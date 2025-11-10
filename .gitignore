@@ -1,0 +1,19 @@
+# --- Dépendances ---
+node_modules/
+
+# --- Caches et builds temporaires ---
+.cache/
+dist/
+build/
+tmp/
+
+# --- Fichiers de logs ---
+*.log
+
+# --- Fichiers d'environnement (ne pas exposer les clés secrètes) ---
+.env
+.env.local
+
+# --- Fichiers système inutiles ---
+.DS_Store
+Thumbs.db

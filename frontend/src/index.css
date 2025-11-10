@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🎨 Thème global Teranga */
+body {
+  @apply bg-gray-50 text-gray-800;
+}
+
+h1, h2, h3 {
+  @apply font-bold text-gray-900;
+}
+
+button {
+  @apply transition rounded-lg;
+}

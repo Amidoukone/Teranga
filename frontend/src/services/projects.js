@@ -1,0 +1,277 @@
+// frontend/src/services/projects.js
+import api from './api';
+import { applyLabels } from '../utils/labels';
+
+/**
+ * ============================================================
+ * 🚀 Service Frontend : Gestion des Projets (CRUD complet)
+ * - Aligné avec le backend (règle des 1h, assignation agent, phases, documents)
+ * - Upload de documents : supporte phaseId, title, kind, notes
+ * - Idempotence côté assignation (le back gère déjà; ici on reste neutre)
+ * - On conserve 100% des fonctionnalités existantes
+ * ============================================================
+ */
+
+/* ---------- Utils locaux ---------- */
+function toNumberOrNull(v) {
+  if (v === '' || v === undefined || v === null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/* ============================================================
+   🔹 PROJETS
+============================================================ */
+
+/**
+ * 🔹 Récupérer tous les projets selon le rôle de l'utilisateur
+ *    - le backend filtre déjà selon le rôle (client/agent/admin)
+ * @param {object} params
+ */
+export async function getProjects(params = {}) {
+  const { data } = await api.get('/projects', { params });
+  const list = data?.projects || [];
+  return list.map((p) => applyLabels(p));
+}
+
+/**
+ * 🔹 Détail d’un projet (+ labels)
+ * @param {number|string} id
+ */
+export async function getProjectById(id) {
+  const { data } = await api.get(`/projects/${id}`);
+  const project = data?.project || null;
+  return project ? applyLabels(project) : null;
+}
+
+/**
+ * 🔹 Créer un projet
+ *    - Admin: peut préciser clientId et agentId
+ *    - Client: clientId ignoré côté back, pris depuis le token
+ * @param {object} form
+ */
+export async function createProject(form) {
+  const payload = {
+    title: form?.title,
+    type: form?.type,
+    description: form?.description || null,
+    budget: toNumberOrNull(form?.budget),
+    currency: form?.currency || 'XOF',
+
+    // Admin uniquement (le backend se charge d’ignorer si non admin)
+    clientId:
+      form?.clientId !== undefined && form.clientId !== ''
+        ? Number(form.clientId)
+        : undefined,
+    agentId:
+      form?.agentId !== undefined && form.agentId !== ''
+        ? Number(form.agentId)
+        : undefined,
+  };
+
+  const { data } = await api.post('/projects', payload, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return applyLabels(data.project);
+}
+
+/**
+ * 🔹 Mettre à jour un projet
+ *    - Respecte la règle 1h côté backend (client) et droits admin
+ * @param {number|string} id
+ * @param {object} form
+ */
+export async function updateProject(id, form) {
+  const payload = {
+    // champs éditables génériques
+    title: form?.title,
+    type: form?.type,
+    description: form?.description ?? null,
+    budget: toNumberOrNull(form?.budget),
+    currency: form?.currency || 'XOF',
+
+    // champs réservés admin (le backend tranchera selon le rôle réel)
+    status: form?.status || undefined,
+    agentId:
+      form?.agentId !== undefined && form.agentId !== ''
+        ? Number(form.agentId)
+        : undefined,
+    clientId:
+      form?.clientId !== undefined && form.clientId !== ''
+        ? Number(form.clientId)
+        : undefined,
+  };
+
+  const { data } = await api.put(`/projects/${id}`, payload, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return applyLabels(data.project);
+}
+
+/**
+ * 🔹 Supprimer un projet
+ *    - Respecte la règle 1h côté backend (client) et droits admin
+ * @param {number|string} id
+ */
+export async function deleteProject(id) {
+  const { data } = await api.delete(`/projects/${id}`);
+  return data;
+}
+
+/**
+ * 🔹 Assigner un agent à un projet (ADMIN uniquement)
+ *    Route backend: POST /projects/assign
+ * @param {number|string} projectId
+ * @param {number|string|null} agentId - null pour désassigner
+ */
+export async function assignAgentToProject(projectId, agentId) {
+  const payload = {
+    projectId: Number(projectId),
+    agentId:
+      agentId === '' || agentId === undefined
+        ? null
+        : agentId === null
+        ? null
+        : Number(agentId),
+  };
+
+  const { data } = await api.post('/projects/assign', payload, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  // on retourne le projet mis à jour pour rafraîchir l’UI avec labels
+  return applyLabels(data.project);
+}
+
+/* ============================================================
+   🔹 PHASES DE PROJET
+============================================================ */
+
+/**
+ * 🔹 Liste des phases liées à un projet
+ * @param {number|string} projectId
+ */
+export async function getProjectPhases(projectId) {
+  const { data } = await api.get('/project-phases', {
+    params: { projectId },
+  });
+  return data?.phases || [];
+}
+
+/**
+ * 🔹 Ajouter ou mettre à jour une phase
+ * @param {object} phase
+ *   - create: { projectId, title, description?, startDate?, endDate? }
+ *   - update: { id, ...mêmes champs }
+ */
+export async function saveProjectPhase(phase) {
+  const { id, ...rest } = phase;
+  if (id) {
+    const { data } = await api.put(`/project-phases/${id}`, rest, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return data?.phase;
+  } else {
+    const { data } = await api.post('/project-phases', rest, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return data?.phase;
+  }
+}
+
+/**
+ * 🔹 Supprimer une phase
+ * @param {number|string} id
+ */
+export async function deleteProjectPhase(id) {
+  const { data } = await api.delete(`/project-phases/${id}`);
+  return data;
+}
+
+/* ============================================================
+   🔹 DOCUMENTS DE PROJET
+============================================================ */
+
+/**
+ * 🔹 Documents du projet
+ * @param {number|string} projectId
+ * @returns {Array} documents (chaque doc peut contenir: phaseTitle, uploader, kindLabel, etc.)
+ */
+export async function getProjectDocuments(projectId) {
+  const { data } = await api.get('/project-documents', {
+    params: { projectId },
+  });
+  return data?.documents || [];
+}
+
+/**
+ * 🔹 Upload de documents
+ * @param {number|string} projectId
+ * @param {File[]} files                     - fichiers à uploader
+ * @param {string} [notes='']                - notes facultatives
+ * @param {number|string|null} [phaseId]     - pour associer à une phase (optionnel)
+ * @param {{ title?: string, kind?: 'contract'|'plan'|'report'|'photo'|'other' }} [meta] - champs métiers optionnels
+ *
+ * ➜ Compatible avec le backend (controller upload):
+ *    - supporte title, kind, notes, phaseId
+ *    - le backend vérifie que phaseId appartient bien au projectId
+ */
+export async function uploadProjectDocuments(
+  projectId,
+  files = [],
+  notes = '',
+  phaseId = null,
+  meta = {}
+) {
+  const formData = new FormData();
+  formData.append('projectId', projectId);
+
+  if (notes) formData.append('notes', notes);
+  if (phaseId !== null && phaseId !== undefined && phaseId !== '') {
+    formData.append('phaseId', String(phaseId));
+  }
+  if (meta?.title) formData.append('title', meta.title);
+  if (meta?.kind) formData.append('kind', meta.kind); // 'contract'|'plan'|'report'|'photo'|'other'
+
+  files.forEach((f) => formData.append('files', f));
+
+  const { data } = await api.post('/project-documents', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data?.documents || [];
+}
+
+/**
+ * 🔹 Supprimer un document
+ * @param {number|string} id
+ */
+export async function deleteProjectDocument(id) {
+  const { data } = await api.delete(`/project-documents/${id}`);
+  return data;
+}
+
+/* ============================================================
+   ✅ Export par défaut NOMMÉ
+   — garde les exports nommés ET fournit un objet service complet
+============================================================ */
+const ProjectsService = {
+  // Projets
+  getProjects,
+  getProjectById,
+  createProject,
+  updateProject,
+  deleteProject,
+  assignAgentToProject,
+
+  // Phases
+  getProjectPhases,
+  saveProjectPhase,
+  deleteProjectPhase,
+
+  // Documents
+  getProjectDocuments,
+  uploadProjectDocuments,
+  deleteProjectDocument,
+};
+
+export default ProjectsService;
