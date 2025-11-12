@@ -112,11 +112,13 @@ export const TRANSACTION_STATUS_ALIASES = {
   processing: 'pending',
   in_progress: 'pending',
   awaiting: 'pending',
+
   // états “terminé / payé / effectué”
   done: 'completed',
   success: 'completed',
   paid: 'completed',
   fulfilled: 'completed',
+
   // annulations
   void: 'cancelled',
   aborted: 'cancelled',
@@ -191,7 +193,7 @@ export const PAYMENT_STATUS_ALIASES = {
 };
 
 /**
- * 🧩 Articles de commande (libres côté back, on garde ton mapping UI)
+ * 🧩 Articles de commande
  */
 export const ORDER_ITEM_STATUSES = {
   pending: 'En attente',
@@ -224,7 +226,6 @@ export function getLabel(key, map) {
  * @param {string} category - "service" | "task" | "transaction" | "order" | "payment" | ...
  */
 export function formatStatus(key, category = 'service') {
-  // Canonicalise d’abord pour éviter d’afficher un alias fantôme
   let canonical = key;
   if (category === 'order') canonical = canonicalizeOrderStatus(key);
   if (category === 'payment') canonical = canonicalizePaymentStatus(key);
@@ -253,9 +254,7 @@ export function formatCurrency(code) {
 }
 
 /**
- * Canonicalise un statut de commande (absorbe les anciens statuts UI)
- * @param {string} key
- * @returns {string} statut acceptable par le backend/DB
+ * Canonicalise un statut de commande
  */
 export function canonicalizeOrderStatus(key) {
   if (!key) return 'created';
@@ -266,9 +265,7 @@ export function canonicalizeOrderStatus(key) {
 }
 
 /**
- * Canonicalise un statut de paiement (absorbe les anciens statuts UI)
- * @param {string} key
- * @returns {string} statut acceptable par le backend/DB
+ * Canonicalise un statut de paiement
  */
 export function canonicalizePaymentStatus(key) {
   if (!key) return 'unpaid';
@@ -279,24 +276,20 @@ export function canonicalizePaymentStatus(key) {
 }
 
 /**
- * ✅ Canonicalise un statut de transaction (absorbe anciens statuts UI)
+ * ✅ Canonicalise un statut de transaction
+ * (absorbe anciens statuts UI)
  * DB cible: 'pending' | 'completed' | 'cancelled'
- * @param {string} key
- * @returns {string}
  */
 export function canonicalizeTransactionStatus(key) {
   if (!key) return 'pending';
   const k = String(key).trim();
-  if (TRANSACTION_STATUSES[k]) return k; // déjà canonique
+  if (TRANSACTION_STATUSES[k]) return k;
   if (TRANSACTION_STATUS_ALIASES[k]) return TRANSACTION_STATUS_ALIASES[k];
-  // Valeur inconnue → repli "pending"
   return 'pending';
 }
 
 /**
- * Canonicalise un statut par catégorie (générique)
- * @param {string} category - "order" | "payment" | "transaction" | ...
- * @param {string} key
+ * Canonicalise un statut générique
  */
 export function canonicalizeStatus(category, key) {
   if (category === 'order') return canonicalizeOrderStatus(key);
@@ -306,10 +299,7 @@ export function canonicalizeStatus(category, key) {
 }
 
 /**
- * Enrichit un objet en lui ajoutant des labels prêts pour l’affichage.
- * Ne modifie pas l’objet original.
- * @param {object} item
- * @returns {object}
+ * Enrichit un objet avec des labels prêts pour l’affichage
  */
 export function applyLabels(item) {
   if (!item || typeof item !== 'object') return item;
@@ -331,14 +321,14 @@ export function applyLabels(item) {
     enriched.statusLabel = getLabel(item.status, TASK_STATUSES);
   }
 
-  // Transactions — on canonicalise avant d’afficher le label
+  // Transactions
   if (item.type && TRANSACTION_TYPES[item.type]) {
     enriched.typeLabel = getLabel(item.type, TRANSACTION_TYPES);
   }
   if (item.status) {
     const canonicalTxn = canonicalizeTransactionStatus(item.status);
     if (TRANSACTION_STATUSES[canonicalTxn]) {
-      enriched.status = canonicalTxn; // harmonise la valeur portée
+      enriched.status = canonicalTxn;
       enriched.statusLabel = getLabel(canonicalTxn, TRANSACTION_STATUSES);
     }
   }
@@ -351,17 +341,17 @@ export function applyLabels(item) {
     enriched.kindLabel = getLabel(item.kind, EVIDENCE_KINDS);
   }
 
-  // Commerce : Catégories
+  // Catégories
   if (item.categoryStatus && CATEGORY_STATUSES[item.categoryStatus]) {
     enriched.categoryStatusLabel = getLabel(item.categoryStatus, CATEGORY_STATUSES);
   }
 
-  // Commerce : Produits
+  // Produits
   if (item.productStatus && PRODUCT_STATUSES[item.productStatus]) {
     enriched.productStatusLabel = getLabel(item.productStatus, PRODUCT_STATUSES);
   }
 
-  // Commerce : Commandes (canonicalisation affichée)
+  // Commandes
   const rawOrderStatus = item.orderStatus || item.status;
   const rawPaymentStatus = item.paymentStatus;
 
@@ -381,7 +371,7 @@ export function applyLabels(item) {
     }
   }
 
-  // Commerce : Order Items (libres)
+  // Items de commande
   if (item.itemStatus && ORDER_ITEM_STATUSES[item.itemStatus]) {
     enriched.itemStatusLabel = getLabel(item.itemStatus, ORDER_ITEM_STATUSES);
   }
@@ -406,7 +396,6 @@ const Labels = {
   TRANSACTION_STATUSES,
   TRANSACTION_STATUS_ALIASES,
   CURRENCY_LABELS,
-
   CATEGORY_STATUSES,
   PRODUCT_STATUSES,
   ORDER_STATUSES,

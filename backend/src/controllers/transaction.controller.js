@@ -85,16 +85,20 @@ exports.create = async (req, res) => {
 
     if (!type) return res.status(400).json({ error: 'Type de transaction requis' });
     const txType = String(type).trim();
-    if (!ALLOWED_TYPES.has(txType)) return res.status(400).json({ error: 'Type de transaction invalide' });
+    if (!ALLOWED_TYPES.has(txType))
+      return res.status(400).json({ error: 'Type de transaction invalide' });
 
     const parsedAmount = parseAmount(amount);
-    if (parsedAmount === null) return res.status(400).json({ error: 'Montant invalide' });
+    if (parsedAmount === null)
+      return res.status(400).json({ error: 'Montant invalide' });
 
     const sid = toSafeInt(serviceId);
     const tid = toSafeInt(taskId);
     const oid = toSafeInt(orderId);
 
-    let service = null, task = null, order = null;
+    let service = null,
+      task = null,
+      order = null;
     if (sid) service = await Service.findByPk(sid);
     if (tid) task = await Task.findByPk(tid);
     if (oid) order = await Order.findByPk(oid);
@@ -111,17 +115,20 @@ exports.create = async (req, res) => {
 
     const finalCurrency = normalizeCurrency(currency, 'XOF');
 
-    /**
-     * 🧾 ACL: si liée à une commande, rattache toujours au client de la commande
-     */
-    const ownerUserId = order ? order.userId : (req.user?.id || null);
+    // 🧾 Détermination de l’utilisateur propriétaire
+    const ownerUserId = order ? order.userId : req.user?.id || null;
 
     /**
-     * 💡 Si la transaction est liée à une commande “payée” ou “livrée”,
-     * elle est directement marquée comme “completed”.
+     * 💡 Détermination du statut initial :
+     * - Commande payée/livrée → completed
+     * - Transaction indépendante (aucune commande) → completed
+     * - Autres cas → pending
      */
     let finalStatus = 'pending';
     if (order && ['paid', 'delivered'].includes(order.status)) {
+      finalStatus = 'completed';
+    } else if (!order) {
+      // 🟢 Toutes transactions indépendantes = complétées (admin, agent, client)
       finalStatus = 'completed';
     }
 
@@ -139,14 +146,15 @@ exports.create = async (req, res) => {
       status: finalStatus,
     };
 
-    // Admin peut forcer un autre statut
+    // 🛡️ Admin peut forcer un autre statut manuellement
     if (status && req.user?.role === 'admin') {
       const s = String(status).trim();
-      if (!ALLOWED_STATUSES.has(s)) return res.status(400).json({ error: 'Statut invalide' });
+      if (!ALLOWED_STATUSES.has(s))
+        return res.status(400).json({ error: 'Statut invalide' });
       payload.status = s;
     }
 
-    // ✅ Vérifie doublon: même orderId + userId + type “expense”
+    // ✅ Vérifie doublon (pour éviter multiples transactions sur même commande)
     const existing = order
       ? await Transaction.findOne({
           where: { orderId: order.id, userId: ownerUserId, type: txType },
@@ -155,7 +163,6 @@ exports.create = async (req, res) => {
 
     let created;
     if (existing) {
-      // Met à jour statut/montant si applicable
       existing.amount = parsedAmount;
       if (existing.status !== 'completed' && finalStatus === 'completed') {
         existing.status = 'completed';
@@ -174,7 +181,9 @@ exports.create = async (req, res) => {
       .json({ message: 'Transaction enregistrée', transaction: withLabels(created) });
   } catch (e) {
     console.error('❌ Erreur création transaction:', e);
-    return res.status(500).json({ error: "Erreur lors de l'ajout de la transaction" });
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de l'ajout de la transaction" });
   }
 };
 
@@ -221,7 +230,9 @@ exports.list = async (req, res) => {
     }
 
     if (startDate || endDate) {
-      const start = startDate ? new Date(startDate) : new Date('1970-01-01T00:00:00Z');
+      const start = startDate
+        ? new Date(startDate)
+        : new Date('1970-01-01T00:00:00Z');
       const end = endDate ? new Date(endDate) : new Date();
       where.createdAt = { [Op.between]: [start, end] };
     }
@@ -261,7 +272,9 @@ exports.list = async (req, res) => {
     res.json({ transactions: enriched, pagination: { page, limit, total: count } });
   } catch (e) {
     console.error('❌ Erreur list transactions:', e);
-    res.status(500).json({ error: 'Erreur lors de la récupération des transactions' });
+    res
+      .status(500)
+      .json({ error: 'Erreur lors de la récupération des transactions' });
   }
 };
 
@@ -284,7 +297,9 @@ exports.detail = async (req, res) => {
     res.json({ transaction: withLabels(trx) });
   } catch (e) {
     console.error('❌ Erreur détail transaction:', e);
-    res.status(500).json({ error: 'Erreur lors de la récupération de la transaction' });
+    res
+      .status(500)
+      .json({ error: 'Erreur lors de la récupération de la transaction' });
   }
 };
 
@@ -337,7 +352,8 @@ exports.update = async (req, res) => {
       const newOid = toSafeInt(orderId);
       if (newOid) {
         const newOrder = await Order.findByPk(newOid);
-        if (!newOrder) return res.status(400).json({ error: 'Commande cible introuvable' });
+        if (!newOrder)
+          return res.status(400).json({ error: 'Commande cible introuvable' });
         trx.orderId = newOrder.id;
         trx.userId = newOrder.userId;
       } else {
@@ -349,27 +365,34 @@ exports.update = async (req, res) => {
 
     if (status !== undefined) {
       const s = String(status).trim();
-      if (!ALLOWED_STATUSES.has(s)) return res.status(400).json({ error: 'Statut invalide' });
-      if (!isAdmin) return res.status(403).json({ error: 'Seul un admin peut modifier le statut' });
+      if (!ALLOWED_STATUSES.has(s))
+        return res.status(400).json({ error: 'Statut invalide' });
+      if (!isAdmin)
+        return res.status(403).json({ error: 'Seul un admin peut modifier le statut' });
       trx.status = s;
     }
 
     if (currency !== undefined) {
-      if (!isAdmin) return res.status(403).json({ error: 'Seul un admin peut modifier la devise' });
+      if (!isAdmin)
+        return res.status(403).json({ error: 'Seul un admin peut modifier la devise' });
       trx.currency = normalizeCurrency(currency, trx.currency || 'XOF');
     }
 
     if (type !== undefined) {
-      if (!isAdmin) return res.status(403).json({ error: 'Seul un admin peut modifier le type' });
+      if (!isAdmin)
+        return res.status(403).json({ error: 'Seul un admin peut modifier le type' });
       const t = String(type).trim();
-      if (!ALLOWED_TYPES.has(t)) return res.status(400).json({ error: 'Type invalide' });
+      if (!ALLOWED_TYPES.has(t))
+        return res.status(400).json({ error: 'Type invalide' });
       trx.type = t;
     }
 
     if (amount !== undefined) {
-      if (!isAdmin) return res.status(403).json({ error: 'Seul un admin peut modifier le montant' });
+      if (!isAdmin)
+        return res.status(403).json({ error: 'Seul un admin peut modifier le montant' });
       const n = parseAmount(amount);
-      if (n === null) return res.status(400).json({ error: 'Montant invalide' });
+      if (n === null)
+        return res.status(400).json({ error: 'Montant invalide' });
       trx.amount = n;
     }
 
@@ -501,6 +524,8 @@ exports.listByOrder = async (req, res) => {
     res.json({ transactions: enriched, pagination: { page, limit, total: count } });
   } catch (e) {
     console.error('❌ Erreur listByOrder transactions:', e);
-    res.status(500).json({ error: "Erreur lors de la récupération des transactions de l'ordre" });
+    res
+      .status(500)
+      .json({ error: "Erreur lors de la récupération des transactions de l'ordre" });
   }
 };

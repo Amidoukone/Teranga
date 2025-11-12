@@ -41,13 +41,13 @@ export default function TransactionsPage() {
     type: '',
     payment: '',
     service: '',
-    order: '', // 🆕
+    order: '',
     sort: '-createdAt',
   });
 
-  /* ===========================
+  /* ============================================================
      🔹 Initialisation
-  =========================== */
+  ============================================================ */
   useEffect(() => {
     async function init() {
       try {
@@ -73,9 +73,9 @@ export default function TransactionsPage() {
     localStorage.setItem('teranga_transactions_showForm', showForm ? '1' : '0');
   }, [showForm]);
 
-  /* ===========================
-     🔹 Chargement
-  =========================== */
+  /* ============================================================
+     🔹 Chargement dynamique
+  ============================================================ */
   async function loadServicesForRole(u) {
     try {
       if (u.role === 'client') {
@@ -132,9 +132,9 @@ export default function TransactionsPage() {
     }
   }
 
-  /* ===========================
-     🔹 Soumission
-  =========================== */
+  /* ============================================================
+     🔹 Soumission formulaire
+  ============================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
     try {
@@ -143,15 +143,22 @@ export default function TransactionsPage() {
         amount: form.amount === '' ? undefined : Number(form.amount),
         serviceId: form.serviceId ? Number(form.serviceId) : undefined,
         taskId: form.taskId ? Number(form.taskId) : undefined,
-        orderId: form.orderId ? Number(form.orderId) : undefined, // 🆕
+        orderId: form.orderId ? Number(form.orderId) : undefined,
       };
 
-      // Règle métier: le client n’envoie qu’une preuve de paiement
-      // -> côté UI on ne bloque pas, mais on laisse createTransaction gérer l’upload proprement
-      await createTransaction(payload);
+      // 🧠 Auto-alignement du statut côté front : transaction indépendante → "completed"
+      if (!payload.orderId) {
+        payload.status = 'completed';
+      }
+
+      const created = await createTransaction(payload);
+      const labeled = applyLabels(created);
+
+      // 🔄 Mise à jour instantanée du tableau sans reload complet
+      setTransactions((prev) => [labeled, ...prev]);
       alert('✅ Transaction ajoutée avec succès');
+
       resetForm();
-      await loadTransactions();
     } catch (err) {
       const status = err?.response?.status;
       if (status === 401) {
@@ -181,9 +188,9 @@ export default function TransactionsPage() {
     setTasks([]);
   }
 
-  /* ===========================
+  /* ============================================================
      🔍 Filtres dynamiques
-  =========================== */
+  ============================================================ */
   useEffect(() => {
     let arr = [...transactions];
 
@@ -198,7 +205,6 @@ export default function TransactionsPage() {
           t.user?.email,
           t.service?.title,
           t.task?.title,
-          // t.order?.reference peut ne pas exister ; fallback code or id
           t.order?.reference || t.order?.code || (t.order ? `#${t.order.id}` : ''),
         ]
           .filter(Boolean)
@@ -241,9 +247,9 @@ export default function TransactionsPage() {
     setFiltered(arr);
   }, [transactions, filters]);
 
-  /* ===========================
-     🔹 UI
-  =========================== */
+  /* ============================================================
+     🔹 UI principale
+  ============================================================ */
   if (!user)
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -398,31 +404,17 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
   );
 }
 
-function TransactionForm({
-  form,
-  setForm,
-  selectedService,
-  handleServiceChange,
-  tasks,
-  services,
-  handleSubmit,
-  loading,
-  user,
-}) {
+function TransactionForm({ form, setForm, selectedService, handleServiceChange, tasks, services, handleSubmit, loading, user }) {
   return (
     <div className="mb-10">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">
-        ➕ Nouvelle transaction
-      </h2>
+      <h2 className="text-lg font-semibold text-gray-800 mb-4">➕ Nouvelle transaction</h2>
 
       <form
         onSubmit={handleSubmit}
         className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-200"
       >
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Type de transaction
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Type de transaction</label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
@@ -437,9 +429,7 @@ function TransactionForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Montant
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Montant</label>
           <input
             type="number"
             step="0.01"
@@ -452,9 +442,7 @@ function TransactionForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Devise
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Devise</label>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
@@ -503,7 +491,6 @@ function TransactionForm({
           </select>
         )}
 
-        {/* 🆕 Champ Commande (visible admin/agent uniquement) */}
         {(user.role === 'admin' || user.role === 'agent') && (
           <input
             type="number"
@@ -522,13 +509,10 @@ function TransactionForm({
           className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
         />
 
-        {/* 📎 Preuve de paiement (client / agent / admin) */}
         <input
           type="file"
           accept=".jpg,.jpeg,.png,.pdf"
-          onChange={(e) =>
-            setForm({ ...form, proofFile: e.target.files?.[0] || null })
-          }
+          onChange={(e) => setForm({ ...form, proofFile: e.target.files?.[0] || null })}
           className="sm:col-span-2 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 bg-white"
         />
 
@@ -577,7 +561,7 @@ function TransactionList({ transactions, loading }) {
                 {t.typeLabel || t.type} — {Number(t.amount || 0).toLocaleString()} {t.currencyLabel || t.currency}
               </h3>
               <p className="text-sm text-gray-600 mt-1">
-                {t.statusLabel ? `Statut : ${t.statusLabel}` : ''}
+                Statut : <strong>{t.statusLabel || '—'}</strong>
               </p>
               <p className="text-sm text-gray-600 mt-1">
                 {t.description || 'Aucune description'}
@@ -599,7 +583,6 @@ function TransactionList({ transactions, loading }) {
                 🔧 <strong>Tâche :</strong> {t.task.title}
               </p>
             )}
-            {/* 🆕 Commande liée */}
             {t.order && (
               <p>
                 🧾 <strong>Commande : </strong>

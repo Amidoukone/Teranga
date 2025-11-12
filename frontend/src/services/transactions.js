@@ -9,7 +9,8 @@ import { applyLabels, canonicalizeTransactionStatus } from '../utils/labels';
  * - JSON si pas de fichier (évite 500 sur certaines routes backend)
  * - FormData si fichier, avec compat noms Multer ('proofFile' | 'proof' | 'file' | 'attachment')
  * - Applique automatiquement les labels
- * - Support orderId pour rattacher à une commande
+ * - Gère le statut par défaut "Effectuée" pour les transactions indépendantes
+ * - Supporte orderId pour rattacher à une commande
  * ============================================================
  */
 
@@ -46,8 +47,8 @@ function asNumeric(v) {
  */
 async function postMultipartResilient(url, payloadFields = {}, file) {
   const fieldCandidates = ['proofFile', 'proof', 'file', 'attachment'];
-
   let lastError;
+
   for (const fieldName of (file ? fieldCandidates : [''])) {
     try {
       const fd = new FormData();
@@ -96,18 +97,26 @@ export async function createTransaction(data) {
     orderId: asNumeric(data.orderId),
   };
 
-  // Harmonise le statut si fourni (sinon, on laisse le backend gérer son défaut, ex: 'pending')
+  /**
+   * 💡 Logique d’harmonisation du statut (alignée avec backend) :
+   * - Si un statut est explicitement fourni → on canonicalise et garde
+   * - Si orderId non défini → transaction indépendante → statut "completed"
+   * - Sinon → on laisse le backend gérer (commande)
+   */
   if (typeof data.status !== 'undefined' && data.status !== null && data.status !== '') {
     payload.status = canonicalizeTransactionStatus(data.status);
+  } else if (!payload.orderId) {
+    // 🟢 Transaction indépendante = statut "Effectuée"
+    payload.status = canonicalizeTransactionStatus('completed');
   }
 
-  // 1) Si pas de fichier => JSON simple (évite 500 si backend attend JSON)
+  // 1️⃣ Pas de fichier => JSON simple (évite 500 si backend attend JSON)
   if (!(data.proofFile instanceof File)) {
     const { data: res } = await api.post('/transactions', cleanObj(payload));
     return applyLabels(res.transaction || res);
   }
 
-  // 2) Avec fichier => multipart résilient (essaie plusieurs noms Multer)
+  // 2️⃣ Avec fichier => multipart résilient (essaie plusieurs noms Multer)
   const res = await postMultipartResilient('/transactions', cleanObj(payload), data.proofFile);
   return applyLabels(res.transaction || res);
 }
