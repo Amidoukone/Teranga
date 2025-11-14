@@ -11,6 +11,7 @@ import { applyLabels, canonicalizeTransactionStatus } from '../utils/labels';
  * - Applique automatiquement les labels
  * - Gère le statut par défaut "Effectuée" pour les transactions indépendantes
  * - Supporte orderId pour rattacher à une commande
+ * - 🆕 Supporte projectId pour rattacher à un projet
  * ============================================================
  */
 
@@ -82,6 +83,7 @@ async function postMultipartResilient(url, payloadFields = {}, file) {
  *  - serviceId?: number
  *  - taskId?: number
  *  - orderId?: number
+ *  - projectId?: number   // 🆕
  *  - status?: string (optionnel; si fourni, sera canonicalisé)
  *  - proofFile?: File
  */
@@ -95,17 +97,18 @@ export async function createTransaction(data) {
     serviceId: asNumeric(data.serviceId),
     taskId: asNumeric(data.taskId),
     orderId: asNumeric(data.orderId),
+    projectId: asNumeric(data.projectId), // 🆕
   };
 
   /**
    * 💡 Logique d’harmonisation du statut (alignée avec backend) :
    * - Si un statut est explicitement fourni → on canonicalise et garde
-   * - Si orderId non défini → transaction indépendante → statut "completed"
-   * - Sinon → on laisse le backend gérer (commande)
+   * - Si transaction indépendante (aucune commande ET aucun projet) → "completed"
+   * - Sinon → on laisse le backend gérer (commande/projet)
    */
   if (typeof data.status !== 'undefined' && data.status !== null && data.status !== '') {
     payload.status = canonicalizeTransactionStatus(data.status);
-  } else if (!payload.orderId) {
+  } else if (!payload.orderId && !payload.projectId) {
     // 🟢 Transaction indépendante = statut "Effectuée"
     payload.status = canonicalizeTransactionStatus('completed');
   }
@@ -149,7 +152,7 @@ export async function getTransactionById(id) {
 /**
  * @param {number} id
  * @param {object} updates
- *  - description?, paymentMethod?, status?, currency?, serviceId?, taskId?, orderId?, type?, amount?, proofFile?
+ *  - description?, paymentMethod?, status?, currency?, serviceId?, taskId?, orderId?, projectId?, type?, amount?, proofFile?
  */
 export async function updateTransaction(id, updates) {
   const payload = {
@@ -158,6 +161,7 @@ export async function updateTransaction(id, updates) {
     serviceId: asNumeric(updates?.serviceId),
     taskId: asNumeric(updates?.taskId),
     orderId: asNumeric(updates?.orderId),
+    projectId: asNumeric(updates?.projectId), // 🆕
   };
 
   // Harmonise le statut si fourni (sinon on ne touche pas)
@@ -209,6 +213,30 @@ export async function getOrderTransactionsWithMeta(orderId, filters = {}) {
   return getTransactionsWithMeta(params);
 }
 
+/* ------------------- Helpers projet 🆕 -------------------- */
+/**
+ * Créer une transaction liée à un projet
+ */
+export async function createProjectTransaction(projectId, data = {}) {
+  return createTransaction({ ...data, projectId: asNumeric(projectId) });
+}
+
+/**
+ * Liste les transactions d’un projet (filtrage côté back via ?projectId=)
+ */
+export async function getProjectTransactions(projectId, filters = {}) {
+  const params = cleanObj({ ...filters, projectId: asNumeric(projectId) });
+  return getTransactions(params);
+}
+
+/**
+ * Liste + pagination (meta) des transactions d’un projet
+ */
+export async function getProjectTransactionsWithMeta(projectId, filters = {}) {
+  const params = cleanObj({ ...filters, projectId: asNumeric(projectId) });
+  return getTransactionsWithMeta(params);
+}
+
 /* ------------------- Export groupé ------------------------ */
 const TransactionsService = {
   createTransaction,
@@ -224,6 +252,11 @@ const TransactionsService = {
   createOrderTransaction,
   getOrderTransactions,
   getOrderTransactionsWithMeta,
+
+  // projet 🆕
+  createProjectTransaction,
+  getProjectTransactions,
+  getProjectTransactionsWithMeta,
 };
 
 export default TransactionsService;

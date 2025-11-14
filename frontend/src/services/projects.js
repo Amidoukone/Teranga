@@ -31,7 +31,8 @@ function toNumberOrNull(v) {
 export async function getProjects(params = {}) {
   const { data } = await api.get('/projects', { params });
   const list = data?.projects || [];
-  return list.map((p) => applyLabels(p));
+  // ⚠️ On précise bien la catégorie 'project' pour éviter les effets de bord
+  return list.map((p) => applyLabels(p, 'project'));
 }
 
 /**
@@ -41,7 +42,7 @@ export async function getProjects(params = {}) {
 export async function getProjectById(id) {
   const { data } = await api.get(`/projects/${id}`);
   const project = data?.project || null;
-  return project ? applyLabels(project) : null;
+  return project ? applyLabels(project, 'project') : null;
 }
 
 /**
@@ -50,7 +51,7 @@ export async function getProjectById(id) {
  *    - Client: clientId ignoré côté back, pris depuis le token
  * @param {object} form
  */
-export async function createProject(form) {
+export async function createProject(form = {}) {
   const payload = {
     title: form?.title,
     type: form?.type,
@@ -72,40 +73,60 @@ export async function createProject(form) {
   const { data } = await api.post('/projects', payload, {
     headers: { 'Content-Type': 'application/json' },
   });
-  return applyLabels(data.project);
+  return applyLabels(data.project, 'project');
 }
 
 /**
  * 🔹 Mettre à jour un projet
- *    - Respecte la règle 1h côté backend (client) et droits admin
+ *    ⚠ IMPORTANT :
+ *    - On n’envoie au backend QUE les champs présents dans `form`
+ *      => pas de reset involontaire du budget / description / currency.
  * @param {number|string} id
  * @param {object} form
  */
-export async function updateProject(id, form) {
-  const payload = {
-    // champs éditables génériques
-    title: form?.title,
-    type: form?.type,
-    description: form?.description ?? null,
-    budget: toNumberOrNull(form?.budget),
-    currency: form?.currency || 'XOF',
+export async function updateProject(id, form = {}) {
+  const payload = {};
 
-    // champs réservés admin (le backend tranchera selon le rôle réel)
-    status: form?.status || undefined,
-    agentId:
-      form?.agentId !== undefined && form.agentId !== ''
-        ? Number(form.agentId)
-        : undefined,
-    clientId:
-      form?.clientId !== undefined && form.clientId !== ''
-        ? Number(form.clientId)
-        : undefined,
-  };
+  // Champs éditables génériques
+  if ('title' in form) {
+    payload.title = form.title;
+  }
+  if ('type' in form) {
+    payload.type = form.type;
+  }
+  if ('description' in form) {
+    // On permet explicitement de vider la description
+    payload.description = form.description ?? null;
+  }
+  if ('budget' in form) {
+    payload.budget = toNumberOrNull(form.budget);
+  }
+  if ('currency' in form) {
+    payload.currency = form.currency || 'XOF';
+  }
+
+  // Champs réservés admin (le backend tranchera selon le rôle réel)
+  if ('status' in form) {
+    payload.status = form.status;
+  }
+  if ('agentId' in form) {
+    payload.agentId =
+      form.agentId === '' || form.agentId === null || form.agentId === undefined
+        ? null
+        : Number(form.agentId);
+  }
+  if ('clientId' in form) {
+    // Généralement on ne change pas le client d’un projet, mais on garde la compatibilité
+    payload.clientId =
+      form.clientId === '' || form.clientId === null || form.clientId === undefined
+        ? undefined
+        : Number(form.clientId);
+  }
 
   const { data } = await api.put(`/projects/${id}`, payload, {
     headers: { 'Content-Type': 'application/json' },
   });
-  return applyLabels(data.project);
+  return applyLabels(data.project, 'project');
 }
 
 /**
@@ -140,7 +161,7 @@ export async function assignAgentToProject(projectId, agentId) {
   });
 
   // on retourne le projet mis à jour pour rafraîchir l’UI avec labels
-  return applyLabels(data.project);
+  return applyLabels(data.project, 'project');
 }
 
 /* ============================================================

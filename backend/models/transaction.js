@@ -11,20 +11,29 @@ module.exports = (sequelize, DataTypes) => {
         onDelete: 'CASCADE',
       });
 
-      // 🧾 Liens fonctionnels existants
+      // 🧾 Lien vers un service (optionnel)
       Transaction.belongsTo(models.Service, {
         foreignKey: 'serviceId',
         as: 'service',
         onDelete: 'SET NULL',
       });
 
+      // 🔧 Lien vers une tâche (optionnel)
       Transaction.belongsTo(models.Task, {
         foreignKey: 'taskId',
         as: 'task',
         onDelete: 'SET NULL',
       });
 
-      // 🛒 Lien e-commerce (FK stockée en DB sous order_id)
+      // 🏗️ 🆕 Lien vers un projet (optionnel)
+      Transaction.belongsTo(models.Project, {
+        foreignKey: 'projectId',
+        as: 'project',
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE',
+      });
+
+      // 🛒 Lien e-commerce (commande)
       Transaction.belongsTo(models.Order, {
         foreignKey: 'orderId', // attribut JS
         as: 'order',
@@ -35,19 +44,26 @@ module.exports = (sequelize, DataTypes) => {
 
   Transaction.init(
     {
-      // 🔗 Clés étrangères (colonnes camelCase existantes)
+      // 🔗 Clés étrangères
       userId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
       serviceId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
       taskId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
 
-      // ⚠️ Spécifique : la colonne réelle est `order_id`
+      // ⚙️ 🆕 Lien vers un projet
+      projectId: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: true,
+        comment: 'FK → projects.id (transaction liée à un projet)',
+      },
+
+      // ⚠️ Lien e-commerce (colonne réelle = order_id)
       orderId: {
         type: DataTypes.INTEGER.UNSIGNED,
         allowNull: true,
         field: 'order_id',
       },
 
-      // 💰 Infos principales
+      // 💰 Informations principales
       type: {
         type: DataTypes.ENUM('revenue', 'expense', 'commission', 'adjustment'),
         allowNull: false,
@@ -56,7 +72,7 @@ module.exports = (sequelize, DataTypes) => {
       currency: { type: DataTypes.STRING(10), defaultValue: 'XOF' },
       paymentMethod: { type: DataTypes.STRING(50), allowNull: true },
 
-      // 🔖 Statut
+      // 🔖 Statut transaction
       status: {
         type: DataTypes.ENUM('pending', 'completed', 'cancelled'),
         defaultValue: 'pending',
@@ -70,15 +86,15 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'Transaction',
       tableName: 'transactions',
-      // IMPORTANT : on ne force pas underscored, ta table est camelCase (createdAt/updatedAt, userId, etc.)
-      // underscored: true, // ⛔️ supprimé
+      // ⚠️ Ne pas activer underscored — tes colonnes sont camelCase
+      // underscored: true,
 
-      // Index alignés sur les noms de colonnes RÉELS
       indexes: [
         { fields: ['userId'] },
         { fields: ['serviceId'] },
         { fields: ['taskId'] },
-        { fields: ['order_id'] }, // colonne réelle en DB
+        { fields: ['projectId'] }, // 🆕 index projet
+        { fields: ['order_id'] },
         { fields: ['type'] },
         { fields: ['status'] },
       ],

@@ -7,10 +7,11 @@ const PROJECT_STATUSES = {
   in_progress: 'En cours',
   completed: 'Terminé',
   validated: 'Validé',
+  cancelled: 'Annulé',
 };
 
 /* =========================================================
-   🧩 Helpers autorisation & cohérence
+   Helpers
 ========================================================= */
 function isWithinOneHour(date) {
   try {
@@ -23,11 +24,10 @@ function isWithinOneHour(date) {
 }
 
 function canClientEditOrDelete(project, user) {
-  if (!user || !project) return false;
   return (
-    user.role === 'client' &&
-    project.clientId === user.id &&
-    isWithinOneHour(project.createdAt)
+    user?.role === 'client' &&
+    project?.clientId === user?.id &&
+    isWithinOneHour(project?.createdAt)
   );
 }
 
@@ -36,12 +36,11 @@ function isAdmin(user) {
 }
 
 /* =========================================================
-   🔹 Créer un projet (client ou admin)
+   Créer un projet
 ========================================================= */
 exports.create = async (req, res) => {
   try {
-    if (!req.user?.id)
-      return res.status(401).json({ error: 'Non authentifié' });
+    if (!req.user?.id) return res.status(401).json({ error: 'Non authentifié' });
 
     const { title, type, description, budget, currency, clientId, agentId } =
       req.body;
@@ -49,8 +48,6 @@ exports.create = async (req, res) => {
     if (!title || !type)
       return res.status(400).json({ error: 'Titre et type requis' });
 
-    // ✅ Admin peut choisir un client spécifique
-    // ✅ Client normal => clientId = son propre ID
     let targetClientId = req.user.id;
     if (isAdmin(req.user) && clientId) {
       targetClientId = parseInt(clientId, 10);
@@ -67,19 +64,10 @@ exports.create = async (req, res) => {
       status: 'created',
     });
 
-    // Récupération enrichie
     const created = await Project.findByPk(project.id, {
       include: [
-        {
-          model: User,
-          as: 'client',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
-        },
-        {
-          model: User,
-          as: 'agent',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
-        },
+        { model: User, as: 'client', attributes: ['id','firstName','lastName','email','role'] },
+        { model: User, as: 'agent', attributes: ['id','firstName','lastName','email','role'] },
       ],
     });
 
@@ -97,7 +85,7 @@ exports.create = async (req, res) => {
 };
 
 /* =========================================================
-   🔹 Liste des projets (vue par rôle)
+   Liste des projets
 ========================================================= */
 exports.list = async (req, res) => {
   try {
@@ -111,16 +99,8 @@ exports.list = async (req, res) => {
     const projects = await Project.findAll({
       where,
       include: [
-        {
-          model: User,
-          as: 'client',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
-        },
-        {
-          model: User,
-          as: 'agent',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
-        },
+        { model: User, as: 'client', attributes: ['id','firstName','lastName','email','role'] },
+        { model: User, as: 'agent', attributes: ['id','firstName','lastName','email','role'] },
       ],
       order: [['createdAt', 'DESC']],
     });
@@ -138,7 +118,7 @@ exports.list = async (req, res) => {
 };
 
 /* =========================================================
-   🔹 Détail d’un projet
+   Détail d’un projet
 ========================================================= */
 exports.detail = async (req, res) => {
   try {
@@ -148,26 +128,14 @@ exports.detail = async (req, res) => {
     const project = await Project.findByPk(req.params.id, {
       include: [
         { model: ProjectPhase, as: 'phases' },
-        {
-          model: User,
-          as: 'client',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
-        },
-        {
-          model: User,
-          as: 'agent',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
-        },
+        { model: User, as: 'client', attributes: ['id','firstName','lastName','email','role'] },
+        { model: User, as: 'agent', attributes: ['id','firstName','lastName','email','role'] },
       ],
     });
 
     if (!project) return res.status(404).json({ error: 'Projet introuvable' });
 
-    // Vérification ACL basique : client ne peut voir que ses projets
-    if (
-      req.user.role === 'client' &&
-      project.clientId !== req.user.id
-    ) {
+    if (req.user.role === 'client' && project.clientId !== req.user.id) {
       return res.status(403).json({ error: 'Accès non autorisé à ce projet' });
     }
 
@@ -184,9 +152,7 @@ exports.detail = async (req, res) => {
 };
 
 /* =========================================================
-   🔧 Mettre à jour un projet
-   🧭 Admin : complet
-   👤 Client : 1h après création max
+   Mise à jour d’un projet (corrected version)
 ========================================================= */
 exports.update = async (req, res) => {
   try {
@@ -198,6 +164,7 @@ exports.update = async (req, res) => {
 
     const adminOK = isAdmin(req.user);
     const clientOK = canClientEditOrDelete(project, req.user);
+
     if (!adminOK && !clientOK) {
       return res.status(403).json({
         error:
@@ -205,42 +172,24 @@ exports.update = async (req, res) => {
       });
     }
 
-    const {
-      title,
-      type,
-      description,
-      budget,
-      currency,
-      status,
-      agentId,
-    } = req.body;
+    // ⚠️ IMPORTANT : On fusionne l’ancien projet + valeurs reçues
+    const merged = {
+      title: req.body.title ?? project.title,
+      type: req.body.type ?? project.type,
+      description: req.body.description !== undefined ? req.body.description : project.description,
+      budget: req.body.budget !== undefined ? req.body.budget : project.budget,
+      currency: req.body.currency ?? project.currency,
+      status: adminOK ? (req.body.status ?? project.status) : project.status,
+      agentId: adminOK ? (req.body.agentId ?? project.agentId) : project.agentId,
+      clientId: project.clientId,
+    };
 
-    const payload = {};
-    if (title !== undefined) payload.title = title;
-    if (type !== undefined) payload.type = type;
-    if (description !== undefined) payload.description = description ?? null;
-    if (budget !== undefined) payload.budget = budget ?? null;
-    if (currency !== undefined) payload.currency = currency ?? 'XOF';
-
-    if (adminOK) {
-      if (status !== undefined) payload.status = status;
-      if (agentId !== undefined) payload.agentId = agentId || null;
-    }
-
-    await project.update(payload);
+    await project.update(merged);
 
     const updated = await Project.findByPk(project.id, {
       include: [
-        {
-          model: User,
-          as: 'client',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
-        },
-        {
-          model: User,
-          as: 'agent',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
-        },
+        { model: User, as: 'client', attributes: ['id','firstName','lastName','email','role'] },
+        { model: User, as: 'agent', attributes: ['id','firstName','lastName','email','role'] },
       ],
     });
 
@@ -258,7 +207,7 @@ exports.update = async (req, res) => {
 };
 
 /* =========================================================
-   🗑️ Supprimer un projet
+   Supprimer un projet
 ========================================================= */
 exports.remove = async (req, res) => {
   try {
@@ -266,19 +215,14 @@ exports.remove = async (req, res) => {
       return res.status(401).json({ error: 'Non authentifié' });
 
     const project = await Project.findByPk(req.params.id, {
-      include: [
-        {
-          model: User,
-          as: 'client',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
-        },
-      ],
+      include: [{ model: User, as: 'client', attributes: ['id','firstName','lastName','email'] }],
     });
 
     if (!project) return res.status(404).json({ error: 'Projet introuvable' });
 
     const adminOK = isAdmin(req.user);
     const clientOK = canClientEditOrDelete(project, req.user);
+
     if (!adminOK && !clientOK) {
       return res.status(403).json({
         error:

@@ -19,6 +19,25 @@ export const ROLE_LABELS = {
 };
 
 /* ============================================================
+   🏗 Projets
+   (aligné avec backend Project + PROJECT_STATUSES du controller)
+============================================================ */
+export const PROJECT_TYPES = {
+  immobilier: 'Immobilier',
+  agricole: 'Agricole',
+  commerce: 'Commerce',
+  autre: 'Autre',
+};
+
+export const PROJECT_STATUSES = {
+  created: 'Créé',
+  in_progress: 'En cours',
+  completed: 'Terminé',
+  validated: 'Validé',
+  cancelled: 'Annulé',
+};
+
+/* ============================================================
    🏡 Biens immobiliers
 ============================================================ */
 export const PROPERTY_TYPES = {
@@ -220,40 +239,6 @@ export function getLabel(key, map) {
 }
 
 /**
- * Formate un statut générique selon sa catégorie
- * (service, tâche, transaction, commande, produit…)
- * @param {string} key - statut technique (peut être alias)
- * @param {string} category - "service" | "task" | "transaction" | "order" | "payment" | ...
- */
-export function formatStatus(key, category = 'service') {
-  let canonical = key;
-  if (category === 'order') canonical = canonicalizeOrderStatus(key);
-  if (category === 'payment') canonical = canonicalizePaymentStatus(key);
-  if (category === 'transaction') canonical = canonicalizeTransactionStatus(key);
-
-  const maps = {
-    service: SERVICE_STATUSES,
-    task: TASK_STATUSES,
-    transaction: TRANSACTION_STATUSES,
-    order: ORDER_STATUSES,
-    payment: PAYMENT_STATUSES,
-    product: PRODUCT_STATUSES,
-    category: CATEGORY_STATUSES,
-    orderItem: ORDER_ITEM_STATUSES,
-  };
-  return getLabel(canonical, maps[category] || {});
-}
-
-/**
- * Formate une devise avec son label lisible
- * @param {string} code - ex: "XOF", "EUR"
- * @returns {string}
- */
-export function formatCurrency(code) {
-  return getLabel(code, CURRENCY_LABELS);
-}
-
-/**
  * Canonicalise un statut de commande
  */
 export function canonicalizeOrderStatus(key) {
@@ -299,60 +284,140 @@ export function canonicalizeStatus(category, key) {
 }
 
 /**
- * Enrichit un objet avec des labels prêts pour l’affichage
+ * 🔍 Détection heuristique du type d’objet pour applyLabels
+ * (pour rester rétro-compatible quand la catégorie n’est pas passée)
  */
-export function applyLabels(item) {
+function inferCategory(item) {
+  // Transaction : montant, type de transaction, orderId / projectId lié
+  if (
+    item.amount !== undefined ||
+    (item.type && TRANSACTION_TYPES[item.type]) ||
+    item.orderId !== undefined ||
+    item.projectId !== undefined
+  ) {
+    return 'transaction';
+  }
+
+  // Commande
+  if (item.orderStatus || item.paymentStatus || item.code) {
+    return 'order';
+  }
+
+  // Tâche
+  if (item.priority || item.taskStatus || item.taskId !== undefined) {
+    return 'task';
+  }
+
+  // Service
+  if (item.serviceStatus || item.serviceType || item.serviceId !== undefined) {
+    return 'service';
+  }
+
+  // Projet : budget + clientId + titre
+  if (
+    item.budget !== undefined &&
+    item.clientId !== undefined &&
+    item.title !== undefined
+  ) {
+    return 'project';
+  }
+
+  return null;
+}
+
+/**
+ * Formate un statut générique selon sa catégorie
+ * (service, tâche, transaction, commande, produit…)
+ * @param {string} key - statut technique (peut être alias)
+ * @param {string} category - "service" | "task" | "transaction" | "order" | "payment" | "project" | ...
+ */
+export function formatStatus(key, category = 'service') {
+  let canonical = key;
+  if (category === 'order') canonical = canonicalizeOrderStatus(key);
+  if (category === 'payment') canonical = canonicalizePaymentStatus(key);
+  if (category === 'transaction') canonical = canonicalizeTransactionStatus(key);
+
+  const maps = {
+    project: PROJECT_STATUSES,
+    service: SERVICE_STATUSES,
+    task: TASK_STATUSES,
+    transaction: TRANSACTION_STATUSES,
+    order: ORDER_STATUSES,
+    payment: PAYMENT_STATUSES,
+    product: PRODUCT_STATUSES,
+    category: CATEGORY_STATUSES,
+    orderItem: ORDER_ITEM_STATUSES,
+  };
+  return getLabel(canonical, maps[category] || {});
+}
+
+/**
+ * Formate une devise avec son label lisible
+ * @param {string} code - ex: "XOF", "EUR"
+ * @returns {string}
+ */
+export function formatCurrency(code) {
+  return getLabel(code, CURRENCY_LABELS);
+}
+
+/**
+ * Enrichit un objet avec des labels prêts pour l’affichage
+ * @param {object} item
+ * @param {string|null} category - optionnel ("project","transaction",...)
+ */
+export function applyLabels(item, category = null) {
   if (!item || typeof item !== 'object') return item;
   const enriched = { ...item };
 
-  // Services
-  if (item.type && SERVICE_TYPES[item.type]) {
-    enriched.typeLabel = getLabel(item.type, SERVICE_TYPES);
-  }
-  if (item.status && SERVICE_STATUSES[item.status]) {
-    enriched.statusLabel = getLabel(item.status, SERVICE_STATUSES);
-  }
+  const cat = category || inferCategory(item);
 
-  // Tâches
-  if (item.priority && TASK_PRIORITIES[item.priority]) {
-    enriched.priorityLabel = getLabel(item.priority, TASK_PRIORITIES);
-  }
-  if (item.status && TASK_STATUSES[item.status]) {
-    enriched.statusLabel = getLabel(item.status, TASK_STATUSES);
-  }
-
-  // Transactions
-  if (item.type && TRANSACTION_TYPES[item.type]) {
-    enriched.typeLabel = getLabel(item.type, TRANSACTION_TYPES);
-  }
-  if (item.status) {
-    const canonicalTxn = canonicalizeTransactionStatus(item.status);
-    if (TRANSACTION_STATUSES[canonicalTxn]) {
-      enriched.status = canonicalTxn;
-      enriched.statusLabel = getLabel(canonicalTxn, TRANSACTION_STATUSES);
+  /* ---------- Projets ---------- */
+  if (cat === 'project') {
+    if (item.type && PROJECT_TYPES[item.type]) {
+      enriched.typeLabel = getLabel(item.type, PROJECT_TYPES);
+    }
+    if (item.status && PROJECT_STATUSES[item.status]) {
+      enriched.statusLabel = getLabel(item.status, PROJECT_STATUSES);
     }
   }
-  if (item.currency && CURRENCY_LABELS[item.currency]) {
-    enriched.currencyLabel = getLabel(item.currency, CURRENCY_LABELS);
+
+  /* ---------- Services ---------- */
+  if (cat === 'service') {
+    if (item.type && SERVICE_TYPES[item.type]) {
+      enriched.typeLabel = getLabel(item.type, SERVICE_TYPES);
+    }
+    if (item.status && SERVICE_STATUSES[item.status]) {
+      enriched.statusLabel = getLabel(item.status, SERVICE_STATUSES);
+    }
   }
 
-  // Preuves
-  if (item.kind && EVIDENCE_KINDS[item.kind]) {
-    enriched.kindLabel = getLabel(item.kind, EVIDENCE_KINDS);
+  /* ---------- Tâches ---------- */
+  if (cat === 'task') {
+    if (item.priority && TASK_PRIORITIES[item.priority]) {
+      enriched.priorityLabel = getLabel(item.priority, TASK_PRIORITIES);
+    }
+    if (item.status && TASK_STATUSES[item.status]) {
+      enriched.statusLabel = getLabel(item.status, TASK_STATUSES);
+    }
   }
 
-  // Catégories
-  if (item.categoryStatus && CATEGORY_STATUSES[item.categoryStatus]) {
-    enriched.categoryStatusLabel = getLabel(item.categoryStatus, CATEGORY_STATUSES);
+  /* ---------- Transactions ---------- */
+  if (cat === 'transaction') {
+    if (item.type && TRANSACTION_TYPES[item.type]) {
+      enriched.typeLabel = getLabel(item.type, TRANSACTION_TYPES);
+    }
+    if (item.status) {
+      const canonicalTxn = canonicalizeTransactionStatus(item.status);
+      if (TRANSACTION_STATUSES[canonicalTxn]) {
+        enriched.status = canonicalTxn;
+        enriched.statusLabel = getLabel(canonicalTxn, TRANSACTION_STATUSES);
+      }
+    }
   }
 
-  // Produits
-  if (item.productStatus && PRODUCT_STATUSES[item.productStatus]) {
-    enriched.productStatusLabel = getLabel(item.productStatus, PRODUCT_STATUSES);
-  }
-
-  // Commandes
-  const rawOrderStatus = item.orderStatus || item.status;
+  /* ---------- Commandes / paiements ---------- */
+  const rawOrderStatus =
+    cat === 'order' ? item.status || item.orderStatus : item.orderStatus;
   const rawPaymentStatus = item.paymentStatus;
 
   if (rawOrderStatus) {
@@ -371,9 +436,38 @@ export function applyLabels(item) {
     }
   }
 
+  /* ---------- Commun ---------- */
+  if (item.currency && CURRENCY_LABELS[item.currency]) {
+    enriched.currencyLabel = getLabel(item.currency, CURRENCY_LABELS);
+  }
+
+  // Preuves
+  if (item.kind && EVIDENCE_KINDS[item.kind]) {
+    enriched.kindLabel = getLabel(item.kind, EVIDENCE_KINDS);
+  }
+
+  // Catégories
+  if (item.categoryStatus && CATEGORY_STATUSES[item.categoryStatus]) {
+    enriched.categoryStatusLabel = getLabel(
+      item.categoryStatus,
+      CATEGORY_STATUSES
+    );
+  }
+
+  // Produits
+  if (item.productStatus && PRODUCT_STATUSES[item.productStatus]) {
+    enriched.productStatusLabel = getLabel(
+      item.productStatus,
+      PRODUCT_STATUSES
+    );
+  }
+
   // Items de commande
   if (item.itemStatus && ORDER_ITEM_STATUSES[item.itemStatus]) {
-    enriched.itemStatusLabel = getLabel(item.itemStatus, ORDER_ITEM_STATUSES);
+    enriched.itemStatusLabel = getLabel(
+      item.itemStatus,
+      ORDER_ITEM_STATUSES
+    );
   }
 
   return enriched;
@@ -384,6 +478,8 @@ export function applyLabels(item) {
 ============================================================ */
 const Labels = {
   ROLE_LABELS,
+  PROJECT_TYPES,
+  PROJECT_STATUSES,
   PROPERTY_TYPES,
   PROPERTY_STATUSES,
   SERVICE_TYPES,

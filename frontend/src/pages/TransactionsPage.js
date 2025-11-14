@@ -7,7 +7,11 @@ import {
   getAllServicesAdmin,
 } from '../services/services';
 import api from '../services/api';
-import { applyLabels, TRANSACTION_TYPES, CURRENCY_LABELS } from '../utils/labels';
+import {
+  applyLabels,
+  TRANSACTION_TYPES,
+  CURRENCY_LABELS,
+} from '../utils/labels';
 import { Link } from 'react-router-dom';
 
 export default function TransactionsPage() {
@@ -23,7 +27,7 @@ export default function TransactionsPage() {
     return saved === null ? true : saved === '1';
   });
 
-  // 🆕 Ajout e-commerce : champ de lien commande
+  // 🆕 Champs liés aux commandes et projets
   const [form, setForm] = useState({
     type: 'expense',
     amount: '',
@@ -32,7 +36,8 @@ export default function TransactionsPage() {
     description: '',
     serviceId: '',
     taskId: '',
-    orderId: '', // 🆕
+    orderId: '',
+    projectId: '', // 🆕 Nouveau champ projet
     proofFile: null,
   });
 
@@ -42,6 +47,7 @@ export default function TransactionsPage() {
     payment: '',
     service: '',
     order: '',
+    project: '', // 🆕 Nouveau filtre projet
     sort: '-createdAt',
   });
 
@@ -88,7 +94,7 @@ export default function TransactionsPage() {
         const servs = await getAllServicesAdmin();
         setServices(servs || []);
       }
-    } catch (e) {
+    } catch {
       console.warn('ℹ️ Pas de liste services pour ce rôle.');
       setServices([]);
     }
@@ -144,20 +150,19 @@ export default function TransactionsPage() {
         serviceId: form.serviceId ? Number(form.serviceId) : undefined,
         taskId: form.taskId ? Number(form.taskId) : undefined,
         orderId: form.orderId ? Number(form.orderId) : undefined,
+        projectId: form.projectId ? Number(form.projectId) : undefined,
       };
 
-      // 🧠 Auto-alignement du statut côté front : transaction indépendante → "completed"
-      if (!payload.orderId) {
+      // 🧠 Statut : transaction indépendante (aucune commande/projet) → "completed"
+      if (!payload.orderId && !payload.projectId) {
         payload.status = 'completed';
       }
 
       const created = await createTransaction(payload);
       const labeled = applyLabels(created);
 
-      // 🔄 Mise à jour instantanée du tableau sans reload complet
       setTransactions((prev) => [labeled, ...prev]);
       alert('✅ Transaction ajoutée avec succès');
-
       resetForm();
     } catch (err) {
       const status = err?.response?.status;
@@ -182,6 +187,7 @@ export default function TransactionsPage() {
       serviceId: '',
       taskId: '',
       orderId: '',
+      projectId: '',
       proofFile: null,
     });
     setSelectedService('');
@@ -189,23 +195,37 @@ export default function TransactionsPage() {
   }
 
   /* ============================================================
+     🧾 Helper : nom d’affichage de l’utilisateur (prénom + nom ou email)
+  ============================================================ */
+  function getUserDisplayName(userObj) {
+    if (!userObj) return 'Système';
+    const fullName = `${userObj.firstName || ''} ${userObj.lastName || ''}`.trim();
+    if (fullName) return fullName;
+    if (userObj.email) return userObj.email;
+    return 'Système';
+  }
+
+  /* ============================================================
      🔍 Filtres dynamiques
   ============================================================ */
   useEffect(() => {
     let arr = [...transactions];
+    const q = filters.q.trim().toLowerCase();
 
-    if (filters.q.trim()) {
-      const q = filters.q.trim().toLowerCase();
+    if (q) {
       arr = arr.filter((t) =>
         [
           t.typeLabel,
           t.statusLabel,
           t.description,
           t.paymentMethod,
+          // 🆕 On inclut aussi le nom complet dans la recherche
           t.user?.email,
+          `${t.user?.firstName || ''} ${t.user?.lastName || ''}`,
           t.service?.title,
           t.task?.title,
           t.order?.reference || t.order?.code || (t.order ? `#${t.order.id}` : ''),
+          t.project?.title || (t.project ? `#${t.project.id}` : ''), // 🆕 recherche par projet
         ]
           .filter(Boolean)
           .join(' ')
@@ -216,13 +236,13 @@ export default function TransactionsPage() {
 
     if (filters.type) arr = arr.filter((t) => t.type === filters.type);
     if (filters.payment)
-      arr = arr.filter((t) =>
-        (t.paymentMethod || '').toLowerCase().includes(filters.payment)
-      );
+      arr = arr.filter((t) => (t.paymentMethod || '').toLowerCase().includes(filters.payment));
     if (filters.service)
       arr = arr.filter((t) => t.service?.id === parseInt(filters.service, 10));
     if (filters.order)
       arr = arr.filter((t) => t.order?.id === parseInt(filters.order, 10));
+    if (filters.project)
+      arr = arr.filter((t) => t.project?.id === parseInt(filters.project, 10)); // 🆕
 
     const by = filters.sort || '-createdAt';
     arr.sort((a, b) => {
@@ -291,7 +311,6 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-        {/* 🔍 Filtres */}
         <TransactionFilters
           filters={filters}
           setFilters={setFilters}
@@ -299,7 +318,6 @@ export default function TransactionsPage() {
           filteredCount={filtered.length}
         />
 
-        {/* ➕ Formulaire */}
         {showForm && (
           <TransactionForm
             form={form}
@@ -314,8 +332,11 @@ export default function TransactionsPage() {
           />
         )}
 
-        {/* 📜 Liste */}
-        <TransactionList transactions={filtered} loading={loading} />
+        <TransactionList
+          transactions={filtered}
+          loading={loading}
+          getUserDisplayName={getUserDisplayName}
+        />
       </div>
     </div>
   );
@@ -392,6 +413,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
               payment: '',
               service: '',
               order: '',
+              project: '',
               sort: '-createdAt',
             })
           }
@@ -404,7 +426,17 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
   );
 }
 
-function TransactionForm({ form, setForm, selectedService, handleServiceChange, tasks, services, handleSubmit, loading, user }) {
+function TransactionForm({
+  form,
+  setForm,
+  selectedService,
+  handleServiceChange,
+  tasks,
+  services,
+  handleSubmit,
+  loading,
+  user,
+}) {
   return (
     <div className="mb-10">
       <h2 className="text-lg font-semibold text-gray-800 mb-4">➕ Nouvelle transaction</h2>
@@ -414,7 +446,9 @@ function TransactionForm({ form, setForm, selectedService, handleServiceChange, 
         className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-200"
       >
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Type de transaction</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Type de transaction
+          </label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
@@ -491,6 +525,17 @@ function TransactionForm({ form, setForm, selectedService, handleServiceChange, 
           </select>
         )}
 
+        {/* 🆕 Champ projet (visible admin/agent) */}
+        {(user.role === 'admin' || user.role === 'agent') && (
+          <input
+            type="number"
+            placeholder="ID Projet (optionnel)"
+            value={form.projectId}
+            onChange={(e) => setForm({ ...form, projectId: e.target.value })}
+            className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          />
+        )}
+
         {(user.role === 'admin' || user.role === 'agent') && (
           <input
             type="number"
@@ -533,7 +578,7 @@ function TransactionForm({ form, setForm, selectedService, handleServiceChange, 
   );
 }
 
-function TransactionList({ transactions, loading }) {
+function TransactionList({ transactions, loading, getUserDisplayName }) {
   if (loading)
     return (
       <p className="text-gray-500 italic text-center py-6">
@@ -558,7 +603,8 @@ function TransactionList({ transactions, loading }) {
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                {t.typeLabel || t.type} — {Number(t.amount || 0).toLocaleString()} {t.currencyLabel || t.currency}
+                {t.typeLabel || t.type} —{' '}
+                {Number(t.amount || 0).toLocaleString()} {t.currencyLabel || t.currency}
               </h3>
               <p className="text-sm text-gray-600 mt-1">
                 Statut : <strong>{t.statusLabel || '—'}</strong>
@@ -583,10 +629,24 @@ function TransactionList({ transactions, loading }) {
                 🔧 <strong>Tâche :</strong> {t.task.title}
               </p>
             )}
+            {t.project && (
+              <p>
+                🏗️ <strong>Projet :</strong>{' '}
+                <Link
+                  to={`/projects/${t.project.id}`}
+                  className="text-blue-600 hover:underline"
+                >
+                  {t.project.title || `#${t.project.id}`}
+                </Link>
+              </p>
+            )}
             {t.order && (
               <p>
-                🧾 <strong>Commande : </strong>
-                <Link to={`/orders/${t.order.id}`} className="text-blue-600 hover:underline">
+                🧾 <strong>Commande :</strong>{' '}
+                <Link
+                  to={`/orders/${t.order.id}`}
+                  className="text-blue-600 hover:underline"
+                >
                   {t.order.code || t.order.reference || `#${t.order.id}`}
                 </Link>
               </p>
@@ -607,7 +667,7 @@ function TransactionList({ transactions, loading }) {
             <p className="mt-1 text-xs text-gray-500">
               Créée le{' '}
               <strong>{new Date(t.createdAt).toLocaleDateString()}</strong> par{' '}
-              <strong>{t.user?.email || 'Système'}</strong>
+              <strong>{getUserDisplayName(t.user)}</strong>
             </p>
           </div>
         </div>

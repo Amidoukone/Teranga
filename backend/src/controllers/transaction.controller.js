@@ -1,7 +1,7 @@
 'use strict';
 
 const { Op } = require('sequelize');
-const { Transaction, User, Service, Task, Order } = require('../../models');
+const { Transaction, User, Service, Task, Order, Project } = require('../../models');
 const {
   toSafeInt,
   toTrimOrNull,
@@ -67,7 +67,7 @@ function extractUploadFile(req) {
 }
 
 /* ============================================================
-   1️⃣ CREATE — compatible service/task/order + upload proofFile
+   1️⃣ CREATE — compatible service/task/order/project + upload proofFile
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -75,6 +75,7 @@ exports.create = async (req, res) => {
       serviceId,
       taskId,
       orderId,
+      projectId,
       type,
       amount,
       currency,
@@ -95,13 +96,16 @@ exports.create = async (req, res) => {
     const sid = toSafeInt(serviceId);
     const tid = toSafeInt(taskId);
     const oid = toSafeInt(orderId);
+    const pid = toSafeInt(projectId);
 
     let service = null,
       task = null,
-      order = null;
+      order = null,
+      project = null;
     if (sid) service = await Service.findByPk(sid);
     if (tid) task = await Task.findByPk(tid);
     if (oid) order = await Order.findByPk(oid);
+    if (pid) project = await Project.findByPk(pid);
 
     const up = extractUploadFile(req);
     const file = up
@@ -115,36 +119,52 @@ exports.create = async (req, res) => {
 
     const finalCurrency = normalizeCurrency(currency, 'XOF');
 
-    // 🧾 Détermination de l’utilisateur propriétaire
-    const ownerUserId = order ? order.userId : req.user?.id || null;
-
     /**
-     * 💡 Détermination du statut initial :
-     * - Commande payée/livrée → completed
-     * - Transaction indépendante (aucune commande) → completed
-     * - Autres cas → pending
+     * 🧾 Détermination de l’utilisateur associé à la transaction
+     *
+     * 👉 CORRECTION IMPORTANTE :
+     * - Pour les transactions liées à une COMMANDE :
+     *     userId = client de la commande (order.userId)
+     * - Pour les transactions liées à un PROJET (sans commande) :
+     *     userId = utilisateur connecté (req.user.id) = auteur réel (agent, admin, client)
+     * - Pour les autres cas :
+     *     userId = utilisateur connecté
+     *
+     * Avant : ownerUserId = order?.userId || project?.clientId || req.user?.id
+     * → ça forçait userId = client du projet, même si c’est l’agent qui crée la transaction.
      */
-    let finalStatus = 'pending';
-    if (order && ['paid', 'delivered'].includes(order.status)) {
-      finalStatus = 'completed';
-    } else if (!order) {
-      // 🟢 Toutes transactions indépendantes = complétées (admin, agent, client)
-      finalStatus = 'completed';
-    }
+    const actorUserId = req.user?.id || null; // celui qui fait réellement la transaction
+    const ownerUserId = order?.userId || actorUserId;
 
     const payload = {
       userId: ownerUserId,
       serviceId: service ? service.id : sid || null,
       taskId: task ? task.id : tid || null,
       orderId: order ? order.id : oid || null,
+      projectId: project ? project.id : pid || null,
       type: txType,
       amount: parsedAmount,
       currency: finalCurrency,
       paymentMethod: toTrimOrNull(paymentMethod),
       description: toTrimOrNull(description),
       proofFile: file,
-      status: finalStatus,
+      status: 'pending',
     };
+
+    /**
+     * 💡 Détermination du statut initial :
+     * - Commande payée/livrée → completed
+     * - Transaction liée à un projet → completed
+     * - Transaction indépendante → completed
+     * - Autres cas → pending
+     */
+    let finalStatus = 'pending';
+    if (order && ['paid', 'delivered'].includes(order.status)) {
+      finalStatus = 'completed';
+    } else if (project || !order) {
+      finalStatus = 'completed';
+    }
+    payload.status = finalStatus;
 
     // 🛡️ Admin peut forcer un autre statut manuellement
     if (status && req.user?.role === 'admin') {
@@ -164,7 +184,7 @@ exports.create = async (req, res) => {
     let created;
     if (existing) {
       existing.amount = parsedAmount;
-      if (existing.status !== 'completed' && finalStatus === 'completed') {
+      if (existing.status !== 'completed' && payload.status === 'completed') {
         existing.status = 'completed';
       }
       await existing.save();
@@ -172,7 +192,10 @@ exports.create = async (req, res) => {
     } else {
       const trx = await Transaction.create(payload);
       created = await Transaction.findByPk(trx.id, {
-        include: COMMON_INCLUDE.concat([{ model: Order, as: 'order' }]),
+        include: COMMON_INCLUDE.concat([
+          { model: Order, as: 'order' },
+          { model: Project, as: 'project' },
+        ]),
       });
     }
 
@@ -181,14 +204,12 @@ exports.create = async (req, res) => {
       .json({ message: 'Transaction enregistrée', transaction: withLabels(created) });
   } catch (e) {
     console.error('❌ Erreur création transaction:', e);
-    return res
-      .status(500)
-      .json({ error: "Erreur lors de l'ajout de la transaction" });
+    return res.status(500).json({ error: "Erreur lors de l'ajout de la transaction" });
   }
 };
 
 /* ============================================================
-   2️⃣ LIST — filtres + ACL + pagination
+   2️⃣ LIST — filtres + ACL + pagination + projectId
 ============================================================ */
 exports.list = async (req, res) => {
   try {
@@ -202,6 +223,7 @@ exports.list = async (req, res) => {
       orderId,
       serviceId,
       taskId,
+      projectId,
       minAmount,
       maxAmount,
       startDate,
@@ -217,9 +239,11 @@ exports.list = async (req, res) => {
     const oid = toSafeInt(orderId);
     const sid = toSafeInt(serviceId);
     const tid = toSafeInt(taskId);
+    const pid = toSafeInt(projectId);
     if (oid) where.orderId = oid;
     if (sid) where.serviceId = sid;
     if (tid) where.taskId = tid;
+    if (pid) where.projectId = pid;
 
     const minA = parseAmount(minAmount);
     const maxA = parseAmount(maxAmount);
@@ -230,9 +254,7 @@ exports.list = async (req, res) => {
     }
 
     if (startDate || endDate) {
-      const start = startDate
-        ? new Date(startDate)
-        : new Date('1970-01-01T00:00:00Z');
+      const start = startDate ? new Date(startDate) : new Date('1970-01-01T00:00:00Z');
       const end = endDate ? new Date(endDate) : new Date();
       where.createdAt = { [Op.between]: [start, end] };
     }
@@ -249,20 +271,23 @@ exports.list = async (req, res) => {
 
     const { limit, offset, page } = getPagination(req);
 
-    let order = [['createdAt', 'DESC']];
+    let orderBy = [['createdAt', 'DESC']];
     if (sort) {
       const s = String(sort);
       const sign = s.startsWith('-') ? 'DESC' : 'ASC';
       const key = s.replace(/^-/, '');
       if (['createdAt', 'amount', 'type', 'status'].includes(key)) {
-        order = [[key, sign]];
+        orderBy = [[key, sign]];
       }
     }
 
     const { rows, count } = await Transaction.findAndCountAll({
       where,
-      include: COMMON_INCLUDE.concat([{ model: Order, as: 'order' }]),
-      order,
+      include: COMMON_INCLUDE.concat([
+        { model: Order, as: 'order' },
+        { model: Project, as: 'project' },
+      ]),
+      order: orderBy,
       limit,
       offset,
       distinct: true,
@@ -272,14 +297,12 @@ exports.list = async (req, res) => {
     res.json({ transactions: enriched, pagination: { page, limit, total: count } });
   } catch (e) {
     console.error('❌ Erreur list transactions:', e);
-    res
-      .status(500)
-      .json({ error: 'Erreur lors de la récupération des transactions' });
+    res.status(500).json({ error: 'Erreur lors de la récupération des transactions' });
   }
 };
 
 /* ============================================================
-   3️⃣ DETAIL — inclut order + ACL
+   3️⃣ DETAIL — inclut order + project + ACL
 ============================================================ */
 exports.detail = async (req, res) => {
   try {
@@ -287,7 +310,10 @@ exports.detail = async (req, res) => {
     if (!id) return res.status(400).json({ error: 'ID invalide' });
 
     const trx = await Transaction.findByPk(id, {
-      include: COMMON_INCLUDE.concat([{ model: Order, as: 'order' }]),
+      include: COMMON_INCLUDE.concat([
+        { model: Order, as: 'order' },
+        { model: Project, as: 'project' },
+      ]),
     });
     if (!trx) return res.status(404).json({ error: 'Transaction introuvable' });
 
@@ -297,14 +323,12 @@ exports.detail = async (req, res) => {
     res.json({ transaction: withLabels(trx) });
   } catch (e) {
     console.error('❌ Erreur détail transaction:', e);
-    res
-      .status(500)
-      .json({ error: 'Erreur lors de la récupération de la transaction' });
+    res.status(500).json({ error: 'Erreur lors de la récupération de la transaction' });
   }
 };
 
 /* ============================================================
-   4️⃣ UPDATE — admin/propriétaire + sync client/order
+   4️⃣ UPDATE — admin/propriétaire + sync client/order/project
 ============================================================ */
 exports.update = async (req, res) => {
   try {
@@ -312,7 +336,10 @@ exports.update = async (req, res) => {
     if (!id) return res.status(400).json({ error: 'ID invalide' });
 
     const trx = await Transaction.findByPk(id, {
-      include: COMMON_INCLUDE.concat([{ model: Order, as: 'order' }]),
+      include: COMMON_INCLUDE.concat([
+        { model: Order, as: 'order' },
+        { model: Project, as: 'project' },
+      ]),
     });
     if (!trx) return res.status(404).json({ error: 'Transaction introuvable' });
 
@@ -325,6 +352,7 @@ exports.update = async (req, res) => {
       status,
       currency,
       orderId,
+      projectId,
       serviceId,
       taskId,
       type,
@@ -358,6 +386,30 @@ exports.update = async (req, res) => {
         trx.userId = newOrder.userId;
       } else {
         trx.orderId = null;
+      }
+    }
+
+    // 🏗️ Si changement de projet
+    if (projectId !== undefined) {
+      const newPid = toSafeInt(projectId);
+      if (newPid) {
+        const newProject = await Project.findByPk(newPid);
+        if (!newProject)
+          return res.status(400).json({ error: 'Projet cible introuvable' });
+        trx.projectId = newProject.id;
+
+        /**
+         * ❗️CORRECTION IMPORTANTE :
+         * Avant : trx.userId = newProject.clientId || trx.userId;
+         * → Cela écrasait l'auteur réel par le client du projet.
+         *
+         * Maintenant :
+         * - On NE touche PAS à trx.userId ici.
+         * - userId continue de représenter celui qui a créé la transaction.
+         * - Les clients gardent l'accès grâce à l'ACL ($project.clientId$).
+         */
+      } else {
+        trx.projectId = null;
       }
     }
 
@@ -404,7 +456,10 @@ exports.update = async (req, res) => {
     await trx.save();
 
     const updated = await Transaction.findByPk(trx.id, {
-      include: COMMON_INCLUDE.concat([{ model: Order, as: 'order' }]),
+      include: COMMON_INCLUDE.concat([
+        { model: Order, as: 'order' },
+        { model: Project, as: 'project' },
+      ]),
     });
 
     res.json({ message: 'Transaction mise à jour', transaction: withLabels(updated) });
@@ -436,12 +491,12 @@ exports.remove = async (req, res) => {
     res.json({ message: 'Transaction supprimée' });
   } catch (e) {
     console.error('❌ Erreur suppression transaction:', e);
-    res.status(500).json({ error: 'Erreur lors de la suppression' });
+    res.status(500).json({ error: 'Erreur lors de la suppression du fichier' });
   }
 };
 
 /* ============================================================
-   6️⃣ SUMMARY / 7️⃣ REPORT / 8️⃣ LIST BY ORDER (inchangés)
+   6️⃣ SUMMARY / 7️⃣ REPORT / 8️⃣ LIST BY ORDER — inchangés
 ============================================================ */
 exports.summary = async (_req, res) => {
   try {
@@ -473,6 +528,7 @@ exports.report = async (req, res) => {
       include: [
         { model: User, as: 'user', attributes: ['id', 'email', 'role'] },
         { model: Order, as: 'order', attributes: ['id', 'code', 'status'] },
+        { model: Project, as: 'project', attributes: ['id', 'title', 'status'] },
       ],
       order: [['createdAt', 'ASC']],
     });
@@ -524,8 +580,6 @@ exports.listByOrder = async (req, res) => {
     res.json({ transactions: enriched, pagination: { page, limit, total: count } });
   } catch (e) {
     console.error('❌ Erreur listByOrder transactions:', e);
-    res
-      .status(500)
-      .json({ error: "Erreur lors de la récupération des transactions de l'ordre" });
+    res.status(500).json({ error: "Erreur lors de la récupération des transactions de l'ordre" });
   }
 };

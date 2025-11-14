@@ -9,8 +9,9 @@ import {
   deleteProject,
   assignAgentToProject,
 } from '../services/projects';
+import { createTransaction } from '../services/transactions'; // 🆕 créer une transaction liée au projet
 import api from '../services/api';
-import { applyLabels } from '../utils/labels';
+import { applyLabels, CURRENCY_LABELS } from '../utils/labels';
 
 /* ============================================================
    🔧 Config UI (labels + styles)
@@ -32,11 +33,11 @@ const PROJECT_STATUSES = [
 
 // Couleurs de badges pour statuts
 const STATUS_STYLES = {
-  created:    { bg: 'bg-slate-100',   text: 'text-slate-700',   ring: 'ring-slate-200' },
-  in_progress:{ bg: 'bg-blue-100',    text: 'text-blue-700',    ring: 'ring-blue-200' },
-  completed:  { bg: 'bg-emerald-100', text: 'text-emerald-700', ring: 'ring-emerald-200' },
-  validated:  { bg: 'bg-indigo-100',  text: 'text-indigo-700',  ring: 'ring-indigo-200' },
-  cancelled:  { bg: 'bg-red-100',     text: 'text-red-700',     ring: 'ring-red-200' },
+  created: { bg: 'bg-slate-100', text: 'text-slate-700', ring: 'ring-slate-200' },
+  in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', ring: 'ring-blue-200' },
+  completed: { bg: 'bg-emerald-100', text: 'text-emerald-700', ring: 'ring-emerald-200' },
+  validated: { bg: 'bg-indigo-100', text: 'text-indigo-700', ring: 'ring-indigo-200' },
+  cancelled: { bg: 'bg-red-100', text: 'text-red-700', ring: 'ring-red-200' },
 };
 
 /** ⏱️ Helper : vrai si la date est dans la dernière heure */
@@ -55,6 +56,21 @@ function canEditDelete(project, user) {
   return false;
 }
 
+/** 🔐 Helper : l’utilisateur peut-il créer une transaction liée au projet ?
+ *
+ *  👉 Mise à jour : on cache la transaction aux AGENTS.
+ *  - Admin : OUI
+ *  - Client propriétaire du projet : OUI
+ *  - Agent (assigné) : NON ici sur cette page
+ */
+function canCreateProjectTransaction(project, user) {
+  if (!user || !project) return false;
+  if (user.role === 'admin') return true;
+  if (user.role === 'client' && project.client?.id === user.id) return true;
+  // ❌ plus de condition pour agent
+  return false;
+}
+
 /* ============================================================
    🧩 Composants UI
 ============================================================ */
@@ -69,9 +85,14 @@ function Btn({
   size = 'md',
 }) {
   const base =
-    'inline-flex items-center justify-center font-semibold rounded-xl shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center font-semibold rounded-xl shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed whitespace-normal break-words text-center';
 
-  const sizes = size === 'sm' ? 'text-sm px-3 py-1.5' : 'text-sm px-4 py-2';
+  const sizesMap = {
+    md: 'text-sm px-4 py-2',
+    sm: 'text-sm px-3 py-1.5',
+    xs: 'text-xs px-2.5 py-1',
+  };
+  const sizes = sizesMap[size] || sizesMap.md;
 
   const variants = {
     primary:
@@ -104,7 +125,7 @@ function StatusBadge({ value }) {
   const label = PROJECT_STATUSES.find((st) => st.value === value)?.label || value;
   return (
     <span
-      className={`inline-flex items-center gap-1 ${s.bg} ${s.text} ${s.ring} ring-1 px-2.5 py-0.5 rounded-full text-xs font-medium shadow-sm`}
+      className={`inline-flex items-center gap-1 ${s.bg} ${s.text} ${s.ring} ring-1 px-2.5 py-0.5 rounded-full text-xs font-medium shadow-sm whitespace-normal break-words max-w-full`}
       aria-label={`Statut ${label}`}
     >
       ● {label}
@@ -114,6 +135,186 @@ function StatusBadge({ value }) {
 
 function FieldRow({ children }) {
   return <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>;
+}
+
+/* ============================================================
+   🧩 Formulaire inline de transaction liée à un projet
+============================================================ */
+function TransactionInlineForm({
+  project,
+  currentUser,
+  onClose,
+  onSuccess,
+}) {
+  const [form, setForm] = useState({
+    type: 'expense',
+    amount: '',
+    currency: 'XOF',
+    paymentMethod: '',
+    description: '',
+    orderId: '', // visible admin/agent
+    proofFile: null, // upload pièce jointe
+  });
+  const [saving, setSaving] = useState(false);
+
+  const canSeeOrder =
+    currentUser?.role === 'admin' || currentUser?.role === 'agent';
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!project?.id) return;
+    try {
+      setSaving(true);
+
+      const payload = {
+        type: form.type,
+        amount: form.amount === '' ? undefined : Number(form.amount),
+        currency: form.currency || 'XOF',
+        paymentMethod: form.paymentMethod || undefined,
+        description: form.description || undefined,
+        orderId: form.orderId ? Number(form.orderId) : undefined,
+        projectId: Number(project.id), // ⭐️ rattachement projet
+        proofFile: form.proofFile || undefined,
+      };
+
+      // IMPORTANT :
+      // - On ne force PAS le statut ici: le backend a une règle:
+      //   * transaction indépendante (ni orderId, ni projectId) => completed
+      //   * liée à un projet OU une commande => backend décide (souvent "pending")
+      await createTransaction(payload);
+
+      alert('✅ Transaction liée au projet créée avec succès');
+      onSuccess?.();
+      onClose?.();
+    } catch (err) {
+      console.error('❌ Erreur création transaction projet:', err);
+      alert(
+        err?.response?.data?.error ||
+          err?.message ||
+          'Erreur lors de la création de la transaction.'
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 bg-gray-50 border border-gray-200 rounded-xl p-4 overflow-hidden">
+      <h4 className="text-sm font-semibold text-gray-800 mb-3 whitespace-normal break-words">
+        💰 Nouvelle transaction pour le projet :{' '}
+        <span className="font-bold">
+          {project?.title || `#${project?.id}`}
+        </span>
+      </h4>
+
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+          <select
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="expense">Dépense</option>
+            <option value="revenue">Revenu</option>
+            <option value="commission">Commission</option>
+            <option value="adjustment">Ajustement</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Montant</label>
+          <input
+            type="number"
+            step="0.01"
+            placeholder="Ex : 50000"
+            value={form.amount}
+            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+            required
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Devise</label>
+          <select
+            value={form.currency}
+            onChange={(e) => setForm({ ...form, currency: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            {Object.entries(CURRENCY_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Méthode de paiement
+          </label>
+          <input
+            placeholder="Ex : Orange Money, Virement…"
+            value={form.paymentMethod}
+            onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {canSeeOrder && (
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              ID Commande (optionnel)
+            </label>
+            <input
+              type="number"
+              placeholder="Ex : 1024"
+              value={form.orderId}
+              onChange={(e) => setForm({ ...form, orderId: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        )}
+
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Description
+          </label>
+          <textarea
+            rows={3}
+            placeholder="Notes, détails…"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
+          />
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Preuve (image/PDF)
+          </label>
+          <input
+            type="file"
+            accept=".jpg,.jpeg,.png,.pdf"
+            onChange={(e) =>
+              setForm({ ...form, proofFile: e.target.files?.[0] || null })
+            }
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 bg-white"
+          />
+        </div>
+
+        <div className="sm:col-span-2 flex justify-end gap-2 flex-wrap">
+          <Btn type="button" variant="secondary" size="sm" onClick={onClose}>
+            Annuler
+          </Btn>
+          <Btn type="submit" variant="primary" size="sm" disabled={saving}>
+            {saving ? 'Enregistrement…' : '💾 Enregistrer'}
+          </Btn>
+        </div>
+      </form>
+    </div>
+  );
 }
 
 /* ============================================================
@@ -144,6 +345,9 @@ export default function ProjectsPage() {
     status: '',
     sort: '-createdAt',
   });
+
+  // 🆕 état pour afficher/masquer le formulaire transaction d'un projet donné
+  const [openTrxProjectId, setOpenTrxProjectId] = useState(null);
 
   const navigate = useNavigate();
   const isMounted = useRef(true);
@@ -217,7 +421,7 @@ export default function ProjectsPage() {
       } catch (err) {
         console.error('❌ Erreur chargement user:', err);
         setUser(null);
-        setErrorMsg('Erreur lors du chargement de l’utilisateur.');
+        setErrorMsg("Erreur lors du chargement de l’utilisateur.");
       } finally {
         setLoading(false);
       }
@@ -272,22 +476,36 @@ export default function ProjectsPage() {
 
   async function handleAssign(projectId, agentId) {
     try {
-      await assignAgentToProject(projectId, agentId);
+      await assignAgentToProject(projectId, agentId ? Number(agentId) : null);
       alert('✅ Agent assigné avec succès');
       await loadForUser(user);
     } catch (err) {
       console.error('❌ Erreur assignation agent:', err);
-      alert('Erreur lors de l’assignation.');
+      alert("Erreur lors de l’assignation.");
     }
   }
 
+  // ✅ Correction : envoi d'un payload COMPLET pour ne pas écraser budget & co
   async function handleStatusChange(projectId, newStatus) {
     try {
-      await updateProject(projectId, { status: newStatus });
+      const proj = projects.find((p) => p.id === projectId);
+      if (!proj) return;
+
+      const payload = {
+        title: proj.title || '',
+        description: proj.description || '',
+        budget: proj.budget ?? '',
+        status: newStatus,
+        type: proj.type || 'autre',
+        clientId: proj.clientId ?? proj.client?.id ?? undefined,
+        agentId: proj.agentId ?? proj.agent?.id ?? undefined,
+      };
+
+      await updateProject(projectId, payload);
       await loadForUser(user);
       alert('✅ Statut mis à jour avec succès');
     } catch (err) {
-      console.error('❌ Erreur mise à jour statut:', err);
+      console.error('❌ Erreur mise à jour du statut:', err);
       alert('Erreur lors de la mise à jour du statut.');
     }
   }
@@ -381,7 +599,7 @@ export default function ProjectsPage() {
             <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-2">
               📁 Projets
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 whitespace-normal break-words">
               {user?.role === 'admin'
                 ? 'Gérez tous les projets des clients.'
                 : user?.role === 'agent'
@@ -392,12 +610,13 @@ export default function ProjectsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {canCreate && (
               <Btn
                 onClick={() => setShowForm((v) => !v)}
                 variant="ghost"
                 title={showForm ? 'Masquer le formulaire' : 'Créer un nouveau projet'}
+                size="sm"
               >
                 {showForm ? '➖ Masquer' : '➕ Nouveau projet'}
               </Btn>
@@ -407,6 +626,7 @@ export default function ProjectsPage() {
               disabled={loading || !user}
               variant="primary"
               title="Rafraîchir la liste"
+              size="sm"
             >
               🔄 Rafraîchir
             </Btn>
@@ -458,6 +678,7 @@ export default function ProjectsPage() {
               onClick={() => setFilters({ q: '', status: '', sort: '-createdAt' })}
               variant="secondary"
               title="Réinitialiser les filtres"
+              size="sm"
             >
               Réinitialiser
             </Btn>
@@ -564,23 +785,24 @@ export default function ProjectsPage() {
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 aria-label="Description"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
                 rows={3}
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-2 flex-wrap">
               {editId && (
                 <Btn
                   type="button"
                   onClick={resetForm}
                   variant="secondary"
                   title="Annuler la modification"
+                  size="sm"
                 >
                   Annuler
                 </Btn>
               )}
-              <Btn type="submit" variant="primary" title="Enregistrer le projet">
+              <Btn type="submit" variant="primary" title="Enregistrer le projet" size="sm">
                 {editId ? '💾 Enregistrer' : '➕ Créer'}
               </Btn>
             </div>
@@ -596,17 +818,19 @@ export default function ProjectsPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((p) => {
               const allowEditDelete = canEditDelete(p, user);
-              const canChangeStatus =
-                user?.role === 'admin' ||
-                (user?.role === 'agent' && p.agent?.id === user.id);
+              // 🔒 seul l'admin peut changer le statut (cohérent backend + page détail)
+              const canChangeStatus = user?.role === 'admin';
+              const canCreateTrx = canCreateProjectTransaction(p, user);
+
+              const isTrxOpen = openTrxProjectId === p.id;
 
               return (
                 <div
                   key={p.id}
-                  className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-lg transition-all p-5 flex flex-col"
+                  className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-lg transition-all p-5 flex flex-col overflow-hidden"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-lg font-semibold text-gray-900 break-words">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <h3 className="text-lg font-semibold text-gray-900 break-words whitespace-normal flex-1 min-w-0">
                       {p.title}
                     </h3>
 
@@ -617,7 +841,7 @@ export default function ProjectsPage() {
                           value={p.status}
                           onChange={(e) => handleStatusChange(p.id, e.target.value)}
                           aria-label="Changer le statut"
-                          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
+                          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 max-w-full"
                           title="Changer le statut"
                         >
                           {PROJECT_STATUSES.map((s) => (
@@ -641,20 +865,22 @@ export default function ProjectsPage() {
 
                   {/* ✅ Noms sans e-mail */}
                   {p.client && (
-                    <p className="text-xs text-gray-700 mt-2">
+                    <p className="text-xs text-gray-700 mt-2 whitespace-normal break-words">
                       👤 <span className="font-medium">Client</span> : {p.client.firstName}{' '}
                       {p.client.lastName}
                     </p>
                   )}
                   {p.agent && (
-                    <p className="text-xs text-gray-700 mt-1">
+                    <p className="text-xs text-gray-700 mt-1 whitespace-normal break-words">
                       🧑‍💼 <span className="font-medium">Agent</span> : {p.agent.firstName}{' '}
                       {p.agent.lastName}
                     </p>
                   )}
 
                   {p.description && (
-                    <p className="text-sm text-gray-700 mt-3">{p.description}</p>
+                    <p className="text-sm text-gray-700 mt-3 whitespace-normal break-words">
+                      {p.description}
+                    </p>
                   )}
 
                   {p.budget && (
@@ -665,57 +891,84 @@ export default function ProjectsPage() {
                   )}
 
                   {/* 🔹 Actions */}
-                  <div className="mt-4 flex flex-wrap gap-2 justify-end items-center">
-                    <div className="mr-auto">
-                      {/* ✅ Sélecteur d’agent pour admin (noms sans e-mail) */}
-                      {user?.role === 'admin' && (
-                        <select
-                          value={p.agent?.id || ''}
-                          onChange={(e) => handleAssign(p.id, e.target.value)}
-                          aria-label="Assigner un agent"
-                          className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
-                          title="Assigner un agent"
+                  <div className="mt-4 flex flex-wrap gap-2 items-center">
+                    {/* ✅ Sélecteur d’agent pour admin (noms sans e-mail) */}
+                    {user?.role === 'admin' && (
+                      <select
+                        value={p.agent?.id || ''}
+                        onChange={(e) => handleAssign(p.id, e.target.value)}
+                        aria-label="Assigner un agent"
+                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 max-w-full"
+                        title="Assigner un agent"
+                      >
+                        <option value="">— Assigner agent —</option>
+                        {agents.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.firstName} {a.lastName}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
+                    <div className="ml-auto flex flex-wrap gap-2 justify-end">
+                      <Btn
+                        onClick={() => navigate(`/projects/${p.id}`)}
+                        variant="primary"
+                        size="sm"
+                        title="Voir les détails du projet"
+                      >
+                        📂 Détails
+                      </Btn>
+
+                      {/* 💰 Transaction : maintenant visible UNIQUEMENT pour admin + client */}
+                      {canCreateTrx && (
+                        <Btn
+                          onClick={() =>
+                            setOpenTrxProjectId(isTrxOpen ? null : p.id)
+                          }
+                          variant="ghost"
+                          size="sm"
+                          title="Ajouter une transaction liée à ce projet"
                         >
-                          <option value="">— Assigner agent —</option>
-                          {agents.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.firstName} {a.lastName}
-                            </option>
-                          ))}
-                        </select>
+                          {isTrxOpen ? '➖ Annuler' : '💰 Transaction'}
+                        </Btn>
+                      )}
+
+                      {(user?.role === 'admin' || allowEditDelete) && (
+                        <>
+                          <Btn
+                            onClick={() => handleEditClick(p)}
+                            variant="warning"
+                            size="xs"
+                            title="Modifier ce projet"
+                          >
+                            ✏️ Modifier
+                          </Btn>
+                          <Btn
+                            onClick={() => handleDelete(p.id)}
+                            variant="danger"
+                            size="xs"
+                            title="Supprimer ce projet"
+                          >
+                            ❌ Supprimer
+                          </Btn>
+                        </>
                       )}
                     </div>
-
-                    <Btn
-                      onClick={() => navigate(`/projects/${p.id}`)}
-                      variant="primary"
-                      size="sm"
-                      title="Voir les détails du projet"
-                    >
-                      📂 Détails
-                    </Btn>
-
-                    {(user?.role === 'admin' || allowEditDelete) && (
-                      <>
-                        <Btn
-                          onClick={() => handleEditClick(p)}
-                          variant="warning"
-                          size="sm"
-                          title="Modifier ce projet"
-                        >
-                          ✏️ Modifier
-                        </Btn>
-                        <Btn
-                          onClick={() => handleDelete(p.id)}
-                          variant="danger"
-                          size="sm"
-                          title="Supprimer ce projet"
-                        >
-                          ❌ Supprimer
-                        </Btn>
-                      </>
-                    )}
                   </div>
+
+                  {/* 🧾 Formulaire inline de transaction liée au projet
+                      (on garde la même condition canCreateTrx, donc jamais pour agent) */}
+                  {isTrxOpen && canCreateTrx && (
+                    <TransactionInlineForm
+                      project={p}
+                      currentUser={user}
+                      onClose={() => setOpenTrxProjectId(null)}
+                      onSuccess={() => {
+                        // La liste des projets reste la même, pas de reload obligatoire ici.
+                      }}
+                    />
+                  )}
                 </div>
               );
             })}
