@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { me, logout } from '../services/auth';
-import { Menu, X, LogOut, Home, ShoppingBag } from 'lucide-react';
+import { Menu, X, LogOut, Home } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
@@ -9,12 +9,8 @@ import { motion, AnimatePresence } from 'framer-motion';
  * 🧭 NavBar — version mise à jour complète
  * ============================================================
  * - Gère tous les rôles : admin, agent, client
- * - Intègre les nouvelles routes :
- *    • /shop → Catalogue produits
- *    • /orders → Commandes
- *    • /admin/catalog/categories
- *    • /admin/catalog/products
  * - Cohérente avec App.js et les pages commerce
+ * - 🔥 Mise à jour : suppression de l’onglet "Produits" pour les visiteurs publics
  * ============================================================
  */
 
@@ -63,6 +59,7 @@ export default function NavBar() {
 
   /* ============================================================
      🌍 Mode PUBLIC (non connecté)
+     🔥 Mise à jour : RETIRER l’onglet "Produits"
   ============================================================ */
   const publicPaths = ['/', '/login', '/register', '/shop', '/products'];
   const isPublic = publicPaths.some(
@@ -85,14 +82,8 @@ export default function NavBar() {
         </Link>
 
         <div className="flex items-center gap-5">
-          <Link
-            to="/shop"
-            className={`flex items-center gap-1 text-sm hover:text-cyan-400 transition ${
-              isActive('/shop') ? 'text-cyan-400' : ''
-            }`}
-          >
-            <ShoppingBag size={16} /> Produits
-          </Link>
+          {/* 🔥 Onglet Produits supprimé ici */}
+          
           <Link
             to="/login"
             className={`hover:text-cyan-400 transition font-medium text-sm ${
@@ -114,6 +105,7 @@ export default function NavBar() {
 
   /* ============================================================
      🔒 Liens selon le rôle utilisateur
+     (commerceLinksCommon reste intact → pas touché)
   ============================================================ */
   const commerceLinksCommon = [
     { path: '/shop', label: '🛍️ Produits' },
@@ -164,7 +156,7 @@ export default function NavBar() {
     location.pathname === path || location.pathname.startsWith(path + '/');
 
   /* ============================================================
-     ✨ Rendu principal
+     ✨ Rendu principal (inchangé)
   ============================================================ */
   return (
     <motion.nav

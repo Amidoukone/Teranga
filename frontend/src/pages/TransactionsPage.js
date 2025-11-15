@@ -1,3 +1,4 @@
+// frontend/src/pages/TransactionsPage.jsx
 import { useEffect, useState } from 'react';
 import { getTransactions, createTransaction } from '../services/transactions';
 import { me } from '../services/auth';
@@ -14,20 +15,35 @@ import {
 } from '../utils/labels';
 import { Link } from 'react-router-dom';
 
+/**
+ * ============================================================
+ * 💰 TransactionsPage — VERSION PREMIUM RESPONSIVE (Option B)
+ * ============================================================
+ * - Design mobile-first 100% optimisé
+ * - Cartes verticales lisibles (type mobile banking)
+ * - Layout premium cohérent Clean Shop
+ * - Affectations : services / tâches / commandes / projets
+ * - Identité utilisateur fallback : first+last → name → email → "—"
+ * ============================================================
+ */
+
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState([]);
   const [filtered, setFiltered] = useState([]);
+
   const [services, setServices] = useState([]);
   const [tasks, setTasks] = useState([]);
+
   const [selectedService, setSelectedService] = useState('');
+
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
+
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_transactions_showForm');
     return saved === null ? true : saved === '1';
   });
 
-  // 🆕 Champs liés aux commandes et projets
   const [form, setForm] = useState({
     type: 'expense',
     amount: '',
@@ -37,7 +53,7 @@ export default function TransactionsPage() {
     serviceId: '',
     taskId: '',
     orderId: '',
-    projectId: '', // 🆕 Nouveau champ projet
+    projectId: '',
     proofFile: null,
   });
 
@@ -47,7 +63,7 @@ export default function TransactionsPage() {
     payment: '',
     service: '',
     order: '',
-    project: '', // 🆕 Nouveau filtre projet
+    project: '',
     sort: '-createdAt',
   });
 
@@ -59,16 +75,14 @@ export default function TransactionsPage() {
       try {
         const userData = await me();
         setUser(userData.user);
-        await loadServicesForRole(userData.user);
+
+        await loadServicesByRole(userData.user);
         await loadTransactions();
       } catch (err) {
-        const status = err?.response?.status;
-        if (status === 401) {
+        if (err?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
           window.location.href = '/login';
-        } else {
-          console.error('❌ Erreur init TransactionsPage:', err);
         }
       }
     }
@@ -80,100 +94,83 @@ export default function TransactionsPage() {
   }, [showForm]);
 
   /* ============================================================
-     🔹 Chargement dynamique
+     🔹 Services selon rôle
   ============================================================ */
-  async function loadServicesForRole(u) {
+  async function loadServicesByRole(u) {
     try {
-      if (u.role === 'client') {
-        const servs = await getMyServices();
-        setServices(servs || []);
-      } else if (u.role === 'agent') {
-        const servs = await getAgentServices();
-        setServices(servs || []);
-      } else if (u.role === 'admin') {
-        const servs = await getAllServicesAdmin();
-        setServices(servs || []);
-      }
+      let servs = [];
+      if (u.role === 'client') servs = await getMyServices();
+      else if (u.role === 'agent') servs = await getAgentServices();
+      else if (u.role === 'admin') servs = await getAllServicesAdmin();
+
+      setServices(servs || []);
     } catch {
-      console.warn('ℹ️ Pas de liste services pour ce rôle.');
       setServices([]);
     }
   }
 
+  /* ============================================================
+     🔹 Transactions
+  ============================================================ */
   async function loadTransactions() {
     setLoading(true);
     try {
       const data = await getTransactions();
       const labeled = data.map((t) => (t.statusLabel ? t : applyLabels(t)));
       setTransactions(labeled);
-    } catch (err) {
-      const status = err?.response?.status;
-      if (status === 401) {
-        localStorage.removeItem('teranga_token');
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-      } else {
-        console.error('❌ Erreur chargement transactions:', err);
-        alert('Erreur lors du chargement des transactions.');
-      }
+    } catch {
+      alert('Erreur lors du chargement des transactions.');
     } finally {
       setLoading(false);
     }
   }
 
+  /* ============================================================
+     🔹 Service → tâches dynamiques
+  ============================================================ */
   async function handleServiceChange(e) {
     const serviceId = e.target.value;
     setSelectedService(serviceId);
+
     setForm((f) => ({ ...f, serviceId, taskId: '' }));
 
-    if (serviceId) {
-      try {
-        const { data } = await api.get(`/tasks/service/${serviceId}`);
-        setTasks(data.tasks || []);
-      } catch {
-        setTasks([]);
-      }
-    } else {
+    if (!serviceId) return setTasks([]);
+
+    try {
+      const { data } = await api.get(`/tasks/service/${serviceId}`);
+      setTasks(data.tasks || []);
+    } catch {
       setTasks([]);
     }
   }
 
   /* ============================================================
-     🔹 Soumission formulaire
+     🔹 Soumission transaction
   ============================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
     try {
       const payload = {
         ...form,
-        amount: form.amount === '' ? undefined : Number(form.amount),
+        amount: form.amount ? Number(form.amount) : undefined,
         serviceId: form.serviceId ? Number(form.serviceId) : undefined,
         taskId: form.taskId ? Number(form.taskId) : undefined,
         orderId: form.orderId ? Number(form.orderId) : undefined,
         projectId: form.projectId ? Number(form.projectId) : undefined,
       };
 
-      // 🧠 Statut : transaction indépendante (aucune commande/projet) → "completed"
       if (!payload.orderId && !payload.projectId) {
         payload.status = 'completed';
       }
 
       const created = await createTransaction(payload);
       const labeled = applyLabels(created);
-
       setTransactions((prev) => [labeled, ...prev]);
+
       alert('✅ Transaction ajoutée avec succès');
       resetForm();
-    } catch (err) {
-      const status = err?.response?.status;
-      if (status === 401) {
-        localStorage.removeItem('teranga_token');
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-      } else {
-        console.error('❌ Erreur ajout transaction:', err);
-        alert("Erreur lors de l'ajout de la transaction");
-      }
+    } catch {
+      alert("Erreur lors de l'ajout de la transaction.");
     }
   }
 
@@ -190,23 +187,26 @@ export default function TransactionsPage() {
       projectId: '',
       proofFile: null,
     });
-    setSelectedService('');
     setTasks([]);
+    setSelectedService('');
   }
 
   /* ============================================================
-     🧾 Helper : nom d’affichage de l’utilisateur (prénom + nom ou email)
+     🔹 Fallback identité
   ============================================================ */
-  function getUserDisplayName(userObj) {
-    if (!userObj) return 'Système';
-    const fullName = `${userObj.firstName || ''} ${userObj.lastName || ''}`.trim();
-    if (fullName) return fullName;
-    if (userObj.email) return userObj.email;
-    return 'Système';
+  function getUserDisplayName(u) {
+    if (!u) return '—';
+    const fn = u.firstName || u.firstname || '';
+    const ln = u.lastName || u.lastname || '';
+    const full = `${fn} ${ln}`.trim();
+    if (full) return full;
+    if (u.name) return u.name;
+    if (u.email) return u.email;
+    return '—';
   }
 
   /* ============================================================
-     🔍 Filtres dynamiques
+     🔍 Filtres premium
   ============================================================ */
   useEffect(() => {
     let arr = [...transactions];
@@ -219,13 +219,11 @@ export default function TransactionsPage() {
           t.statusLabel,
           t.description,
           t.paymentMethod,
-          // 🆕 On inclut aussi le nom complet dans la recherche
-          t.user?.email,
-          `${t.user?.firstName || ''} ${t.user?.lastName || ''}`,
+          getUserDisplayName(t.user),
           t.service?.title,
           t.task?.title,
-          t.order?.reference || t.order?.code || (t.order ? `#${t.order.id}` : ''),
-          t.project?.title || (t.project ? `#${t.project.id}` : ''), // 🆕 recherche par projet
+          t.order?.code || t.order?.reference || (t.order ? `#${t.order.id}` : ''),
+          t.project?.title || (t.project ? `#${t.project.id}` : ''),
         ]
           .filter(Boolean)
           .join(' ')
@@ -237,28 +235,26 @@ export default function TransactionsPage() {
     if (filters.type) arr = arr.filter((t) => t.type === filters.type);
     if (filters.payment)
       arr = arr.filter((t) => (t.paymentMethod || '').toLowerCase().includes(filters.payment));
-    if (filters.service)
-      arr = arr.filter((t) => t.service?.id === parseInt(filters.service, 10));
-    if (filters.order)
-      arr = arr.filter((t) => t.order?.id === parseInt(filters.order, 10));
-    if (filters.project)
-      arr = arr.filter((t) => t.project?.id === parseInt(filters.project, 10)); // 🆕
+    if (filters.service) arr = arr.filter((t) => t.service?.id === Number(filters.service));
+    if (filters.order) arr = arr.filter((t) => t.order?.id === Number(filters.order));
+    if (filters.project) arr = arr.filter((t) => t.project?.id === Number(filters.project));
 
     const by = filters.sort || '-createdAt';
     arr.sort((a, b) => {
       const sign = by.startsWith('-') ? -1 : 1;
       const key = by.replace(/^-/, '');
-      let va, vb;
+
+      let va = a[key];
+      let vb = b[key];
+
       if (key === 'createdAt') {
         va = new Date(a.createdAt).getTime();
         vb = new Date(b.createdAt).getTime();
       } else if (key === 'amount') {
-        va = Number(a.amount || 0);
-        vb = Number(b.amount || 0);
-      } else {
-        va = a[key];
-        vb = b[key];
+        va = Number(a.amount);
+        vb = Number(b.amount);
       }
+
       if (va < vb) return -1 * sign;
       if (va > vb) return 1 * sign;
       return 0;
@@ -268,7 +264,7 @@ export default function TransactionsPage() {
   }, [transactions, filters]);
 
   /* ============================================================
-     🔹 UI principale
+     🔹 UI PRINCIPALE — PREMIUM RESPONSIVE
   ============================================================ */
   if (!user)
     return (
@@ -278,14 +274,17 @@ export default function TransactionsPage() {
     );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        {/* 🧭 En-tête */}
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-10">
+      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-6 sm:p-8 border border-gray-100">
+
+        {/* HEADER PREMIUM */}
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">💰 Transactions</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Connecté en tant que <strong>{user.email}</strong> ({user.role})
+            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
+              💰 Transactions
+            </h1>
+            <p className="text-sm text-slate-600 mt-1">
+              Suivi & gestion de toutes vos opérations financières.
             </p>
           </div>
 
@@ -294,7 +293,7 @@ export default function TransactionsPage() {
               onClick={() => setShowForm((v) => !v)}
               className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
             >
-              {showForm ? '➖ Masquer le formulaire' : '➕ Nouvelle transaction'}
+              {showForm ? '➖ Masquer' : '➕ Nouvelle transaction'}
             </button>
 
             <button
@@ -311,6 +310,7 @@ export default function TransactionsPage() {
           </div>
         </div>
 
+        {/* FILTRES */}
         <TransactionFilters
           filters={filters}
           setFilters={setFilters}
@@ -318,6 +318,7 @@ export default function TransactionsPage() {
           filteredCount={filtered.length}
         />
 
+        {/* FORMULAIRE */}
         {showForm && (
           <TransactionForm
             form={form}
@@ -332,6 +333,7 @@ export default function TransactionsPage() {
           />
         )}
 
+        {/* LISTE RESPONSIVE PREMIUM */}
         <TransactionList
           transactions={filtered}
           loading={loading}
@@ -343,25 +345,26 @@ export default function TransactionsPage() {
 }
 
 /* ============================================================
-   🔹 Sous-composants
+   🔹 FILTRES PREMIUM RESPONSIVE
 ============================================================ */
 function TransactionFilters({ filters, setFilters, services, filteredCount }) {
   return (
     <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-3">
+
         <input
           placeholder="🔎 Rechercher une transaction"
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-2"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm col-span-2 focus:ring-2 focus:ring-blue-500"
         />
 
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Type (tous)</option>
+          <option value="">Type</option>
           {Object.entries(TRANSACTION_TYPES).map(([key, label]) => (
             <option key={key} value={key}>
               {label}
@@ -370,20 +373,18 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
         </select>
 
         <input
-          placeholder="Méthode paiement"
+          placeholder="Paiement (ex: orange money)"
           value={filters.payment}
-          onChange={(e) =>
-            setFilters({ ...filters, payment: e.target.value.toLowerCase() })
-          }
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          onChange={(e) => setFilters({ ...filters, payment: e.target.value.toLowerCase() })}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
         />
 
         <select
           value={filters.service}
           onChange={(e) => setFilters({ ...filters, service: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Service (tous)</option>
+          <option value="">Service</option>
           {services.map((s) => (
             <option key={s.id} value={s.id}>
               {s.title}
@@ -394,7 +395,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
         <select
           value={filters.sort}
           onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-2"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white col-span-2 focus:ring-2 focus:ring-blue-500"
         >
           <option value="-createdAt">Plus récentes</option>
           <option value="createdAt">Plus anciennes</option>
@@ -403,8 +404,9 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
         </select>
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
-        <div className="text-xs text-gray-500">{filteredCount} transaction(s)</div>
+      <div className="flex justify-between items-center text-xs text-gray-500">
+        <span>{filteredCount} transaction(s) trouvée(s)</span>
+
         <button
           onClick={() =>
             setFilters({
@@ -417,7 +419,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
               sort: '-createdAt',
             })
           }
-          className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
+          className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
         >
           Réinitialiser
         </button>
@@ -426,6 +428,9 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
   );
 }
 
+/* ============================================================
+   🔹 FORMULAIRE PREMIUM RESPONSIVE
+============================================================ */
 function TransactionForm({
   form,
   setForm,
@@ -439,20 +444,23 @@ function TransactionForm({
 }) {
   return (
     <div className="mb-10">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">➕ Nouvelle transaction</h2>
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        ➕ Nouvelle transaction
+      </h2>
 
       <form
         onSubmit={handleSubmit}
         className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-200"
       >
+        {/* TYPE */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="text-sm font-medium text-gray-700 mb-1 block">
             Type de transaction
           </label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
           >
             {Object.entries(TRANSACTION_TYPES).map(([key, label]) => (
               <option key={key} value={key}>
@@ -462,8 +470,11 @@ function TransactionForm({
           </select>
         </div>
 
+        {/* MONTANT */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Montant</label>
+          <label className="text-sm font-medium text-gray-700 mb-1 block">
+            Montant
+          </label>
           <input
             type="number"
             step="0.01"
@@ -471,16 +482,19 @@ function TransactionForm({
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
+        {/* DEVISE */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Devise</label>
+          <label className="text-sm font-medium text-gray-700 mb-1 block">
+            Devise
+          </label>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
           >
             {Object.entries(CURRENCY_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
@@ -490,17 +504,19 @@ function TransactionForm({
           </select>
         </div>
 
+        {/* MÉTHODE PAIEMENT */}
         <input
           placeholder="Méthode de paiement (optionnel)"
           value={form.paymentMethod}
           onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-          className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
         />
 
+        {/* SERVICE */}
         <select
           value={selectedService}
           onChange={handleServiceChange}
-          className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
         >
           <option value="">— Transaction indépendante —</option>
           {services.map((s) => (
@@ -510,11 +526,12 @@ function TransactionForm({
           ))}
         </select>
 
+        {/* TÂCHES */}
         {tasks.length > 0 && (
           <select
             value={form.taskId}
             onChange={(e) => setForm({ ...form, taskId: e.target.value })}
-            className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
           >
             <option value="">— Aucune tâche —</option>
             {tasks.map((t) => (
@@ -525,42 +542,46 @@ function TransactionForm({
           </select>
         )}
 
-        {/* 🆕 Champ projet (visible admin/agent) */}
+        {/* PROJET */}
         {(user.role === 'admin' || user.role === 'agent') && (
           <input
             type="number"
             placeholder="ID Projet (optionnel)"
             value={form.projectId}
             onChange={(e) => setForm({ ...form, projectId: e.target.value })}
-            className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
           />
         )}
 
+        {/* COMMANDE */}
         {(user.role === 'admin' || user.role === 'agent') && (
           <input
             type="number"
             placeholder="ID Commande (optionnel)"
             value={form.orderId}
             onChange={(e) => setForm({ ...form, orderId: e.target.value })}
-            className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
           />
         )}
 
+        {/* DESCRIPTION */}
         <textarea
           placeholder="Description"
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           rows={3}
-          className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
         />
 
+        {/* PREUVE */}
         <input
           type="file"
           accept=".jpg,.jpeg,.png,.pdf"
           onChange={(e) => setForm({ ...form, proofFile: e.target.files?.[0] || null })}
-          className="sm:col-span-2 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 bg-white"
+          className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
         />
 
+        {/* BOUTON */}
         <div className="col-span-2 text-right">
           <button
             type="submit"
@@ -578,6 +599,9 @@ function TransactionForm({
   );
 }
 
+/* ============================================================
+   🔹 LISTE PREMIUM RESPONSIVE (Mobile-first)
+============================================================ */
 function TransactionList({ transactions, loading, getUserDisplayName }) {
   if (loading)
     return (
@@ -594,81 +618,103 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
     );
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-5 sm:gap-6 sm:grid-cols-2">
       {transactions.map((t) => (
         <div
           key={t.id}
-          className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md transition"
+          className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md transition flex flex-col"
         >
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                {t.typeLabel || t.type} —{' '}
-                {Number(t.amount || 0).toLocaleString()} {t.currencyLabel || t.currency}
-              </h3>
-              <p className="text-sm text-gray-600 mt-1">
-                Statut : <strong>{t.statusLabel || '—'}</strong>
-              </p>
-              <p className="text-sm text-gray-600 mt-1">
-                {t.description || 'Aucune description'}
-              </p>
-            </div>
-            <div className="mt-2 sm:mt-0 text-xs text-gray-500">
-              {new Date(t.createdAt).toLocaleString()}
-            </div>
+          {/* ENTÊTE TRANSACTION */}
+          <div className="flex flex-col gap-1 mb-3">
+            <h3 className="text-lg font-semibold text-gray-900 leading-snug">
+              {t.typeLabel || t.type} —{' '}
+              {Number(t.amount || 0).toLocaleString()} {t.currencyLabel || t.currency}
+            </h3>
+
+            <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 w-fit">
+              {t.statusLabel || '—'}
+            </span>
+
+            <p className="text-sm text-gray-600 mt-1 line-clamp-3">
+              {t.description || 'Aucune description'}
+            </p>
           </div>
 
-          <div className="mt-3 text-sm text-gray-700">
+          {/* INFOS ASSOCIÉES */}
+          <div className="flex-1 text-sm text-gray-700 space-y-2">
+
             {t.service && (
-              <p>
-                🔗 <strong>Service :</strong> {t.service.title}
+              <p className="flex items-center gap-2">
+                <span>🔗</span>
+                <span>
+                  <strong>Service :</strong> {t.service.title}
+                </span>
               </p>
             )}
+
             {t.task && (
-              <p>
-                🔧 <strong>Tâche :</strong> {t.task.title}
+              <p className="flex items-center gap-2">
+                <span>🔧</span>
+                <span>
+                  <strong>Tâche :</strong> {t.task.title}
+                </span>
               </p>
             )}
+
             {t.project && (
-              <p>
-                🏗️ <strong>Projet :</strong>{' '}
-                <Link
-                  to={`/projects/${t.project.id}`}
-                  className="text-blue-600 hover:underline"
-                >
-                  {t.project.title || `#${t.project.id}`}
-                </Link>
+              <p className="flex items-center gap-2">
+                <span>🏗️</span>
+                <span>
+                  <strong>Projet :</strong>{' '}
+                  <Link
+                    to={`/projects/${t.project.id}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {t.project.title || `#${t.project.id}`}
+                  </Link>
+                </span>
               </p>
             )}
+
             {t.order && (
-              <p>
-                🧾 <strong>Commande :</strong>{' '}
-                <Link
-                  to={`/orders/${t.order.id}`}
-                  className="text-blue-600 hover:underline"
-                >
-                  {t.order.code || t.order.reference || `#${t.order.id}`}
-                </Link>
+              <p className="flex items-center gap-2">
+                <span>🧾</span>
+                <span>
+                  <strong>Commande :</strong>{' '}
+                  <Link
+                    to={`/orders/${t.order.id}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {t.order.code || t.order.reference || `#${t.order.id}`}
+                  </Link>
+                </span>
               </p>
             )}
+
             {t.proofFile?.path && (
-              <p className="mt-1">
-                📎{' '}
+              <p className="flex items-center gap-2">
+                <span>📎</span>
                 <a
                   href={`http://localhost:5000${t.proofFile.path}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 hover:underline truncate"
                 >
                   Voir la pièce jointe
                 </a>
               </p>
             )}
-            <p className="mt-1 text-xs text-gray-500">
+          </div>
+
+          {/* PIED DE CARTE */}
+          <div className="mt-4 text-xs text-gray-500 flex flex-col gap-1">
+            <span>
               Créée le{' '}
-              <strong>{new Date(t.createdAt).toLocaleDateString()}</strong> par{' '}
-              <strong>{getUserDisplayName(t.user)}</strong>
-            </p>
+              <strong>{new Date(t.createdAt).toLocaleDateString()}</strong>
+            </span>
+            <span>
+              Par <strong>{getUserDisplayName(t.user)}</strong>
+            </span>
           </div>
         </div>
       ))}

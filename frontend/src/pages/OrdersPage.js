@@ -13,11 +13,13 @@ import {
 
 /**
  * ============================================================
- * 🧾 Commandes — Page Liste + Création rapide
+ * 🧾 Commandes — Clean Shop Premium Edition
  * ============================================================
- * - Charge les commandes (selon rôle)
- * - Filtres : texte, statut, paiement, tri
- * - Création : simple ou avec 1er article
+ * - Filtres élégants (recherche, statut, paiement)
+ * - Tri moderne (récents / anciens)
+ * - Création rapide avec produit optionnel
+ * - UI cohérente avec ProductCatalogPage
+ * - Design premium, clair, professionnel, moderne
  * ============================================================
  */
 export default function OrdersPage() {
@@ -50,7 +52,7 @@ export default function OrdersPage() {
   });
 
   /* ============================================================
-     🔹 Initialisation (auth + données)
+     🔹 Initialisation
   ============================================================ */
   useEffect(() => {
     async function init() {
@@ -59,13 +61,10 @@ export default function OrdersPage() {
         setUser(ud.user);
         await Promise.all([loadOrders(), loadProducts()]);
       } catch (e) {
-        const status = e?.response?.status;
-        if (status === 401) {
+        if (e?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
           window.location.href = '/login';
-        } else {
-          console.error('❌ init OrdersPage:', e);
         }
       }
     }
@@ -77,7 +76,7 @@ export default function OrdersPage() {
   }, [showForm]);
 
   /* ============================================================
-     🔹 Chargement des commandes
+     🔄 Charger commandes
   ============================================================ */
   async function loadOrders() {
     setLoading(true);
@@ -85,7 +84,6 @@ export default function OrdersPage() {
       const data = await getOrders();
       setOrders(Array.isArray(data) ? data : []);
     } catch (e) {
-      console.error('❌ loadOrders:', e);
       alert('Erreur lors du chargement des commandes.');
     } finally {
       setLoading(false);
@@ -96,9 +94,8 @@ export default function OrdersPage() {
     setLoadingProducts(true);
     try {
       const prods = await getProducts({ limit: 200 });
-      setProducts(Array.isArray(prods) ? prods : []);
+      setProducts(prods || []);
     } catch (e) {
-      console.error('❌ loadProducts (OrdersPage):', e);
       setProducts([]);
     } finally {
       setLoadingProducts(false);
@@ -106,7 +103,7 @@ export default function OrdersPage() {
   }
 
   /* ============================================================
-     🔹 Création de commande
+     ➕ Création commande
   ============================================================ */
   async function handleCreate(e) {
     e.preventDefault();
@@ -115,12 +112,12 @@ export default function OrdersPage() {
         customerNote: form.customerNote || '',
       };
 
-      // Ajout du premier article si activé
       if (form.withItem && form.productId) {
         const prod = products.find((p) => String(p.id) === String(form.productId));
-        const unit = form.unitPrice !== '' && form.unitPrice !== null
-          ? Number(form.unitPrice)
-          : Number(prod?.price || 0);
+        const unit =
+          form.unitPrice !== '' && form.unitPrice !== null
+            ? Number(form.unitPrice)
+            : Number(prod?.price || 0);
 
         payload.items = [
           {
@@ -139,35 +136,37 @@ export default function OrdersPage() {
         quantity: 1,
         unitPrice: '',
       });
+
       await loadOrders();
-      alert('✅ Commande créée avec succès');
-    } catch (e) {
-      console.error('❌ createOrder:', e);
+      alert('✅ Commande créée avec succès.');
+    } catch {
       alert('Erreur lors de la création de la commande.');
     }
   }
 
   /* ============================================================
-     🔎 Filtres + Tri
+     🎛️ Filtres + Tri
   ============================================================ */
   const filtered = useMemo(() => {
     return (orders || [])
       .filter((o) => {
         if (!filters.q.trim()) return true;
         const q = filters.q.toLowerCase();
-        return [
-          o.code,
-          o.customer?.email,
-          o.customerNote,
-          o.orderStatus,
-          o.paymentStatus,
-          o.currency,
-          String(o.totalAmount ?? ''),
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-          .includes(q);
+        return (
+          [
+            o.code,
+            o.customer?.email,
+            o.customerNote,
+            o.orderStatus,
+            o.paymentStatus,
+            o.currency,
+            String(o.totalAmount ?? ''),
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .includes(q)
+        );
       })
       .filter((o) => {
         if (!filters.status) return true;
@@ -202,7 +201,7 @@ export default function OrdersPage() {
   }, [orders, filters]);
 
   /* ============================================================
-     🔹 UI
+     UI — Clean Shop Premium
   ============================================================ */
   if (!user) {
     return (
@@ -214,30 +213,35 @@ export default function OrdersPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
+      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
 
-        {/* 🧭 En-tête */}
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+        {/* ------------------------------------------------------- */}
+        {/* 🧭 En-tête Premium */}
+        {/* ------------------------------------------------------- */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8">
+
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">🛒 Commandes</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Connecté en tant que <strong>{user.email}</strong> ({user.role})
+            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
+              🧾 <span>Gestion des commandes</span>
+            </h1>
+            <p className="text-sm text-slate-600 mt-1">
+              Suivi, filtrage et création de vos commandes.
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Link
               to="/shop"
-              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-cyan-600 text-white hover:bg-cyan-700 transition"
+              className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700"
             >
               🛍️ Ouvrir le catalogue
             </Link>
 
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
+              className="px-4 py-2 text-sm rounded-lg bg-slate-800 text-white font-semibold shadow-sm hover:bg-slate-900"
             >
-              {showForm ? '➖ Masquer le formulaire' : '➕ Nouvelle commande'}
+              {showForm ? '➖ Masquer' : '➕ Nouvelle commande'}
             </button>
 
             <button
@@ -246,7 +250,7 @@ export default function OrdersPage() {
               className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition ${
                 loading
                   ? 'bg-blue-300 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
               {loading ? 'Chargement…' : '🔄 Rafraîchir'}
@@ -254,22 +258,31 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {/* 🎛️ Filtres */}
-        <div className="mb-5 bg-gray-50 border border-gray-200 rounded-xl p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+        {/* ------------------------------------------------------- */}
+        {/* 🎛️ Filtres Premium */}
+        {/* ------------------------------------------------------- */}
+        <div className="mb-6 bg-gray-50 border border-gray-200 rounded-xl p-5">
+
+          {/* Ligne 1 — Recherche */}
+          <div className="flex flex-col lg:flex-row gap-3 mb-4">
             <input
-              placeholder="🔎 Rechercher"
               value={filters.q}
               onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-2"
+              placeholder="🔎 Rechercher une commande, un email, un montant..."
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
             />
+          </div>
 
+          {/* Ligne 2 — Sélecteurs */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+
+            {/* Statut commande */}
             <select
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Statut commande (tous)</option>
+              <option value="">Statut commande</option>
               <option value="created">Créée</option>
               <option value="processing">En traitement</option>
               <option value="shipped">Expédiée</option>
@@ -279,40 +292,48 @@ export default function OrdersPage() {
               <option value="refunded">Remboursée</option>
             </select>
 
+            {/* Paiement */}
             <select
               value={filters.payment}
               onChange={(e) => setFilters({ ...filters, payment: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Paiement (tous)</option>
+              <option value="">Paiement</option>
               <option value="unpaid">Non payée</option>
               <option value="partial">Partielle</option>
               <option value="paid">Payée</option>
               <option value="refunded">Remboursée</option>
             </select>
 
+            {/* Tri */}
             <select
               value={filters.sort}
               onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-2"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 col-span-2"
             >
               <option value="-createdAt">Plus récentes</option>
               <option value="createdAt">Plus anciennes</option>
             </select>
           </div>
 
-          <div className="mt-3 flex items-center justify-between">
-            <div className="text-xs text-gray-500">{filtered.length} commande(s)</div>
+          {/* Reset */}
+          <div className="mt-4 flex justify-between items-center text-xs text-gray-500">
+            <div>{filtered.length} commande(s) trouvée(s)</div>
+
             <button
-              onClick={() => setFilters({ q: '', status: '', payment: '', sort: '-createdAt' })}
-              className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
+              onClick={() =>
+                setFilters({ q: '', status: '', payment: '', sort: '-createdAt' })
+              }
+              className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium"
             >
               Réinitialiser
             </button>
           </div>
         </div>
 
-        {/* ➕ Formulaire création (enrichi) */}
+        {/* ------------------------------------------------------- */}
+        {/* ➕ Formulaire création */}
+        {/* ------------------------------------------------------- */}
         {showForm && (
           <form
             onSubmit={handleCreate}
@@ -324,11 +345,13 @@ export default function OrdersPage() {
             <textarea
               rows={3}
               value={form.customerNote}
-              onChange={(e) => setForm((f) => ({ ...f, customerNote: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              onChange={(e) =>
+                setForm((f) => ({ ...f, customerNote: e.target.value }))
+              }
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
             />
 
-            {/* 🔧 Ajout d'un premier article (optionnel) */}
+            {/* 🧩 Ajout d’un produit */}
             <div className="mt-4">
               <label className="inline-flex items-center gap-2 text-sm">
                 <input
@@ -358,12 +381,13 @@ export default function OrdersPage() {
                     disabled={loadingProducts}
                     value={form.productId}
                     onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">— Sélectionner —</option>
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} — {Number(p.price || 0).toLocaleString()} {formatCurrency(p.currency || 'XOF')}
+                        {p.name} — {Number(p.price || 0).toLocaleString()}{' '}
+                        {formatCurrency(p.currency || 'XOF')}
                       </option>
                     ))}
                   </select>
@@ -378,7 +402,7 @@ export default function OrdersPage() {
                     min={1}
                     value={form.quantity}
                     onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -390,9 +414,11 @@ export default function OrdersPage() {
                     type="number"
                     step="0.01"
                     value={form.unitPrice}
-                    onChange={(e) => setForm((f) => ({ ...f, unitPrice: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                    placeholder="Laisse vide pour PU produit"
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, unitPrice: e.target.value }))
+                    }
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                    placeholder="Laisse vide pour PU du produit"
                   />
                 </div>
               </div>
@@ -401,7 +427,7 @@ export default function OrdersPage() {
             <div className="mt-4 text-right">
               <button
                 type="submit"
-                className="px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
+                className="px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700"
               >
                 Créer la commande
               </button>
@@ -409,7 +435,9 @@ export default function OrdersPage() {
           </form>
         )}
 
-        {/* 📜 Liste des commandes */}
+        {/* ------------------------------------------------------- */}
+        {/* 📄 Liste des commandes */}
+        {/* ------------------------------------------------------- */}
         {loading ? (
           <p className="text-gray-500 italic text-center py-6">Chargement…</p>
         ) : filtered.length === 0 ? (
@@ -439,7 +467,7 @@ export default function OrdersPage() {
                       </p>
 
                       <p className="text-xs text-gray-500 mt-1">
-                        Statut commande : {formatStatus(o.orderStatus, 'order')} • Paiement :{' '}
+                        Statut : {formatStatus(o.orderStatus, 'order')} • Paiement :{' '}
                         {formatStatus(o.paymentStatus, 'payment')}
                       </p>
                     </div>
@@ -452,14 +480,14 @@ export default function OrdersPage() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Link
                       to={`/orders/${o.id}`}
-                      className="inline-block px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                       Ouvrir la commande
                     </Link>
 
                     <Link
                       to={`/orders/${o.id}/transactions`}
-                      className="inline-block px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition"
+                      className="px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900"
                     >
                       💰 Transactions
                     </Link>

@@ -14,21 +14,55 @@ module.exports = (sequelize, DataTypes) => {
 
   Product.init(
     {
+      // 🔗 Relation catégorie (nullable)
       categoryId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
 
+      // 🏷️ Identité produit
       name: { type: DataTypes.STRING(180), allowNull: false },
       slug: { type: DataTypes.STRING(220), allowNull: false, unique: true },
       sku: { type: DataTypes.STRING(80), allowNull: true, unique: true },
 
-      price: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
-      currency: { type: DataTypes.STRING(10), allowNull: false, defaultValue: 'XOF' },
+      // 💰 Prix & devise
+      price: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: false,
+        defaultValue: 0,
+      },
+      currency: {
+        type: DataTypes.STRING(10),
+        allowNull: false,
+        defaultValue: 'XOF',
+      },
 
-      stock: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 0 },
-      isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
+      // 📦 Stock & statut
+      stock: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      isActive: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+      },
 
+      // 📝 Descriptions
       shortDescription: { type: DataTypes.STRING(500), allowNull: true },
       description: { type: DataTypes.TEXT, allowNull: true },
-      coverImage: { type: DataTypes.STRING, allowNull: true }, // /uploads/...
+
+      /**
+       * 🖼 Image principale (historique)
+       * - chemin relatif ex: "/uploads/products/xxx.jpg"
+       * - front: normalisé via getFileUrl(...)
+       */
+      coverImage: { type: DataTypes.STRING, allowNull: true },
+
+      /**
+       * 🖼🖼🖼 Galerie d'images (multi-images)
+       * - JSON ARRAY de chemins relatifs ex: ["/uploads/products/1.jpg", ...]
+       * - on recommandera côté backend/front de limiter à 3 images max
+       * - coverImage = image principale (généralement gallery[0])
+       */
       gallery: { type: DataTypes.JSON, allowNull: true }, // array d’URLs
     },
     {

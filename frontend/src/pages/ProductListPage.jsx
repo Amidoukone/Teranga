@@ -1,3 +1,4 @@
+// frontend/src/pages/ProductListPage.jsx
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getProducts } from '../services/products';
@@ -9,6 +10,7 @@ import { formatCurrency } from '../utils/labels';
  * - Charge la liste complète via /api/products
  * - Affiche nom, image, prix et description courte
  * - Cohérent avec normalizeProduct() et ProductDetailPage
+ * - Compatible multi-images (cover + gallery via allImageUrls)
  * ---------------------------------------------------------
  */
 export default function ProductListPage() {
@@ -95,10 +97,13 @@ export default function ProductListPage() {
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((p) => {
-            const imgSrc =
-              p.imageUrl && typeof p.imageUrl === 'string'
-                ? p.imageUrl
-                : null;
+            // 🔹 On tire pleinement parti du backend multi-images
+            const images = Array.isArray(p.allImageUrls) && p.allImageUrls.length
+              ? p.allImageUrls
+              : (p.imageUrl ? [p.imageUrl] : []);
+
+            const mainImg = images[0] || null;
+            const hasMulti = images.length > 1;
 
             return (
               <Link
@@ -106,22 +111,32 @@ export default function ProductListPage() {
                 to={`/products/${p.id}`}
                 className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition p-5 flex flex-col"
               >
-                {imgSrc ? (
-                  <img
-                    src={imgSrc}
-                    alt={p.name}
-                    className="w-full h-40 object-cover rounded-lg mb-4"
-                  />
+                {/* Image produit */}
+                {mainImg ? (
+                  <div className="relative mb-4">
+                    <img
+                      src={mainImg}
+                      alt={p.name}
+                      className="w-full h-40 object-cover rounded-lg"
+                    />
+                    {hasMulti && (
+                      <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-full">
+                        {images.length} images
+                      </span>
+                    )}
+                  </div>
                 ) : (
                   <div className="w-full h-40 flex items-center justify-center bg-gray-100 rounded-lg text-gray-400 text-sm mb-4">
                     Aucun visuel
                   </div>
                 )}
 
+                {/* Titre */}
                 <h2 className="text-lg font-semibold text-gray-900 line-clamp-1">
                   {p.name}
                 </h2>
 
+                {/* Description courte */}
                 <p className="text-gray-500 flex-1 mt-1 text-sm line-clamp-2">
                   {p.description
                     ? `${p.description.slice(0, 100)}${
@@ -130,6 +145,7 @@ export default function ProductListPage() {
                     : 'Pas de description.'}
                 </p>
 
+                {/* Prix */}
                 <div className="mt-3 font-bold text-blue-600 text-base">
                   {formatCurrency(p.currency || 'XOF')}{' '}
                   {Number(p.price || 0).toLocaleString()}
