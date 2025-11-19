@@ -1,40 +1,41 @@
-// backend/utils/bootstrapAdmin.js
-const bcrypt = require("bcrypt");
-const db = require("../models"); // chargé depuis models/index.js
+'use strict';
 
-async function bootstrapAdmin() {
+const bcrypt = require('bcrypt');
+const db = require('../../models');  // <-- Chemin corrigé
+const { User } = db;
+
+module.exports = async function bootstrapAdmin() {
   try {
     const email = process.env.BOOTSTRAP_ADMIN_EMAIL;
     const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
 
-    // Si pas de variables → on ignore
     if (!email || !password) {
-      console.log("⚠️  Bootstrap admin désactivé (ENV non définies)");
+      console.log("⚠️ Variables BOOTSTRAP_ADMIN_EMAIL ou PASSWORD manquantes. Bootstrap ignoré.");
       return;
     }
 
-    const existing = await db.User.findOne({ where: { email } });
-
-    if (existing) {
-      console.log("ℹ️  Admin déjà existant → aucun nouveau compte créé.");
+    // Vérifie si l'admin existe déjà
+    const exists = await User.findOne({ where: { email } });
+    if (exists) {
+      console.log(`ℹ️ Admin "${email}" existe déjà. Aucun bootstrap nécessaire.`);
       return;
     }
 
-    const hash = await bcrypt.hash(password, 10);
+    console.log(`🛠️ Création du compte admin "${email}"…`);
 
-    await db.User.create({
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await User.create({
       email,
-      passwordHash: hash,
+      passwordHash,
       firstName: "Super",
       lastName: "Admin",
       role: "admin",
-      emailVerified: true
+      emailVerified: true,
     });
 
-    console.log("✅ Compte admin créé automatiquement !");
+    console.log(`✅ Admin "${email}" créé avec succès !`);
   } catch (err) {
-    console.error("❌ Erreur lors du bootstrap admin :", err);
+    console.error("❌ Erreur bootstrap admin :", err.message);
   }
-}
-
-module.exports = bootstrapAdmin;
+};
