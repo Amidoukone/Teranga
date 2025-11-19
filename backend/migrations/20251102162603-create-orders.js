@@ -2,16 +2,14 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Création de la table orders avec statuts alignés sur le modèle Order
     await queryInterface.createTable('orders', {
       id: { type: Sequelize.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
 
+      // 🔗 Utilisateur (relation logique uniquement)
       user_id: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: false,
-        references: { model: 'users', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
+        allowNull: false
+        // ❌ pas de references / onDelete / onUpdate
       },
 
       // Code lisible unique (ex: CMD-YYYYMMDD-XXXX)
@@ -24,10 +22,7 @@ module.exports = {
       total: { type: Sequelize.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
       currency: { type: Sequelize.STRING(10), allowNull: false, defaultValue: 'XOF' },
 
-      /**
-       * Statut de commande — DOIT correspondre au modèle Sequelize.
-       * Ordre cohérent avec les transitions métier et le frontend.
-       */
+      // Statut de commande
       status: {
         type: Sequelize.ENUM(
           'created',
@@ -43,9 +38,7 @@ module.exports = {
         defaultValue: 'created',
       },
 
-      /**
-       * Statut de paiement — cohérent avec le modèle et le front.
-       */
+      // Statut de paiement
       payment_status: {
         type: Sequelize.ENUM('unpaid', 'paid', 'partial', 'refunded'),
         allowNull: false,
@@ -62,11 +55,19 @@ module.exports = {
       notes: { type: Sequelize.TEXT, allowNull: true },
 
       // Timestamps (underscored)
-      created_at: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.fn('NOW') },
-      updated_at: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.fn('NOW') },
+      created_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.fn('NOW'),
+      },
+      updated_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.fn('NOW'),
+      },
     });
 
-    // Index utiles (perf & intégrité)
+    // Index utiles
     await queryInterface.addIndex('orders', ['user_id']);
     await queryInterface.addIndex('orders', ['code'], { unique: true });
     await queryInterface.addIndex('orders', ['status']);
@@ -83,19 +84,12 @@ module.exports = {
     // Puis la table
     await queryInterface.dropTable('orders');
 
-    /**
-     * Nettoyage des types ENUM (utile surtout pour Postgres).
-     * Conserver ces lignes pour compat multi-SGBD, même si MySQL les ignore.
-     */
+    // Nettoyage ENUM (surtout Postgres ; MySQL ignore)
     try {
       await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_orders_status";');
-    } catch (e) {
-      // no-op (MySQL ne connaît pas DROP TYPE)
-    }
+    } catch (e) {}
     try {
       await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_orders_payment_status";');
-    } catch (e) {
-      // no-op
-    }
+    } catch (e) {}
   },
 };

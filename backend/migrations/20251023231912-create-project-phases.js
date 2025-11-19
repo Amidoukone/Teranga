@@ -10,13 +10,10 @@ module.exports = {
         primaryKey: true,
       },
 
-      // 🔗 Relation principale
+      // 🔗 Relation logique
       projectId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: false,
-        references: { model: 'projects', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
+        allowNull: false
       },
 
       // 🧱 Données de la phase
@@ -70,9 +67,10 @@ module.exports = {
 
     await queryInterface.dropTable('project_phases');
 
-    // Nettoyage ENUM (PostgreSQL)
     if (queryInterface.sequelize.options.dialect === 'postgres') {
-      await queryInterface.sequelize.query(`DROP TYPE IF EXISTS "enum_project_phases_status";`);
+      await queryInterface.sequelize.query(
+        `DROP TYPE IF EXISTS "enum_project_phases_status";`
+      );
     }
   },
 };

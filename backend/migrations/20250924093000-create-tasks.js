@@ -10,43 +10,31 @@ module.exports = {
         primaryKey: true
       },
 
-      // 🔗 Relations
+      // 🔗 Relations logiques (pas de FK en DB sur PlanetScale)
       serviceId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: true,
-        references: { model: 'services', key: 'id' },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
+        allowNull: true
       },
       propertyId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: true,
-        references: { model: 'properties', key: 'id' },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
+        allowNull: true
       },
       creatorId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: false,
-        references: { model: 'users', key: 'id' },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
+        allowNull: false
       },
       assignedTo: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: true,
-        references: { model: 'users', key: 'id' },
-        onDelete: 'SET NULL',
-        onUpdate: 'CASCADE'
+        allowNull: true
       },
 
       // 📝 Infos principales
       type: {
         type: Sequelize.ENUM(
-          'repair', 
-          'visit', 
-          'administrative', 
-          'shopping', 
+          'repair',
+          'visit',
+          'administrative',
+          'shopping',
           'other'
         ),
         allowNull: false
@@ -89,8 +77,14 @@ module.exports = {
       },
 
       // ⏰ Dates
-      dueDate: { type: Sequelize.DATE, allowNull: true },
-      completedAt: { type: Sequelize.DATE, allowNull: true },
+      dueDate: {
+        type: Sequelize.DATE,
+        allowNull: true
+      },
+      completedAt: {
+        type: Sequelize.DATE,
+        allowNull: true
+      },
 
       // 📅 Tracking
       createdAt: {
@@ -116,7 +110,7 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    // ⚠️ Supprimer d’abord les index et ENUMs pour éviter conflits
+    // On nettoie les index puis la table
     await queryInterface.removeIndex('tasks', ['serviceId']);
     await queryInterface.removeIndex('tasks', ['propertyId']);
     await queryInterface.removeIndex('tasks', ['creatorId']);

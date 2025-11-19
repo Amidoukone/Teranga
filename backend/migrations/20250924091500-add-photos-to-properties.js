@@ -4,7 +4,7 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.addColumn('properties', 'photos', {
-      type: Sequelize.DataTypes.JSON, // ✅ MySQL 5.7+ support JSON
+      type: Sequelize.DataTypes.JSON, // ✅ PlanetScale/MySQL supporte JSON
       allowNull: true
     });
   },

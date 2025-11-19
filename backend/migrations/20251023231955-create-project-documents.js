@@ -10,30 +10,24 @@ module.exports = {
         primaryKey: true,
       },
 
-      // 🔗 Relations
+      // 🔗 Relations logiques
       projectId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: false,
-        references: { model: 'projects', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
+        allowNull: false
       },
       uploaderId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: true, // ✅ cohérent avec onDelete: 'SET NULL'
-        references: { model: 'users', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
+        allowNull: true
       },
 
       // 📄 Métadonnées de fichier (compatibles avec le frontend)
       originalName: { type: Sequelize.STRING(255), allowNull: true }, // ex: "devis.pdf"
-      filePath: { type: Sequelize.STRING(1024), allowNull: false },     // ex: "/uploads/projects/xxx.pdf"
-      mimeType: { type: Sequelize.STRING(255), allowNull: true },       // ex: "application/pdf"
-      fileSize: { type: Sequelize.INTEGER.UNSIGNED, allowNull: true },  // en octets
+      filePath: { type: Sequelize.STRING(1024), allowNull: false },   // ex: "/uploads/projects/xxx.pdf"
+      mimeType: { type: Sequelize.STRING(255), allowNull: true },     // ex: "application/pdf"
+      fileSize: { type: Sequelize.INTEGER.UNSIGNED, allowNull: true },// en octets
 
       // 📝 Champs optionnels (utiles côté back-office)
-      title: { type: Sequelize.STRING(255), allowNull: true }, // ✅ optionnel (UI ne l'envoie pas)
+      title: { type: Sequelize.STRING(255), allowNull: true }, 
       kind: {
         type: Sequelize.ENUM('contract', 'plan', 'report', 'photo', 'other'),
         allowNull: false,
@@ -71,9 +65,10 @@ module.exports = {
     // Puis la table
     await queryInterface.dropTable('project_documents');
 
-    // Nettoyage ENUM (PostgreSQL uniquement)
     if (queryInterface.sequelize.options.dialect === 'postgres') {
-      await queryInterface.sequelize.query(`DROP TYPE IF EXISTS "enum_project_documents_kind";`);
+      await queryInterface.sequelize.query(
+        `DROP TYPE IF EXISTS "enum_project_documents_kind";`
+      );
     }
   },
 };

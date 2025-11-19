@@ -3,39 +3,30 @@
 /**
  * ✅ Migration : Ajout de la colonne phaseId dans la table project_documents
  * -------------------------------------------------------------
- * - Permet de rattacher un document à une phase précise du projet
- * - Relation optionnelle : (phaseId) → project_phases(id)
- * - Compatible MySQL et PostgreSQL
- * -------------------------------------------------------------
- * Pour exécuter :
- *   npx sequelize-cli db:migrate
+ * Version PlanetScale : SANS contrainte de clé étrangère
  * -------------------------------------------------------------
  */
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // 1️⃣ Ajout de la colonne phaseId
+    // 1️⃣ Ajout de la colonne phaseId (sans FK)
     await queryInterface.addColumn('project_documents', 'phaseId', {
       type: Sequelize.INTEGER.UNSIGNED,
       allowNull: true,
-      references: {
-        model: 'project_phases', // table cible
-        key: 'id',
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'SET NULL',
-      after: 'projectId', // position (pour MySQL, ignoré par PostgreSQL)
+      // ❌ PAS de "references", "onUpdate", "onDelete" sur PlanetScale
+      // optionnel : conservé, uniquement pour l'ordre des colonnes (MySQL)
+      after: 'projectId',
     });
 
-    // 2️⃣ Index pour accélérer les jointures et filtres
+    // 2️⃣ Index pour les filtres/jointures logiques
     await queryInterface.addIndex('project_documents', ['phaseId'], {
       name: 'idx_project_documents_phaseId',
     });
 
-    console.log('✅ Colonne phaseId ajoutée à project_documents');
+    console.log('✅ Colonne phaseId ajoutée à project_documents (sans FK)');
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface) {
     // 1️⃣ Suppression de l’index
     await queryInterface.removeIndex('project_documents', 'idx_project_documents_phaseId');
 

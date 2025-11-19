@@ -1,4 +1,5 @@
 'use strict';
+
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('products', {
@@ -8,13 +9,11 @@ module.exports = {
         primaryKey: true,
       },
 
-      // 🔗 Catégorie (nullable)
+      // 🔗 Catégorie (relation logique uniquement)
       category_id: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: true,
-        references: { model: 'categories', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
+        allowNull: true
+        // ❌ pas de "references" sur PlanetScale
       },
 
       // 🏷️ Identité produit
@@ -50,15 +49,10 @@ module.exports = {
       short_description: { type: Sequelize.STRING(500), allowNull: true },
       description: { type: Sequelize.TEXT, allowNull: true },
 
-      /**
-       * 🖼 Image principale
-       */
+      // 🖼 Image principale
       cover_image: { type: Sequelize.STRING, allowNull: true },
 
-      /**
-       * 🖼🖼🖼 Galerie multi-images
-       * JSON_ARRAY de chemins relatifs (ex: "/uploads/products/1.jpg", ...)
-       */
+      // 🖼🖼🖼 Galerie multi-images (JSON)
       gallery: { type: Sequelize.JSON, allowNull: true },
 
       // 🕒 Timestamps

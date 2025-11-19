@@ -10,20 +10,14 @@ module.exports = {
         primaryKey: true,
       },
 
-      // 🔗 Relations utilisateurs
+      // 🔗 Relations utilisateurs (logiques seulement)
       clientId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: false,
-        references: { model: 'users', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
+        allowNull: false
       },
       agentId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: true,
-        references: { model: 'users', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
+        allowNull: true
       },
 
       // 🧱 Données principales
@@ -86,9 +80,11 @@ module.exports = {
 
     await queryInterface.dropTable('projects');
 
-    // Nettoyage ENUM (PostgreSQL)
+    // Reste safe : ne s’exécute que sur Postgres
     if (queryInterface.sequelize.options.dialect === 'postgres') {
-      await queryInterface.sequelize.query(`DROP TYPE IF EXISTS "enum_projects_status";`);
+      await queryInterface.sequelize.query(
+        `DROP TYPE IF EXISTS "enum_projects_status";`
+      );
     }
   },
 };

@@ -9,31 +9,30 @@ module.exports = {
         autoIncrement: true,
         primaryKey: true
       },
+
+      // 🔗 IDs logiques (pas de FK côté DB sur PlanetScale)
       clientId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: false,
-        references: { model: 'users', key: 'id' },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
+        allowNull: false
       },
       agentId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: true,
-        references: { model: 'users', key: 'id' },
-        onDelete: 'SET NULL',
-        onUpdate: 'CASCADE'
+        allowNull: true
       },
       propertyId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: false,
-        references: { model: 'properties', key: 'id' },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
+        allowNull: false
       },
 
       // Champs métier
       type: {
-        type: Sequelize.ENUM('errand', 'administrative', 'payment', 'money_transfer', 'other'),
+        type: Sequelize.ENUM(
+          'errand',
+          'administrative',
+          'payment',
+          'money_transfer',
+          'other'
+        ),
         allowNull: false
       },
       title: {
@@ -74,11 +73,9 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.fn('NOW')
       }
-    }, {
-      engine: 'InnoDB'
     });
 
-    // Indexes utiles
+    // Indexes utiles pour les filtres et jointures
     await queryInterface.addIndex('services', ['clientId']);
     await queryInterface.addIndex('services', ['agentId']);
     await queryInterface.addIndex('services', ['propertyId']);

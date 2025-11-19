@@ -5,9 +5,12 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-// Import Sequelize via models/index.js
+// Sequelize (models/index.js)
 const db = require('./models');
 const { sequelize } = db;
+
+// Ajout du bootstrap admin
+const bootstrapAdmin = require('./src/utils/bootstrapAdmin');
 
 // Activer les logs SQL si disponibles
 if (sequelize?.options) {
@@ -45,24 +48,21 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 /* ======================================================
-   📂 Servir correctement les fichiers uploadés
+   📂 Fichiers uploadés (uploads/)
    ====================================================== */
-// ⚙️ Résolution robuste du chemin absolu
+const fs = require('fs');
 const uploadsRoot = path.join(__dirname, 'uploads');
 
-// Création automatique si manquant (utile en prod Docker)
-const fs = require('fs');
 if (!fs.existsSync(uploadsRoot)) {
   fs.mkdirSync(uploadsRoot, { recursive: true });
   console.log('📂 Dossier uploads créé automatiquement:', uploadsRoot);
 }
 
-// ✅ Route publique pour les fichiers (PDF, images…)
 app.use('/uploads', express.static(uploadsRoot));
 console.log('✅ Fichiers statiques disponibles sur /uploads');
 
 /* ======================================================
-   🔧 Chargement robuste des routeurs Express
+   🔧 Chargement des routeurs Express
    ====================================================== */
 function pickExpressRouter(mod) {
   const candidates = [mod, mod?.default, mod?.router];
@@ -94,7 +94,7 @@ function loadRouter(routeFsPath, mountPath) {
 }
 
 /* ======================================================
-   🚀 Chargement des routes API (structure modulaire)
+   🚀 Chargement des routes API
    ====================================================== */
 // Auth & core
 loadRouter('./src/routes/auth.routes', '/api/auth');
@@ -105,19 +105,19 @@ loadRouter('./src/routes/task.routes', '/api/tasks');
 loadRouter('./src/routes/evidence.routes', '/api/evidences');
 loadRouter('./src/routes/transaction.routes', '/api/transactions');
 
-// 🆕 Module Projets
+// Module Projets
 loadRouter('./src/routes/project.routes', '/api/projects');
 loadRouter('./src/routes/projectPhase.routes', '/api/project-phases');
 loadRouter('./src/routes/projectDocument.routes', '/api/project-documents');
 
-// 🆕🛒 Module Commerce (ajouts)
+// Module Commerce
 loadRouter('./src/routes/category.routes', '/api/categories');
 loadRouter('./src/routes/product.routes', '/api/products');
 loadRouter('./src/routes/order.routes', '/api/orders');
 loadRouter('./src/routes/orderItem.routes', '/api/order-items');
 
 /* ======================================================
-   🔍 Healthcheck + racine
+   🔍 Healthcheck + Racine
    ====================================================== */
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
@@ -153,6 +153,9 @@ async function start() {
   try {
     await sequelize.authenticate();
     console.log('✅ Connexion MySQL OK');
+
+    // 🔥 Création automatique du compte admin si absent
+    await bootstrapAdmin();
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 API Teranga lancée sur http://localhost:${PORT}`);

@@ -9,27 +9,21 @@ module.exports = {
         autoIncrement: true,
         primaryKey: true
       },
+
+      // 🔗 Relations logiques (sans contraintes FK côté DB)
       userId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: false,
-        references: { model: 'users', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        allowNull: false
       },
       serviceId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: true,
-        references: { model: 'services', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+        allowNull: true
       },
       taskId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: true,
-        references: { model: 'tasks', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+        allowNull: true
       },
+
       // ✅ Types cohérents avec le contrôleur et le frontend
       type: {
         type: Sequelize.ENUM('revenue', 'expense', 'commission', 'adjustment'),
@@ -52,6 +46,7 @@ module.exports = {
         type: Sequelize.JSON,
         allowNull: true
       },
+
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
@@ -64,6 +59,7 @@ module.exports = {
       }
     });
 
+    // 🔍 Indexes utiles
     await queryInterface.addIndex('transactions', ['userId']);
     await queryInterface.addIndex('transactions', ['type']);
     await queryInterface.addIndex('transactions', ['createdAt']);

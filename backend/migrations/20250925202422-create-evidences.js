@@ -10,20 +10,14 @@ module.exports = {
         primaryKey: true
       },
 
-      // 🔗 Relations
+      // 🔗 Relations logiques (sans contraintes FK)
       taskId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: false,
-        references: { model: 'tasks', key: 'id' },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
+        allowNull: false
       },
       uploaderId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: true,
-        references: { model: 'users', key: 'id' },
-        onDelete: 'SET NULL',
-        onUpdate: 'CASCADE'
+        allowNull: true
       },
 
       // 📄 Métadonnées fichier
@@ -32,12 +26,30 @@ module.exports = {
         allowNull: false,
         defaultValue: 'document'
       },
-      mimeType: { type: Sequelize.STRING(255), allowNull: true },
-      originalName: { type: Sequelize.STRING(255), allowNull: true },
-      filePath: { type: Sequelize.STRING(1024), allowNull: false }, // ex: /uploads/evidences/xxxx.jpg
-      fileSize: { type: Sequelize.INTEGER.UNSIGNED, allowNull: true }, // bytes
-      thumbnailPath: { type: Sequelize.STRING(1024), allowNull: true }, // optionnel si tu génères des miniatures
-      notes: { type: Sequelize.TEXT, allowNull: true },
+      mimeType: {
+        type: Sequelize.STRING(255),
+        allowNull: true
+      },
+      originalName: {
+        type: Sequelize.STRING(255),
+        allowNull: true
+      },
+      filePath: {
+        type: Sequelize.STRING(1024),
+        allowNull: false // ex: /uploads/evidences/xxxx.jpg
+      },
+      fileSize: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: true // bytes
+      },
+      thumbnailPath: {
+        type: Sequelize.STRING(1024),
+        allowNull: true // miniature optionnelle
+      },
+      notes: {
+        type: Sequelize.TEXT,
+        allowNull: true
+      },
 
       createdAt: {
         type: Sequelize.DATE,
@@ -49,8 +61,6 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.fn('NOW')
       }
-    }, {
-      engine: 'InnoDB'
     });
 
     await queryInterface.addIndex('evidences', ['taskId']);
