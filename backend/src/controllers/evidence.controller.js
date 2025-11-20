@@ -13,8 +13,18 @@ const { EVIDENCE_KINDS, getLabel } = require('../utils/labels');
    🧩 Helpers utilitaires
 ====================================================== */
 function toSafeInt(v) {
-  const n = parseInt(v, 10);
+  if (v === null || v === undefined) return null;
+  const n = parseInt(String(v), 10);
   return Number.isNaN(n) ? null : n;
+}
+
+/**
+ * Construit une URL de fichier POSIX relative (stable en prod)
+ * → ex: /uploads/evidences/12345-file.jpg
+ */
+function buildEvidencePath(filename) {
+  // path.posix garantit des "/" même si le serveur tourne sur Windows
+  return path.posix.join('/uploads/evidences', filename);
 }
 
 function guessKind(mime) {
@@ -116,9 +126,16 @@ function canAccessOrder(user, order) {
    🧰 Normalisation des fichiers envoyés (clé pour éviter 400)
    - Supporte req.files = Array (upload.array('files'))
    - Supporte req.files = { champ1:[..], champ2:[..] } (upload.fields([...]))
+   - Supporte aussi le cas où Multer met un seul champ: req.file
 ====================================================== */
 function normalizeUploadedFiles(req) {
+  // Cas multer.single() (au cas où)
+  if (req.file) return [req.file];
+
+  // Cas array direct
   if (Array.isArray(req.files)) return req.files;
+
+  // Cas fields: { files:[...], proofFile:[...], ... }
   if (req.files && typeof req.files === 'object') {
     const out = [];
     for (const key of Object.keys(req.files)) {
@@ -127,6 +144,7 @@ function normalizeUploadedFiles(req) {
     }
     return out;
   }
+
   return [];
 }
 
@@ -178,7 +196,7 @@ exports.create = async (req, res) => {
         kind: guessKind(f.mimetype),
         mimeType: f.mimetype || null,
         originalName: f.originalname || null,
-        filePath: `/uploads/evidences/${f.filename}`,
+        filePath: buildEvidencePath(f.filename), // ✅ chemin relatif POSIX
         fileSize: f.size || null,
         thumbnailPath: null,
         notes,
@@ -272,7 +290,9 @@ exports.listByTask = async (req, res) => {
 
     const evidences = await Evidence.findAll({
       where: { taskId },
-      include: [{ model: User, as: 'uploader', attributes: ['id', 'firstName', 'lastName', 'email'] }],
+      include: [
+        { model: User, as: 'uploader', attributes: ['id', 'firstName', 'lastName', 'email'] },
+      ],
       order: [['createdAt', 'DESC']],
     });
 
@@ -299,7 +319,9 @@ exports.listByOrder = async (req, res) => {
 
     const evidences = await Evidence.findAll({
       where: { orderId },
-      include: [{ model: User, as: 'uploader', attributes: ['id', 'firstName', 'lastName', 'email'] }],
+      include: [
+        { model: User, as: 'uploader', attributes: ['id', 'firstName', 'lastName', 'email'] },
+      ],
       order: [['createdAt', 'DESC']],
     });
 
@@ -335,8 +357,14 @@ exports.remove = async (req, res) => {
 
     // 🧹 Supprime le fichier physique si présent
     if (ev.filePath) {
-      const abs = path.join(__dirname, '../../', ev.filePath.replace(/^\//, ''));
-      try { await fs.unlink(abs); } catch { /* non bloquant */ }
+      // On retire un éventuel / ou \ au début du chemin relatif
+      const relative = ev.filePath.replace(/^[/\\]/, '');
+      const abs = path.join(__dirname, '../../', relative);
+      try {
+        await fs.unlink(abs);
+      } catch {
+        // Non bloquant : le fichier peut avoir déjà été supprimé
+      }
     }
 
     await ev.destroy();
