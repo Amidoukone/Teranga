@@ -37,50 +37,73 @@ function getPagination(req, defaultLimit = 50, maxLimit = 200) {
   return { limit, offset };
 }
 
+/* ============================================================
+   🖼️ Normalisation des chemins photos (lecture)
+   - But : corriger les anciennes valeurs en base qui auraient
+     stocké une URL absolue (http://localhost:5000/...) ou un
+     chemin bizarre, pour toujours renvoyer /uploads/...
+============================================================ */
+function normalizePhotoPath(p) {
+  if (!p) return p;
+  let s = String(p).trim();
+  if (!s) return s;
+
+  // Déjà au bon format
+  if (s.startsWith('/uploads/')) {
+    return s.replace(/\/{2,}/g, '/');
+  }
+
+  // URL absolue contenant /uploads/ (ex: http://localhost:5000/uploads/...)
+  const idx = s.indexOf('/uploads/');
+  if (idx !== -1) {
+    s = s.slice(idx);
+    return s.replace(/\/{2,}/g, '/');
+  }
+
+  // Fallback : on ne touche pas pour ne pas casser un cas exotique
+  return s;
+}
+
 function addLabels(p) {
   if (!p) return null;
   const obj = p.toJSON ? p.toJSON() : p;
+
+  // Normaliser les photos à la volée (utile si d’anciennes données contiennent "http://localhost...")
+  let photos = obj.photos;
+  if (Array.isArray(photos)) {
+    photos = photos.map(normalizePhotoPath);
+  }
+
   return {
     ...obj,
+    photos,
     typeLabel: getLabel(obj.type, PROPERTY_TYPES),
     statusLabel: getLabel(obj.status, PROPERTY_STATUSES),
   };
 }
 
 /* ============================================================
-   🖼️ Fonction critique corrigée : chemins fichiers
-   - produit toujours un chemin public commençant par /uploads/...
+   🖼️ Fonction critique : chemins fichiers (UPLOAD)
+   ✅ Version production-safe :
+   - Ne fait PLUS confiance à f.path (qui dépend de l’OS / Render / proxy)
+   - Utilise uniquement f.filename défini par multer
+   - Produit TOUJOURS : /uploads/properties/<filename>
 ============================================================ */
 function filePathsFromMulter(files = []) {
-  if (!files || !files.length) return [];
+  if (!Array.isArray(files) || !files.length) return [];
 
-  return files.map((f) => {
-    try {
-      // Normaliser Windows/Linux
-      let p = String(f.path || '').replace(/\\/g, '/');
-
-      // Si on retrouve /uploads/, on tronque avant pour garder un chemin public
-      const idx = p.lastIndexOf('/uploads/');
-      if (idx !== -1) {
-        p = p.slice(idx); // ✅ garde uniquement la portion publique
-      } else if (p.includes('uploads/')) {
-        // cas fallback si le préfixe n'a pas de slash initial
-        p = '/' + p.slice(p.indexOf('uploads/'));
-      } else if (f.filename) {
-        // dernier recours propre (convention properties)
-        p = `/uploads/properties/${f.filename}`;
-      } else {
-        // si vraiment rien, on met une valeur neutre
-        p = '/uploads/properties/unknown';
+  return files
+    .map((f) => {
+      try {
+        if (f && f.filename) {
+          return `/uploads/properties/${f.filename}`;
+        }
+        return null;
+      } catch {
+        return null;
       }
-
-      // enlever les doubles slash
-      p = p.replace(/\/{2,}/g, '/');
-      return p;
-    } catch (_e) {
-      return '/uploads/properties/unknown';
-    }
-  });
+    })
+    .filter(Boolean);
 }
 
 /* ============================================================
@@ -365,7 +388,10 @@ exports.update = async (req, res) => {
       if (shouldReplace) {
         updates.photos = newPhotos;
       } else {
-        updates.photos = [...(Array.isArray(p.photos) ? p.photos : []), ...newPhotos];
+        updates.photos = [
+          ...(Array.isArray(p.photos) ? p.photos.map(normalizePhotoPath) : []),
+          ...newPhotos,
+        ];
       }
     }
 

@@ -4,37 +4,66 @@ import { useParams } from 'react-router-dom';
 import { uploadEvidences, getEvidences, deleteEvidence } from '../services/evidences';
 import { me } from '../services/auth';
 
+// =========================================
+// 🌍 BASE URL dynamique (PRODUCTION SAFE)
+// =========================================
+const RAW_API = window.__TERANGA_API_BASE_URL || '';
+const FILE_BASE =
+  window.__TERANGA_FILE_BASE_URL ||
+  RAW_API.replace(/\/api\/?$/, '') ||
+  '';
+
+function toAbsUrl(path = '') {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const clean = path.startsWith('/') ? path : `/${path}`;
+  return `${FILE_BASE}${clean}`.replace(/([^:]\/)\/+/g, '$1');
+}
+
 export default function TaskEvidencesPage() {
   const { id } = useParams(); // taskId
   const [evidences, setEvidences] = useState([]);
   const [files, setFiles] = useState([]);
-  const [previewUrls, setPreviewUrls] = useState([]); // 🆕 aperçus
+  const [previewUrls, setPreviewUrls] = useState([]);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
 
-  // 🆕 mémorisation affichage formulaire
+  // toggle form visibility
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_evidences_showForm');
     return saved === null ? true : saved === '1';
   });
 
-  // 🆕 filtres UI
+  // UI filters
   const [filters, setFilters] = useState({
     q: '',
-    kind: '',          // '', 'image', 'pdf', 'other' (et toute valeur exacte venant du backend si ev.kind est renseigné)
+    kind: '',
     withNotes: false,
     dateFrom: '',
     dateTo: '',
-    sort: '-createdAt', // -createdAt (récent -> ancien) | createdAt | originalName | kind
+    sort: '-createdAt',
   });
 
-  // ✅ Mémoïse la fonction pour éviter l’avertissement et les recréations inutiles
+  // =========================================
+  // Helpers mime/kind
+  // =========================================
+  function inferKindFromName(name = '', mime = '') {
+    const lower = name.toLowerCase();
+    if (mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(lower)) return 'image';
+    if (mime === 'application/pdf' || /\.pdf$/i.test(lower)) return 'pdf';
+    return 'other';
+  }
+
+  // =========================================
+  // Loading evidences (memoized)
+  // =========================================
   const fetchEvidences = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
-      const evs = await getEvidences(id);
+      const evs = await getEvidences(id); // returns array already
       setEvidences(evs || []);
     } catch (err) {
       console.error('❌ Erreur chargement evidences:', err);
@@ -44,13 +73,13 @@ export default function TaskEvidencesPage() {
     }
   }, [id]);
 
-  // Init user + evidences
+  // Init load
   useEffect(() => {
-    let mounted = true;
+    let active = true;
     async function init() {
       try {
         const userData = await me();
-        if (!mounted) return;
+        if (!active) return;
         setUser(userData.user);
         await fetchEvidences();
       } catch (err) {
@@ -59,75 +88,80 @@ export default function TaskEvidencesPage() {
     }
     if (id) init();
     return () => {
-      mounted = false;
+      active = false;
     };
   }, [id, fetchEvidences]);
 
-  // Mémoriser l’état d’affichage du formulaire
+  // persist showForm state
   useEffect(() => {
     localStorage.setItem('teranga_evidences_showForm', showForm ? '1' : '0');
   }, [showForm]);
 
-  // Libérer les prévisualisations
+  // cleanup previews
   useEffect(() => {
     return () => {
-      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+      previewUrls.forEach((u) => URL.revokeObjectURL(u));
     };
   }, [previewUrls]);
 
-  function inferKindFromName(name = '', mime = '') {
-    const lower = name.toLowerCase();
-    if (mime.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(lower)) return 'image';
-    if (mime === 'application/pdf' || /\.pdf$/i.test(lower)) return 'pdf';
-    return 'other';
-  }
-
+  // =========================================
+  // File selection
+  // =========================================
   function handleFileChange(e) {
     const selected = Array.from(e.target.files || []);
     setFiles(selected);
 
-    // replace previews
     previewUrls.forEach((u) => URL.revokeObjectURL(u));
     const previews = selected.map((f) => URL.createObjectURL(f));
     setPreviewUrls(previews);
   }
 
+  // =========================================
+  // Upload evidences
+  // =========================================
   async function handleUpload(e) {
     e.preventDefault();
     try {
       if (files.length === 0) {
-        alert('Sélectionnez au moins un fichier.');
+        alert('Ajoutez au moins un fichier.');
         return;
       }
       await uploadEvidences(id, files, notes);
-      // reset
+
       setFiles([]);
       setNotes('');
       previewUrls.forEach((u) => URL.revokeObjectURL(u));
       setPreviewUrls([]);
+
       await fetchEvidences();
     } catch (err) {
-      console.error('❌ Erreur upload evidences:', err);
-      alert('Erreur lors de l’upload des fichiers ❌');
+      console.error('❌ Upload error', err);
+      alert("Erreur lors de l'upload");
     }
   }
 
+  // =========================================
+  // Delete evidence (admin)
+  // =========================================
   async function handleDelete(evidenceId) {
     if (!window.confirm('Supprimer cette preuve ?')) return;
+
     try {
       await deleteEvidence(evidenceId);
       await fetchEvidences();
     } catch (err) {
-      console.error('❌ Erreur suppression evidence:', err);
-      alert('Erreur lors de la suppression ❌');
+      console.error('❌ Delete error', err);
+      alert('Erreur lors de la suppression');
     }
   }
 
-  // 🧮 Application des filtres/tri côté client
+  // =========================================
+  // Filtering + Sorting
+  // =========================================
   const filtered = useMemo(() => {
     let arr = [...(evidences || [])];
 
-    // Texte
+    // Text search
     if (filters.q.trim()) {
       const q = filters.q.trim().toLowerCase();
       arr = arr.filter((ev) =>
@@ -155,35 +189,35 @@ export default function TaskEvidencesPage() {
       });
     }
 
-    // Avec notes
+    // With notes
     if (filters.withNotes) {
       arr = arr.filter((ev) => !!(ev.notes && String(ev.notes).trim()));
     }
 
-    // Période
+    // Date range
     if (filters.dateFrom) {
-      const tsFrom = new Date(filters.dateFrom).setHours(0, 0, 0, 0);
-      arr = arr.filter((ev) => new Date(ev.createdAt).getTime() >= tsFrom);
+      const ts = new Date(filters.dateFrom).setHours(0, 0, 0, 0);
+      arr = arr.filter((ev) => new Date(ev.createdAt).getTime() >= ts);
     }
     if (filters.dateTo) {
-      const tsTo = new Date(filters.dateTo).setHours(23, 59, 59, 999);
-      arr = arr.filter((ev) => new Date(ev.createdAt).getTime() <= tsTo);
+      const ts = new Date(filters.dateTo).setHours(23, 59, 59, 999);
+      arr = arr.filter((ev) => new Date(ev.createdAt).getTime() <= ts);
     }
 
-    // Tri
+    // Sorting
     const by = filters.sort || '-createdAt';
     arr.sort((a, b) => {
       const sign = by.startsWith('-') ? -1 : 1;
       const key = by.replace(/^-/, '');
-      let va;
-      let vb;
+
+      let va, vb;
 
       if (key === 'createdAt') {
         va = new Date(a.createdAt || 0).getTime();
         vb = new Date(b.createdAt || 0).getTime();
       } else if (key === 'originalName' || key === 'kind') {
-        va = (a[key] || '').toString().toLowerCase();
-        vb = (b[key] || '').toString().toLowerCase();
+        va = (a[key] || '').toLowerCase();
+        vb = (b[key] || '').toLowerCase();
       } else {
         va = a[key];
         vb = b[key];
@@ -197,50 +231,49 @@ export default function TaskEvidencesPage() {
     return arr;
   }, [evidences, filters]);
 
+  // =========================================
+  // UI Rendering
+  // =========================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
       <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        {/* 🧭 En-tête */}
+
+        {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
           <h1 className="text-2xl font-bold text-gray-900">📎 Preuves de la tâche #{id}</h1>
 
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowForm((s) => !s)}
-              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
-            >
-              {showForm ? '➖ Masquer le formulaire' : '➕ Ajouter des preuves'}
-            </button>
-          </div>
+          <button
+            onClick={() => setShowForm((s) => !s)}
+            className="px-4 py-2 bg-slate-800 text-white text-sm rounded-lg hover:bg-slate-900"
+          >
+            {showForm ? '➖ Masquer le formulaire' : '➕ Ajouter des preuves'}
+          </button>
         </div>
 
         {loading && (
           <p className="text-gray-500 animate-pulse text-center mb-4">Chargement…</p>
         )}
 
-        {/* 🎛️ Filtres */}
+        {/* Filters */}
         <div className="mb-6 bg-gray-50 border border-gray-200 rounded-xl p-5">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+
             <div className="lg:col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Recherche
-              </label>
+              <label className="text-xs text-gray-600">Recherche</label>
               <input
-                placeholder="Nom du fichier, notes, auteur…"
                 value={filters.q}
                 onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                placeholder="Nom du fichier, notes…"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Type de pièce
-              </label>
+              <label className="text-xs text-gray-600">Type</label>
               <select
                 value={filters.kind}
                 onChange={(e) => setFilters({ ...filters, kind: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">— Tous —</option>
                 <option value="image">Image</option>
@@ -249,63 +282,52 @@ export default function TaskEvidencesPage() {
               </select>
             </div>
 
-            <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={filters.withNotes}
-                  onChange={(e) => setFilters({ ...filters, withNotes: e.target.checked })}
-                  className="h-4 w-4"
-                />
-                Avec notes
-              </label>
-            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={filters.withNotes}
+                onChange={(e) => setFilters({ ...filters, withNotes: e.target.checked })}
+              />
+              Avec notes
+            </label>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Du
-              </label>
+              <label className="text-xs text-gray-600">Du</label>
               <input
                 type="date"
                 value={filters.dateFrom}
                 onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Au
-              </label>
+              <label className="text-xs text-gray-600">Au</label>
               <input
                 type="date"
                 value={filters.dateTo}
                 onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Tri
-              </label>
+              <label className="text-xs text-gray-600">Tri</label>
               <select
                 value={filters.sort}
                 onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 <option value="-createdAt">Plus récents</option>
                 <option value="createdAt">Plus anciens</option>
-                <option value="originalName">Nom (A→Z)</option>
-                <option value="-originalName">Nom (Z→A)</option>
-                <option value="kind">Type (A→Z)</option>
-                <option value="-kind">Type (Z→A)</option>
+                <option value="originalName">Nom A→Z</option>
+                <option value="-originalName">Nom Z→A</option>
               </select>
             </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between">
-            <div className="text-xs text-gray-500">{filtered.length} preuve(s) affichée(s)</div>
+          <div className="flex justify-between mt-3 text-xs text-gray-600">
+            <span>{filtered.length} preuve(s)</span>
             <button
               onClick={() =>
                 setFilters({
@@ -317,53 +339,41 @@ export default function TaskEvidencesPage() {
                   sort: '-createdAt',
                 })
               }
-              className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
+              className="px-3 py-1.5 bg-gray-200 rounded-md text-xs"
             >
-              Réinitialiser les filtres
+              Réinitialiser
             </button>
           </div>
         </div>
 
-        {/* 🧾 Formulaire upload (toggle) */}
+        {/* Upload Form */}
         {showForm && (
-          <form
-            onSubmit={handleUpload}
-            className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-8"
-          >
+          <form onSubmit={handleUpload} className="bg-gray-50 p-5 rounded-xl border mb-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fichiers *
-                </label>
+                <label className="text-sm">Fichiers *</label>
                 <input
                   type="file"
                   multiple
-                  accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.pdf,.txt,.doc,.docx,.xls,.xlsx"
                   onChange={handleFileChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm cursor-pointer focus:ring-2 focus:ring-blue-500 bg-white"
+                  accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.pdf,.txt,.doc,.docx,.xls,.xlsx"
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
                 />
-                {/* Aperçu */}
+
                 {previewUrls.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-3">
                     {previewUrls.map((url, i) => {
                       const f = files[i];
                       const kind = inferKindFromName(f?.name, f?.type);
                       return (
-                        <div
-                          key={i}
-                          className="w-28 h-28 border border-gray-300 rounded-lg overflow-hidden shadow-sm flex items-center justify-center bg-white"
-                          title={f?.name}
-                        >
+                        <div key={i} className="w-28 h-28 border rounded-lg flex items-center justify-center bg-white">
                           {kind === 'image' ? (
-                            <img
-                              src={url}
-                              alt={`preview-${i}`}
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={url} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <div className="text-center text-xs px-2 text-gray-600 break-words">
+                            <span className="text-xs text-gray-600 text-center break-words px-2">
                               📄 {f?.name}
-                            </div>
+                            </span>
                           )}
                         </div>
                       );
@@ -373,24 +383,18 @@ export default function TaskEvidencesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes (optionnel)
-                </label>
+                <label className="text-sm">Notes</label>
                 <textarea
-                  placeholder="Contexte, précision…"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={4}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
                 />
               </div>
             </div>
 
-            <div className="mt-4 text-right">
-              <button
-                type="submit"
-                className="px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
-              >
+            <div className="text-right mt-4">
+              <button className="px-5 py-2.5 bg-blue-600 text-white rounded-lg">
                 Uploader
               </button>
             </div>
@@ -398,56 +402,50 @@ export default function TaskEvidencesPage() {
         )}
 
         {user?.role !== 'admin' && (
-          <p className="italic text-gray-500 mb-4">
-            🔒 Seul un administrateur peut supprimer une preuve.
-          </p>
+          <p className="text-gray-500 italic mb-4">🔒 Seul un administrateur peut supprimer une preuve.</p>
         )}
 
-        {/* 📄 Liste des evidences */}
+        {/* List */}
         {filtered.length === 0 ? (
-          <p className="text-gray-500 italic text-center py-6">Aucune preuve trouvée.</p>
+          <p className="text-gray-500 italic text-center">Aucune preuve trouvée.</p>
         ) : (
           <div className="grid gap-4">
             {filtered.map((ev) => {
-              const k = ev.kind || inferKindFromName(ev.originalName, ev.mimeType);
-              const fileUrl = `http://localhost:5000${ev.filePath}`;
-              const isImage = k === 'image';
+              const kind = ev.kind || inferKindFromName(ev.originalName, ev.mimeType);
+              const fileUrl = toAbsUrl(ev.filePath);
+              const isImage = kind === 'image';
+
               return (
-                <div
-                  key={ev.id}
-                  className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div key={ev.id} className="bg-white border rounded-xl p-4 shadow-sm">
+                  <div className="flex flex-col md:flex-row md:justify-between gap-3">
+
                     <div className="flex items-center gap-3">
-                      <div className="w-16 h-16 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
+                      <div className="w-16 h-16 border rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
                         {isImage ? (
-                          <img
-                            src={fileUrl}
-                            alt={ev.originalName || 'evidence'}
-                            className="w-full h-full object-cover"
-                          />
+                          <img src={fileUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-2xl">📄</span>
                         )}
                       </div>
+
                       <div>
                         <a
                           href={fileUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-blue-600 hover:underline text-sm font-semibold break-all"
-                          title={ev.originalName || ev.filePath}
+                          className="text-blue-600 hover:underline text-sm font-semibold"
                         >
                           {ev.originalName || ev.filePath}
                         </a>
+
                         <div className="text-xs text-gray-500">
-                          Type : <span className="uppercase">{k}</span> • Ajouté le{' '}
-                          {new Date(ev.createdAt).toLocaleString()} par{' '}
+                          Type : {kind.toUpperCase()} — Ajouté le {new Date(ev.createdAt).toLocaleString()} par{' '}
                           {ev.uploader
                             ? `${ev.uploader.firstName || ''} ${ev.uploader.lastName || ''}`.trim() ||
                               ev.uploader.email
                             : '—'}
                         </div>
+
                         {ev.notes && (
                           <div className="text-sm text-gray-700 mt-1">
                             <strong>Notes :</strong> {ev.notes}
@@ -456,16 +454,13 @@ export default function TaskEvidencesPage() {
                       </div>
                     </div>
 
-                    {/* Actions admin */}
                     {user?.role === 'admin' && (
-                      <div className="text-right">
-                        <button
-                          onClick={() => handleDelete(ev.id)}
-                          className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition"
-                        >
-                          ❌ Supprimer
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => handleDelete(ev.id)}
+                        className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg"
+                      >
+                        ❌ Supprimer
+                      </button>
                     )}
                   </div>
                 </div>

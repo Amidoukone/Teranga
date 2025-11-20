@@ -1,37 +1,77 @@
-// frontend/src/pages/ProductDetailPage.jsx
+// ============================================================
+// ProductDetailPage.jsx — Teranga PRODUCTION READY (Option B)
+// ============================================================
+
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getProductById } from '../services/products';
 import { formatCurrency } from '../utils/labels';
 
-/**
- * 🛍️ Détail d’un produit
- * ---------------------------------------------------------
- * - Charge les données via /api/products/:id
- * - Affiche galerie d’images, description, prix, stock, catégorie
- * - Lightbox plein écran au clic sur l’image principale
- * - Cohérent avec normalizeProduct() (imageUrl + allImageUrls)
- * ---------------------------------------------------------
- */
+/* ============================================================
+   🌍 CONFIG PRODUCTION — FILE_BASE / toAbsUrl()
+============================================================ */
+const FILE_BASE =
+  (typeof window !== 'undefined' &&
+    (window.__TERANGA_FILE_BASE_URL ||
+      window.__TERANGA_API_BASE_URL ||
+      '')) ||
+  '';
+
+function normalizePath(path = '') {
+  if (!path) return '';
+  const p = String(path).trim().replace(/\\/g, '/');
+
+  if (/^https?:\/\//i.test(p)) return p;
+
+  const start = p.startsWith('/') ? p : '/' + p;
+  return start.replace(/\/{2,}/g, '/');
+}
+
+function toAbsUrl(path = '') {
+  const norm = normalizePath(path);
+  if (/^https?:\/\//i.test(norm)) return norm;
+
+  return (
+    FILE_BASE.replace(/\/$/, '') +
+    '/' +
+    norm.replace(/^\//, '')
+  );
+}
+
+/* ============================================================
+   ⭐ PAGE DÉTAIL PRODUIT
+============================================================ */
 export default function ProductDetailPage() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // 🖼️ Gestion de la galerie
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  /* ============================================================
+     🔄 Load product
+  ============================================================= */
   useEffect(() => {
     async function loadProduct() {
       try {
         setLoading(true);
         const prod = await getProductById(id);
+
+        // NORMALISATION ABSOLUE DES IMAGES
+        const cover = prod.imageUrl ? toAbsUrl(prod.imageUrl) : null;
+        const gallery = Array.isArray(prod.allImageUrls)
+          ? prod.allImageUrls.map(toAbsUrl)
+          : [];
+
+        prod.imageUrl = cover;
+        prod.allImageUrls = gallery;
+
         setProduct(prod);
-        setError('');
         setSelectedIndex(0);
         setLightboxOpen(false);
+        setError('');
       } catch (e) {
         console.error('❌ Erreur chargement produit:', e);
         const msg =
@@ -45,9 +85,9 @@ export default function ProductDetailPage() {
     if (id) loadProduct();
   }, [id]);
 
-  /* =========================================================
-     🌀 États de chargement / erreur
-  ========================================================= */
+  /* ============================================================
+     🌀 Load/Errors
+  ============================================================= */
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
@@ -63,6 +103,7 @@ export default function ProductDetailPage() {
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
         <div className="text-center">
           <p className="text-red-600 text-lg mb-4">{error}</p>
+
           <Link
             to="/shop"
             className="inline-block px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition"
@@ -92,9 +133,9 @@ export default function ProductDetailPage() {
     );
   }
 
-  /* =========================================================
-     🖼️ Données produit prêtes
-  ========================================================= */
+  /* ============================================================
+     🖼 Construction des images (normalisées)
+  ============================================================= */
   const {
     name,
     description,
@@ -106,7 +147,6 @@ export default function ProductDetailPage() {
     allImageUrls,
   } = product;
 
-  // 🔹 Construction de la liste d’images (cover + galerie)
   const images =
     Array.isArray(allImageUrls) && allImageUrls.length
       ? allImageUrls
@@ -117,54 +157,65 @@ export default function ProductDetailPage() {
   const hasImages = images.length > 0;
   const currentImage = hasImages ? images[selectedIndex] : null;
 
-  // 🔹 Navigation lightbox
-  function goPrev(event) {
-    if (event) event.stopPropagation();
+  /* ============================================================
+     🖼 Lightbox navigation
+  ============================================================= */
+  function goPrev(e) {
+    if (e) e.stopPropagation();
     if (!hasImages) return;
+
     setSelectedIndex((prev) =>
       prev === 0 ? images.length - 1 : prev - 1
     );
   }
 
-  function goNext(event) {
-    if (event) event.stopPropagation();
+  function goNext(e) {
+    if (e) e.stopPropagation();
     if (!hasImages) return;
+
     setSelectedIndex((prev) =>
       prev === images.length - 1 ? 0 : prev + 1
     );
   }
 
   function openLightbox() {
-    if (!hasImages) return;
-    setLightboxOpen(true);
+    if (hasImages) setLightboxOpen(true);
   }
 
   function closeLightbox() {
     setLightboxOpen(false);
   }
 
+  /* ============================================================
+     🧱 UI PRINCIPALE
+  ============================================================= */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-6 py-10">
       <div className="max-w-4xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
+
         <div className="flex flex-col md:flex-row gap-6">
-          {/* =========================
+
+          {/* ===========================
               🖼 Bloc images
-          ========================== */}
+              ========================== */}
           <div className="w-full md:w-1/2">
+
             {hasImages ? (
               <>
                 {/* Image principale */}
                 <div
                   className="relative cursor-zoom-in group"
                   onClick={openLightbox}
-                  aria-label="Voir l'image en grand"
+                  aria-label={`Voir image ${selectedIndex + 1} de ${images.length}`}
                 >
                   <img
                     src={currentImage}
                     alt={name}
                     className="w-full h-80 object-cover rounded-xl border border-gray-200"
                   />
+
                   <div className="absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/10 transition" />
+
                   {images.length > 1 && (
                     <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-full">
                       {selectedIndex + 1} / {images.length}
@@ -177,14 +228,15 @@ export default function ProductDetailPage() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     {images.map((img, idx) => (
                       <button
-                        key={img + idx}
+                        key={idx}
                         type="button"
                         onClick={() => setSelectedIndex(idx)}
-                        className={`border rounded-lg overflow-hidden w-16 h-16 flex-shrink-0 ${
+                        className={`border rounded-lg overflow-hidden w-16 h-16 ${
                           idx === selectedIndex
                             ? 'ring-2 ring-blue-500 border-blue-500'
                             : 'border-gray-200 hover:border-blue-300'
                         }`}
+                        aria-label={`Voir la vignette ${idx + 1}`}
                       >
                         <img
                           src={img}
@@ -201,11 +253,12 @@ export default function ProductDetailPage() {
                 Aucun visuel disponible
               </div>
             )}
+
           </div>
 
-          {/* =========================
+          {/* ===========================
               📄 Bloc infos
-          ========================== */}
+              ========================== */}
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               {name}
@@ -228,8 +281,7 @@ export default function ProductDetailPage() {
 
             {typeof stock === 'number' && (
               <p className="text-sm text-gray-500 mb-4">
-                <span className="font-medium">Stock :</span>{' '}
-                {stock}
+                <span className="font-medium">Stock :</span> {stock}
               </p>
             )}
 
@@ -243,14 +295,17 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* =========================
-          💡 Lightbox plein écran
-      ========================== */}
+      {/* ============================================================
+          💡 LIGHTBOX PLEIN ÉCRAN
+      ============================================================ */}
       {lightboxOpen && hasImages && (
         <div
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
           onClick={closeLightbox}
+          role="dialog"
+          aria-modal="true"
         >
+          {/* Close */}
           <button
             type="button"
             onClick={(e) => {
@@ -258,11 +313,12 @@ export default function ProductDetailPage() {
               closeLightbox();
             }}
             className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80"
-            aria-label="Fermer"
+            aria-label="Fermer la lightbox"
           >
             ✕
           </button>
 
+          {/* Nav */}
           {images.length > 1 && (
             <>
               <button
@@ -273,6 +329,7 @@ export default function ProductDetailPage() {
               >
                 ‹
               </button>
+
               <button
                 type="button"
                 onClick={goNext}
@@ -286,7 +343,7 @@ export default function ProductDetailPage() {
 
           <img
             src={currentImage}
-            alt={name}
+            alt={`${name} (image ${selectedIndex + 1})`}
             className="max-w-[90vw] max-h-[80vh] object-contain rounded-xl shadow-2xl border border-white/20"
           />
 

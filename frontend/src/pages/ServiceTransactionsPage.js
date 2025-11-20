@@ -4,6 +4,21 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { me } from '../services/auth';
 import { getTransactions, createTransaction } from '../services/transactions';
 import api from '../services/api';
+import { applyLabels } from '../utils/labels';
+
+// 🌍 BASE URL dynamique pour les fichiers (prod + dev)
+const RAW_API = window.__TERANGA_API_BASE_URL || '';
+const FILE_BASE =
+  window.__TERANGA_FILE_BASE_URL ||
+  RAW_API.replace(/\/api\/?$/, '') ||
+  '';
+
+function toAbsUrl(path = '') {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return `${FILE_BASE}${normalized}`.replace(/([^:]\/)\/+/g, '$1');
+}
 
 export default function ServiceTransactionsPage() {
   const { id } = useParams(); // serviceId
@@ -12,7 +27,8 @@ export default function ServiceTransactionsPage() {
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);     // chargement global page
+  const [submitting, setSubmitting] = useState(false); // chargement formulaire
 
   const [form, setForm] = useState({
     type: 'expense',
@@ -22,25 +38,29 @@ export default function ServiceTransactionsPage() {
     proofFile: null,
   });
 
-  // 🔐 En-têtes d'auth stables (évite de recréer une fonction dans les deps)
+  // 🔐 En-têtes d'auth stables
   const authHeaders = useMemo(() => {
     const token =
       localStorage.getItem('teranga_token') || localStorage.getItem('token');
     return token ? { Authorization: `Bearer ${token}` } : {};
   }, []);
 
-  // 🔁 Charge les transactions du service (stable pour useEffect)
+  // 🔁 Transactions du service
   const fetchTransactions = useCallback(async () => {
     try {
       const data = await getTransactions({ serviceId: id });
-      setTransactions(data);
+      // on applique les labels s'ils ne sont pas déjà présents
+      const enriched = (data || []).map((t) =>
+        t.statusLabel || t.typeLabel || t.currencyLabel ? t : applyLabels(t)
+      );
+      setTransactions(enriched);
     } catch (err) {
       console.error('❌ Erreur fetchTransactions:', err);
       setTransactions([]);
     }
   }, [id]);
 
-  // 🔁 Charge les tâches liées au service (stable pour useEffect)
+  // 🔁 Tâches du service
   const fetchTasks = useCallback(async () => {
     try {
       const { data } = await api.get(`/tasks/service/${id}`, {
@@ -53,7 +73,7 @@ export default function ServiceTransactionsPage() {
     }
   }, [id, authHeaders]);
 
-  // 🚪 Initialisation + redirection si non auth
+  // 🚪 Initialisation
   useEffect(() => {
     let active = true;
     async function init() {
@@ -77,19 +97,34 @@ export default function ServiceTransactionsPage() {
     };
   }, [fetchTransactions, fetchTasks]);
 
+  // ➕ Soumission du formulaire
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!id) {
+      alert('Service introuvable.');
+      return;
+    }
+
+    const amountNumber = parseFloat(form.amount);
+    if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+      alert('Montant invalide.');
+      return;
+    }
+
+    setSubmitting(true);
     try {
       const payload = {
         serviceId: parseInt(id, 10),
         taskId: form.taskId ? parseInt(form.taskId, 10) : undefined,
         type: form.type,
-        amount: parseFloat(form.amount),
+        amount: amountNumber,
         description: form.description || undefined,
         proofFile: form.proofFile || null,
       };
+
       await createTransaction(payload);
       alert('✅ Transaction ajoutée');
+
       setForm({
         type: 'expense',
         amount: '',
@@ -97,10 +132,13 @@ export default function ServiceTransactionsPage() {
         taskId: '',
         proofFile: null,
       });
-      await fetchTransactions(); // ✅ rechargement propre
+
+      await fetchTransactions();
     } catch (err) {
       console.error('❌ Erreur ajout transaction:', err);
       alert("Erreur lors de l'ajout de la transaction");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -157,7 +195,7 @@ export default function ServiceTransactionsPage() {
               <select
                 value={form.type}
                 onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 <option value="revenue">Revenu</option>
                 <option value="expense">Dépense</option>
@@ -178,7 +216,7 @@ export default function ServiceTransactionsPage() {
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
                 required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
               />
             </div>
 
@@ -190,7 +228,7 @@ export default function ServiceTransactionsPage() {
               <select
                 value={form.taskId}
                 onChange={(e) => setForm({ ...form, taskId: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 <option value="">— Aucune tâche —</option>
                 {tasks.map((t) => (
@@ -213,7 +251,7 @@ export default function ServiceTransactionsPage() {
                   setForm({ ...form, description: e.target.value })
                 }
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
               />
             </div>
 
@@ -236,13 +274,14 @@ export default function ServiceTransactionsPage() {
             <div className="col-span-2 text-right">
               <button
                 type="submit"
+                disabled={submitting}
                 className={`px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition ${
-                  loading
+                  submitting
                     ? 'bg-blue-300 cursor-not-allowed'
                     : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
                 }`}
               >
-                {loading ? 'Ajout…' : 'Ajouter la transaction'}
+                {submitting ? 'Ajout…' : 'Ajouter la transaction'}
               </button>
             </div>
           </form>
@@ -267,7 +306,8 @@ export default function ServiceTransactionsPage() {
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {t.type.toUpperCase()} — {t.amount} {t.currency}
+                      {(t.typeLabel || t.type || '').toString().toUpperCase()} —{' '}
+                      {Number(t.amount || 0).toLocaleString()} {t.currencyLabel || t.currency}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
                       {t.description || 'Aucune description'}
@@ -275,21 +315,24 @@ export default function ServiceTransactionsPage() {
                   </div>
 
                   <div className="mt-2 sm:mt-0 text-xs text-gray-500">
-                    {new Date(t.createdAt).toLocaleString()}
+                    {t.createdAt
+                      ? new Date(t.createdAt).toLocaleString()
+                      : 'Date inconnue'}
                   </div>
                 </div>
 
-                <div className="mt-3 text-sm text-gray-700">
+                <div className="mt-3 text-sm text-gray-700 space-y-1">
                   {t.task && (
                     <p>
                       🔧 <strong>Tâche :</strong> {t.task.title} (ID {t.task.id})
                     </p>
                   )}
+
                   {t.proofFile?.path && (
                     <p className="mt-1">
                       📎{' '}
                       <a
-                        href={`http://localhost:5000${t.proofFile.path}`}
+                        href={toAbsUrl(t.proofFile.path)}
                         target="_blank"
                         rel="noreferrer"
                         className="text-blue-600 hover:underline"
@@ -298,8 +341,14 @@ export default function ServiceTransactionsPage() {
                       </a>
                     </p>
                   )}
+
                   <p className="mt-1 text-xs text-gray-500">
-                    Enregistré par <strong>{t.user?.email}</strong>
+                    Enregistré par{' '}
+                    <strong>
+                      {t.user?.email ||
+                        `${t.user?.firstName || ''} ${t.user?.lastName || ''}`.trim() ||
+                        '—'}
+                    </strong>
                   </p>
                 </div>
               </div>

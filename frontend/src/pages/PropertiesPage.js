@@ -90,21 +90,32 @@ export default function PropertiesPage() {
     }
   }
 
-  // ==========================================
-  // 🔹 Helpers d’images
-  // ==========================================
-  const API_BASE = 'http://localhost:5000'; // cohérent avec ton backend actuel
-  function toAbsUrl(pathOrUrl = '') {
-    if (!pathOrUrl) return '';
-    // si déjà absolu
-    if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
-    // assure le slash unique
-    const normalized = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
-    return `${API_BASE}${normalized}`.replace(/([^:]\/)\/+/g, '$1');
-  }
-  function isPdf(path = '') {
-    return /\.pdf($|\?)/i.test(path);
-  }
+// ==========================================
+// 🔹 Helpers d’images
+// ==========================================
+
+// Base pour les fichiers : backend en prod ou fallback local en dev
+const FILE_BASE =
+  (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
+  (typeof window !== 'undefined' && window.__TERANGA_API_BASE_URL
+    ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
+    : 'http://localhost:5000');
+
+function toAbsUrl(pathOrUrl = '') {
+  if (!pathOrUrl) return '';
+
+  // si c'est déjà une URL absolue (http/https), on ne touche pas
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+
+  // on s'assure qu'il y a un seul slash entre base et chemin
+  const normalized = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+  return `${FILE_BASE}${normalized}`.replace(/([^:]\/)\/+/g, '$1');
+}
+
+function isPdf(path = '') {
+  return /\.pdf($|\?)/i.test(path);
+}
+
 
   // ==========================================
   // 🔹 Gestion fichiers & prévisualisation

@@ -1,15 +1,40 @@
+/* eslint-disable jsx-a11y/img-redundant-alt */
 // frontend/src/pages/AdminProductsPage.jsx
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from "react";
 import {
   getProducts,
   createProduct,
   updateProduct,
   deleteProduct,
-} from '../services/products';
-import { getCategories } from '../services/categories';
-import { me } from '../services/auth';
-import { formatCurrency } from '../utils/labels';
+} from "../services/products";
+import { getCategories } from "../services/categories";
+import { me } from "../services/auth";
+import { formatCurrency } from "../utils/labels";
 
+/* ============================================================
+   🌍 CONFIG PRODUCTION (Option A)
+   - Utilise FILE_BASE / API_BASE du runtime (injecté via index.html)
+   - Aucun localhost en dur
+============================================================ */
+const FILE_BASE =
+  (typeof window !== "undefined" &&
+    (window.__TERANGA_FILE_BASE_URL ||
+      window.__TERANGA_API_BASE_URL ||
+      "")) ||
+  "";
+
+/* Normalisation des URLs absolues */
+function toAbsUrl(path = "") {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+  return (
+    FILE_BASE.replace(/\/$/, "") + "/" + String(path).replace(/^\//, "")
+  );
+}
+
+/* ============================================================
+   ⭐ PAGE ADMIN PRODUITS — VERSION PRODUCTION READY
+============================================================ */
 export default function AdminProductsPage() {
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
@@ -18,68 +43,66 @@ export default function AdminProductsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
 
-  // 🔹 État du formulaire
   const [form, setForm] = useState({
-    name: '',
-    description: '',
-    price: '',
-    currency: 'XOF',
+    name: "",
+    description: "",
+    price: "",
+    currency: "XOF",
     stock: 0,
-    categoryId: '',
-    imageFile: null,   // image principale (cover)
-    imageFiles: [],    // galerie (0 à 3 images)
+    categoryId: "",
+    imageFile: null, // file cover
+    imageFiles: [], // file[] gallery
   });
 
-  // 🔹 Prévisualisation (cover + galerie)
-  const [previewCoverUrl, setPreviewCoverUrl] = useState('');
+  // Prévisualisations
+  const [previewCoverUrl, setPreviewCoverUrl] = useState("");
   const [previewGalleryUrls, setPreviewGalleryUrls] = useState([]);
 
-  // 🔹 Lightbox pour agrandir les images d’un produit
+  // Lightbox
   const [lightbox, setLightbox] = useState({
     open: false,
     product: null,
     index: 0,
   });
 
-  /* ===========================
-     🔄 Init
-  =========================== */
+  /* ============================================================
+     🔄 Initialisation
+  ============================================================= */
   useEffect(() => {
     async function init() {
       try {
-        const ud = await me();
-        setUser(ud.user);
+        const u = await me();
+        setUser(u.user);
         await Promise.all([loadCategories(), loadProducts()]);
       } catch (err) {
-        console.error('❌ init AdminProductsPage:', err);
+        console.error("❌ init AdminProductsPage:", err);
       }
     }
     init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Nettoyage des URLs de preview quand elles changent / au démontage
+  // Nettoyage des URL de preview
   useEffect(() => {
     return () => {
       if (previewCoverUrl) URL.revokeObjectURL(previewCoverUrl);
       previewGalleryUrls.forEach((u) => {
         try {
           URL.revokeObjectURL(u);
-        } catch {
-          /* ignore */
-        }
+        } catch {}
       });
     };
   }, [previewCoverUrl, previewGalleryUrls]);
 
+  /* ============================================================
+     📦 Loaders
+  ============================================================= */
   async function loadProducts() {
     setLoading(true);
     try {
       const prods = await getProducts({ limit: 200 });
       setProducts(prods || []);
-    } catch (err) {
-      console.error('❌ loadProducts:', err);
-      alert('Erreur lors du chargement des produits.');
+    } catch (e) {
+      alert("Erreur chargement produits");
     } finally {
       setLoading(false);
     }
@@ -90,347 +113,298 @@ export default function AdminProductsPage() {
       const cats = await getCategories({ limit: 200 });
       setCategories(cats || []);
     } catch (err) {
-      console.error('❌ loadCategories:', err);
+      console.error("❌ loadCategories:", err);
       setCategories([]);
     }
   }
 
-  /* ===========================
+  /* ============================================================
      🧹 Reset form
-  =========================== */
+  ============================================================= */
   function resetForm() {
     setForm({
-      name: '',
-      description: '',
-      price: '',
-      currency: 'XOF',
+      name: "",
+      description: "",
+      price: "",
+      currency: "XOF",
       stock: 0,
-      categoryId: '',
+      categoryId: "",
       imageFile: null,
       imageFiles: [],
     });
     setEditing(null);
-    setPreviewCoverUrl('');
+    setPreviewCoverUrl("");
     setPreviewGalleryUrls([]);
   }
 
-  /* ===========================
-     🖼️ Gestion image principale
-  =========================== */
+  /* ============================================================
+     🖼 COVER
+  ============================================================= */
   function handleCoverChange(file) {
     setForm((f) => ({ ...f, imageFile: file || null }));
     setPreviewCoverUrl((old) => {
       if (old) {
         try {
           URL.revokeObjectURL(old);
-        } catch {
-          /* ignore */
-        }
+        } catch {}
       }
-      if (!file) return '';
-      return URL.createObjectURL(file);
+      return file ? URL.createObjectURL(file) : "";
     });
   }
 
-  /* ===========================
-     🖼️ Gestion galerie (0–3 images)
-  =========================== */
+  /* ============================================================
+     🖼 GALERIE (max 3 images)
+  ============================================================= */
   function handleGalleryChange(fileList) {
-    const files = Array.from(fileList || []).filter((f) => f instanceof File);
-    const limited = files.slice(0, 3); // limite à 3 images
+    const list = Array.from(fileList || []).slice(0, 3);
 
-    setForm((f) => ({ ...f, imageFiles: limited }));
+    setForm((f) => ({ ...f, imageFiles: list }));
 
-    // Nettoyage des anciennes urls
-    setPreviewGalleryUrls((oldUrls) => {
-      oldUrls.forEach((u) => {
-        try {
-          URL.revokeObjectURL(u);
-        } catch {
-          /* ignore */
-        }
-      });
-      // Création des nouvelles urls
-      return limited.map((file) => URL.createObjectURL(file));
+    previewGalleryUrls.forEach((u) => {
+      try {
+        URL.revokeObjectURL(u);
+      } catch {}
     });
+
+    setPreviewGalleryUrls(list.map((f) => URL.createObjectURL(f)));
   }
 
-  /* ===========================
-     💾 Submit
-  =========================== */
+  /* ============================================================
+     💾 SUBMIT
+  ============================================================= */
   async function handleSubmit(e) {
     e.preventDefault();
     try {
-      if (!form.name || form.price === '' || form.price === null) {
-        alert('Nom et prix sont requis.');
+      if (!form.name || form.price === "") {
+        alert("Nom et prix obligatoires");
         return;
       }
 
       const payload = {
         ...form,
-        price: form.price === '' ? '' : Number(form.price),
-        stock: form.stock === '' ? 0 : Number(form.stock),
-        categoryId: form.categoryId ? Number(form.categoryId) : '',
-        // imageFile (File) et imageFiles (File[]) sont déjà dans form,
-        // et seront correctement sérialisés par toFormData côté service.
+        price: Number(form.price),
+        stock: Number(form.stock || 0),
+        categoryId: form.categoryId ? Number(form.categoryId) : "",
       };
 
       if (editing) {
         await updateProduct(editing.id, payload);
-        alert('✅ Produit mis à jour avec succès.');
+        alert("Produit mis à jour");
       } else {
         await createProduct(payload);
-        alert('✅ Produit ajouté avec succès.');
+        alert("Produit ajouté");
       }
 
       resetForm();
       await loadProducts();
       setShowForm(false);
-    } catch (err) {
-      console.error('❌ handleSubmit:', err);
-      const msg =
-        err?.response?.data?.error ||
-        "Erreur lors de l'enregistrement du produit.";
-      alert(msg);
+    } catch (e) {
+      console.error("❌ handleSubmit:", e);
+      alert("Erreur enregistrement produit");
     }
   }
 
-  /* ===========================
-     🗑️ Delete
-  =========================== */
+  /* ============================================================
+     🗑 SUPPRESSION
+  ============================================================= */
   async function handleDelete(id) {
-    const confirmDelete = window.confirm(
-      '⚠️ Voulez-vous vraiment supprimer ce produit ?\n\nCette action est irréversible.'
-    );
-    if (!confirmDelete) return;
-
+    if (!window.confirm("Supprimer ce produit ?")) return;
     try {
-      // utilise le flag force=true pour suppression directe côté backend
       await deleteProduct(`${id}?force=true`);
-      alert('🗑 Produit supprimé avec succès.');
       await loadProducts();
-    } catch (err) {
-      console.error('❌ deleteProduct:', err);
-      const msg =
-        err?.response?.data?.error ||
-        'Erreur lors de la suppression du produit.';
-      alert(msg);
+      alert("Produit supprimé");
+    } catch (e) {
+      alert("Erreur suppression");
     }
   }
 
-  /* ===========================
-     ✏️ Edit
-  =========================== */
+  /* ============================================================
+     ✏️ EDIT
+  ============================================================= */
   function handleEdit(p) {
-    const cId = p.category?.id || p.categoryId || '';
     setForm({
-      name: p.name || '',
-      description: p.description || '',
-      price: p.price ?? '',
-      currency: (p.currency || 'XOF').toUpperCase(),
+      name: p.name || "",
+      description: p.description || "",
+      price: p.price ?? "",
+      currency: (p.currency || "XOF").toUpperCase(),
       stock: p.stock ?? 0,
-      categoryId: cId ? String(cId) : '',
-      imageFile: null,     // on ne pré-remplit pas, l'image actuelle est conservée si on ne choisit rien
-      imageFiles: [],      // idem pour la galerie
+      categoryId: p.categoryId ? String(p.categoryId) : "",
+      imageFile: null,
+      imageFiles: [],
     });
 
-    // On ne met pas les images existantes dans les previews (elles sont visibles dans la liste + lightbox)
-    setPreviewCoverUrl('');
-    setPreviewGalleryUrls([]);
-
     setEditing(p);
+    setPreviewCoverUrl("");
+    setPreviewGalleryUrls([]);
     setShowForm(true);
   }
 
-  /* ===========================
-     🏷️ Helpers
-  =========================== */
+  /* ============================================================
+     📌 Mapping catégories
+  ============================================================= */
   const categoriesById = useMemo(() => {
-    const map = new Map();
-    categories.forEach((c) => map.set(c.id, c));
-    return map;
+    const m = new Map();
+    categories.forEach((c) => m.set(c.id, c));
+    return m;
   }, [categories]);
 
-  /* ===========================
-     🔍 Helpers Lightbox
-  =========================== */
-  function openLightbox(product, startIndex = 0) {
+  /* ============================================================
+     🔍 Lightbox
+  ============================================================= */
+  function openLightbox(product, index = 0) {
     if (!product) return;
-    const urls =
-      (product.allImageUrls && product.allImageUrls.length > 0)
-        ? product.allImageUrls
-        : (product.imageUrl ? [product.imageUrl] : []);
 
-    if (!urls.length) return;
+    // Convertit toutes les URLs en absolues
+    const imgs = (product.allImageUrls || [])
+      .map(toAbsUrl)
+      .filter(Boolean);
+
+    const fallback = product.imageUrl ? [toAbsUrl(product.imageUrl)] : [];
+    const final = imgs.length ? imgs : fallback;
+
+    if (!final.length) return;
 
     setLightbox({
       open: true,
-      product,
-      index: Math.max(0, Math.min(startIndex, urls.length - 1)),
+      product: { ...product, _images: final },
+      index: Math.max(0, Math.min(index, final.length - 1)),
     });
+  }
+
+  function goPrev() {
+    const imgs = lightbox.product?._images || [];
+    if (!imgs.length) return;
+    setLightbox((lb) => ({
+      ...lb,
+      index: (lb.index - 1 + imgs.length) % imgs.length,
+    }));
+  }
+
+  function goNext() {
+    const imgs = lightbox.product?._images || [];
+    if (!imgs.length) return;
+    setLightbox((lb) => ({
+      ...lb,
+      index: (lb.index + 1) % imgs.length,
+    }));
   }
 
   function closeLightbox() {
     setLightbox({ open: false, product: null, index: 0 });
   }
 
-  function goPrev() {
-    if (!lightbox.product) return;
-    const urls =
-      lightbox.product.allImageUrls && lightbox.product.allImageUrls.length > 0
-        ? lightbox.product.allImageUrls
-        : (lightbox.product.imageUrl ? [lightbox.product.imageUrl] : []);
-    if (!urls.length) return;
-
-    setLightbox((prev) => ({
-      ...prev,
-      index: (prev.index - 1 + urls.length) % urls.length,
-    }));
-  }
-
-  function goNext() {
-    if (!lightbox.product) return;
-    const urls =
-      lightbox.product.allImageUrls && lightbox.product.allImageUrls.length > 0
-        ? lightbox.product.allImageUrls
-        : (lightbox.product.imageUrl ? [lightbox.product.imageUrl] : []);
-    if (!urls.length) return;
-
-    setLightbox((prev) => ({
-      ...prev,
-      index: (prev.index + 1) % urls.length,
-    }));
-  }
-
+  /* ============================================================
+     🧱 UI
+  ============================================================= */
   if (!user)
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <p className="text-gray-600 text-lg animate-pulse">Chargement…</p>
+      <div className="flex justify-center items-center min-h-screen">
+        Chargement…
       </div>
     );
 
-  /* ===========================
-     🧱 UI principale
-  =========================== */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-8 border">
+
+        {/* HEADER */}
+        <div className="flex justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              📦 Gestion des produits
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Connecté en tant que <strong>{user.email}</strong> ({user.role})
+            <h1 className="text-2xl font-bold">📦 Gestion des produits</h1>
+            <p className="text-sm text-gray-600">
+              Connecté : <strong>{user.email}</strong> ({user.role})
             </p>
           </div>
+
           <div className="flex gap-2">
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
+              className="px-4 py-2 bg-slate-800 text-white rounded-lg"
             >
-              {showForm ? '➖ Masquer le formulaire' : '➕ Nouveau produit'}
+              {showForm ? "➖ Masquer" : "➕ Nouveau"}
             </button>
+
             <button
-              onClick={loadProducts}
               disabled={loading}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition ${
-                loading
-                  ? 'bg-blue-300 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-              }`}
+              onClick={loadProducts}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg"
             >
-              {loading ? 'Chargement…' : '🔄 Rafraîchir'}
+              🔄 Rafraîchir
             </button>
           </div>
         </div>
 
-        {/* Formulaire */}
+        {/* FORMULAIRE */}
         {showForm && (
           <form
             onSubmit={handleSubmit}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-200 mb-8"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border mb-10"
           >
-            {/* Nom */}
-            <div className="sm:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nom
-              </label>
+            {/* NOM */}
+            <div>
+              <label className="text-sm font-medium">Nom</label>
               <input
-                placeholder="Nom"
                 value={form.name}
+                required
                 onChange={(e) =>
                   setForm({ ...form, name: e.target.value })
                 }
-                required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2"
               />
             </div>
 
-            {/* Prix */}
-            <div className="sm:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prix
-              </label>
+            {/* PRIX */}
+            <div>
+              <label className="text-sm font-medium">Prix</label>
               <input
-                placeholder="Prix"
                 type="number"
-                step="0.01"
                 value={form.price}
+                required
                 onChange={(e) =>
                   setForm({ ...form, price: e.target.value })
                 }
-                required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2"
               />
             </div>
 
-            {/* Devise */}
+            {/* DEVISE */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Devise
-              </label>
+              <label className="text-sm font-medium">Devise</label>
               <select
                 value={form.currency}
                 onChange={(e) =>
                   setForm({ ...form, currency: e.target.value })
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2"
               >
-                <option value="XOF">Franc CFA (XOF)</option>
-                <option value="EUR">Euro (€)</option>
-                <option value="USD">Dollar ($)</option>
+                <option value="XOF">Franc CFA</option>
+                <option value="EUR">Euro</option>
+                <option value="USD">Dollar</option>
               </select>
             </div>
 
-            {/* Stock */}
+            {/* STOCK */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Stock
-              </label>
+              <label className="text-sm font-medium">Stock</label>
               <input
-                placeholder="Stock"
                 type="number"
                 value={form.stock}
                 onChange={(e) =>
                   setForm({ ...form, stock: e.target.value })
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2"
               />
             </div>
 
-            {/* Catégorie */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Catégorie
-              </label>
+            {/* CATÉGORIE */}
+            <div className="col-span-2">
+              <label className="text-sm font-medium">Catégorie</label>
               <select
                 value={form.categoryId}
                 onChange={(e) =>
                   setForm({ ...form, categoryId: e.target.value })
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2"
               >
                 <option value="">— Sans catégorie —</option>
                 {categories.map((c) => (
@@ -441,309 +415,227 @@ export default function AdminProductsPage() {
               </select>
             </div>
 
-            {/* Description */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
+            {/* DESCRIPTION */}
+            <div className="col-span-2">
+              <label className="text-sm font-medium">Description</label>
               <textarea
-                placeholder="Description (optionnelle)"
+                rows={3}
                 value={form.description}
                 onChange={(e) =>
                   setForm({ ...form, description: e.target.value })
                 }
-                rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-              />
+                className="w-full border rounded-lg px-3 py-2"
+              ></textarea>
             </div>
 
-            {/* Image principale */}
+            {/* IMAGE PRINCIPALE */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium">
                 Image principale
               </label>
               <input
                 type="file"
-                accept=".jpg,.jpeg,.png,.webp"
+                accept="image/*"
                 onChange={(e) =>
                   handleCoverChange(e.target.files?.[0] || null)
                 }
-                className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2 bg-white"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Formats: JPG/PNG/WebP.
-                <br />
-                En modification, si vous laissez vide, l’image actuelle est conservée.
-              </p>
             </div>
 
-            {/* Aperçu image principale */}
-            <div className="flex items-end">
+            <div className="flex items-center">
               {previewCoverUrl ? (
                 <img
                   src={previewCoverUrl}
-                  alt="Prévisualisation"
-                  className="w-32 h-32 object-cover rounded-lg border border-gray-200"
+                  alt="Prévisualisation image principale"
+                  className="w-32 h-32 object-cover rounded border"
                 />
               ) : (
-                <div className="w-32 h-32 flex items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-400 text-xs">
+                <div className="w-32 h-32 border border-dashed rounded flex items-center justify-center text-xs text-gray-400">
                   Aucun aperçu
                 </div>
               )}
             </div>
 
-            {/* Galerie images */}
-            <div className="sm:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Galerie (jusqu’à 3 images)
+            {/* GALERIE */}
+            <div className="col-span-2">
+              <label className="text-sm font-medium">
+                Galerie (max 3)
               </label>
               <input
                 type="file"
-                accept=".jpg,.jpeg,.png,.webp"
                 multiple
+                accept="image/*"
                 onChange={(e) => handleGalleryChange(e.target.files)}
-                className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-2 bg-white"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Vous pouvez sélectionner jusqu’à 3 images. Laisser vide pour conserver la galerie existante.
-              </p>
             </div>
 
-            {/* Aperçu galerie */}
-            <div className="sm:col-span-1 flex items-end">
-              {previewGalleryUrls && previewGalleryUrls.length > 0 ? (
-                <div className="flex gap-2 flex-wrap">
-                  {previewGalleryUrls.map((url, idx) => (
-                    <img
-                      key={idx}
-                      src={url}
-                      alt={`Prévisualisation ${idx + 1}`}
-                      className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="w-full h-20 flex items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-400 text-xs">
-                  Aucune image de galerie sélectionnée
-                </div>
-              )}
+            <div className="col-span-2 flex gap-2">
+              {previewGalleryUrls.map((url, i) => (
+                <img
+                  key={i}
+                  src={url}
+                  alt={`Prévisualisation galerie ${i + 1}`}
+                  className="w-20 h-20 rounded border object-cover"
+                />
+              ))}
             </div>
 
-            {/* Boutons form */}
-            <div className="sm:col-span-2 text-right">
+            {/* ACTIONS */}
+            <div className="col-span-2 text-right">
               <button
                 type="button"
                 onClick={resetForm}
-                className="mr-2 px-4 py-2 text-sm rounded-lg bg-gray-200 hover:bg-gray-300 transition"
+                className="px-4 py-2 bg-gray-200 rounded-lg mr-2"
               >
                 Réinitialiser
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
+                className="px-5 py-2 bg-blue-600 text-white rounded-lg"
               >
-                {editing ? '💾 Mettre à jour' : '➕ Ajouter'}
+                {editing ? "💾 Mettre à jour" : "➕ Ajouter"}
               </button>
             </div>
           </form>
         )}
 
-        {/* Liste produits */}
-        {products.length === 0 ? (
-          <p className="text-gray-500 italic text-center py-6">
-            Aucun produit trouvé.
-          </p>
-        ) : (
-          <div className="grid gap-5">
-            {products.map((p) => {
-              const cat = p.category || categoriesById.get(p.categoryId);
-              const mainImg =
-                (p.allImageUrls && p.allImageUrls[0]) ||
-                p.imageUrl ||
-                p.image ||
-                '';
-              const hasGallery =
-                p.allImageUrls && p.allImageUrls.length > 1;
+        {/* LISTE PRODUITS */}
+        <div className="grid gap-6">
+          {products.map((p) => {
+            const allAbs =
+              (p.allImageUrls || []).map(toAbsUrl) || [];
+            const imgMain =
+              allAbs[0] ||
+              toAbsUrl(p.imageUrl || p.image || "");
 
-              return (
-                <div
-                  key={p.id}
-                  className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md transition"
-                >
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                    <div className="flex gap-4">
-                      {/* Image cliquable (ouvre lightbox) */}
-                      {mainImg ? (
-                        <button
-                          type="button"
-                          onClick={() => openLightbox(p, 0)}
-                          className="relative w-20 h-20 rounded-lg border border-gray-200 overflow-hidden group focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          title="Cliquer pour agrandir"
-                        >
-                          <img
-                            src={mainImg}
-                            alt={p.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          />
-                          {hasGallery && (
-                            <span className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                              {p.allImageUrls.length} img
-                            </span>
-                          )}
-                        </button>
+            const cat =
+              p.category || categoriesById.get(p.categoryId);
+
+            return (
+              <div
+                key={p.id}
+                className="bg-white border rounded-xl shadow-sm p-5"
+              >
+                <div className="flex justify-between">
+                  <div className="flex gap-4">
+                    <button
+                      type="button"
+                      onClick={() => openLightbox(p, 0)}
+                      className="w-20 h-20 border rounded overflow-hidden"
+                    >
+                      {imgMain ? (
+                        <img
+                          src={imgMain}
+                          alt={p.name}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
-                        <div className="w-20 h-20 flex items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-400 text-xs">
+                        <div className="flex items-center justify-center w-full h-full text-xs text-gray-400">
                           —
                         </div>
                       )}
+                    </button>
 
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {p.name}{' '}
-                          <span className="text-xs font-normal text-gray-500">
-                            #{p.id}
-                          </span>
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {Number(p.price || 0).toLocaleString()}{' '}
-                          {formatCurrency(p.currency || 'XOF')}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Stock : {p.stock ?? 0}
-                          {cat ? (
-                            <>
-                              {' '}
-                              • Catégorie :{' '}
-                              <span className="font-medium">
-                                {cat.name}
-                              </span>
-                            </>
-                          ) : null}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEdit(p)}
-                        className="px-3 py-1.5 text-xs rounded bg-yellow-500 text-white hover:bg-yellow-600"
-                      >
-                        ✏️ Modifier
-                      </button>
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="px-3 py-1.5 text-xs rounded bg-red-600 text-white hover:bg-red-700"
-                      >
-                        🗑 Supprimer
-                      </button>
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {p.name}{" "}
+                        <span className="text-xs text-gray-500">
+                          #{p.id}
+                        </span>
+                      </h3>
+                      <p className="text-sm text-gray-700">
+                        {Number(p.price).toLocaleString()}{" "}
+                        {formatCurrency(p.currency)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Stock : {p.stock}
+                        {cat && (
+                          <>
+                            {" "}
+                            • Catégorie :{" "}
+                            <span className="font-medium">
+                              {cat.name}
+                            </span>
+                          </>
+                        )}
+                      </p>
                     </div>
                   </div>
 
-                  {p.description && (
-                    <p className="mt-3 text-sm text-gray-700">
-                      {p.description}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEdit(p)}
+                      className="px-3 py-1 text-xs bg-yellow-500 text-white rounded"
+                    >
+                      ✏️ Modifier
+                    </button>
 
-      {/* Lightbox d’images produit */}
-      {lightbox.open && lightbox.product && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center px-4">
-          <div className="relative max-w-3xl w-full max-h-[90vh] bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-700">
-            {/* Header lightbox */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700 text-slate-100 text-sm">
-              <div className="truncate">
-                <span className="font-semibold">
-                  {lightbox.product.name}
-                </span>
-                {lightbox.product.id && (
-                  <span className="text-xs text-slate-400 ml-2">
-                    #{lightbox.product.id}
-                  </span>
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      className="px-3 py-1 text-xs bg-red-600 text-white rounded"
+                    >
+                      🗑 Supprimer
+                    </button>
+                  </div>
+                </div>
+
+                {p.description && (
+                  <p className="text-sm text-gray-700 mt-3">
+                    {p.description}
+                  </p>
                 )}
               </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ====================== LIGHTBOX ====================== */}
+      {lightbox.open && lightbox.product && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4">
+          <div className="bg-black rounded-2xl max-w-3xl w-full overflow-hidden border border-gray-700">
+
+            <div className="flex justify-between items-center px-4 py-2 text-white border-b border-gray-700">
+              <span className="truncate font-semibold">
+                {lightbox.product.name}
+              </span>
               <button
-                type="button"
+                className="px-2 py-1 bg-gray-700 rounded text-xs"
                 onClick={closeLightbox}
-                className="px-2 py-1 text-xs rounded-md bg-slate-700 hover:bg-slate-600"
               >
                 ✖ Fermer
               </button>
             </div>
 
-            {/* Image + contrôles */}
-            <div className="relative flex items-center justify-center bg-black">
-              {(() => {
-                const urls =
-                  (lightbox.product.allImageUrls &&
-                    lightbox.product.allImageUrls.length > 0
-                    ? lightbox.product.allImageUrls
-                    : (lightbox.product.imageUrl
-                        ? [lightbox.product.imageUrl]
-                        : [])) || [];
-                const currentUrl =
-                  urls[lightbox.index] || urls[0] || '';
+            <div className="relative flex items-center justify-center p-4">
+              <img
+                src={
+                  lightbox.product._images[lightbox.index] ||
+                  ""
+                }
+                alt="Agrandissement image produit"
+                className="max-h-[70vh] max-w-[90vw] object-contain"
+              />
 
-                return currentUrl ? (
-                  <>
-                    <img
-                      src={currentUrl}
-                      alt={lightbox.product.name}
-                      className="max-h-[70vh] max-w-full object-contain mx-auto"
-                    />
+              {lightbox.product._images.length > 1 && (
+                <>
+                  <button
+                    onClick={goPrev}
+                    className="absolute left-3 top-1/2 bg-black/60 text-white px-3 py-2 rounded-full"
+                  >
+                    ◀
+                  </button>
 
-                    {urls.length > 1 && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={goPrev}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 px-3 py-2 rounded-full bg-black/60 text-white text-sm hover:bg-black/80"
-                        >
-                          ◀
-                        </button>
-                        <button
-                          type="button"
-                          onClick={goNext}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-2 rounded-full bg-black/60 text-white text-sm hover:bg-black/80"
-                        >
-                          ▶
-                        </button>
-                      </>
-                    )}
-
-                    {urls.length > 1 && (
-                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 bg-black/50 px-2 py-1 rounded-full">
-                        {urls.map((u, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() =>
-                              setLightbox((prev) => ({
-                                ...prev,
-                                index: idx,
-                              }))
-                            }
-                            className={`w-2.5 h-2.5 rounded-full border border-white/70 ${
-                              idx === lightbox.index
-                                ? 'bg-white'
-                                : 'bg-white/30'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="h-64 flex items-center justify-center text-slate-300 text-sm">
-                    Aucune image à afficher
-                  </div>
-                );
-              })()}
+                  <button
+                    onClick={goNext}
+                    className="absolute right-3 top-1/2 bg-black/60 text-white px-3 py-2 rounded-full"
+                  >
+                    ▶
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

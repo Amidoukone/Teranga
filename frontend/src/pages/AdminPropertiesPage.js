@@ -38,6 +38,27 @@ export default function AdminPropertiesPage() {
   });
 
   // ==============================================
+  // 🌐 Helpers URL fichiers (PROD SAFE)
+  // ==============================================
+  const FILE_BASE =
+    (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
+    (typeof window !== 'undefined' && window.__TERANGA_API_BASE_URL
+      ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
+      : 'http://localhost:5000');
+
+  function isPdf(path = '') {
+    return /\.pdf($|\?)/i.test(path);
+  }
+
+  function toAbsUrl(path = '') {
+    if (!path) return '';
+    // si déjà absolu, on ne touche pas
+    if (/^https?:\/\//i.test(path)) return path;
+    const normalized = path.startsWith('/') ? path : `/${path}`;
+    return `${FILE_BASE}${normalized}`.replace(/([^:]\/)\/+/g, '$1');
+  }
+
+  // ==============================================
   // 🔹 Initialisation
   // ==============================================
   useEffect(() => {
@@ -55,7 +76,7 @@ export default function AdminPropertiesPage() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [lightbox]);
+  }, [lightbox.open, lightbox.index, lightbox.images]);
 
   // ==============================================
   // 🔹 Charger clients & propriétés
@@ -152,8 +173,10 @@ export default function AdminPropertiesPage() {
       description: p.description || '',
     });
     setFiles([]);
+    // ⚠️ ICI on utilisait http://localhost:5000 => on passe par toAbsUrl
+    previewUrls.forEach((url) => URL.revokeObjectURL(url));
     setPreviewUrls(
-      p.photos ? p.photos.map((photo) => `http://localhost:5000${photo}`) : []
+      p.photos ? p.photos.map((photo) => toAbsUrl(photo)) : []
     );
   }
 
@@ -227,19 +250,6 @@ export default function AdminPropertiesPage() {
       ...lb,
       index: (lb.index - 1 + lb.images.length) % lb.images.length,
     }));
-  }
-
-  // ==============================================
-  // 🧩 Helpers
-  // ==============================================
-  function isPdf(path = '') {
-    return /\.pdf($|\?)/i.test(path);
-  }
-  function toAbsUrl(path = '') {
-    if (!path) return '';
-    if (/^https?:\/\//i.test(path)) return path;
-    const normalized = path.startsWith('/') ? path : `/${path}`;
-    return `http://localhost:5000${normalized}`;
   }
 
   // ==============================================
@@ -354,7 +364,9 @@ export default function AdminPropertiesPage() {
               <input
                 placeholder="Code postal"
                 value={form.postalCode}
-                onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, postalCode: e.target.value })
+                }
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
               />
               <input
@@ -481,7 +493,10 @@ export default function AdminPropertiesPage() {
                               src={abs}
                               alt={`photo-${i}`}
                               onClick={() =>
-                                openLightbox(imageUrls, Math.max(0, startIndex))
+                                openLightbox(
+                                  imageUrls,
+                                  Math.max(0, startIndex)
+                                )
                               }
                               className="w-24 h-24 object-cover rounded-md border border-gray-200 cursor-zoom-in hover:scale-105 transition-transform"
                             />

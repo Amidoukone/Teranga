@@ -1,59 +1,91 @@
-// frontend/src/pages/ProductCatalogPage.jsx
+/* eslint-disable jsx-a11y/img-redundant-alt */
+// ============================================================
+// ProductCatalogPage.jsx — Teranga PRODUCTION READY (Option B)
+// Clean Shop Premium + FILE_BASE + Lightbox + Optimisations
+// ============================================================
+
 import { useEffect, useMemo, useState } from 'react';
 import { getProducts } from '../services/products';
 import { createOrder } from '../services/orders';
 import { me } from '../services/auth';
 import { formatCurrency } from '../utils/labels';
 
-/**
- * ============================================================
- * 🛍️ Page Catalogue Produits (Shop) — Clean Shop Premium
- * ============================================================
- * - Accessible à tous les rôles connectés (client, agent, admin)
- * - Affiche les produits avec coverImage + gallery (allImageUrls)
- * - Lightbox moderne pour défiler les images du produit
- * - Permet aux clients/agents de passer une commande
- * - Système de recherche + filtres (nom, catégorie, prix, tri)
- * - Cohérent avec le design Teranga et l’admin produits
- * ============================================================
- */
+/* ============================================================
+   🌍 PRODUCTION CONFIG — FILE_BASE / toAbsUrl()
+   Compatible Render + Netlify, aucun localhost
+============================================================ */
+const FILE_BASE =
+  (typeof window !== 'undefined' &&
+    (window.__TERANGA_FILE_BASE_URL ||
+      window.__TERANGA_API_BASE_URL ||
+      '')) ||
+  '';
+
+function normalizePath(path = '') {
+  if (!path) return '';
+  const p = String(path).trim().replace(/\\/g, '/');
+
+  if (/^https?:\/\//i.test(p)) return p;
+
+  const start = p.startsWith('/') ? p : '/' + p;
+  return start.replace(/\/{2,}/g, '/');
+}
+
+function toAbsUrl(path = '') {
+  const norm = normalizePath(path);
+  if (/^https?:\/\//i.test(norm)) return norm;
+
+  return (
+    FILE_BASE.replace(/\/$/, '') +
+    '/' +
+    norm.replace(/^\//, '')
+  );
+}
+
+/* ============================================================
+   ⭐ PAGE CATALOGUE PRODUITS (CLEAN SHOP PREMIUM)
+============================================================ */
 export default function ProductCatalogPage() {
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Commander popup
   const [creating, setCreating] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
 
-  // 🖼️ Lightbox images
+  // Lightbox premium
   const [previewProduct, setPreviewProduct] = useState(null);
   const [previewIndex, setPreviewIndex] = useState(0);
 
-  // 🔍 Filtres & tri
+  // Filtres + tri
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState(''); // id de catégorie ou ''
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
-  const [sort, setSort] = useState('default'); // default | price_asc | price_desc | name_asc | name_desc | stock_desc
+  const [sort, setSort] = useState('default');
 
   /* ============================================================
-     🔹 Initialisation utilisateur + produits
+     🔹 1) Init user + produits
   ============================================================ */
   useEffect(() => {
     async function init() {
       try {
         const { user } = await me();
         setUser(user);
+
         const prods = await getProducts({ limit: 200 });
         setProducts(prods || []);
+
         setError('');
       } catch (e) {
         console.error('❌ Erreur chargement catalogue:', e);
-        const msg =
+        setError(
           e?.response?.data?.error ||
-          "Impossible de charger les produits.";
-        setError(msg);
+            "Impossible de charger les produits."
+        );
       } finally {
         setLoading(false);
       }
@@ -62,12 +94,68 @@ export default function ProductCatalogPage() {
   }, []);
 
   /* ============================================================
-     💰 Création d'une commande rapide à partir d’un produit
+     🧰 Helpers — Images du produit
+  ============================================================ */
+  function getImagesForProduct(p) {
+    if (!p) return [];
+
+    let gallery = Array.isArray(p.allImageUrls) ? p.allImageUrls : [];
+    gallery = gallery.map((u) => toAbsUrl(u)).filter(Boolean);
+
+    const cover = p.imageUrl ? toAbsUrl(p.imageUrl) : null;
+
+    if (gallery.length) return gallery;
+    if (cover) return [cover];
+
+    return [];
+  }
+
+  /* ============================================================
+     🖼️ Lightbox controls
+  ============================================================ */
+  function openPreview(product, startIndex = 0) {
+    const imgs = getImagesForProduct(product);
+    if (!imgs.length) return;
+
+    const index = Math.min(Math.max(startIndex, 0), imgs.length - 1);
+    setPreviewProduct(product);
+    setPreviewIndex(index);
+  }
+
+  function closePreview() {
+    setPreviewProduct(null);
+    setPreviewIndex(0);
+  }
+
+  function goPrev(e) {
+    if (e) e.stopPropagation();
+    const imgs = getImagesForProduct(previewProduct);
+    if (!imgs.length) return;
+
+    setPreviewIndex((prev) =>
+      prev === 0 ? imgs.length - 1 : prev - 1
+    );
+  }
+
+  function goNext(e) {
+    if (e) e.stopPropagation();
+    const imgs = getImagesForProduct(previewProduct);
+    if (!imgs.length) return;
+
+    setPreviewIndex((prev) =>
+      prev === imgs.length - 1 ? 0 : prev + 1
+    );
+  }
+
+  /* ============================================================
+     🛒 Création d'une commande rapide
   ============================================================ */
   async function handleOrder(product) {
-    if (!user) return alert('Vous devez être connecté pour commander.');
+    if (!user)
+      return alert('Vous devez être connecté pour commander.');
+
     if (user.role === 'admin') {
-      return alert("ℹ️ Les administrateurs ne passent pas de commande ici.");
+      return alert("ℹ️ Les administrateurs ne passent pas de commandes ici.");
     }
 
     setSelectedProduct(product);
@@ -80,6 +168,7 @@ export default function ProductCatalogPage() {
 
     try {
       setCreating(false);
+
       const payload = {
         customerNote: `Commande de ${quantity} x ${selectedProduct.name}`,
         items: [
@@ -90,78 +179,44 @@ export default function ProductCatalogPage() {
           },
         ],
       };
+
       await createOrder(payload);
       alert(`✅ Commande créée pour ${quantity} × ${selectedProduct.name}`);
+
       setSelectedProduct(null);
       setQuantity(1);
     } catch (err) {
       console.error('❌ Erreur création commande:', err);
-      alert('Erreur lors de la création de la commande.');
+      alert("Erreur lors de la création de la commande.");
     }
   }
 
   /* ============================================================
-     🖼️ Helpers Lightbox
+     🧮 Dérivés — catégories disponibles
   ============================================================ */
-  function getImagesForProduct(p) {
-    const gallery = Array.isArray(p.allImageUrls) ? p.allImageUrls : [];
-    if (gallery.length) return gallery;
-    if (p.imageUrl && typeof p.imageUrl === 'string') return [p.imageUrl];
-    return [];
-  }
-
-  function openPreview(product, startIndex = 0) {
-    const imgs = getImagesForProduct(product);
-    if (!imgs.length) return;
-    const clampedIndex = Math.min(Math.max(startIndex, 0), imgs.length - 1);
-    setPreviewProduct(product);
-    setPreviewIndex(clampedIndex);
-  }
-
-  function closePreview() {
-    setPreviewProduct(null);
-    setPreviewIndex(0);
-  }
-
-  function goPrev(e) {
-    if (e) e.stopPropagation();
-    if (!previewProduct) return;
-    const imgs = getImagesForProduct(previewProduct);
-    if (!imgs.length) return;
-    setPreviewIndex((prev) => (prev === 0 ? imgs.length - 1 : prev - 1));
-  }
-
-  function goNext(e) {
-    if (e) e.stopPropagation();
-    if (!previewProduct) return;
-    const imgs = getImagesForProduct(previewProduct);
-    if (!imgs.length) return;
-    setPreviewIndex((prev) => (prev === imgs.length - 1 ? 0 : prev + 1));
-  }
-
-  /* ============================================================
-     🧮 Dérivés : catégories + produits filtrés
-  ============================================================ */
-
-  // Liste des catégories distinctes présentes dans les produits (pour le filtre)
   const availableCategories = useMemo(() => {
     const map = new Map();
     products.forEach((p) => {
       const cat = p.category;
-      if (cat && cat.id && !map.has(cat.id)) {
-        map.set(cat.id, { id: cat.id, name: cat.name || `Catégorie #${cat.id}` });
+      if (cat?.id && !map.has(cat.id)) {
+        map.set(cat.id, {
+          id: cat.id,
+          name: cat.name || `Catégorie #${cat.id}`,
+        });
       }
     });
-    return Array.from(map.values()).sort((a, b) =>
+
+    return [...map.values()].sort((a, b) =>
       (a.name || '').localeCompare(b.name || '')
     );
   }, [products]);
 
-  // Produits filtrés + triés (client-side, optimisé par useMemo)
+  /* ============================================================
+     🧮 Produits filtrés + triés
+  ============================================================ */
   const filteredProducts = useMemo(() => {
     let arr = [...products];
 
-    // 🔎 Recherche plein-text (nom, description, catégorie, id)
     const q = search.trim().toLowerCase();
     if (q) {
       arr = arr.filter((p) => {
@@ -178,15 +233,16 @@ export default function ProductCatalogPage() {
       });
     }
 
-    // 🎯 Filtre catégorie
     if (categoryFilter) {
-      const catIdNum = Number(categoryFilter);
-      arr = arr.filter((p) => Number(p.category?.id || p.categoryId) === catIdNum);
+      const catId = Number(categoryFilter);
+      arr = arr.filter(
+        (p) => Number(p.category?.id || p.categoryId || 0) === catId
+      );
     }
 
-    // 💰 Filtre prix min/max
     const min = priceMin !== '' ? Number(priceMin) : null;
     const max = priceMax !== '' ? Number(priceMax) : null;
+
     if (min !== null && !Number.isNaN(min)) {
       arr = arr.filter((p) => Number(p.price || 0) >= min);
     }
@@ -194,15 +250,10 @@ export default function ProductCatalogPage() {
       arr = arr.filter((p) => Number(p.price || 0) <= max);
     }
 
-    // 🔃 Tri
     if (sort === 'price_asc') {
-      arr.sort(
-        (a, b) => Number(a.price || 0) - Number(b.price || 0)
-      );
+      arr.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
     } else if (sort === 'price_desc') {
-      arr.sort(
-        (a, b) => Number(b.price || 0) - Number(a.price || 0)
-      );
+      arr.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
     } else if (sort === 'name_asc') {
       arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     } else if (sort === 'name_desc') {
@@ -210,13 +261,12 @@ export default function ProductCatalogPage() {
     } else if (sort === 'stock_desc') {
       arr.sort((a, b) => Number(b.stock || 0) - Number(a.stock || 0));
     }
-    // sort === 'default' => on garde l'ordre du backend
 
     return arr;
   }, [products, search, categoryFilter, priceMin, priceMax, sort]);
 
   /* ============================================================
-     🌀 États de chargement / erreur
+     🌀 États de chargement
   ============================================================ */
   if (loading) {
     return (
@@ -227,7 +277,6 @@ export default function ProductCatalogPage() {
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
@@ -249,17 +298,17 @@ export default function ProductCatalogPage() {
   }
 
   /* ============================================================
-     🧱 Affichage du catalogue (Clean Shop Premium + filtres)
+     🧱 UI PRINCIPALE — Filtres + Tri + Grille Produits
   ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 sm:px-6 py-10">
       <div className="max-w-6xl mx-auto">
-        {/* En-tête */}
+
+        {/* ==== HEADER ==== */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4 sm:mb-6">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              🛍️
-              <span>Catalogue des produits</span>
+              🛍️ <span>Catalogue des produits</span>
             </h1>
             <p className="text-sm text-slate-600 mt-1">
               Découvrez les produits disponibles dans votre espace Teranga.
@@ -273,29 +322,28 @@ export default function ProductCatalogPage() {
           </div>
         </div>
 
-        {/* Barre de filtres */}
+        {/* ==== BARRE DE FILTRES ==== */}
         <div className="mb-8 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl shadow-sm px-4 py-4 sm:px-5 sm:py-4">
           <div className="grid gap-3 md:grid-cols-4 items-end">
-            {/* Recherche plein texte */}
+
+            {/* --- Recherche --- */}
             <div className="md:col-span-2">
               <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
                 Rechercher
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                  🔍
-                </span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Nom, description, catégorie, #id…"
-                  className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                  className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
 
-            {/* Catégorie */}
+            {/* --- Catégorie --- */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
                 Catégorie
@@ -303,7 +351,7 @@ export default function ProductCatalogPage() {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white"
               >
                 <option value="">Toutes les catégories</option>
                 {availableCategories.map((c) => (
@@ -313,12 +361,12 @@ export default function ProductCatalogPage() {
                 ))}
               </select>
             </div>
-
-            {/* Prix min / max (en petite ligne sur mobile) */}
           </div>
 
+          {/* ==== Filtres prix + reset + tri ==== */}
           <div className="mt-3 grid gap-3 md:grid-cols-[1.2fr_1fr]">
-            {/* Prix + reset */}
+
+            {/* Prix */}
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
@@ -329,10 +377,11 @@ export default function ProductCatalogPage() {
                   min="0"
                   value={priceMin}
                   onChange={(e) => setPriceMin(e.target.value)}
-                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white"
                   placeholder="Min"
                 />
               </div>
+
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
                   Prix max
@@ -342,10 +391,12 @@ export default function ProductCatalogPage() {
                   min="0"
                   value={priceMax}
                   onChange={(e) => setPriceMax(e.target.value)}
-                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white"
                   placeholder="Max"
                 />
               </div>
+
+              {/* Reset */}
               <div className="flex items-end">
                 <button
                   type="button"
@@ -356,7 +407,7 @@ export default function ProductCatalogPage() {
                     setPriceMax('');
                     setSort('default');
                   }}
-                  className="w-full text-xs font-semibold rounded-xl border border-slate-200 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 transition"
+                  className="w-full text-xs font-semibold rounded-xl border border-slate-200 px-3 py-2 bg-slate-50 hover:bg-slate-100"
                 >
                   Réinitialiser
                 </button>
@@ -371,7 +422,7 @@ export default function ProductCatalogPage() {
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
-                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white"
               >
                 <option value="default">Recommandé</option>
                 <option value="price_asc">Prix croissant</option>
@@ -384,53 +435,52 @@ export default function ProductCatalogPage() {
           </div>
         </div>
 
-        {/* Grille produits */}
+        {/* ==== GRILLE PRODUITS ==== */}
         {filteredProducts.length === 0 ? (
-          <div className="bg-white/80 border border-slate-200 rounded-2xl shadow-sm py-10 flex items-center justify-center">
+          <div className="bg-white/80 border rounded-2xl shadow-sm py-10 flex items-center justify-center">
             <p className="text-slate-500 text-sm">
-              Aucun produit ne correspond à ces critères de recherche.
+              Aucun produit ne correspond à ces critères.
             </p>
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProducts.map((p) => {
-              const images = getImagesForProduct(p);
-              const thumb = images[0] || null;
+              const imgs = getImagesForProduct(p);
+              const thumb = imgs[0] || null;
 
               return (
                 <div
                   key={p.id}
-                  className="bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-lg hover:border-blue-200 transition-all duration-200 overflow-hidden flex flex-col"
+                  className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:border-blue-200 transition overflow-hidden flex flex-col"
                 >
-                  {/* Image + overlay */}
+                  {/* Image */}
                   {thumb ? (
                     <button
                       type="button"
                       onClick={() => openPreview(p, 0)}
-                      className="relative w-full group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-50"
-                      aria-label={`Agrandir les images de ${p.name}`}
+                      className="relative group"
+                      aria-label={`Voir images de ${p.name}`}
                     >
                       <img
                         src={thumb}
                         alt={p.name}
-                        className="w-full h-44 object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                        className="w-full h-44 object-cover transition group-hover:scale-[1.03]"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
-                      <div className="absolute left-3 bottom-3 flex flex-col gap-1 text-left">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-black/60 text-[11px] text-white shadow-sm">
-                          Cliquer pour agrandir
-                        </span>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent opacity-0 group-hover:opacity-100 transition" />
+
+                      <div className="absolute left-3 bottom-3 text-white text-[11px] bg-black/50 px-2 py-1 rounded">
+                        Cliquer pour agrandir
                       </div>
 
-                      {images.length > 1 && (
-                        <span className="absolute right-3 bottom-3 inline-flex items-center px-2 py-0.5 rounded-full bg-black/70 text-[11px] text-white shadow-sm">
-                          {images.length} photo{images.length > 1 ? 's' : ''}
+                      {imgs.length > 1 && (
+                        <span className="absolute right-3 bottom-3 text-[11px] bg-black/60 text-white px-2 py-0.5 rounded">
+                          {imgs.length} photos
                         </span>
                       )}
                     </button>
                   ) : (
-                    <div className="w-full h-44 flex items-center justify-center bg-slate-100 text-slate-400 text-sm">
+                    <div className="w-full h-44 flex items-center justify-center bg-slate-100 text-slate-400">
                       Aucun visuel
                     </div>
                   )}
@@ -441,8 +491,9 @@ export default function ProductCatalogPage() {
                       <h2 className="text-base font-semibold text-slate-900 line-clamp-2">
                         {p.name}
                       </h2>
+
                       {p.category?.name && (
-                        <span className="shrink-0 ml-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-[11px] font-medium text-blue-700">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] bg-blue-50 text-blue-700 border border-blue-100">
                           {p.category.name}
                         </span>
                       )}
@@ -453,14 +504,13 @@ export default function ProductCatalogPage() {
                     </p>
 
                     <p className="text-sm text-slate-600 flex-1 line-clamp-3">
-                      {p.description
-                        ? p.description
-                        : 'Pas de description pour ce produit.'}
+                      {p.description || 'Aucune description.'}
                     </p>
 
-                    <div className="mt-3 flex items-center justify-between gap-2">
+                    {/* Prix + Stock */}
+                    <div className="mt-3 flex items-center justify-between">
                       <div>
-                        <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                        <p className="text-[11px] uppercase text-slate-400">
                           Prix
                         </p>
                         <p className="text-lg font-bold text-blue-600">
@@ -468,9 +518,10 @@ export default function ProductCatalogPage() {
                           {Number(p.price || 0).toLocaleString()}
                         </p>
                       </div>
+
                       {typeof p.stock === 'number' && (
                         <div className="text-right">
-                          <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                          <p className="text-[11px] uppercase text-slate-400">
                             Stock
                           </p>
                           <p
@@ -486,13 +537,13 @@ export default function ProductCatalogPage() {
                       )}
                     </div>
 
-                    {/* Bouton Commander (clients/agents seulement) */}
+                    {/* Bouton Commander */}
                     {user && user.role !== 'admin' && (
                       <button
                         onClick={() => handleOrder(p)}
-                        className="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+                        className="mt-4 w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-xl shadow-sm bg-blue-600 text-white hover:bg-blue-700"
                       >
-                        <span>🛒 Commander</span>
+                        🛒 Commander
                       </button>
                     )}
                   </div>
@@ -502,27 +553,28 @@ export default function ProductCatalogPage() {
           </div>
         )}
 
-        {/* ✅ Popup de commande rapide */}
+        {/* ==== POPUP COMMANDE ==== */}
         {creating && selectedProduct && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40 px-4">
             <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-slate-200 relative">
               <button
-                type="button"
                 onClick={() => setCreating(false)}
-                className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 text-sm"
                 aria-label="Fermer"
+                className="absolute top-3 right-3 text-slate-500 hover:text-slate-800"
               >
                 ✕
               </button>
+
               <h2 className="text-xl font-bold text-slate-900 mb-1">
                 Commander {selectedProduct.name}
               </h2>
               <p className="text-xs text-slate-500 mb-4">
                 {formatCurrency(selectedProduct.currency || 'XOF')}{' '}
-                {Number(selectedProduct.price || 0).toLocaleString()} par unité
+                {Number(selectedProduct.price || 0).toLocaleString()} / unité
               </p>
+
               <form onSubmit={handleConfirmOrder}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   Quantité
                 </label>
                 <input
@@ -530,19 +582,20 @@ export default function ProductCatalogPage() {
                   min="1"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-4"
                 />
+
                 <div className="flex justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setCreating(false)}
-                    className="px-4 py-2 text-sm rounded-lg bg-gray-200 hover:bg-gray-300 transition"
+                    className="px-4 py-2 text-sm bg-gray-200 rounded-lg hover:bg-gray-300"
                   >
                     Annuler
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
                     Confirmer
                   </button>
@@ -552,40 +605,46 @@ export default function ProductCatalogPage() {
           </div>
         )}
 
-        {/* 💡 Lightbox plein écran pour les images produit */}
+        {/* ============================================================
+            💡 LIGHTBOX PLEIN ÉCRAN
+        ============================================================ */}
         {previewProduct && (
           <div
             className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4"
             onClick={closePreview}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Images du produit ${previewProduct.name}`}
           >
-            {/* Close */}
+            {/* Bouton fermeture */}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 closePreview();
               }}
-              className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80"
-              aria-label="Fermer"
+              className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white"
+              aria-label="Fermer la lightbox"
             >
               ✕
             </button>
 
-            {/* Navigation si plusieurs images */}
+            {/* Navigation */}
             {getImagesForProduct(previewProduct).length > 1 && (
               <>
                 <button
                   type="button"
                   onClick={goPrev}
-                  className="absolute left-4 text-white text-2xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70"
+                  className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
                   aria-label="Image précédente"
                 >
                   ‹
                 </button>
+
                 <button
                   type="button"
                   onClick={goNext}
-                  className="absolute right-4 text-white text-2xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70"
+                  className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
                   aria-label="Image suivante"
                 >
                   ›
@@ -598,38 +657,34 @@ export default function ProductCatalogPage() {
               className="bg-slate-900/95 border border-slate-700 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header lightbox */}
+              {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 text-slate-100 text-sm">
                 <div className="truncate">
-                  <span className="font-semibold">
-                    {previewProduct.name}
-                  </span>
+                  <span className="font-semibold">{previewProduct.name}</span>
                   {previewProduct.id && (
                     <span className="text-xs text-slate-400 ml-2">
                       #{previewProduct.id}
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-slate-400">
-                  {getImagesForProduct(previewProduct).length > 0 && (
-                    <>
-                      {previewIndex + 1} /{' '}
-                      {getImagesForProduct(previewProduct).length}
-                    </>
-                  )}
-                </div>
+
+                {getImagesForProduct(previewProduct).length > 1 && (
+                  <div className="text-xs text-slate-400">
+                    {previewIndex + 1} / {getImagesForProduct(previewProduct).length}
+                  </div>
+                )}
               </div>
 
               {/* Image principale */}
               <div className="flex-1 flex items-center justify-center bg-black">
                 <img
                   src={getImagesForProduct(previewProduct)[previewIndex]}
-                  alt={previewProduct.name}
-                  className="max-h-[70vh] max-w-full object-contain"
+                  alt={`Photo ${previewIndex + 1} de ${previewProduct.name}`}
+                  className="max-h-[70vh] max-w-full object-contain rounded-lg"
                 />
               </div>
 
-              {/* Thumbnails si plusieurs images */}
+              {/* Miniatures */}
               {getImagesForProduct(previewProduct).length > 1 && (
                 <div className="px-4 py-3 bg-slate-950/80 border-t border-slate-800 flex gap-2 overflow-x-auto">
                   {getImagesForProduct(previewProduct).map((img, idx) => (
@@ -637,15 +692,16 @@ export default function ProductCatalogPage() {
                       key={idx}
                       type="button"
                       onClick={() => setPreviewIndex(idx)}
-                      className={`relative w-16 h-16 rounded-lg overflow-hidden border ${
+                      className={`relative w-16 h-16 rounded-lg overflow-hidden border flex-shrink-0 transition ${
                         idx === previewIndex
                           ? 'border-blue-400 ring-2 ring-blue-400/70'
                           : 'border-slate-600 hover:border-slate-400'
-                      } flex-shrink-0`}
+                      }`}
+                      aria-label={`Miniature ${idx + 1}`}
                     >
                       <img
                         src={img}
-                        alt={`Preview ${idx + 1}`}
+                        alt={`Miniature ${idx + 1} pour ${previewProduct.name}`}
                         className="w-full h-full object-cover"
                       />
                     </button>
@@ -655,6 +711,7 @@ export default function ProductCatalogPage() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
