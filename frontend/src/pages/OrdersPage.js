@@ -1,4 +1,8 @@
-// frontend/src/pages/OrdersPage.js
+// ============================================================
+// OrdersPage.jsx — Teranga PRODUCTION READY (Option B)
+// Clean Shop Premium, filtres, tri, cohérence globale
+// ============================================================
+
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrders, createOrder } from '../services/orders';
@@ -11,23 +15,16 @@ import {
   canonicalizePaymentStatus,
 } from '../utils/labels';
 
-/**
- * ============================================================
- * 🧾 Commandes — Clean Shop Premium Edition
- * ============================================================
- * - Filtres élégants (recherche, statut, paiement)
- * - Tri moderne (récents / anciens)
- * - Création rapide avec produit optionnel
- * - UI cohérente avec ProductCatalogPage
- * - Design premium, clair, professionnel, moderne
- * ============================================================
- */
+/* ============================================================
+   ⭐ Page Commandes — Clean Shop Premium
+============================================================ */
 export default function OrdersPage() {
   const [user, setUser] = useState(null);
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Produits (pour ajout rapide)
+  // Produits pour création rapide de commande
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
@@ -52,13 +49,14 @@ export default function OrdersPage() {
   });
 
   /* ============================================================
-     🔹 Initialisation
+     🔄 Initialisation
   ============================================================ */
   useEffect(() => {
     async function init() {
       try {
         const ud = await me();
         setUser(ud.user);
+
         await Promise.all([loadOrders(), loadProducts()]);
       } catch (e) {
         if (e?.response?.status === 401) {
@@ -76,7 +74,7 @@ export default function OrdersPage() {
   }, [showForm]);
 
   /* ============================================================
-     🔄 Charger commandes
+     📦 Charger commandes & produits
   ============================================================ */
   async function loadOrders() {
     setLoading(true);
@@ -95,7 +93,7 @@ export default function OrdersPage() {
     try {
       const prods = await getProducts({ limit: 200 });
       setProducts(prods || []);
-    } catch (e) {
+    } catch {
       setProducts([]);
     } finally {
       setLoadingProducts(false);
@@ -114,6 +112,7 @@ export default function OrdersPage() {
 
       if (form.withItem && form.productId) {
         const prod = products.find((p) => String(p.id) === String(form.productId));
+
         const unit =
           form.unitPrice !== '' && form.unitPrice !== null
             ? Number(form.unitPrice)
@@ -129,6 +128,8 @@ export default function OrdersPage() {
       }
 
       await createOrder(payload);
+
+      // Reset propre
       setForm({
         customerNote: '',
         withItem: false,
@@ -138,20 +139,22 @@ export default function OrdersPage() {
       });
 
       await loadOrders();
+
       alert('✅ Commande créée avec succès.');
-    } catch {
+    } catch (err) {
+      console.error('❌ Erreur création commande:', err);
       alert('Erreur lors de la création de la commande.');
     }
   }
 
   /* ============================================================
-     🎛️ Filtres + Tri
+     🎛️ Filtres + tri
   ============================================================ */
   const filtered = useMemo(() => {
     return (orders || [])
       .filter((o) => {
         if (!filters.q.trim()) return true;
-        const q = filters.q.toLowerCase();
+        const q = filters.q.trim().toLowerCase();
         return (
           [
             o.code,
@@ -175,8 +178,8 @@ export default function OrdersPage() {
       })
       .filter((o) => {
         if (!filters.payment) return true;
-        const canonPay = canonicalizePaymentStatus(filters.payment);
-        return o.paymentStatus === canonPay;
+        const canon = canonicalizePaymentStatus(filters.payment);
+        return o.paymentStatus === canon;
       })
       .sort((a, b) => {
         const by = filters.sort || '-createdAt';
@@ -201,7 +204,7 @@ export default function OrdersPage() {
   }, [orders, filters]);
 
   /* ============================================================
-     UI — Clean Shop Premium
+     🧱 UI principale
   ============================================================ */
   if (!user) {
     return (
@@ -215,11 +218,10 @@ export default function OrdersPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
       <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
 
-        {/* ------------------------------------------------------- */}
-        {/* 🧭 En-tête Premium */}
-        {/* ------------------------------------------------------- */}
+        {/* ===================================================== */}
+        {/* 🧭 Header Premium */}
+        {/* ===================================================== */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8">
-
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
               🧾 <span>Gestion des commandes</span>
@@ -232,14 +234,14 @@ export default function OrdersPage() {
           <div className="flex gap-3">
             <Link
               to="/shop"
-              className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700"
+              className="px-4 py-2 text-sm bg-blue-600 text-white font-semibold rounded-lg shadow-sm hover:bg-blue-700"
             >
-              🛍️ Ouvrir le catalogue
+              🛍️ Voir catalogue
             </Link>
 
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="px-4 py-2 text-sm rounded-lg bg-slate-800 text-white font-semibold shadow-sm hover:bg-slate-900"
+              className="px-4 py-2 text-sm bg-slate-800 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-900"
             >
               {showForm ? '➖ Masquer' : '➕ Nouvelle commande'}
             </button>
@@ -247,10 +249,8 @@ export default function OrdersPage() {
             <button
               onClick={loadOrders}
               disabled={loading}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition ${
-                loading
-                  ? 'bg-blue-300 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm ${
+                loading ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
               {loading ? 'Chargement…' : '🔄 Rafraîchir'}
@@ -258,29 +258,29 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {/* ------------------------------------------------------- */}
+        {/* ===================================================== */}
         {/* 🎛️ Filtres Premium */}
-        {/* ------------------------------------------------------- */}
+        {/* ===================================================== */}
         <div className="mb-6 bg-gray-50 border border-gray-200 rounded-xl p-5">
 
-          {/* Ligne 1 — Recherche */}
+          {/* Recherche */}
           <div className="flex flex-col lg:flex-row gap-3 mb-4">
             <input
               value={filters.q}
               onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-              placeholder="🔎 Rechercher une commande, un email, un montant..."
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+              placeholder="🔎 Rechercher (email, code, montant...)"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          {/* Ligne 2 — Sélecteurs */}
+          {/* Sélecteurs */}
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
 
-            {/* Statut commande */}
+            {/* Statut */}
             <select
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
             >
               <option value="">Statut commande</option>
               <option value="created">Créée</option>
@@ -296,7 +296,7 @@ export default function OrdersPage() {
             <select
               value={filters.payment}
               onChange={(e) => setFilters({ ...filters, payment: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
             >
               <option value="">Paiement</option>
               <option value="unpaid">Non payée</option>
@@ -309,7 +309,7 @@ export default function OrdersPage() {
             <select
               value={filters.sort}
               onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 col-span-2"
+              className="col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
             >
               <option value="-createdAt">Plus récentes</option>
               <option value="createdAt">Plus anciennes</option>
@@ -317,8 +317,8 @@ export default function OrdersPage() {
           </div>
 
           {/* Reset */}
-          <div className="mt-4 flex justify-between items-center text-xs text-gray-500">
-            <div>{filtered.length} commande(s) trouvée(s)</div>
+          <div className="mt-4 flex justify-between text-xs text-gray-500">
+            <div>{filtered.length} commande(s)</div>
 
             <button
               onClick={() =>
@@ -331,14 +331,15 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {/* ------------------------------------------------------- */}
-        {/* ➕ Formulaire création */}
-        {/* ------------------------------------------------------- */}
+        {/* ===================================================== */}
+        {/* ➕ Formulaire création commande */}
+        {/* ===================================================== */}
         {showForm && (
           <form
             onSubmit={handleCreate}
             className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-8"
           >
+            {/* Note client */}
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Note client (optionnel)
             </label>
@@ -351,7 +352,7 @@ export default function OrdersPage() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
             />
 
-            {/* 🧩 Ajout d’un produit */}
+            {/* Ajouter un article */}
             <div className="mt-4">
               <label className="inline-flex items-center gap-2 text-sm">
                 <input
@@ -373,6 +374,7 @@ export default function OrdersPage() {
 
             {form.withItem && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+                {/* Produit */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Produit
@@ -380,8 +382,10 @@ export default function OrdersPage() {
                   <select
                     disabled={loadingProducts}
                     value={form.productId}
-                    onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, productId: e.target.value }))
+                    }
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
                   >
                     <option value="">— Sélectionner —</option>
                     {products.map((p) => (
@@ -393,6 +397,7 @@ export default function OrdersPage() {
                   </select>
                 </div>
 
+                {/* Quantité */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Quantité
@@ -401,11 +406,14 @@ export default function OrdersPage() {
                     type="number"
                     min={1}
                     value={form.quantity}
-                    onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, quantity: e.target.value }))
+                    }
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
                   />
                 </div>
 
+                {/* PU */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     PU (optionnel)
@@ -417,7 +425,7 @@ export default function OrdersPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, unitPrice: e.target.value }))
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
                     placeholder="Laisse vide pour PU du produit"
                   />
                 </div>
@@ -429,19 +437,21 @@ export default function OrdersPage() {
                 type="submit"
                 className="px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700"
               >
-                Créer la commande
+                ➕ Créer la commande
               </button>
             </div>
           </form>
         )}
 
-        {/* ------------------------------------------------------- */}
-        {/* 📄 Liste des commandes */}
-        {/* ------------------------------------------------------- */}
+        {/* ===================================================== */}
+        {/* 📄 LISTE Commandes */}
+        {/* ===================================================== */}
         {loading ? (
           <p className="text-gray-500 italic text-center py-6">Chargement…</p>
         ) : filtered.length === 0 ? (
-          <p className="text-gray-500 italic text-center py-6">Aucune commande.</p>
+          <p className="text-gray-500 italic text-center py-6">
+            Aucune commande trouvée.
+          </p>
         ) : (
           <div className="grid gap-5">
             {filtered.map((o) => {
@@ -473,7 +483,9 @@ export default function OrdersPage() {
                     </div>
 
                     <div className="sm:text-right text-sm text-gray-500">
-                      {o.createdAt ? new Date(o.createdAt).toLocaleString() : '—'}
+                      {o.createdAt
+                        ? new Date(o.createdAt).toLocaleString()
+                        : '—'}
                     </div>
                   </div>
 
@@ -482,7 +494,7 @@ export default function OrdersPage() {
                       to={`/orders/${o.id}`}
                       className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
-                      Ouvrir la commande
+                      📄 Ouvrir
                     </Link>
 
                     <Link

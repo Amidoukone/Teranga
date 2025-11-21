@@ -1,3 +1,4 @@
+// frontend/src/pages/ServicesPage.jsx
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -6,6 +7,12 @@ import { getMyServices, createService } from '../services/services';
 import { getProperties } from '../services/properties';
 import { applyLabels, SERVICE_TYPES, SERVICE_STATUSES } from '../utils/labels';
 
+/* ============================================================
+   🧠 Page Services (Option B)
+   - Gestion des services (client + admin)
+   - Création / édition / suppression
+   - Filtres + tri
+============================================================ */
 export default function ServicesPage() {
   const [services, setServices] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -58,15 +65,21 @@ export default function ServicesPage() {
   const loadServices = useCallback(async () => {
     try {
       const servs = await getMyServices();
-      // 🏷️ Ajouter les labels français si backend ne les fournit pas
-      const enriched = servs.map((s) => ({
+
+      // 🏷️ Ajouter les labels français si backend ne les fournit pas déjà
+      const list = Array.isArray(servs) ? servs : servs?.services || [];
+      const enriched = list.map((s) => ({
         ...s,
-        ...(s.statusLabel ? {} : applyLabels(s)),
+        ...(s.statusLabel && s.typeLabel ? {} : applyLabels(s)),
       }));
+
       setServices(enriched);
     } catch (e) {
       console.error('❌ Load services:', e);
-      alert('Erreur lors du chargement des services');
+      alert(
+        e?.response?.data?.error ||
+          'Erreur lors du chargement des services.'
+      );
     }
   }, []);
 
@@ -84,7 +97,7 @@ export default function ServicesPage() {
         setProperties(data.properties || []);
       } catch (e) {
         console.error('❌ Erreur chargement biens client:', e);
-        alert('Erreur lors du chargement des biens du client');
+        alert('Erreur lors du chargement des biens du client.');
       }
     },
     [authHeaders]
@@ -93,10 +106,10 @@ export default function ServicesPage() {
   const loadMyProperties = useCallback(async () => {
     try {
       const props = await getProperties();
-      setProperties(props);
+      setProperties(Array.isArray(props) ? props : props?.properties || []);
     } catch (e) {
       console.error('❌ Load properties (me):', e);
-      alert('Erreur lors du chargement des biens');
+      alert('Erreur lors du chargement des biens.');
     }
   }, []);
 
@@ -116,11 +129,16 @@ export default function ServicesPage() {
   useEffect(() => {
     async function init() {
       try {
-        const { user } = await me();
-        setUser(user);
+        const { user: u } = await me();
+        if (!u) {
+          navigate('/login');
+          return;
+        }
+
+        setUser(u);
         await loadServices();
 
-        if (user.role === 'admin') {
+        if (u.role === 'admin') {
           await loadClients();
         } else {
           await loadMyProperties();
@@ -133,13 +151,17 @@ export default function ServicesPage() {
     init();
   }, [loadClients, loadMyProperties, loadServices, navigate]);
 
+  // Lorsqu’un admin choisit un client, charger ses biens
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
     if (form.clientId) {
       loadClientProperties(form.clientId);
+    } else {
+      setProperties([]);
     }
   }, [form.clientId, user, loadClientProperties]);
 
+  // Persister l’état d’affichage du formulaire
   useEffect(() => {
     localStorage.setItem('teranga_services_showForm', showForm ? '1' : '0');
   }, [showForm]);
@@ -151,6 +173,7 @@ export default function ServicesPage() {
     e.preventDefault();
     try {
       setLoading(true);
+
       if (!form.propertyId) {
         alert('Veuillez choisir un bien.');
         return;
@@ -174,7 +197,10 @@ export default function ServicesPage() {
       }
     } catch (e) {
       console.error('❌ createService:', e);
-      alert('Erreur lors de la création du service');
+      alert(
+        e?.response?.data?.error ||
+          'Erreur lors de la création du service.'
+      );
     } finally {
       setLoading(false);
     }
@@ -184,6 +210,7 @@ export default function ServicesPage() {
     e.preventDefault();
     try {
       setLoading(true);
+
       if (!editingId) {
         alert('Aucun service à modifier.');
         return;
@@ -197,7 +224,9 @@ export default function ServicesPage() {
         address: form.address,
         budget: form.budget === '' ? null : parseFloat(form.budget),
         type: form.type,
-        propertyId: parseInt(form.propertyId, 10) || null,
+        propertyId: form.propertyId
+          ? parseInt(form.propertyId, 10)
+          : null,
       };
 
       if (user?.role === 'admin' && form.clientId) {
@@ -211,7 +240,10 @@ export default function ServicesPage() {
       await loadServices();
     } catch (e) {
       console.error('❌ Erreur mise à jour service:', e);
-      alert('Erreur lors de la mise à jour du service');
+      alert(
+        e?.response?.data?.error ||
+          'Erreur lors de la mise à jour du service.'
+      );
     } finally {
       setLoading(false);
     }
@@ -224,7 +256,10 @@ export default function ServicesPage() {
       await loadServices();
     } catch (e) {
       console.error('❌ Erreur suppression service:', e);
-      alert('Erreur lors de la suppression du service ❌');
+      alert(
+        e?.response?.data?.error ||
+          'Erreur lors de la suppression du service ❌'
+      );
     }
   }
 
@@ -240,7 +275,10 @@ export default function ServicesPage() {
       contactPerson: service.contactPerson || '',
       contactPhone: service.contactPhone || '',
       address: service.address || '',
-      budget: service.budget || '',
+      budget:
+        service.budget === null || service.budget === undefined
+          ? ''
+          : service.budget,
     });
   }
 
@@ -260,10 +298,11 @@ export default function ServicesPage() {
   }
 
   /* ==========================================
-     🔹 Filtrage
+     🔹 Filtrage + Tri
   ========================================== */
   useEffect(() => {
     let arr = [...services];
+
     if (filters.q.trim()) {
       const q = filters.q.trim().toLowerCase();
       arr = arr.filter((s) =>
@@ -287,16 +326,20 @@ export default function ServicesPage() {
 
     if (filters.type) arr = arr.filter((s) => s.type === filters.type);
     if (filters.status) arr = arr.filter((s) => s.status === filters.status);
+
     if (filters.property) {
-      arr = arr.filter((s) => s.property?.id === parseInt(filters.property, 10));
+      const pid = parseInt(filters.property, 10);
+      arr = arr.filter((s) => s.property?.id === pid);
     }
 
     const by = filters.sort || '-createdAt';
+    const sign = by.startsWith('-') ? -1 : 1;
+    const key = by.replace(/^-/, '');
+
     arr.sort((a, b) => {
-      const sign = by.startsWith('-') ? -1 : 1;
-      const key = by.replace(/^-/, '');
-      let va = a[key],
-        vb = b[key];
+      let va = a[key];
+      let vb = b[key];
+
       if (key === 'createdAt') {
         va = new Date(a.createdAt).getTime();
         vb = new Date(b.createdAt).getTime();
@@ -304,10 +347,12 @@ export default function ServicesPage() {
         va = (a.title || '').toLowerCase();
         vb = (b.title || '').toLowerCase();
       }
+
       if (va < vb) return -1 * sign;
       if (va > vb) return 1 * sign;
       return 0;
     });
+
     setFiltered(arr);
   }, [filters, services]);
 
@@ -472,7 +517,13 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
         <div className="text-xs text-gray-500">{filteredCount} service(s)</div>
         <button
           onClick={() =>
-            setFilters({ q: '', type: '', status: '', property: '', sort: '-createdAt' })
+            setFilters({
+              q: '',
+              type: '',
+              status: '',
+              property: '',
+              sort: '-createdAt',
+            })
           }
           className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
         >
@@ -483,7 +534,9 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
   );
 }
 
-/* ✅ Nouveau composant manquant : ServiceForm */
+/* ============================================================
+   🧾 FORMULAIRE DE CRÉATION / ÉDITION
+============================================================ */
 function ServiceForm({
   user,
   clients,
@@ -506,7 +559,7 @@ function ServiceForm({
         onSubmit={(e) => (editingId ? handleUpdate(e) : handleSubmit(e))}
         className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-200"
       >
-        {/* Client (admin uniquement) */}
+        {/* ADMIN : sélection client */}
         {user?.role === 'admin' && (
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -545,6 +598,7 @@ function ServiceForm({
                 ? '— Choisir un client d’abord —'
                 : '— Choisir un bien —'}
             </option>
+
             {properties.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.title} — {p.city} ({p.type})
@@ -553,7 +607,6 @@ function ServiceForm({
           </select>
         </div>
 
-        {/* Champs du service */}
         <ServiceFormFields form={form} setForm={setForm} />
 
         {/* Boutons */}
@@ -567,6 +620,7 @@ function ServiceForm({
               Annuler
             </button>
           )}
+
           <button
             type="submit"
             disabled={loading}
@@ -584,6 +638,7 @@ function ServiceForm({
   );
 }
 
+/* Champs du formulaire */
 function ServiceFormFields({ form, setForm }) {
   return (
     <>
@@ -622,7 +677,7 @@ function ServiceFormFields({ form, setForm }) {
           Description
         </label>
         <textarea
-          placeholder="Détail du service demandé..."
+          placeholder="Détail du service…"
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           rows={3}
@@ -635,9 +690,9 @@ function ServiceFormFields({ form, setForm }) {
           Personne de contact
         </label>
         <input
-          placeholder="Nom du contact"
           value={form.contactPerson}
           onChange={(e) => setForm({ ...form, contactPerson: e.target.value })}
+          placeholder="Nom du contact"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -647,9 +702,9 @@ function ServiceFormFields({ form, setForm }) {
           Téléphone du contact
         </label>
         <input
-          placeholder="+223 70 00 00 00"
           value={form.contactPhone}
           onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
+          placeholder="+223 70 00 00 00"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -659,9 +714,9 @@ function ServiceFormFields({ form, setForm }) {
           Adresse
         </label>
         <input
-          placeholder="Adresse du lieu"
           value={form.address}
           onChange={(e) => setForm({ ...form, address: e.target.value })}
+          placeholder="Adresse du lieu"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -683,6 +738,9 @@ function ServiceFormFields({ form, setForm }) {
   );
 }
 
+/* ============================================================
+   🔍 ServiceCard (Affichage)
+============================================================ */
 function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md transition">
@@ -690,7 +748,9 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
         <div>
           <h3 className="text-lg font-semibold text-gray-900">
             {s.title}{' '}
-            <span className="text-sm text-gray-500">({s.typeLabel || s.type})</span>
+            <span className="text-sm text-gray-500">
+              ({s.typeLabel || s.type})
+            </span>
           </h3>
           <p className="text-sm text-gray-600 mt-1">
             {s.description || 'Aucune description'}
@@ -745,6 +805,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
           📋 Voir tâches
         </button>
 
+        {/* ADMIN */}
         {user?.role === 'admin' && (
           <>
             <button

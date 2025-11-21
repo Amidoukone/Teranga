@@ -1,25 +1,53 @@
-// frontend/src/pages/ServiceTransactionsPage.js
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { me } from '../services/auth';
-import { getTransactions, createTransaction } from '../services/transactions';
-import api from '../services/api';
-import { applyLabels } from '../utils/labels';
+// frontend/src/pages/ServiceTransactionsPage.jsx
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { me } from "../services/auth";
+import { getTransactions, createTransaction } from "../services/transactions";
+import api from "../services/api";
+import { applyLabels } from "../utils/labels";
 
-// 🌍 BASE URL dynamique pour les fichiers (prod + dev)
-const RAW_API = window.__TERANGA_API_BASE_URL || '';
-const FILE_BASE =
+/* ============================================================================
+   🌐 FILE_BASE + normalizePath + toAbsUrl (Option B - Production Ready)
+   Identique aux autres pages déjà corrigées
+============================================================================ */
+const RAW_API =
+  window.__TERANGA_API_BASE_URL ||
+  process.env.REACT_APP_API_BASE_URL ||
+  "";
+
+export const FILE_BASE =
   window.__TERANGA_FILE_BASE_URL ||
-  RAW_API.replace(/\/api\/?$/, '') ||
-  '';
+  RAW_API.replace(/\/api\/?$/, "") ||
+  "";
 
-function toAbsUrl(path = '') {
-  if (!path) return '';
-  if (/^https?:\/\//i.test(path)) return path;
-  const normalized = path.startsWith('/') ? path : `/${path}`;
-  return `${FILE_BASE}${normalized}`.replace(/([^:]\/)\/+/g, '$1');
+// /uploads/a.jpg → /uploads/a.jpg (clean)
+function normalizePath(path = "") {
+  if (!path) return "";
+  const clean = String(path).trim().replace(/\\/g, "/");
+
+  // Déjà absolu
+  if (/^https?:\/\//i.test(clean)) return clean;
+
+  const prefixed = clean.startsWith("/") ? clean : "/" + clean;
+  return prefixed.replace(/\/{2,}/g, "/");
 }
 
+// Convertit vers URL absolue FILE_BASE
+function toAbsUrl(path = "") {
+  const norm = normalizePath(path);
+  if (!norm) return "";
+
+  // Déjà absolu
+  if (/^https?:\/\//i.test(norm)) return norm;
+
+  return (
+    FILE_BASE.replace(/\/$/, "") + "/" + norm.replace(/^\//, "")
+  );
+}
+
+/* ============================================================================
+   📄 PAGE ServiceTransactionsPage
+============================================================================ */
 export default function ServiceTransactionsPage() {
   const { id } = useParams(); // serviceId
   const navigate = useNavigate();
@@ -27,91 +55,118 @@ export default function ServiceTransactionsPage() {
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);     // chargement global page
-  const [submitting, setSubmitting] = useState(false); // chargement formulaire
+
+  const [loading, setLoading] = useState(true); // chargement global
+  const [submitting, setSubmitting] = useState(false); // création transaction
 
   const [form, setForm] = useState({
-    type: 'expense',
-    amount: '',
-    description: '',
-    taskId: '',
+    type: "expense",
+    amount: "",
+    description: "",
+    taskId: "",
     proofFile: null,
   });
 
-  // 🔐 En-têtes d'auth stables
+  /* ============================================================================
+     🔐 Auth headers stables
+  ============================================================================ */
   const authHeaders = useMemo(() => {
     const token =
-      localStorage.getItem('teranga_token') || localStorage.getItem('token');
+      localStorage.getItem("teranga_token") ||
+      localStorage.getItem("token");
     return token ? { Authorization: `Bearer ${token}` } : {};
   }, []);
 
-  // 🔁 Transactions du service
-  const fetchTransactions = useCallback(async () => {
-    try {
-      const data = await getTransactions({ serviceId: id });
-      // on applique les labels s'ils ne sont pas déjà présents
-      const enriched = (data || []).map((t) =>
-        t.statusLabel || t.typeLabel || t.currencyLabel ? t : applyLabels(t)
-      );
-      setTransactions(enriched);
-    } catch (err) {
-      console.error('❌ Erreur fetchTransactions:', err);
-      setTransactions([]);
-    }
-  }, [id]);
+  /* ============================================================================
+     🔄 Charger transactions d’un service
+  ============================================================================ */
+  const fetchTransactions = useCallback(
+    async () => {
+      try {
+        const data = await getTransactions({ serviceId: id });
 
-  // 🔁 Tâches du service
-  const fetchTasks = useCallback(async () => {
-    try {
-      const { data } = await api.get(`/tasks/service/${id}`, {
-        headers: authHeaders,
-      });
-      setTasks(data.tasks || []);
-    } catch (err) {
-      console.error('❌ Erreur fetchTasks:', err);
-      setTasks([]);
-    }
-  }, [id, authHeaders]);
+        const enriched = (data || []).map((t) => {
+          // Si labels déjà fournis par API → ne pas écraser
+          if (t.statusLabel || t.typeLabel || t.currencyLabel) return t;
+          return applyLabels(t);
+        });
 
-  // 🚪 Initialisation
+        setTransactions(enriched);
+      } catch (err) {
+        console.error("❌ Erreur fetchTransactions:", err);
+        setTransactions([]);
+      }
+    },
+    [id]
+  );
+
+  /* ============================================================================
+     🔄 Charger tâches du service
+  ============================================================================ */
+  const fetchTasks = useCallback(
+    async () => {
+      try {
+        const { data } = await api.get(`/tasks/service/${id}`, {
+          headers: authHeaders,
+        });
+        setTasks(data.tasks || []);
+      } catch (err) {
+        console.error("❌ Erreur fetchTasks:", err);
+        setTasks([]);
+      }
+    },
+    [id, authHeaders]
+  );
+
+  /* ============================================================================
+     🚀 Initialisation page
+  ============================================================================ */
   useEffect(() => {
     let active = true;
+
     async function init() {
       try {
         const u = await me();
         if (!active) return;
+
         setUser(u.user);
+
         await Promise.all([fetchTransactions(), fetchTasks()]);
       } catch (err) {
-        console.error('❌ Erreur init service transactions:', err);
-        localStorage.removeItem('teranga_token');
-        localStorage.removeItem('token');
-        window.location.href = '/login';
+        console.error("❌ Erreur init ServiceTransactionsPage:", err);
+        localStorage.removeItem("teranga_token");
+        localStorage.removeItem("token");
+        window.location.href = "/login";
       } finally {
         if (active) setLoading(false);
       }
     }
+
     init();
     return () => {
       active = false;
     };
   }, [fetchTransactions, fetchTasks]);
 
-  // ➕ Soumission du formulaire
+  /* ============================================================================
+     ➕ Création d’une transaction liée à un service
+  ============================================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
+
     if (!id) {
-      alert('Service introuvable.');
+      alert("Service introuvable.");
       return;
     }
 
     const amountNumber = parseFloat(form.amount);
     if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
-      alert('Montant invalide.');
+      alert("Montant invalide.");
       return;
     }
 
     setSubmitting(true);
+
     try {
       const payload = {
         serviceId: parseInt(id, 10),
@@ -123,25 +178,29 @@ export default function ServiceTransactionsPage() {
       };
 
       await createTransaction(payload);
-      alert('✅ Transaction ajoutée');
+      alert("✅ Transaction ajoutée avec succès");
 
+      // reset
       setForm({
-        type: 'expense',
-        amount: '',
-        description: '',
-        taskId: '',
+        type: "expense",
+        amount: "",
+        description: "",
+        taskId: "",
         proofFile: null,
       });
 
       await fetchTransactions();
     } catch (err) {
-      console.error('❌ Erreur ajout transaction:', err);
-      alert("Erreur lors de l'ajout de la transaction");
+      console.error("❌ Erreur ajout transaction:", err);
+      alert("Erreur lors de l’ajout de la transaction");
     } finally {
       setSubmitting(false);
     }
   }
 
+  /* ============================================================================
+     Rendu : écran de chargement / auth manquante
+  ============================================================================ */
   if (loading)
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -160,9 +219,13 @@ export default function ServiceTransactionsPage() {
       </div>
     );
 
+  /* ============================================================================
+     🎨 Rendu principal
+  ============================================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
       <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
+        
         {/* 🧭 En-tête */}
         <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
           <h1 className="text-2xl font-bold text-gray-900">
@@ -177,7 +240,7 @@ export default function ServiceTransactionsPage() {
           </button>
         </div>
 
-        {/* ➕ Formulaire de création */}
+        {/* 📌 FORMULAIRE DE CRÉATION */}
         <div className="mb-10">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">
             ➕ Ajouter une transaction
@@ -187,7 +250,7 @@ export default function ServiceTransactionsPage() {
             onSubmit={handleSubmit}
             className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-200"
           >
-            {/* Type de transaction */}
+            {/* Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Type de transaction
@@ -212,7 +275,7 @@ export default function ServiceTransactionsPage() {
               <input
                 type="number"
                 step="0.01"
-                placeholder="Ex: 15000"
+                placeholder="15000"
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
                 required
@@ -245,7 +308,7 @@ export default function ServiceTransactionsPage() {
                 Description
               </label>
               <textarea
-                placeholder="Description ou détails de la transaction"
+                placeholder="Description ou détails"
                 value={form.description}
                 onChange={(e) =>
                   setForm({ ...form, description: e.target.value })
@@ -258,15 +321,15 @@ export default function ServiceTransactionsPage() {
             {/* Pièce jointe */}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pièce justificative (JPG, PNG, PDF)
+                Pièce justificative (PDF, JPG, PNG)
               </label>
               <input
                 type="file"
-                accept=".jpg,.jpeg,.png,.pdf"
+                accept=".pdf,.jpg,.jpeg,.png"
                 onChange={(e) =>
                   setForm({ ...form, proofFile: e.target.files?.[0] || null })
                 }
-                className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
               />
             </div>
 
@@ -277,24 +340,24 @@ export default function ServiceTransactionsPage() {
                 disabled={submitting}
                 className={`px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition ${
                   submitting
-                    ? 'bg-blue-300 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                    ? "bg-blue-300 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
               >
-                {submitting ? 'Ajout…' : 'Ajouter la transaction'}
+                {submitting ? "Ajout…" : "Ajouter la transaction"}
               </button>
             </div>
           </form>
         </div>
 
-        {/* 📜 Historique */}
+        {/* 📜 HISTORIQUE DES TRANSACTIONS */}
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           📜 Historique des transactions
         </h2>
 
         {transactions.length === 0 ? (
           <p className="text-gray-500 italic text-center py-6">
-            Aucune transaction enregistrée pour ce service.
+            Aucune transaction enregistrée.
           </p>
         ) : (
           <div className="grid gap-6">
@@ -304,23 +367,27 @@ export default function ServiceTransactionsPage() {
                 className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md transition"
               >
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
+                  {/* Type + Montant */}
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {(t.typeLabel || t.type || '').toString().toUpperCase()} —{' '}
-                      {Number(t.amount || 0).toLocaleString()} {t.currencyLabel || t.currency}
+                      {(t.typeLabel || t.type || "").toString().toUpperCase()} —{" "}
+                      {Number(t.amount || 0).toLocaleString("fr-FR")}{" "}
+                      {t.currencyLabel || t.currency || ""}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
-                      {t.description || 'Aucune description'}
+                      {t.description || "Aucune description"}
                     </p>
                   </div>
 
+                  {/* Date */}
                   <div className="mt-2 sm:mt-0 text-xs text-gray-500">
                     {t.createdAt
-                      ? new Date(t.createdAt).toLocaleString()
-                      : 'Date inconnue'}
+                      ? new Date(t.createdAt).toLocaleString("fr-FR")
+                      : "Date inconnue"}
                   </div>
                 </div>
 
+                {/* Détails */}
                 <div className="mt-3 text-sm text-gray-700 space-y-1">
                   {t.task && (
                     <p>
@@ -329,8 +396,8 @@ export default function ServiceTransactionsPage() {
                   )}
 
                   {t.proofFile?.path && (
-                    <p className="mt-1">
-                      📎{' '}
+                    <p>
+                      📎{" "}
                       <a
                         href={toAbsUrl(t.proofFile.path)}
                         target="_blank"
@@ -343,11 +410,13 @@ export default function ServiceTransactionsPage() {
                   )}
 
                   <p className="mt-1 text-xs text-gray-500">
-                    Enregistré par{' '}
+                    Enregistré par{" "}
                     <strong>
                       {t.user?.email ||
-                        `${t.user?.firstName || ''} ${t.user?.lastName || ''}`.trim() ||
-                        '—'}
+                        `${t.user?.firstName || ""} ${
+                          t.user?.lastName || ""
+                        }`.trim() ||
+                        "—"}
                     </strong>
                   </p>
                 </div>

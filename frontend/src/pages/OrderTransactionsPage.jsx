@@ -1,4 +1,8 @@
-// frontend/src/pages/OrderTransactionsPage.jsx
+// ============================================================
+// OrderTransactionsPage.jsx — Teranga PRODUCTION READY (Option B)
+// Clean Shop Premium + FILE_BASE + toAbsUrl + Optimisations
+// ============================================================
+
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -12,20 +16,39 @@ import {
   CURRENCY_LABELS,
 } from '../utils/labels';
 
-/**
- * ============================================================
- * 💰 OrderTransactionsPage — Clean Shop Premium
- * ============================================================
- * - Liste + création de transactions liées à une commande
- * - Filtres modernes (recherche, type, méthode, tri)
- * - UI cohérente avec OrdersPage & ProductCatalogPage
- * - Rôles :
- *   • Admin : voir, créer
- *   • Agent : voir, créer
- *   • Client : voir uniquement
- * ============================================================
- */
+/* ============================================================
+   🌍 PRODUCTION CONFIG — FILE_BASE / normalizePath / toAbsUrl()
+   Compatible Render + Netlify, aucun localhost
+============================================================ */
+const FILE_BASE =
+  (typeof window !== 'undefined' &&
+    (window.__TERANGA_FILE_BASE_URL ||
+      window.__TERANGA_API_BASE_URL ||
+      '')) ||
+  '';
 
+function normalizePath(path = '') {
+  if (!path) return '';
+  const p = String(path).trim().replace(/\\/g, '/');
+  if (/^https?:\/\//i.test(p)) return p;
+  const start = p.startsWith('/') ? p : '/' + p;
+  return start.replace(/\/{2,}/g, '/');
+}
+
+function toAbsUrl(path = '') {
+  const norm = normalizePath(path);
+  if (/^https?:\/\//i.test(norm)) return norm;
+
+  return (
+    FILE_BASE.replace(/\/$/, '') +
+    '/' +
+    norm.replace(/^\//, '')
+  );
+}
+
+/* ============================================================
+   Helpers
+============================================================ */
 function getUserDisplay(u) {
   if (!u) return '—';
   const first = u.firstName ?? u.firstname ?? '';
@@ -37,6 +60,9 @@ function getUserDisplay(u) {
   return '—';
 }
 
+/* ============================================================
+   ⭐ PAGE PRINCIPALE
+============================================================ */
 export default function OrderTransactionsPage() {
   const { id } = useParams(); // orderId
   const navigate = useNavigate();
@@ -67,7 +93,7 @@ export default function OrderTransactionsPage() {
   });
 
   /* ============================================================
-     🔄 Chargement des transactions
+      Chargement transactions
   ============================================================ */
   const loadTransactions = useCallback(async () => {
     if (!id) return;
@@ -80,14 +106,14 @@ export default function OrderTransactionsPage() {
       setTransactions(labeled);
     } catch (err) {
       console.error('❌ Erreur chargement transactions commande:', err);
-      alert('Erreur lors du chargement des transactions de la commande.');
+      alert('Erreur lors du chargement des transactions.');
     } finally {
       setLoading(false);
     }
   }, [id]);
 
   /* ============================================================
-     🔹 Initialisation utilisateur + données
+      Init user + data
   ============================================================ */
   useEffect(() => {
     (async () => {
@@ -97,8 +123,7 @@ export default function OrderTransactionsPage() {
         await loadTransactions();
       } catch (err) {
         console.error('❌ Erreur init OrderTransactionsPage:', err);
-        const status = err?.response?.status;
-        if (status === 401) {
+        if (err?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
           window.location.href = '/login';
@@ -115,26 +140,25 @@ export default function OrderTransactionsPage() {
   }, [showForm]);
 
   /* ============================================================
-     ➕ Création d'une transaction
+      ➕ Création transaction
   ============================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.amount || isNaN(parseFloat(form.amount))) {
       return alert('Montant invalide.');
     }
-
     try {
       const payload = {
         ...form,
         amount: parseFloat(form.amount),
       };
       await createOrderTransaction(id, payload);
-      alert('✅ Transaction ajoutée à la commande avec succès');
+      alert('✅ Transaction ajoutée');
       resetForm();
       await loadTransactions();
     } catch (err) {
-      console.error('❌ Erreur ajout transaction commande:', err);
-      alert("Erreur lors de l'ajout de la transaction.");
+      console.error('❌ Erreur ajout transaction:', err);
+      alert("Erreur lors de l'ajout.");
     }
   }
 
@@ -150,7 +174,7 @@ export default function OrderTransactionsPage() {
   }
 
   /* ============================================================
-     🔍 Filtres dynamiques + tri
+      🔍 Filtres et tri
   ============================================================ */
   const filteredTransactions = useMemo(() => {
     let arr = [...transactions];
@@ -210,7 +234,7 @@ export default function OrderTransactionsPage() {
   }, [transactions, filters]);
 
   /* ============================================================
-     🌈 UI principale — Premium
+      UI — État initial
   ============================================================ */
   if (!user) {
     return (
@@ -222,17 +246,21 @@ export default function OrderTransactionsPage() {
 
   const canCreate = user.role === 'admin' || user.role === 'agent';
 
+  /* ============================================================
+      Rendu principal
+  ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
       <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        {/* 🧭 En-tête premium */}
+        
+        {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
               💰 <span>Transactions de la commande #{id}</span>
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Suivi des paiements et mouvements financiers liés à cette commande.
+              Suivi des paiements et mouvements financiers.
             </p>
           </div>
 
@@ -240,19 +268,19 @@ export default function OrderTransactionsPage() {
             {canCreate && (
               <button
                 onClick={() => setShowForm((v) => !v)}
-                className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
+                className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900"
               >
-                {showForm ? '➖ Masquer le formulaire' : '➕ Nouvelle transaction'}
+                {showForm ? '➖ Masquer' : '➕ Nouvelle transaction'}
               </button>
             )}
 
             <button
               onClick={loadTransactions}
               disabled={loading}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition ${
+              className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm ${
                 loading
                   ? 'bg-blue-300 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
               {loading ? 'Chargement…' : '🔄 Rafraîchir'}
@@ -260,21 +288,21 @@ export default function OrderTransactionsPage() {
 
             <button
               onClick={() => navigate(`/orders/${id}`)}
-              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300 transition"
+              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300"
             >
-              ← Retour à la commande
+              ← Retour
             </button>
           </div>
         </div>
 
-        {/* 🎛️ Filtres */}
+        {/* FILTRES */}
         <TransactionFilters
           filters={filters}
           setFilters={setFilters}
           count={filteredTransactions.length}
         />
 
-        {/* ➕ Formulaire création */}
+        {/* FORMULAIRE */}
         {canCreate && showForm && (
           <TransactionForm
             form={form}
@@ -284,7 +312,7 @@ export default function OrderTransactionsPage() {
           />
         )}
 
-        {/* 📜 Liste des transactions */}
+        {/* LISTE */}
         <TransactionList transactions={filteredTransactions} loading={loading} />
       </div>
     </div>
@@ -292,26 +320,27 @@ export default function OrderTransactionsPage() {
 }
 
 /* ============================================================
-   🔹 Sous-composants : Filtres / Formulaire / Liste
+   🔹 Sous-composants — Filtres / Formulaire / Liste
 ============================================================ */
 
 function TransactionFilters({ filters, setFilters, count }) {
   return (
     <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-        {/* Recherche globale */}
+        
+        {/* Recherche */}
         <input
-          placeholder="🔎 Rechercher (type, statut, description, utilisateur...)"
+          placeholder="🔎 Rechercher (type, statut, description...)"
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-2 bg-white shadow-sm"
+          className="col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
         />
 
-        {/* Type de transaction */}
+        {/* Type */}
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
         >
           <option value="">Type (tous)</option>
           {Object.entries(TRANSACTION_TYPES).map(([key, label]) => (
@@ -321,21 +350,21 @@ function TransactionFilters({ filters, setFilters, count }) {
           ))}
         </select>
 
-        {/* Méthode de paiement (texte libre) */}
+        {/* Méthode paiement */}
         <input
           placeholder="Méthode paiement"
           value={filters.payment}
           onChange={(e) =>
             setFilters({ ...filters, payment: e.target.value })
           }
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
         />
 
         {/* Tri */}
         <select
           value={filters.sort}
           onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white col-span-2"
+          className="col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
         >
           <option value="-createdAt">Plus récentes</option>
           <option value="createdAt">Plus anciennes</option>
@@ -345,12 +374,12 @@ function TransactionFilters({ filters, setFilters, count }) {
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-        <div>{count} transaction(s) trouvée(s)</div>
+        <div>{count} transaction(s)</div>
         <button
           onClick={() =>
             setFilters({ q: '', type: '', payment: '', sort: '-createdAt' })
           }
-          className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
+          className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300"
         >
           Réinitialiser
         </button>
@@ -359,11 +388,14 @@ function TransactionFilters({ filters, setFilters, count }) {
   );
 }
 
+/* ============================================================
+   FORMULAIRE
+============================================================ */
 function TransactionForm({ form, setForm, handleSubmit, loading }) {
   return (
     <div className="mb-10">
       <h2 className="text-lg font-semibold text-gray-800 mb-4">
-        ➕ Nouvelle transaction liée à la commande
+        ➕ Nouvelle transaction
       </h2>
 
       <form
@@ -378,7 +410,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
           >
             {Object.entries(TRANSACTION_TYPES).map(([key, label]) => (
               <option key={key} value={key}>
@@ -400,7 +432,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
           />
         </div>
 
@@ -412,7 +444,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
           >
             {Object.entries(CURRENCY_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
@@ -422,18 +454,18 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
           </select>
         </div>
 
-        {/* Méthode paiement */}
+        {/* Payment Method */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Méthode de paiement (optionnel)
           </label>
           <input
-            placeholder="Ex : Mobile Money, Virement, Espèces..."
+            placeholder="Ex : MoMo, Virement..."
             value={form.paymentMethod}
             onChange={(e) =>
               setForm({ ...form, paymentMethod: e.target.value })
             }
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
           />
         </div>
 
@@ -443,17 +475,17 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
             Description
           </label>
           <textarea
-            placeholder="Description de la transaction (optionnel)"
+            rows={3}
+            placeholder="Description (optionnelle)"
             value={form.description}
             onChange={(e) =>
               setForm({ ...form, description: e.target.value })
             }
-            rows={3}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
           />
         </div>
 
-        {/* Pièce jointe */}
+        {/* File */}
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Pièce jointe (optionnel)
@@ -464,25 +496,22 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
             onChange={(e) =>
               setForm({ ...form, proofFile: e.target.files?.[0] || null })
             }
-            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 bg-white"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
           />
-          <p className="mt-1 text-xs text-gray-500">
-            Formats acceptés : images, PDF, documents bureautiques.
-          </p>
         </div>
 
-        {/* Bouton submit */}
+        {/* Submit */}
         <div className="sm:col-span-2 text-right">
           <button
             type="submit"
             disabled={loading}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition ${
+            className={`px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm ${
               loading
                 ? 'bg-blue-300 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >
-            {loading ? 'Enregistrement…' : '💾 Enregistrer la transaction'}
+            {loading ? 'Enregistrement…' : '💾 Enregistrer'}
           </button>
         </div>
       </form>
@@ -490,6 +519,9 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
   );
 }
 
+/* ============================================================
+   LISTE DES TRANSACTIONS
+============================================================ */
 function TransactionList({ transactions, loading }) {
   if (loading) {
     return (
@@ -502,7 +534,7 @@ function TransactionList({ transactions, loading }) {
   if (transactions.length === 0) {
     return (
       <p className="text-gray-500 italic text-center py-6">
-        Aucune transaction trouvée pour cette commande.
+        Aucune transaction trouvée.
       </p>
     );
   }
@@ -519,13 +551,16 @@ function TransactionList({ transactions, loading }) {
             className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md transition"
           >
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+              
+              {/* Left block */}
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                  <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                     {t.typeLabel || t.type}
                   </span>
+
                   {t.statusLabel && (
-                    <span className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                       {t.statusLabel}
                     </span>
                   )}
@@ -541,46 +576,40 @@ function TransactionList({ transactions, loading }) {
 
                 {t.paymentMethod && (
                   <p className="text-xs text-gray-500 mt-1">
-                    Méthode de paiement :{' '}
+                    Méthode :{' '}
                     <span className="font-medium">{t.paymentMethod}</span>
                   </p>
                 )}
               </div>
 
-              <div className="mt-1 sm:mt-0 text-xs text-gray-500 text-right">
+              {/* Right block */}
+              <div className="text-xs text-gray-500 text-right mt-1 sm:mt-0">
                 <div>
                   Créée le{' '}
-                  <strong>
-                    {new Date(t.createdAt).toLocaleDateString()}
-                  </strong>
+                  <strong>{new Date(t.createdAt).toLocaleDateString()}</strong>
                 </div>
                 <div>
                   à{' '}
-                  <strong>
-                    {new Date(t.createdAt).toLocaleTimeString()}
-                  </strong>
+                  <strong>{new Date(t.createdAt).toLocaleTimeString()}</strong>
                 </div>
               </div>
             </div>
 
-            <div className="mt-3 text-sm text-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="mt-3 flex flex-col sm:flex-row justify-between text-sm">
               <div className="text-xs text-gray-500">
-                Saisie par{' '}
-                <strong>{userDisplay}</strong>
+                Saisie par <strong>{userDisplay}</strong>
               </div>
 
-              <div>
-                {t.proofFile?.path && (
-                  <a
-                    href={`http://localhost:5000${t.proofFile.path}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
-                  >
-                    📎 Voir la pièce jointe
-                  </a>
-                )}
-              </div>
+              {t.proofFile?.path && (
+                <a
+                  href={toAbsUrl(t.proofFile.path)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center text-xs font-medium text-blue-600 hover:underline"
+                >
+                  📎 Voir la pièce jointe
+                </a>
+              )}
             </div>
           </div>
         );

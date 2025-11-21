@@ -12,9 +12,41 @@ import {
   deleteProjectDocument,
   updateProject,
 } from "../services/projects";
-import { getFileUrl } from "../services/api";
-import { getTransactions, createTransaction } from "../services/transactions";
-import { applyLabels, CURRENCY_LABELS } from "../utils/labels";
+import { applyLabels, CURRENCY_LABELS } from "../utils/labels"; 
+import {
+  getTransactions,
+  createTransaction,
+} from "../services/transactions";
+
+/* ============================================================
+   🌐 FILE_BASE + Helpers (Option B)
+============================================================ */
+const FILE_BASE =
+  window.__TERANGA_FILE_BASE_URL ||
+  process.env.REACT_APP_FILE_BASE_URL ||
+  "";
+
+// /uploads/a/b.jpg → https://..../uploads/a/b.jpg
+function normalizePath(path = "") {
+  if (!path) return "";
+  const clean = String(path).trim().replace(/\\/g, "/");
+
+  if (/^https?:\/\//i.test(clean)) return clean;
+
+  const pref = clean.startsWith("/") ? clean : "/" + clean;
+  return pref.replace(/\/{2,}/g, "/");
+}
+
+function toAbsUrl(path = "") {
+  const norm = normalizePath(path);
+  if (/^https?:\/\//i.test(norm)) return norm;
+
+  return (
+    FILE_BASE.replace(/\/$/, "") +
+    "/" +
+    norm.replace(/^\//, "")
+  );
+}
 
 /* ============================================================
    🎨 UI Components — Style B
@@ -77,41 +109,25 @@ function Btn({
 }
 
 /* ============================================================
-   🧾 Helper : libellé de l'auteur de la transaction
-   👉 On priorise les champs createdBy / createdByUser / createdByLabel
+   🧾 Helper : libellé auteur transaction
 ============================================================ */
 function getTransactionAuthorLabel(t) {
   if (!t) return "—";
+  if (t.createdBy?.firstName || t.createdBy?.lastName)
+    return `${t.createdBy.firstName || ""} ${t.createdBy.lastName || ""}`.trim();
 
-  // 1️⃣ Cas idéal : backend renvoie un objet createdBy (ou createdByUser)
-  if (t.createdBy && (t.createdBy.firstName || t.createdBy.lastName)) {
-    return (
-      `${t.createdBy.firstName || ""} ${t.createdBy.lastName || ""}`.trim() ||
-      "—"
-    );
-  }
-  if (
-    t.createdByUser &&
-    (t.createdByUser.firstName || t.createdByUser.lastName)
-  ) {
-    return (
-      `${t.createdByUser.firstName || ""} ${
-        t.createdByUser.lastName || ""
-      }`.trim() || "—"
-    );
-  }
+  if (t.createdByUser?.firstName || t.createdByUser?.lastName)
+    return `${t.createdByUser.firstName || ""} ${t.createdByUser.lastName || ""}`.trim();
 
-  // 2️⃣ Cas où applyLabels a généré un label pour le créateur
-  if (t.createdByLabel || t.createdByName || t.createdByEmail) {
-    return t.createdByLabel || t.createdByName || t.createdByEmail || "—";
-  }
-
-  // 3️⃣ En dernier recours, on regarde éventuellement un "user" générique
-  if (t.user && (t.user.firstName || t.user.lastName)) {
-    return `${t.user.firstName || ""} ${t.user.lastName || ""}`.trim() || "—";
-  }
-
-  return t.userLabel || t.userName || t.userEmail || "—";
+  return (
+    t.createdByLabel ||
+    t.createdByName ||
+    t.createdByEmail ||
+    t.userLabel ||
+    t.userName ||
+    t.userEmail ||
+    "—"
+  );
 }
 
 /* ============================================================
@@ -136,10 +152,10 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         ...form,
         amount: form.amount === "" ? undefined : Number(form.amount),
         projectId: Number(projectId),
-        // 🔹 On transmet aussi l'utilisateur courant pour la traçabilité
         userId: currentUser?.id,
       });
-      alert("✅ Transaction enregistrée avec succès");
+
+      alert("✅ Transaction enregistrée");
       setForm({
         type: "expense",
         amount: "",
@@ -150,7 +166,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       });
       onSuccess?.();
     } catch (err) {
-      console.error("❌ Erreur transaction projet:", err);
+      console.error("❌ Transaction error:", err);
       alert(
         err?.response?.data?.error ||
           "Erreur lors de la création de la transaction."
@@ -163,12 +179,12 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-slate-50 border border-slate-200 p-4 rounded-2xl mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3 shadow-sm overflow-hidden max-w-full"
+      className="bg-slate-50 border border-slate-200 p-4 rounded-2xl mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3 shadow-sm"
     >
       <select
         value={form.type}
         onChange={(e) => setForm({ ...form, type: e.target.value })}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
+        className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
       >
         <option value="expense">Dépense</option>
         <option value="revenue">Revenu</option>
@@ -183,13 +199,13 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         value={form.amount}
         onChange={(e) => setForm({ ...form, amount: e.target.value })}
         required
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+        className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
       />
 
       <select
         value={form.currency}
         onChange={(e) => setForm({ ...form, currency: e.target.value })}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
+        className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
       >
         {Object.entries(CURRENCY_LABELS).map(([key, label]) => (
           <option key={key} value={key}>
@@ -201,15 +217,19 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       <input
         placeholder="Méthode de paiement"
         value={form.paymentMethod}
-        onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
+        onChange={(e) =>
+          setForm({ ...form, paymentMethod: e.target.value })
+        }
+        className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
       />
 
       <textarea
         placeholder="Description"
         value={form.description}
-        onChange={(e) => setForm({ ...form, description: e.target.value })}
-        className="sm:col-span-2 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
+        onChange={(e) =>
+          setForm({ ...form, description: e.target.value })
+        }
+        className="sm:col-span-2 border border-slate-300 rounded-lg px-3 py-2 text-sm"
       />
 
       <input
@@ -218,7 +238,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         onChange={(e) =>
           setForm({ ...form, proofFile: e.target.files?.[0] || null })
         }
-        className="sm:col-span-2 text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500"
+        className="sm:col-span-2 text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white"
       />
 
       <div className="sm:col-span-2 flex justify-end">
@@ -231,7 +251,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
 }
 
 /* ============================================================
-   🧠 Page principale
+   🧠 PAGE PRINCIPALE ProjectDetailPage — DÉBUT
 ============================================================ */
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -262,20 +282,21 @@ export default function ProjectDetailPage() {
 
   const [now, setNow] = useState(Date.now());
 
-  // ACL
-  const isAdmin = user?.role === "admin";
-  const isAgent = user?.role === "agent";
-  const isClient = user?.role === "client";
-  const isAssignedAgent = isAgent && project?.agent?.id === user?.id;
-  const adminAll = isAdmin;
-  const clientCanAdd = isClient;
-  const agentCanAddDocs = isAssignedAgent;
-
+  // Rafraîchissement affichage du chrono client (1h)
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
 
+  // ACL
+  const isAdmin = user?.role === "admin";
+  const isAgent = user?.role === "agent";
+  const isClient = user?.role === "client";
+  const isAssignedAgent = isAgent && project?.agent?.id === user?.id;
+  const clientCanAddDocs = isClient;
+  const agentCanAddDocs = isAssignedAgent;
+
+  // Fenêtre client (1h)
   const createdAtMs = useMemo(() => {
     if (!project?.createdAt) return null;
     const t = new Date(project.createdAt).getTime();
@@ -286,6 +307,7 @@ export default function ProjectDetailPage() {
     () => (createdAtMs ? now - createdAtMs <= 3600000 : false),
     [createdAtMs, now]
   );
+
   const clientCanModifyOrDelete = isClient && withinOneHour;
 
   const timeLeftText = useMemo(() => {
@@ -297,28 +319,27 @@ export default function ProjectDetailPage() {
   }, [clientCanModifyOrDelete, createdAtMs, now]);
 
   /* ============================================================
-     🔹 Chargement complet projet + phases + documents + transactions
+     🔹 Chargement complet du projet
   ============================================================ */
   const loadProject = useCallback(async (pid) => {
     if (!pid) return;
     try {
-      const [data, phs, docs, trxs] = await Promise.all([
+      const [p, phs, docs, trxs] = await Promise.all([
         getProjectById(pid),
         getProjectPhases(pid),
         getProjectDocuments(pid),
         getTransactions({ projectId: pid }),
       ]);
+
       if (!isMounted.current) return;
-      setProject(applyLabels(data));
+      setProject(applyLabels(p));
       setPhases((phs || []).map(applyLabels));
       setDocuments(docs || []);
       setTransactions((trxs || []).map(applyLabels));
     } catch (e) {
-      console.error("❌ Erreur chargement projet:", e);
-      if (isMounted.current) {
-        setErrorMsg("Erreur lors du chargement du projet.");
-        setProject(null);
-      }
+      console.error("❌ loadProject:", e);
+      setErrorMsg("Erreur lors du chargement du projet.");
+      setProject(null);
     }
   }, []);
 
@@ -329,31 +350,31 @@ export default function ProjectDetailPage() {
         const { user: u } = await me();
         setUser(u);
         await loadProject(id);
-      } catch (err) {
-        console.error("❌ Erreur init projet:", err);
-        setErrorMsg("Erreur chargement projet.");
+      } catch (e) {
+        console.error("❌ init:", e);
+        setErrorMsg("Erreur de chargement.");
       } finally {
         setLoading(false);
       }
     })();
+
     return () => {
       isMounted.current = false;
     };
   }, [id, loadProject]);
 
   /* ============================================================
-     🔹 Mise à jour du statut projet (ADMIN uniquement)
+     🔹 Mise à jour statut projet (ADMIN)
   ============================================================ */
   async function handleStatusChange(newStatus) {
-    if (!isAdmin) return; // sécurité front
+    if (!isAdmin) return;
     try {
-      if (!project?.id) return;
       await updateProject(project.id, { status: newStatus });
       await loadProject(project.id);
-      alert("✅ Statut mis à jour avec succès");
+      alert("Statut mis à jour.");
     } catch (err) {
-      console.error("❌ Erreur mise à jour statut:", err);
-      alert("Erreur lors de la mise à jour du statut.");
+      console.error("❌ update status:", err);
+      alert("Erreur lors de la mise à jour.");
     }
   }
 
@@ -364,14 +385,20 @@ export default function ProjectDetailPage() {
     const rev = transactions
       .filter((t) => t.type === "revenue")
       .reduce((s, t) => s + Number(t.amount || 0), 0);
+
     const exp = transactions
       .filter((t) => t.type === "expense")
       .reduce((s, t) => s + Number(t.amount || 0), 0);
-    return { revenues: rev, expenses: exp, balance: rev - exp };
+
+    return {
+      revenues: rev,
+      expenses: exp,
+      balance: rev - exp,
+    };
   }, [transactions]);
 
   /* ============================================================
-     🔹 PHASES + DOCUMENTS
+     🔹 Phases : ajout / édition / suppression
   ============================================================ */
   async function handlePhaseSubmit(e) {
     e.preventDefault();
@@ -380,13 +407,15 @@ export default function ProjectDetailPage() {
         ...phaseForm,
         projectId: project.id,
       };
+
       if (editPhaseId) payload.id = editPhaseId;
+
       await saveProjectPhase(payload);
       resetPhaseForm();
       await loadProject(project.id);
     } catch (err) {
-      console.error("❌ Erreur phase:", err);
-      alert("Erreur lors de la sauvegarde de la phase.");
+      console.error("❌ savePhase:", err);
+      alert("Erreur lors de la sauvegarde.");
     }
   }
 
@@ -400,6 +429,9 @@ export default function ProjectDetailPage() {
     setEditPhaseId(null);
   }
 
+  /* ============================================================
+     🔹 Documents
+  ============================================================ */
   function handleFileChange(e) {
     setFiles(Array.from(e.target.files || []));
   }
@@ -412,19 +444,18 @@ export default function ProjectDetailPage() {
         files,
         notes,
         selectedPhaseId ? Number(selectedPhaseId) : undefined,
-        {
-          title: docTitle || undefined,
-          kind: docKind || "other",
-        }
+        { title: docTitle || undefined, kind: docKind || "other" }
       );
+
       setFiles([]);
       setNotes("");
       setDocTitle("");
       setSelectedPhaseId("");
+
       await loadProject(project.id);
     } catch (err) {
-      console.error("❌ Erreur upload document:", err);
-      alert("Erreur lors du téléversement.");
+      console.error("❌ upload docs:", err);
+      alert("Erreur upload documents.");
     }
   }
 
@@ -434,8 +465,8 @@ export default function ProjectDetailPage() {
       await deleteProjectDocument(docId);
       await loadProject(project.id);
     } catch (err) {
-      console.error("❌ Erreur suppression document:", err);
-      alert("Erreur lors de la suppression du document.");
+      console.error("❌ delete doc:", err);
+      alert("Erreur suppression.");
     }
   }
 
@@ -446,7 +477,7 @@ export default function ProjectDetailPage() {
     return (
       <div className="flex justify-center items-center min-h-screen bg-slate-50">
         <p className="text-blue-700 text-lg animate-pulse font-medium">
-          ⏳ Chargement du projet...
+          Chargement…
         </p>
       </div>
     );
@@ -473,49 +504,27 @@ export default function ProjectDetailPage() {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="max-w-6xl mx-auto">
-        {/* Barre de navigation locale */}
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        {/* NAV HEADER */}
+        <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigate("/projects")}
             className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
           >
-            <span className="text-lg">←</span>
-            <span className="whitespace-normal break-words">
-              Retour aux projets
-            </span>
+            <span className="text-lg">←</span> Retour
           </button>
-
-          <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
-            {project.client && (
-              <span className="truncate max-w-[200px] sm:max-w-xs">
-                👤 Client:{" "}
-                <span className="font-medium text-slate-800 whitespace-normal break-words">
-                  {project.client.firstName} {project.client.lastName}
-                </span>
-              </span>
-            )}
-            {project.agent && (
-              <span className="hidden sm:inline truncate max-w-[200px]">
-                • 🧑‍💼 Agent:{" "}
-                <span className="font-medium text-slate-800 whitespace-normal break-words">
-                  {project.agent.firstName} {project.agent.lastName}
-                </span>
-              </span>
-            )}
-          </div>
         </div>
 
-        {/* Carte principale */}
-        <div className="bg-white shadow-lg rounded-3xl border border-slate-100 p-6 md:p-8 space-y-10 overflow-hidden">
+        {/* CARD PRINCIPALE */}
+        <div className="bg-white shadow-lg rounded-3xl border border-slate-100 p-6 md:p-8 space-y-10">
           {/* HEADER */}
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between md:flex-wrap gap-6">
-            <div className="space-y-3 flex-1 min-w-0">
-              <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 border border-slate-200 px-3 py-1 text-xs text-slate-500 flex-wrap">
+          <div className="flex flex-col md:flex-row md:justify-between gap-6">
+            <div className="space-y-3 flex-1">
+              <div className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 text-xs text-slate-500 rounded-full">
                 <span>Projet #{project.id}</span>
                 {project.createdAt && (
                   <>
                     <span className="opacity-40">•</span>
-                    <span className="truncate max-w-[260px] md:max-w-xs whitespace-normal break-words">
+                    <span>
                       Créé le{" "}
                       {new Date(project.createdAt).toLocaleString("fr-FR")}
                     </span>
@@ -523,81 +532,73 @@ export default function ProjectDetailPage() {
                 )}
               </div>
 
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 flex items-start gap-2 break-words whitespace-normal">
-                <span>📁</span>
-                <span className="break-words whitespace-normal min-w-0">
-                  {project.title}
-                </span>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 break-words">
+                {project.title}
               </h1>
 
-              <p className="text-sm md:text-base text-slate-600 max-w-2xl whitespace-normal break-words">
-                {project.description || "Aucune description fournie."}
+              <p className="text-sm text-slate-600 max-w-2xl break-words">
+                {project.description || "Aucune description."}
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
-                {/* Statut : ADMIN peut changer, autres voient un badge */}
                 {isAdmin ? (
-                  <div className="inline-flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-slate-500">Statut :</span>
-                    <select
-                      value={project.status}
-                      onChange={(e) => handleStatusChange(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 bg-white max-w-full whitespace-normal break-words"
-                    >
-                      <option value="created">Créé</option>
-                      <option value="in_progress">En cours</option>
-                      <option value="completed">Terminé</option>
-                      <option value="validated">Validé</option>
-                      <option value="cancelled">Annulé</option>
-                    </select>
-                  </div>
+                  <select
+                    value={project.status}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm"
+                  >
+                    <option value="created">Créé</option>
+                    <option value="in_progress">En cours</option>
+                    <option value="completed">Terminé</option>
+                    <option value="validated">Validé</option>
+                    <option value="cancelled">Annulé</option>
+                  </select>
                 ) : (
-                  <Badge color="blue">
-                    Statut :{" "}
-                    <span className="ml-1 break-words whitespace-normal">
-                      {statusLabel}
-                    </span>
-                  </Badge>
+                  <Badge color="blue">Statut : {statusLabel}</Badge>
                 )}
 
                 <Badge color="green">
-                  💰 Budget :{" "}
-                  {Number(project.budget || 0).toLocaleString("fr-FR")} XOF
+                  💰 Budget : {Number(project.budget || 0).toLocaleString("fr-FR")}{" "}
+                  XOF
                 </Badge>
 
                 {isClient && (
                   <Badge color={clientCanModifyOrDelete ? "yellow" : "gray"}>
                     {clientCanModifyOrDelete
-                      ? `⏱ Modification possible encore ${timeLeftText}`
-                      : "⏱ Fenêtre de modification expirée"}
+                      ? `Modification possible ${timeLeftText}`
+                      : "Fenêtre expirée"}
                   </Badge>
                 )}
               </div>
             </div>
 
-            {/* Carte synthèse finances */}
-            <div className="w-full md:w-80 bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 overflow-hidden">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            {/* SYNTHÈSE FINANCIÈRE */}
+            <div className="w-full md:w-80 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+              <h3 className="text-xs font-semibold text-slate-500 uppercase">
                 Synthèse financière
               </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500">Revenus</span>
+              <div className="space-y-2 text-sm mt-2">
+                <div className="flex justify-between">
+                  <span>Revenus</span>
                   <span className="font-semibold text-emerald-700">
                     {totals.revenues.toLocaleString("fr-FR")} XOF
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500">Dépenses</span>
+
+                <div className="flex justify-between">
+                  <span>Dépenses</span>
                   <span className="font-semibold text-rose-700">
                     {totals.expenses.toLocaleString("fr-FR")} XOF
                   </span>
                 </div>
-                <div className="border-t border-slate-200 pt-2 mt-1 flex justify-between items-center">
-                  <span className="text-slate-600 font-medium">Solde</span>
+
+                <div className="flex justify-between border-t border-slate-200 pt-2">
+                  <span className="font-medium">Solde</span>
                   <span
                     className={`font-semibold ${
-                      totals.balance >= 0 ? "text-emerald-700" : "text-rose-700"
+                      totals.balance >= 0
+                        ? "text-emerald-700"
+                        : "text-rose-700"
                     }`}
                   >
                     {totals.balance.toLocaleString("fr-FR")} XOF
@@ -607,19 +608,16 @@ export default function ProjectDetailPage() {
             </div>
           </div>
 
-          {/* GRID CONTENU PRINCIPAL */}
+          {/* CONTENT GRID */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Colonne gauche : Transactions + Phases */}
-            <div className="lg:col-span-2 space-y-8 min-w-0">
+            {/* LEFT : TRANSACTIONS + PHASES */}
+            <div className="lg:col-span-2 space-y-8">
               {/* TRANSACTIONS */}
               <section>
-                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                  <h2 className="text-lg font-semibold text-slate-900 whitespace-normal break-words">
-                    💰 Transactions liées
-                  </h2>
-                </div>
+                <h2 className="text-lg font-semibold text-slate-900 mb-3">
+                  💰 Transactions liées
+                </h2>
 
-                {/* 🔒 On cache le formulaire aux clients. Seuls admin + agent assigné peuvent créer. */}
                 {(isAdmin || isAssignedAgent) && (
                   <ProjectTransactionForm
                     projectId={project.id}
@@ -630,64 +628,41 @@ export default function ProjectDetailPage() {
 
                 {transactions.length === 0 ? (
                   <p className="text-slate-500 italic text-sm">
-                    Aucune transaction enregistrée pour ce projet.
+                    Aucune transaction.
                   </p>
                 ) : (
                   <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm">
                     <table className="min-w-full text-xs md:text-sm">
                       <thead className="bg-slate-50 text-slate-600 font-semibold">
                         <tr>
-                          <th className="px-3 py-2 text-left whitespace-normal break-words">
-                            Type
-                          </th>
-                          <th className="px-3 py-2 text-left whitespace-normal break-words">
-                            Montant
-                          </th>
-                          <th className="px-3 py-2 text-left whitespace-normal break-words">
-                            Devise
-                          </th>
-                          <th className="px-3 py-2 text-left whitespace-normal break-words">
-                            Méthode
-                          </th>
-                          <th className="px-3 py-2 text-left whitespace-normal break-words">
-                            Créé par
-                          </th>
-                          <th className="px-3 py-2 text-left whitespace-normal break-words">
-                            Statut
-                          </th>
-                          <th className="px-3 py-2 text-left whitespace-normal break-words">
-                            Date
-                          </th>
+                          <th className="px-3 py-2 text-left">Type</th>
+                          <th className="px-3 py-2 text-left">Montant</th>
+                          <th className="px-3 py-2 text-left">Devise</th>
+                          <th className="px-3 py-2 text-left">Méthode</th>
+                          <th className="px-3 py-2 text-left">Créé par</th>
+                          <th className="px-3 py-2 text-left">Statut</th>
+                          <th className="px-3 py-2 text-left">Date</th>
                         </tr>
                       </thead>
                       <tbody>
                         {transactions.map((t) => (
-                          <tr
-                            key={t.id}
-                            className="border-t border-slate-100 hover:bg-slate-50"
-                          >
-                            <td className="px-3 py-2 break-words whitespace-normal">
-                              {t.typeLabel || t.type}
-                            </td>
+                          <tr key={t.id} className="border-t border-slate-100">
+                            <td className="px-3 py-2">{t.typeLabel}</td>
                             <td className="px-3 py-2">
-                              {Number(t.amount || 0).toLocaleString("fr-FR")}
+                              {Number(t.amount).toLocaleString("fr-FR")}
                             </td>
-                            <td className="px-3 py-2">{t.currency || "—"}</td>
-                            <td className="px-3 py-2 break-words whitespace-normal">
+                            <td className="px-3 py-2">{t.currency}</td>
+                            <td className="px-3 py-2">
                               {t.paymentMethod || "—"}
                             </td>
-                            <td className="px-3 py-2 break-words whitespace-normal">
+                            <td className="px-3 py-2">
                               {getTransactionAuthorLabel(t)}
                             </td>
-                            <td className="px-3 py-2 break-words whitespace-normal">
-                              {t.statusLabel || t.status || "—"}
-                            </td>
+                            <td className="px-3 py-2">{t.statusLabel}</td>
                             <td className="px-3 py-2">
-                              {t.createdAt
-                                ? new Date(t.createdAt).toLocaleDateString(
-                                    "fr-FR"
-                                  )
-                                : "—"}
+                              {new Date(t.createdAt).toLocaleDateString(
+                                "fr-FR"
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -699,31 +674,28 @@ export default function ProjectDetailPage() {
 
               {/* PHASES */}
               <section>
-                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                  <h2 className="text-lg font-semibold text-slate-900 whitespace-normal break-words">
-                    🗂️ Phases du projet
-                  </h2>
-                </div>
+                <h2 className="text-lg font-semibold text-slate-900 mb-3">
+                  🗂️ Phases du projet
+                </h2>
 
-                {(isAdmin || (isClient && clientCanModifyOrDelete)) && (
+                {(isAdmin ||
+                  (isClient && clientCanModifyOrDelete)) && (
                   <form
                     onSubmit={handlePhaseSubmit}
-                    className="bg-slate-50 border border-slate-200 p-5 rounded-2xl mb-5 grid gap-4 md:grid-cols-2 shadow-sm overflow-hidden max-w-full"
+                    className="bg-slate-50 border border-slate-200 p-5 rounded-2xl mb-5 grid gap-4 md:grid-cols-2"
                   >
                     <input
-                      placeholder="Titre de la phase *"
+                      placeholder="Titre *"
                       value={phaseForm.title}
                       onChange={(e) =>
-                        setPhaseForm({
-                          ...phaseForm,
-                          title: e.target.value,
-                        })
+                        setPhaseForm({ ...phaseForm, title: e.target.value })
                       }
                       required
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
                     />
+
                     <input
-                      placeholder="Description (optionnel)"
+                      placeholder="Description"
                       value={phaseForm.description}
                       onChange={(e) =>
                         setPhaseForm({
@@ -731,12 +703,11 @@ export default function ProjectDetailPage() {
                           description: e.target.value,
                         })
                       }
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
                     />
 
                     <input
                       type="date"
-                      placeholder="Date de début"
                       value={phaseForm.startDate}
                       onChange={(e) =>
                         setPhaseForm({
@@ -744,11 +715,11 @@ export default function ProjectDetailPage() {
                           startDate: e.target.value,
                         })
                       }
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
                     />
+
                     <input
                       type="date"
-                      placeholder="Date de fin"
                       value={phaseForm.endDate}
                       onChange={(e) =>
                         setPhaseForm({
@@ -756,10 +727,10 @@ export default function ProjectDetailPage() {
                           endDate: e.target.value,
                         })
                       }
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
                     />
 
-                    <div className="md:col-span-2 flex justify-end gap-2 flex-wrap">
+                    <div className="md:col-span-2 flex justify-end gap-2">
                       {editPhaseId && (
                         <Btn
                           type="button"
@@ -771,9 +742,7 @@ export default function ProjectDetailPage() {
                         </Btn>
                       )}
                       <Btn type="submit" variant="primary" size="sm">
-                        {editPhaseId
-                          ? "💾 Enregistrer la phase"
-                          : "➕ Ajouter la phase"}
+                        {editPhaseId ? "💾 Enregistrer" : "➕ Ajouter"}
                       </Btn>
                     </div>
                   </form>
@@ -788,44 +757,46 @@ export default function ProjectDetailPage() {
                     {phases.map((ph) => (
                       <div
                         key={ph.id}
-                        className="border border-slate-200 rounded-2xl p-4 bg-white shadow-sm overflow-hidden"
+                        className="border border-slate-200 rounded-2xl p-4 bg-white shadow-sm"
                       >
-                        <div className="flex items-start justify-between gap-3 flex-wrap">
-                          <div className="min-w-0 flex-1">
-                            <h3 className="text-sm font-semibold text-slate-900 break-words whitespace-normal">
+                        <div className="flex justify-between">
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-semibold text-slate-900">
                               {ph.title}
                             </h3>
                             {ph.description && (
-                              <p className="text-xs text-slate-600 mt-1 break-words whitespace-normal">
+                              <p className="text-xs text-slate-600 mt-1">
                                 {ph.description}
                               </p>
                             )}
                             <p className="text-[11px] text-slate-500 mt-1">
+                              Début :
                               {ph.startDate
-                                ? `Début: ${new Date(
-                                    ph.startDate
-                                  ).toLocaleDateString("fr-FR")}`
-                                : "Début: —"}{" "}
-                              •{" "}
+                                ? new Date(ph.startDate).toLocaleDateString(
+                                    "fr-FR"
+                                  )
+                                : " —"}
+                              {" • "}
+                              Fin :
                               {ph.endDate
-                                ? `Fin: ${new Date(
-                                    ph.endDate
-                                  ).toLocaleDateString("fr-FR")}`
-                                : "Fin: —"}
+                                ? new Date(ph.endDate).toLocaleDateString(
+                                    "fr-FR"
+                                  )
+                                : " —"}
                             </p>
                           </div>
 
                           {(isAdmin ||
                             isAssignedAgent ||
                             (isClient && clientCanModifyOrDelete)) && (
-                            <div className="flex flex-col gap-1 shrink-0">
+                            <div className="flex flex-col gap-1">
                               <Btn
                                 variant="warning"
                                 size="xs"
                                 onClick={() => {
                                   setEditPhaseId(ph.id);
                                   setPhaseForm({
-                                    title: ph.title || "",
+                                    title: ph.title,
                                     description: ph.description || "",
                                     startDate: ph.startDate
                                       ? ph.startDate.slice(0, 10)
@@ -838,25 +809,22 @@ export default function ProjectDetailPage() {
                               >
                                 ✏️
                               </Btn>
+
                               <Btn
                                 variant="danger"
                                 size="xs"
                                 onClick={async () => {
                                   if (
-                                    !window.confirm("Supprimer cette phase ?")
+                                    !window.confirm(
+                                      "Supprimer cette phase ?"
+                                    )
                                   )
                                     return;
                                   try {
                                     await deleteProjectPhase(ph.id);
                                     await loadProject(project.id);
                                   } catch (err) {
-                                    console.error(
-                                      "❌ Erreur suppression phase:",
-                                      err
-                                    );
-                                    alert(
-                                      "Erreur lors de la suppression de la phase."
-                                    );
+                                    alert("Erreur suppression phase.");
                                   }
                                 }}
                               >
@@ -872,49 +840,50 @@ export default function ProjectDetailPage() {
               </section>
             </div>
 
-            {/* Colonne droite : Documents */}
+            {/* RIGHT : DOCUMENTS */}
             <div className="space-y-6">
               <section>
-                <h2 className="text-lg font-semibold text-slate-900 mb-3 whitespace-normal break-words">
-                  📎 Documents du projet
+                <h2 className="text-lg font-semibold text-slate-900 mb-3">
+                  📎 Documents
                 </h2>
 
-                {(adminAll || clientCanAdd || agentCanAddDocs) && (
+                {(isAdmin || clientCanAddDocs || agentCanAddDocs) && (
                   <form
                     onSubmit={handleUploadDocuments}
-                    className="bg-slate-50 border border-slate-200 p-4 rounded-2xl mb-4 grid gap-3 shadow-sm overflow-hidden max-w-full"
+                    className="bg-slate-50 border border-slate-200 p-4 rounded-2xl mb-4 grid gap-3"
                   >
                     <input
                       type="file"
                       multiple
                       accept=".pdf,.jpg,.jpeg,.png"
                       onChange={handleFileChange}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs md:text-sm cursor-pointer focus:ring-2 focus:ring-blue-500"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs"
                     />
+
                     <select
                       value={selectedPhaseId}
                       onChange={(e) => setSelectedPhaseId(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs"
                     >
-                      <option value="">
-                        — Associer à une phase (optionnel) —
-                      </option>
+                      <option value="">— Phase (optionnel)</option>
                       {phases.map((ph) => (
                         <option key={ph.id} value={ph.id}>
                           {ph.title}
                         </option>
                       ))}
                     </select>
+
                     <input
-                      placeholder="Titre du document (optionnel)"
+                      placeholder="Titre (optionnel)"
                       value={docTitle}
                       onChange={(e) => setDocTitle(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs"
                     />
+
                     <select
                       value={docKind}
                       onChange={(e) => setDocKind(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs"
                     >
                       <option value="other">Autre</option>
                       <option value="contract">Contrat</option>
@@ -922,12 +891,14 @@ export default function ProjectDetailPage() {
                       <option value="report">Rapport</option>
                       <option value="photo">Photo</option>
                     </select>
+
                     <input
-                      placeholder="Notes (optionnel)"
+                      placeholder="Notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs"
                     />
+
                     <div className="flex justify-end">
                       <Btn type="submit" variant="primary" size="sm">
                         📤 Upload
@@ -938,52 +909,54 @@ export default function ProjectDetailPage() {
 
                 {documents.length === 0 ? (
                   <p className="text-slate-500 italic text-sm">
-                    Aucun document joint.
+                    Aucun document.
                   </p>
                 ) : (
                   <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
                     {documents.map((doc) => (
                       <div
                         key={doc.id}
-                        className="border border-slate-200 rounded-2xl p-3.5 bg-white shadow-sm flex flex-col justify-between gap-2 overflow-hidden"
+                        className="border border-slate-200 rounded-2xl p-3.5 bg-white shadow-sm flex flex-col"
                       >
-                        <div className="space-y-1 min-w-0">
-                          <p className="font-semibold text-sm text-slate-900 break-words whitespace-normal">
+                        <div className="space-y-1">
+                          <p className="font-semibold text-sm text-slate-900 break-words">
                             {doc.title || doc.originalName || "Document"}
                           </p>
+
                           {(doc.phase?.title || doc.phaseTitle) && (
-                            <p className="text-[11px] text-slate-600 break-words whitespace-normal">
+                            <p className="text-[11px] text-slate-600">
                               🔗 Phase : {doc.phase?.title || doc.phaseTitle}
                             </p>
                           )}
+
                           <p className="text-[11px] text-slate-500">
-                            {doc.mimeType || "Fichier"} •{" "}
-                            {typeof doc.fileSize === "number"
-                              ? (doc.fileSize / 1024).toFixed(1)
-                              : "?"}{" "}
-                            Ko
+                            {doc.mimeType} —{" "}
+                            {(doc.fileSize / 1024).toFixed(1)} Ko
                           </p>
+
                           <p className="text-[11px] text-slate-400">
                             Ajouté le{" "}
                             {new Date(doc.createdAt).toLocaleString("fr-FR")}
                           </p>
+
                           {doc.notes && (
-                            <p className="text-xs text-slate-700 mt-1 break-words whitespace-normal">
+                            <p className="text-xs text-slate-700">
                               {doc.notes}
                             </p>
                           )}
                         </div>
 
-                        <div className="flex justify-between items-center pt-1 gap-2 flex-wrap">
+                        <div className="flex justify-between mt-2 items-center">
                           <a
-                            href={getFileUrl(doc.filePath)}
+                            href={toAbsUrl(doc.filePath)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:text-blue-800 hover:underline truncate max-w-[140px]"
+                            className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
                           >
                             📄 Ouvrir
                           </a>
-                          {(adminAll || clientCanModifyOrDelete) && (
+
+                          {(isAdmin || clientCanModifyOrDelete) && (
                             <Btn
                               onClick={() => handleDeleteDocument(doc.id)}
                               variant="danger"

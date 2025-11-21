@@ -9,12 +9,12 @@ import {
   deleteProject,
   assignAgentToProject,
 } from '../services/projects';
-import { createTransaction } from '../services/transactions'; // 🆕 créer une transaction liée au projet
+import { createTransaction } from '../services/transactions';
 import api from '../services/api';
 import { applyLabels, CURRENCY_LABELS } from '../utils/labels';
 
 /* ============================================================
-   🔧 Config UI (labels + styles)
+   🔧 Config UI
 ============================================================ */
 const PROJECT_TYPES = [
   { value: 'immobilier', label: 'Immobilier' },
@@ -31,7 +31,7 @@ const PROJECT_STATUSES = [
   { value: 'cancelled', label: 'Annulé' },
 ];
 
-// Couleurs de badges pour statuts
+// Badges style
 const STATUS_STYLES = {
   created: { bg: 'bg-slate-100', text: 'text-slate-700', ring: 'ring-slate-200' },
   in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', ring: 'ring-blue-200' },
@@ -40,39 +40,40 @@ const STATUS_STYLES = {
   cancelled: { bg: 'bg-red-100', text: 'text-red-700', ring: 'ring-red-200' },
 };
 
-/** ⏱️ Helper : vrai si la date est dans la dernière heure */
+/* ============================================================
+   Helpers autorisations
+============================================================ */
 function isWithinOneHour(date) {
   if (!date) return false;
-  const created = new Date(date).getTime();
-  return Number.isFinite(created) && Date.now() - created <= 3600000;
+  const ts = new Date(date).getTime();
+  return Number.isFinite(ts) && Date.now() - ts <= 3600000;
 }
 
-/** 🔐 Helper : l’utilisateur peut-il modifier/supprimer le projet ? */
 function canEditDelete(project, user) {
   if (!user || !project) return false;
   if (user.role === 'admin') return true;
+
   if (user.role === 'client')
     return project.clientId === user.id && isWithinOneHour(project.createdAt);
+
   return false;
 }
 
-/** 🔐 Helper : l’utilisateur peut-il créer une transaction liée au projet ?
- *
- *  👉 Mise à jour : on cache la transaction aux AGENTS.
- *  - Admin : OUI
- *  - Client propriétaire du projet : OUI
- *  - Agent (assigné) : NON ici sur cette page
- */
 function canCreateProjectTransaction(project, user) {
   if (!user || !project) return false;
+
+  // Admin → OK
   if (user.role === 'admin') return true;
+
+  // Client propriétaire du projet → OK
   if (user.role === 'client' && project.client?.id === user.id) return true;
-  // ❌ plus de condition pour agent
+
+  // Agent → NON (sur cette page)
   return false;
 }
 
 /* ============================================================
-   🧩 Composants UI
+   UI Elements
 ============================================================ */
 function Btn({
   children,
@@ -121,12 +122,13 @@ function Btn({
 }
 
 function StatusBadge({ value }) {
-  const s = STATUS_STYLES[value] || STATUS_STYLES['created'];
-  const label = PROJECT_STATUSES.find((st) => st.value === value)?.label || value;
+  const style = STATUS_STYLES[value] || STATUS_STYLES['created'];
+  const label =
+    PROJECT_STATUSES.find((s) => s.value === value)?.label || value;
+
   return (
     <span
-      className={`inline-flex items-center gap-1 ${s.bg} ${s.text} ${s.ring} ring-1 px-2.5 py-0.5 rounded-full text-xs font-medium shadow-sm whitespace-normal break-words max-w-full`}
-      aria-label={`Statut ${label}`}
+      className={`inline-flex items-center gap-1 ${style.bg} ${style.text} ${style.ring} ring-1 px-2.5 py-0.5 rounded-full text-xs font-medium`}
     >
       ● {label}
     </span>
@@ -138,22 +140,17 @@ function FieldRow({ children }) {
 }
 
 /* ============================================================
-   🧩 Formulaire inline de transaction liée à un projet
+   Inline Transaction Form (fix FILE_BASE inside)
 ============================================================ */
-function TransactionInlineForm({
-  project,
-  currentUser,
-  onClose,
-  onSuccess,
-}) {
+function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
   const [form, setForm] = useState({
     type: 'expense',
     amount: '',
     currency: 'XOF',
     paymentMethod: '',
     description: '',
-    orderId: '', // visible admin/agent
-    proofFile: null, // upload pièce jointe
+    orderId: '',
+    proofFile: null,
   });
   const [saving, setSaving] = useState(false);
 
@@ -162,25 +159,20 @@ function TransactionInlineForm({
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!project?.id) return;
     try {
       setSaving(true);
 
       const payload = {
+        projectId: Number(project.id),
         type: form.type,
         amount: form.amount === '' ? undefined : Number(form.amount),
         currency: form.currency || 'XOF',
         paymentMethod: form.paymentMethod || undefined,
         description: form.description || undefined,
         orderId: form.orderId ? Number(form.orderId) : undefined,
-        projectId: Number(project.id), // ⭐️ rattachement projet
         proofFile: form.proofFile || undefined,
       };
 
-      // IMPORTANT :
-      // - On ne force PAS le statut ici: le backend a une règle:
-      //   * transaction indépendante (ni orderId, ni projectId) => completed
-      //   * liée à un projet OU une commande => backend décide (souvent "pending")
       await createTransaction(payload);
 
       alert('✅ Transaction liée au projet créée avec succès');
@@ -199,21 +191,26 @@ function TransactionInlineForm({
   }
 
   return (
-    <div className="mt-3 bg-gray-50 border border-gray-200 rounded-xl p-4 overflow-hidden">
-      <h4 className="text-sm font-semibold text-gray-800 mb-3 whitespace-normal break-words">
-        💰 Nouvelle transaction pour le projet :{' '}
-        <span className="font-bold">
-          {project?.title || `#${project?.id}`}
-        </span>
+    <div className="mt-3 bg-gray-50 border border-gray-200 rounded-xl p-4">
+      <h4 className="text-sm font-semibold text-gray-800 mb-3">
+        💰 Nouvelle transaction pour le projet{' '}
+        <span className="font-bold">{project?.title || `#${project?.id}`}</span>
       </h4>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* ---- FORM START ---- */}
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+      >
+        {/* Type */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Type
+          </label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
           >
             <option value="expense">Dépense</option>
             <option value="revenue">Revenu</option>
@@ -222,25 +219,30 @@ function TransactionInlineForm({
           </select>
         </div>
 
+        {/* Montant */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Montant</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Montant
+          </label>
           <input
             type="number"
             step="0.01"
-            placeholder="Ex : 50000"
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
           />
         </div>
 
+        {/* Devise */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Devise</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Devise
+          </label>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
           >
             {Object.entries(CURRENCY_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
@@ -250,18 +252,22 @@ function TransactionInlineForm({
           </select>
         </div>
 
+        {/* Méthode paiement */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">
             Méthode de paiement
           </label>
           <input
-            placeholder="Ex : Orange Money, Virement…"
             value={form.paymentMethod}
-            onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            onChange={(e) =>
+              setForm({ ...form, paymentMethod: e.target.value })
+            }
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            placeholder="Ex : Orange Money"
           />
         </div>
 
+        {/* OrderId visible pour admin/agent */}
         {canSeeOrder && (
           <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -269,27 +275,31 @@ function TransactionInlineForm({
             </label>
             <input
               type="number"
-              placeholder="Ex : 1024"
               value={form.orderId}
-              onChange={(e) => setForm({ ...form, orderId: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              onChange={(e) =>
+                setForm({ ...form, orderId: e.target.value })
+              }
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
             />
           </div>
         )}
 
+        {/* Description */}
         <div className="sm:col-span-2">
           <label className="block text-xs font-medium text-gray-700 mb-1">
             Description
           </label>
           <textarea
             rows={3}
-            placeholder="Notes, détails…"
             value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
+            onChange={(e) =>
+              setForm({ ...form, description: e.target.value })
+            }
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
           />
         </div>
 
+        {/* ProofFile */}
         <div className="sm:col-span-2">
           <label className="block text-xs font-medium text-gray-700 mb-1">
             Preuve (image/PDF)
@@ -300,25 +310,28 @@ function TransactionInlineForm({
             onChange={(e) =>
               setForm({ ...form, proofFile: e.target.files?.[0] || null })
             }
-            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 bg-white"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
           />
         </div>
 
-        <div className="sm:col-span-2 flex justify-end gap-2 flex-wrap">
+        {/* Buttons */}
+        <div className="sm:col-span-2 flex justify-end gap-2">
           <Btn type="button" variant="secondary" size="sm" onClick={onClose}>
             Annuler
           </Btn>
+
           <Btn type="submit" variant="primary" size="sm" disabled={saving}>
             {saving ? 'Enregistrement…' : '💾 Enregistrer'}
           </Btn>
         </div>
       </form>
+      {/* ---- FORM END ---- */}
     </div>
   );
 }
 
 /* ============================================================
-   🧠 Page principale
+   PAGE PRINCIPALE — DEBUT
 ============================================================ */
 export default function ProjectsPage() {
   const [user, setUser] = useState(null);
@@ -326,6 +339,7 @@ export default function ProjectsPage() {
   const [clients, setClients] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [, setErrorMsg] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -346,7 +360,6 @@ export default function ProjectsPage() {
     sort: '-createdAt',
   });
 
-  // 🆕 état pour afficher/masquer le formulaire transaction d'un projet donné
   const [openTrxProjectId, setOpenTrxProjectId] = useState(null);
 
   const navigate = useNavigate();
@@ -384,14 +397,19 @@ export default function ProjectsPage() {
     if (!u) return;
     setLoading(true);
     setErrorMsg('');
+
     try {
       const list = await getProjects({});
-      const normalized = Array.isArray(list) ? list.map(applyLabels) : [];
+      const normalized = Array.isArray(list)
+        ? list.map(applyLabels)
+        : [];
       if (isMounted.current) setProjects(normalized);
     } catch (e) {
       console.error('❌ Erreur chargement projets:', e);
       setErrorMsg(
-        e?.response?.data?.error || e?.message || 'Erreur lors du chargement des projets.'
+        e?.response?.data?.error ||
+          e?.message ||
+          'Erreur lors du chargement des projets.'
       );
     } finally {
       setLoading(false);
@@ -403,17 +421,22 @@ export default function ProjectsPage() {
   ============================================================ */
   useEffect(() => {
     isMounted.current = true;
+
     const init = async () => {
       const token = getToken();
       if (!token) {
         setLoading(false);
         return;
       }
+
       try {
         const { user: u } = await me();
         if (!isMounted.current) return;
+
         setUser(u);
+
         await loadForUser(u);
+
         if (u.role === 'admin') {
           await loadClients();
           await loadAgents();
@@ -426,6 +449,7 @@ export default function ProjectsPage() {
         setLoading(false);
       }
     };
+
     init();
     return () => {
       isMounted.current = false;
@@ -433,7 +457,7 @@ export default function ProjectsPage() {
   }, [getToken, loadForUser, loadClients, loadAgents]);
 
   /* ============================================================
-     🔹 Handlers CRUD + statut
+     🔹 Handlers CRUD (création / édition / suppression)
   ============================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
@@ -443,6 +467,7 @@ export default function ProjectsPage() {
         clientId: user?.role === 'admin' ? form.clientId : undefined,
         agentId: user?.role === 'admin' ? form.agentId : undefined,
       };
+
       if (editId) {
         await updateProject(editId, payload);
         alert('✅ Projet mis à jour avec succès');
@@ -450,6 +475,7 @@ export default function ProjectsPage() {
         await createProject(payload);
         alert('✅ Projet créé avec succès');
       }
+
       resetForm();
       await loadForUser(user);
     } catch (err) {
@@ -464,6 +490,7 @@ export default function ProjectsPage() {
 
   async function handleDelete(id) {
     if (!window.confirm('Supprimer ce projet ?')) return;
+
     try {
       await deleteProject(id);
       alert('✅ Projet supprimé');
@@ -476,7 +503,10 @@ export default function ProjectsPage() {
 
   async function handleAssign(projectId, agentId) {
     try {
-      await assignAgentToProject(projectId, agentId ? Number(agentId) : null);
+      await assignAgentToProject(
+        projectId,
+        agentId ? Number(agentId) : null
+      );
       alert('✅ Agent assigné avec succès');
       await loadForUser(user);
     } catch (err) {
@@ -485,7 +515,6 @@ export default function ProjectsPage() {
     }
   }
 
-  // ✅ Correction : envoi d'un payload COMPLET pour ne pas écraser budget & co
   async function handleStatusChange(projectId, newStatus) {
     try {
       const proj = projects.find((p) => p.id === projectId);
@@ -512,6 +541,7 @@ export default function ProjectsPage() {
 
   function handleEditClick(p) {
     if (!user) return;
+
     if (user.role === 'admin' || canEditDelete(p, user)) {
       setEditId(p.id);
       setForm({
@@ -526,7 +556,7 @@ export default function ProjectsPage() {
       setShowForm(true);
     } else {
       alert(
-        "⏱️ Vous ne pouvez plus modifier ce projet. Les clients ne peuvent modifier leur projet que dans l'heure suivant sa création."
+        "⏱️ Vous ne pouvez plus modifier ce projet (limité à 1h pour les clients)."
       );
     }
   }
@@ -546,10 +576,11 @@ export default function ProjectsPage() {
   }
 
   /* ============================================================
-     🔹 Filtres & tri
+     🔹 Filtres et tri
   ============================================================ */
   const filtered = useMemo(() => {
     let arr = [...projects];
+
     if (filters.q.trim()) {
       const q = filters.q.trim().toLowerCase();
       arr = arr.filter(
@@ -558,29 +589,41 @@ export default function ProjectsPage() {
           (p.description || '').toLowerCase().includes(q)
       );
     }
-    if (filters.status) arr = arr.filter((p) => p.status === filters.status);
+
+    if (filters.status) {
+      arr = arr.filter((p) => p.status === filters.status);
+    }
 
     const sortKey = filters.sort.replace(/^-/, '');
     const sign = filters.sort.startsWith('-') ? -1 : 1;
+
     arr.sort((a, b) => {
       const va = a?.[sortKey];
       const vb = b?.[sortKey];
-      if (sortKey === 'createdAt' || sortKey === 'updatedAt')
-        return (new Date(va).getTime() - new Date(vb).getTime()) * sign;
-      if (typeof va === 'number' || typeof vb === 'number')
+
+      if (sortKey === 'createdAt' || sortKey === 'updatedAt') {
+        return (
+          (new Date(va).getTime() - new Date(vb).getTime()) * sign
+        );
+      }
+
+      if (typeof va === 'number' || typeof vb === 'number') {
         return ((Number(va) || 0) - (Number(vb) || 0)) * sign;
+      }
+
       return (va || '').toString().localeCompare(vb || '') * sign;
     });
+
     return arr;
   }, [projects, filters]);
 
   /* ============================================================
-     🔹 Rendu
+     🔹 Rendu principal
   ============================================================ */
   if (loading)
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-gray-100">
-        <p className="text-blue-700 text-lg animate-pulse" role="status" aria-live="polite">
+        <p className="text-blue-700 text-lg animate-pulse">
           ⏳ Chargement des projets…
         </p>
       </div>
@@ -591,22 +634,19 @@ export default function ProjectsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
       <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-3xl p-8 border border-gray-100">
-        {/* ====================================================
-            🔹 En-tête + actions
-        ==================================================== */}
+        
+        {/* ================= HEADER ================= */}
         <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
           <div className="space-y-1">
             <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-2">
               📁 Projets
             </h1>
-            <p className="text-sm text-gray-500 whitespace-normal break-words">
+            <p className="text-sm text-gray-500">
               {user?.role === 'admin'
                 ? 'Gérez tous les projets des clients.'
                 : user?.role === 'agent'
                 ? 'Projets qui vous sont assignés.'
-                : user
-                ? 'Vos projets personnels.'
-                : 'Connectez-vous pour accéder à vos projets.'}
+                : 'Vos projets personnels.'}
             </p>
           </div>
 
@@ -615,7 +655,6 @@ export default function ProjectsPage() {
               <Btn
                 onClick={() => setShowForm((v) => !v)}
                 variant="ghost"
-                title={showForm ? 'Masquer le formulaire' : 'Créer un nouveau projet'}
                 size="sm"
               >
                 {showForm ? '➖ Masquer' : '➕ Nouveau projet'}
@@ -625,7 +664,6 @@ export default function ProjectsPage() {
               onClick={() => loadForUser(user)}
               disabled={loading || !user}
               variant="primary"
-              title="Rafraîchir la liste"
               size="sm"
             >
               🔄 Rafraîchir
@@ -633,24 +671,24 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {/* ====================================================
-            🔹 Filtres
-        ==================================================== */}
+        {/* ================= FILTRES ================= */}
         <div className="mb-6 bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <input
               value={filters.q}
-              onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
-              placeholder="Rechercher (titre, description)…"
-              aria-label="Recherche"
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, q: e.target.value }))
+              }
+              placeholder="Rechercher…"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
             />
 
             <select
               value={filters.status}
-              onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-              aria-label="Filtrer par statut"
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, status: e.target.value }))
+              }
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
             >
               <option value="">Tous les statuts</option>
               {PROJECT_STATUSES.map((s) => (
@@ -662,22 +700,24 @@ export default function ProjectsPage() {
 
             <select
               value={filters.sort}
-              onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value }))}
-              aria-label="Trier"
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, sort: e.target.value }))
+              }
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
             >
-              <option value="-createdAt">Tri: plus récents</option>
-              <option value="createdAt">Tri: plus anciens</option>
-              <option value="-updatedAt">Maj: plus récents</option>
-              <option value="updatedAt">Maj: plus anciens</option>
+              <option value="-createdAt">Plus récents</option>
+              <option value="createdAt">Plus anciens</option>
+              <option value="-updatedAt">Maj récentes</option>
+              <option value="updatedAt">Maj anciennes</option>
               <option value="title">Titre A→Z</option>
               <option value="-title">Titre Z→A</option>
             </select>
 
             <Btn
-              onClick={() => setFilters({ q: '', status: '', sort: '-createdAt' })}
+              onClick={() =>
+                setFilters({ q: '', status: '', sort: '-createdAt' })
+              }
               variant="secondary"
-              title="Réinitialiser les filtres"
               size="sm"
             >
               Réinitialiser
@@ -685,9 +725,7 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {/* ====================================================
-            🔹 Formulaire création / édition
-        ==================================================== */}
+        {/* ================= FORM CREATION / EDIT ================= */}
         {showForm && canCreate && (
           <form
             onSubmit={handleSubmit}
@@ -695,13 +733,13 @@ export default function ProjectsPage() {
           >
             {user.role === 'admin' && (
               <FieldRow>
-                {/* ✅ Liste clients sans e-mail */}
                 <select
                   value={form.clientId}
-                  onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, clientId: e.target.value })
+                  }
                   required
-                  aria-label="Choisir un client"
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 >
                   <option value="">— Choisir un client —</option>
                   {clients.map((c) => (
@@ -711,14 +749,14 @@ export default function ProjectsPage() {
                   ))}
                 </select>
 
-                {/* ✅ Liste agents sans e-mail */}
                 <select
                   value={form.agentId}
-                  onChange={(e) => setForm({ ...form, agentId: e.target.value })}
-                  aria-label="Assigner un agent"
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) =>
+                    setForm({ ...form, agentId: e.target.value })
+                  }
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 >
-                  <option value="">— Aucun agent assigné —</option>
+                  <option value="">— Aucun agent —</option>
                   {agents.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.firstName} {a.lastName}
@@ -732,18 +770,19 @@ export default function ProjectsPage() {
               <input
                 placeholder="Titre *"
                 value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, title: e.target.value })
+                }
                 required
-                aria-label="Titre du projet"
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
               />
 
               <select
                 value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                required
-                aria-label="Type de projet"
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                onChange={(e) =>
+                  setForm({ ...form, type: e.target.value })
+                }
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
               >
                 {PROJECT_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>
@@ -760,16 +799,18 @@ export default function ProjectsPage() {
                 min="0"
                 placeholder="Budget (XOF)"
                 value={form.budget}
-                onChange={(e) => setForm({ ...form, budget: e.target.value })}
-                aria-label="Budget"
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                onChange={(e) =>
+                  setForm({ ...form, budget: e.target.value })
+                }
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
               />
 
               <select
                 value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                aria-label="Statut"
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                onChange={(e) =>
+                  setForm({ ...form, status: e.target.value })
+                }
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
               >
                 {PROJECT_STATUSES.map((s) => (
                   <option key={s.value} value={s.value}>
@@ -779,70 +820,61 @@ export default function ProjectsPage() {
               </select>
             </FieldRow>
 
-            <div>
-              <textarea
-                placeholder="Description"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                aria-label="Description"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
-                rows={3}
-              />
-            </div>
+            <textarea
+              placeholder="Description"
+              value={form.description}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
 
-            <div className="flex items-center justify-end gap-2 flex-wrap">
+            <div className="flex justify-end gap-2">
               {editId && (
-                <Btn
-                  type="button"
-                  onClick={resetForm}
-                  variant="secondary"
-                  title="Annuler la modification"
-                  size="sm"
-                >
+                <Btn variant="secondary" size="sm" onClick={resetForm}>
                   Annuler
                 </Btn>
               )}
-              <Btn type="submit" variant="primary" title="Enregistrer le projet" size="sm">
-                {editId ? '💾 Enregistrer' : '➕ Créer'}
+              <Btn type="submit" variant="primary" size="sm">
+                {editId ? 'Enregistrer' : 'Créer'}
               </Btn>
             </div>
           </form>
         )}
 
-        {/* ====================================================
-            🔹 Liste des projets
-        ==================================================== */}
+        {/* ================= LISTE DES PROJETS ================= */}
         {filtered.length === 0 ? (
-          <p className="text-gray-500 italic text-center py-6">Aucun projet trouvé.</p>
+          <p className="text-gray-500 italic text-center py-6">
+            Aucun projet trouvé.
+          </p>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((p) => {
               const allowEditDelete = canEditDelete(p, user);
-              // 🔒 seul l'admin peut changer le statut (cohérent backend + page détail)
               const canChangeStatus = user?.role === 'admin';
               const canCreateTrx = canCreateProjectTransaction(p, user);
-
               const isTrxOpen = openTrxProjectId === p.id;
 
               return (
                 <div
                   key={p.id}
-                  className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-lg transition-all p-5 flex flex-col overflow-hidden"
+                  className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-lg transition p-5 flex flex-col"
                 >
-                  <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <h3 className="text-lg font-semibold text-gray-900 break-words whitespace-normal flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="text-lg font-semibold text-gray-900 break-words flex-1">
                       {p.title}
                     </h3>
 
-                    {/* ✅ Statut (édition si autorisé, sinon badge) */}
-                    <div className="shrink-0">
+                    {/* statut */}
+                    <div>
                       {canChangeStatus ? (
                         <select
                           value={p.status}
-                          onChange={(e) => handleStatusChange(p.id, e.target.value)}
-                          aria-label="Changer le statut"
-                          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 max-w-full"
-                          title="Changer le statut"
+                          onChange={(e) =>
+                            handleStatusChange(p.id, e.target.value)
+                          }
+                          className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                         >
                           {PROJECT_STATUSES.map((s) => (
                             <option key={s.value} value={s.value}>
@@ -863,43 +895,40 @@ export default function ProjectsPage() {
                       : '—'}
                   </p>
 
-                  {/* ✅ Noms sans e-mail */}
                   {p.client && (
-                    <p className="text-xs text-gray-700 mt-2 whitespace-normal break-words">
-                      👤 <span className="font-medium">Client</span> : {p.client.firstName}{' '}
-                      {p.client.lastName}
+                    <p className="text-xs text-gray-700 mt-2">
+                      👤 Client : {p.client.firstName} {p.client.lastName}
                     </p>
                   )}
+
                   {p.agent && (
-                    <p className="text-xs text-gray-700 mt-1 whitespace-normal break-words">
-                      🧑‍💼 <span className="font-medium">Agent</span> : {p.agent.firstName}{' '}
-                      {p.agent.lastName}
+                    <p className="text-xs text-gray-700 mt-1">
+                      🧑‍💼 Agent : {p.agent.firstName} {p.agent.lastName}
                     </p>
                   )}
 
                   {p.description && (
-                    <p className="text-sm text-gray-700 mt-3 whitespace-normal break-words">
+                    <p className="text-sm text-gray-700 mt-3">
                       {p.description}
                     </p>
                   )}
 
                   {p.budget && (
                     <p className="text-sm text-gray-800 mt-2">
-                      💰 <span className="font-medium">Budget</span> :{' '}
+                      💰 Budget :{' '}
                       {Number(p.budget).toLocaleString('fr-FR')} XOF
                     </p>
                   )}
 
-                  {/* 🔹 Actions */}
-                  <div className="mt-4 flex flex-wrap gap-2 items-center">
-                    {/* ✅ Sélecteur d’agent pour admin (noms sans e-mail) */}
+                  {/* ACTIONS */}
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {user?.role === 'admin' && (
                       <select
                         value={p.agent?.id || ''}
-                        onChange={(e) => handleAssign(p.id, e.target.value)}
-                        aria-label="Assigner un agent"
-                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 max-w-full"
-                        title="Assigner un agent"
+                        onChange={(e) =>
+                          handleAssign(p.id, e.target.value)
+                        }
+                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
                       >
                         <option value="">— Assigner agent —</option>
                         {agents.map((a) => (
@@ -910,17 +939,15 @@ export default function ProjectsPage() {
                       </select>
                     )}
 
-                    <div className="ml-auto flex flex-wrap gap-2 justify-end">
+                    <div className="ml-auto flex flex-wrap gap-2">
                       <Btn
                         onClick={() => navigate(`/projects/${p.id}`)}
                         variant="primary"
                         size="sm"
-                        title="Voir les détails du projet"
                       >
                         📂 Détails
                       </Btn>
 
-                      {/* 💰 Transaction : maintenant visible UNIQUEMENT pour admin + client */}
                       {canCreateTrx && (
                         <Btn
                           onClick={() =>
@@ -928,7 +955,6 @@ export default function ProjectsPage() {
                           }
                           variant="ghost"
                           size="sm"
-                          title="Ajouter une transaction liée à ce projet"
                         >
                           {isTrxOpen ? '➖ Annuler' : '💰 Transaction'}
                         </Btn>
@@ -940,15 +966,14 @@ export default function ProjectsPage() {
                             onClick={() => handleEditClick(p)}
                             variant="warning"
                             size="xs"
-                            title="Modifier ce projet"
                           >
                             ✏️ Modifier
                           </Btn>
+
                           <Btn
                             onClick={() => handleDelete(p.id)}
                             variant="danger"
                             size="xs"
-                            title="Supprimer ce projet"
                           >
                             ❌ Supprimer
                           </Btn>
@@ -957,16 +982,12 @@ export default function ProjectsPage() {
                     </div>
                   </div>
 
-                  {/* 🧾 Formulaire inline de transaction liée au projet
-                      (on garde la même condition canCreateTrx, donc jamais pour agent) */}
                   {isTrxOpen && canCreateTrx && (
                     <TransactionInlineForm
                       project={p}
                       currentUser={user}
                       onClose={() => setOpenTrxProjectId(null)}
-                      onSuccess={() => {
-                        // La liste des projets reste la même, pas de reload obligatoire ici.
-                      }}
+                      onSuccess={() => {}}
                     />
                   )}
                 </div>
