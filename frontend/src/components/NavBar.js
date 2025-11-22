@@ -1,29 +1,31 @@
 // ============================================================================
-// NavBar.jsx — Version Ultra-Premium 2025
-// Responsive • Accessible • Rapide • Production Ready
+// NavBar.jsx — Version Ultra-Premium PRO 2025 (avec LOGO TERANGA)
+// Design moderne • Mobile-first • Accessible • Ultra-stable
 // ============================================================================
+
 import { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { me, logout } from '../services/auth';
-import { Menu, X, LogOut, Home } from 'lucide-react';
+import { Menu, X, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// 🧠 Helper — Ajoute une latence minimaliste pour fluidifier UX
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// Petite latence douce UX
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 export default function NavBar() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [open, setOpen] = useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
 
-  /* ============================================================
-     🔐 Chargement utilisateur (optimisé)
-  ============================================================ */
+  // ============================================================================
+  // 🔐 Chargement utilisateur
+  // ============================================================================
   useEffect(() => {
     let active = true;
+
     async function fetchUser() {
       try {
         const res = await me();
@@ -34,20 +36,23 @@ export default function NavBar() {
         if (active) setLoading(false);
       }
     }
+
     fetchUser();
-    return () => (active = false);
+    return () => {
+      active = false;
+    };
   }, [location.pathname]);
 
-/* ============================================================
-   ✨ Fermer menu mobile automatiquement (ESLint safe)
-============================================================ */
-useEffect(() => {
-  setOpen(false);
-}, [location.pathname]);
+  // ============================================================================
+  // ✨ Fermeture automatique du menu mobile
+  // ============================================================================
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
 
-  /* ============================================================
-     🚪 Déconnexion + feedback UX instantané
-  ============================================================ */
+  // ============================================================================
+  // 🚪 Déconnexion
+  // ============================================================================
   const handleLogout = useCallback(async () => {
     setOpen(false);
     await delay(80);
@@ -57,41 +62,56 @@ useEffect(() => {
 
   if (loading) return null;
 
-  /* ============================================================
-     🌍 Mode PUBLIC (non connecté)
-  ============================================================ */
+  // ============================================================================
+  // 🌍 Mode public (non connecté)
+  // ============================================================================
   const publicRoutes = ['/', '/login', '/register', '/shop'];
   const isPublic = publicRoutes.some((p) =>
     location.pathname.startsWith(p)
   );
 
+  // LOGO Teranga
+  const Logo = (
+    <img
+      src="/logo_32x32.png"
+      alt="Teranga"
+      className="w-7 h-7 object-contain drop-shadow-md"
+    />
+  );
+
   if (!user && isPublic) {
     return (
       <nav
-        className="bg-slate-900/90 backdrop-blur-md text-white px-5 py-4
-                   shadow-md sticky top-0 z-[60] border-b border-slate-800"
+        className="
+          bg-slate-900/90 backdrop-blur-md text-white
+          px-5 py-4 shadow-md sticky top-0 z-[90] border-b border-slate-800
+        "
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
+
+          {/* LOGO + NOM */}
           <Link
             to="/"
             className="flex items-center gap-2 text-cyan-400 font-bold text-lg"
           >
-            <Home size={20} />
-            Teranga
+            {Logo}
+            <span>Teranga</span>
           </Link>
 
           <div className="flex items-center gap-5 text-sm">
             <Link
               to="/login"
-              className="hover:text-cyan-400 transition"
+              className="hover:text-cyan-400 transition font-medium"
             >
               Connexion
             </Link>
 
             <Link
               to="/register"
-              className="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-600
-                         rounded-md text-white font-semibold shadow-sm transition"
+              className="
+                px-4 py-1.5 bg-cyan-500 hover:bg-cyan-600
+                rounded-md text-white font-semibold shadow-sm transition
+              "
             >
               Inscription
             </Link>
@@ -101,9 +121,9 @@ useEffect(() => {
     );
   }
 
-  /* ============================================================
-     🔗 Liens premium selon rôle
-  ============================================================ */
+  // ============================================================================
+  // 🔗 Liens premium selon rôle
+  // ============================================================================
   const commerceLinksCommon = [
     { path: '/shop', label: '🛍️ Produits' },
     { path: '/orders', label: '🧾 Commandes' },
@@ -120,6 +140,7 @@ useEffect(() => {
       { path: '/finance', label: '📈 Finances' },
       ...commerceLinksCommon,
     ],
+
     agent: [
       { path: '/dashboard', label: '📊 Dashboard' },
       { path: '/projects', label: '📁 Projets assignés' },
@@ -129,6 +150,7 @@ useEffect(() => {
       { path: '/finance', label: '📈 Finances' },
       ...commerceLinksCommon,
     ],
+
     admin: [
       { path: '/dashboard', label: '📊 Dashboard' },
       { path: '/projects', label: '📁 Projets' },
@@ -153,37 +175,39 @@ useEffect(() => {
     location.pathname === path ||
     location.pathname.startsWith(path + '/');
 
-  /* ============================================================
-     🧭 NavBar Premium Responsive
-  ============================================================ */
+  // ============================================================================
+  // 🧭 NavBar Premium Responsive
+  // ============================================================================
   return (
     <nav
       className="
-        bg-slate-900/95 backdrop-blur-xl
-        text-white shadow-xl border-b border-slate-800
-        sticky top-0 z-[70]
+        bg-slate-900/95 backdrop-blur-xl text-white
+        shadow-xl border-b border-slate-800 sticky top-0 z-[90]
       "
       aria-label="Navigation principale"
     >
       <div className="max-w-7xl mx-auto px-6">
-        {/* Header principal */}
         <div className="flex items-center justify-between py-3">
-          {/* Logo */}
+
+          {/* LOGO TERANGA */}
           <Link
             to="/"
             className="flex items-center gap-2 font-bold text-lg text-cyan-400"
           >
-            <Home size={20} />
-            Teranga
+            {Logo}
+            <span>Teranga</span>
           </Link>
 
           {/* Bouton mobile */}
           <button
-            aria-label="Ouvrir le menu"
+            aria-label="Menu mobile"
             aria-controls="mobile-menu"
             aria-expanded={open}
             onClick={() => setOpen(!open)}
-            className="md:hidden text-gray-300 hover:text-white transition p-2"
+            className="
+              md:hidden text-gray-300 hover:text-white
+              transition p-2 focus:outline-none focus:ring-2 focus:ring-cyan-500
+            "
           >
             {open ? <X size={26} /> : <Menu size={26} />}
           </button>
@@ -194,12 +218,12 @@ useEffect(() => {
               <li key={l.path}>
                 <Link
                   to={l.path}
-                  className={`text-[0.9rem] transition font-medium relative 
-                    ${
-                      isActive(l.path)
-                        ? 'text-cyan-400'
-                        : 'text-gray-300 hover:text-white'
-                    }`}
+                  className={`
+                    text-[0.9rem] font-medium transition relative
+                    ${isActive(l.path)
+                      ? 'text-cyan-400'
+                      : 'text-gray-300 hover:text-white'}
+                  `}
                 >
                   {l.label}
 
@@ -210,9 +234,12 @@ useEffect(() => {
               </li>
             ))}
 
-            {/* Profil desktop */}
+            {/* Profil Desktop */}
             <li>
-              <div className="flex items-center gap-3 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700">
+              <div className="
+                flex items-center gap-3 bg-slate-800/50 px-3 py-1.5
+                rounded-lg border border-slate-700
+              ">
                 <div className="flex flex-col text-right">
                   <span className="text-sm font-semibold text-white">
                     {user.firstName || user.email}
@@ -221,12 +248,20 @@ useEffect(() => {
                     {user.role}
                   </span>
                 </div>
-                <div className="w-9 h-9 rounded-full bg-cyan-500 text-white flex items-center justify-center font-bold text-sm uppercase">
+
+                <div className="
+                  w-9 h-9 rounded-full bg-cyan-500 text-white flex
+                  items-center justify-center font-bold uppercase shadow
+                ">
                   {user.firstName?.[0] || user.email?.[0] || '?'}
                 </div>
+
                 <button
                   onClick={handleLogout}
-                  className="ml-2 flex items-center gap-1 bg-red-500 hover:bg-red-600 px-3 py-1.5 text-xs rounded-md transition"
+                  className="
+                    ml-2 flex items-center gap-1 bg-red-500 hover:bg-red-600
+                    px-3 py-1.5 text-xs rounded-md font-semibold transition
+                  "
                 >
                   <LogOut size={14} /> Déconnexion
                 </button>
@@ -236,7 +271,9 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* MENU MOBILE */}
+      {/* ====================== */}
+      {/* MENU MOBILE ANIMÉ      */}
+      {/* ====================== */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -245,19 +282,22 @@ useEffect(() => {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="md:hidden bg-slate-800 border-t border-slate-700 px-6 py-4 space-y-2 overflow-hidden"
+            className="
+              md:hidden bg-slate-800 border-t border-slate-700
+              px-6 py-4 space-y-2 overflow-hidden
+            "
           >
             {links.map((l) => (
               <Link
                 key={l.path}
                 to={l.path}
                 onClick={() => setOpen(false)}
-                className={`block text-sm py-2 px-3 rounded-md transition
-                  ${
-                    isActive(l.path)
-                      ? 'bg-cyan-600 text-white font-semibold'
-                      : 'text-gray-300 hover:bg-slate-700 hover:text-white'
-                  }`}
+                className={`
+                  block text-sm py-2 px-3 rounded-md transition
+                  ${isActive(l.path)
+                    ? 'bg-cyan-600 text-white font-semibold'
+                    : 'text-gray-300 hover:bg-slate-700 hover:text-white'}
+                `}
               >
                 {l.label}
               </Link>
@@ -267,7 +307,10 @@ useEffect(() => {
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-xs px-3 py-2 rounded-md font-semibold transition"
+              className="
+                flex items-center gap-2 bg-red-500 hover:bg-red-600
+                text-xs px-3 py-2 rounded-md font-semibold transition
+              "
             >
               <LogOut size={14} /> Déconnexion
             </button>
