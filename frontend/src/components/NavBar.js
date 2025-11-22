@@ -71,7 +71,7 @@ export default function NavBar() {
   // LOGO Teranga (depuis /public)
   const Logo = (
     <img
-      src="/logo_32x32.png"
+      src="/logo_180x180.png"
       alt="Teranga"
       className="w-7 h-7 object-contain drop-shadow-md"
     />
