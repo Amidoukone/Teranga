@@ -1,3 +1,15 @@
-# https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+
+# Empêcher le crawl des pages privées si tu veux
+Disallow: /dashboard
+Disallow: /services
+Disallow: /projects
+Disallow: /properties
+Disallow: /transactions
+Disallow: /finance
+Disallow: /orders
+Disallow: /admin
+
+# Fichiers utiles
+Sitemap: https://teranga-diaspora.com/sitemap.xml

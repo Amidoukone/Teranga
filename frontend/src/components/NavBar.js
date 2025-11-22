@@ -44,7 +44,7 @@ export default function NavBar() {
   }, [location.pathname]);
 
   // ============================================================================
-  // ✨ Fermeture automatique du menu mobile
+  // ✨ Fermeture automatique du menu mobile après navigation
   // ============================================================================
   useEffect(() => {
     setOpen(false);
@@ -66,11 +66,9 @@ export default function NavBar() {
   // 🌍 Mode public (non connecté)
   // ============================================================================
   const publicRoutes = ['/', '/login', '/register', '/shop'];
-  const isPublic = publicRoutes.some((p) =>
-    location.pathname.startsWith(p)
-  );
+  const isPublic = publicRoutes.some((p) => location.pathname.startsWith(p));
 
-  // LOGO Teranga
+  // LOGO Teranga (depuis /public)
   const Logo = (
     <img
       src="/logo_32x32.png"
@@ -88,7 +86,6 @@ export default function NavBar() {
         "
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-
           {/* LOGO + NOM */}
           <Link
             to="/"
@@ -172,8 +169,7 @@ export default function NavBar() {
   const links = roleLinks[user?.role] || [];
 
   const isActive = (path) =>
-    location.pathname === path ||
-    location.pathname.startsWith(path + '/');
+    location.pathname === path || location.pathname.startsWith(path + '/');
 
   // ============================================================================
   // 🧭 NavBar Premium Responsive
@@ -186,10 +182,12 @@ export default function NavBar() {
       "
       aria-label="Navigation principale"
     >
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex items-center justify-between py-3">
-
-          {/* LOGO TERANGA */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        {/* ===================================================================== */}
+        {/* HEADER MOBILE (xs - md)                                              */}
+        {/* ===================================================================== */}
+        <div className="flex items-center justify-between py-3 md:hidden">
+          {/* Logo Teranga */}
           <Link
             to="/"
             className="flex items-center gap-2 font-bold text-lg text-cyan-400"
@@ -198,7 +196,7 @@ export default function NavBar() {
             <span>Teranga</span>
           </Link>
 
-          {/* Bouton mobile */}
+          {/* Bouton menu mobile */}
           <button
             aria-label="Menu mobile"
             aria-controls="mobile-menu"
@@ -211,69 +209,96 @@ export default function NavBar() {
           >
             {open ? <X size={26} /> : <Menu size={26} />}
           </button>
+        </div>
 
-          {/* Liens desktop */}
-          <ul className="hidden md:flex items-center gap-6">
+        {/* ===================================================================== */}
+        {/* HEADER DESKTOP (>= md)                                                */}
+        {/* ===================================================================== */}
+        <div className="hidden md:flex items-center gap-6 py-3">
+          {/* Colonne gauche : Logo (fixe) */}
+          <Link
+            to="/"
+            className="flex items-center gap-2 font-bold text-lg text-cyan-400 whitespace-nowrap"
+          >
+            {Logo}
+            <span>Teranga</span>
+          </Link>
+
+          {/* Colonne centrale : Liens (flex-wrap + multi-ligne possible) */}
+          <ul
+            className="
+              flex-1 flex flex-wrap
+              gap-x-4 lg:gap-x-6 gap-y-1
+              justify-center
+            "
+          >
             {links.map((l) => (
-              <li key={l.path}>
+              <li key={l.path} className="whitespace-nowrap">
                 <Link
                   to={l.path}
                   className={`
                     text-[0.9rem] font-medium transition relative
-                    ${isActive(l.path)
-                      ? 'text-cyan-400'
-                      : 'text-gray-300 hover:text-white'}
+                    ${
+                      isActive(l.path)
+                        ? 'text-cyan-400'
+                        : 'text-gray-300 hover:text-white'
+                    }
                   `}
                 >
                   {l.label}
-
                   {isActive(l.path) && (
                     <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-cyan-400 rounded-full" />
                   )}
                 </Link>
               </li>
             ))}
-
-            {/* Profil Desktop */}
-            <li>
-              <div className="
-                flex items-center gap-3 bg-slate-800/50 px-3 py-1.5
-                rounded-lg border border-slate-700
-              ">
-                <div className="flex flex-col text-right">
-                  <span className="text-sm font-semibold text-white">
-                    {user.firstName || user.email}
-                  </span>
-                  <span className="text-xs text-gray-400 uppercase tracking-wide">
-                    {user.role}
-                  </span>
-                </div>
-
-                <div className="
-                  w-9 h-9 rounded-full bg-cyan-500 text-white flex
-                  items-center justify-center font-bold uppercase shadow
-                ">
-                  {user.firstName?.[0] || user.email?.[0] || '?'}
-                </div>
-
-                <button
-                  onClick={handleLogout}
-                  className="
-                    ml-2 flex items-center gap-1 bg-red-500 hover:bg-red-600
-                    px-3 py-1.5 text-xs rounded-md font-semibold transition
-                  "
-                >
-                  <LogOut size={14} /> Déconnexion
-                </button>
-              </div>
-            </li>
           </ul>
+
+          {/* Colonne droite : Profil Desktop */}
+          <div
+            className="
+              flex items-center gap-3 bg-slate-800/50 px-3 py-1.5
+              rounded-lg border border-slate-700 max-w-xs lg:max-w-sm
+            "
+          >
+            <div className="flex flex-col text-right truncate">
+              <div className="flex items-center justify-end gap-1">
+                <span className="text-sm font-semibold text-white truncate">
+                  {user.firstName || user.email}
+                </span>
+                {/* Petit point vert (statut en ligne) */}
+                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block shadow" />
+              </div>
+              <span className="text-xs text-gray-400 uppercase tracking-wide">
+                {user.role}
+              </span>
+            </div>
+
+            <div
+              className="
+                w-9 h-9 rounded-full bg-cyan-500 text-white flex
+                items-center justify-center font-bold uppercase shadow shrink-0
+              "
+            >
+              {user.firstName?.[0] || user.email?.[0] || '?'}
+            </div>
+
+            <button
+              onClick={handleLogout}
+              className="
+                ml-1 flex items-center gap-1 bg-red-500 hover:bg-red-600
+                px-3 py-1.5 text-xs rounded-md font-semibold transition shrink-0
+              "
+            >
+              <LogOut size={14} /> Déconnexion
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ====================== */}
-      {/* MENU MOBILE ANIMÉ      */}
-      {/* ====================== */}
+      {/* ======================================================================= */}
+      {/* MENU MOBILE ANIMÉ (sous le header mobile)                              */}
+      {/* ======================================================================= */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -287,6 +312,7 @@ export default function NavBar() {
               px-6 py-4 space-y-2 overflow-hidden
             "
           >
+            {/* Liens navigation mobile */}
             {links.map((l) => (
               <Link
                 key={l.path}
@@ -294,9 +320,11 @@ export default function NavBar() {
                 onClick={() => setOpen(false)}
                 className={`
                   block text-sm py-2 px-3 rounded-md transition
-                  ${isActive(l.path)
-                    ? 'bg-cyan-600 text-white font-semibold'
-                    : 'text-gray-300 hover:bg-slate-700 hover:text-white'}
+                  ${
+                    isActive(l.path)
+                      ? 'bg-cyan-600 text-white font-semibold'
+                      : 'text-gray-300 hover:bg-slate-700 hover:text-white'
+                  }
                 `}
               >
                 {l.label}
@@ -305,6 +333,7 @@ export default function NavBar() {
 
             <hr className="border-slate-700 my-3" />
 
+            {/* Déconnexion mobile */}
             <button
               onClick={handleLogout}
               className="

@@ -1,6 +1,6 @@
 // ============================================================================
 // App.js — Teranga Platform (Version Premium PRO 2025)
-// Navigation • Routage protégé • SEO dynamique • Responsive
+// Navigation • Routage protégé • SEO dynamique • Optimisé Google
 // ============================================================================
 
 import { useEffect } from 'react';
@@ -50,37 +50,38 @@ import OrderTransactionsPage from './pages/OrderTransactionsPage';
 import { getToken, getLocalUser } from './services/auth';
 
 // ============================================================================
-// 🧭 Scroll automatique lors d’un changement de route
+// 🧭 Scroll automatique
 // ============================================================================
 function ScrollToTop() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    try {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch {
-      window.scrollTo(0, 0);
-    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [pathname]);
 
   return null;
 }
 
 // ============================================================================
-// 🧠 SEO Dynamique — Change automatiquement le titre de la page
+// 🧠 SEO Dynamique — Mise à jour du titre + meta description
 // ============================================================================
-function SetTitle({ title }) {
+function SetTitle({ title, description }) {
   useEffect(() => {
     document.title = title
       ? `${title} – Teranga`
       : 'Teranga – Diaspora & Services';
-  }, [title]);
+
+    if (description) {
+      let metaDesc = document.querySelector("meta[name='description']");
+      if (metaDesc) metaDesc.setAttribute("content", description);
+    }
+  }, [title, description]);
 
   return null;
 }
 
 // ============================================================================
-// 🔐 Protection d’accès (auth obligatoire)
+// 🔐 Authentication wall
 // ============================================================================
 function RequireAuth({ children }) {
   const location = useLocation();
@@ -113,7 +114,7 @@ function RequireRole({ allow = [], children }) {
 }
 
 // ============================================================================
-// 🚪 Pages accessibles seulement si NON connecté
+// 🚪 PublicOnly — Empêche un utilisateur connecté de voir login/register
 // ============================================================================
 function PublicOnly({ children }) {
   const token = getToken();
@@ -126,23 +127,26 @@ function PublicOnly({ children }) {
 }
 
 // ============================================================================
-// 🧩 Application principale
+// 🧩 APPLICATION PRINCIPALE
 // ============================================================================
 export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 text-gray-800">
+
       <ScrollToTop />
       <NavBar />
 
       <main className="flex-1 container mx-auto px-4 py-6">
 
         <Routes>
-          {/* =============================
-              🌐 PAGES PUBLIQUES
-          ============================== */}
+
+          {/* 🌐 Pages publiques */}
           <Route path="/" element={
             <>
-              <SetTitle title="Accueil" />
+              <SetTitle
+                title="Accueil"
+                description="Teranga — Plateforme qui connecte la diaspora africaine à ses biens, projets et services."
+              />
               <HomePage />
             </>
           } />
@@ -156,7 +160,7 @@ export default function App() {
 
           <Route path="/products/:id" element={
             <>
-              <SetTitle title="Détail produit" />
+              <SetTitle title="Produit" />
               <ProductDetailPage />
             </>
           } />
@@ -179,10 +183,7 @@ export default function App() {
             </PublicOnly>
           } />
 
-
-          {/* =============================
-              👥 UTILISATEURS CONNECTÉS
-          ============================== */}
+          {/* 👥 Espace connecté */}
           <Route path="/dashboard" element={
             <RequireAuth>
               <>
@@ -195,7 +196,7 @@ export default function App() {
           <Route path="/properties" element={
             <RequireAuth>
               <>
-                <SetTitle title="Mes biens" />
+                <SetTitle title="Biens" />
                 <PropertiesPage />
               </>
             </RequireAuth>
@@ -204,7 +205,7 @@ export default function App() {
           <Route path="/projects" element={
             <RequireAuth>
               <>
-                <SetTitle title="Mes projets" />
+                <SetTitle title="Projets" />
                 <ProjectsPage />
               </>
             </RequireAuth>
@@ -273,10 +274,7 @@ export default function App() {
             </RequireAuth>
           } />
 
-
-          {/* =============================
-              🧾 COMMERCE — COMMANDES
-          ============================== */}
+          {/* 🧾 Commerce */}
           <Route path="/orders" element={
             <RequireAuth>
               <>
@@ -289,7 +287,7 @@ export default function App() {
           <Route path="/orders/:id" element={
             <RequireAuth>
               <>
-                <SetTitle title="Détail commande" />
+                <SetTitle title="Commande" />
                 <OrderDetailPage />
               </>
             </RequireAuth>
@@ -304,10 +302,7 @@ export default function App() {
             </RequireAuth>
           } />
 
-
-          {/* =============================
-              ⚙️ AGENTS
-          ============================== */}
+          {/* 👨‍💼 Agents */}
           <Route path="/agent/services" element={
             <RequireAuth>
               <RequireRole allow={['agent', 'admin']}>
@@ -319,15 +314,12 @@ export default function App() {
             </RequireAuth>
           } />
 
-
-          {/* =============================
-              👑 ADMIN
-          ============================== */}
+          {/* 👑 Admin */}
           <Route path="/admin/projects" element={
             <RequireAuth>
               <RequireRole allow={['admin']}>
                 <>
-                  <SetTitle title="Gestion des projets" />
+                  <SetTitle title="Gestion projets" />
                   <AdminProjectsPage />
                 </>
               </RequireRole>
@@ -349,7 +341,7 @@ export default function App() {
             <RequireAuth>
               <RequireRole allow={['admin']}>
                 <>
-                  <SetTitle title="Gestion des services" />
+                  <SetTitle title="Services (admin)" />
                   <AdminServicesPage />
                 </>
               </RequireRole>
@@ -393,16 +385,14 @@ export default function App() {
             <RequireAuth>
               <RequireRole allow={['admin']}>
                 <>
-                  <SetTitle title="Produits (admin)" />
+                  <SetTitle title="Produits admin" />
                   <AdminProductsPage />
                 </>
               </RequireRole>
             </RequireAuth>
           } />
 
-          {/* =============================
-              🚧 ROUTE PAR DÉFAUT
-          ============================== */}
+          {/* ROUTE PAR DÉFAUT */}
           <Route path="*" element={
             <>
               <SetTitle title="Accueil" />
@@ -411,12 +401,13 @@ export default function App() {
           } />
 
         </Routes>
+
       </main>
 
-      {/* FOOTER */}
       <footer className="bg-gray-100 border-t border-gray-200 py-4 text-center text-sm text-gray-600">
         © {new Date().getFullYear()} <span className="font-semibold text-blue-600">Teranga</span> — Tous droits réservés.
       </footer>
+
     </div>
   );
 }

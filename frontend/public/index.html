@@ -3,50 +3,86 @@
   <head>
     <meta charset="utf-8" />
 
-    <!-- 🔥 Favicon principal -->
+    <!-- ======================================= -->
+    <!-- 🔥 ICONES & FAVICONS                     -->
+    <!-- ======================================= -->
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-
-    <!-- 📱 Responsive -->
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <!-- 🎨 Couleur du thème -->
-    <meta name="theme-color" content="#0ea5e9" />
-
-    <!-- 📝 Description SEO -->
-    <meta
-      name="description"
-      content="Teranga — La plateforme moderne qui connecte la diaspora africaine à ses biens, projets et services au pays. Transparence, sécurité, accompagnement humain."
-    />
-
-    <!-- 📱 Icônes mobile / PWA -->
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo_192x192.png" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo_180x180.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
-    <!-- 🔍 SEO + Social OG -->
+    <!-- ======================================= -->
+    <!-- 📱 RESPONSIVE                            -->
+    <!-- ======================================= -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- ======================================= -->
+    <!-- 🎨 COULEUR NAVIGATEUR / PWA             -->
+    <!-- ======================================= -->
+    <meta name="theme-color" content="#0ea5e9" />
+
+    <!-- ======================================= -->
+    <!-- 🔍 SEO — DESCRIPTION + MOTS CLÉS         -->
+    <!-- ======================================= -->
+    <title>Teranga – Plateforme pour la diaspora africaine</title>
+
+    <meta
+      name="description"
+      content="Teranga — La plateforme moderne qui connecte la diaspora africaine à ses biens, projets et services au pays. Transparence, preuves, agents certifiés, suivi en temps réel."
+    />
+
+    <meta
+      name="keywords"
+      content="diaspora africaine, Mali, Afrique, gestion de biens, services diaspora, suivi projets, Teranga, agents locaux, immobilier diaspora, assistance au pays"
+    />
+
+    <meta name="robots" content="index, follow" />
+
+    <!-- ======================================= -->
+    <!-- 🟦 OPEN GRAPH — FACEBOOK / WHATSAPP      -->
+    <!-- ======================================= -->
     <meta property="og:title" content="Teranga — Diaspora & Services au pays" />
     <meta
       property="og:description"
-      content="Gérez vos biens, projets et services à distance avec transparence et sécurité. Teranga reconnecte la diaspora africaine à son pays."
+      content="Gérez vos biens, projets et services à distance en toute transparence. Preuves, photos, vidéos, transactions claires et agents certifiés."
     />
     <meta property="og:image" content="%PUBLIC_URL%/logo_512x512.png" />
-    <meta property="og:type" content="website" />
     <meta property="og:url" content="https://teranga-diaspora.com" />
+    <meta property="og:type" content="website" />
 
-    <!-- 🐦 Twitter Cards -->
+    <!-- ======================================= -->
+    <!-- 🐦 TWITTER CARDS                         -->
+    <!-- ======================================= -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Teranga — Diaspora & Services" />
     <meta
       name="twitter:description"
-      content="Plateforme moderne dédiée à la diaspora africaine : gestion de projets, biens, services, preuves, transactions."
+      content="Plateforme moderne dédiée à la diaspora africaine : services, biens, projets, agents de terrain, transparence totale."
     />
     <meta name="twitter:image" content="%PUBLIC_URL%/logo_512x512.png" />
 
-    <!-- 🔤 Titre -->
-    <title>Teranga – Diaspora & Services</title>
+    <!-- ======================================= -->
+    <!-- 📊 SCHEMA.ORG — GOOGLE RICH RESULTS     -->
+    <!-- ======================================= -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Teranga",
+        "url": "https://teranga-diaspora.com",
+        "logo": "https://teranga-diaspora.com/logo_512x512.png",
+        "description": "Plateforme moderne connectant la diaspora africaine à ses biens, projets et services au pays.",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Bamako",
+          "addressCountry": "Mali"
+        }
+      }
+    </script>
+
   </head>
 
   <body>
-    <noscript>Veuillez activer JavaScript pour utiliser Teranga.</noscript>
+    <noscript>Veuillez activer JavaScript pour utiliser l'application Teranga.</noscript>
     <div id="root"></div>
   </body>
 </html>
