@@ -1,6 +1,6 @@
 // ============================================================================
 // HomePage.jsx — Teranga Landing Page Premium 2025
-// Émotionnelle • Moderne • Lisible • Production Ready
+// Version Émotionnelle + Soft + Mobile Optimisée
 // ============================================================================
 import { Link } from "react-router-dom";
 import {
@@ -19,14 +19,14 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-blue-100 text-gray-800 scroll-smooth">
       {/* ===================================================================== */}
-      {/* 🏆 HERO SECTION — EMOTION + MODERN DESIGN */}
+      {/* 🏆 HERO SECTION — Émotion + Modernité + Lisibilité Mobile */}
       {/* ===================================================================== */}
       <section
         id="accueil"
-        className="flex flex-col items-center justify-center text-center py-28 px-6 bg-gradient-to-b from-blue-100 to-white relative overflow-hidden"
+        className="flex flex-col items-center justify-center text-center py-24 sm:py-32 px-6 bg-gradient-to-b from-blue-100 to-white relative overflow-hidden"
       >
         {/* Halo decoratif */}
-        <div className="absolute -top-20 left-1/2 w-[900px] h-[900px] bg-blue-300/20 rounded-full blur-3xl -translate-x-1/2" />
+        <div className="absolute -top-32 left-1/2 w-[900px] h-[900px] bg-blue-300/10 rounded-full blur-3xl -translate-x-1/2" />
 
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -34,16 +34,20 @@ export default function HomePage() {
           transition={{ duration: 0.8 }}
           className="max-w-4xl mx-auto relative"
         >
-          <h1 className="text-5xl sm:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
-            La confiance, <span className="text-blue-600">à distance</span>.  
-            <br />
-            La sérénité, <span className="text-blue-600">à portée de main</span>.
+          {/* TITRE ADAPTÉ MOBILE */}
+          <h1 className="text-4xl sm:text-6xl font-extrabold text-gray-900 mb-6 leading-tight sm:leading-[1.15]">
+            <span className="block text-blue-700 sm:text-blue-600">
+              La confiance à distance,
+            </span>
+            <span className="block text-blue-700 sm:text-blue-600">
+              la sérénité à portée de main.
+            </span>
           </h1>
 
           <p className="text-gray-700 text-lg sm:text-xl mb-10 leading-relaxed max-w-3xl mx-auto">
-            Avec <strong>Teranga</strong>, la diaspora africaine reste connectée à
-            ses projets, ses biens et son pays — avec transparence, sécurité et un
-            accompagnement humain à chaque étape.  
+            Avec <strong>Teranga</strong>, la diaspora africaine suit et gère
+            ses biens, projets et démarches directement depuis l’étranger —
+            avec transparence, fiabilité et une présence humaine sur le terrain.
           </p>
 
           <div className="flex flex-wrap justify-center gap-4">
@@ -62,14 +66,14 @@ export default function HomePage() {
           </div>
         </motion.div>
 
+        {/* Bas du Hero */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="mt-12 text-gray-500 text-sm max-w-2xl mx-auto leading-relaxed"
+          className="mt-10 text-gray-500 text-sm max-w-xl mx-auto leading-relaxed"
         >
-          Parce que la distance ne devrait jamais être un obstacle entre vous et
-          votre patrimoine au pays.
+          Parce que la distance ne devrait jamais vous éloigner de ce qui compte.
         </motion.p>
       </section>
 
@@ -81,13 +85,12 @@ export default function HomePage() {
         className="py-24 px-6 bg-white border-t border-gray-100"
       >
         <div className="max-w-6xl mx-auto text-center mb-14">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Nos services, votre tranquillité
           </h2>
           <p className="text-gray-600 max-w-3xl mx-auto text-lg leading-relaxed">
-            Nous accompagnons la diaspora dans la gestion de ses biens, de ses
-            démarches et de ses projets — avec une présence locale solide et un
-            engagement total pour la transparence.
+            Une gamme complète pensée pour simplifier la vie de la diaspora :
+            suivi, preuves, transparence et support humain sur place.
           </p>
         </div>
 
@@ -96,17 +99,17 @@ export default function HomePage() {
             {
               icon: Home,
               title: "Gestion immobilière",
-              desc: "Suivi d’entretien, états des lieux, visites, rapports, gestion locative… vos biens sont entre de bonnes mains.",
+              desc: "Suivi des biens, états des lieux, visites, rapports en images, gestion locative… Un agent dédié sur place.",
             },
             {
               icon: Truck,
               title: "Services personnalisés",
-              desc: "Courses, paiements, dossiers administratifs, projets personnels… une équipe locale s’occupe de tout pour vous.",
+              desc: "Courses, démarches, paiements, chantiers, missions personnelles… Nous gérons pour vous, en toute fiabilité.",
             },
             {
               icon: Globe,
-              title: "Transparence totale",
-              desc: "Preuves, photos, documents, transactions : vous voyez tout, en temps réel, peu importe où vous êtes dans le monde.",
+              title: "Transparence absolue",
+              desc: "Photos, preuves, documents, transactions : accès instantané à toutes vos informations, où que vous soyez.",
             },
           ].map(({ icon: Icon, title, desc }) => (
             <motion.div
@@ -125,19 +128,19 @@ export default function HomePage() {
       </section>
 
       {/* ===================================================================== */}
-      {/* 💡 À PROPOS — STORYTELLING ÉMOTIONNEL */}
+      {/* 💡 À PROPOS — STORYTELLING ADAPTÉ */}
       {/* ===================================================================== */}
       <section
         id="apropos"
         className="py-24 px-6 bg-gradient-to-br from-blue-50 via-white to-blue-100"
       >
         <div className="max-w-5xl mx-auto text-center mb-10">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Teranga, un pont entre vous et votre pays
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            Teranga : bien plus qu’un service
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto leading-relaxed">
-            Une plateforme conçue pour instaurer la confiance, maintenir les
-            liens et simplifier la vie de la diaspora africaine.
+            Une plateforme pensée pour créer un lien de confiance solide entre
+            la diaspora et ses projets au pays.
           </p>
         </div>
 
@@ -148,19 +151,18 @@ export default function HomePage() {
           className="max-w-4xl mx-auto text-gray-700 text-base leading-relaxed space-y-6"
         >
           <p>
-            Le mot <strong>“Teranga”</strong> signifie hospitalité, chaleur
-            humaine et respect. C’est précisément cet esprit que nous plaçons au
-            cœur de chaque interaction.
+            Le mot <strong>“Teranga”</strong> évoque l’hospitalité, la chaleur
+            humaine et le respect. Nous avons construit notre plateforme autour
+            de ces valeurs.
           </p>
           <p>
-            Pour beaucoup, la distance crée de l’incertitude : “Est-ce que mon bien
-            est bien géré ? Mes projets avancent-ils vraiment ? À qui puis-je
-            faire confiance ?”  
+            La distance crée souvent des doutes : “Mon bien est-il bien géré ?”,
+            “Mon projet avance-t-il vraiment ?”. Notre mission : y répondre par
+            la transparence, la preuve et l’accompagnement.
           </p>
           <p>
-            Notre mission : faire disparaître ces doutes grâce à une plateforme
-            moderne, des agents certifiés et une transparence totale — afin que
-            chaque membre de la diaspora garde un lien solide avec son pays.
+            Avec nos agents certifiés sur le terrain et une interface claire,
+            vous gardez toujours le contrôle, où que vous viviez.
           </p>
         </motion.div>
 
@@ -182,12 +184,11 @@ export default function HomePage() {
         className="py-24 px-6 bg-white border-t border-gray-200"
       >
         <div className="max-w-6xl mx-auto text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Contactez-nous
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto text-lg leading-relaxed">
-            Une question ? Un projet ? Une idée ?  
-            Notre équipe vous répond sous 24h.
+            Une question ? Un projet ? Notre équipe vous répond sous 24h.
           </p>
         </div>
 
@@ -200,30 +201,21 @@ export default function HomePage() {
             }}
             className="bg-gray-50 border border-gray-200 rounded-2xl p-8 shadow-sm text-left"
           >
-            {[
-              {
-                label: "Nom complet",
-                type: "text",
-                placeholder: "Votre nom",
-              },
-              {
-                label: "Adresse email",
-                type: "email",
-                placeholder: "exemple@email.com",
-              },
-            ].map((input, i) => (
-              <div key={i} className="mb-5">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {input.label}
-                </label>
-                <input
-                  type={input.type}
-                  required
-                  placeholder={input.placeholder}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-            ))}
+            {[{ label: "Nom complet", type: "text", placeholder: "Votre nom" },
+              { label: "Adresse email", type: "email", placeholder: "exemple@email.com" }]
+              .map((input, i) => (
+                <div key={i} className="mb-5">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {input.label}
+                  </label>
+                  <input
+                    type={input.type}
+                    required
+                    placeholder={input.placeholder}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              ))}
 
             <div className="mb-5">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -260,8 +252,7 @@ export default function HomePage() {
               <p>Hamdallaye ACI 200, Bamako — Mali</p>
             </div>
             <p className="text-sm text-gray-500">
-              Chaque message compte : nous vous répondons rapidement, avec une
-              écoute attentive et un engagement réel.
+              Nous vous accompagnons avec écoute, respect et professionnalisme.
             </p>
           </div>
         </div>

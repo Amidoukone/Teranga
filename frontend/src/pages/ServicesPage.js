@@ -8,10 +8,10 @@ import { getProperties } from '../services/properties';
 import { applyLabels, SERVICE_TYPES, SERVICE_STATUSES } from '../utils/labels';
 
 /* ============================================================
-   🧠 Page Services (Option B, responsive & production-ready)
+   🧠 Page Services — Premium Pro 2025 (responsive & production-ready)
    - Gestion des services (client + admin)
    - Création / édition / suppression
-   - Filtres + tri
+   - Filtres avancés + tri
 ============================================================ */
 export default function ServicesPage() {
   const [services, setServices] = useState([]);
@@ -19,6 +19,7 @@ export default function ServicesPage() {
   const [properties, setProperties] = useState([]);
   const [clients, setClients] = useState([]);
   const [user, setUser] = useState(null);
+
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
@@ -295,7 +296,7 @@ export default function ServicesPage() {
   }
 
   /* ==========================================
-     🔹 Filtrage + Tri
+     🔹 Filtrage + Tri (local)
   ========================================== */
   useEffect(() => {
     let arr = [...services];
@@ -354,11 +355,11 @@ export default function ServicesPage() {
   }, [filters, services]);
 
   /* ==========================================
-     🔹 UI
+     🔹 UI principale
   ========================================== */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100">
+      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100 overflow-hidden">
         {/* HEADER */}
         <Header
           showForm={showForm}
@@ -419,14 +420,18 @@ export default function ServicesPage() {
 }
 
 /* ============================================================
-   🧩 HEADER (responsive)
+   🧩 HEADER (responsive, mobile-first)
 ============================================================ */
 function Header({ showForm, setShowForm, loading, loadServices }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
       <div className="max-w-full break-words">
-        <h1 className="text-2xl font-bold text-gray-900">🛠️ Mes Services</h1>
-        <p className="text-sm text-gray-500">Gérez et suivez vos services.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          🛠️ Mes Services
+        </h1>
+        <p className="text-sm text-gray-500">
+          Créez, suivez et gérez vos services en toute simplicité.
+        </p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -434,7 +439,7 @@ function Header({ showForm, setShowForm, loading, loadServices }) {
           onClick={() => setShowForm((v) => !v)}
           className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
         >
-          {showForm ? '➖ Masquer formulaire' : '➕ Nouveau service'}
+          {showForm ? '➖ Masquer le formulaire' : '➕ Nouveau service'}
         </button>
 
         <button
@@ -454,7 +459,7 @@ function Header({ showForm, setShowForm, loading, loadServices }) {
 }
 
 /* ============================================================
-   🧩 FILTRES (responsive)
+   🧩 FILTRES (grid mobile-first)
 ============================================================ */
 function Filters({ filters, setFilters, properties, filteredCount }) {
   return (
@@ -465,14 +470,14 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
           placeholder="🔎 Rechercher un service"
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-1 sm:col-span-2 lg:col-span-2 break-words"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-1 sm:col-span-2 lg:col-span-2 w-full"
         />
 
         {/* Type */}
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 break-words"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full"
         >
           <option value="">Type (tous)</option>
           {Object.entries(SERVICE_TYPES).map(([key, label]) => (
@@ -486,7 +491,7 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
         <select
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 break-words"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full"
         >
           <option value="">Statut (tous)</option>
           {Object.entries(SERVICE_STATUSES).map(([key, label]) => (
@@ -500,7 +505,7 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
         <select
           value={filters.property}
           onChange={(e) => setFilters({ ...filters, property: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 break-words"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full"
         >
           <option value="">Bien (tous)</option>
           {properties.map((p) => (
@@ -514,7 +519,7 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
         <select
           value={filters.sort}
           onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-1 sm:col-span-2 lg:col-span-2 break-words"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-1 sm:col-span-2 lg:col-span-2 w-full"
         >
           <option value="-createdAt">Plus récents</option>
           <option value="createdAt">Plus anciens</option>
@@ -545,7 +550,7 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
 }
 
 /* ============================================================
-   🧾 FORMULAIRE DE CRÉATION / ÉDITION (responsive)
+   🧾 FORMULAIRE DE CRÉATION / ÉDITION (mobile-friendly)
 ============================================================ */
 function ServiceForm({
   user,
@@ -574,7 +579,7 @@ function ServiceForm({
       >
         {/* ADMIN : sélection client */}
         {user?.role === 'admin' && (
-          <div className="col-span-2">
+          <div className="col-span-1 sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Client associé *
             </label>
@@ -598,7 +603,7 @@ function ServiceForm({
         )}
 
         {/* Biens */}
-        <div className="col-span-2">
+        <div className="col-span-1 sm:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Bien associé *
           </label>
@@ -630,7 +635,7 @@ function ServiceForm({
         <ServiceFormFields form={form} setForm={setForm} />
 
         {/* Boutons */}
-        <div className="col-span-2 flex flex-col sm:flex-row justify-end gap-2 pt-2">
+        <div className="col-span-1 sm:col-span-2 flex flex-col sm:flex-row justify-end gap-2 pt-2">
           {editingId && (
             <button
               type="button"
@@ -665,7 +670,7 @@ function ServiceForm({
 }
 
 /* ============================================================
-   🧩 Champs internes du formulaire (responsive)
+   🧩 Champs internes du formulaire (mobile-first)
 ============================================================ */
 function ServiceFormFields({ form, setForm }) {
   return (
@@ -703,13 +708,13 @@ function ServiceFormFields({ form, setForm }) {
           required
           className="
             w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500 break-words
+            focus:ring-2 focus:ring-blue-500
           "
         />
       </div>
 
       {/* Description */}
-      <div className="col-span-2 w-full">
+      <div className="col-span-1 sm:col-span-2 w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Description
         </label>
@@ -720,7 +725,7 @@ function ServiceFormFields({ form, setForm }) {
           rows={3}
           className="
             w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500 break-words
+            focus:ring-2 focus:ring-blue-500
           "
         />
       </div>
@@ -736,7 +741,7 @@ function ServiceFormFields({ form, setForm }) {
           placeholder="Nom du contact"
           className="
             w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500 break-words
+            focus:ring-2 focus:ring-blue-500
           "
         />
       </div>
@@ -752,13 +757,13 @@ function ServiceFormFields({ form, setForm }) {
           placeholder="+223 70 00 00 00"
           className="
             w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500 break-words
+            focus:ring-2 focus:ring-blue-500
           "
         />
       </div>
 
       {/* Adresse */}
-      <div className="col-span-2 w-full">
+      <div className="col-span-1 sm:col-span-2 w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Adresse
         </label>
@@ -768,7 +773,7 @@ function ServiceFormFields({ form, setForm }) {
           placeholder="Adresse du lieu"
           className="
             w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500 break-words
+            focus:ring-2 focus:ring-blue-500
           "
         />
       </div>
@@ -803,7 +808,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
       className="
         bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-5
         hover:shadow-md transition
-        w-full break-words
+        w-full max-w-full
       "
     >
       {/* ENTÊTE (titre + statut) */}
@@ -824,7 +829,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
         <div
           className={`
             mt-1 sm:mt-0 px-3 py-1 rounded-full text-xs font-semibold
-            whitespace-nowrap
+            whitespace-nowrap self-start
             ${
               s.status === 'created'
                 ? 'bg-gray-100 text-gray-700'
