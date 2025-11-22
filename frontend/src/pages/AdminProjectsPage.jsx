@@ -1,4 +1,8 @@
 // frontend/src/pages/AdminProjectsPage.jsx
+// ============================================================================
+// AdminProjectsPage.jsx — VERSION PRODUCTION READY (Option B)
+// ============================================================================
+
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -12,7 +16,8 @@ import { createTransaction } from '../services/transactions';
 import { CURRENCY_LABELS } from '../utils/labels';
 
 /* ============================================================
-   🔧 Typologies et statuts (inchangés)
+   🔧 Typologies et statuts
+   (on garde ta logique, juste stabilisée)
 ============================================================ */
 const PROJECT_TYPES = [
   { value: 'immobilier', label: 'Immobilier' },
@@ -30,7 +35,9 @@ const PROJECT_STATUSES = [
 ];
 
 /* ============================================================
-   🧩 Composant Formulaire de transaction liée à un projet
+   🧩 Formulaire de transaction liée à un projet
+   - Utilise createTransaction (service global)
+   - Conserve proofFile pour compat backend
 ============================================================ */
 function ProjectTransactionForm({ project, onClose, onSuccess }) {
   const [form, setForm] = useState({
@@ -47,15 +54,18 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
     e.preventDefault();
     try {
       setLoading(true);
+
       const payload = {
         ...form,
         amount: form.amount === '' ? undefined : Number(form.amount),
         projectId: Number(project.id),
       };
+
       await createTransaction(payload);
+
       alert('✅ Transaction enregistrée avec succès');
-      onSuccess?.();
-      onClose?.();
+      if (typeof onSuccess === 'function') onSuccess();
+      if (typeof onClose === 'function') onClose();
     } catch (err) {
       console.error('❌ Erreur création transaction projet:', err);
       alert(
@@ -74,6 +84,7 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
         💰 Nouvelle transaction pour le projet :{' '}
         <span className="font-bold">{project.title}</span>
       </h4>
+
       <form
         onSubmit={handleSubmit}
         className="grid grid-cols-1 sm:grid-cols-2 gap-3"
@@ -160,51 +171,88 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
 }
 
 /* ============================================================
-   🧠 Page principale : Administration des projets
+   🧠 Page principale : Administration des projets (Admin only)
 ============================================================ */
 export default function AdminProjectsPage() {
   const navigate = useNavigate();
-  const [isAdmin, setIsAdmin] = useState(null);
+
+  const [isAdmin, setIsAdmin] = useState(null); // null = en cours, true = admin
   const [projects, setProjects] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [openTrxProjectId, setOpenTrxProjectId] = useState(null);
 
-  // 🔹 Filtres
+  // 🔹 Filtres locaux
   const [filters, setFilters] = useState({
     q: '',
     status: 'all',
     type: 'all',
   });
 
+  // 🔹 Headers auth (compat teranga_token / token)
   const authHeaders = useMemo(() => {
     const token =
       localStorage.getItem('teranga_token') || localStorage.getItem('token');
-    return { headers: { Authorization: token ? `Bearer ${token}` : '' } };
+    return token
+      ? { headers: { Authorization: `Bearer ${token}` } }
+      : { headers: {} };
   }, []);
 
-  // Vérifie si l’utilisateur est admin
+  /* ============================================================
+     👮 Vérification admin via /auth/me
+  ============================================================ */
   useEffect(() => {
-    me()
-      .then(({ user }) => {
-        if (user.role !== 'admin') navigate('/dashboard');
-        else setIsAdmin(true);
-      })
-      .catch(() => navigate('/login'));
+    let active = true;
+
+    async function checkAdmin() {
+      try {
+        const res = await me();
+        if (!active) return;
+
+        const user = res?.user;
+        if (!user) {
+          navigate('/login');
+          return;
+        }
+
+        if (user.role !== 'admin') {
+          navigate('/dashboard');
+          return;
+        }
+
+        setIsAdmin(true);
+      } catch (err) {
+        console.error('❌ Erreur /auth/me (AdminProjectsPage):', err);
+        if (!active) return;
+        navigate('/login');
+      }
+    }
+
+    checkAdmin();
+    return () => {
+      active = false;
+    };
   }, [navigate]);
 
-  // Chargement des agents
+  /* ============================================================
+     👥 Chargement des agents (admin)
+  ============================================================ */
   const loadAgents = useCallback(async () => {
     try {
-      const { data } = await api.get('/users?role=agent', authHeaders);
-      setAgents(data.users || []);
+      const { data } = await api.get('/users', {
+        ...authHeaders,
+        params: { role: 'agent' },
+      });
+      setAgents(data?.users || []);
     } catch (err) {
       console.error('❌ Erreur chargement agents:', err);
       setAgents([]);
     }
   }, [authHeaders]);
 
-  // Chargement des projets
+  /* ============================================================
+     📁 Chargement des projets
+  ============================================================ */
   const loadProjects = useCallback(async () => {
     setLoading(true);
     try {
@@ -218,18 +266,22 @@ export default function AdminProjectsPage() {
     }
   }, []);
 
-  // Initialisation
+  /* ============================================================
+     🔁 Initialisation quand on sait qu'on est admin
+  ============================================================ */
   useEffect(() => {
-    if (isAdmin) {
-      loadProjects();
-      loadAgents();
-    }
+    if (!isAdmin) return;
+    loadProjects();
+    loadAgents();
   }, [isAdmin, loadProjects, loadAgents]);
 
-  // Assignation agent
+  /* ============================================================
+     👤 Assignation agent au projet
+  ============================================================ */
   async function handleAssign(projectId, agentId) {
     try {
-      await assignAgentToProject(projectId, agentId ? Number(agentId) : null);
+      const toSend = agentId ? Number(agentId) : null;
+      await assignAgentToProject(projectId, toSend);
       await loadProjects();
       alert('✅ Agent assigné avec succès');
     } catch (err) {
@@ -238,17 +290,21 @@ export default function AdminProjectsPage() {
     }
   }
 
-  // Changement statut (✅ envoi payload complet pour ne pas écraser budget & co)
+  /* ============================================================
+     🔄 Changement de statut (envoi payload complet)
+  ============================================================ */
   async function handleStatusChange(projectId, newStatus) {
     try {
       const proj = projects.find((p) => p.id === projectId);
       if (!proj) return;
 
       const payload = {
-        // Aligné avec ProjectsPage.jsx (form)
         title: proj.title || '',
         description: proj.description || '',
-        budget: proj.budget ?? '',
+        budget:
+          proj.budget === '' || proj.budget === null || proj.budget === undefined
+            ? ''
+            : proj.budget,
         status: newStatus,
         type: proj.type || 'autre',
         clientId: proj.clientId ?? proj.client?.id ?? undefined,
@@ -264,38 +320,62 @@ export default function AdminProjectsPage() {
     }
   }
 
-  // Application filtres
+  /* ============================================================
+     🧮 Application des filtres
+  ============================================================ */
   const filteredProjects = useMemo(() => {
     let arr = [...projects];
 
     if (filters.q.trim()) {
       const q = filters.q.trim().toLowerCase();
-      arr = arr.filter(
-        (p) =>
-          (p.title || '').toLowerCase().includes(q) ||
-          (p.description || '').toLowerCase().includes(q)
+      arr = arr.filter((p) =>
+        [
+          p.title,
+          p.description,
+          p.type,
+          p.client?.firstName,
+          p.client?.lastName,
+          p.agent?.firstName,
+          p.agent?.lastName,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(q)
       );
     }
-    if (filters.status !== 'all') arr = arr.filter((p) => p.status === filters.status);
-    if (filters.type !== 'all') arr = arr.filter((p) => p.type === filters.type);
 
+    if (filters.status !== 'all') {
+      arr = arr.filter((p) => p.status === filters.status);
+    }
+
+    if (filters.type !== 'all') {
+      arr = arr.filter((p) => p.type === filters.type);
+    }
+
+    // Tri du plus récent au plus ancien
     arr.sort((a, b) => {
       const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
       const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
       return db - da;
     });
+
     return arr;
   }, [projects, filters]);
 
-  if (isAdmin === null)
+  /* ============================================================
+     ⏳ Écran de chargement avant de savoir si admin
+  ============================================================ */
+  if (isAdmin === null) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <p className="text-gray-500 text-lg animate-pulse">Chargement…</p>
       </div>
     );
+  }
 
   /* ============================================================
-     🔹 Rendu principal
+     🎨 Rendu principal
   ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
@@ -305,6 +385,7 @@ export default function AdminProjectsPage() {
           <h1 className="text-2xl font-bold text-gray-900 whitespace-normal break-words">
             🧩 Gestion des Projets
           </h1>
+
           <button
             onClick={loadProjects}
             disabled={loading}
@@ -323,14 +404,18 @@ export default function AdminProjectsPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <input
               value={filters.q}
-              onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
-              placeholder="Rechercher (titre ou description)…"
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, q: e.target.value }))
+              }
+              placeholder="Rechercher (titre, client, agent, description)…"
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
             />
 
             <select
               value={filters.status}
-              onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, status: e.target.value }))
+              }
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
             >
               <option value="all">Tous les statuts</option>
@@ -343,7 +428,9 @@ export default function AdminProjectsPage() {
 
             <select
               value={filters.type}
-              onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value }))}
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, type: e.target.value }))
+              }
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 whitespace-normal break-words"
             >
               <option value="all">Tous les types</option>
@@ -355,7 +442,9 @@ export default function AdminProjectsPage() {
             </select>
 
             <button
-              onClick={() => setFilters({ q: '', status: 'all', type: 'all' })}
+              onClick={() =>
+                setFilters({ q: '', status: 'all', type: 'all' })
+              }
               className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-200 hover:bg-gray-300 transition whitespace-normal break-words text-center"
             >
               Réinitialiser
@@ -363,7 +452,7 @@ export default function AdminProjectsPage() {
           </div>
         </div>
 
-        {/* Tableau */}
+        {/* Tableau des projets */}
         <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-100 text-gray-700 font-semibold">
@@ -398,38 +487,51 @@ export default function AdminProjectsPage() {
               ) : (
                 filteredProjects.map((p) => {
                   const trxOpen = openTrxProjectId === p.id;
+                  const budgetLabel = p.budget
+                    ? `${Number(p.budget).toLocaleString('fr-FR')} XOF`
+                    : '—';
+
+                  const clientName = p.client
+                    ? `${p.client.firstName || ''} ${p.client.lastName || ''}`.trim() ||
+                      p.client.email ||
+                      '—'
+                    : '—';
+
+                  const agentName = p.agent
+                    ? `${p.agent.firstName || ''} ${p.agent.lastName || ''}`.trim() ||
+                      p.agent.email ||
+                      'Non assigné'
+                    : 'Non assigné';
+
                   return (
                     <tr
                       key={p.id}
                       className="border-t border-gray-100 hover:bg-gray-50 transition"
                     >
+                      {/* Titre / Type / Budget */}
                       <td className="px-4 py-3 align-top max-w-xs md:max-w-sm">
                         <div className="font-semibold text-gray-900 whitespace-normal break-words">
-                          {p.title}
+                          {p.title || '—'}
                         </div>
                         <div className="text-xs text-gray-500 whitespace-normal break-words mt-1">
-                          {p.type || '—'} • Budget :{' '}
-                          {p.budget
-                            ? `${Number(p.budget).toLocaleString('fr-FR')} XOF`
-                            : '—'}
+                          {p.type || '—'} • Budget : {budgetLabel}
                         </div>
                       </td>
 
+                      {/* Client */}
                       <td className="px-4 py-3 align-top whitespace-normal break-words max-w-[180px]">
-                        {p.client
-                          ? `${p.client.firstName} ${p.client.lastName}`
-                          : '—'}
+                        {clientName}
                       </td>
 
+                      {/* Agent */}
                       <td className="px-4 py-3 align-top whitespace-normal break-words max-w-[180px]">
-                        {p.agent
-                          ? `${p.agent.firstName} ${p.agent.lastName}`
-                          : 'Non assigné'}
+                        {agentName}
                       </td>
 
+                      {/* Statut */}
                       <td className="px-4 py-3 align-top">
                         <select
-                          value={p.status}
+                          value={p.status || 'created'}
                           onChange={(e) =>
                             handleStatusChange(p.id, e.target.value)
                           }
@@ -443,8 +545,10 @@ export default function AdminProjectsPage() {
                         </select>
                       </td>
 
+                      {/* Actions */}
                       <td className="px-4 py-3 align-top">
                         <div className="flex flex-col gap-2 max-w-xs whitespace-normal break-words">
+                          {/* Assignation agent */}
                           <select
                             value={p.agent?.id || ''}
                             onChange={(e) =>
@@ -455,11 +559,13 @@ export default function AdminProjectsPage() {
                             <option value="">— Assigner agent —</option>
                             {agents.map((a) => (
                               <option key={a.id} value={a.id}>
-                                {a.firstName} {a.lastName}
+                                {`${a.firstName || ''} ${a.lastName || ''}`.trim() ||
+                                  a.email}
                               </option>
                             ))}
                           </select>
 
+                          {/* Bouton transaction */}
                           <button
                             onClick={() =>
                               setOpenTrxProjectId(trxOpen ? null : p.id)
@@ -473,6 +579,7 @@ export default function AdminProjectsPage() {
                             {trxOpen ? '➖ Annuler' : '💰 Transaction'}
                           </button>
 
+                          {/* Formulaire transaction liée */}
                           {trxOpen && (
                             <ProjectTransactionForm
                               project={p}

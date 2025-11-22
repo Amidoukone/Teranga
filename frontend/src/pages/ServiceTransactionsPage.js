@@ -6,9 +6,8 @@ import { getTransactions, createTransaction } from "../services/transactions";
 import api from "../services/api";
 import { applyLabels } from "../utils/labels";
 
-/* ============================================================================
-   🌐 FILE_BASE + normalizePath + toAbsUrl (Option B - Production Ready)
-   Identique aux autres pages déjà corrigées
+/* ============================================================================    
+   🌍 FILE_BASE + normalizePath + toAbsUrl (Option B — PRODUCTION READY)
 ============================================================================ */
 const RAW_API =
   window.__TERANGA_API_BASE_URL ||
@@ -20,24 +19,20 @@ export const FILE_BASE =
   RAW_API.replace(/\/api\/?$/, "") ||
   "";
 
-// /uploads/a.jpg → /uploads/a.jpg (clean)
+/** Normalisation chemins backend */
 function normalizePath(path = "") {
   if (!path) return "";
-  const clean = String(path).trim().replace(/\\/g, "/");
+  const clean = String(path).replace(/\\/g, "/").trim();
 
-  // Déjà absolu
   if (/^https?:\/\//i.test(clean)) return clean;
-
-  const prefixed = clean.startsWith("/") ? clean : "/" + clean;
-  return prefixed.replace(/\/{2,}/g, "/");
+  const fixed = clean.startsWith("/") ? clean : `/${clean}`;
+  return fixed.replace(/\/{2,}/g, "/");
 }
 
-// Convertit vers URL absolue FILE_BASE
+/** Conversion en URL absolue */
 function toAbsUrl(path = "") {
   const norm = normalizePath(path);
   if (!norm) return "";
-
-  // Déjà absolu
   if (/^https?:\/\//i.test(norm)) return norm;
 
   return (
@@ -45,8 +40,8 @@ function toAbsUrl(path = "") {
   );
 }
 
-/* ============================================================================
-   📄 PAGE ServiceTransactionsPage
+/* ============================================================================    
+   📄 PAGE : ServiceTransactionsPage
 ============================================================================ */
 export default function ServiceTransactionsPage() {
   const { id } = useParams(); // serviceId
@@ -56,8 +51,8 @@ export default function ServiceTransactionsPage() {
   const [transactions, setTransactions] = useState([]);
   const [tasks, setTasks] = useState([]);
 
-  const [loading, setLoading] = useState(true); // chargement global
-  const [submitting, setSubmitting] = useState(false); // création transaction
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     type: "expense",
@@ -67,29 +62,30 @@ export default function ServiceTransactionsPage() {
     proofFile: null,
   });
 
-  /* ============================================================================
-     🔐 Auth headers stables
+  /* ============================================================================    
+     🔐 Auth headers
   ============================================================================ */
   const authHeaders = useMemo(() => {
     const token =
       localStorage.getItem("teranga_token") ||
       localStorage.getItem("token");
+
     return token ? { Authorization: `Bearer ${token}` } : {};
   }, []);
 
-  /* ============================================================================
-     🔄 Charger transactions d’un service
+  /* ============================================================================    
+     📥 Charger transactions
   ============================================================================ */
   const fetchTransactions = useCallback(
     async () => {
       try {
         const data = await getTransactions({ serviceId: id });
 
-        const enriched = (data || []).map((t) => {
-          // Si labels déjà fournis par API → ne pas écraser
-          if (t.statusLabel || t.typeLabel || t.currencyLabel) return t;
-          return applyLabels(t);
-        });
+        const enriched = (data || []).map((t) =>
+          t.statusLabel || t.typeLabel || t.currencyLabel
+            ? t
+            : applyLabels(t)
+        );
 
         setTransactions(enriched);
       } catch (err) {
@@ -100,8 +96,8 @@ export default function ServiceTransactionsPage() {
     [id]
   );
 
-  /* ============================================================================
-     🔄 Charger tâches du service
+  /* ============================================================================    
+     📥 Charger tâches
   ============================================================================ */
   const fetchTasks = useCallback(
     async () => {
@@ -118,8 +114,8 @@ export default function ServiceTransactionsPage() {
     [id, authHeaders]
   );
 
-  /* ============================================================================
-     🚀 Initialisation page
+  /* ============================================================================    
+     🚀 Initialisation
   ============================================================================ */
   useEffect(() => {
     let active = true;
@@ -131,9 +127,12 @@ export default function ServiceTransactionsPage() {
 
         setUser(u.user);
 
-        await Promise.all([fetchTransactions(), fetchTasks()]);
+        await Promise.all([
+          fetchTransactions(),
+          fetchTasks(),
+        ]);
       } catch (err) {
-        console.error("❌ Erreur init ServiceTransactionsPage:", err);
+        console.error("❌ Erreur init:", err);
         localStorage.removeItem("teranga_token");
         localStorage.removeItem("token");
         window.location.href = "/login";
@@ -148,21 +147,17 @@ export default function ServiceTransactionsPage() {
     };
   }, [fetchTransactions, fetchTasks]);
 
-  /* ============================================================================
-     ➕ Création d’une transaction liée à un service
+  /* ============================================================================    
+     ➕ Création transaction
   ============================================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!id) {
-      alert("Service introuvable.");
-      return;
-    }
+    if (!id) return alert("Service introuvable.");
 
-    const amountNumber = parseFloat(form.amount);
-    if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
-      alert("Montant invalide.");
-      return;
+    const amountNum = parseFloat(form.amount);
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      return alert("Montant invalide.");
     }
 
     setSubmitting(true);
@@ -172,15 +167,15 @@ export default function ServiceTransactionsPage() {
         serviceId: parseInt(id, 10),
         taskId: form.taskId ? parseInt(form.taskId, 10) : undefined,
         type: form.type,
-        amount: amountNumber,
+        amount: amountNum,
         description: form.description || undefined,
         proofFile: form.proofFile || null,
       };
 
       await createTransaction(payload);
+
       alert("✅ Transaction ajoutée avec succès");
 
-      // reset
       setForm({
         type: "expense",
         amount: "",
@@ -198,218 +193,268 @@ export default function ServiceTransactionsPage() {
     }
   }
 
-  /* ============================================================================
-     Rendu : écran de chargement / auth manquante
+  /* ============================================================================    
+     Chargement
   ============================================================================ */
-  if (loading)
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
         <p className="text-gray-500 text-lg animate-pulse">
           Chargement des transactions…
         </p>
       </div>
     );
+  }
 
-  if (!user)
+  if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-red-500 text-lg font-semibold">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-red-600 text-lg font-semibold">
           Utilisateur non authentifié.
         </p>
       </div>
     );
+  }
 
-  /* ============================================================================
-     🎨 Rendu principal
+  /* ============================================================================    
+     🎨 UI principale — Responsive premium
   ============================================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
+      <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100">
+
         {/* 🧭 En-tête */}
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-10">
+          <h1 className="text-2xl font-bold text-gray-900 break-words">
             💼 Transactions du service #{id}
           </h1>
 
           <button
             onClick={() => navigate(`/services/${id}/tasks`)}
-            className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
+            className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
           >
             📋 Voir les tâches
           </button>
         </div>
 
-        {/* 📌 FORMULAIRE DE CRÉATION */}
-        <div className="mb-10">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            ➕ Ajouter une transaction
-          </h2>
+        {/* ➕ Formulaire */}
+        <TransactionForm
+          form={form}
+          setForm={setForm}
+          tasks={tasks}
+          submitting={submitting}
+          handleSubmit={handleSubmit}
+        />
 
-          <form
-            onSubmit={handleSubmit}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-200"
+        {/* 📜 Historique */}
+        <TransactionHistory transactions={transactions} />
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================
+   🧩 FORMULAIRE — Responsive & Premium
+============================================================================ */
+function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
+  return (
+    <div className="mb-12">
+      <h2 className="text-lg font-semibold text-gray-800 mb-4">
+        ➕ Ajouter une transaction
+      </h2>
+
+      <form
+        onSubmit={handleSubmit}
+        className="
+          grid grid-cols-1 sm:grid-cols-2 gap-4
+          bg-gray-50 p-5 rounded-xl border border-gray-200
+        "
+      >
+        {/* Type */}
+        <FormGroup label="Type de transaction">
+          <select
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+            className="form-input"
           >
-            {/* Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Type de transaction
-              </label>
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                <option value="revenue">Revenu</option>
-                <option value="expense">Dépense</option>
-                <option value="commission">Commission</option>
-                <option value="adjustment">Ajustement</option>
-              </select>
-            </div>
+            <option value="revenue">Revenu</option>
+            <option value="expense">Dépense</option>
+            <option value="commission">Commission</option>
+            <option value="adjustment">Ajustement</option>
+          </select>
+        </FormGroup>
 
-            {/* Montant */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Montant (FCFA)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="15000"
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
-              />
-            </div>
+        {/* Montant */}
+        <FormGroup label="Montant (FCFA)">
+          <input
+            type="number"
+            step="0.01"
+            placeholder="15000"
+            value={form.amount}
+            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+            required
+            className="form-input"
+          />
+        </FormGroup>
 
-            {/* Lier à une tâche */}
-            <div className="col-span-2 sm:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Lier à une tâche (optionnel)
-              </label>
-              <select
-                value={form.taskId}
-                onChange={(e) => setForm({ ...form, taskId: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                <option value="">— Aucune tâche —</option>
-                {tasks.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.title || `Tâche #${t.id}`}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {/* Tâche liée */}
+        <FormGroup label="Lier à une tâche (optionnel)" full>
+          <select
+            value={form.taskId}
+            onChange={(e) => setForm({ ...form, taskId: e.target.value })}
+            className="form-input"
+          >
+            <option value="">— Aucune tâche —</option>
+            {tasks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title || `Tâche #${t.id}`}
+              </option>
+            ))}
+          </select>
+        </FormGroup>
 
-            {/* Description */}
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                placeholder="Description ou détails"
-                value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-                rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
-              />
-            </div>
+        {/* Description */}
+        <FormGroup label="Description" full>
+          <textarea
+            value={form.description}
+            onChange={(e) =>
+              setForm({ ...form, description: e.target.value })
+            }
+            rows={3}
+            className="form-input"
+            placeholder="Description ou détails"
+          />
+        </FormGroup>
 
-            {/* Pièce jointe */}
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pièce justificative (PDF, JPG, PNG)
-              </label>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) =>
-                  setForm({ ...form, proofFile: e.target.files?.[0] || null })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-              />
-            </div>
+        {/* Fichier */}
+        <FormGroup label="Pièce justificative (PDF, JPG, PNG)" full>
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={(e) =>
+              setForm({
+                ...form,
+                proofFile: e.target.files?.[0] || null,
+              })
+            }
+            className="form-input"
+          />
+        </FormGroup>
 
-            {/* Bouton */}
-            <div className="col-span-2 text-right">
-              <button
-                type="submit"
-                disabled={submitting}
-                className={`px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition ${
-                  submitting
-                    ? "bg-blue-300 cursor-not-allowed"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
-              >
-                {submitting ? "Ajout…" : "Ajouter la transaction"}
-              </button>
-            </div>
-          </form>
+        {/* Bouton */}
+        <div className="col-span-2 flex justify-end">
+          <button
+            type="submit"
+            disabled={submitting}
+            className={`
+              px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition
+              ${
+                submitting
+                  ? "bg-blue-300 cursor-not-allowed text-white"
+                  : "bg-blue-600 text-white hover:bg-blue-700"
+              }
+            `}
+          >
+            {submitting ? "Ajout…" : "Ajouter la transaction"}
+          </button>
         </div>
+      </form>
+    </div>
+  );
+}
 
-        {/* 📜 HISTORIQUE DES TRANSACTIONS */}
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          📜 Historique des transactions
-        </h2>
+/* ============================================================================
+   🧩 REUSABLE FORM FIELD WRAPPER
+============================================================================ */
+function FormGroup({ label, children, full }) {
+  return (
+    <div className={full ? "col-span-2" : ""}>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
 
-        {transactions.length === 0 ? (
-          <p className="text-gray-500 italic text-center py-6">
-            Aucune transaction enregistrée.
-          </p>
-        ) : (
-          <div className="grid gap-6">
-            {transactions.map((t) => (
+/* ============================================================================
+   🧩 HISTORIQUE — Responsive & Premium
+============================================================================ */
+function TransactionHistory({ transactions }) {
+  return (
+    <div>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        📜 Historique des transactions
+      </h2>
+
+      {transactions.length === 0 ? (
+        <p className="text-gray-500 italic text-center py-6">
+          Aucune transaction enregistrée.
+        </p>
+      ) : (
+        <div className="grid gap-6">
+          {transactions.map((t) => {
+            const title =
+              (t.typeLabel || t.type || "")
+                .toString()
+                .toUpperCase();
+
+            const amount = Number(t.amount || 0).toLocaleString(
+              "fr-FR"
+            );
+
+            const currency =
+              t.currencyLabel || t.currency || "";
+
+            return (
               <div
                 key={t.id}
                 className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md transition"
               >
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
-                  {/* Type + Montant */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {(t.typeLabel || t.type || "").toString().toUpperCase()} —{" "}
-                      {Number(t.amount || 0).toLocaleString("fr-FR")}{" "}
-                      {t.currencyLabel || t.currency || ""}
+                {/* Titre + date */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-900 break-words">
+                      {title} — {amount} {currency}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-gray-600 break-words mt-1">
                       {t.description || "Aucune description"}
                     </p>
                   </div>
 
-                  {/* Date */}
-                  <div className="mt-2 sm:mt-0 text-xs text-gray-500">
+                  <div className="text-xs text-gray-500">
                     {t.createdAt
-                      ? new Date(t.createdAt).toLocaleString("fr-FR")
+                      ? new Date(t.createdAt).toLocaleString(
+                          "fr-FR"
+                        )
                       : "Date inconnue"}
                   </div>
                 </div>
 
                 {/* Détails */}
-                <div className="mt-3 text-sm text-gray-700 space-y-1">
+                <div className="mt-4 text-sm text-gray-700 space-y-2">
                   {t.task && (
-                    <p>
-                      🔧 <strong>Tâche :</strong> {t.task.title} (ID {t.task.id})
+                    <p className="break-words">
+                      🔧 <strong>Tâche :</strong>{" "}
+                      {t.task.title} (ID {t.task.id})
                     </p>
                   )}
 
                   {t.proofFile?.path && (
-                    <p>
+                    <p className="break-words">
                       📎{" "}
                       <a
                         href={toAbsUrl(t.proofFile.path)}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-blue-600 hover:underline"
+                        className="text-blue-600 hover:underline break-all"
                       >
                         Voir la pièce jointe
                       </a>
                     </p>
                   )}
 
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 break-words">
                     Enregistré par{" "}
                     <strong>
                       {t.user?.email ||
@@ -421,10 +466,18 @@ export default function ServiceTransactionsPage() {
                   </p>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
+
+/* ============================================================================    
+   UTILITÉ : STYLE UNIFORME INPUTS (global inline)
+============================================================================ */
+const inputBase =
+  "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white";
+
+window.formInputStyle = inputBase;

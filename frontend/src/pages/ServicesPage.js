@@ -8,7 +8,7 @@ import { getProperties } from '../services/properties';
 import { applyLabels, SERVICE_TYPES, SERVICE_STATUSES } from '../utils/labels';
 
 /* ============================================================
-   🧠 Page Services (Option B)
+   🧠 Page Services (Option B, responsive & production-ready)
    - Gestion des services (client + admin)
    - Création / édition / suppression
    - Filtres + tri
@@ -21,6 +21,7 @@ export default function ServicesPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_services_showForm');
     return saved === null ? true : saved === '1';
@@ -77,8 +78,7 @@ export default function ServicesPage() {
     } catch (e) {
       console.error('❌ Load services:', e);
       alert(
-        e?.response?.data?.error ||
-          'Erreur lors du chargement des services.'
+        e?.response?.data?.error || 'Erreur lors du chargement des services.'
       );
     }
   }, []);
@@ -198,8 +198,7 @@ export default function ServicesPage() {
     } catch (e) {
       console.error('❌ createService:', e);
       alert(
-        e?.response?.data?.error ||
-          'Erreur lors de la création du service.'
+        e?.response?.data?.error || 'Erreur lors de la création du service.'
       );
     } finally {
       setLoading(false);
@@ -224,9 +223,7 @@ export default function ServicesPage() {
         address: form.address,
         budget: form.budget === '' ? null : parseFloat(form.budget),
         type: form.type,
-        propertyId: form.propertyId
-          ? parseInt(form.propertyId, 10)
-          : null,
+        propertyId: form.propertyId ? parseInt(form.propertyId, 10) : null,
       };
 
       if (user?.role === 'admin' && form.clientId) {
@@ -360,8 +357,9 @@ export default function ServicesPage() {
      🔹 UI
   ========================================== */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100">
+        {/* HEADER */}
         <Header
           showForm={showForm}
           setShowForm={setShowForm}
@@ -369,6 +367,7 @@ export default function ServicesPage() {
           loadServices={loadServices}
         />
 
+        {/* FILTRES */}
         <Filters
           filters={filters}
           setFilters={setFilters}
@@ -376,6 +375,7 @@ export default function ServicesPage() {
           filteredCount={filtered.length}
         />
 
+        {/* FORMULAIRE */}
         {showForm && (
           <ServiceForm
             user={user}
@@ -391,7 +391,7 @@ export default function ServicesPage() {
           />
         )}
 
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4 break-words">
           📋 Mes services existants
         </h2>
 
@@ -419,28 +419,30 @@ export default function ServicesPage() {
 }
 
 /* ============================================================
-   ✅ SOUS-COMPOSANTS
+   🧩 HEADER (responsive)
 ============================================================ */
 function Header({ showForm, setShowForm, loading, loadServices }) {
   return (
-    <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-      <div>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="max-w-full break-words">
         <h1 className="text-2xl font-bold text-gray-900">🛠️ Mes Services</h1>
         <p className="text-sm text-gray-500">Gérez et suivez vos services.</p>
       </div>
-      <div className="flex gap-2">
+
+      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
+          className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
         >
           {showForm ? '➖ Masquer formulaire' : '➕ Nouveau service'}
         </button>
+
         <button
           onClick={loadServices}
           disabled={loading}
-          className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition ${
+          className={`w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition ${
             loading
-              ? 'bg-blue-300 cursor-not-allowed'
+              ? 'bg-blue-300 cursor-not-allowed text-white'
               : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
           }`}
         >
@@ -451,21 +453,26 @@ function Header({ showForm, setShowForm, loading, loadServices }) {
   );
 }
 
+/* ============================================================
+   🧩 FILTRES (responsive)
+============================================================ */
 function Filters({ filters, setFilters, properties, filteredCount }) {
   return (
-    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-5">
+    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+        {/* Recherche */}
         <input
           placeholder="🔎 Rechercher un service"
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-2"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-1 sm:col-span-2 lg:col-span-2 break-words"
         />
 
+        {/* Type */}
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 break-words"
         >
           <option value="">Type (tous)</option>
           {Object.entries(SERVICE_TYPES).map(([key, label]) => (
@@ -475,10 +482,11 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
           ))}
         </select>
 
+        {/* Statut */}
         <select
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 break-words"
         >
           <option value="">Statut (tous)</option>
           {Object.entries(SERVICE_STATUSES).map(([key, label]) => (
@@ -488,10 +496,11 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
           ))}
         </select>
 
+        {/* Bien */}
         <select
           value={filters.property}
           onChange={(e) => setFilters({ ...filters, property: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 break-words"
         >
           <option value="">Bien (tous)</option>
           {properties.map((p) => (
@@ -501,10 +510,11 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
           ))}
         </select>
 
+        {/* Tri */}
         <select
           value={filters.sort}
           onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-2"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-1 sm:col-span-2 lg:col-span-2 break-words"
         >
           <option value="-createdAt">Plus récents</option>
           <option value="createdAt">Plus anciens</option>
@@ -513,7 +523,7 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
         </select>
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="text-xs text-gray-500">{filteredCount} service(s)</div>
         <button
           onClick={() =>
@@ -525,7 +535,7 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
               sort: '-createdAt',
             })
           }
-          className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
+          className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition w-full sm:w-auto text-center"
         >
           Réinitialiser
         </button>
@@ -535,7 +545,7 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
 }
 
 /* ============================================================
-   🧾 FORMULAIRE DE CRÉATION / ÉDITION
+   🧾 FORMULAIRE DE CRÉATION / ÉDITION (responsive)
 ============================================================ */
 function ServiceForm({
   user,
@@ -551,13 +561,16 @@ function ServiceForm({
 }) {
   return (
     <div className="mb-10">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">
+      <h2 className="text-lg font-semibold text-gray-800 mb-4 break-words">
         {editingId ? '✏️ Modifier le service' : '➕ Créer un nouveau service'}
       </h2>
 
       <form
         onSubmit={(e) => (editingId ? handleUpdate(e) : handleSubmit(e))}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-200"
+        className="
+          grid grid-cols-1 sm:grid-cols-2 gap-4
+          bg-gray-50 p-4 sm:p-5 rounded-xl border border-gray-200
+        "
       >
         {/* ADMIN : sélection client */}
         {user?.role === 'admin' && (
@@ -569,7 +582,10 @@ function ServiceForm({
               value={form.clientId}
               onChange={(e) => setForm({ ...form, clientId: e.target.value })}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              className="
+                w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                focus:ring-2 focus:ring-blue-500
+              "
             >
               <option value="">— Sélectionner un client —</option>
               {clients.map((c) => (
@@ -591,7 +607,10 @@ function ServiceForm({
             onChange={(e) => setForm({ ...form, propertyId: e.target.value })}
             required
             disabled={user?.role === 'admin' && !form.clientId}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            className="
+              w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+              focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100
+            "
           >
             <option value="">
               {user?.role === 'admin' && !form.clientId
@@ -607,15 +626,19 @@ function ServiceForm({
           </select>
         </div>
 
+        {/* Champs internes */}
         <ServiceFormFields form={form} setForm={setForm} />
 
         {/* Boutons */}
-        <div className="col-span-2 text-right flex gap-2 justify-end">
+        <div className="col-span-2 flex flex-col sm:flex-row justify-end gap-2 pt-2">
           {editingId && (
             <button
               type="button"
               onClick={resetForm}
-              className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-300 hover:bg-gray-400 transition"
+              className="
+                w-full sm:w-auto px-4 py-2 bg-gray-300 rounded-lg
+                text-sm font-semibold hover:bg-gray-400 transition
+              "
             >
               Annuler
             </button>
@@ -624,11 +647,14 @@ function ServiceForm({
           <button
             type="submit"
             disabled={loading}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition ${
-              loading
-                ? 'bg-blue-300 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-            }`}
+            className={`
+              w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition
+              ${
+                loading
+                  ? 'bg-blue-300 cursor-not-allowed text-white'
+                  : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+              }
+            `}
           >
             {editingId ? '💾 Mettre à jour' : 'Créer Service'}
           </button>
@@ -638,18 +664,24 @@ function ServiceForm({
   );
 }
 
-/* Champs du formulaire */
+/* ============================================================
+   🧩 Champs internes du formulaire (responsive)
+============================================================ */
 function ServiceFormFields({ form, setForm }) {
   return (
     <>
-      <div>
+      {/* Type */}
+      <div className="w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Type de service
         </label>
         <select
           value={form.type}
           onChange={(e) => setForm({ ...form, type: e.target.value })}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="
+            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+            focus:ring-2 focus:ring-blue-500
+          "
         >
           {Object.entries(SERVICE_TYPES).map(([key, label]) => (
             <option key={key} value={key}>
@@ -659,7 +691,8 @@ function ServiceFormFields({ form, setForm }) {
         </select>
       </div>
 
-      <div>
+      {/* Titre */}
+      <div className="w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Titre *
         </label>
@@ -668,11 +701,15 @@ function ServiceFormFields({ form, setForm }) {
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           required
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="
+            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+            focus:ring-2 focus:ring-blue-500 break-words
+          "
         />
       </div>
 
-      <div className="col-span-2">
+      {/* Description */}
+      <div className="col-span-2 w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Description
         </label>
@@ -681,11 +718,15 @@ function ServiceFormFields({ form, setForm }) {
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           rows={3}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="
+            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+            focus:ring-2 focus:ring-blue-500 break-words
+          "
         />
       </div>
 
-      <div>
+      {/* Personne de contact */}
+      <div className="w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Personne de contact
         </label>
@@ -693,11 +734,15 @@ function ServiceFormFields({ form, setForm }) {
           value={form.contactPerson}
           onChange={(e) => setForm({ ...form, contactPerson: e.target.value })}
           placeholder="Nom du contact"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="
+            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+            focus:ring-2 focus:ring-blue-500 break-words
+          "
         />
       </div>
 
-      <div>
+      {/* Téléphone */}
+      <div className="w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Téléphone du contact
         </label>
@@ -705,11 +750,15 @@ function ServiceFormFields({ form, setForm }) {
           value={form.contactPhone}
           onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
           placeholder="+223 70 00 00 00"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="
+            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+            focus:ring-2 focus:ring-blue-500 break-words
+          "
         />
       </div>
 
-      <div className="col-span-2">
+      {/* Adresse */}
+      <div className="col-span-2 w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Adresse
         </label>
@@ -717,11 +766,15 @@ function ServiceFormFields({ form, setForm }) {
           value={form.address}
           onChange={(e) => setForm({ ...form, address: e.target.value })}
           placeholder="Adresse du lieu"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="
+            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+            focus:ring-2 focus:ring-blue-500 break-words
+          "
         />
       </div>
 
-      <div>
+      {/* Budget */}
+      <div className="w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Budget estimé (FCFA)
         </label>
@@ -731,7 +784,10 @@ function ServiceFormFields({ form, setForm }) {
           placeholder="Ex: 15000"
           value={form.budget}
           onChange={(e) => setForm({ ...form, budget: e.target.value })}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="
+            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+            focus:ring-2 focus:ring-blue-500
+          "
         />
       </div>
     </>
@@ -739,57 +795,75 @@ function ServiceFormFields({ form, setForm }) {
 }
 
 /* ============================================================
-   🔍 ServiceCard (Affichage)
+   🔍 ServiceCard (Affichage – Optimisé mobile/desktop)
 ============================================================ */
 function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md transition">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
+    <div
+      className="
+        bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-5
+        hover:shadow-md transition
+        w-full break-words
+      "
+    >
+      {/* ENTÊTE (titre + statut) */}
+      <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:items-start">
+        <div className="min-w-0 break-words">
+          <h3 className="text-lg font-semibold text-gray-900 break-words">
             {s.title}{' '}
             <span className="text-sm text-gray-500">
               ({s.typeLabel || s.type})
             </span>
           </h3>
-          <p className="text-sm text-gray-600 mt-1">
+
+          <p className="text-sm text-gray-600 mt-1 whitespace-normal break-words">
             {s.description || 'Aucune description'}
           </p>
         </div>
 
         <div
-          className={`mt-2 sm:mt-0 px-3 py-1 rounded-full text-xs font-semibold ${
-            s.status === 'created'
-              ? 'bg-gray-100 text-gray-700'
-              : s.status === 'in_progress'
-              ? 'bg-blue-100 text-blue-700'
-              : s.status === 'completed'
-              ? 'bg-green-100 text-green-700'
-              : 'bg-emerald-100 text-emerald-700'
-          }`}
+          className={`
+            mt-1 sm:mt-0 px-3 py-1 rounded-full text-xs font-semibold
+            whitespace-nowrap
+            ${
+              s.status === 'created'
+                ? 'bg-gray-100 text-gray-700'
+                : s.status === 'in_progress'
+                ? 'bg-blue-100 text-blue-700'
+                : s.status === 'completed'
+                ? 'bg-green-100 text-green-700'
+                : 'bg-emerald-100 text-emerald-700'
+            }
+          `}
         >
           {s.statusLabel || s.status.replace('_', ' ')}
         </div>
       </div>
 
-      <div className="mt-3 text-sm text-gray-700 space-y-1">
-        <p>
+      {/* META */}
+      <div className="mt-4 text-sm text-gray-700 space-y-2">
+        <p className="break-words">
           <strong>Bien :</strong>{' '}
           {s.property?.title
             ? `${s.property.title} — ${s.property.city}`
             : s.propertyId}
         </p>
-        <p>
+
+        <p className="break-words">
           <strong>Contact :</strong> {s.contactPerson || 'N/A'} (
           {s.contactPhone || '-'})
         </p>
-        <p>
+
+        <p className="break-words">
           <strong>Adresse :</strong> {s.address || 'N/A'}
         </p>
+
         <p>
-          <strong>Budget :</strong> {s.budget ?? 'Non précisé'}
+          <strong>Budget :</strong>{' '}
+          {s.budget != null ? `${s.budget} FCFA` : 'Non précisé'}
         </p>
-        <p>
+
+        <p className="break-words">
           <strong>Agent :</strong>{' '}
           {s.agent
             ? `${s.agent.firstName} ${s.agent.lastName}`
@@ -797,26 +871,41 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
         </p>
       </div>
 
-      <div className="mt-4 flex gap-2 flex-wrap">
+      {/* ACTIONS */}
+      <div
+        className="
+          mt-5 flex flex-col sm:flex-row flex-wrap gap-2
+          w-full sm:w-auto
+        "
+      >
         <button
           onClick={() => navigate(`/services/${s.id}/tasks`)}
-          className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          className="
+            w-full sm:w-auto px-4 py-2 text-sm font-medium bg-blue-600 text-white
+            rounded-lg hover:bg-blue-700 transition
+          "
         >
           📋 Voir tâches
         </button>
 
-        {/* ADMIN */}
         {user?.role === 'admin' && (
           <>
             <button
               onClick={() => startEdit(s)}
-              className="px-4 py-2 text-sm font-medium bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition"
+              className="
+                w-full sm:w-auto px-4 py-2 text-sm font-medium
+                bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition
+              "
             >
               ✏️ Modifier
             </button>
+
             <button
               onClick={() => handleDelete(s.id)}
-              className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              className="
+                w-full sm:w-auto px-4 py-2 text-sm font-medium
+                bg-red-600 text-white rounded-lg hover:bg-red-700 transition
+              "
             >
               🗑 Supprimer
             </button>

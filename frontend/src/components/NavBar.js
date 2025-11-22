@@ -1,29 +1,26 @@
-import { useEffect, useState } from 'react';
+// ============================================================================
+// NavBar.jsx — Version Ultra-Premium 2025
+// Responsive • Accessible • Rapide • Production Ready
+// ============================================================================
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { me, logout } from '../services/auth';
 import { Menu, X, LogOut, Home } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-/**
- * ============================================================
- * 🧭 NavBar — version mise à jour complète
- * ============================================================
- * - Gère tous les rôles : admin, agent, client
- * - Cohérente avec App.js et les pages commerce
- * - 🔥 Mise à jour : suppression de l’onglet "Produits" pour les visiteurs publics
- * ============================================================
- */
+// 🧠 Helper — Ajoute une latence minimaliste pour fluidifier UX
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function NavBar() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const menuId = 'mobile-menu';
 
   /* ============================================================
-     🔹 Chargement utilisateur
+     🔐 Chargement utilisateur (optimisé)
   ============================================================ */
   useEffect(() => {
     let active = true;
@@ -38,74 +35,74 @@ export default function NavBar() {
       }
     }
     fetchUser();
-    return () => {
-      active = false;
-    };
+    return () => (active = false);
   }, [location.pathname]);
 
-  // Ferme le menu mobile à chaque changement de route
-  useEffect(() => {
+/* ============================================================
+   ✨ Fermer menu mobile automatiquement (ESLint safe)
+============================================================ */
+useEffect(() => {
+  setOpen(false);
+}, [location.pathname]);
+
+  /* ============================================================
+     🚪 Déconnexion + feedback UX instantané
+  ============================================================ */
+  const handleLogout = useCallback(async () => {
     setOpen(false);
-  }, [location.pathname]);
-
-  function handleLogout() {
+    await delay(80);
     logout();
-    setUser(null);
-    setOpen(false);
     navigate('/login');
-  }
+  }, [navigate]);
 
   if (loading) return null;
 
   /* ============================================================
      🌍 Mode PUBLIC (non connecté)
-     🔥 Mise à jour : RETIRER l’onglet "Produits"
   ============================================================ */
-  const publicPaths = ['/', '/login', '/register', '/shop', '/products'];
-  const isPublic = publicPaths.some(
-    (p) => location.pathname === p || location.pathname.startsWith(p + '/')
+  const publicRoutes = ['/', '/login', '/register', '/shop'];
+  const isPublic = publicRoutes.some((p) =>
+    location.pathname.startsWith(p)
   );
 
   if (!user && isPublic) {
-    const isActive = (path) =>
-      location.pathname === path || location.pathname.startsWith(path + '/');
-
     return (
-      <nav className="bg-slate-900/90 backdrop-blur-md text-white px-6 py-4 shadow-md sticky top-0 z-50 flex justify-between items-center border-b border-slate-800">
-        <Link
-          to="/"
-          className="flex items-center gap-2 font-bold text-lg text-cyan-400 hover:text-cyan-300 transition-all"
-          aria-label="Accueil Teranga"
-        >
-          <Home size={22} className="text-cyan-400" />
-          <span className="font-semibold">Teranga</span>
-        </Link>
+      <nav
+        className="bg-slate-900/90 backdrop-blur-md text-white px-5 py-4
+                   shadow-md sticky top-0 z-[60] border-b border-slate-800"
+      >
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-cyan-400 font-bold text-lg"
+          >
+            <Home size={20} />
+            Teranga
+          </Link>
 
-        <div className="flex items-center gap-5">
-          {/* 🔥 Onglet Produits supprimé ici */}
-          
-          <Link
-            to="/login"
-            className={`hover:text-cyan-400 transition font-medium text-sm ${
-              isActive('/login') ? 'text-cyan-400' : ''
-            }`}
-          >
-            Connexion
-          </Link>
-          <Link
-            to="/register"
-            className="px-4 py-1.5 rounded-md bg-cyan-500 text-white font-semibold hover:bg-cyan-600 transition text-sm shadow-sm"
-          >
-            Inscription
-          </Link>
+          <div className="flex items-center gap-5 text-sm">
+            <Link
+              to="/login"
+              className="hover:text-cyan-400 transition"
+            >
+              Connexion
+            </Link>
+
+            <Link
+              to="/register"
+              className="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-600
+                         rounded-md text-white font-semibold shadow-sm transition"
+            >
+              Inscription
+            </Link>
+          </div>
         </div>
       </nav>
     );
   }
 
   /* ============================================================
-     🔒 Liens selon le rôle utilisateur
-     (commerceLinksCommon reste intact → pas touché)
+     🔗 Liens premium selon rôle
   ============================================================ */
   const commerceLinksCommon = [
     { path: '/shop', label: '🛍️ Produits' },
@@ -114,8 +111,8 @@ export default function NavBar() {
 
   const roleLinks = {
     client: [
-      { path: '/dashboard', label: '📊 Tableau de bord' },
-      { path: '/projects', label: '📁 Mes projets' },
+      { path: '/dashboard', label: '📊 Dashboard' },
+      { path: '/projects', label: '📁 Projets' },
       { path: '/properties', label: '🏡 Biens' },
       { path: '/services', label: '🧾 Services' },
       { path: '/tasks', label: '📋 Tâches' },
@@ -124,7 +121,7 @@ export default function NavBar() {
       ...commerceLinksCommon,
     ],
     agent: [
-      { path: '/dashboard', label: '📊 Tableau de bord' },
+      { path: '/dashboard', label: '📊 Dashboard' },
       { path: '/projects', label: '📁 Projets assignés' },
       { path: '/agent/services', label: '⚙️ Services assignés' },
       { path: '/tasks', label: '📋 Tâches' },
@@ -133,7 +130,7 @@ export default function NavBar() {
       ...commerceLinksCommon,
     ],
     admin: [
-      { path: '/dashboard', label: '📊 Tableau de bord' },
+      { path: '/dashboard', label: '📊 Dashboard' },
       { path: '/projects', label: '📁 Projets' },
       { path: '/admin/projects', label: '🧩 Gestion des projets' },
       { path: '/services', label: '🧾 Services' },
@@ -145,143 +142,138 @@ export default function NavBar() {
       { path: '/transactions', label: '💰 Transactions' },
       { path: '/finance', label: '📈 Finances' },
       ...commerceLinksCommon,
-      { path: '/admin/catalog/categories', label: '🗂️ Catégories (admin)' },
-      { path: '/admin/catalog/products', label: '📦 Produits (admin)' },
+      { path: '/admin/catalog/categories', label: '🗂️ Catégories' },
+      { path: '/admin/catalog/products', label: '📦 Produits' },
     ],
   };
 
   const links = roleLinks[user?.role] || [];
 
   const isActive = (path) =>
-    location.pathname === path || location.pathname.startsWith(path + '/');
+    location.pathname === path ||
+    location.pathname.startsWith(path + '/');
 
   /* ============================================================
-     ✨ Rendu principal (inchangé)
+     🧭 NavBar Premium Responsive
   ============================================================ */
   return (
-    <motion.nav
-      initial={{ y: -40, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.35 }}
-      className="bg-slate-900/95 backdrop-blur-md text-white shadow-xl sticky top-0 z-50 border-b border-slate-800"
+    <nav
+      className="
+        bg-slate-900/95 backdrop-blur-xl
+        text-white shadow-xl border-b border-slate-800
+        sticky top-0 z-[70]
+      "
+      aria-label="Navigation principale"
     >
       <div className="max-w-7xl mx-auto px-6">
-        {/* Barre principale */}
-        <div className="flex justify-between items-center py-3">
+        {/* Header principal */}
+        <div className="flex items-center justify-between py-3">
           {/* Logo */}
           <Link
             to="/"
-            className="flex items-center gap-2 font-bold text-lg text-cyan-400 hover:text-cyan-300 transition"
+            className="flex items-center gap-2 font-bold text-lg text-cyan-400"
           >
-            <Home size={22} className="text-cyan-400" />
-            <span>Teranga</span>
+            <Home size={20} />
+            Teranga
           </Link>
 
-          {/* Menu mobile */}
+          {/* Bouton mobile */}
           <button
-            type="button"
-            className="md:hidden text-gray-300 hover:text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
-            onClick={() => setOpen((v) => !v)}
-            aria-controls={menuId}
+            aria-label="Ouvrir le menu"
+            aria-controls="mobile-menu"
             aria-expanded={open}
+            onClick={() => setOpen(!open)}
+            className="md:hidden text-gray-300 hover:text-white transition p-2"
           >
             {open ? <X size={26} /> : <Menu size={26} />}
           </button>
 
-          {/* Liens Desktop */}
-          <div className="hidden md:flex items-center justify-center flex-wrap gap-x-6 gap-y-2">
+          {/* Liens desktop */}
+          <ul className="hidden md:flex items-center gap-6">
             {links.map((l) => (
-              <Link
-                key={l.path}
-                to={l.path}
-                className={`relative py-1 text-[0.9rem] font-medium transition-all ${
-                  isActive(l.path)
-                    ? 'text-cyan-400'
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                {l.label}
-                {isActive(l.path) && (
-                  <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-cyan-400 rounded-full" />
-                )}
-              </Link>
-            ))}
-          </div>
+              <li key={l.path}>
+                <Link
+                  to={l.path}
+                  className={`text-[0.9rem] transition font-medium relative 
+                    ${
+                      isActive(l.path)
+                        ? 'text-cyan-400'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                >
+                  {l.label}
 
-          {/* Profil Desktop */}
-          {user && (
-            <div className="hidden md:flex items-center gap-4 ml-4">
+                  {isActive(l.path) && (
+                    <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-cyan-400 rounded-full" />
+                  )}
+                </Link>
+              </li>
+            ))}
+
+            {/* Profil desktop */}
+            <li>
               <div className="flex items-center gap-3 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700">
-                <div className="text-right">
-                  <div className="text-sm font-semibold leading-tight text-white">
+                <div className="flex flex-col text-right">
+                  <span className="text-sm font-semibold text-white">
                     {user.firstName || user.email}
-                  </div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                  </span>
+                  <span className="text-xs text-gray-400 uppercase tracking-wide">
                     {user.role}
-                    <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
-                  </div>
+                  </span>
                 </div>
-                <div className="w-9 h-9 flex items-center justify-center rounded-full bg-cyan-500 text-white font-bold uppercase shadow">
+                <div className="w-9 h-9 rounded-full bg-cyan-500 text-white flex items-center justify-center font-bold text-sm uppercase">
                   {user.firstName?.[0] || user.email?.[0] || '?'}
                 </div>
+                <button
+                  onClick={handleLogout}
+                  className="ml-2 flex items-center gap-1 bg-red-500 hover:bg-red-600 px-3 py-1.5 text-xs rounded-md transition"
+                >
+                  <LogOut size={14} /> Déconnexion
+                </button>
               </div>
-
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-1 bg-red-500 hover:bg-red-600 text-xs px-3 py-1.5 rounded-md font-semibold transition"
-              >
-                <LogOut size={14} /> Déconnexion
-              </button>
-            </div>
-          )}
+            </li>
+          </ul>
         </div>
       </div>
 
-      {/* Menu mobile */}
+      {/* MENU MOBILE */}
       <AnimatePresence>
         {open && (
           <motion.div
-            id={menuId}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            id="mobile-menu"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="md:hidden bg-slate-800 border-t border-slate-700 px-6 py-4 space-y-2"
+            className="md:hidden bg-slate-800 border-t border-slate-700 px-6 py-4 space-y-2 overflow-hidden"
           >
             {links.map((l) => (
               <Link
                 key={l.path}
                 to={l.path}
                 onClick={() => setOpen(false)}
-                className={`block text-sm py-2 px-3 rounded-md transition ${
-                  isActive(l.path)
-                    ? 'bg-cyan-600 text-white font-semibold'
-                    : 'text-gray-300 hover:bg-slate-700 hover:text-white'
-                }`}
+                className={`block text-sm py-2 px-3 rounded-md transition
+                  ${
+                    isActive(l.path)
+                      ? 'bg-cyan-600 text-white font-semibold'
+                      : 'text-gray-300 hover:bg-slate-700 hover:text-white'
+                  }`}
               >
                 {l.label}
               </Link>
             ))}
 
-            <Link
-              to="/"
-              onClick={() => setOpen(false)}
-              className="block text-sm py-2 px-3 rounded-md text-gray-300 hover:bg-slate-700 hover:text-white mt-4 border-t border-slate-700 pt-3"
-            >
-              🌍 Retour au site vitrine
-            </Link>
+            <hr className="border-slate-700 my-3" />
 
-            {user && (
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-xs px-3 py-2 rounded-md font-semibold w-fit mt-3 transition"
-              >
-                <LogOut size={14} /> Déconnexion
-              </button>
-            )}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-xs px-3 py-2 rounded-md font-semibold transition"
+            >
+              <LogOut size={14} /> Déconnexion
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.nav>
+    </nav>
   );
 }

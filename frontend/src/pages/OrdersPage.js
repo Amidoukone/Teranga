@@ -1,9 +1,9 @@
 // ============================================================
-// OrdersPage.jsx — Teranga PRODUCTION READY (Option B)
-// Clean Shop Premium, filtres, tri, cohérence globale
+// OrdersPage.jsx — Teranga PRODUCTION READY (Option B Premium)
+// Clean Shop, filtres, tri, formulaires, responsivité mobile
 // ============================================================
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { getOrders, createOrder } from '../services/orders';
 import { getProducts } from '../services/products';
@@ -49,6 +49,36 @@ export default function OrdersPage() {
   });
 
   /* ============================================================
+     🔄 Loaders (useCallback pour éviter les recréations)
+  ============================================================ */
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getOrders();
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('❌ Erreur chargement commandes:', e);
+      alert('Erreur lors du chargement des commandes.');
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadProducts = useCallback(async () => {
+    setLoadingProducts(true);
+    try {
+      const prods = await getProducts({ limit: 200 });
+      setProducts(prods || []);
+    } catch (e) {
+      console.error('❌ Erreur chargement produits:', e);
+      setProducts([]);
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, []);
+
+  /* ============================================================
      🔄 Initialisation
   ============================================================ */
   useEffect(() => {
@@ -59,6 +89,7 @@ export default function OrdersPage() {
 
         await Promise.all([loadOrders(), loadProducts()]);
       } catch (e) {
+        console.error('❌ Erreur init OrdersPage:', e);
         if (e?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
@@ -67,38 +98,12 @@ export default function OrdersPage() {
       }
     }
     init();
-  }, []);
+  }, [loadOrders, loadProducts]);
 
+  // Persistance de l’affichage du formulaire
   useEffect(() => {
     localStorage.setItem('teranga_orders_showForm', showForm ? '1' : '0');
   }, [showForm]);
-
-  /* ============================================================
-     📦 Charger commandes & produits
-  ============================================================ */
-  async function loadOrders() {
-    setLoading(true);
-    try {
-      const data = await getOrders();
-      setOrders(Array.isArray(data) ? data : []);
-    } catch (e) {
-      alert('Erreur lors du chargement des commandes.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadProducts() {
-    setLoadingProducts(true);
-    try {
-      const prods = await getProducts({ limit: 200 });
-      setProducts(prods || []);
-    } catch {
-      setProducts([]);
-    } finally {
-      setLoadingProducts(false);
-    }
-  }
 
   /* ============================================================
      ➕ Création commande
@@ -111,7 +116,9 @@ export default function OrdersPage() {
       };
 
       if (form.withItem && form.productId) {
-        const prod = products.find((p) => String(p.id) === String(form.productId));
+        const prod = products.find(
+          (p) => String(p.id) === String(form.productId)
+        );
 
         const unit =
           form.unitPrice !== '' && form.unitPrice !== null
@@ -148,7 +155,7 @@ export default function OrdersPage() {
   }
 
   /* ============================================================
-     🎛️ Filtres + tri
+     🎛️ Filtres + tri (mémoïsés)
   ============================================================ */
   const filtered = useMemo(() => {
     return (orders || [])
@@ -190,8 +197,8 @@ export default function OrdersPage() {
         let vb = b[key];
 
         if (key === 'createdAt') {
-          va = new Date(a.createdAt).getTime();
-          vb = new Date(b.createdAt).getTime();
+          va = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          vb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         } else if (key === 'totalAmount') {
           va = Number(a.totalAmount ?? 0);
           vb = Number(b.totalAmount ?? 0);
@@ -204,7 +211,7 @@ export default function OrdersPage() {
   }, [orders, filters]);
 
   /* ============================================================
-     🧱 UI principale
+     🧱 UI principale — wrapper + skeleton
   ============================================================ */
   if (!user) {
     return (
@@ -215,15 +222,15 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-4 sm:p-8">
 
         {/* ===================================================== */}
-        {/* 🧭 Header Premium */}
+        {/* 🧭 Header Premium Responsive */}
         {/* ===================================================== */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
+          <div className="max-w-full break-words">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
               🧾 <span>Gestion des commandes</span>
             </h1>
             <p className="text-sm text-slate-600 mt-1">
@@ -231,17 +238,17 @@ export default function OrdersPage() {
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Link
               to="/shop"
-              className="px-4 py-2 text-sm bg-blue-600 text-white font-semibold rounded-lg shadow-sm hover:bg-blue-700"
+              className="w-full sm:w-auto px-4 py-2 text-sm bg-blue-600 text-white font-semibold rounded-lg shadow-sm hover:bg-blue-700 text-center"
             >
               🛍️ Voir catalogue
             </Link>
 
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="px-4 py-2 text-sm bg-slate-800 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-900"
+              className="w-full sm:w-auto px-4 py-2 text-sm bg-slate-800 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-900 text-center"
             >
               {showForm ? '➖ Masquer' : '➕ Nouvelle commande'}
             </button>
@@ -249,8 +256,10 @@ export default function OrdersPage() {
             <button
               onClick={loadOrders}
               disabled={loading}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm ${
-                loading ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
+              className={`w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm text-center ${
+                loading
+                  ? 'bg-blue-300 cursor-not-allowed text-white'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
               {loading ? 'Chargement…' : '🔄 Rafraîchir'}
@@ -259,23 +268,21 @@ export default function OrdersPage() {
         </div>
 
         {/* ===================================================== */}
-        {/* 🎛️ Filtres Premium */}
+        {/* 🎛️ Filtres Premium Responsive */}
         {/* ===================================================== */}
-        <div className="mb-6 bg-gray-50 border border-gray-200 rounded-xl p-5">
-
+        <div className="mb-6 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5">
           {/* Recherche */}
           <div className="flex flex-col lg:flex-row gap-3 mb-4">
             <input
               value={filters.q}
               onChange={(e) => setFilters({ ...filters, q: e.target.value })}
               placeholder="🔎 Rechercher (email, code, montant...)"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-blue-500 break-words"
             />
           </div>
 
           {/* Sélecteurs */}
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-
             {/* Statut */}
             <select
               value={filters.status}
@@ -309,22 +316,22 @@ export default function OrdersPage() {
             <select
               value={filters.sort}
               onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-              className="col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+              className="col-span-1 sm:col-span-2 lg:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
             >
               <option value="-createdAt">Plus récentes</option>
               <option value="createdAt">Plus anciennes</option>
             </select>
           </div>
 
-          {/* Reset */}
-          <div className="mt-4 flex justify-between text-xs text-gray-500">
+          {/* Reset + compteur */}
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-500">
             <div>{filtered.length} commande(s)</div>
 
             <button
               onClick={() =>
                 setFilters({ q: '', status: '', payment: '', sort: '-createdAt' })
               }
-              className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium"
+              className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium w-full sm:w-auto text-center"
             >
               Réinitialiser
             </button>
@@ -332,29 +339,31 @@ export default function OrdersPage() {
         </div>
 
         {/* ===================================================== */}
-        {/* ➕ Formulaire création commande */}
+        {/* ➕ Formulaire création commande (Premium Responsive) */}
         {/* ===================================================== */}
         {showForm && (
           <form
             onSubmit={handleCreate}
-            className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-8"
+            className="bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5 mb-8"
           >
             {/* Note client */}
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Note client (optionnel)
-            </label>
-            <textarea
-              rows={3}
-              value={form.customerNote}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, customerNote: e.target.value }))
-              }
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Note client (optionnel)
+              </label>
+              <textarea
+                rows={3}
+                value={form.customerNote}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, customerNote: e.target.value }))
+                }
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 break-words"
+              />
+            </div>
 
             {/* Ajouter un article */}
-            <div className="mt-4">
-              <label className="inline-flex items-center gap-2 text-sm">
+            <div className="mt-2">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
                 <input
                   type="checkbox"
                   checked={form.withItem}
@@ -368,7 +377,7 @@ export default function OrdersPage() {
                     }))
                   }
                 />
-                Ajouter un article à la création
+                <span>Ajouter un article à la création</span>
               </label>
             </div>
 
@@ -390,7 +399,7 @@ export default function OrdersPage() {
                     <option value="">— Sélectionner —</option>
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} — {Number(p.price || 0).toLocaleString()}{' '}
+                        {p.name} — {Number(p.price || 0).toLocaleString('fr-FR')}{' '}
                         {formatCurrency(p.currency || 'XOF')}
                       </option>
                     ))}
@@ -426,7 +435,7 @@ export default function OrdersPage() {
                       setForm((f) => ({ ...f, unitPrice: e.target.value }))
                     }
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-                    placeholder="Laisse vide pour PU du produit"
+                    placeholder="Laissez vide pour PU du produit"
                   />
                 </div>
               </div>
@@ -435,7 +444,7 @@ export default function OrdersPage() {
             <div className="mt-4 text-right">
               <button
                 type="submit"
-                className="px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700"
+                className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700"
               >
                 ➕ Créer la commande
               </button>
@@ -444,10 +453,12 @@ export default function OrdersPage() {
         )}
 
         {/* ===================================================== */}
-        {/* 📄 LISTE Commandes */}
+        {/* 📄 LISTE Commandes — Cards responsive */}
         {/* ===================================================== */}
         {loading ? (
-          <p className="text-gray-500 italic text-center py-6">Chargement…</p>
+          <p className="text-gray-500 italic text-center py-6">
+            Chargement…
+          </p>
         ) : filtered.length === 0 ? (
           <p className="text-gray-500 italic text-center py-6">
             Aucune commande trouvée.
@@ -461,45 +472,47 @@ export default function OrdersPage() {
               return (
                 <div
                   key={o.id}
-                  className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md transition"
+                  className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-5 hover:shadow-md transition w-full break-words"
                 >
+                  {/* En-tête commande */}
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-semibold text-gray-900 break-words">
                         {o.code || `Commande #${o.id}`}
                       </h3>
 
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 mt-1 break-words">
                         Client : {o.customer?.email || '—'} • Montant :{' '}
                         <strong>
-                          {total.toLocaleString()} {formatCurrency(currency)}
+                          {total.toLocaleString('fr-FR')} {formatCurrency(currency)}
                         </strong>
                       </p>
 
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-1 break-words">
                         Statut : {formatStatus(o.orderStatus, 'order')} • Paiement :{' '}
                         {formatStatus(o.paymentStatus, 'payment')}
                       </p>
                     </div>
 
-                    <div className="sm:text-right text-sm text-gray-500">
+                    <div className="sm:text-right text-xs text-gray-500 whitespace-nowrap">
                       {o.createdAt
-                        ? new Date(o.createdAt).toLocaleString()
+                        ? new Date(o.createdAt).toLocaleString('fr-FR')
                         : '—'}
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  {/* Actions */}
+                  <div className="mt-3 flex flex-col sm:flex-row flex-wrap gap-2">
                     <Link
                       to={`/orders/${o.id}`}
-                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      className="w-full sm:w-auto px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-center"
                     >
                       📄 Ouvrir
                     </Link>
 
                     <Link
                       to={`/orders/${o.id}/transactions`}
-                      className="px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900"
+                      className="w-full sm:w-auto px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 text-center"
                     >
                       💰 Transactions
                     </Link>

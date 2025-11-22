@@ -1,4 +1,8 @@
-import { Link } from 'react-router-dom';
+// ============================================================================
+// HomePage.jsx — Teranga Landing Page Premium 2025
+// Émotionnelle • Moderne • Lisible • Production Ready
+// ============================================================================
+import { Link } from "react-router-dom";
 import {
   ArrowRight,
   Home,
@@ -8,33 +12,38 @@ import {
   Phone,
   MapPin,
   HeartHandshake,
-} from 'lucide-react';
-import { motion } from 'framer-motion';
+} from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-blue-100 text-gray-800 scroll-smooth">
-      {/* 🏠 HERO / ACCUEIL */}
+      {/* ===================================================================== */}
+      {/* 🏆 HERO SECTION — EMOTION + MODERN DESIGN */}
+      {/* ===================================================================== */}
       <section
         id="accueil"
-        className="flex flex-col items-center justify-center text-center py-24 px-6 bg-gradient-to-b from-blue-100 to-white relative overflow-hidden"
+        className="flex flex-col items-center justify-center text-center py-28 px-6 bg-gradient-to-b from-blue-100 to-white relative overflow-hidden"
       >
+        {/* Halo decoratif */}
+        <div className="absolute -top-20 left-1/2 w-[900px] h-[900px] bg-blue-300/20 rounded-full blur-3xl -translate-x-1/2" />
+
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          className="max-w-4xl mx-auto"
+          transition={{ duration: 0.8 }}
+          className="max-w-4xl mx-auto relative"
         >
           <h1 className="text-5xl sm:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
-            Bienvenue sur <span className="text-blue-600">Teranga 🌍</span>
+            La confiance, <span className="text-blue-600">à distance</span>.  
+            <br />
+            La sérénité, <span className="text-blue-600">à portée de main</span>.
           </h1>
 
           <p className="text-gray-700 text-lg sm:text-xl mb-10 leading-relaxed max-w-3xl mx-auto">
-            <strong>Teranga</strong> est la plateforme de confiance qui relie la{" "}
-            <strong>diaspora africaine</strong> à ses biens, projets et services
-            sur le continent. Notre mission est de vous offrir une expérience
-            fluide, transparente et sécurisée pour gérer vos investissements,
-            vos démarches et vos propriétés à distance, en toute sérénité.
+            Avec <strong>Teranga</strong>, la diaspora africaine reste connectée à
+            ses projets, ses biens et son pays — avec transparence, sécurité et un
+            accompagnement humain à chaque étape.  
           </p>
 
           <div className="flex flex-wrap justify-center gap-4">
@@ -59,27 +68,26 @@ export default function HomePage() {
           transition={{ delay: 0.5 }}
           className="mt-12 text-gray-500 text-sm max-w-2xl mx-auto leading-relaxed"
         >
-          🌍 <strong>Teranga</strong> rapproche les familles, les investisseurs
-          et les services entre la diaspora et le continent africain — à
-          commencer par le <strong>Mali</strong>, symbole de transparence et de
-          confiance.
+          Parce que la distance ne devrait jamais être un obstacle entre vous et
+          votre patrimoine au pays.
         </motion.p>
       </section>
 
+      {/* ===================================================================== */}
       {/* ⚙️ SERVICES */}
+      {/* ===================================================================== */}
       <section
         id="services"
-        className="py-20 px-6 bg-white border-t border-gray-100"
+        className="py-24 px-6 bg-white border-t border-gray-100"
       >
         <div className="max-w-6xl mx-auto text-center mb-14">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Nos Services
+            Nos services, votre tranquillité
           </h2>
           <p className="text-gray-600 max-w-3xl mx-auto text-lg leading-relaxed">
-            Teranga vous offre une gamme complète de services conçus pour simplifier
-            la gestion de vos biens, projets et démarches depuis l’étranger.
-            Notre priorité : vous permettre de suivre, planifier et contrôler
-            chaque action en toute transparence, où que vous soyez.
+            Nous accompagnons la diaspora dans la gestion de ses biens, de ses
+            démarches et de ses projets — avec une présence locale solide et un
+            engagement total pour la transparence.
           </p>
         </div>
 
@@ -87,18 +95,18 @@ export default function HomePage() {
           {[
             {
               icon: Home,
-              title: 'Gestion immobilière',
-              desc: 'Supervisez vos biens à distance grâce à une gestion complète : suivi d’entretien, rapports, visites virtuelles et gestion locative assurée par nos agents agréés.',
+              title: "Gestion immobilière",
+              desc: "Suivi d’entretien, états des lieux, visites, rapports, gestion locative… vos biens sont entre de bonnes mains.",
             },
             {
               icon: Truck,
-              title: 'Services personnalisés',
-              desc: 'Confiez-nous vos courses, paiements, démarches administratives ou chantiers : nos équipes locales fiables et réactives s’en occupent pour vous.',
+              title: "Services personnalisés",
+              desc: "Courses, paiements, dossiers administratifs, projets personnels… une équipe locale s’occupe de tout pour vous.",
             },
             {
               icon: Globe,
-              title: 'Suivi et transparence',
-              desc: 'Accédez à une interface moderne et claire pour suivre vos projets, transactions et dépenses en temps réel, avec des preuves et documents certifiés.',
+              title: "Transparence totale",
+              desc: "Preuves, photos, documents, transactions : vous voyez tout, en temps réel, peu importe où vous êtes dans le monde.",
             },
           ].map(({ icon: Icon, title, desc }) => (
             <motion.div
@@ -116,19 +124,20 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 💡 À PROPOS DE NOUS */}
+      {/* ===================================================================== */}
+      {/* 💡 À PROPOS — STORYTELLING ÉMOTIONNEL */}
+      {/* ===================================================================== */}
       <section
         id="apropos"
-        className="py-20 px-6 bg-gradient-to-br from-blue-50 via-white to-blue-100"
+        className="py-24 px-6 bg-gradient-to-br from-blue-50 via-white to-blue-100"
       >
         <div className="max-w-5xl mx-auto text-center mb-10">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            À propos de nous
+            Teranga, un pont entre vous et votre pays
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto leading-relaxed">
-            Bien plus qu’une application, <strong>Teranga</strong> est un
-            véritable pont de confiance entre la diaspora africaine et son
-            patrimoine au pays.
+            Une plateforme conçue pour instaurer la confiance, maintenir les
+            liens et simplifier la vie de la diaspora africaine.
           </p>
         </div>
 
@@ -139,21 +148,19 @@ export default function HomePage() {
           className="max-w-4xl mx-auto text-gray-700 text-base leading-relaxed space-y-6"
         >
           <p>
-            Notre mission est de <strong>simplifier la vie des Africains de la
-            diaspora</strong> en leur offrant des solutions fiables pour gérer
-            leurs biens et leurs projets à distance, tout en garantissant une
-            <strong> transparence totale</strong> à chaque étape.
+            Le mot <strong>“Teranga”</strong> signifie hospitalité, chaleur
+            humaine et respect. C’est précisément cet esprit que nous plaçons au
+            cœur de chaque interaction.
           </p>
           <p>
-            Implantée à <strong>Hamdallaye ACI 200, Bamako – Mali</strong>,
-            notre équipe d’agents de terrain, d’ingénieurs et de partenaires
-            certifiés veille à ce que chaque service soit exécuté avec rigueur,
-            respect et efficacité.
+            Pour beaucoup, la distance crée de l’incertitude : “Est-ce que mon bien
+            est bien géré ? Mes projets avancent-ils vraiment ? À qui puis-je
+            faire confiance ?”  
           </p>
           <p>
-            Nous croyons en un futur où la{" "}
-            <strong>technologie crée la proximité</strong>, où chaque membre de
-            la diaspora garde un lien solide et sûr avec ses projets au pays.
+            Notre mission : faire disparaître ces doutes grâce à une plateforme
+            moderne, des agents certifiés et une transparence totale — afin que
+            chaque membre de la diaspora garde un lien solide avec son pays.
           </p>
         </motion.div>
 
@@ -167,20 +174,20 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ===================================================================== */}
       {/* 📞 CONTACT */}
+      {/* ===================================================================== */}
       <section
         id="contact"
-        className="py-20 px-6 bg-white border-t border-gray-200"
+        className="py-24 px-6 bg-white border-t border-gray-200"
       >
         <div className="max-w-6xl mx-auto text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
             Contactez-nous
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto text-lg leading-relaxed">
-            Vous faites partie de la diaspora et souhaitez collaborer avec une
-            équipe sérieuse et réactive pour vos projets, biens ou démarches au
-            Mali ? Écrivez-nous dès aujourd’hui : nous serons ravis de vous
-            accompagner.
+            Une question ? Un projet ? Une idée ?  
+            Notre équipe vous répond sous 24h.
           </p>
         </div>
 
@@ -189,25 +196,34 @@ export default function HomePage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              alert('✅ Merci ! Votre message a bien été envoyé.');
+              alert("Merci ! Votre message a bien été envoyé.");
             }}
             className="bg-gray-50 border border-gray-200 rounded-2xl p-8 shadow-sm text-left"
           >
-            {[{ label: 'Nom complet', type: 'text', placeholder: 'Votre nom' },
-              { label: 'Adresse email', type: 'email', placeholder: 'exemple@email.com' }]
-              .map((input, i) => (
-                <div key={i} className="mb-5">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {input.label}
-                  </label>
-                  <input
-                    type={input.type}
-                    required
-                    placeholder={input.placeholder}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-              ))}
+            {[
+              {
+                label: "Nom complet",
+                type: "text",
+                placeholder: "Votre nom",
+              },
+              {
+                label: "Adresse email",
+                type: "email",
+                placeholder: "exemple@email.com",
+              },
+            ].map((input, i) => (
+              <div key={i} className="mb-5">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {input.label}
+                </label>
+                <input
+                  type={input.type}
+                  required
+                  placeholder={input.placeholder}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+            ))}
 
             <div className="mb-5">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -230,7 +246,7 @@ export default function HomePage() {
           </form>
 
           {/* Infos de contact */}
-          <div className="flex flex-col justify-center bg-white text-left space-y-5 p-4 md:p-0 text-gray-700">
+          <div className="flex flex-col justify-center space-y-5 text-gray-700 text-left">
             <div className="flex items-center gap-3">
               <Mail className="text-blue-600" />
               <p>contact@teranga-platform.com</p>
@@ -241,22 +257,23 @@ export default function HomePage() {
             </div>
             <div className="flex items-center gap-3">
               <MapPin className="text-blue-600" />
-              <p>Hamdallaye ACI 200, Bamako – Mali</p>
+              <p>Hamdallaye ACI 200, Bamako — Mali</p>
             </div>
-            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-              Notre équipe vous répond sous 24 heures. Nous sommes disponibles
-              pour vous assister dans toutes vos démarches, avec écoute et
-              professionnalisme.
+            <p className="text-sm text-gray-500">
+              Chaque message compte : nous vous répondons rapidement, avec une
+              écoute attentive et un engagement réel.
             </p>
           </div>
         </div>
       </section>
 
+      {/* ===================================================================== */}
       {/* ⚓ FOOTER */}
+      {/* ===================================================================== */}
       <footer className="bg-slate-900 text-gray-300 text-sm py-6 px-6 mt-12">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 text-center sm:text-left">
           <p>
-            © {new Date().getFullYear()}{' '}
+            © {new Date().getFullYear()}{" "}
             <span className="text-cyan-400 font-semibold">Teranga</span> — Tous
             droits réservés.
           </p>

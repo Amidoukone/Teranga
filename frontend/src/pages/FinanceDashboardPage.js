@@ -1,4 +1,3 @@
-// frontend/src/pages/FinanceDashboardPage.js
 import { useEffect, useMemo, useState } from 'react';
 import { getTransactions } from '../services/transactions';
 import { me } from '../services/auth';
@@ -21,27 +20,31 @@ export default function FinanceDashboardPage() {
   const [filters, setFilters] = useState({
     q: '',
     type: '', // '', 'revenue', 'expense', 'commission', 'adjustment'
-    role: '', // '', 'client', 'agent', 'admin' (visible/utile surtout pour admin)
+    role: '', // '', 'client', 'agent', 'admin'
     dateFrom: '',
     dateTo: '',
-    onlyLinked: false, // seulement celles liées à un service/tâche
-    sort: '-createdAt', // -createdAt, createdAt, amount
+    onlyLinked: false, // uniquement celles liées à un service/tâche
+    sort: '-createdAt', // -createdAt, createdAt, amount, -amount
   });
+
   const [showChart, setShowChart] = useState(() => {
     const saved = localStorage.getItem('teranga_finance_showChart');
     return saved === null ? true : saved === '1';
   });
 
+  // 🔄 Persistance de l’état du graphique
   useEffect(() => {
     localStorage.setItem('teranga_finance_showChart', showChart ? '1' : '0');
   }, [showChart]);
 
+  // 🚀 Initialisation
   useEffect(() => {
     async function init() {
       try {
         const u = await me();
         setUser(u.user);
-        const txs = await getTransactions(); // ✅ côté backend: ACL déjà prises en compte
+
+        const txs = await getTransactions(); // ACL côté backend
         setTransactions(txs || []);
       } catch (err) {
         console.error('❌ Erreur chargement FinanceDashboard:', err);
@@ -49,6 +52,7 @@ export default function FinanceDashboardPage() {
         setLoading(false);
       }
     }
+
     init();
   }, []);
 
@@ -91,11 +95,18 @@ export default function FinanceDashboardPage() {
     // Période
     if (filters.dateFrom) {
       const tsFrom = new Date(filters.dateFrom).setHours(0, 0, 0, 0);
-      arr = arr.filter((t) => new Date(t.createdAt).getTime() >= tsFrom);
+      arr = arr.filter((t) => {
+        if (!t.createdAt) return false;
+        return new Date(t.createdAt).getTime() >= tsFrom;
+      });
     }
+
     if (filters.dateTo) {
       const tsTo = new Date(filters.dateTo).setHours(23, 59, 59, 999);
-      arr = arr.filter((t) => new Date(t.createdAt).getTime() <= tsTo);
+      arr = arr.filter((t) => {
+        if (!t.createdAt) return false;
+        return new Date(t.createdAt).getTime() <= tsTo;
+      });
     }
 
     // Liées à un service/tâche
@@ -130,7 +141,7 @@ export default function FinanceDashboardPage() {
     return arr;
   }, [transactions, filters]);
 
-  // 🔢 Calcul des totaux selon les transactions filtrées (vue courante)
+  // 🔢 Calcul des totaux selon la vue filtrée
   const computedSummary = useMemo(() => {
     const totals = {
       revenues: 0,
@@ -152,16 +163,19 @@ export default function FinanceDashboardPage() {
     return { ...totals, balance };
   }, [filtered]);
 
-  // Conserver l’API publique (summary) pour compatibilité, basé sur la vue filtrée
+  // Conserver summary pour compatibilité (basé sur computedSummary)
   useEffect(() => {
     setSummary(computedSummary);
   }, [computedSummary]);
 
+  // Format monétaire local (XOF, etc.)
   const formatCurrency = (v) =>
-    new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
-      Number(v || 0)
-    );
+    new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(v || 0));
 
+  // Raccourcis de plage de dates
   function quickRange(days) {
     const now = new Date();
     const from = new Date(now);
@@ -200,6 +214,7 @@ export default function FinanceDashboardPage() {
       'userRole',
       'createdAt',
     ];
+
     const rows = filtered.map((t) => [
       t.id,
       t.type,
@@ -211,8 +226,9 @@ export default function FinanceDashboardPage() {
       t.task?.title || '',
       t.user?.email || '',
       t.user?.role || '',
-      new Date(t.createdAt).toISOString(),
+      t.createdAt ? new Date(t.createdAt).toISOString() : '',
     ]);
+
     const csv =
       headers.join(',') +
       '\n' +
@@ -229,19 +245,22 @@ export default function FinanceDashboardPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (loading)
+  // États transitoires
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <p className="text-gray-600 text-lg animate-pulse">Chargement…</p>
       </div>
     );
+  }
 
-  if (!user || !summary)
+  if (!user || !summary) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <p className="text-gray-600">Aucune donnée disponible.</p>
       </div>
     );
+  }
 
   // 🎨 Données pour le graphique (vue filtrée)
   const COLORS = ['#16a34a', '#dc2626', '#2563eb', '#9333ea'];
@@ -252,53 +271,64 @@ export default function FinanceDashboardPage() {
     { name: 'Ajustements', value: summary.adjustments },
   ];
 
+  // ============================================================
+  // 🖥️ UI principale — responsive + premium
+  // ============================================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        {/* 🧭 En-tête */}
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">📊 Tableau de bord financier</h1>
-            <p className="text-sm text-gray-600 mt-1">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100">
+        {/* 🧭 En-tête responsive */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">
+              📊 Tableau de bord financier
+            </h1>
+            <p className="text-sm text-gray-600 mt-1 break-words">
               {user.role === 'admin'
-                ? 'Vue globale (tous rôles confondus)'
+                ? 'Vue globale (tous rôles confondus).'
                 : user.role === 'agent'
-                ? 'Vos transactions liées à vos services et tâches'
-                : 'Vos transactions personnelles'}
+                ? 'Vos transactions liées à vos services et tâches.'
+                : 'Vos transactions personnelles.'}
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowChart((s) => !s)}
-              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
+              className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
             >
               {showChart ? '➖ Masquer le graphique' : '📈 Afficher le graphique'}
             </button>
             <button
               onClick={exportCSV}
-              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-emerald-600 text-white hover:bg-emerald-700 transition"
+              className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-emerald-600 text-white hover:bg-emerald-700 transition"
             >
               ⬇️ Export CSV
             </button>
           </div>
         </div>
 
-        {/* 🎛️ Filtres */}
-        <div className="mb-6 bg-gray-50 border border-gray-200 rounded-xl p-5">
+        {/* 🎛️ Filtres premium + responsive */}
+        <div className="mb-6 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
+            {/* Recherche texte */}
             <div className="lg:col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Recherche</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Recherche
+              </label>
               <input
                 placeholder="Description, moyen de paiement, service/tâche, email…"
                 value={filters.q}
                 onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 break-words"
               />
             </div>
 
+            {/* Type */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Type
+              </label>
               <select
                 value={filters.type}
                 onChange={(e) => setFilters({ ...filters, type: e.target.value })}
@@ -312,9 +342,11 @@ export default function FinanceDashboardPage() {
               </select>
             </div>
 
-            {/* Visible surtout utile pour admin */}
+            {/* Rôle (surtout admin) */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Rôle</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Rôle
+              </label>
               <select
                 value={filters.role}
                 onChange={(e) => setFilters({ ...filters, role: e.target.value })}
@@ -327,18 +359,26 @@ export default function FinanceDashboardPage() {
               </select>
             </div>
 
+            {/* Date du */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Du</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Du
+              </label>
               <input
                 type="date"
                 value={filters.dateFrom}
-                onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                onChange={(e) =>
+                  setFilters({ ...filters, dateFrom: e.target.value })
+                }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
+            {/* Date au */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Au</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Au
+              </label>
               <input
                 type="date"
                 value={filters.dateTo}
@@ -347,8 +387,11 @@ export default function FinanceDashboardPage() {
               />
             </div>
 
+            {/* Tri */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Tri</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Tri
+              </label>
               <select
                 value={filters.sort}
                 onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
@@ -362,33 +405,39 @@ export default function FinanceDashboardPage() {
             </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-4">
+          {/* Ligne du bas filtres : options + reset */}
+          <div className="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
               <label className="inline-flex items-center gap-2 text-sm text-gray-700">
                 <input
                   type="checkbox"
                   checked={filters.onlyLinked}
-                  onChange={(e) => setFilters({ ...filters, onlyLinked: e.target.checked })}
+                  onChange={(e) =>
+                    setFilters({ ...filters, onlyLinked: e.target.checked })
+                  }
                   className="h-4 w-4"
                 />
                 Uni. liées à un service/tâche
               </label>
 
               {/* Raccourcis de période */}
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
+                  type="button"
                   onClick={() => quickRange(7)}
                   className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
                 >
                   7j
                 </button>
                 <button
+                  type="button"
                   onClick={() => quickRange(30)}
                   className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
                 >
                   30j
                 </button>
                 <button
+                  type="button"
                   onClick={() => quickRange(90)}
                   className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
                 >
@@ -397,9 +446,12 @@ export default function FinanceDashboardPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="text-xs text-gray-500">{filtered.length} transaction(s)</div>
+            <div className="flex items-center justify-between sm:justify-end gap-2">
+              <div className="text-xs text-gray-500">
+                {filtered.length} transaction(s)
+              </div>
               <button
+                type="button"
                 onClick={resetFilters}
                 className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
               >
@@ -410,9 +462,9 @@ export default function FinanceDashboardPage() {
         </div>
 
         {/* Solde & Graphique */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <h2
-            className={`text-xl font-bold ${
+            className={`text-xl font-bold break-words ${
               summary.balance >= 0 ? 'text-green-600' : 'text-red-600'
             }`}
           >
@@ -421,10 +473,17 @@ export default function FinanceDashboardPage() {
         </div>
 
         {showChart && (
-          <div className="w-full h-80 mt-4">
+          <div className="w-full h-72 sm:h-80 mt-4">
             <ResponsiveContainer>
               <PieChart>
-                <Pie dataKey="value" data={chartData} cx="50%" cy="50%" outerRadius={110} label>
+                <Pie
+                  dataKey="value"
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={110}
+                  label
+                >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index]} />
                   ))}
@@ -436,20 +495,34 @@ export default function FinanceDashboardPage() {
           </div>
         )}
 
-        {/* 👑 Admin : affichage séparé par rôles (sur vue filtrée) */}
+        {/* 👑 Admin : breakdown par rôle (vue filtrée) */}
         {user.role === 'admin' && (
           <div className="mt-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">👥 Détails par rôle</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              👥 Détails par rôle
+            </h3>
             <RoleBreakdown transactions={filtered} />
           </div>
         )}
 
         {/* 📘 Détails globaux (vue filtrée) */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="💰 Revenus" value={`${formatCurrency(summary.revenues)} XOF`} />
-          <StatCard label="💸 Dépenses" value={`${formatCurrency(summary.expenses)} XOF`} />
-          <StatCard label="🏢 Commissions" value={`${formatCurrency(summary.commissions)} XOF`} />
-          <StatCard label="⚙️ Ajustements" value={`${formatCurrency(summary.adjustments)} XOF`} />
+          <StatCard
+            label="💰 Revenus"
+            value={`${formatCurrency(summary.revenues)} XOF`}
+          />
+          <StatCard
+            label="💸 Dépenses"
+            value={`${formatCurrency(summary.expenses)} XOF`}
+          />
+          <StatCard
+            label="🏢 Commissions"
+            value={`${formatCurrency(summary.commissions)} XOF`}
+          />
+          <StatCard
+            label="⚙️ Ajustements"
+            value={`${formatCurrency(summary.adjustments)} XOF`}
+          />
         </div>
       </div>
     </div>
@@ -460,8 +533,10 @@ export default function FinanceDashboardPage() {
 function StatCard({ label, value }) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-      <div className="text-sm text-gray-500">{label}</div>
-      <div className="text-xl font-semibold text-gray-900 mt-1">{value}</div>
+      <div className="text-sm text-gray-500 break-words">{label}</div>
+      <div className="text-xl font-semibold text-gray-900 mt-1 break-words">
+        {value}
+      </div>
     </div>
   );
 }
@@ -493,8 +568,8 @@ function RoleBreakdown({ transactions }) {
 
   const Block = ({ title, list, showAdjustments = false }) => (
     <div className="border border-gray-200 rounded-xl p-4 mb-3 bg-white">
-      <h4 className="font-semibold text-gray-900 mb-2">{title}</h4>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+      <h4 className="font-semibold text-gray-900 mb-2 break-words">{title}</h4>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-gray-700">
         <div>Revenus : {sum(list, 'revenue').toFixed(2)} XOF</div>
         <div>Dépenses : {sum(list, 'expense').toFixed(2)} XOF</div>
         <div>Commissions : {sum(list, 'commission').toFixed(2)} XOF</div>
@@ -508,12 +583,16 @@ function RoleBreakdown({ transactions }) {
   );
 
   return (
-    <div>
+    <div className="space-y-3">
       <Block title="👤 Clients" list={grouped.client} />
       <Block title="🧑‍🔧 Agents" list={grouped.agent} />
       <Block title="👑 Admins" list={grouped.admin} />
       {grouped.autres.length > 0 && (
-        <Block title="⚙️ Autres / Ajustements internes" list={grouped.autres} showAdjustments />
+        <Block
+          title="⚙️ Autres / Ajustements internes"
+          list={grouped.autres}
+          showAdjustments
+        />
       )}
     </div>
   );
