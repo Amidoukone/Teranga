@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml"
+>
 
-  <!-- === Pages publiques === -->
+  <!-- ===================================================== -->
+  <!-- 🌍  PAGES PUBLIQUES — INDEXATION PRIORITAIRE        -->
+  <!-- ===================================================== -->
+
   <url>
     <loc>https://teranga-diaspora.com/</loc>
     <changefreq>daily</changefreq>
@@ -11,13 +17,13 @@
   <url>
     <loc>https://teranga-diaspora.com/login</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://teranga-diaspora.com/register</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.6</priority>
   </url>
 
   <url>
@@ -26,47 +32,129 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- === Pages utilisateur connecté (Google ne les verra pas mais c’est OK) -->
+  <url>
+    <loc>https://teranga-diaspora.com/products</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- ===================================================== -->
+  <!-- 📄  PAGES LÉGALES — IMPORTANT POUR LE SEO             -->
+  <!-- ===================================================== -->
+
+  <url>
+    <loc>https://teranga-diaspora.com/legal</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://teranga-diaspora.com/privacy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://teranga-diaspora.com/terms</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- ===================================================== -->
+  <!-- 👥  ESPACE UTILISATEUR CONNECTÉ                      -->
+  <!-- (Google les crawle mais ne peut pas voir le contenu) -->
+  <!-- ===================================================== -->
+
   <url>
     <loc>https://teranga-diaspora.com/dashboard</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.5</priority>
   </url>
 
   <url>
     <loc>https://teranga-diaspora.com/services</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.5</priority>
   </url>
 
   <url>
     <loc>https://teranga-diaspora.com/projects</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.5</priority>
   </url>
 
   <url>
     <loc>https://teranga-diaspora.com/properties</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.5</priority>
   </url>
 
   <url>
     <loc>https://teranga-diaspora.com/transactions</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.5</priority>
   </url>
 
   <url>
     <loc>https://teranga-diaspora.com/finance</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.5</priority>
   </url>
 
-  <!-- === Admin (Optionnel mais pas bloquant) === -->
+  <url>
+    <loc>https://teranga-diaspora.com/orders</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- ===================================================== -->
+  <!-- 👨‍💼  ESPACE AGENT                                     -->
+  <!-- ===================================================== -->
+
+  <url>
+    <loc>https://teranga-diaspora.com/agent/services</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <!-- ===================================================== -->
+  <!-- 👑  ESPACE ADMIN — INDEXATION FAIBLE MAIS UTILE       -->
+  <!-- ===================================================== -->
+
   <url>
     <loc>https://teranga-diaspora.com/admin/projects</loc>
-    <priority>0.4</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://teranga-diaspora.com/admin/services</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://teranga-diaspora.com/admin/users</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://teranga-diaspora.com/admin/properties</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://teranga-diaspora.com/admin/catalog/categories</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://teranga-diaspora.com/admin/catalog/products</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
   </url>
 
 </urlset>

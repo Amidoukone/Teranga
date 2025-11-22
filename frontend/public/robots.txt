@@ -1,7 +1,18 @@
+# ================================================================
+# robots.txt — Teranga (https://teranga-diaspora.com)
+# Optimisation SEO Premium PRO 2025
+# Indexation contrôlée • Sécurité • Performance
+# ================================================================
+
 User-agent: *
+# Autoriser toutes les pages publiques
 Allow: /
 
-# Empêcher le crawl des pages privées si tu veux
+# ==============================
+# 🔐 Zones privées / protégées
+# Ces pages nécessitent une authentification,
+# inutile et déconseillé de les faire crawler.
+# ==============================
 Disallow: /dashboard
 Disallow: /services
 Disallow: /projects
@@ -9,7 +20,34 @@ Disallow: /properties
 Disallow: /transactions
 Disallow: /finance
 Disallow: /orders
+Disallow: /agent
 Disallow: /admin
 
-# Fichiers utiles
+# ==============================
+# 📄 Éviter que Google indexe les paramètres (filtres SPA)
+# Cela améliore la propreté de l’indexation.
+# ==============================
+Disallow: /*?*
+Disallow: /*&*
+
+# ==============================
+# 📦 Autoriser JS, CSS et assets
+# (Indispensable pour l'analyse de Google)
+# ==============================
+Allow: /*.js$
+Allow: /*.css$
+Allow: /static/
+
+# ==============================
+# 🗺️ Sitemap
+# indispensable pour Google Search Console
+# ==============================
 Sitemap: https://teranga-diaspora.com/sitemap.xml
+
+# ================================================================
+# ✨ Notes :
+# - Ce fichier permet à Google d’indexer proprement l’app React.
+# - Les zones privées sont protégées pour éviter les erreurs.
+# - Les assets sont autorisés pour que Google “voit” l’affichage réel.
+# - Le sitemap assure une indexation rapide et efficace.
+# ================================================================

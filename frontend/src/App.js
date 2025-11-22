@@ -1,12 +1,13 @@
 // ============================================================================
 // App.js — Teranga Platform (Version Premium PRO 2025)
-// Navigation • Routage protégé • SEO dynamique • Optimisé Google
+// Navigation • Routage protégé • SEO dynamique • GA4 tracking
 // ============================================================================
 
 import { useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import NavBar from './components/NavBar';
+import Analytics from './utils/analytics';
 
 // 🌐 Pages publiques
 import HomePage from './pages/HomePage';
@@ -15,7 +16,12 @@ import RegisterPage from './pages/RegisterPage';
 import ProductCatalogPage from './pages/ProductCatalogPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 
-// 👥 Pages utilisateurs connectés
+// 🧾 Pages légales
+import LegalPage from './pages/LegalPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
+
+// 👥 Utilisateurs connectés
 import DashboardPage from './pages/DashboardPage';
 import PropertiesPage from './pages/PropertiesPage';
 import ServicesPage from './pages/ServicesPage';
@@ -41,7 +47,7 @@ import AdminProjectsPage from './pages/AdminProjectsPage';
 import AdminCategoriesPage from './pages/AdminCategoriesPage';
 import AdminProductsPage from './pages/AdminProductsPage';
 
-// 🧾 Commerce — Commandes
+// 🧾 Commerce
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import OrderTransactionsPage from './pages/OrderTransactionsPage';
@@ -56,32 +62,60 @@ function ScrollToTop() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
   }, [pathname]);
 
   return null;
 }
 
 // ============================================================================
-// 🧠 SEO Dynamique — Mise à jour du titre + meta description
+// 🧠 SEO Dynamique — Titre + descriptions OG/Twitter
 // ============================================================================
-function SetTitle({ title, description }) {
-  useEffect(() => {
-    document.title = title
-      ? `${title} – Teranga`
-      : 'Teranga – Diaspora & Services';
+const DEFAULT_TITLE = 'Teranga – Diaspora & Services';
+const DEFAULT_DESCRIPTION =
+  "Teranga — Plateforme moderne qui connecte la diaspora africaine à ses biens, projets et services au pays, avec transparence, preuves et agents certifiés.";
 
-    if (description) {
-      let metaDesc = document.querySelector("meta[name='description']");
-      if (metaDesc) metaDesc.setAttribute("content", description);
+function setOrCreateMeta(selector, attr, value) {
+  if (!value) return;
+
+  let tag = document.querySelector(selector);
+
+  if (!tag) {
+    const match = selector.match(/meta\[(name|property)="([^"]+)"\]/);
+    if (match) {
+      const [, key, val] = match;
+      tag = document.createElement('meta');
+      tag.setAttribute(key, val);
+      document.head.appendChild(tag);
     }
+  }
+
+  if (tag) tag.setAttribute(attr, value);
+}
+
+function SetSeo({ title, description }) {
+  useEffect(() => {
+    const finalTitle = title ? `${title} – Teranga` : DEFAULT_TITLE;
+    const finalDescription = description || DEFAULT_DESCRIPTION;
+
+    document.title = finalTitle;
+
+    setOrCreateMeta('meta[name="description"]', 'content', finalDescription);
+    setOrCreateMeta('meta[property="og:title"]', 'content', finalTitle);
+    setOrCreateMeta('meta[property="og:description"]', 'content', finalDescription);
+    setOrCreateMeta('meta[name="twitter:title"]', 'content', finalTitle);
+    setOrCreateMeta('meta[name="twitter:description"]', 'content', finalDescription);
   }, [title, description]);
 
   return null;
 }
 
 // ============================================================================
-// 🔐 Authentication wall
+// 🔐 Auth Guards
 // ============================================================================
 function RequireAuth({ children }) {
   const location = useLocation();
@@ -94,9 +128,6 @@ function RequireAuth({ children }) {
   return children;
 }
 
-// ============================================================================
-// 🛡️ Restriction selon rôle
-// ============================================================================
 function RequireRole({ allow = [], children }) {
   const location = useLocation();
   const user = getLocalUser();
@@ -113,9 +144,6 @@ function RequireRole({ allow = [], children }) {
   return <Navigate to="/dashboard" replace />;
 }
 
-// ============================================================================
-// 🚪 PublicOnly — Empêche un utilisateur connecté de voir login/register
-// ============================================================================
 function PublicOnly({ children }) {
   const token = getToken();
   const user = getLocalUser();
@@ -127,7 +155,7 @@ function PublicOnly({ children }) {
 }
 
 // ============================================================================
-// 🧩 APPLICATION PRINCIPALE
+// 🧩 App (Final)
 // ============================================================================
 export default function App() {
   return (
@@ -136,278 +164,406 @@ export default function App() {
       <ScrollToTop />
       <NavBar />
 
-      <main className="flex-1 container mx-auto px-4 py-6">
+      {/* 📈 Google Analytics v4 — tracking automatique */}
+      <Analytics trackingId="G-5JVYGYHZ7Y" />
 
+      <main className="flex-1 container mx-auto px-4 py-6">
         <Routes>
 
-          {/* 🌐 Pages publiques */}
-          <Route path="/" element={
-            <>
-              <SetTitle
-                title="Accueil"
-                description="Teranga — Plateforme qui connecte la diaspora africaine à ses biens, projets et services."
-              />
-              <HomePage />
-            </>
-          } />
-
-          <Route path="/shop" element={
-            <>
-              <SetTitle title="Produits" />
-              <ProductCatalogPage />
-            </>
-          } />
-
-          <Route path="/products/:id" element={
-            <>
-              <SetTitle title="Produit" />
-              <ProductDetailPage />
-            </>
-          } />
-
-          <Route path="/login" element={
-            <PublicOnly>
+          {/* ============================= */}
+          {/* 🌐 PAGES PUBLIQUES           */}
+          {/* ============================= */}
+          <Route
+            path="/"
+            element={
               <>
-                <SetTitle title="Connexion" />
-                <LoginPage />
+                <SetSeo title="Accueil" />
+                <HomePage />
               </>
-            </PublicOnly>
-          } />
+            }
+          />
 
-          <Route path="/register" element={
-            <PublicOnly>
+          <Route
+            path="/shop"
+            element={
               <>
-                <SetTitle title="Inscription" />
-                <RegisterPage />
+                <SetSeo title="Produits & Services" />
+                <ProductCatalogPage />
               </>
-            </PublicOnly>
-          } />
+            }
+          />
 
-          {/* 👥 Espace connecté */}
-          <Route path="/dashboard" element={
-            <RequireAuth>
+          <Route
+            path="/products/:id"
+            element={
               <>
-                <SetTitle title="Tableau de bord" />
-                <DashboardPage />
+                <SetSeo title="Détail produit" />
+                <ProductDetailPage />
               </>
-            </RequireAuth>
-          } />
+            }
+          />
 
-          <Route path="/properties" element={
-            <RequireAuth>
+          {/* ============================= */}
+          {/* 📄 PAGES LÉGALES             */}
+          {/* ============================= */}
+          <Route
+            path="/legal"
+            element={
               <>
-                <SetTitle title="Biens" />
-                <PropertiesPage />
+                <SetSeo title="Mentions légales" />
+                <LegalPage />
               </>
-            </RequireAuth>
-          } />
+            }
+          />
 
-          <Route path="/projects" element={
-            <RequireAuth>
+          <Route
+            path="/privacy"
+            element={
               <>
-                <SetTitle title="Projets" />
-                <ProjectsPage />
+                <SetSeo title="Confidentialité" />
+                <PrivacyPage />
               </>
-            </RequireAuth>
-          } />
+            }
+          />
 
-          <Route path="/projects/:id" element={
-            <RequireAuth>
+          <Route
+            path="/terms"
+            element={
               <>
-                <SetTitle title="Détail projet" />
-                <ProjectDetailPage />
+                <SetSeo title="Conditions d'utilisation" />
+                <TermsPage />
               </>
-            </RequireAuth>
-          } />
+            }
+          />
 
-          <Route path="/services" element={
-            <RequireAuth>
-              <>
-                <SetTitle title="Services" />
-                <ServicesPage />
-              </>
-            </RequireAuth>
-          } />
-
-          <Route path="/services/:id/tasks" element={
-            <RequireAuth>
-              <>
-                <SetTitle title="Tâches du service" />
-                <ServiceTasksPage />
-              </>
-            </RequireAuth>
-          } />
-
-          <Route path="/tasks" element={
-            <RequireAuth>
-              <>
-                <SetTitle title="Tâches" />
-                <TasksPage />
-              </>
-            </RequireAuth>
-          } />
-
-          <Route path="/tasks/:id/evidences" element={
-            <RequireAuth>
-              <>
-                <SetTitle title="Preuves" />
-                <TaskEvidencesPage />
-              </>
-            </RequireAuth>
-          } />
-
-          <Route path="/transactions" element={
-            <RequireAuth>
-              <>
-                <SetTitle title="Transactions" />
-                <TransactionsPage />
-              </>
-            </RequireAuth>
-          } />
-
-          <Route path="/finance" element={
-            <RequireAuth>
-              <>
-                <SetTitle title="Finances" />
-                <FinanceDashboardPage />
-              </>
-            </RequireAuth>
-          } />
-
-          {/* 🧾 Commerce */}
-          <Route path="/orders" element={
-            <RequireAuth>
-              <>
-                <SetTitle title="Commandes" />
-                <OrdersPage />
-              </>
-            </RequireAuth>
-          } />
-
-          <Route path="/orders/:id" element={
-            <RequireAuth>
-              <>
-                <SetTitle title="Commande" />
-                <OrderDetailPage />
-              </>
-            </RequireAuth>
-          } />
-
-          <Route path="/orders/:id/transactions" element={
-            <RequireAuth>
-              <>
-                <SetTitle title="Transactions commande" />
-                <OrderTransactionsPage />
-              </>
-            </RequireAuth>
-          } />
-
-          {/* 👨‍💼 Agents */}
-          <Route path="/agent/services" element={
-            <RequireAuth>
-              <RequireRole allow={['agent', 'admin']}>
+          {/* ============================= */}
+          {/* 🔐 AUTH PUBLIQUE             */}
+          {/* ============================= */}
+          <Route
+            path="/login"
+            element={
+              <PublicOnly>
                 <>
-                  <SetTitle title="Services assignés" />
-                  <AgentServicesPage />
+                  <SetSeo title="Connexion" />
+                  <LoginPage />
                 </>
-              </RequireRole>
-            </RequireAuth>
-          } />
+              </PublicOnly>
+            }
+          />
 
-          {/* 👑 Admin */}
-          <Route path="/admin/projects" element={
-            <RequireAuth>
-              <RequireRole allow={['admin']}>
+          <Route
+            path="/register"
+            element={
+              <PublicOnly>
                 <>
-                  <SetTitle title="Gestion projets" />
-                  <AdminProjectsPage />
+                  <SetSeo title="Inscription" />
+                  <RegisterPage />
                 </>
-              </RequireRole>
-            </RequireAuth>
-          } />
+              </PublicOnly>
+            }
+          />
 
-          <Route path="/admin/agents" element={
-            <RequireAuth>
-              <RequireRole allow={['admin']}>
+          {/* ============================= */}
+          {/* 👥 UTILISATEURS CONNECTÉS    */}
+          {/* ============================= */}
+          <Route
+            path="/dashboard"
+            element={
+              <RequireAuth>
                 <>
-                  <SetTitle title="Agents" />
-                  <AdminAgentsPage />
+                  <SetSeo title="Tableau de bord" />
+                  <DashboardPage />
                 </>
-              </RequireRole>
-            </RequireAuth>
-          } />
+              </RequireAuth>
+            }
+          />
 
-          <Route path="/admin/services" element={
-            <RequireAuth>
-              <RequireRole allow={['admin']}>
+          <Route
+            path="/properties"
+            element={
+              <RequireAuth>
                 <>
-                  <SetTitle title="Services (admin)" />
-                  <AdminServicesPage />
+                  <SetSeo title="Mes biens" />
+                  <PropertiesPage />
                 </>
-              </RequireRole>
-            </RequireAuth>
-          } />
+              </RequireAuth>
+            }
+          />
 
-          <Route path="/admin/users" element={
-            <RequireAuth>
-              <RequireRole allow={['admin']}>
+          <Route
+            path="/projects"
+            element={
+              <RequireAuth>
                 <>
-                  <SetTitle title="Utilisateurs" />
-                  <AdminUsersPage />
+                  <SetSeo title="Mes projets" />
+                  <ProjectsPage />
                 </>
-              </RequireRole>
-            </RequireAuth>
-          } />
+              </RequireAuth>
+            }
+          />
 
-          <Route path="/admin/properties" element={
-            <RequireAuth>
-              <RequireRole allow={['admin']}>
+          <Route
+            path="/projects/:id"
+            element={
+              <RequireAuth>
                 <>
-                  <SetTitle title="Biens clients" />
-                  <AdminPropertiesPage />
+                  <SetSeo title="Détail projet" />
+                  <ProjectDetailPage />
                 </>
-              </RequireRole>
-            </RequireAuth>
-          } />
+              </RequireAuth>
+            }
+          />
 
-          <Route path="/admin/catalog/categories" element={
-            <RequireAuth>
-              <RequireRole allow={['admin']}>
+          <Route
+            path="/services"
+            element={
+              <RequireAuth>
                 <>
-                  <SetTitle title="Catégories" />
-                  <AdminCategoriesPage />
+                  <SetSeo title="Services" />
+                  <ServicesPage />
                 </>
-              </RequireRole>
-            </RequireAuth>
-          } />
+              </RequireAuth>
+            }
+          />
 
-          <Route path="/admin/catalog/products" element={
-            <RequireAuth>
-              <RequireRole allow={['admin']}>
+          <Route
+            path="/services/:id/tasks"
+            element={
+              <RequireAuth>
                 <>
-                  <SetTitle title="Produits admin" />
-                  <AdminProductsPage />
+                  <SetSeo title="Tâches du service" />
+                  <ServiceTasksPage />
                 </>
-              </RequireRole>
-            </RequireAuth>
-          } />
+              </RequireAuth>
+            }
+          />
 
-          {/* ROUTE PAR DÉFAUT */}
-          <Route path="*" element={
-            <>
-              <SetTitle title="Accueil" />
-              <HomePage />
-            </>
-          } />
+          <Route
+            path="/tasks"
+            element={
+              <RequireAuth>
+                <>
+                  <SetSeo title="Tâches" />
+                  <TasksPage />
+                </>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/tasks/:id/evidences"
+            element={
+              <RequireAuth>
+                <>
+                  <SetSeo title="Preuves" />
+                  <TaskEvidencesPage />
+                </>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/transactions"
+            element={
+              <RequireAuth>
+                <>
+                  <SetSeo title="Transactions" />
+                  <TransactionsPage />
+                </>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/finance"
+            element={
+              <RequireAuth>
+                <>
+                  <SetSeo title="Finances" />
+                  <FinanceDashboardPage />
+                </>
+              </RequireAuth>
+            }
+          />
+
+          {/* ============================= */}
+          {/* 🧾 COMMERCE — COMMANDES      */}
+          {/* ============================= */}
+          <Route
+            path="/orders"
+            element={
+              <RequireAuth>
+                <>
+                  <SetSeo title="Commandes" />
+                  <OrdersPage />
+                </>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/orders/:id"
+            element={
+              <RequireAuth>
+                <>
+                  <SetSeo title="Détail commande" />
+                  <OrderDetailPage />
+                </>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/orders/:id/transactions"
+            element={
+              <RequireAuth>
+                <>
+                  <SetSeo title="Transactions commande" />
+                  <OrderTransactionsPage />
+                </>
+              </RequireAuth>
+            }
+          />
+
+          {/* ============================= */}
+          {/* ⚙️ AGENTS                   */}
+          {/* ============================= */}
+          <Route
+            path="/agent/services"
+            element={
+              <RequireAuth>
+                <RequireRole allow={['agent', 'admin']}>
+                  <>
+                    <SetSeo title="Services assignés" />
+                    <AgentServicesPage />
+                  </>
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+
+          {/* ============================= */}
+          {/* 👑 ADMIN                   */}
+          {/* ============================= */}
+          <Route
+            path="/admin/projects"
+            element={
+              <RequireAuth>
+                <RequireRole allow={['admin']}>
+                  <>
+                    <SetSeo title="Gestion des projets" />
+                    <AdminProjectsPage />
+                  </>
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/admin/agents"
+            element={
+              <RequireAuth>
+                <RequireRole allow={['admin']}>
+                  <>
+                    <SetSeo title="Agents" />
+                    <AdminAgentsPage />
+                  </>
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/admin/services"
+            element={
+              <RequireAuth>
+                <RequireRole allow={['admin']}>
+                  <>
+                    <SetSeo title="Gestion des services" />
+                    <AdminServicesPage />
+                  </>
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/admin/users"
+            element={
+              <RequireAuth>
+                <RequireRole allow={['admin']}>
+                  <>
+                    <SetSeo title="Utilisateurs" />
+                    <AdminUsersPage />
+                  </>
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/admin/properties"
+            element={
+              <RequireAuth>
+                <RequireRole allow={['admin']}>
+                  <>
+                    <SetSeo title="Biens clients" />
+                    <AdminPropertiesPage />
+                  </>
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/admin/catalog/categories"
+            element={
+              <RequireAuth>
+                <RequireRole allow={['admin']}>
+                  <>
+                    <SetSeo title="Catégories" />
+                    <AdminCategoriesPage />
+                  </>
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/admin/catalog/products"
+            element={
+              <RequireAuth>
+                <RequireRole allow={['admin']}>
+                  <>
+                    <SetSeo title="Produits (admin)" />
+                    <AdminProductsPage />
+                  </>
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+
+          {/* ============================= */}
+          {/* 🚧 ROUTE PAR DÉFAUT         */}
+          {/* ============================= */}
+          <Route
+            path="*"
+            element={
+              <>
+                <SetSeo title="Accueil" />
+                <HomePage />
+              </>
+            }
+          />
 
         </Routes>
-
       </main>
 
+      {/* FOOTER */}
       <footer className="bg-gray-100 border-t border-gray-200 py-4 text-center text-sm text-gray-600">
-        © {new Date().getFullYear()} <span className="font-semibold text-blue-600">Teranga</span> — Tous droits réservés.
+        © {new Date().getFullYear()}{' '}
+        <span className="font-semibold text-blue-600">Teranga</span> — Tous droits réservés.
       </footer>
-
     </div>
   );
 }
