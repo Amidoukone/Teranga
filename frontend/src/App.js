@@ -75,7 +75,9 @@ function ScrollToTop() {
 // ============================================================================
 // 🧠 SEO Dynamique — Titre + descriptions OG/Twitter
 // ============================================================================
-const DEFAULT_TITLE = 'Teranga – Diaspora & Services';
+const DEFAULT_TITLE =
+  'Teranga : La plateforme qui rapproche la diaspora de son pays. Gérez vos biens et services même quand vous êtes loin.';
+
 const DEFAULT_DESCRIPTION =
   "Teranga — Plateforme moderne qui connecte la diaspora africaine à ses biens, projets et services au pays, avec transparence, preuves et agents certifiés.";
 
@@ -173,15 +175,19 @@ export default function App() {
           {/* ============================= */}
           {/* 🌐 PAGES PUBLIQUES           */}
           {/* ============================= */}
-          <Route
-            path="/"
-            element={
-              <>
-                <SetSeo title="Accueil" />
-                <HomePage />
-              </>
-            }
-          />
+<Route
+  path="/"
+  element={
+    <>
+      <SetSeo
+        title="La plateforme qui rapproche la diaspora de son pays. Gérez vos biens et services même quand vous êtes loin."
+        description="Teranga est la plateforme moderne qui permet à la diaspora africaine de gérer ses biens, services et projets au pays, avec transparence totale, preuves à chaque étape et agents certifiés."
+      />
+      <HomePage />
+    </>
+  }
+/>
+
 
           <Route
             path="/shop"
