@@ -1,12 +1,15 @@
 // ============================================================================
 // PrivacyPage.jsx — Politique de confidentialité RGPD • Teranga 2025
 // ============================================================================
-import SetTitle from "../components/SetTitleWrapper";
+import SetSeo from "../components/SetSeo";
 
 export default function PrivacyPage() {
   return (
     <>
-      <SetTitle title="Politique de confidentialité" />
+      <SetSeo
+        title="Politique de confidentialité"
+        description="Politique de confidentialité Teranga conforme au RGPD : données collectées, finalités, droits des utilisateurs, sécurité et durée de conservation."
+      />
 
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 px-4 py-10">
         <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-2xl p-6 sm:p-10 border border-gray-200">
@@ -19,9 +22,7 @@ export default function PrivacyPage() {
 
             <p>
               La présente politique explique comment Teranga collecte, utilise,
-              stocke et protège vos données personnelles conformément au RGPD
-              (Règlement Général sur la Protection des Données — UE) et aux bonnes
-              pratiques de protection de la vie privée.
+              stocke et protège vos données personnelles conformément au RGPD.
             </p>
 
             <h2 className="text-xl font-semibold text-gray-900 mt-6">
@@ -39,7 +40,7 @@ export default function PrivacyPage() {
             </h2>
             <p>Les données sont utilisées pour :</p>
             <ul className="list-disc pl-6">
-              <li>Gérer votre compte et votre authentification</li>
+              <li>Gérer votre compte</li>
               <li>Exécuter les services demandés</li>
               <li>Assurer la sécurité de l’application</li>
               <li>Suivre les projets, biens et transactions</li>
@@ -49,16 +50,16 @@ export default function PrivacyPage() {
               3. Conservation des données
             </h2>
             <p>
-              Les données sont conservées aussi longtemps que nécessaire à
-              l’exécution des services ou conformément aux obligations légales.
+              Les données sont conservées aussi longtemps que nécessaire ou selon
+              les obligations légales.
             </p>
 
             <h2 className="text-xl font-semibold text-gray-900 mt-6">
               4. Partage des données
             </h2>
             <p>
-              Teranga ne revend pas vos données. Elles peuvent être transmises à
-              des agents certifiés uniquement pour l’exécution des services.
+              Teranga ne revend pas vos données. Elles peuvent être transmises aux
+              agents certifiés uniquement pour exécuter les services.
             </p>
 
             <h2 className="text-xl font-semibold text-gray-900 mt-6">

@@ -1,12 +1,15 @@
 // ============================================================================
 // TermsPage.jsx — Conditions générales d'utilisation • Teranga 2025
 // ============================================================================
-import SetTitle from "../components/SetTitleWrapper";
+import SetSeo from "../components/SetSeo";
 
 export default function TermsPage() {
   return (
     <>
-      <SetTitle title="Conditions d'utilisation" />
+      <SetSeo 
+        title="Conditions d'utilisation"
+        description="Découvrez les conditions d'utilisation de Teranga : règles, responsabilités et fonctionnement de la plateforme dédiée à la diaspora."
+      />
 
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 px-4 py-10">
         <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-2xl p-6 sm:p-10 border border-gray-200">
