@@ -1,163 +1,170 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { login, me } from '../services/auth';
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { login, me } from "../services/auth";
+import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // ✅ nouveau state
+  // Champs
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  // États
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
   const navigate = useNavigate();
 
-  // ✅ Redirection si déjà connecté
+  // =====================================================================
+  // 🔐 Redirection automatique si utilisateur déjà connecté
+  // =====================================================================
   useEffect(() => {
     async function check() {
       try {
         const u = await me();
-        if (u?.user) navigate('/dashboard');
+        if (u?.user) navigate("/dashboard");
       } catch {
-        // pas connecté : normal
+        // utilisateur non connecté, normal
       }
     }
     check();
   }, [navigate]);
 
+  // =====================================================================
+  // 🚪 Connexion
+  // =====================================================================
   async function handleLogin(e) {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg("");
+
     try {
       await login({ email, password });
-      navigate('/dashboard');
+      navigate("/dashboard");
     } catch (e) {
-      alert('❌ Échec de connexion : vérifiez vos identifiants.');
+      setErrorMsg("Échec de connexion : identifiants invalides.");
     } finally {
       setLoading(false);
     }
   }
 
+  // =====================================================================
+  // 🖥️ UI
+  // =====================================================================
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
-      <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        {/* Logo / Titre */}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
+      <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-8 border border-gray-100 relative">
+
+        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <span className="text-3xl">🌍</span>
-            <h1 className="text-2xl font-bold text-blue-700">Teranga</h1>
-          </div>
-          <p className="text-gray-600 text-sm">
-            Connectez-vous à votre espace personnel
+          <img 
+            src="/logo_180x180.png" 
+            alt="Logo Teranga" 
+            className="w-16 h-16 mx-auto mb-2 drop-shadow-sm"
+          />
+          <h1 className="text-2xl font-extrabold text-blue-700 tracking-tight">
+            Connexion Teranga
+          </h1>
+          <p className="text-gray-600 text-sm mt-1">
+            Accédez à votre espace sécurisé
           </p>
         </div>
 
+        {/* Message d'erreur */}
+        {errorMsg && (
+          <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+            {errorMsg}
+          </div>
+        )}
+
         {/* Formulaire */}
         <form onSubmit={handleLogin} className="space-y-5">
-          {/* Champ Email */}
+
+          {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-800 mb-1">
               Adresse email
             </label>
-            <input
-              type="email"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              placeholder="exemple@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoFocus
-              required
-            />
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+
+              <input
+                type="email"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 text-sm 
+                           focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                placeholder="exemple@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoFocus
+                required
+              />
+            </div>
           </div>
 
-          {/* Champ Mot de passe */}
+          {/* Mot de passe */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-800 mb-1">
               Mot de passe
             </label>
+
             <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+
               <input
-                type={showPassword ? 'text' : 'password'} // 👀 bascule ici
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                type={showPassword ? "text" : "password"}
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2 text-sm 
+                           focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              {/* Bouton afficher/masquer */}
+
+              {/* Afficher / cacher */}
               <button
                 type="button"
+                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-blue-600 focus:outline-none"
-                tabIndex={-1}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-blue-600"
               >
-                {showPassword ? (
-                  // 👁️ Icône "visible"
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.8"
-                    stroke="currentColor"
-                    className="w-5 h-5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M2.036 12.322a1.012 1.012 0 010-.644C3.423 7.51 7.3 4.5 12 4.5c4.7 0 8.578 3.01 9.964 7.178a1.012 1.012 0 010 .644C20.578 16.49 16.7 19.5 12 19.5c-4.7 0-8.578-3.01-9.964-7.178z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                ) : (
-                  // 🙈 Icône "caché"
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.8"
-                    stroke="currentColor"
-                    className="w-5 h-5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3.98 8.223a10.477 10.477 0 00-1.7 3.77 1.012 1.012 0 000 .514C3.657 16.49 7.536 19.5 12 19.5c1.59 0 3.09-.312 4.45-.877m3.57-2.26A10.45 10.45 0 0021.72 12a10.48 10.48 0 00-4.312-5.44M9.88 9.88a3 3 0 104.24 4.24M3 3l18 18"
-                    />
-                  </svg>
-                )}
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
           </div>
 
-          {/* Bouton de connexion */}
+          {/* Connexion */}
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-2.5 text-white font-semibold rounded-lg transition
-              ${
-                loading
-                  ? 'bg-blue-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
-              }`}
+            className={`w-full py-2.5 text-white font-semibold rounded-lg transition flex items-center justify-center
+              ${loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"}`}
           >
-            {loading ? 'Connexion...' : 'Se connecter'}
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin w-5 h-5 mr-2" />
+                Connexion…
+              </>
+            ) : (
+              "Se connecter"
+            )}
           </button>
         </form>
 
-        {/* Aide / liens */}
+        {/* Liens supplémentaires */}
         <div className="mt-8 text-center text-sm text-gray-600">
           <p className="mb-2">
             <strong>Clients :</strong> Vous n’avez pas encore de compte ?
           </p>
+
           <Link
             to="/register"
             className="text-blue-600 font-medium hover:underline"
           >
             ➕ Créer un compte client
           </Link>
+
           <p className="mt-4 text-gray-500 text-xs">
-            Les agents et administrateurs sont créés par l’administrateur.
+            Les agents et administrateurs sont créés uniquement par l’administrateur.
           </p>
         </div>
       </div>
