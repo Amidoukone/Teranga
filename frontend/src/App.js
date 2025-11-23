@@ -7,7 +7,8 @@ import { useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import NavBar from './components/NavBar';
-import Analytics from './utils/analytics';
+import Analytics from './components/Analytics';
+
 
 // 🌐 Pages publiques
 import HomePage from './pages/HomePage';
