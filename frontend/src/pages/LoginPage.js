@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { login, me } from "../services/auth";
-import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail, CheckCircle2 } from "lucide-react";
 
 export default function LoginPage() {
   // Champs
@@ -12,27 +12,38 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // =====================================================================
-  // 🔐 Redirection automatique si utilisateur déjà connecté
-  // =====================================================================
+  /* ==========================================================
+     🔄 Affiche le message de succès (venant de /register)
+  ========================================================== */
+  useEffect(() => {
+    const msg = location.state?.successMsg;
+    if (msg) {
+      setSuccessMsg(msg);
+      window.history.replaceState({}, ""); // nettoyage propre
+    }
+  }, [location.state]);
+
+  /* ==========================================================
+     🔐 Redirection si déjà connecté
+  ========================================================== */
   useEffect(() => {
     async function check() {
       try {
         const u = await me();
         if (u?.user) navigate("/dashboard");
-      } catch {
-        // utilisateur non connecté, normal
-      }
+      } catch {}
     }
     check();
   }, [navigate]);
 
-  // =====================================================================
-  // 🚪 Connexion
-  // =====================================================================
+  /* ==========================================================
+     🚀 Connexion
+  ========================================================== */
   async function handleLogin(e) {
     e.preventDefault();
     setLoading(true);
@@ -41,43 +52,57 @@ export default function LoginPage() {
     try {
       await login({ email, password });
       navigate("/dashboard");
-    } catch (e) {
-      setErrorMsg("Échec de connexion : identifiants invalides.");
+    } catch (err) {
+      console.error("Erreur login:", err);
+
+      // Récupère le vrai message backend
+      const backendMsg = err?.response?.data?.error;
+      setErrorMsg(backendMsg || "Échec de connexion : identifiants invalides.");
     } finally {
       setLoading(false);
     }
   }
 
-  // =====================================================================
-  // 🖥️ UI
-  // =====================================================================
+  /* ==========================================================
+     🖥️ UI
+  ========================================================== */
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
       <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-8 border border-gray-100 relative">
 
-        {/* Logo */}
+        {/* ---------- LOGO + TITRE ---------- */}
         <div className="text-center mb-8">
-          <img 
-            src="/logo_180x180.png" 
-            alt="Logo Teranga" 
+          <img
+            src="/logo_180x180.png"
+            alt="Logo Teranga"
             className="w-16 h-16 mx-auto mb-2 drop-shadow-sm"
           />
+
           <h1 className="text-2xl font-extrabold text-blue-700 tracking-tight">
             Connexion Teranga
           </h1>
+
           <p className="text-gray-600 text-sm mt-1">
             Accédez à votre espace sécurisé
           </p>
         </div>
 
-        {/* Message d'erreur */}
+        {/* ---------- MESSAGE DE SUCCÈS ---------- */}
+        {successMsg && (
+          <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm flex items-start gap-2">
+            <CheckCircle2 className="w-5 h-5 mt-0.5" />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* ---------- MESSAGE D’ERREUR ---------- */}
         {errorMsg && (
           <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
             {errorMsg}
           </div>
         )}
 
-        {/* Formulaire */}
+        {/* ---------- FORMULAIRE ---------- */}
         <form onSubmit={handleLogin} className="space-y-5">
 
           {/* Email */}
@@ -85,6 +110,7 @@ export default function LoginPage() {
             <label className="block text-sm font-medium text-gray-800 mb-1">
               Adresse email
             </label>
+
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
 
@@ -120,7 +146,7 @@ export default function LoginPage() {
                 required
               />
 
-              {/* Afficher / cacher */}
+              {/* Afficher / masquer */}
               <button
                 type="button"
                 aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
@@ -132,7 +158,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Connexion */}
+          {/* Bouton */}
           <button
             type="submit"
             disabled={loading}
@@ -150,10 +176,10 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Liens supplémentaires */}
+        {/* ---------- LIENS SUPPLÉMENTAIRES ---------- */}
         <div className="mt-8 text-center text-sm text-gray-600">
           <p className="mb-2">
-            <strong>Clients :</strong> Vous n’avez pas encore de compte ?
+            <strong>Clients :</strong> vous n’avez pas encore de compte ?
           </p>
 
           <Link
@@ -164,7 +190,7 @@ export default function LoginPage() {
           </Link>
 
           <p className="mt-4 text-gray-500 text-xs">
-            Les agents et administrateurs sont créés uniquement par l’administrateur.
+            Les agents et administrateurs sont créés uniquement par un administrateur.
           </p>
         </div>
       </div>

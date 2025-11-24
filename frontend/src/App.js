@@ -8,7 +8,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import NavBar from './components/NavBar';
 import Analytics from './components/Analytics';
-
+import SetSeo from "./components/SetSeo"; // ✅ Nouvelle source unique SEO
 
 // 🌐 Pages publiques
 import HomePage from './pages/HomePage';
@@ -56,6 +56,7 @@ import OrderTransactionsPage from './pages/OrderTransactionsPage';
 // 🔐 Auth
 import { getToken, getLocalUser } from './services/auth';
 
+
 // ============================================================================
 // 🧭 Scroll automatique
 // ============================================================================
@@ -73,49 +74,6 @@ function ScrollToTop() {
   return null;
 }
 
-// ============================================================================
-// 🧠 SEO Dynamique — Titre + descriptions OG/Twitter
-// ============================================================================
-const DEFAULT_TITLE =
-  'Teranga : La plateforme qui rapproche la diaspora de son pays. Gérez vos biens et services même quand vous êtes loin.';
-
-const DEFAULT_DESCRIPTION =
-  "Teranga — Plateforme moderne qui connecte la diaspora africaine à ses biens, projets et services au pays, avec transparence, preuves et agents certifiés.";
-
-function setOrCreateMeta(selector, attr, value) {
-  if (!value) return;
-
-  let tag = document.querySelector(selector);
-
-  if (!tag) {
-    const match = selector.match(/meta\[(name|property)="([^"]+)"\]/);
-    if (match) {
-      const [, key, val] = match;
-      tag = document.createElement('meta');
-      tag.setAttribute(key, val);
-      document.head.appendChild(tag);
-    }
-  }
-
-  if (tag) tag.setAttribute(attr, value);
-}
-
-function SetSeo({ title, description }) {
-  useEffect(() => {
-    const finalTitle = title ? `${title} – Teranga` : DEFAULT_TITLE;
-    const finalDescription = description || DEFAULT_DESCRIPTION;
-
-    document.title = finalTitle;
-
-    setOrCreateMeta('meta[name="description"]', 'content', finalDescription);
-    setOrCreateMeta('meta[property="og:title"]', 'content', finalTitle);
-    setOrCreateMeta('meta[property="og:description"]', 'content', finalDescription);
-    setOrCreateMeta('meta[name="twitter:title"]', 'content', finalTitle);
-    setOrCreateMeta('meta[name="twitter:description"]', 'content', finalDescription);
-  }, [title, description]);
-
-  return null;
-}
 
 // ============================================================================
 // 🔐 Auth Guards
@@ -157,6 +115,7 @@ function PublicOnly({ children }) {
   return children;
 }
 
+
 // ============================================================================
 // 🧩 App (Final)
 // ============================================================================
@@ -176,19 +135,18 @@ export default function App() {
           {/* ============================= */}
           {/* 🌐 PAGES PUBLIQUES           */}
           {/* ============================= */}
-<Route
-  path="/"
-  element={
-    <>
-      <SetSeo
-        title="La plateforme qui rapproche la diaspora de son pays. Gérez vos biens et services même quand vous êtes loin."
-        description="Teranga est la plateforme moderne qui permet à la diaspora africaine de gérer ses biens, services et projets au pays, avec transparence totale, preuves à chaque étape et agents certifiés."
-      />
-      <HomePage />
-    </>
-  }
-/>
-
+          <Route
+            path="/"
+            element={
+              <>
+                <SetSeo
+                  title="Teranga – Gestion de biens & services pour la diaspora"
+                  description="Teranga est la plateforme moderne qui permet à la diaspora africaine de gérer biens, projets et services à distance, avec transparence et preuves à chaque étape."
+                />
+                <HomePage />
+              </>
+            }
+          />
 
           <Route
             path="/shop"
@@ -223,25 +181,9 @@ export default function App() {
             }
           />
 
-          <Route
-            path="/privacy"
-            element={
-              <>
-                <SetSeo title="Confidentialité" />
-                <PrivacyPage />
-              </>
-            }
-          />
-
-          <Route
-            path="/terms"
-            element={
-              <>
-                <SetSeo title="Conditions d'utilisation" />
-                <TermsPage />
-              </>
-            }
-          />
+          {/* ❗ PrivacyPage et TermsPage gèrent déjà SetSeo en interne → pas ici */}
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
 
           {/* ============================= */}
           {/* 🔐 AUTH PUBLIQUE             */}
@@ -450,7 +392,7 @@ export default function App() {
           />
 
           {/* ============================= */}
-          {/* 👑 ADMIN                   */}
+          {/* 👑 ADMIN                    */}
           {/* ============================= */}
           <Route
             path="/admin/projects"

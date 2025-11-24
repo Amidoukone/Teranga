@@ -19,31 +19,29 @@ export default function RegisterPage() {
 
   const navigate = useNavigate();
 
-  // ============================================================================
-  // 🔐 Redirection si déjà connecté
-  // ============================================================================
+  /* ==========================================================
+     🔐 Redirection si déjà connecté
+  ========================================================== */
   useEffect(() => {
     async function checkUser() {
       try {
         const u = await me();
         if (u?.user) navigate("/dashboard");
-      } catch {
-        // utilisateur non connecté : comportement normal
-      }
+      } catch {}
     }
     checkUser();
   }, [navigate]);
 
-  // ============================================================================
-  // 📝 Gestion du formulaire
-  // ============================================================================
+  /* ==========================================================
+     📝 Mise à jour champs
+  ========================================================== */
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  // ============================================================================
-  // 🚀 Inscription
-  // ============================================================================
+  /* ==========================================================
+     🚀 Inscription
+  ========================================================== */
   async function handleRegister(e) {
     e.preventDefault();
     setLoading(true);
@@ -52,7 +50,7 @@ export default function RegisterPage() {
     try {
       const payload = { ...form, role: "client" };
 
-      // pays ISO2
+      // Normalisation ISO2 du pays
       if (payload.country) {
         payload.country = payload.country.toUpperCase().slice(0, 2);
       }
@@ -60,27 +58,30 @@ export default function RegisterPage() {
       await register(payload);
 
       navigate("/login", {
-        state: { successMsg: "Compte créé avec succès ! Vous pouvez vous connecter." },
+        state: {
+          successMsg: "✔ Votre compte a été créé avec succès ! Vous pouvez vous connecter.",
+        },
       });
 
     } catch (err) {
       console.error("Erreur register:", err);
-      setErrorMsg("Une erreur est survenue. Vérifiez vos informations.");
+
+      // Affichage du vrai message backend
+      const backendMsg = err?.response?.data?.error;
+      setErrorMsg(backendMsg || "Une erreur est survenue. Vérifiez vos informations.");
     } finally {
       setLoading(false);
     }
   }
 
-  // ============================================================================
-  // 🖼️ Interface
-  // ============================================================================
+  /* ==========================================================
+     🖼️ UI
+  ========================================================== */
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
       <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
 
-        {/* ===================================================================== */}
-        {/* LOGO + TITRE */}
-        {/* ===================================================================== */}
+        {/* ----------- LOGO & TITRE ----------- */}
         <div className="text-center mb-8">
           <img
             src="/logo_180x180.png"
@@ -94,25 +95,21 @@ export default function RegisterPage() {
             Inscription réservée aux <strong>clients</strong>
           </p>
           <p className="text-xs text-gray-500">
-            Les agents et administrateurs sont ajoutés par un administrateur.
+            Les agents et administrateurs sont gérés par l’équipe Teranga.
           </p>
         </div>
 
-        {/* ===================================================================== */}
-        {/* MESSAGE D’ERREUR */}
-        {/* ===================================================================== */}
+        {/* ----------- MESSAGE ERREUR ----------- */}
         {errorMsg && (
           <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
             {errorMsg}
           </div>
         )}
 
-        {/* ===================================================================== */}
-        {/* FORMULAIRE */}
-        {/* ===================================================================== */}
+        {/* ----------- FORMULAIRE ----------- */}
         <form onSubmit={handleRegister} className="space-y-5">
 
-          {/* Champ générique réutilisable */}
+          {/* Champs communs */}
           {[
             { field: "firstName", label: "Prénom", icon: User, type: "text", placeholder: "Votre prénom", required: true },
             { field: "lastName", label: "Nom", icon: User, type: "text", placeholder: "Votre nom", required: true },
@@ -131,9 +128,10 @@ export default function RegisterPage() {
                   onChange={(e) => updateField(field, e.target.value)}
                   required={required}
                   className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 text-sm 
-                             focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
               </div>
+
               {field === "country" && (
                 <p className="text-xs text-gray-500 mt-1">
                   Code ISO2 (ex : <strong>SN</strong> = Sénégal).
@@ -142,7 +140,7 @@ export default function RegisterPage() {
             </div>
           ))}
 
-          {/* MOT DE PASSE */}
+          {/* Champ mot de passe */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Mot de passe
@@ -157,23 +155,23 @@ export default function RegisterPage() {
                 value={form.password}
                 onChange={(e) => updateField("password", e.target.value)}
                 required
-                minLength={6}
+                minLength={8} // 🔥 Aligné avec backend
                 className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2 text-sm 
-                           focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
 
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-blue-600"
-                aria-label={showPassword ? "Masquer" : "Afficher"}
-                tabIndex={-1}
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
 
-            <p className="text-xs text-gray-500 mt-1">Minimum 6 caractères.</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Minimum <strong>8</strong> caractères.
+            </p>
           </div>
 
           {/* BOUTON */}
@@ -194,19 +192,15 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        {/* ===================================================================== */}
-        {/* LIEN CONNEXION */}
-        {/* ===================================================================== */}
+        {/* ----------- LIEN CONNEXION ----------- */}
         <div className="mt-8 text-center text-sm text-gray-600">
           <p className="mb-2">Déjà un compte ?</p>
 
-          <Link
-            to="/login"
-            className="text-blue-600 font-medium hover:underline"
-          >
+          <Link to="/login" className="text-blue-600 font-medium hover:underline">
             🔑 Se connecter
           </Link>
         </div>
+
       </div>
     </div>
   );
