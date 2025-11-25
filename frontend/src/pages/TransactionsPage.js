@@ -1,5 +1,5 @@
 // ============================================================================
-// TransactionsPage.jsx — VERSION PRODUCTION SAFE (TERANGA)
+// TransactionsPage.jsx — VERSION PRODUCTION SAFE (TERANGA) — OPTIMISÉE RESPONSIVE
 // ============================================================================
 
 import { useEffect, useState } from 'react';
@@ -19,17 +19,14 @@ import {
 import { Link } from 'react-router-dom';
 
 // ============================================================================
-// 🌍 Helpers URL Production — FICHIERS (proofFile, images…)
+// 🌍 Helpers URL Production — FICHIERS
 // ============================================================================
-
 const FILE_BASE =
   (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
-  (typeof window !== 'undefined' &&
-  window.__TERANGA_API_BASE_URL
+  (typeof window !== 'undefined' && window.__TERANGA_API_BASE_URL
     ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
     : 'http://localhost:5000');
 
-/** Construit une URL absolue propre pour tout fichier */
 function toAbsUrl(path = '') {
   if (!path) return '';
   if (/^https?:\/\//i.test(path)) return path;
@@ -41,7 +38,6 @@ function toAbsUrl(path = '') {
 // 📂 Page principale
 // ============================================================================
 export default function TransactionsPage() {
-  // États initiaux
   const [transactions, setTransactions] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [services, setServices] = useState([]);
@@ -78,8 +74,7 @@ export default function TransactionsPage() {
     sort: '-createdAt',
   });
 
-
-    // ==========================================================================
+  // ==========================================================================
   // 🔹 Initialisation utilisateur + données
   // ==========================================================================
   useEffect(() => {
@@ -105,7 +100,7 @@ export default function TransactionsPage() {
   }, [showForm]);
 
   // ==========================================================================
-  // 🔹 Charger services selon rôle
+  // 🔹 Services selon rôle
   // ==========================================================================
   async function loadServicesByRole(u) {
     try {
@@ -120,7 +115,7 @@ export default function TransactionsPage() {
   }
 
   // ==========================================================================
-  // 🔹 Charger transactions
+  // 🔹 Transactions
   // ==========================================================================
   async function loadTransactions() {
     setLoading(true);
@@ -136,7 +131,7 @@ export default function TransactionsPage() {
   }
 
   // ==========================================================================
-  // 🔹 Service → tâches
+  // 🔹 Service → Tâches
   // ==========================================================================
   async function handleServiceChange(e) {
     const serviceId = e.target.value;
@@ -153,7 +148,7 @@ export default function TransactionsPage() {
   }
 
   // ==========================================================================
-  // 🔹 Soumettre une transaction
+  // 🔹 Soumission formulaire
   // ==========================================================================
   async function handleSubmit(e) {
     e.preventDefault();
@@ -167,7 +162,6 @@ export default function TransactionsPage() {
         projectId: form.projectId ? Number(form.projectId) : undefined,
       };
 
-      // Auto-complete si pas d’objet lié
       if (!payload.orderId && !payload.projectId) {
         payload.status = 'completed';
       }
@@ -201,7 +195,7 @@ export default function TransactionsPage() {
   }
 
   // ==========================================================================
-  // 🔹 Format nom utilisateur
+  // 🔹 Affichage utilisateur
   // ==========================================================================
   function getUserDisplayName(u) {
     if (!u) return '—';
@@ -213,7 +207,7 @@ export default function TransactionsPage() {
   }
 
   // ==========================================================================
-  // 🔍 Filtres premium
+  // 🔍 Filtres premium (optimisés)
   // ==========================================================================
   useEffect(() => {
     let arr = [...transactions];
@@ -246,7 +240,6 @@ export default function TransactionsPage() {
     if (filters.order) arr = arr.filter((t) => t.order?.id === Number(filters.order));
     if (filters.project) arr = arr.filter((t) => t.project?.id === Number(filters.project));
 
-    // tri
     const by = filters.sort || '-createdAt';
     arr.sort((a, b) => {
       const sign = by.startsWith('-') ? -1 : 1;
@@ -269,7 +262,6 @@ export default function TransactionsPage() {
 
     setFiltered(arr);
   }, [transactions, filters]);
-
 
   // ==========================================================================
   // 🔹 UI PRINCIPALE
@@ -296,10 +288,10 @@ export default function TransactionsPage() {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
+              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition w-full sm:w-auto"
             >
               {showForm ? '➖ Masquer' : '➕ Nouvelle transaction'}
             </button>
@@ -307,7 +299,7 @@ export default function TransactionsPage() {
             <button
               onClick={loadTransactions}
               disabled={loading}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition ${
+              className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition w-full sm:w-auto ${
                 loading
                   ? 'bg-blue-300 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -354,24 +346,29 @@ export default function TransactionsPage() {
 }
 
 // ============================================================================
-// 🔹 Filtres Composant
+// 🔹 Filtres Composant — 100% responsive & espacement optimisé
 // ============================================================================
 function TransactionFilters({ filters, setFilters, services, filteredCount }) {
   return (
     <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-3">
 
-        <input
-          placeholder="🔎 Rechercher"
-          value={filters.q}
-          onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm col-span-2 focus:ring-2 focus:ring-blue-500"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
 
+        {/* Recherche */}
+        <div className="lg:col-span-2">
+          <input
+            placeholder="🔎 Rechercher une transaction…"
+            value={filters.q}
+            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Type */}
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full"
         >
           <option value="">Type</option>
           {Object.entries(TRANSACTION_TYPES).map(([key, label]) => (
@@ -379,17 +376,19 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
           ))}
         </select>
 
+        {/* Paiement */}
         <input
           placeholder="Mode paiement"
           value={filters.payment}
           onChange={(e) => setFilters({ ...filters, payment: e.target.value.toLowerCase() })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full"
         />
 
+        {/* Service */}
         <select
           value={filters.service}
           onChange={(e) => setFilters({ ...filters, service: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full"
         >
           <option value="">Service</option>
           {services.map((s) => (
@@ -397,10 +396,11 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
           ))}
         </select>
 
+        {/* Tri */}
         <select
           value={filters.sort}
           onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white col-span-2"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full lg:col-span-2"
         >
           <option value="-createdAt">Plus récentes</option>
           <option value="createdAt">Plus anciennes</option>
@@ -409,8 +409,11 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
         </select>
       </div>
 
-      <div className="flex justify-between text-xs text-gray-500">
+      {/* Bas des filtres */}
+      <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-500">
+
         <span>{filteredCount} transaction(s)</span>
+
         <button
           onClick={() =>
             setFilters({
@@ -423,7 +426,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
               sort: '-createdAt',
             })
           }
-          className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300"
+          className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 w-full sm:w-auto text-center"
         >
           Réinitialiser
         </button>
@@ -433,7 +436,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
 }
 
 // ============================================================================
-// 🔹 Formulaire
+// 🔹 Formulaire Transaction — Responsive amélioré
 // ============================================================================
 function TransactionForm({
   form,
@@ -495,7 +498,7 @@ function TransactionForm({
           </select>
         </div>
 
-        {/* méthode paiement */}
+        {/* paiement */}
         <input
           placeholder="Mode paiement"
           value={form.paymentMethod}
@@ -569,7 +572,6 @@ function TransactionForm({
           className="sm:col-span-2 border px-3 py-2 rounded-lg bg-white"
         />
 
-        {/* bouton */}
         <div className="sm:col-span-2 text-right">
           <button
             type="submit"
@@ -585,7 +587,7 @@ function TransactionForm({
 }
 
 // ============================================================================
-// 🔹 Liste Transactions
+// 🔹 Liste Transactions — responsive améliorée
 // ============================================================================
 function TransactionList({ transactions, loading, getUserDisplayName }) {
   if (loading)
@@ -601,34 +603,29 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
     );
 
   return (
-    <div className="grid gap-5 sm:grid-cols-2">
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {transactions.map((t) => (
         <div
           key={t.id}
           className="bg-white border rounded-xl shadow-sm p-5 hover:shadow-md transition flex flex-col"
         >
           <div className="mb-3">
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-gray-900 break-words">
               {t.typeLabel} — {Number(t.amount).toLocaleString()} {t.currencyLabel}
             </h3>
 
-            <span className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-1 rounded-full">
+            <span className="inline-block text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-1 rounded-full mt-1">
               {t.statusLabel}
             </span>
 
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-sm text-gray-600 mt-2 break-words">
               {t.description || 'Aucune description'}
             </p>
           </div>
 
-          <div className="flex-1 text-sm text-gray-700 space-y-2">
-            {t.service && (
-              <p>🔗 <strong>Service :</strong> {t.service.title}</p>
-            )}
-
-            {t.task && (
-              <p>🔧 <strong>Tâche :</strong> {t.task.title}</p>
-            )}
+          <div className="flex-1 text-sm text-gray-700 space-y-2 break-words">
+            {t.service && <p>🔗 <strong>Service :</strong> {t.service.title}</p>}
+            {t.task && <p>🔧 <strong>Tâche :</strong> {t.task.title}</p>}
 
             {t.project && (
               <p>

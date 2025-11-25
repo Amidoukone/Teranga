@@ -113,22 +113,28 @@ function Btn({
 ============================================================ */
 function getTransactionAuthorLabel(t) {
   if (!t) return "—";
-  if (t.createdBy?.firstName || t.createdBy?.lastName)
-    return `${t.createdBy.firstName || ""} ${t.createdBy.lastName || ""}`.trim();
 
-  if (t.createdByUser?.firstName || t.createdByUser?.lastName)
-    return `${t.createdByUser.firstName || ""} ${t.createdByUser.lastName || ""}`.trim();
+  // Le backend renvoie déjà `user` pour l'auteur réel
+  if (t.user) {
+    const fn = t.user.firstName || t.user.firstname || "";
+    const ln = t.user.lastName || t.user.lastname || "";
 
-  return (
-    t.createdByLabel ||
-    t.createdByName ||
-    t.createdByEmail ||
-    t.userLabel ||
-    t.userName ||
-    t.userEmail ||
-    "—"
-  );
+    const full = `${fn} ${ln}`.trim();
+    if (full.length > 0) return full;
+
+    if (t.user.email) return t.user.email;
+  }
+
+  // fallback (rare)
+  if (t.createdByUser) {
+    const full = `${t.createdByUser.firstName || ""} ${t.createdByUser.lastName || ""}`.trim();
+    if (full.length > 0) return full;
+    if (t.createdByUser.email) return t.createdByUser.email;
+  }
+
+  return "—";
 }
+
 
 /* ============================================================
    💰 Formulaire de transaction liée au projet

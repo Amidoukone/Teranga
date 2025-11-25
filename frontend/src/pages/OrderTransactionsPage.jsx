@@ -250,25 +250,27 @@ export default function OrderTransactionsPage() {
       Rendu principal
   ============================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100">
         
-        {/* HEADER */}
+        {/* HEADER — 100% responsive mobile / tablette / desktop */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
+          {/* Bloc titre */}
+          <div className="max-w-full break-words">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
               💰 <span>Transactions de la commande #{id}</span>
             </h1>
-            <p className="text-sm text-slate-600 mt-1">
+            <p className="text-sm text-slate-600 mt-1 break-words">
               Suivi des paiements et mouvements financiers.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2 justify-end">
+          {/* Boutons actions (stack sur mobile, inline sur desktop) */}
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
             {canCreate && (
               <button
                 onClick={() => setShowForm((v) => !v)}
-                className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900"
+                className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 text-center"
               >
                 {showForm ? '➖ Masquer' : '➕ Nouvelle transaction'}
               </button>
@@ -277,9 +279,9 @@ export default function OrderTransactionsPage() {
             <button
               onClick={loadTransactions}
               disabled={loading}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm ${
+              className={`w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm text-center ${
                 loading
-                  ? 'bg-blue-300 cursor-not-allowed'
+                  ? 'bg-blue-300 cursor-not-allowed text-white'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
@@ -288,7 +290,7 @@ export default function OrderTransactionsPage() {
 
             <button
               onClick={() => navigate(`/orders/${id}`)}
-              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300"
+              className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300 text-center"
             >
               ← Retour
             </button>
@@ -313,11 +315,14 @@ export default function OrderTransactionsPage() {
         )}
 
         {/* LISTE */}
-        <TransactionList transactions={filteredTransactions} loading={loading} />
+        <TransactionList
+          transactions={filteredTransactions}
+          loading={loading}
+        />
       </div>
     </div>
   );
-}
+} 
 
 /* ============================================================
    🔹 Sous-composants — Filtres / Formulaire / Liste
@@ -325,22 +330,24 @@ export default function OrderTransactionsPage() {
 
 function TransactionFilters({ filters, setFilters, count }) {
   return (
-    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-        
-        {/* Recherche */}
+    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5">
+      {/* Ligne recherche seule — pleine largeur, plus respirable */}
+      <div className="flex flex-col lg:flex-row gap-3 mb-4">
         <input
-          placeholder="🔎 Rechercher (type, statut, description...)"
+          placeholder="🔎 Rechercher (type, statut, description, méthode, utilisateur...)"
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+          className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white shadow-sm break-words"
         />
+      </div>
 
+      {/* Ligne filtres compactes mais fluides */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         {/* Type */}
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full"
         >
           <option value="">Type (tous)</option>
           {Object.entries(TRANSACTION_TYPES).map(([key, label]) => (
@@ -357,14 +364,14 @@ function TransactionFilters({ filters, setFilters, count }) {
           onChange={(e) =>
             setFilters({ ...filters, payment: e.target.value })
           }
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full"
         />
 
-        {/* Tri */}
+        {/* Tri — prend plus de place sur les grands écrans */}
         <select
           value={filters.sort}
           onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-          className="col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full sm:col-span-2 lg:col-span-4"
         >
           <option value="-createdAt">Plus récentes</option>
           <option value="createdAt">Plus anciennes</option>
@@ -373,13 +380,14 @@ function TransactionFilters({ filters, setFilters, count }) {
         </select>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+      {/* Bas de bloc : compteur + reset (stack sur mobile) */}
+      <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-500">
         <div>{count} transaction(s)</div>
         <button
           onClick={() =>
             setFilters({ q: '', type: '', payment: '', sort: '-createdAt' })
           }
-          className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300"
+          className="w-full sm:w-auto px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium text-center"
         >
           Réinitialiser
         </button>
@@ -400,7 +408,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
 
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-200"
+        className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 sm:p-5 rounded-xl border border-gray-200"
       >
         {/* Type */}
         <div>
@@ -505,7 +513,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
           <button
             type="submit"
             disabled={loading}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm ${
+            className={`w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm ${
               loading
                 ? 'bg-blue-300 cursor-not-allowed'
                 : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -551,10 +559,9 @@ function TransactionList({ transactions, loading }) {
             className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md transition"
           >
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-              
               {/* Left block */}
-              <div>
-                <div className="flex items-center gap-2">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                     {t.typeLabel || t.type}
                   </span>
@@ -566,16 +573,16 @@ function TransactionList({ transactions, loading }) {
                   )}
                 </div>
 
-                <h3 className="text-lg font-semibold text-gray-900 mt-2">
+                <h3 className="text-lg font-semibold text-gray-900 mt-2 break-words">
                   {Number(t.amount || 0).toLocaleString()} {currencyLabel}
                 </h3>
 
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-gray-600 mt-1 break-words">
                   {t.description || 'Aucune description fournie.'}
                 </p>
 
                 {t.paymentMethod && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-1 break-words">
                     Méthode :{' '}
                     <span className="font-medium">{t.paymentMethod}</span>
                   </p>
@@ -583,7 +590,7 @@ function TransactionList({ transactions, loading }) {
               </div>
 
               {/* Right block */}
-              <div className="text-xs text-gray-500 text-right mt-1 sm:mt-0">
+              <div className="text-xs text-gray-500 text-right mt-1 sm:mt-0 whitespace-nowrap">
                 <div>
                   Créée le{' '}
                   <strong>{new Date(t.createdAt).toLocaleDateString()}</strong>
@@ -595,7 +602,7 @@ function TransactionList({ transactions, loading }) {
               </div>
             </div>
 
-            <div className="mt-3 flex flex-col sm:flex-row justify-between text-sm">
+            <div className="mt-3 flex flex-col sm:flex-row justify-between text-sm gap-1 sm:gap-0">
               <div className="text-xs text-gray-500">
                 Saisie par <strong>{userDisplay}</strong>
               </div>
@@ -617,3 +624,4 @@ function TransactionList({ transactions, loading }) {
     </div>
   );
 }
+
