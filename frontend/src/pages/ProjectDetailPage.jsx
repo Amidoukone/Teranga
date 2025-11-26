@@ -1,4 +1,8 @@
+// ============================================================
 // frontend/src/pages/ProjectDetailPage.jsx
+// Version Premium Responsive — PARTIE 1 / 2
+// ============================================================
+
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { me } from "../services/auth";
@@ -12,27 +16,24 @@ import {
   deleteProjectDocument,
   updateProject,
 } from "../services/projects";
-import { applyLabels, CURRENCY_LABELS } from "../utils/labels"; 
+import { applyLabels, CURRENCY_LABELS } from "../utils/labels";
 import {
   getTransactions,
   createTransaction,
 } from "../services/transactions";
 
 /* ============================================================
-   🌐 FILE_BASE + Helpers (Option B)
+   🌐 FILE_BASE + Helpers
 ============================================================ */
 const FILE_BASE =
   window.__TERANGA_FILE_BASE_URL ||
   process.env.REACT_APP_FILE_BASE_URL ||
   "";
 
-// /uploads/a/b.jpg → https://..../uploads/a/b.jpg
 function normalizePath(path = "") {
   if (!path) return "";
   const clean = String(path).trim().replace(/\\/g, "/");
-
   if (/^https?:\/\//i.test(clean)) return clean;
-
   const pref = clean.startsWith("/") ? clean : "/" + clean;
   return pref.replace(/\/{2,}/g, "/");
 }
@@ -49,7 +50,7 @@ function toAbsUrl(path = "") {
 }
 
 /* ============================================================
-   🎨 UI Components — Style B
+   UI Components
 ============================================================ */
 function Badge({ color = "gray", children }) {
   const colors = {
@@ -61,7 +62,7 @@ function Badge({ color = "gray", children }) {
   };
   return (
     <span
-      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ring-1 shadow-sm whitespace-normal break-words ${colors[color]}`}
+      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ring-1 shadow-sm ${colors[color]}`}
     >
       {children}
     </span>
@@ -99,7 +100,6 @@ function Btn({
         transition-all duration-150 
         focus:outline-none focus:ring-2 focus:ring-offset-1 
         disabled:opacity-60 disabled:cursor-not-allowed
-        whitespace-normal break-words text-center
         ${styles[variant]} ${sizeClasses[size]} ${className}
       `}
     >
@@ -109,23 +109,19 @@ function Btn({
 }
 
 /* ============================================================
-   🧾 Helper : libellé auteur transaction
+   🧾 Auteur transaction
 ============================================================ */
 function getTransactionAuthorLabel(t) {
   if (!t) return "—";
 
-  // Le backend renvoie déjà `user` pour l'auteur réel
   if (t.user) {
     const fn = t.user.firstName || t.user.firstname || "";
     const ln = t.user.lastName || t.user.lastname || "";
-
     const full = `${fn} ${ln}`.trim();
     if (full.length > 0) return full;
-
     if (t.user.email) return t.user.email;
   }
 
-  // fallback (rare)
   if (t.createdByUser) {
     const full = `${t.createdByUser.firstName || ""} ${t.createdByUser.lastName || ""}`.trim();
     if (full.length > 0) return full;
@@ -135,9 +131,8 @@ function getTransactionAuthorLabel(t) {
   return "—";
 }
 
-
 /* ============================================================
-   💰 Formulaire de transaction liée au projet
+   💰 Formulaire transaction projet
 ============================================================ */
 function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
   const [form, setForm] = useState({
@@ -154,6 +149,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
     e.preventDefault();
     try {
       setSaving(true);
+
       await createTransaction({
         ...form,
         amount: form.amount === "" ? undefined : Number(form.amount),
@@ -190,7 +186,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       <select
         value={form.type}
         onChange={(e) => setForm({ ...form, type: e.target.value })}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
+        className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
       >
         <option value="expense">Dépense</option>
         <option value="revenue">Revenu</option>
@@ -205,13 +201,13 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         value={form.amount}
         onChange={(e) => setForm({ ...form, amount: e.target.value })}
         required
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
+        className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
       />
 
       <select
         value={form.currency}
         onChange={(e) => setForm({ ...form, currency: e.target.value })}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
+        className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
       >
         {Object.entries(CURRENCY_LABELS).map(([key, label]) => (
           <option key={key} value={key}>
@@ -223,19 +219,15 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       <input
         placeholder="Méthode de paiement"
         value={form.paymentMethod}
-        onChange={(e) =>
-          setForm({ ...form, paymentMethod: e.target.value })
-        }
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
+        onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
+        className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
       />
 
       <textarea
         placeholder="Description"
         value={form.description}
-        onChange={(e) =>
-          setForm({ ...form, description: e.target.value })
-        }
-        className="sm:col-span-2 border border-slate-300 rounded-lg px-3 py-2 text-sm"
+        onChange={(e) => setForm({ ...form, description: e.target.value })}
+        className="sm:col-span-2 border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
       />
 
       <input
@@ -244,7 +236,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         onChange={(e) =>
           setForm({ ...form, proofFile: e.target.files?.[0] || null })
         }
-        className="sm:col-span-2 text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white"
+        className="sm:col-span-2 text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white w-full block min-w-0"
       />
 
       <div className="sm:col-span-2 flex justify-end">
@@ -257,7 +249,10 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
 }
 
 /* ============================================================
-   🧠 PAGE PRINCIPALE ProjectDetailPage — DÉBUT
+   PAGE PRINCIPALE ProjectDetailPage — (suite PARTIE 2)
+============================================================ */
+/* ============================================================
+   🧠 PAGE PRINCIPALE ProjectDetailPage — PARTIE 2 / 2
 ============================================================ */
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -288,21 +283,20 @@ export default function ProjectDetailPage() {
 
   const [now, setNow] = useState(Date.now());
 
-  // Rafraîchissement affichage du chrono client (1h)
+  // rafraîchissement fenêtre édition client (1h)
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
 
-  // ACL
   const isAdmin = user?.role === "admin";
   const isAgent = user?.role === "agent";
   const isClient = user?.role === "client";
   const isAssignedAgent = isAgent && project?.agent?.id === user?.id;
+
   const clientCanAddDocs = isClient;
   const agentCanAddDocs = isAssignedAgent;
 
-  // Fenêtre client (1h)
   const createdAtMs = useMemo(() => {
     if (!project?.createdAt) return null;
     const t = new Date(project.createdAt).getTime();
@@ -316,6 +310,7 @@ export default function ProjectDetailPage() {
 
   const clientCanModifyOrDelete = isClient && withinOneHour;
 
+  // chrono restant
   const timeLeftText = useMemo(() => {
     if (!clientCanModifyOrDelete || !createdAtMs) return "";
     const msLeft = 3600000 - (now - createdAtMs);
@@ -325,7 +320,7 @@ export default function ProjectDetailPage() {
   }, [clientCanModifyOrDelete, createdAtMs, now]);
 
   /* ============================================================
-     🔹 Chargement complet du projet
+     🔹 Chargement
   ============================================================ */
   const loadProject = useCallback(async (pid) => {
     if (!pid) return;
@@ -338,6 +333,7 @@ export default function ProjectDetailPage() {
       ]);
 
       if (!isMounted.current) return;
+
       setProject(applyLabels(p));
       setPhases((phs || []).map(applyLabels));
       setDocuments(docs || []);
@@ -351,6 +347,7 @@ export default function ProjectDetailPage() {
 
   useEffect(() => {
     isMounted.current = true;
+
     (async () => {
       try {
         const { user: u } = await me();
@@ -370,7 +367,7 @@ export default function ProjectDetailPage() {
   }, [id, loadProject]);
 
   /* ============================================================
-     🔹 Mise à jour statut projet (ADMIN)
+     🔹 Statut project (admin)
   ============================================================ */
   async function handleStatusChange(newStatus) {
     if (!isAdmin) return;
@@ -404,7 +401,7 @@ export default function ProjectDetailPage() {
   }, [transactions]);
 
   /* ============================================================
-     🔹 Phases : ajout / édition / suppression
+     🔹 Phases
   ============================================================ */
   async function handlePhaseSubmit(e) {
     e.preventDefault();
@@ -413,7 +410,6 @@ export default function ProjectDetailPage() {
         ...phaseForm,
         projectId: project.id,
       };
-
       if (editPhaseId) payload.id = editPhaseId;
 
       await saveProjectPhase(payload);
@@ -436,7 +432,7 @@ export default function ProjectDetailPage() {
   }
 
   /* ============================================================
-     🔹 Documents
+     🔹 Documents — RESPONSIVE FIX
   ============================================================ */
   function handleFileChange(e) {
     setFiles(Array.from(e.target.files || []));
@@ -444,6 +440,7 @@ export default function ProjectDetailPage() {
 
   async function handleUploadDocuments(e) {
     e.preventDefault();
+
     try {
       await uploadProjectDocuments(
         project.id,
@@ -453,6 +450,7 @@ export default function ProjectDetailPage() {
         { title: docTitle || undefined, kind: docKind || "other" }
       );
 
+      // reset
       setFiles([]);
       setNotes("");
       setDocTitle("");
@@ -510,7 +508,8 @@ export default function ProjectDetailPage() {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="max-w-6xl mx-auto">
-        {/* NAV HEADER */}
+
+        {/* ========================= BACK BUTTON ========================= */}
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigate("/projects")}
@@ -520,11 +519,13 @@ export default function ProjectDetailPage() {
           </button>
         </div>
 
-        {/* CARD PRINCIPALE */}
+        {/* ========================= CARD PRINCIPALE ========================= */}
         <div className="bg-white shadow-lg rounded-3xl border border-slate-100 p-6 md:p-8 space-y-10">
-          {/* HEADER */}
+
+          {/* ----------------------- HEADER ----------------------- */}
           <div className="flex flex-col md:flex-row md:justify-between gap-6">
-            <div className="space-y-3 flex-1">
+            <div className="space-y-3 flex-1 min-w-0">
+
               <div className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 text-xs text-slate-500 rounded-full">
                 <span>Projet #{project.id}</span>
                 {project.createdAt && (
@@ -564,8 +565,8 @@ export default function ProjectDetailPage() {
                 )}
 
                 <Badge color="green">
-                  💰 Budget : {Number(project.budget || 0).toLocaleString("fr-FR")}{" "}
-                  XOF
+                  💰 Budget :{" "}
+                  {Number(project.budget || 0).toLocaleString("fr-FR")} XOF
                 </Badge>
 
                 {isClient && (
@@ -583,6 +584,7 @@ export default function ProjectDetailPage() {
               <h3 className="text-xs font-semibold text-slate-500 uppercase">
                 Synthèse financière
               </h3>
+
               <div className="space-y-2 text-sm mt-2">
                 <div className="flex justify-between">
                   <span>Revenus</span>
@@ -614,11 +616,12 @@ export default function ProjectDetailPage() {
             </div>
           </div>
 
-          {/* CONTENT GRID */}
+          {/* ========================= GRID PRINCIPALE ========================= */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* LEFT : TRANSACTIONS + PHASES */}
+            {/* ----------- LARGE COLUMN : Transactions + Phases ----------- */}
             <div className="lg:col-span-2 space-y-8">
-              {/* TRANSACTIONS */}
+
+              {/* ---------------- TRANSACTIONS LIEES ---------------- */}
               <section>
                 <h2 className="text-lg font-semibold text-slate-900 mb-3">
                   💰 Transactions liées
@@ -650,6 +653,7 @@ export default function ProjectDetailPage() {
                           <th className="px-3 py-2 text-left">Date</th>
                         </tr>
                       </thead>
+
                       <tbody>
                         {transactions.map((t) => (
                           <tr key={t.id} className="border-t border-slate-100">
@@ -678,14 +682,13 @@ export default function ProjectDetailPage() {
                 )}
               </section>
 
-              {/* PHASES */}
+              {/* ---------------- PHASES DU PROJET ---------------- */}
               <section>
                 <h2 className="text-lg font-semibold text-slate-900 mb-3">
                   🗂️ Phases du projet
                 </h2>
 
-                {(isAdmin ||
-                  (isClient && clientCanModifyOrDelete)) && (
+                {(isAdmin || (isClient && clientCanModifyOrDelete)) && (
                   <form
                     onSubmit={handlePhaseSubmit}
                     className="bg-slate-50 border border-slate-200 p-5 rounded-2xl mb-5 grid gap-4 md:grid-cols-2"
@@ -697,7 +700,7 @@ export default function ProjectDetailPage() {
                         setPhaseForm({ ...phaseForm, title: e.target.value })
                       }
                       required
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
 
                     <input
@@ -709,7 +712,7 @@ export default function ProjectDetailPage() {
                           description: e.target.value,
                         })
                       }
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
 
                     <input
@@ -721,7 +724,7 @@ export default function ProjectDetailPage() {
                           startDate: e.target.value,
                         })
                       }
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
 
                     <input
@@ -733,7 +736,7 @@ export default function ProjectDetailPage() {
                           endDate: e.target.value,
                         })
                       }
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
 
                     <div className="md:col-span-2 flex justify-end gap-2">
@@ -747,6 +750,7 @@ export default function ProjectDetailPage() {
                           Annuler
                         </Btn>
                       )}
+
                       <Btn type="submit" variant="primary" size="sm">
                         {editPhaseId ? "💾 Enregistrer" : "➕ Ajouter"}
                       </Btn>
@@ -767,14 +771,16 @@ export default function ProjectDetailPage() {
                       >
                         <div className="flex justify-between">
                           <div className="min-w-0">
-                            <h3 className="text-sm font-semibold text-slate-900">
+                            <h3 className="text-sm font-semibold text-slate-900 break-words">
                               {ph.title}
                             </h3>
+
                             {ph.description && (
-                              <p className="text-xs text-slate-600 mt-1">
+                              <p className="text-xs text-slate-600 mt-1 break-words">
                                 {ph.description}
                               </p>
                             )}
+
                             <p className="text-[11px] text-slate-500 mt-1">
                               Début :
                               {ph.startDate
@@ -792,9 +798,7 @@ export default function ProjectDetailPage() {
                             </p>
                           </div>
 
-                          {(isAdmin ||
-                            isAssignedAgent ||
-                            (isClient && clientCanModifyOrDelete)) && (
+                          {(isAdmin || isAssignedAgent || clientCanModifyOrDelete) && (
                             <div className="flex flex-col gap-1">
                               <Btn
                                 variant="warning"
@@ -820,16 +824,12 @@ export default function ProjectDetailPage() {
                                 variant="danger"
                                 size="xs"
                                 onClick={async () => {
-                                  if (
-                                    !window.confirm(
-                                      "Supprimer cette phase ?"
-                                    )
-                                  )
+                                  if (!window.confirm("Supprimer cette phase ?"))
                                     return;
                                   try {
                                     await deleteProjectPhase(ph.id);
                                     await loadProject(project.id);
-                                  } catch (err) {
+                                  } catch {
                                     alert("Erreur suppression phase.");
                                   }
                                 }}
@@ -846,7 +846,7 @@ export default function ProjectDetailPage() {
               </section>
             </div>
 
-            {/* RIGHT : DOCUMENTS */}
+            {/* ----------- RIGHT COLUMN — DOCUMENTS ----------- */}
             <div className="space-y-6">
               <section>
                 <h2 className="text-lg font-semibold text-slate-900 mb-3">
@@ -856,20 +856,37 @@ export default function ProjectDetailPage() {
                 {(isAdmin || clientCanAddDocs || agentCanAddDocs) && (
                   <form
                     onSubmit={handleUploadDocuments}
-                    className="bg-slate-50 border border-slate-200 p-4 rounded-2xl mb-4 grid gap-3"
+                    className="
+                      bg-slate-50 border border-slate-200 rounded-2xl 
+                      p-4 mb-4 
+                      grid grid-cols-1 sm:grid-cols-2 gap-4
+                    "
                   >
-                    <input
-                      type="file"
-                      multiple
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={handleFileChange}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs"
-                    />
+                    {/* File input */}
+                    <div className="sm:col-span-2">
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={handleFileChange}
+                        className="
+                          w-full block 
+                          border border-slate-300 rounded-lg 
+                          px-3 py-2 text-xs 
+                          bg-white 
+                          min-w-0
+                        "
+                      />
+                    </div>
 
+                    {/* Select phase */}
                     <select
                       value={selectedPhaseId}
                       onChange={(e) => setSelectedPhaseId(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs"
+                      className="
+                        border border-slate-300 rounded-lg 
+                        px-3 py-2 text-xs w-full min-w-0
+                      "
                     >
                       <option value="">— Phase (optionnel)</option>
                       {phases.map((ph) => (
@@ -879,17 +896,25 @@ export default function ProjectDetailPage() {
                       ))}
                     </select>
 
+                    {/* Title */}
                     <input
                       placeholder="Titre (optionnel)"
                       value={docTitle}
                       onChange={(e) => setDocTitle(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs"
+                      className="
+                        border border-slate-300 rounded-lg 
+                        px-3 py-2 text-xs w-full min-w-0
+                      "
                     />
 
+                    {/* Kind */}
                     <select
                       value={docKind}
                       onChange={(e) => setDocKind(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs"
+                      className="
+                        border border-slate-300 rounded-lg 
+                        px-3 py-2 text-xs w-full min-w-0
+                      "
                     >
                       <option value="other">Autre</option>
                       <option value="contract">Contrat</option>
@@ -898,14 +923,18 @@ export default function ProjectDetailPage() {
                       <option value="photo">Photo</option>
                     </select>
 
+                    {/* Notes */}
                     <input
                       placeholder="Notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs"
+                      className="
+                        border border-slate-300 rounded-lg 
+                        px-3 py-2 text-xs w-full min-w-0
+                      "
                     />
 
-                    <div className="flex justify-end">
+                    <div className="sm:col-span-2 flex justify-end">
                       <Btn type="submit" variant="primary" size="sm">
                         📤 Upload
                       </Btn>
@@ -913,6 +942,7 @@ export default function ProjectDetailPage() {
                   </form>
                 )}
 
+                {/* LISTE DOCUMENTS */}
                 {documents.length === 0 ? (
                   <p className="text-slate-500 italic text-sm">
                     Aucun document.
@@ -922,31 +952,33 @@ export default function ProjectDetailPage() {
                     {documents.map((doc) => (
                       <div
                         key={doc.id}
-                        className="border border-slate-200 rounded-2xl p-3.5 bg-white shadow-sm flex flex-col"
+                        className="
+                          border border-slate-200 rounded-2xl 
+                          p-3.5 bg-white shadow-sm 
+                          flex flex-col min-w-0
+                        "
                       >
-                        <div className="space-y-1">
+                        <div className="space-y-1 min-w-0">
                           <p className="font-semibold text-sm text-slate-900 break-words">
                             {doc.title || doc.originalName || "Document"}
                           </p>
 
                           {(doc.phase?.title || doc.phaseTitle) && (
-                            <p className="text-[11px] text-slate-600">
+                            <p className="text-[11px] text-slate-600 break-words">
                               🔗 Phase : {doc.phase?.title || doc.phaseTitle}
                             </p>
                           )}
 
                           <p className="text-[11px] text-slate-500">
-                            {doc.mimeType} —{" "}
-                            {(doc.fileSize / 1024).toFixed(1)} Ko
+                            {doc.mimeType} — {(doc.fileSize / 1024).toFixed(1)} Ko
                           </p>
 
                           <p className="text-[11px] text-slate-400">
-                            Ajouté le{" "}
-                            {new Date(doc.createdAt).toLocaleString("fr-FR")}
+                            Ajouté le {new Date(doc.createdAt).toLocaleString("fr-FR")}
                           </p>
 
                           {doc.notes && (
-                            <p className="text-xs text-slate-700">
+                            <p className="text-xs text-slate-700 break-words">
                               {doc.notes}
                             </p>
                           )}
@@ -972,6 +1004,7 @@ export default function ProjectDetailPage() {
                             </Btn>
                           )}
                         </div>
+
                       </div>
                     ))}
                   </div>

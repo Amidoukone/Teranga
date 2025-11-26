@@ -14,7 +14,7 @@ import api from '../services/api';
 import { applyLabels, CURRENCY_LABELS } from '../utils/labels';
 
 /* ============================================================
-   🔧 Config UI
+   🔧 CONFIG UI — DESIGN SYSTEM PREMIUM (OPTION B)
 ============================================================ */
 const PROJECT_TYPES = [
   { value: 'immobilier', label: 'Immobilier' },
@@ -31,7 +31,6 @@ const PROJECT_STATUSES = [
   { value: 'cancelled', label: 'Annulé' },
 ];
 
-// Badges style
 const STATUS_STYLES = {
   created: { bg: 'bg-slate-100', text: 'text-slate-700', ring: 'ring-slate-200' },
   in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', ring: 'ring-blue-200' },
@@ -41,7 +40,7 @@ const STATUS_STYLES = {
 };
 
 /* ============================================================
-   Helpers autorisations
+   ⏱ Permissions
 ============================================================ */
 function isWithinOneHour(date) {
   if (!date) return false;
@@ -51,6 +50,7 @@ function isWithinOneHour(date) {
 
 function canEditDelete(project, user) {
   if (!user || !project) return false;
+
   if (user.role === 'admin') return true;
 
   if (user.role === 'client')
@@ -62,87 +62,88 @@ function canEditDelete(project, user) {
 function canCreateProjectTransaction(project, user) {
   if (!user || !project) return false;
 
-  // Admin → OK
   if (user.role === 'admin') return true;
 
-  // Client propriétaire du projet → OK
   if (user.role === 'client' && project.client?.id === user.id) return true;
 
-  // Agent → NON (sur cette page)
   return false;
 }
 
 /* ============================================================
-   UI Elements
+   ⭐ Premium Button — Option B
 ============================================================ */
 function Btn({
   children,
-  onClick,
   type = 'button',
-  title,
+  onClick,
   disabled,
-  className = '',
   variant = 'primary',
   size = 'md',
+  className = '',
 }) {
   const base =
-    'inline-flex items-center justify-center font-semibold rounded-xl shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed whitespace-normal break-words text-center';
+    'inline-flex items-center justify-center font-semibold rounded-xl shadow-sm transition-all duration-200 whitespace-normal break-words focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed';
 
-  const sizesMap = {
-    md: 'text-sm px-4 py-2',
-    sm: 'text-sm px-3 py-1.5',
-    xs: 'text-xs px-2.5 py-1',
-  };
-  const sizes = sizesMap[size] || sizesMap.md;
+  const sizes = {
+    md: 'px-4 py-2 text-sm',
+    sm: 'px-3 py-1.5 text-sm',
+    xs: 'px-2 py-1 text-xs',
+  }[size];
 
   const variants = {
     primary:
       'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white focus-visible:ring-blue-500',
     secondary:
-      'bg-gray-100 hover:bg-gray-200 text-gray-900 focus-visible:ring-gray-400',
+      'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 focus-visible:ring-slate-400',
     ghost:
-      'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 focus-visible:ring-gray-400',
+      'bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 focus-visible:ring-slate-400',
     warning:
-      'bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-600 hover:to-amber-500 text-white focus-visible:ring-amber-400',
+      'bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-600 hover:to-amber-500 text-white focus-visible:ring-amber-500',
     danger:
       'bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-700 hover:to-rose-600 text-white focus-visible:ring-rose-500',
-  };
+  }[variant];
 
   return (
     <button
       type={type}
-      title={title}
-      onClick={onClick}
       disabled={disabled}
-      className={`${base} ${sizes} ${variants[variant]} ${className}`}
+      onClick={onClick}
+      className={`${base} ${sizes} ${variants} ${className}`}
     >
       {children}
     </button>
   );
 }
 
+/* ============================================================
+   Status Badge (premium)
+============================================================ */
 function StatusBadge({ value }) {
-  const style = STATUS_STYLES[value] || STATUS_STYLES['created'];
-  const label =
-    PROJECT_STATUSES.find((s) => s.value === value)?.label || value;
+  const s = STATUS_STYLES[value] || STATUS_STYLES['created'];
+  const label = PROJECT_STATUSES.find((e) => e.value === value)?.label || value;
 
   return (
     <span
-      className={`inline-flex items-center gap-1 ${style.bg} ${style.text} ${style.ring} ring-1 px-2.5 py-0.5 rounded-full text-xs font-medium`}
+      className={`inline-flex items-center gap-1 ${s.bg} ${s.text} ${s.ring}
+        ring-1 px-2.5 py-0.5 rounded-full text-xs font-medium`}
     >
       ● {label}
     </span>
   );
 }
 
+/* ============================================================
+   Field Row — responsive premium
+============================================================ */
 function FieldRow({ children }) {
-  return <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>;
+  return <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{children}</div>;
 }
 
 /* ============================================================
-   Inline Transaction Form (fix FILE_BASE inside)
+   Inline Transaction Form (Premium B)
 ============================================================ */
 function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     type: 'expense',
     amount: '',
@@ -152,7 +153,6 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
     orderId: '',
     proofFile: null,
   });
-  const [saving, setSaving] = useState(false);
 
   const canSeeOrder =
     currentUser?.role === 'admin' || currentUser?.role === 'agent';
@@ -162,55 +162,46 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
     try {
       setSaving(true);
 
-      const payload = {
-        projectId: Number(project.id),
+      await createTransaction({
         type: form.type,
-        amount: form.amount === '' ? undefined : Number(form.amount),
-        currency: form.currency || 'XOF',
-        paymentMethod: form.paymentMethod || undefined,
+        amount: form.amount ? Number(form.amount) : undefined,
+        currency: form.currency,
         description: form.description || undefined,
+        paymentMethod: form.paymentMethod || undefined,
         orderId: form.orderId ? Number(form.orderId) : undefined,
         proofFile: form.proofFile || undefined,
-      };
+        projectId: Number(project.id),
+      });
 
-      await createTransaction(payload);
-
-      alert('✅ Transaction liée au projet créée avec succès');
+      alert('Transaction créée');
       onSuccess?.();
       onClose?.();
     } catch (err) {
-      console.error('❌ Erreur création transaction projet:', err);
-      alert(
-        err?.response?.data?.error ||
-          err?.message ||
-          'Erreur lors de la création de la transaction.'
-      );
+      console.error('❌ Transaction error:', err);
+      alert('Erreur lors de la création de la transaction.');
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="mt-3 bg-gray-50 border border-gray-200 rounded-xl p-4">
-      <h4 className="text-sm font-semibold text-gray-800 mb-3">
-        💰 Nouvelle transaction pour le projet{' '}
-        <span className="font-bold">{project?.title || `#${project?.id}`}</span>
+    <div className="mt-4 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+      <h4 className="text-sm font-semibold text-slate-700 mb-3">
+        💰 Nouvelle transaction
       </h4>
 
-      {/* ---- FORM START ---- */}
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+        className="grid grid-cols-1 md:grid-cols-2 gap-4"
       >
-        {/* Type */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label className="text-xs text-slate-600 font-medium mb-1 block">
             Type
           </label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
           >
             <option value="expense">Dépense</option>
             <option value="revenue">Revenu</option>
@@ -219,58 +210,53 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
           </select>
         </div>
 
-        {/* Montant */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label className="text-xs text-slate-600 font-medium mb-1 block">
             Montant
           </label>
           <input
             type="number"
-            step="0.01"
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
           />
         </div>
 
-        {/* Devise */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label className="text-xs text-slate-600 font-medium mb-1 block">
             Devise
           </label>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
           >
-            {Object.entries(CURRENCY_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
+            {Object.entries(CURRENCY_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Méthode paiement */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Méthode de paiement
+          <label className="text-xs text-slate-600 font-medium mb-1 block">
+            Méthode paiement
           </label>
           <input
             value={form.paymentMethod}
             onChange={(e) =>
               setForm({ ...form, paymentMethod: e.target.value })
             }
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            placeholder="Ex : Orange Money"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            placeholder="Ex : OM, Wave"
           />
         </div>
 
-        {/* OrderId visible pour admin/agent */}
         {canSeeOrder && (
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+          <div className="md:col-span-2">
+            <label className="text-xs text-slate-600 font-medium mb-1 block">
               ID Commande (optionnel)
             </label>
             <input
@@ -279,14 +265,13 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
               onChange={(e) =>
                 setForm({ ...form, orderId: e.target.value })
               }
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
             />
           </div>
         )}
 
-        {/* Description */}
-        <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+        <div className="md:col-span-2">
+          <label className="text-xs text-slate-600 font-medium mb-1 block">
             Description
           </label>
           <textarea
@@ -295,14 +280,13 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
             onChange={(e) =>
               setForm({ ...form, description: e.target.value })
             }
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
           />
         </div>
 
-        {/* ProofFile */}
-        <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Preuve (image/PDF)
+        <div className="md:col-span-2">
+          <label className="text-xs text-slate-600 font-medium mb-1 block">
+            Preuve (image / PDF)
           </label>
           <input
             type="file"
@@ -310,28 +294,25 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
             onChange={(e) =>
               setForm({ ...form, proofFile: e.target.files?.[0] || null })
             }
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
           />
         </div>
 
-        {/* Buttons */}
-        <div className="sm:col-span-2 flex justify-end gap-2">
-          <Btn type="button" variant="secondary" size="sm" onClick={onClose}>
+        <div className="md:col-span-2 flex justify-end gap-2">
+          <Btn variant="secondary" size="sm" onClick={onClose}>
             Annuler
           </Btn>
-
-          <Btn type="submit" variant="primary" size="sm" disabled={saving}>
+          <Btn variant="primary" size="sm" type="submit" disabled={saving}>
             {saving ? 'Enregistrement…' : '💾 Enregistrer'}
           </Btn>
         </div>
       </form>
-      {/* ---- FORM END ---- */}
     </div>
   );
 }
 
 /* ============================================================
-   PAGE PRINCIPALE — DEBUT
+   🧠 PAGE PRINCIPALE — Début
 ============================================================ */
 export default function ProjectsPage() {
   const [user, setUser] = useState(null);
@@ -371,12 +352,12 @@ export default function ProjectsPage() {
   );
 
   /* ============================================================
-     🔹 Chargement des données
-  ============================================================ */
+     🔹 Chargement des données (clients, agents, projets)
+  ============================================================= */
   const loadClients = useCallback(async () => {
     try {
       const { data } = await api.get('/users?role=client');
-      setClients(data.users || []);
+      setClients(Array.isArray(data.users) ? data.users : []);
     } catch (e) {
       console.error('❌ Erreur chargement clients:', e);
       setClients([]);
@@ -386,7 +367,7 @@ export default function ProjectsPage() {
   const loadAgents = useCallback(async () => {
     try {
       const { data } = await api.get('/users?role=agent');
-      setAgents(data.users || []);
+      setAgents(Array.isArray(data.users) ? data.users : []);
     } catch (e) {
       console.error('❌ Erreur chargement agents:', e);
       setAgents([]);
@@ -400,9 +381,7 @@ export default function ProjectsPage() {
 
     try {
       const list = await getProjects({});
-      const normalized = Array.isArray(list)
-        ? list.map(applyLabels)
-        : [];
+      const normalized = Array.isArray(list) ? list.map(applyLabels) : [];
       if (isMounted.current) setProjects(normalized);
     } catch (e) {
       console.error('❌ Erreur chargement projets:', e);
@@ -412,13 +391,13 @@ export default function ProjectsPage() {
           'Erreur lors du chargement des projets.'
       );
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
   }, []);
 
   /* ============================================================
      🔹 Initialisation
-  ============================================================ */
+  ============================================================= */
   useEffect(() => {
     isMounted.current = true;
 
@@ -434,31 +413,30 @@ export default function ProjectsPage() {
         if (!isMounted.current) return;
 
         setUser(u);
-
         await loadForUser(u);
 
         if (u.role === 'admin') {
-          await loadClients();
-          await loadAgents();
+          await Promise.all([loadClients(), loadAgents()]);
         }
       } catch (err) {
         console.error('❌ Erreur chargement user:', err);
         setUser(null);
         setErrorMsg("Erreur lors du chargement de l’utilisateur.");
       } finally {
-        setLoading(false);
+        if (isMounted.current) setLoading(false);
       }
     };
 
     init();
+
     return () => {
       isMounted.current = false;
     };
   }, [getToken, loadForUser, loadClients, loadAgents]);
 
   /* ============================================================
-     🔹 Handlers CRUD (création / édition / suppression)
-  ============================================================ */
+     🔹 Handlers CRUD
+  ============================================================= */
   async function handleSubmit(e) {
     e.preventDefault();
     try {
@@ -490,7 +468,6 @@ export default function ProjectsPage() {
 
   async function handleDelete(id) {
     if (!window.confirm('Supprimer ce projet ?')) return;
-
     try {
       await deleteProject(id);
       alert('✅ Projet supprimé');
@@ -556,7 +533,7 @@ export default function ProjectsPage() {
       setShowForm(true);
     } else {
       alert(
-        "⏱️ Vous ne pouvez plus modifier ce projet (limité à 1h pour les clients)."
+        '⏱️ Vous ne pouvez plus modifier ce projet (limité à 1h pour les clients).'
       );
     }
   }
@@ -576,8 +553,8 @@ export default function ProjectsPage() {
   }
 
   /* ============================================================
-     🔹 Filtres et tri
-  ============================================================ */
+     🔹 Filtres & Tri (avec responsive-friendly data)
+  ============================================================= */
   const filtered = useMemo(() => {
     let arr = [...projects];
 
@@ -618,30 +595,31 @@ export default function ProjectsPage() {
   }, [projects, filters]);
 
   /* ============================================================
-     🔹 Rendu principal
-  ============================================================ */
-  if (loading)
+     🔹 Rendu
+  ============================================================= */
+  if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-gray-100">
-        <p className="text-blue-700 text-lg animate-pulse">
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
+        <p className="text-blue-700 text-base sm:text-lg animate-pulse text-center px-4">
           ⏳ Chargement des projets…
         </p>
       </div>
     );
+  }
 
   const canCreate = Boolean(user?.role && user.role !== 'agent');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-3xl p-8 border border-gray-100">
-        
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-6 sm:py-10 overflow-x-hidden">
+      <div className="max-w-6xl w-full mx-auto bg-white shadow-2xl rounded-3xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 border border-slate-100">
+
         {/* ================= HEADER ================= */}
-        <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-2">
+        <div className="w-full flex flex-wrap items-start justify-between gap-4 mb-6">
+          <div className="space-y-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
               📁 Projets
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-xs sm:text-sm text-slate-500">
               {user?.role === 'admin'
                 ? 'Gérez tous les projets des clients.'
                 : user?.role === 'agent'
@@ -650,19 +628,19 @@ export default function ProjectsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-2 justify-end">
             {canCreate && (
               <Btn
                 onClick={() => setShowForm((v) => !v)}
                 variant="ghost"
                 size="sm"
               >
-                {showForm ? '➖ Masquer' : '➕ Nouveau projet'}
+                {showForm ? '➖ Masquer le formulaire' : '➕ Nouveau projet'}
               </Btn>
             )}
             <Btn
               onClick={() => loadForUser(user)}
-              disabled={loading || !user}
+              disabled={!user}
               variant="primary"
               size="sm"
             >
@@ -672,15 +650,15 @@ export default function ProjectsPage() {
         </div>
 
         {/* ================= FILTRES ================= */}
-        <div className="mb-6 bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="mb-6 bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <input
               value={filters.q}
               onChange={(e) =>
                 setFilters((f) => ({ ...f, q: e.target.value }))
               }
               placeholder="Rechercher…"
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
             />
 
             <select
@@ -688,7 +666,7 @@ export default function ProjectsPage() {
               onChange={(e) =>
                 setFilters((f) => ({ ...f, status: e.target.value }))
               }
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
             >
               <option value="">Tous les statuts</option>
               {PROJECT_STATUSES.map((s) => (
@@ -703,7 +681,7 @@ export default function ProjectsPage() {
               onChange={(e) =>
                 setFilters((f) => ({ ...f, sort: e.target.value }))
               }
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
             >
               <option value="-createdAt">Plus récents</option>
               <option value="createdAt">Plus anciens</option>
@@ -719,8 +697,9 @@ export default function ProjectsPage() {
               }
               variant="secondary"
               size="sm"
+              className="w-full"
             >
-              Réinitialiser
+              Réinitialiser filtres
             </Btn>
           </div>
         </div>
@@ -729,108 +708,143 @@ export default function ProjectsPage() {
         {showForm && canCreate && (
           <form
             onSubmit={handleSubmit}
-            className="space-y-4 bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-8 shadow-sm"
+            className="space-y-4 bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200 mb-8 shadow-sm"
           >
             {user.role === 'admin' && (
               <FieldRow>
-                <select
-                  value={form.clientId}
-                  onChange={(e) =>
-                    setForm({ ...form, clientId: e.target.value })
-                  }
-                  required
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="">— Choisir un client —</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.firstName} {c.lastName}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label className="text-xs font-medium text-slate-600 mb-1 block">
+                    Client *
+                  </label>
+                  <select
+                    value={form.clientId}
+                    onChange={(e) =>
+                      setForm({ ...form, clientId: e.target.value })
+                    }
+                    required
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">— Choisir un client —</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.firstName} {c.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                <select
-                  value={form.agentId}
-                  onChange={(e) =>
-                    setForm({ ...form, agentId: e.target.value })
-                  }
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="">— Aucun agent —</option>
-                  {agents.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.firstName} {a.lastName}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label className="text-xs font-medium text-slate-600 mb-1 block">
+                    Agent (optionnel)
+                  </label>
+                  <select
+                    value={form.agentId}
+                    onChange={(e) =>
+                      setForm({ ...form, agentId: e.target.value })
+                    }
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">— Aucun agent —</option>
+                    {agents.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.firstName} {a.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </FieldRow>
             )}
 
             <FieldRow>
-              <input
-                placeholder="Titre *"
-                value={form.title}
-                onChange={(e) =>
-                  setForm({ ...form, title: e.target.value })
-                }
-                required
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                  Titre *
+                </label>
+                <input
+                  placeholder="Titre du projet"
+                  value={form.title}
+                  onChange={(e) =>
+                    setForm({ ...form, title: e.target.value })
+                  }
+                  required
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
 
-              <select
-                value={form.type}
-                onChange={(e) =>
-                  setForm({ ...form, type: e.target.value })
-                }
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              >
-                {PROJECT_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                  Type
+                </label>
+                <select
+                  value={form.type}
+                  onChange={(e) =>
+                    setForm({ ...form, type: e.target.value })
+                  }
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  {PROJECT_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </FieldRow>
 
             <FieldRow>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Budget (XOF)"
-                value={form.budget}
-                onChange={(e) =>
-                  setForm({ ...form, budget: e.target.value })
-                }
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                  Budget (XOF)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Budget estimé"
+                  value={form.budget}
+                  onChange={(e) =>
+                    setForm({ ...form, budget: e.target.value })
+                  }
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
 
-              <select
-                value={form.status}
-                onChange={(e) =>
-                  setForm({ ...form, status: e.target.value })
-                }
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              >
-                {PROJECT_STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                  Statut
+                </label>
+                <select
+                  value={form.status}
+                  onChange={(e) =>
+                    setForm({ ...form, status: e.target.value })
+                  }
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  {PROJECT_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </FieldRow>
 
-            <textarea
-              placeholder="Description"
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
+            <div>
+              <label className="text-xs font-medium text-slate-600 mb-1 block">
+                Description
+              </label>
+              <textarea
+                placeholder="Détails du projet…"
+                value={form.description}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
+                rows={3}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               {editId && (
                 <Btn variant="secondary" size="sm" onClick={resetForm}>
                   Annuler
@@ -845,11 +859,11 @@ export default function ProjectsPage() {
 
         {/* ================= LISTE DES PROJETS ================= */}
         {filtered.length === 0 ? (
-          <p className="text-gray-500 italic text-center py-6">
+          <p className="text-slate-500 italic text-center py-6 text-sm">
             Aucun projet trouvé.
           </p>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
             {filtered.map((p) => {
               const allowEditDelete = canEditDelete(p, user);
               const canChangeStatus = user?.role === 'admin';
@@ -859,22 +873,30 @@ export default function ProjectsPage() {
               return (
                 <div
                   key={p.id}
-                  className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-lg transition p-5 flex flex-col"
+                  className="w-full bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-200 p-4 sm:p-5 flex flex-col h-full overflow-hidden"
                 >
+                  {/* Header card */}
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-lg font-semibold text-gray-900 break-words flex-1">
-                      {p.title}
-                    </h3>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-lg font-semibold text-slate-900 break-words">
+                        {p.title}
+                      </h3>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-1">
+                        Créé le{' '}
+                        {p.createdAt
+                          ? new Date(p.createdAt).toLocaleString('fr-FR')
+                          : '—'}
+                      </p>
+                    </div>
 
-                    {/* statut */}
-                    <div>
+                    <div className="shrink-0">
                       {canChangeStatus ? (
                         <select
                           value={p.status}
                           onChange={(e) =>
                             handleStatusChange(p.id, e.target.value)
                           }
-                          className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+                          className="border border-slate-300 rounded-md px-2 py-1 text-xs sm:text-sm max-w-[140px]"
                         >
                           {PROJECT_STATUSES.map((s) => (
                             <option key={s.value} value={s.value}>
@@ -888,47 +910,61 @@ export default function ProjectsPage() {
                     </div>
                   </div>
 
-                  <p className="text-xs text-gray-400 mt-1">
-                    Créé le{' '}
-                    {p.createdAt
-                      ? new Date(p.createdAt).toLocaleString('fr-FR')
-                      : '—'}
-                  </p>
+                  {/* Meta */}
+                  <div className="mt-2 space-y-1 text-xs sm:text-[13px] text-slate-700">
+                    {p.client && (
+                      <p className="truncate">
+                        👤 Client :{' '}
+                        <span className="font-medium">
+                          {p.client.firstName} {p.client.lastName}
+                        </span>
+                      </p>
+                    )}
+                    {p.agent && (
+                      <p className="truncate">
+                        🧑‍💼 Agent :{' '}
+                        <span className="font-medium">
+                          {p.agent.firstName} {p.agent.lastName}
+                        </span>
+                      </p>
+                    )}
+                    {p.type && (
+                      <p className="text-slate-500">
+                        🏷 Type :{' '}
+                        <span className="font-medium">
+                          {
+                            PROJECT_TYPES.find((t) => t.value === p.type)
+                              ?.label ?? p.type
+                          }
+                        </span>
+                      </p>
+                    )}
+                  </div>
 
-                  {p.client && (
-                    <p className="text-xs text-gray-700 mt-2">
-                      👤 Client : {p.client.firstName} {p.client.lastName}
-                    </p>
-                  )}
-
-                  {p.agent && (
-                    <p className="text-xs text-gray-700 mt-1">
-                      🧑‍💼 Agent : {p.agent.firstName} {p.agent.lastName}
-                    </p>
-                  )}
-
+                  {/* Description */}
                   {p.description && (
-                    <p className="text-sm text-gray-700 mt-3">
+                    <p className="mt-3 text-sm text-slate-700 line-clamp-4 break-words">
                       {p.description}
                     </p>
                   )}
 
+                  {/* Budget */}
                   {p.budget && (
-                    <p className="text-sm text-gray-800 mt-2">
+                    <p className="mt-2 text-sm text-slate-800 font-medium">
                       💰 Budget :{' '}
                       {Number(p.budget).toLocaleString('fr-FR')} XOF
                     </p>
                   )}
 
-                  {/* ACTIONS */}
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  {/* Actions */}
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
                     {user?.role === 'admin' && (
                       <select
                         value={p.agent?.id || ''}
                         onChange={(e) =>
                           handleAssign(p.id, e.target.value)
                         }
-                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
+                        className="border border-slate-300 rounded-lg px-2 py-1 text-xs sm:text-sm max-w-full"
                       >
                         <option value="">— Assigner agent —</option>
                         {agents.map((a) => (
@@ -943,7 +979,7 @@ export default function ProjectsPage() {
                       <Btn
                         onClick={() => navigate(`/projects/${p.id}`)}
                         variant="primary"
-                        size="sm"
+                        size="xs"
                       >
                         📂 Détails
                       </Btn>
@@ -954,9 +990,9 @@ export default function ProjectsPage() {
                             setOpenTrxProjectId(isTrxOpen ? null : p.id)
                           }
                           variant="ghost"
-                          size="sm"
+                          size="xs"
                         >
-                          {isTrxOpen ? '➖ Annuler' : '💰 Transaction'}
+                          {isTrxOpen ? '➖ Transaction' : '💰 Transaction'}
                         </Btn>
                       )}
 
@@ -969,7 +1005,6 @@ export default function ProjectsPage() {
                           >
                             ✏️ Modifier
                           </Btn>
-
                           <Btn
                             onClick={() => handleDelete(p.id)}
                             variant="danger"
@@ -982,6 +1017,7 @@ export default function ProjectsPage() {
                     </div>
                   </div>
 
+                  {/* Inline transaction */}
                   {isTrxOpen && canCreateTrx && (
                     <TransactionInlineForm
                       project={p}
