@@ -5,6 +5,7 @@
 // ============================================================
 
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';          // ⬅️ AJOUTÉ
 import { getProducts } from '../services/products';
 import { createOrder } from '../services/orders';
 import { me } from '../services/auth';
@@ -66,6 +67,9 @@ export default function ProductCatalogPage() {
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
   const [sort, setSort] = useState('default');
+
+  // ⬅️ Pour redirection après commande
+  const navigate = useNavigate();
 
   /* ============================================================
      🔹 1) Init user + produits
@@ -180,11 +184,23 @@ export default function ProductCatalogPage() {
         ],
       };
 
-      await createOrder(payload);
+      // ⬅️ On récupère la commande créée
+      const newOrder = await createOrder(payload);
+
       alert(`✅ Commande créée pour ${quantity} × ${selectedProduct.name}`);
 
       setSelectedProduct(null);
       setQuantity(1);
+
+      // ⬅️ Redirection automatique vers la commande
+      if (newOrder?.id) {
+        navigate(`/orders/${newOrder.id}`);
+      } else if (newOrder?.order?.id) {
+        // fallback ultra safe si jamais le service renvoie { order: {...} }
+        navigate(`/orders/${newOrder.order.id}`);
+      } else {
+        navigate('/orders');
+      }
     } catch (err) {
       console.error('❌ Erreur création commande:', err);
       alert("Erreur lors de la création de la commande.");

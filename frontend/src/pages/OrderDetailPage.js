@@ -1,6 +1,11 @@
-// frontend/src/pages/OrderDetailPage.jsx
+// ============================================================
+// OrderDetailPage.jsx — Teranga PRODUCTION READY (Option B)
+// Clean Shop Premium — Responsive — FILE_BASE system
+// ============================================================
+
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+
 import {
   getOrderById,
   updateOrder,
@@ -8,13 +13,16 @@ import {
   updateOrderItem,
   deleteOrderItem,
 } from '../services/orders';
+
 import { getProducts } from '../services/products';
 import {
   uploadOrderEvidences,
   getOrderEvidences,
   deleteOrderEvidence,
 } from '../services/evidences';
+
 import { me } from '../services/auth';
+
 import {
   formatCurrency,
   formatStatus,
@@ -23,8 +31,8 @@ import {
 } from '../utils/labels';
 
 /* ============================================================
-   🌍 FILE_BASE + normalizePath + toAbsUrl (Option B Production)
-=============================================================== */
+   🌍 FILE_BASE + normalizePath + toAbsUrl
+============================================================ */
 const FILE_BASE =
   (typeof window !== 'undefined' &&
     (window.__TERANGA_FILE_BASE_URL ||
@@ -34,9 +42,9 @@ const FILE_BASE =
 
 function normalizePath(path = '') {
   if (!path) return '';
-  const formatted = String(path).trim().replace(/\\/g, '/');
-  if (/^https?:\/\//i.test(formatted)) return formatted;
-  const fixed = formatted.startsWith('/') ? formatted : '/' + formatted;
+  const p = String(path).trim().replace(/\\/g, '/');
+  if (/^https?:\/\//i.test(p)) return p;
+  const fixed = p.startsWith('/') ? p : '/' + p;
   return fixed.replace(/\/{2,}/g, '/');
 }
 
@@ -47,8 +55,8 @@ function toAbsUrl(path = '') {
 }
 
 /* ============================================================
-   🧾 OrderDetailPage — Clean Shop Premium Edition
-=============================================================== */
+   ⭐ Page Détail Commande
+============================================================ */
 export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -56,6 +64,7 @@ export default function OrderDetailPage() {
   const [user, setUser] = useState(null);
   const [order, setOrder] = useState(null);
   const [products, setProducts] = useState([]);
+
   const [loading, setLoading] = useState(true);
 
   const [itemForm, setItemForm] = useState({
@@ -73,31 +82,35 @@ export default function OrderDetailPage() {
   const [fileInputKey, setFileInputKey] = useState(() => Date.now());
 
   /* ============================================================
-     Helper affichage client
-  ============================================================ */
+     👤 Affichage nom du client
+  ============================================================= */
   const customerDisplay = useMemo(() => {
     if (!order?.customer) return '—';
     const c = order.customer;
+
     const first = c.firstName ?? c.firstname ?? '';
     const last = c.lastName ?? c.lastname ?? '';
+
     const full = `${first} ${last}`.trim();
     return full || c.name || c.email || '—';
   }, [order]);
 
   /* ============================================================
-     Helper affichage uploader
-  ============================================================ */
-  function formatUploader(uploader) {
-    if (!uploader) return '—';
-    const first = uploader.firstName ?? uploader.firstname ?? '';
-    const last = uploader.lastName ?? uploader.lastname ?? '';
+     👤 Affichage uploader (preuves)
+  ============================================================= */
+  function formatUploader(u) {
+    if (!u) return '—';
+
+    const first = u.firstName ?? u.firstname ?? '';
+    const last = u.lastName ?? u.lastname ?? '';
     const full = `${first} ${last}`.trim();
-    return full || uploader.name || uploader.email || '—';
+
+    return full || u.name || u.email || '—';
   }
 
   /* ============================================================
-     Initialisation
-  ============================================================ */
+     🔄 Initialisation
+  ============================================================= */
   const init = useCallback(async () => {
     try {
       const ud = await me();
@@ -108,7 +121,12 @@ export default function OrderDetailPage() {
         getProducts({ limit: 200 }),
       ]);
 
-      setOrder(o || null);
+      if (!o) {
+        navigate('/orders');
+        return;
+      }
+
+      setOrder(o);
       setProducts(prods || []);
 
       const evs = await getOrderEvidences(id);
@@ -117,7 +135,7 @@ export default function OrderDetailPage() {
       if (e?.response?.status === 401) {
         localStorage.removeItem('teranga_token');
         localStorage.removeItem('token');
-        navigate('/login', { replace: true });
+        navigate('/login');
       }
     } finally {
       setLoading(false);
@@ -125,8 +143,8 @@ export default function OrderDetailPage() {
   }, [id, navigate]);
 
   useEffect(() => {
-    if (id) init();
-  }, [id, init]);
+    init();
+  }, [init]);
 
   const refresh = useCallback(async () => {
     const o = await getOrderById(id);
@@ -134,19 +152,22 @@ export default function OrderDetailPage() {
   }, [id]);
 
   /* ============================================================
-     Gestion statuts commande
-  ============================================================ */
+     🔄 Mise à jour statut commande
+  ============================================================= */
   async function handleOrderUpdate(patch) {
     try {
       const payload = {};
+
       if (patch.orderStatus) {
         payload.status = canonicalizeOrderStatus(patch.orderStatus);
       }
       if (patch.paymentStatus) {
         payload.paymentStatus = canonicalizePaymentStatus(patch.paymentStatus);
       }
+
       await updateOrder(id, payload);
       await refresh();
+
       alert('✅ Commande mise à jour.');
     } catch {
       alert('Erreur mise à jour commande.');
@@ -154,14 +175,15 @@ export default function OrderDetailPage() {
   }
 
   /* ============================================================
-     Gestion articles
-  ============================================================ */
+     🧩 Gestion articles
+  ============================================================= */
   async function handleAddItem(e) {
     e.preventDefault();
-    try {
-      if (!itemForm.productId) return alert('Produit requis.');
-      if (Number(itemForm.quantity) <= 0) return alert('Quantité invalide.');
 
+    if (!itemForm.productId) return alert('Produit requis.');
+    if (Number(itemForm.quantity) <= 0) return alert('Quantité invalide.');
+
+    try {
       const payload = {
         productId: Number(itemForm.productId),
         quantity: Number(itemForm.quantity),
@@ -172,11 +194,14 @@ export default function OrderDetailPage() {
       }
 
       await addOrderItem(id, payload);
+
       setItemForm({ productId: '', quantity: 1, unitPrice: '' });
+
       await refresh();
       alert('✅ Article ajouté.');
-    } catch {
-      alert("Erreur ajout article.");
+    } catch (err) {
+      console.error(err);
+      alert('Erreur ajout article.');
     }
   }
 
@@ -191,17 +216,18 @@ export default function OrderDetailPage() {
 
   async function handleDeleteItem(itemId) {
     if (!window.confirm('Supprimer cet article ?')) return;
+
     try {
       await deleteOrderItem(id, itemId);
       await refresh();
     } catch {
-      alert("Erreur suppression article.");
+      alert('Erreur suppression article.');
     }
   }
 
   /* ============================================================
-     Gestion preuves fichier
-  ============================================================ */
+     📎 Gestion preuves
+  ============================================================= */
   function onFilesChange(ev) {
     const selected = Array.from(ev.target.files || []);
     setFiles(selected);
@@ -209,13 +235,15 @@ export default function OrderDetailPage() {
 
   async function handleUpload(e) {
     e.preventDefault();
-    if (!files.length) return alert('Sélectionnez un fichier');
-    setUploading(true);
+    if (!files.length) return alert('Sélectionnez un fichier.');
 
+    setUploading(true);
     try {
       await uploadOrderEvidences(id, files, notes);
+
       setFiles([]);
       setNotes('');
+
       if (fileInputRef.current) fileInputRef.current.value = '';
       setFileInputKey(Date.now());
 
@@ -223,8 +251,8 @@ export default function OrderDetailPage() {
       setEvidences(evs || []);
 
       alert('✅ Preuves ajoutées.');
-    } catch (e) {
-      alert("Erreur upload fichiers.");
+    } catch {
+      alert('Erreur upload fichiers.');
     } finally {
       setUploading(false);
     }
@@ -232,22 +260,23 @@ export default function OrderDetailPage() {
 
   async function handleDeleteEvidence(evId) {
     if (!window.confirm('Supprimer cette preuve ?')) return;
+
     try {
       await deleteOrderEvidence(evId);
       const evs = await getOrderEvidences(id);
       setEvidences(evs || []);
     } catch {
-      alert("Erreur suppression preuve.");
+      alert('Erreur suppression preuve.');
     }
   }
 
   /* ============================================================
-     Chargement
-  ============================================================ */
+     ⏳ Loading + commande introuvable
+  ============================================================= */
   if (!user || loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <p className="animate-pulse text-gray-600 text-lg">Chargement…</p>
+        <p className="text-lg text-gray-600 animate-pulse">Chargement…</p>
       </div>
     );
   }
@@ -267,8 +296,8 @@ export default function OrderDetailPage() {
   const currency = order.currency || 'XOF';
 
   /* ============================================================
-     UI Premium — Page complète
-  ============================================================ */
+     ⭐ UI principale — Header + Résumé
+  ============================================================= */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
       <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
@@ -280,7 +309,7 @@ export default function OrderDetailPage() {
               🧾 <span>{order.code || `Commande #${order.id}`}</span>
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Suivi détaillé de la commande, des articles et des preuves.
+              Détails complets de la commande, paiements et preuves.
             </p>
           </div>
 
@@ -294,9 +323,7 @@ export default function OrderDetailPage() {
 
             {canAdmin && (
               <button
-                onClick={() =>
-                  handleOrderUpdate({ orderStatus: 'cancelled' })
-                }
+                onClick={() => handleOrderUpdate({ orderStatus: 'cancelled' })}
                 className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700"
               >
                 Annuler
@@ -314,11 +341,13 @@ export default function OrderDetailPage() {
               👤 Client
             </h3>
             <p className="font-medium text-slate-800">{customerDisplay}</p>
+
             {order.customer?.email && (
               <p className="text-xs text-slate-500 mt-1">
                 {order.customer.email}
               </p>
             )}
+
             {order.customerNote && (
               <p className="text-sm text-slate-700 mt-3">
                 <strong>Note client :</strong> {order.customerNote}
@@ -336,13 +365,17 @@ export default function OrderDetailPage() {
               <span className="px-2 py-1 rounded-full bg-blue-50 text-blue-700 border text-[11px]">
                 {formatStatus(order.orderStatus, 'order')}
               </span>
+
               <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border text-[11px]">
                 {formatStatus(order.paymentStatus, 'payment')}
               </span>
             </div>
 
             <p className="text-xs text-slate-500">
-              Créée le {order.createdAt ? new Date(order.createdAt).toLocaleString() : '—'}
+              Créée le{' '}
+              {order.createdAt
+                ? new Date(order.createdAt).toLocaleString()
+                : '—'}
             </p>
 
             {canAdmin && (
@@ -357,7 +390,10 @@ export default function OrderDetailPage() {
                 <button
                   className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs hover:bg-emerald-700"
                   onClick={() =>
-                    handleOrderUpdate({ orderStatus: 'paid', paymentStatus: 'paid' })
+                    handleOrderUpdate({
+                      orderStatus: 'paid',
+                      paymentStatus: 'paid',
+                    })
                   }
                 >
                   Payée
@@ -366,7 +402,10 @@ export default function OrderDetailPage() {
                 <button
                   className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700"
                   onClick={() =>
-                    handleOrderUpdate({ orderStatus: 'delivered', paymentStatus: 'paid' })
+                    handleOrderUpdate({
+                      orderStatus: 'delivered',
+                      paymentStatus: 'paid',
+                    })
                   }
                 >
                   Livrée
@@ -377,7 +416,7 @@ export default function OrderDetailPage() {
 
           {/* MONTANT */}
           <div className="bg-gray-50 border p-4 rounded-xl">
-            <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+            <h3 className="text-slate-800 font-semibold mb-2 flex items-center gap-2">
               💰 Résumé
             </h3>
 
@@ -388,13 +427,16 @@ export default function OrderDetailPage() {
 
             {order.items?.length > 0 && (
               <p className="text-xs text-slate-500 mt-3">
-                {order.items.length} article{order.items.length > 1 ? 's' : ''}
+                {order.items.length} article
+                {order.items.length > 1 ? 's' : ''}
               </p>
             )}
           </div>
         </div>
 
-        {/* ARTICLES */}
+        {/* ============================================================
+            🧩 ARTICLES
+        ============================================================ */}
         <section className="mb-10">
           <h2 className="text-lg font-semibold text-slate-900 mb-3">
             🧩 Articles
@@ -411,13 +453,15 @@ export default function OrderDetailPage() {
                     <p className="font-semibold text-slate-900">
                       {it.product?.name || `Article #${it.id}`}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+
+                    <p className="text-xs text-slate-500 mt-1">
                       ID article : #{it.id}
                     </p>
 
                     <p className="text-sm text-slate-700 mt-2">
                       Qté : <strong>{it.quantity}</strong>
                     </p>
+
                     <p className="text-sm text-slate-700">
                       PU :{' '}
                       <strong>
@@ -425,10 +469,13 @@ export default function OrderDetailPage() {
                         {formatCurrency(currency)}
                       </strong>
                     </p>
+
                     <p className="text-sm text-slate-700">
                       Total :{' '}
                       <strong>
-                        {(Number(it.unitPrice || it.price) * it.quantity).toLocaleString()}{' '}
+                        {(
+                          Number(it.unitPrice || it.price) * it.quantity
+                        ).toLocaleString()}{' '}
                         {formatCurrency(currency)}
                       </strong>
                     </p>
@@ -462,12 +509,16 @@ export default function OrderDetailPage() {
             </p>
           )}
 
+          {/* Ajout d’article - Admin seulement */}
           {canAdmin && (
             <form
               onSubmit={handleAddItem}
-              className="mt-5 bg-gray-50 border rounded-xl p-4"
+              className="mt-5 bg-gray-50 border p-4 rounded-xl"
             >
-              <h3 className="text-sm font-semibold mb-3">➕ Ajouter un article</h3>
+              <h3 className="text-sm font-semibold mb-3">
+                ➕ Ajouter un article
+              </h3>
+
               <div className="grid md:grid-cols-4 gap-3">
                 <select
                   value={itemForm.productId}
@@ -479,7 +530,8 @@ export default function OrderDetailPage() {
                   <option value="">— Sélectionner —</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} — {Number(p.price).toLocaleString()} {formatCurrency(p.currency)}
+                      {p.name} — {Number(p.price).toLocaleString()}{' '}
+                      {formatCurrency(p.currency)}
                     </option>
                   ))}
                 </select>
@@ -517,19 +569,23 @@ export default function OrderDetailPage() {
           )}
         </section>
 
-        {/* PREUVES FICHIERS */}
+        {/* ============================================================
+            📎 PREUVES
+        ============================================================ */}
         {canUploadProofs && (
           <section className="mb-10">
             <h2 className="text-lg font-semibold text-slate-900 mb-3">
               📎 Preuves du paiement
             </h2>
 
-            {/* Form Upload */}
+            {/* Upload */}
             <form
               onSubmit={handleUpload}
               className="bg-gray-50 border p-4 rounded-xl mb-5"
             >
               <div className="grid md:grid-cols-3 gap-3">
+
+                {/* Fichier */}
                 <div className="md:col-span-2">
                   <label className="text-xs text-slate-600">Fichiers</label>
                   <input
@@ -543,6 +599,7 @@ export default function OrderDetailPage() {
                   />
                 </div>
 
+                {/* Notes */}
                 <div>
                   <label className="text-xs text-slate-600">Notes</label>
                   <input
@@ -569,7 +626,7 @@ export default function OrderDetailPage() {
               </div>
             </form>
 
-            {/* Liste preuves */}
+            {/* Liste des preuves */}
             {evidences.length === 0 ? (
               <p className="text-sm text-slate-500 italic">Aucune preuve.</p>
             ) : (
@@ -581,9 +638,11 @@ export default function OrderDetailPage() {
                   return (
                     <div
                       key={ev.id}
-                      className="bg-white border p-4 rounded-xl shadow-sm flex flex-col sm:flex-row gap-3 justify-between"
+                      className="bg-white border p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between gap-3"
                     >
                       <div className="flex gap-3">
+
+                        {/* Thumbnail */}
                         <div className="w-16 h-16 border bg-gray-50 rounded-lg overflow-hidden">
                           {isImage ? (
                             <img
@@ -598,11 +657,12 @@ export default function OrderDetailPage() {
                           )}
                         </div>
 
+                        {/* Infos fichier */}
                         <div>
                           <a
                             href={fileUrl}
                             target="_blank"
-                            rel="noreferrer"
+                            rel="noopener noreferrer"
                             className="text-blue-600 font-semibold hover:underline break-all text-sm"
                           >
                             {ev.originalName || ev.filePath}
@@ -638,7 +698,9 @@ export default function OrderDetailPage() {
           </section>
         )}
 
-        {/* BOTTOM LINKS */}
+        {/* ============================================================
+            🔗 BOTTOM LINKS
+        ============================================================ */}
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             to={`/orders/${id}/transactions`}
@@ -654,6 +716,7 @@ export default function OrderDetailPage() {
             ← Retour commandes
           </Link>
         </div>
+
       </div>
     </div>
   );

@@ -4,7 +4,7 @@
 // ============================================================
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // ⬅️ AJOUT useNavigate
 import { getOrders, createOrder } from '../services/orders';
 import { getProducts } from '../services/products';
 import { me } from '../services/auth';
@@ -47,6 +47,8 @@ export default function OrdersPage() {
     quantity: 1,
     unitPrice: '',
   });
+
+  const navigate = useNavigate(); // ⬅️ Pour redirection après création
 
   /* ============================================================
      🔄 Loaders (useCallback pour éviter les recréations)
@@ -134,7 +136,8 @@ export default function OrdersPage() {
         ];
       }
 
-      await createOrder(payload);
+      // ⬅️ On récupère la commande créée
+      const newOrder = await createOrder(payload);
 
       // Reset propre
       setForm({
@@ -145,9 +148,18 @@ export default function OrdersPage() {
         unitPrice: '',
       });
 
-      await loadOrders();
-
       alert('✅ Commande créée avec succès.');
+
+      // ⬅️ Redirection automatique vers la commande
+      if (newOrder?.id) {
+        navigate(`/orders/${newOrder.id}`);
+      } else if (newOrder?.order?.id) {
+        // fallback si l'API renvoie { order: {...} }
+        navigate(`/orders/${newOrder.order.id}`);
+      } else {
+        // Si on n'arrive pas à récupérer l'id, on reste sur la page et on recharge
+        await loadOrders();
+      }
     } catch (err) {
       console.error('❌ Erreur création commande:', err);
       alert('Erreur lors de la création de la commande.');

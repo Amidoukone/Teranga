@@ -149,6 +149,7 @@ async function recomputeOrderTotals(orderId) {
 
 /* ============================================================
    1️⃣ CREATE — /orders/:orderId/items ou /order-items
+   ➕ décrémentation du stock produit
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -163,21 +164,43 @@ exports.create = async (req, res) => {
 
     // Vérifie si le produit existe
     let product = null;
+    let pid = null;
     if (productId) {
-      const pid = toSafeInt(productId);
+      pid = toSafeInt(productId);
       product = pid ? await Product.findByPk(pid) : null;
+    }
+
+    const qty = toSafeInt(quantity) ?? 1;
+
+    // ✅ Contrôle de stock si le produit gère un stock
+    if (product && product.stock !== null && typeof product.stock !== 'undefined') {
+      const currentStock = Number(product.stock);
+      if (!Number.isNaN(currentStock) && currentStock < qty) {
+        return res.status(400).json({
+          error: `Stock insuffisant pour le produit "${product.name}". Disponible : ${currentStock}, demandé : ${qty}.`,
+        });
+      }
     }
 
     const item = await OrderItem.create({
       orderId: order.id,
-      productId: product ? product.id : toSafeInt(productId),
+      productId: product ? product.id : pid,
       name: toTrimOrNull(name) || product?.name || '—',
       sku: toTrimOrNull(sku) || product?.sku || null,
       unitPrice: toNullableNumber(unitPrice) ?? (product?.price ?? 0),
-      quantity: toSafeInt(quantity) ?? 1,
+      quantity: qty,
       total: 0,
       status: String(status).trim(),
     });
+
+    // ✅ Décrémentation effective du stock
+    if (product && product.stock !== null && typeof product.stock !== 'undefined') {
+      const currentStock = Number(product.stock);
+      if (!Number.isNaN(currentStock)) {
+        product.stock = currentStock - qty;
+        await product.save();
+      }
+    }
 
     // Recalcul commande
     const updatedOrder = await recomputeOrderTotals(order.id);
@@ -199,6 +222,10 @@ exports.create = async (req, res) => {
     });
   } catch (e) {
     console.error('❌ create orderItem:', e);
+    const msg = e?.message || '';
+    if (msg.toLowerCase().includes('stock insuffisant')) {
+      return res.status(400).json({ error: msg });
+    }
     res.status(500).json({ error: "Erreur lors de l'ajout de l'article à la commande." });
   }
 };
@@ -237,6 +264,7 @@ exports.list = async (req, res) => {
 
 /* ============================================================
    3️⃣ UPDATE — Modification d’un article
+   (⚠️ On laisse le stock tel quel pour éviter d’ajouter trop de complexité)
 ============================================================ */
 exports.update = async (req, res) => {
   try {
@@ -286,6 +314,8 @@ exports.update = async (req, res) => {
 
 /* ============================================================
    4️⃣ DELETE — Suppression d’un article
+   (ici on ne recrédite pas le stock pour rester simple/cohérent
+    avec ton besoin initial : décrément à la commande)
 ============================================================ */
 exports.remove = async (req, res) => {
   try {

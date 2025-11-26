@@ -1,7 +1,7 @@
 'use strict';
 
 const { Op } = require('sequelize');
-const { Order, OrderItem, User, Product, Transaction } = require('../../models'); // ✅ Ajout Transaction
+const { Order, OrderItem, User, Product, Transaction } = require('../../models'); // ✅ Transaction + Product
 const {
   ORDER_STATUSES,
   ORDER_PAYMENT_STATUSES,
@@ -142,7 +142,7 @@ function syncPaymentStatus(order) {
 }
 
 /* ============================================================
-   1️⃣ CREATE — Crée une commande complète
+   1️⃣ CREATE — Crée une commande complète (+ gestion stock)
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -156,6 +156,7 @@ exports.create = async (req, res) => {
         ? toSafeInt(norm.userId) || req.user.id
         : req.user.id;
 
+    // 1) Création de la commande (sans items pour l’instant)
     const order = await Order.create({
       userId: ownerId,
       status: norm.status,
@@ -169,13 +170,71 @@ exports.create = async (req, res) => {
       notes: toTrimOrNull(norm.note),
     });
 
-    if (Array.isArray(norm.items) && norm.items.length > 0) {
-      for (const it of norm.items) {
+    const items = Array.isArray(norm.items) ? norm.items : [];
+
+    /* --------------------------------------------------------
+       2) Prévalidation des stocks pour tous les items
+       - On regroupe les quantités par produit
+       - On vérifie que le stock est suffisant
+       - En cas d’insuffisance → on supprime la commande vide
+         et on renvoie une 400 propre.
+    -------------------------------------------------------- */
+    const qtyByProductId = new Map();
+
+    for (const it of items) {
+      const pid = toSafeInt(it.productId);
+      const qty = toSafeInt(it.quantity) ?? 1;
+      if (!pid || !qty || qty <= 0) continue;
+      qtyByProductId.set(pid, (qtyByProductId.get(pid) || 0) + qty);
+    }
+
+    const productsById = new Map();
+
+    if (qtyByProductId.size > 0) {
+      const productIds = [...qtyByProductId.keys()];
+      const products = await Product.findAll({ where: { id: productIds } });
+      products.forEach((p) => productsById.set(p.id, p));
+
+      for (const [pid, totalQty] of qtyByProductId.entries()) {
+        const product = productsById.get(pid);
+        if (!product) {
+          // Produit introuvable → on laisse passer (pas de stock géré)
+          continue;
+        }
+
+        const rawStock = product.stock;
+        if (rawStock === null || typeof rawStock === 'undefined') {
+          // Stock non géré sur ce produit → on ne bloque pas
+          continue;
+        }
+
+        const currentStock = Number(rawStock);
+        if (!Number.isNaN(currentStock) && currentStock < totalQty) {
+          await order.destroy(); // rollback de la commande vide
+          return res.status(400).json({
+            error: `Stock insuffisant pour le produit "${product.name}". Disponible : ${currentStock}, demandé : ${totalQty}.`,
+          });
+        }
+      }
+    }
+
+    /* --------------------------------------------------------
+       3) Création des OrderItem + décrémentation du stock
+    -------------------------------------------------------- */
+    if (items.length > 0) {
+      for (const it of items) {
         const pid = toSafeInt(it.productId);
-        let product = pid ? await Product.findByPk(pid) : null;
+        // On réutilise le produit préchargé si possible
+        let product = pid ? productsById.get(pid) : null;
+        if (!product && pid) {
+          product = await Product.findByPk(pid);
+        }
+
         const name = product ? product.name : it.name || '—';
-        const price = toNullableNumber(it.unitPrice) ?? (product ? product.price : 0);
+        const price =
+          toNullableNumber(it.unitPrice) ?? (product ? product.price : 0);
         const qty = toSafeInt(it.quantity) ?? 1;
+
         await OrderItem.create({
           orderId: order.id,
           productId: pid || null,
@@ -185,9 +244,21 @@ exports.create = async (req, res) => {
           quantity: qty,
           total: price * qty,
         });
+
+        // Décrémentation effective du stock si géré
+        if (product && product.stock !== null && typeof product.stock !== 'undefined') {
+          const currentStock = Number(product.stock);
+          if (!Number.isNaN(currentStock)) {
+            product.stock = currentStock - qty;
+            await product.save();
+          }
+        }
       }
     }
 
+    /* --------------------------------------------------------
+       4) Recalcul total + sync statut/paiement
+    -------------------------------------------------------- */
     const { subtotal } = await recomputeTotals(order.id);
     const total =
       subtotal + parseFloat(order.tax || 0) + parseFloat(order.shipping || 0);
@@ -207,6 +278,10 @@ exports.create = async (req, res) => {
     res.status(201).json({ order: withLabels(created) });
   } catch (e) {
     console.error('❌ create order:', e);
+    const msg = e?.message || '';
+    if (msg.toLowerCase().includes('stock insuffisant')) {
+      return res.status(400).json({ error: msg });
+    }
     res.status(500).json({ error: "Erreur lors de la création de la commande." });
   }
 };
