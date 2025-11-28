@@ -185,7 +185,13 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
   }
 
   return (
-    <div className="mt-4 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+    <div
+      className="
+        mt-4 bg-slate-50 border border-slate-200 rounded-2xl p-4
+        w-full max-w-full min-w-0
+        overflow-auto
+      "
+    >
       <h4 className="text-sm font-semibold text-slate-700 mb-3">
         💰 Nouvelle transaction
       </h4>
@@ -350,7 +356,6 @@ export default function ProjectsPage() {
     () => localStorage.getItem('teranga_token') || localStorage.getItem('token'),
     []
   );
-
   /* ============================================================
      🔹 Chargement des données (clients, agents, projets)
   ============================================================= */
@@ -873,12 +878,23 @@ export default function ProjectsPage() {
               return (
                 <div
                   key={p.id}
-                  className="w-full bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-200 p-4 sm:p-5 flex flex-col h-full overflow-hidden"
+                  className="
+                    w-full min-w-0
+                    bg-white border border-slate-200 rounded-2xl shadow-sm
+                    hover:shadow-lg transition-all duration-200
+                    p-4 sm:p-5 flex flex-col h-full overflow-hidden
+                  "
                 >
                   {/* Header card */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base sm:text-lg font-semibold text-slate-900 break-words">
+                      <h3
+                        className="
+                          text-base sm:text-lg font-semibold text-slate-900
+                          break-words whitespace-normal
+                          w-full max-w-full
+                        "
+                      >
                         {p.title}
                       </h3>
                       <p className="text-[11px] sm:text-xs text-slate-400 mt-1">
@@ -913,7 +929,7 @@ export default function ProjectsPage() {
                   {/* Meta */}
                   <div className="mt-2 space-y-1 text-xs sm:text-[13px] text-slate-700">
                     {p.client && (
-                      <p className="truncate">
+                      <p className="truncate w-full max-w-full">
                         👤 Client :{' '}
                         <span className="font-medium">
                           {p.client.firstName} {p.client.lastName}
@@ -921,7 +937,7 @@ export default function ProjectsPage() {
                       </p>
                     )}
                     {p.agent && (
-                      <p className="truncate">
+                      <p className="truncate w-full max-w-full">
                         🧑‍💼 Agent :{' '}
                         <span className="font-medium">
                           {p.agent.firstName} {p.agent.lastName}
@@ -929,7 +945,7 @@ export default function ProjectsPage() {
                       </p>
                     )}
                     {p.type && (
-                      <p className="text-slate-500">
+                      <p className="text-slate-500 break-words w-full max-w-full">
                         🏷 Type :{' '}
                         <span className="font-medium">
                           {
@@ -957,7 +973,14 @@ export default function ProjectsPage() {
                   )}
 
                   {/* Actions */}
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <div
+                    className="
+                      mt-4
+                      flex flex-wrap items-center gap-2
+                      w-full max-w-full min-w-0
+                      overflow-hidden
+                    "
+                  >
                     {user?.role === 'admin' && (
                       <select
                         value={p.agent?.id || ''}
@@ -1035,3 +1058,4 @@ export default function ProjectsPage() {
     </div>
   );
 }
+

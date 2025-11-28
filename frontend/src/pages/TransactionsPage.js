@@ -598,7 +598,7 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
   if (transactions.length === 0)
     return (
       <p className="text-gray-500 italic text-center py-6">
-        Aucune transaction trouvée.
+        Aucun transaction trouvée.
       </p>
     );
 
@@ -607,10 +607,21 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
       {transactions.map((t) => (
         <div
           key={t.id}
-          className="bg-white border rounded-xl shadow-sm p-5 hover:shadow-md transition flex flex-col"
+          className="
+            bg-white border rounded-xl shadow-sm p-5
+            hover:shadow-md transition flex flex-col
+            w-full max-w-full min-w-0 overflow-hidden
+          "
         >
-          <div className="mb-3">
-            <h3 className="text-lg font-semibold text-gray-900 break-words">
+          {/* HEADER */}
+          <div className="mb-3 min-w-0">
+            <h3
+              className="
+                text-lg font-semibold text-gray-900 
+                break-words whitespace-normal
+                w-full max-w-full
+              "
+            >
               {t.typeLabel} — {Number(t.amount).toLocaleString()} {t.currencyLabel}
             </h3>
 
@@ -618,41 +629,58 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
               {t.statusLabel}
             </span>
 
-            <p className="text-sm text-gray-600 mt-2 break-words">
+            <p className="text-sm text-gray-600 mt-2 break-words whitespace-normal">
               {t.description || 'Aucune description'}
             </p>
           </div>
 
-          <div className="flex-1 text-sm text-gray-700 space-y-2 break-words">
-            {t.service && <p>🔗 <strong>Service :</strong> {t.service.title}</p>}
-            {t.task && <p>🔧 <strong>Tâche :</strong> {t.task.title}</p>}
+          {/* META */}
+          <div className="flex-1 text-sm text-gray-700 space-y-2 min-w-0 break-words">
+
+            {t.service && (
+              <p className="break-words whitespace-normal">
+                🔗 <strong>Service :</strong> {t.service.title}
+              </p>
+            )}
+
+            {t.task && (
+              <p className="break-words whitespace-normal">
+                🔧 <strong>Tâche :</strong> {t.task.title}
+              </p>
+            )}
 
             {t.project && (
-              <p>
+              <p className="min-w-0 break-words whitespace-normal">
                 🏗️ <strong>Projet :</strong>{' '}
-                <Link to={`/projects/${t.project.id}`} className="text-blue-600 hover:underline">
+                <Link
+                  to={`/projects/${t.project.id}`}
+                  className="text-blue-600 hover:underline break-words whitespace-normal"
+                >
                   {t.project.title}
                 </Link>
               </p>
             )}
 
             {t.order && (
-              <p>
+              <p className="min-w-0 break-words whitespace-normal">
                 🧾 <strong>Commande :</strong>{' '}
-                <Link to={`/orders/${t.order.id}`} className="text-blue-600 hover:underline">
+                <Link
+                  to={`/orders/${t.order.id}`}
+                  className="text-blue-600 hover:underline break-words whitespace-normal"
+                >
                   {t.order.code || `#${t.order.id}`}
                 </Link>
               </p>
             )}
 
             {t.proofFile?.path && (
-              <p>
+              <p className="min-w-0 break-words whitespace-normal">
                 📎{' '}
                 <a
                   href={toAbsUrl(t.proofFile.path)}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 hover:underline break-words"
                 >
                   Voir la pièce jointe
                 </a>
@@ -660,6 +688,7 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
             )}
           </div>
 
+          {/* FOOTER */}
           <div className="mt-4 text-xs text-gray-500">
             <p>
               Créée le <strong>{new Date(t.createdAt).toLocaleDateString()}</strong>

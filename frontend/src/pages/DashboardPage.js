@@ -1,6 +1,6 @@
 // frontend/src/pages/DashboardPage.jsx
 // ============================================================================
-// DashboardPage — Version Premium Évoluée (Responsive + UI moderne)
+// DashboardPage — Version Premium Évoluée 2025 (Responsive + UI moderne + rôle normalisé)
 // ============================================================================
 
 import { useEffect, useState } from 'react';
@@ -17,13 +17,46 @@ import {
 } from '../services/transactions';
 import FinanceWidget from '../components/FinanceWidget';
 
-// Petite fonction utilitaire pour formater les montants
+/* ============================================================================
+   🔧 UTILITAIRES
+=========================================================================== */
+
+// Normalisation rôle (comme dans NavBar)
+function normalizeRole(rawRole) {
+  if (!rawRole) return 'client';
+  const r = String(rawRole).toLowerCase();
+
+  if (r.includes('admin')) return 'admin';
+  if (r.includes('agent')) return 'agent';
+  return 'client';
+}
+
+function prettyRoleLabel(role) {
+  const r = normalizeRole(role);
+  if (r === 'admin') return 'ADMINISTRATEUR';
+  if (r === 'agent') return 'AGENT';
+  return 'CLIENT';
+}
+
 function formatAmount(value) {
   return Number(value || 0).toLocaleString('fr-FR');
 }
 
+function getInitials(user) {
+  if (!user) return '?';
+  const first = user.firstName || '';
+  const last = user.lastName || '';
+  const initials = (first[0] || '') + (last[0] || '');
+  if (initials.trim()) return initials.toUpperCase();
+  return (user.email?.[0] || '?').toUpperCase();
+}
+
+/* ============================================================================
+   PAGE PRINCIPALE
+=========================================================================== */
 export default function DashboardPage() {
   const [user, setUser] = useState(null);
+
   const [stats, setStats] = useState({
     servicesCount: 0,
     activeServices: 0,
@@ -32,18 +65,21 @@ export default function DashboardPage() {
     totalExpense: 0,
     balance: 0,
   });
+
   const [loading, setLoading] = useState(true);
 
+  /* ---------------------------------------------------------------------- */
+  /* 🔄 INITIALISATION                                                     */
+  /* ---------------------------------------------------------------------- */
   useEffect(() => {
     async function init() {
       try {
-        const { user } = await me();
-        setUser(user);
-        await loadStats(user);
+        const res = await me();
+        const u = res.user;
+        setUser(u);
+        await loadStats(u);
       } catch (err) {
         console.error('❌ Erreur Dashboard init:', err);
-        // on ne redirige pas ici pour ne pas casser la logique globale,
-        // c'est géré ailleurs dans l'app.
       } finally {
         setLoading(false);
       }
@@ -51,34 +87,36 @@ export default function DashboardPage() {
     init();
   }, []);
 
+  /* ---------------------------------------------------------------------- */
+  /* 📊 CHARGEMENT DES STATISTIQUES                                        */
+  /* ---------------------------------------------------------------------- */
   async function loadStats(u) {
     try {
       let services = [];
       let transactions = [];
       let financialSummary = null;
 
-      // 🔹 SERVICES selon rôle
-      if (u.role === 'admin') {
-        const adminServices = await getAllServicesAdmin();
-        services = adminServices || [];
-      } else if (u.role === 'agent') {
-        const agentServices = await getAgentServices();
-        services = agentServices || [];
+      const role = normalizeRole(u.role);
+
+      // SERVICES selon rôle
+      if (role === 'admin') {
+        services = await getAllServicesAdmin();
+      } else if (role === 'agent') {
+        services = await getAgentServices();
       } else {
-        const clientServices = await getMyServices();
-        services = clientServices || [];
+        services = await getMyServices();
       }
 
-      // 🔹 TRANSACTIONS (ACL côté backend)
+      // TRANSACTIONS
       transactions = await getTransactions();
 
-      // 🔹 Résumé financier (admin uniquement si dispo)
-      if (u.role === 'admin') {
+      // Résumé financier (admin only)
+      if (role === 'admin') {
         financialSummary = await getFinancialSummary();
       }
 
-      // 🔹 Calculs statistiques
-      const activeServices = services.filter(
+      // Calculs
+      const activeServices = (services || []).filter(
         (s) => s.status !== 'completed' && s.status !== 'validated'
       ).length;
 
@@ -86,7 +124,7 @@ export default function DashboardPage() {
         financialSummary?.revenues ??
         transactions
           .filter((t) => t.type === 'revenue')
-          .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+          .reduce((n, t) => n + Number(t.amount || 0), 0);
 
       const totalExpense =
         financialSummary?.expenses ??
@@ -94,12 +132,10 @@ export default function DashboardPage() {
           .filter((t) =>
             ['expense', 'commission', 'adjustment'].includes(t.type)
           )
-          .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+          .reduce((n, t) => n + Number(t.amount || 0), 0);
 
       const balance =
-        financialSummary?.balance !== undefined
-          ? financialSummary.balance
-          : totalRevenue - totalExpense;
+        financialSummary?.balance ?? totalRevenue - totalExpense;
 
       setStats({
         servicesCount: services.length,
@@ -109,12 +145,14 @@ export default function DashboardPage() {
         totalExpense,
         balance,
       });
-    } catch (e) {
-      console.error('❌ Erreur chargement statistiques Dashboard:', e);
+    } catch (err) {
+      console.error('❌ Erreur chargement stats Dashboard:', err);
     }
   }
 
-  // Écrans de chargement / fallback
+  /* ---------------------------------------------------------------------- */
+  /* 🌀 ÉTAT CHARGEMENT                                                     */
+  /* ---------------------------------------------------------------------- */
   if (loading || !user) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
@@ -125,18 +163,21 @@ export default function DashboardPage() {
     );
   }
 
+  const roleKey = normalizeRole(user.role);
   const isPositiveBalance = stats.balance >= 0;
 
+  /* ============================================================================
+     🎨 UI PRINCIPALE
+  =========================================================================== */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 lg:py-10">
       <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl border border-gray-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
-        {/* =================================================================== */}
-        {/* 🧭 En-tête Premium                                                  */}
-        {/* =================================================================== */}
-        <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6 mb-8">
+        {/* ------------------------------------------------------------------ */}
+        {/* 🧭 HEADER PREMIUM                                                  */}
+        {/* ------------------------------------------------------------------ */}
+        <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6 mb-10">
           <div className="flex items-center gap-3">
-            {/* Avatar simple basé sur les initiales */}
             <div className="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-semibold text-lg shadow-sm">
               {getInitials(user)}
             </div>
@@ -145,22 +186,20 @@ export default function DashboardPage() {
                 Bonjour, {user.firstName || user.email} 👋
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                Bienvenue sur votre tableau de bord&nbsp;
-                <span className="font-semibold text-blue-600 uppercase tracking-wide">
-                  {user.role}
+                Bienvenue sur votre espace Teranga — rôle :
+                <span className="font-semibold text-blue-600 uppercase ml-1">
+                  {prettyRoleLabel(user.role)}
                 </span>
               </p>
             </div>
           </div>
 
-          {/* Badge rôle + mini résumé solde */}
+          {/* Badge rôle + solde */}
           <div className="flex flex-col items-start md:items-end gap-2">
-            <span
-              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
-                         bg-blue-50 text-blue-700 border border-blue-100"
-            >
-              Rôle : {user.role.toUpperCase()}
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+              {prettyRoleLabel(user.role)}
             </span>
+
             <div className="text-right">
               <div className="text-xs text-gray-500">Solde global</div>
               <div
@@ -174,26 +213,14 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* =================================================================== */}
-        {/* 📊 Statistiques dynamiques                                         */}
-        {/* =================================================================== */}
-        <section className="mb-10">
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              label="Services totaux"
-              value={formatAmount(stats.servicesCount)}
-              icon="📦"
-            />
-            <StatCard
-              label="Services actifs"
-              value={formatAmount(stats.activeServices)}
-              icon="✅"
-            />
-            <StatCard
-              label="Transactions"
-              value={formatAmount(stats.transactionsCount)}
-              icon="💳"
-            />
+        {/* ------------------------------------------------------------------ */}
+        {/* 📊 STATISTIQUES                                                   */}
+        {/* ------------------------------------------------------------------ */}
+        <section className="mb-12">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Services totaux" value={stats.servicesCount} icon="📦" />
+            <StatCard label="Services actifs" value={stats.activeServices} icon="⚡" />
+            <StatCard label="Transactions" value={stats.transactionsCount} icon="💳" />
             <StatCard
               label="Solde actuel"
               value={`${formatAmount(stats.balance)} XOF`}
@@ -203,57 +230,45 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* =================================================================== */}
-        {/* 💰 Bloc Financier (FinanceWidget)                                  */}
-        {/* =================================================================== */}
-        <section className="mb-10">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-            {/* Widget principal sur 2/3 sur desktop */}
+        {/* ------------------------------------------------------------------ */}
+        {/* 💰 FINANCES (WIDGET + SYNTHÈSE)                                   */}
+        {/* ------------------------------------------------------------------ */}
+        <section className="mb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5 lg:p-6 shadow-sm">
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
                     💰 Vue détaillée des finances
                   </h2>
-                  <span className="hidden sm:inline-flex px-2.5 py-1 text-xs rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                    Mis à jour en temps réel
-                  </span>
                 </div>
-
-                <FinanceWidget role={user.role} />
+                <FinanceWidget role={roleKey} />
               </div>
             </div>
 
-            {/* Résumé compact à droite sur desktop */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between">
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
               <div>
                 <h3 className="text-base font-semibold text-gray-900 mb-2">
                   Synthèse rapide
                 </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Un aperçu condensé de votre activité financière&nbsp;:
-                </p>
-
                 <ul className="space-y-2 text-sm text-gray-700">
-                  <li className="flex items-center justify-between">
-                    <span>Revenus totaux</span>
+                  <li className="flex justify-between">
+                    <span>Revenus</span>
                     <span className="font-semibold text-emerald-600">
                       {formatAmount(stats.totalRevenue)} XOF
                     </span>
                   </li>
-                  <li className="flex items-center justify-between">
-                    <span>Dépenses + frais</span>
+                  <li className="flex justify-between">
+                    <span>Dépenses</span>
                     <span className="font-semibold text-red-600">
                       {formatAmount(stats.totalExpense)} XOF
                     </span>
                   </li>
-                  <li className="flex items-center justify-between border-t border-dashed border-gray-200 pt-2 mt-2">
+                  <li className="flex justify-between border-t border-dashed border-gray-200 pt-2 mt-2">
                     <span>Solde net</span>
                     <span
                       className={`font-bold ${
-                        isPositiveBalance
-                          ? 'text-emerald-600'
-                          : 'text-red-600'
+                        isPositiveBalance ? 'text-emerald-600' : 'text-red-600'
                       }`}
                     >
                       {formatAmount(stats.balance)} XOF
@@ -261,115 +276,64 @@ export default function DashboardPage() {
                   </li>
                 </ul>
               </div>
-
-              <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-500">
-                Pour plus de détails, consultez le{' '}
-                <span className="font-semibold text-blue-600">
-                  Tableau de bord financier
-                </span>{' '}
-                dans vos liens rapides.
-              </div>
+              <p className="text-xs text-gray-500 border-t border-gray-100 mt-4 pt-3">
+                Pour plus de détails, consultez le tableau financier.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* =================================================================== */}
-        {/* 🔗 Liens rapides selon rôle                                        */}
-        {/* =================================================================== */}
+        {/* ------------------------------------------------------------------ */}
+        {/* 🚀 LIENS RAPIDES                                                  */}
+        {/* ------------------------------------------------------------------ */}
         <section>
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
             🚀 Accès rapides
           </h2>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {user.role === 'admin' && (
+
+            {/* ADMIN */}
+            {roleKey === 'admin' && (
               <>
-                <QuickLink
-                  to="/services"
-                  label="Mes services (clients)"
-                  icon="🧾"
-                />
-                <QuickLink
-                  to="/admin/services"
-                  label="Gestion des services"
-                  icon="🧩"
-                />
-                <QuickLink
-                  to="/admin/users"
-                  label="Utilisateurs"
-                  icon="👥"
-                />
-                <QuickLink
-                  to="/admin/agents"
-                  label="Agents"
-                  icon="🧑‍🔧"
-                />
-                <QuickLink
-                  to="/transactions"
-                  label="Transactions"
-                  icon="💰"
-                />
-                <QuickLink
-                  to="/finance"
-                  label="Tableau financier"
-                  icon="📊"
-                />
+                <QuickLink to="/services" label="Services clients" icon="🧾" />
+                <QuickLink to="/admin/services" label="Gestion services" icon="🧩" />
+                <QuickLink to="/admin/users" label="Utilisateurs" icon="👥" />
+                <QuickLink to="/admin/agents" label="Agents" icon="🧑‍🔧" />
+                <QuickLink to="/transactions" label="Transactions" icon="💰" />
+                <QuickLink to="/finance" label="Finances" icon="📊" />
               </>
             )}
 
-            {user.role === 'client' && (
+            {/* CLIENT */}
+            {roleKey === 'client' && (
               <>
-                <QuickLink
-                  to="/services"
-                  label="Mes services"
-                  icon="🧾"
-                />
-                <QuickLink
-                  to="/properties"
-                  label="Mes biens"
-                  icon="🏡"
-                />
-                <QuickLink
-                  to="/transactions"
-                  label="Mes transactions"
-                  icon="💰"
-                />
-                <QuickLink
-                  to="/finance"
-                  label="Mes finances"
-                  icon="📊"
-                />
+                <QuickLink to="/services" label="Mes services" icon="🧾" />
+                <QuickLink to="/properties" label="Mes biens" icon="🏡" />
+                <QuickLink to="/transactions" label="Mes transactions" icon="💰" />
+                <QuickLink to="/finance" label="Mes finances" icon="📊" />
               </>
             )}
 
-            {user.role === 'agent' && (
+            {/* AGENT */}
+            {roleKey === 'agent' && (
               <>
-                <QuickLink
-                  to="/agent/services"
-                  label="Services assignés"
-                  icon="⚙️"
-                />
-                <QuickLink
-                  to="/transactions"
-                  label="Mes transactions"
-                  icon="💰"
-                />
-                <QuickLink
-                  to="/finance"
-                  label="Mes finances"
-                  icon="📊"
-                />
+                <QuickLink to="/agent/services" label="Services assignés" icon="⚙️" />
+                <QuickLink to="/transactions" label="Mes transactions" icon="💰" />
+                <QuickLink to="/finance" label="Mes finances" icon="📊" />
               </>
             )}
           </div>
         </section>
+
       </div>
     </div>
   );
 }
 
-/* ============================================================================ */
-/* ✅ Composants réutilisables Premium                                         */
-/* ============================================================================ */
+/* ============================================================================
+   COMPOSANTS RÉUTILISABLES PREMIUM
+=========================================================================== */
 
 function StatCard({ label, value, highlight = false, icon }) {
   return (
@@ -379,22 +343,12 @@ function StatCard({ label, value, highlight = false, icon }) {
         bg-gradient-to-br from-blue-50 via-white to-blue-50
         border border-blue-100 rounded-2xl
         px-4 py-4 sm:px-5 sm:py-5
-        shadow-sm hover:shadow-md transition-shadow
+        shadow-sm hover:shadow-md transition
       "
     >
-      {/* Badge icône */}
-      {icon && (
-        <div className="absolute -top-2 -right-2 text-3xl opacity-20">
-          {icon}
-        </div>
-      )}
-
+      {icon && <div className="absolute -top-2 -right-2 text-3xl opacity-20">{icon}</div>}
       <div className="text-xs font-medium text-gray-500 mb-1">{label}</div>
-      <div
-        className={`text-lg sm:text-xl font-bold ${
-          highlight ? 'text-emerald-700' : 'text-blue-800'
-        }`}
-      >
+      <div className={`text-lg sm:text-xl font-bold ${highlight ? 'text-emerald-700' : 'text-blue-800'}`}>
         {value}
       </div>
     </div>
@@ -407,10 +361,9 @@ function QuickLink({ to, label, icon }) {
       to={to}
       className="
         group flex items-center justify-between
-        rounded-xl px-4 py-3
-        bg-slate-900 text-white
-        shadow-sm hover:shadow-md
-        transition
+        px-4 py-3 rounded-xl
+        bg-slate-900 text-white shadow-sm
+        hover:shadow-md transition
       "
     >
       <div className="flex items-center gap-3">
@@ -418,7 +371,7 @@ function QuickLink({ to, label, icon }) {
           className="
             flex items-center justify-center h-9 w-9 rounded-full
             bg-slate-800 group-hover:bg-slate-700
-            text-lg
+            text-lg transition
           "
         >
           {icon}
@@ -430,19 +383,4 @@ function QuickLink({ to, label, icon }) {
       </span>
     </Link>
   );
-}
-
-/** 🧩 Helper pour avatar : initiales à partir du user */
-function getInitials(user) {
-  if (!user) return '?';
-  const first = user.firstName || '';
-  const last = user.lastName || '';
-  const email = user.email || '';
-
-  const fromNames = (first[0] || '') + (last[0] || '');
-  if (fromNames.trim()) return fromNames.toUpperCase();
-
-  // fallback sur email
-  const firstChar = email[0] || '?';
-  return firstChar.toUpperCase();
 }
