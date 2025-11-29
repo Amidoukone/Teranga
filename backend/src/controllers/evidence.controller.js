@@ -1,12 +1,10 @@
-// backend/src/controllers/evidence.controller.js
 'use strict';
 
-const path = require('path');
-const fs = require('fs/promises');
 const { Evidence, Task, Service, Property, User, Order } = require('../../models');
 const { Op } = require('sequelize');
+const imagekit = require('../helpers/teranga-imagekit'); // ⭐ ImageKit intégré ici
 
-// 🌍 Dictionnaire de labels
+// 🌍 Labels
 const { EVIDENCE_KINDS, getLabel } = require('../utils/labels');
 
 /* ======================================================
@@ -18,15 +16,6 @@ function toSafeInt(v) {
   return Number.isNaN(n) ? null : n;
 }
 
-/**
- * Construit une URL de fichier POSIX relative (stable en prod)
- * → ex: /uploads/evidences/12345-file.jpg
- */
-function buildEvidencePath(filename) {
-  // path.posix garantit des "/" même si le serveur tourne sur Windows
-  return path.posix.join('/uploads/evidences', filename);
-}
-
 function guessKind(mime) {
   if (!mime) return 'other';
   if (mime.startsWith('image/')) return 'photo';
@@ -34,14 +23,10 @@ function guessKind(mime) {
   return 'other';
 }
 
-/**
- * 🏷️ Ajoute les labels + quelques alias utiles au front
- */
 function addLabels(evidence) {
   if (!evidence) return null;
   const e = evidence.toJSON ? evidence.toJSON() : evidence;
 
-  // Construit un nom complet uploaderName (fallback email)
   let uploaderName = null;
   if (e.uploader) {
     const fn = e.uploader.firstName || e.uploader.firstname || '';
@@ -58,7 +43,7 @@ function addLabels(evidence) {
 }
 
 /* ======================================================
-   🔐 Chargement & ACL — TÂCHES
+   🔐 ACL — Tâches
 ====================================================== */
 async function loadTaskForAcl(taskId) {
   if (!taskId) return null;
@@ -91,8 +76,7 @@ function canAccessTask(user, task) {
 }
 
 /* ======================================================
-   🔐 Chargement & ACL — COMMANDES
-   (défensif : userId | clientId | agentId possibles)
+   🔐 ACL — Commandes
 ====================================================== */
 async function loadOrderForAcl(orderId) {
   if (!orderId) return null;
@@ -104,103 +88,97 @@ function canAccessOrder(user, order) {
   if (user.role === 'admin') return true;
 
   const uid = String(user.id);
-  const oUser   = order.userId   != null ? String(order.userId)   : null;
+  const oUser = order.userId != null ? String(order.userId) : null;
   const oClient = order.clientId != null ? String(order.clientId) : null;
-  const oAgent  = order.agentId  != null ? String(order.agentId)  : null;
+  const oAgent = order.agentId != null ? String(order.agentId) : null;
 
   if (user.role === 'client') {
-    if (oUser && oUser === uid) return true;
-    if (oClient && oClient === uid) return true;
-    return false;
+    return oUser === uid || oClient === uid;
   }
 
   if (user.role === 'agent') {
-    if (oAgent && oAgent === uid) return true;
-    return false;
+    return oAgent === uid;
   }
 
   return false;
 }
 
 /* ======================================================
-   🧰 Normalisation des fichiers envoyés (clé pour éviter 400)
-   - Supporte req.files = Array (upload.array('files'))
-   - Supporte req.files = { champ1:[..], champ2:[..] } (upload.fields([...]))
-   - Supporte aussi le cas où Multer met un seul champ: req.file
+   🧰 Normalisation des fichiers envoyés
 ====================================================== */
 function normalizeUploadedFiles(req) {
-  // Cas multer.single() (au cas où)
   if (req.file) return [req.file];
-
-  // Cas array direct
   if (Array.isArray(req.files)) return req.files;
 
-  // Cas fields: { files:[...], proofFile:[...], ... }
   if (req.files && typeof req.files === 'object') {
     const out = [];
-    for (const key of Object.keys(req.files)) {
-      const arr = req.files[key];
+    for (const arr of Object.values(req.files)) {
       if (Array.isArray(arr)) out.push(...arr);
     }
     return out;
   }
-
   return [];
 }
 
 /* ======================================================
-   📸 Créer une ou plusieurs preuves
-   ➕ Support taskId OU orderId (un des deux requis)
+   📸 CREATE — Proofs upload → ImageKit
 ====================================================== */
 exports.create = async (req, res) => {
   try {
     const taskId = toSafeInt(req.body?.taskId);
     const orderId = toSafeInt(req.body?.orderId);
-    const notes = (req.body?.notes ?? null) || null;
+    const notes = req.body?.notes || null;
 
     if (!taskId && !orderId) {
       return res.status(400).json({ error: 'taskId ou orderId requis' });
     }
 
-    // Contexte + ACL
     let task = null;
     let order = null;
 
     if (taskId) {
       task = await loadTaskForAcl(taskId);
       if (!task) return res.status(404).json({ error: 'Tâche introuvable' });
-      if (!canAccessTask(req.user, task)) {
+      if (!canAccessTask(req.user, task))
         return res.status(403).json({ error: 'Accès interdit (tâche)' });
-      }
     }
 
     if (orderId) {
       order = await loadOrderForAcl(orderId);
       if (!order) return res.status(404).json({ error: 'Commande introuvable' });
-      if (!canAccessOrder(req.user, order)) {
+      if (!canAccessOrder(req.user, order))
         return res.status(403).json({ error: 'Accès interdit (commande)' });
-      }
     }
 
     const files = normalizeUploadedFiles(req);
-    if (!files.length) {
-      return res.status(400).json({ error: 'Aucun fichier fourni' });
-    }
+    if (!files.length) return res.status(400).json({ error: 'Aucun fichier fourni' });
 
     const created = [];
+
     for (const f of files) {
+      /* ======================================================
+          🚀 Upload ImageKit
+      ====================================================== */
+      const uploaded = await imagekit.upload({
+        file: f.buffer, // ⭐ buffer du memoryStorage
+        fileName: `evidence_${Date.now()}_${f.originalname}`,
+        folder: '/teranga/evidences/',
+      });
+
       const record = await Evidence.create({
-        taskId: task ? task.id : (taskId || null),
-        orderId: order ? order.id : (orderId || null),
+        taskId: task ? task.id : taskId,
+        orderId: order ? order.id : orderId,
         uploaderId: req.user.id,
         kind: guessKind(f.mimetype),
         mimeType: f.mimetype || null,
         originalName: f.originalname || null,
-        filePath: buildEvidencePath(f.filename), // ✅ chemin relatif POSIX
+        filePath: uploaded.url, // ⭐ URL CDN
+        fileId: uploaded.fileId, // ⭐ important pour delete
         fileSize: f.size || null,
         thumbnailPath: null,
         notes,
       });
+
       created.push(record);
     }
 
@@ -212,11 +190,9 @@ exports.create = async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    const evidencesWithLabels = withIncludes.map(addLabels);
-
     return res.status(201).json({
       message: 'Preuve(s) ajoutée(s) avec succès',
-      evidences: evidencesWithLabels,
+      evidences: withIncludes.map(addLabels),
     });
   } catch (e) {
     console.error('❌ Erreur create evidence:', e);
@@ -225,10 +201,7 @@ exports.create = async (req, res) => {
 };
 
 /* ======================================================
-   📋 Liste des preuves (ACL)
-   Support ?taskId=... ou ?orderId=...
-   - Admin : peut lister sans filtre
-   - Agent/Client : doivent fournir taskId ou orderId
+   📋 LIST — ACL
 ====================================================== */
 exports.list = async (req, res) => {
   try {
@@ -244,38 +217,34 @@ exports.list = async (req, res) => {
     if (taskId) {
       const task = await loadTaskForAcl(taskId);
       if (!task) return res.status(404).json({ error: 'Tâche introuvable' });
-      if (!canAccessTask(req.user, task)) {
+      if (!canAccessTask(req.user, task))
         return res.status(403).json({ error: 'Accès interdit (tâche)' });
-      }
       where.taskId = taskId;
     }
 
     if (orderId) {
       const order = await loadOrderForAcl(orderId);
       if (!order) return res.status(404).json({ error: 'Commande introuvable' });
-      if (!canAccessOrder(req.user, order)) {
+      if (!canAccessOrder(req.user, order))
         return res.status(403).json({ error: 'Accès interdit (commande)' });
-      }
       where.orderId = orderId;
     }
 
     const evidences = await Evidence.findAll({
       where,
-      include: [
-        { model: User, as: 'uploader', attributes: ['id', 'firstName', 'lastName', 'email'] },
-      ],
+      include: [{ model: User, as: 'uploader', attributes: ['id', 'firstName', 'lastName', 'email'] }],
       order: [['createdAt', 'DESC']],
     });
 
     return res.json({ evidences: evidences.map(addLabels) });
   } catch (e) {
     console.error('❌ Erreur list evidences:', e);
-    return res.status(500).json({ error: "Erreur lors de la récupération des preuves" });
+    return res.status(500).json({ error: 'Erreur lors de la récupération des preuves' });
   }
 };
 
 /* ======================================================
-   📂 Alias — Liste des preuves d’une tâche
+   📂 LIST BY TASK
 ====================================================== */
 exports.listByTask = async (req, res) => {
   try {
@@ -284,27 +253,24 @@ exports.listByTask = async (req, res) => {
 
     const task = await loadTaskForAcl(taskId);
     if (!task) return res.status(404).json({ error: 'Tâche introuvable' });
-    if (!canAccessTask(req.user, task)) {
+    if (!canAccessTask(req.user, task))
       return res.status(403).json({ error: 'Accès interdit' });
-    }
 
     const evidences = await Evidence.findAll({
       where: { taskId },
-      include: [
-        { model: User, as: 'uploader', attributes: ['id', 'firstName', 'lastName', 'email'] },
-      ],
+      include: [{ model: User, as: 'uploader', attributes: ['id', 'firstName', 'lastName', 'email'] }],
       order: [['createdAt', 'DESC']],
     });
 
     return res.json({ evidences: evidences.map(addLabels) });
   } catch (e) {
-    console.error('❌ Erreur listByTask evidences:', e);
-    return res.status(500).json({ error: "Erreur lors de la récupération des preuves" });
+    console.error('❌ Erreur listByTask:', e);
+    return res.status(500).json({ error: 'Erreur lors de la récupération des preuves' });
   }
 };
 
 /* ======================================================
-   🆕 Alias — Liste des preuves d’une commande
+   🔹 LIST BY ORDER
 ====================================================== */
 exports.listByOrder = async (req, res) => {
   try {
@@ -313,27 +279,24 @@ exports.listByOrder = async (req, res) => {
 
     const order = await loadOrderForAcl(orderId);
     if (!order) return res.status(404).json({ error: 'Commande introuvable' });
-    if (!canAccessOrder(req.user, order)) {
+    if (!canAccessOrder(req.user, order))
       return res.status(403).json({ error: 'Accès interdit' });
-    }
 
     const evidences = await Evidence.findAll({
       where: { orderId },
-      include: [
-        { model: User, as: 'uploader', attributes: ['id', 'firstName', 'lastName', 'email'] },
-      ],
+      include: [{ model: User, as: 'uploader', attributes: ['id', 'firstName', 'lastName', 'email'] }],
       order: [['createdAt', 'DESC']],
     });
 
     return res.json({ evidences: evidences.map(addLabels) });
   } catch (e) {
-    console.error('❌ Erreur listByOrder evidences:', e);
-    return res.status(500).json({ error: "Erreur lors de la récupération des preuves" });
+    console.error('❌ Erreur listByOrder:', e);
+    return res.status(500).json({ error: 'Erreur lors de la récupération des preuves' });
   }
 };
 
 /* ======================================================
-   🗑️ Suppression sécurisée (admin)
+   🗑️ DELETE — ImageKit + ACL admin
 ====================================================== */
 exports.remove = async (req, res) => {
   try {
@@ -343,27 +306,28 @@ exports.remove = async (req, res) => {
     const ev = await Evidence.findByPk(id, {
       include: [
         { model: User, as: 'uploader', attributes: ['id', 'email', 'role'] },
-        // conservé pour compat avec d'autres écrans
-        { model: Task, as: 'task', include: [{ model: Service, as: 'service' }] },
+        {
+          model: Task,
+          as: 'task',
+          include: [{ model: Service, as: 'service' }],
+        },
       ],
     });
 
     if (!ev) return res.status(404).json({ error: 'Preuve introuvable' });
 
-    // 🔒 Admin-only
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Suppression réservée à un administrateur.' });
     }
 
-    // 🧹 Supprime le fichier physique si présent
-    if (ev.filePath) {
-      // On retire un éventuel / ou \ au début du chemin relatif
-      const relative = ev.filePath.replace(/^[/\\]/, '');
-      const abs = path.join(__dirname, '../../', relative);
+    /* ======================================================
+       🗑️ Suppression ImageKit 
+    ====================================================== */
+    if (ev.fileId) {
       try {
-        await fs.unlink(abs);
-      } catch {
-        // Non bloquant : le fichier peut avoir déjà été supprimé
+        await imagekit.deleteFile(ev.fileId);
+      } catch (e) {
+        console.warn('⚠️ Impossible de supprimer le fichier ImageKit:', e.message);
       }
     }
 
@@ -371,6 +335,6 @@ exports.remove = async (req, res) => {
     return res.json({ message: 'Preuve supprimée avec succès' });
   } catch (e) {
     console.error('❌ Erreur remove evidence:', e);
-    return res.status(500).json({ error: "Erreur lors de la suppression de la preuve" });
+    return res.status(500).json({ error: 'Erreur lors de la suppression du fichier' });
   }
 };

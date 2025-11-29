@@ -1,49 +1,49 @@
-'use strict';
+// backend/src/middleware/uploadProjects.middleware.js
+"use strict";
 
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const multer = require("multer");
+const path = require("path");
 
-// 📂 Dossier d’upload pour les documents de projets
-const uploadDir = path.join(__dirname, '../../uploads/projects');
+/* ============================================================
+   📂 MEMORY STORAGE — ImageKit Ready
+   Les fichiers vont en mémoire → upload vers ImageKit dans le controller
+   Plus d'écriture sur disque → compatible Render & Netlify
+============================================================ */
+const storage = multer.memoryStorage();
 
-// ✅ Création récursive si le dossier n’existe pas
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-  console.log('📂 Dossier créé automatiquement :', uploadDir);
-}
+/* ============================================================
+   🔒 Filtre des fichiers (identique à ta version)
+   Formats autorisés:
+   - jpg, jpeg, png, pdf
+============================================================ */
+const allowed = new Set([".jpg", ".jpeg", ".png", ".pdf"]);
 
-// ⚙️ Configuration du stockage : nom de fichier unique + extension d’origine
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${unique}${ext}`);
-  },
-});
-
-// 🔒 Filtre des fichiers (formats autorisés)
 const fileFilter = (_req, file, cb) => {
-  const allowed = ['.jpg', '.jpeg', '.png', '.pdf'];
   const ext = path.extname(file.originalname).toLowerCase();
-
-  if (!allowed.includes(ext)) {
+  if (!allowed.has(ext)) {
     return cb(
-      new Error('Type de fichier non supporté (jpg, jpeg, png, pdf uniquement)'),
+      new Error("Type de fichier non supporté (jpg, jpeg, png, pdf uniquement)"),
       false
     );
   }
-
   cb(null, true);
 };
 
-// 🚀 Middleware Multer prêt à l’emploi
+/* ============================================================
+   🚀 Middleware Multer (version mémoire)
+============================================================ */
 const uploadProjects = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo max
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10 Mo max/fichier
+  },
 });
 
-// ✅ Export du middleware
+/* ============================================================
+   👍 EXPORT IDENTIQUE À TA STRUCTURE EXISTANTE
+   → uploadProjects.single("file")
+   → uploadProjects.array("files", 10)
+   → uploadProjects.fields([{ name: "files" }])
+============================================================ */
 module.exports = uploadProjects;

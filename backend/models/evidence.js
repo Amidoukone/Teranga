@@ -4,7 +4,6 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Evidence extends Model {
     static associate(models) {
-      // 🔗 Relations existantes (métier)
       Evidence.belongsTo(models.Task, {
         foreignKey: 'taskId',
         as: 'task',
@@ -17,7 +16,6 @@ module.exports = (sequelize, DataTypes) => {
         onDelete: 'SET NULL',
       });
 
-      // 🛒 Relation e-commerce (nouvelle)
       Evidence.belongsTo(models.Order, {
         foreignKey: 'orderId',
         as: 'order',
@@ -28,28 +26,37 @@ module.exports = (sequelize, DataTypes) => {
 
   Evidence.init(
     {
-      // 🔗 Clés étrangères
+      // FK
       taskId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
       uploaderId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
 
-      // ⚠️ Spécificité : seule cette colonne est en snake_case dans ta base
       orderId: {
         type: DataTypes.INTEGER.UNSIGNED,
         allowNull: true,
-        field: 'order_id',
+        field: 'order_id', // correspond exactement à ta colonne
       },
 
-      // 📄 Métadonnées du fichier (camelCase dans ta DB)
+      // Type & métadonnées
       kind: {
         type: DataTypes.ENUM('photo', 'document', 'receipt', 'other'),
         allowNull: false,
         defaultValue: 'document',
       },
+
       mimeType: { type: DataTypes.STRING, allowNull: true },
       originalName: { type: DataTypes.STRING, allowNull: true },
+
+      // ⭐ URL CDN ImageKit
       filePath: { type: DataTypes.STRING, allowNull: false },
+
+      // ⭐ Identifiant ImageKit (manquant dans ton ancien modèle)
+      fileId: { type: DataTypes.STRING, allowNull: true },
+
       fileSize: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+
+      // Peut stocker un future thumbnail généré automatiquement
       thumbnailPath: { type: DataTypes.STRING, allowNull: true },
+
       notes: { type: DataTypes.TEXT, allowNull: true },
     },
     {
@@ -57,14 +64,10 @@ module.exports = (sequelize, DataTypes) => {
       modelName: 'Evidence',
       tableName: 'evidences',
 
-      // 🚫 Pas de `underscored: true` car ta table est camelCase
-      // Sequelize utilisera les noms tels quels (mimeType, filePath, etc.)
-      // underscored: true, <-- retiré
-
       indexes: [
         { fields: ['taskId'] },
         { fields: ['uploaderId'] },
-        { fields: ['order_id'] }, // vrai nom de la colonne en DB
+        { fields: ['order_id'] },
         { fields: ['kind'] },
       ],
     }

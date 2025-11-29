@@ -8,81 +8,76 @@ function toNullableNumber(v) {
 module.exports = (sequelize, DataTypes) => {
   class Property extends Model {
     static associate(models) {
-      // Relation : un bien appartient à un utilisateur (propriétaire)
-      Property.belongsTo(models.User, { foreignKey: 'ownerId', as: 'owner' });
+      Property.belongsTo(models.User, {
+        foreignKey: 'ownerId',
+        as: 'owner'
+      });
     }
   }
 
-  Property.init({
-    ownerId: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false
-    },
-    title: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
-    description: DataTypes.TEXT,
-    type: {
-      type: DataTypes.ENUM('house', 'apartment', 'land', 'commercial'),
-      allowNull: false
-    },
-    address: {
-      type: DataTypes.TEXT,
-      allowNull: false
-    },
-    city: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
-    postalCode: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    latitude: {
-      type: DataTypes.DECIMAL(10, 7),
-      allowNull: true,
-      set(value) {
-        this.setDataValue('latitude', toNullableNumber(value));
-      }
-    },
-    longitude: {
-      type: DataTypes.DECIMAL(10, 7),
-      allowNull: true,
-      set(value) {
-        this.setDataValue('longitude', toNullableNumber(value));
-      }
-    },
-    surfaceArea: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: true,
-      set(value) {
-        this.setDataValue('surfaceArea', toNullableNumber(value));
-      }
-    },
-    roomCount: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      set(value) {
-        this.setDataValue('roomCount', toNullableNumber(value));
-      }
-    },
-    status: {
-      type: DataTypes.ENUM('active', 'inactive', 'sold'),
-      defaultValue: 'active'
-    },
+  Property.init(
+    {
+      ownerId: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false
+      },
 
-    // ✅ Nouvelle colonne photos
-    photos: {
-      type: DataTypes.JSON,   // MySQL 5.7+ support JSON
-      allowNull: true,
-      defaultValue: []        // liste vide si aucun fichier
+      title: { type: DataTypes.STRING, allowNull: false },
+      description: DataTypes.TEXT,
+
+      type: {
+        type: DataTypes.ENUM('house', 'apartment', 'land', 'commercial'),
+        allowNull: false
+      },
+
+      address: { type: DataTypes.TEXT, allowNull: false },
+      city: { type: DataTypes.STRING, allowNull: false },
+      postalCode: { type: DataTypes.STRING, allowNull: true },
+
+      latitude: {
+        type: DataTypes.DECIMAL(10, 7),
+        allowNull: true,
+        set(v) { this.setDataValue('latitude', toNullableNumber(v)); }
+      },
+      longitude: {
+        type: DataTypes.DECIMAL(10, 7),
+        allowNull: true,
+        set(v) { this.setDataValue('longitude', toNullableNumber(v)); }
+      },
+
+      surfaceArea: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        set(v) { this.setDataValue('surfaceArea', toNullableNumber(v)); }
+      },
+      roomCount: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        set(v) { this.setDataValue('roomCount', toNullableNumber(v)); }
+      },
+
+      status: {
+        type: DataTypes.ENUM('active', 'inactive', 'sold'),
+        defaultValue: 'active'
+      },
+
+      /**
+       * 🖼 MULTI-PHOTOS (ImageKit ou legacy local)
+       * - JSON ARRAY d’URL
+       * - ex: ["https://ik.imagekit.io/.../photo1.jpg", ...]
+       */
+      photos: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        defaultValue: []
+      }
+    },
+    {
+      sequelize,
+      modelName: 'Property',
+      tableName: 'properties'
     }
-  }, {
-    sequelize,
-    modelName: 'Property',
-    tableName: 'properties'   // ✅ cohérent avec ta DB (minuscule)
-  });
+  );
 
   return Property;
 };

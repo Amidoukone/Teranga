@@ -3,16 +3,17 @@
 const { Property, User, sequelize } = require('../../models');
 const { Op } = require('sequelize');
 
-// 🌍 Dictionnaire de labels centralisé (assure-toi que ces clés existent)
 const {
   PROPERTY_TYPES,
   PROPERTY_STATUSES,
   getLabel,
-  applyLabels, // si tu l’as côté backend; sinon on recalcule ci-dessous
 } = require('../utils/labels');
 
+const imageKit = require('../helpers/teranga-imagekit'); // 🔥 ImageKit helper
+const path = require('path');
+
 /* ============================================================
-   ⚙️ Helpers utilitaires
+   Helpers utilitaires
 ============================================================ */
 function toNullableNumber(v) {
   if (v === '' || v === undefined || v === null) return null;
@@ -38,131 +39,61 @@ function getPagination(req, defaultLimit = 50, maxLimit = 200) {
 }
 
 /* ============================================================
-   🖼️ Normalisation des chemins photos (lecture)
-   - But : corriger les anciennes valeurs en base qui auraient
-     stocké une URL absolue (http://localhost:5000/...) ou un
-     chemin bizarre, pour toujours renvoyer /uploads/...
+   🔥 Ajout des labels + conversion
 ============================================================ */
-function normalizePhotoPath(p) {
-  if (!p) return p;
-  let s = String(p).trim();
-  if (!s) return s;
-
-  // Déjà au bon format
-  if (s.startsWith('/uploads/')) {
-    return s.replace(/\/{2,}/g, '/');
-  }
-
-  // URL absolue contenant /uploads/ (ex: http://localhost:5000/uploads/...)
-  const idx = s.indexOf('/uploads/');
-  if (idx !== -1) {
-    s = s.slice(idx);
-    return s.replace(/\/{2,}/g, '/');
-  }
-
-  // Fallback : on ne touche pas pour ne pas casser un cas exotique
-  return s;
-}
-
 function addLabels(p) {
   if (!p) return null;
-  const obj = p.toJSON ? p.toJSON() : p;
 
-  // Normaliser les photos à la volée (utile si d’anciennes données contiennent "http://localhost...")
-  let photos = obj.photos;
-  if (Array.isArray(photos)) {
-    photos = photos.map(normalizePhotoPath);
-  }
+  const obj = p.toJSON ? p.toJSON() : p;
 
   return {
     ...obj,
-    photos,
     typeLabel: getLabel(obj.type, PROPERTY_TYPES),
     statusLabel: getLabel(obj.status, PROPERTY_STATUSES),
   };
 }
 
 /* ============================================================
-   🖼️ Fonction critique : chemins fichiers (UPLOAD)
-   ✅ Version production-safe :
-   - Ne fait PLUS confiance à f.path (qui dépend de l’OS / Render / proxy)
-   - Utilise uniquement f.filename défini par multer
-   - Produit TOUJOURS : /uploads/properties/<filename>
+   🔥 UPLOAD ImageKit (memory buffer → CDN)
 ============================================================ */
-function filePathsFromMulter(files = []) {
-  if (!Array.isArray(files) || !files.length) return [];
+async function uploadPhotosToImageKit(files = []) {
+  const results = [];
 
-  return files
-    .map((f) => {
-      try {
-        if (f && f.filename) {
-          return `/uploads/properties/${f.filename}`;
-        }
-        return null;
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean);
-}
+  for (const f of files) {
+    const ext = path.extname(f.originalname).replace('.', '') || 'jpg';
 
-/* ============================================================
-   🧭 Résolution du propriétaire cible (pour création côté admin)
-   - Accepte ownerId / clientId (body ou query) ou ownerEmail (body)
-   - Valide que l’utilisateur existe et a le rôle 'client'
-============================================================ */
-async function resolveTargetOwnerId(req) {
-  // Par défaut: le créateur est le propriétaire (client ou admin qui crée pour lui-même)
-  let targetOwnerId = req.user.id;
+    const uploaded = await imageKit.upload({
+      file: f.buffer,       // memory upload
+      fileName: `prop_${Date.now()}_${Math.round(Math.random() * 1e9)}.${ext}`,
+      folder: '/teranga/properties',
+    });
 
-  // Admin peut créer pour un client spécifique
-  // On accepte les variantes suivantes:
-  //   body.ownerId | body.clientId | query.ownerId | query.clientId | body.ownerEmail
-  if (req.user.role === 'admin') {
-    const body = req.body || {};
-    const q = req.query || {};
-
-    const candidateId =
-      toSafeInt(body.ownerId) ||
-      toSafeInt(body.clientId) ||
-      toSafeInt(q.ownerId) ||
-      toSafeInt(q.clientId) ||
-      null;
-
-    const ownerEmail = body.ownerEmail ? String(body.ownerEmail).trim() : null;
-
-    let targetUser = null;
-
-    if (candidateId) {
-      targetUser = await User.findByPk(candidateId);
-      if (!targetUser) {
-        throw new Error('ownerId/clientId invalide: utilisateur introuvable');
-      }
-    } else if (ownerEmail) {
-      targetUser = await User.findOne({ where: { email: ownerEmail } });
-      if (!targetUser) {
-        throw new Error('ownerEmail invalide: utilisateur introuvable');
-      }
-    }
-
-    if (targetUser) {
-      if (String(targetUser.role) !== 'client') {
-        // On force la logique business: un bien appartient à un client
-        throw new Error(
-          `L'utilisateur cible (id=${targetUser.id}) n'a pas le rôle "client" (role actuel: ${targetUser.role}).`
-        );
-      }
-      targetOwnerId = targetUser.id;
-    }
+    results.push({
+      url: uploaded.url,
+      fileId: uploaded.fileId,
+    });
   }
 
-  return targetOwnerId;
+  return results;
 }
 
 /* ============================================================
-   📜 LISTE des biens
-   - Client : ses propres biens
-   - Admin  : peut voir tous ou filtrer par client
+   🔥 DELETE ImageKit
+============================================================ */
+async function deleteImageKitFiles(photoObjects = []) {
+  for (const p of photoObjects) {
+    if (p?.fileId) {
+      try {
+        await imageKit.deleteFile(p.fileId);
+      } catch (e) {
+        console.warn('⚠️ Impossible de supprimer fileId ImageKit:', p.fileId, e.message);
+      }
+    }
+  }
+}
+
+/* ============================================================
+   🔵 LIST des propriétés
 ============================================================ */
 exports.list = async (req, res) => {
   try {
@@ -191,13 +122,9 @@ exports.list = async (req, res) => {
     if (req.user.role === 'admin') {
       if (clientId) {
         where.ownerId = toSafeInt(clientId);
-      } else if (String(all).toLowerCase() === 'true') {
-        // tous les biens (pas de filtre supplémentaire)
-      } else {
-        // défaut admin : tous les biens (utile pour dashboard)
       }
+      // sinon admin voit tout
     } else {
-      // client : uniquement ses biens
       where.ownerId = req.user.id;
     }
 
@@ -213,18 +140,18 @@ exports.list = async (req, res) => {
       offset,
     });
 
-    return res.json({
+    res.json({
       properties: rows.map(addLabels),
       pagination: { limit, offset, total: count },
     });
   } catch (e) {
-    console.error('❌ Erreur list properties:', e);
-    return res.status(500).json({ error: 'Erreur lors de la récupération des biens' });
+    console.error('❌ list properties:', e);
+    res.status(500).json({ error: 'Erreur lors de la récupération des biens' });
   }
 };
 
 /* ============================================================
-   📜 LISTE des biens d’un client (admin)
+   🔵 LIST by client (admin)
 ============================================================ */
 exports.listByClient = async (req, res) => {
   try {
@@ -246,33 +173,26 @@ exports.listByClient = async (req, res) => {
       offset,
     });
 
-    return res.json({
+    res.json({
       properties: rows.map(addLabels),
       pagination: { limit, offset, total: count },
     });
   } catch (e) {
-    console.error('❌ Erreur listByClient properties:', e);
-    return res
-      .status(500)
-      .json({ error: 'Erreur lors de la récupération des biens du client' });
+    console.error('❌ listByClient properties:', e);
+    res.status(500).json({ error: 'Erreur lors de la récupération des biens' });
   }
 };
 
 /* ============================================================
-   ➕ CRÉER un bien
-   - Client : crée pour lui-même
-   - Admin  : peut créer pour un client spécifique (ownerId|clientId|ownerEmail)
-   - Upload : jusqu’à 5 fichiers via champ 'files'
+   🔥 CREATE (ImageKit upload)
 ============================================================ */
 exports.create = async (req, res) => {
   try {
     const {
-      // variantes d’aiguillage admin -> client
-      ownerId,      // optionnel (admin)
-      clientId,     // optionnel (admin)
-      ownerEmail,   // optionnel (admin, fallback par email)
+      ownerId,
+      clientId,
+      ownerEmail,
 
-      // champs métier
       title,
       type,
       address,
@@ -283,37 +203,45 @@ exports.create = async (req, res) => {
       surfaceArea,
       roomCount,
       description,
-      status, // optionnel
+      status,
     } = req.body || {};
 
     if (!title || !type || !address || !city) {
       return res.status(400).json({ error: 'title, type, address, city sont requis' });
     }
 
-    // 🔐 Résolution explicite du propriétaire cible
-    let targetOwnerId;
-    try {
-      targetOwnerId = await resolveTargetOwnerId(req);
-    } catch (err) {
-      console.warn('⚠️ Aiguillage propriétaire refusé:', err.message);
-      return res.status(400).json({ error: err.message });
+    /* RESOLUTION DU PROPRIETAIRE */
+    let targetOwnerId = req.user.id;
+
+    if (req.user.role === 'admin') {
+      const candidateId =
+        toSafeInt(ownerId) ||
+        toSafeInt(clientId) ||
+        null;
+
+      if (candidateId) {
+        const user = await User.findByPk(candidateId);
+        if (!user) return res.status(400).json({ error: 'ownerId/clientId invalide' });
+        if (user.role !== 'client') return res.status(400).json({ error: 'Le propriétaire doit être un client' });
+        targetOwnerId = user.id;
+      } else if (ownerEmail) {
+        const user = await User.findOne({ where: { email: ownerEmail } });
+        if (!user || user.role !== 'client') {
+          return res.status(400).json({ error: 'ownerEmail invalide ou non client' });
+        }
+        targetOwnerId = user.id;
+      }
     }
 
-    const photos = filePathsFromMulter(req.files);
-    console.log('📸 Photos uploadées (create):', photos);
-    console.log(
-      `🧾 Demande création bien par user=${req.user.id} (role=${req.user.role}) => ownerId=${targetOwnerId}` +
-        (ownerId ? ` | body.ownerId=${ownerId}` : '') +
-        (clientId ? ` | body.clientId=${clientId}` : '') +
-        (ownerEmail ? ` | body.ownerEmail=${ownerEmail}` : '')
-    );
+    /* 🔥 UPLOAD ImageKit */
+    const photos = req.files?.length ? await uploadPhotosToImageKit(req.files) : [];
 
     const created = await Property.create({
       ownerId: targetOwnerId,
-      title: String(title).trim(),
-      type: String(type).trim(),
-      address: String(address).trim(),
-      city: String(city).trim(),
+      title,
+      type,
+      address,
+      city,
       postalCode: toTrimOrNull(postalCode),
       latitude: toNullableNumber(latitude),
       longitude: toNullableNumber(longitude),
@@ -321,7 +249,7 @@ exports.create = async (req, res) => {
       roomCount: toNullableNumber(roomCount),
       description: toTrimOrNull(description),
       status: status ? String(status).trim() : 'active',
-      photos,
+      photos, // 🔥 intégration ImageKit
     });
 
     const property = await Property.findByPk(created.id, {
@@ -333,14 +261,13 @@ exports.create = async (req, res) => {
       property: addLabels(property),
     });
   } catch (e) {
-    console.error('❌ Erreur create property:', e);
-    return res.status(500).json({ error: 'Erreur lors de la création du bien' });
+    console.error('❌ create property:', e);
+    res.status(500).json({ error: 'Erreur lors de la création du bien' });
   }
 };
 
 /* ============================================================
-   ✏️ METTRE À JOUR un bien
-   - Merge ou remplacement complet des photos
+   🔥 UPDATE (ImageKit upload + merge/replace)
 ============================================================ */
 exports.update = async (req, res) => {
   try {
@@ -348,7 +275,6 @@ exports.update = async (req, res) => {
     const p = await Property.findByPk(id);
     if (!p) return res.status(404).json({ error: 'Bien introuvable' });
 
-    // Vérif droits
     if (req.user.role !== 'admin' && String(p.ownerId) !== String(req.user.id)) {
       return res.status(403).json({ error: 'Non autorisé' });
     }
@@ -381,17 +307,22 @@ exports.update = async (req, res) => {
     if (description !== undefined) updates.description = toTrimOrNull(description);
     if (status !== undefined) updates.status = String(status).trim();
 
-    const newPhotos = filePathsFromMulter(req.files);
+    /* 🔥 Nouveaux uploads */
+    let newPhotos = [];
+    if (req.files && req.files.length) {
+      newPhotos = await uploadPhotosToImageKit(req.files);
+    }
+
     if (newPhotos.length) {
-      console.log('📸 Nouvelles photos uploadées (update):', newPhotos);
       const shouldReplace = String(replacePhotos).toLowerCase() === 'true';
+
       if (shouldReplace) {
+        // supprimer les anciennes images IK
+        await deleteImageKitFiles(p.photos);
+
         updates.photos = newPhotos;
       } else {
-        updates.photos = [
-          ...(Array.isArray(p.photos) ? p.photos.map(normalizePhotoPath) : []),
-          ...newPhotos,
-        ];
+        updates.photos = [...(p.photos || []), ...newPhotos];
       }
     }
 
@@ -401,15 +332,15 @@ exports.update = async (req, res) => {
       include: [{ model: User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email'] }],
     });
 
-    return res.json({ message: 'Bien mis à jour', property: addLabels(property) });
+    res.json({ message: 'Bien mis à jour', property: addLabels(property) });
   } catch (e) {
-    console.error('❌ Erreur update property:', e);
-    return res.status(500).json({ error: 'Erreur lors de la mise à jour du bien' });
+    console.error('❌ update property:', e);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour du bien' });
   }
 };
 
 /* ============================================================
-   🗑️ SUPPRIMER un bien
+   🔥 DELETE (suppression ImageKit)
 ============================================================ */
 exports.remove = async (req, res) => {
   try {
@@ -421,10 +352,14 @@ exports.remove = async (req, res) => {
       return res.status(403).json({ error: 'Non autorisé' });
     }
 
+    /* 🔥 supprimer les fichiers ImageKit */
+    await deleteImageKitFiles(p.photos || []);
+
     await p.destroy();
-    return res.json({ message: 'Bien supprimé' });
+
+    res.json({ message: 'Bien supprimé' });
   } catch (e) {
-    console.error('❌ Erreur delete property:', e);
-    return res.status(500).json({ error: 'Erreur lors de la suppression du bien' });
+    console.error('❌ delete property:', e);
+    res.status(500).json({ error: 'Erreur lors de la suppression du bien' });
   }
 };

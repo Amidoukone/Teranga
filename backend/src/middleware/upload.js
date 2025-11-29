@@ -1,43 +1,43 @@
+// backend/src/middleware/uploadProperties.middleware.js
+'use strict';
+
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 
-// 📂 Dossier d’upload (relatif à la racine du projet backend)
-const uploadDir = path.join(__dirname, '../../uploads/properties');
+/* ============================================================
+   📌 Nouveau système basé sur MEMORY STORAGE (ImageKit-ready)
+   → On ne sauvegarde plus rien sur disque local
+   → Les fichiers sont envoyés en RAM : file.buffer
+============================================================ */
+const storage = multer.memoryStorage();
 
-// Vérifie que le dossier existe, sinon le crée récursivement
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-  console.log('📂 Dossier créé automatiquement :', uploadDir);
-}
+/* ============================================================
+   🔒 Filtre des extensions autorisées (identique à ta version)
+============================================================ */
+const ALLOWED_EXTS = new Set(['.jpg', '.jpeg', '.png', '.pdf']);
 
-// ⚙️ Configuration de stockage
-const storage = multer.diskStorage({
-  destination: function (_req, _file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (_req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-// 🔒 Filtrer les types de fichiers (images et pdf uniquement)
-const fileFilter = (req, file, cb) => {
-  const allowed = ['.jpg', '.jpeg', '.png', '.pdf'];
-  const ext = path.extname(file.originalname).toLowerCase();
-
-  if (!allowed.includes(ext)) {
-    return cb(new Error('Type de fichier non supporté (jpg, jpeg, png, pdf uniquement)'), false);
+function fileFilter(req, file, cb) {
+  const ext = (path.extname(file.originalname) || '').toLowerCase();
+  if (!ALLOWED_EXTS.has(ext)) {
+    return cb(
+      new Error('Type de fichier non supporté (jpg, jpeg, png, pdf uniquement)'),
+      false
+    );
   }
   cb(null, true);
-};
+}
 
-// 🚀 Middleware upload
+/* ============================================================
+   🚀 Configuration Multer
+============================================================ */
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB max
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
 });
 
+/* ============================================================
+   🟢 EXPORT
+   → Les controllers continuent d’utiliser req.files normalement
+============================================================ */
 module.exports = upload;

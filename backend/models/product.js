@@ -14,8 +14,12 @@ module.exports = (sequelize, DataTypes) => {
 
   Product.init(
     {
-      // 🔗 Relation catégorie (nullable)
-      categoryId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+      // 🔗 Relation catégorie
+      categoryId: { 
+        type: DataTypes.INTEGER.UNSIGNED, 
+        allowNull: true,
+        field: 'category_id'
+      },
 
       // 🏷️ Identité produit
       name: { type: DataTypes.STRING(180), allowNull: false },
@@ -44,32 +48,43 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
+        field: 'is_active'
       },
 
       // 📝 Descriptions
-      shortDescription: { type: DataTypes.STRING(500), allowNull: true },
+      shortDescription: { 
+        type: DataTypes.STRING(500), 
+        allowNull: true, 
+        field: 'short_description'
+      },
       description: { type: DataTypes.TEXT, allowNull: true },
 
       /**
-       * 🖼 Image principale (historique)
-       * - chemin relatif ex: "/uploads/products/xxx.jpg"
-       * - front: normalisé via getFileUrl(...)
+       * 🖼 Image principale stockée sur ImageKit ou local
+       * - URL absolue (ImageKit) ou relative (/uploads/products/*.jpg)
        */
-      coverImage: { type: DataTypes.STRING, allowNull: true },
+      coverImage: { 
+        type: DataTypes.STRING(1024), 
+        allowNull: true,
+        field: 'cover_image'
+      },
 
       /**
-       * 🖼🖼🖼 Galerie d'images (multi-images)
-       * - JSON ARRAY de chemins relatifs ex: ["/uploads/products/1.jpg", ...]
-       * - on recommandera côté backend/front de limiter à 3 images max
-       * - coverImage = image principale (généralement gallery[0])
+       * 🖼🖼🖼 Galerie multi-images
+       * - Toujours un JSON array
+       * - URLs absolues ImageKit ou locales
        */
-      gallery: { type: DataTypes.JSON, allowNull: true }, // array d’URLs
+      gallery: { 
+        type: DataTypes.JSON, 
+        allowNull: true 
+      },
     },
     {
       sequelize,
       modelName: 'Product',
       tableName: 'products',
       underscored: true,
+
       indexes: [
         { fields: ['slug'], unique: true },
         { fields: ['sku'], unique: true },

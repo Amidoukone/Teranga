@@ -7,64 +7,95 @@ module.exports = {
       id: {
         type: Sequelize.INTEGER.UNSIGNED,
         autoIncrement: true,
-        primaryKey: true
+        primaryKey: true,
       },
 
-      // 🔗 Relations logiques (sans contraintes FK)
+      /* ============================================================
+         🔗 Relations logiques
+         - PAS DE FOREIGN KEY car PlanetScale ne supporte pas les FK
+      ============================================================ */
       taskId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: false
+        allowNull: true,
       },
       uploaderId: {
         type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: true
+        allowNull: true,
       },
 
-      // 📄 Métadonnées fichier
+      // ⭐ CORRECTIF : Ajout order_id
+      order_id: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: true,
+      },
+
+      /* ============================================================
+         📄 Métadonnées du fichier
+      ============================================================ */
       kind: {
         type: Sequelize.ENUM('photo', 'document', 'receipt', 'other'),
         allowNull: false,
-        defaultValue: 'document'
+        defaultValue: 'document',
       },
+
       mimeType: {
         type: Sequelize.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       originalName: {
         type: Sequelize.STRING(255),
-        allowNull: true
-      },
-      filePath: {
-        type: Sequelize.STRING(1024),
-        allowNull: false // ex: /uploads/evidences/xxxx.jpg
-      },
-      fileSize: {
-        type: Sequelize.INTEGER.UNSIGNED,
-        allowNull: true // bytes
-      },
-      thumbnailPath: {
-        type: Sequelize.STRING(1024),
-        allowNull: true // miniature optionnelle
-      },
-      notes: {
-        type: Sequelize.TEXT,
-        allowNull: true
+        allowNull: true,
       },
 
+      // ⭐ URL CDN ImageKit
+      filePath: {
+        type: Sequelize.STRING(1024),
+        allowNull: false,
+      },
+
+      // ⭐ ID ImageKit pour deleteFile()
+      fileId: {
+        type: Sequelize.STRING(255),
+        allowNull: true,
+      },
+
+      fileSize: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: true,
+      },
+
+      thumbnailPath: {
+        type: Sequelize.STRING(1024),
+        allowNull: true,
+      },
+
+      notes: {
+        type: Sequelize.TEXT,
+        allowNull: true,
+      },
+
+      /* ============================================================
+         ⏱️ Timestamps
+      ============================================================ */
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.fn('NOW')
+        defaultValue: Sequelize.fn('NOW'),
       },
       updatedAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.fn('NOW')
-      }
+        defaultValue: Sequelize.fn('NOW'),
+      },
     });
 
+    /* ============================================================
+       📌 Index optimisés
+    ============================================================ */
     await queryInterface.addIndex('evidences', ['taskId']);
     await queryInterface.addIndex('evidences', ['uploaderId']);
+    await queryInterface.addIndex('evidences', ['order_id']);
+    await queryInterface.addIndex('evidences', ['kind']);
     await queryInterface.addIndex('evidences', ['createdAt']);
   },
 

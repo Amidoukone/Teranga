@@ -11,6 +11,8 @@ const {
   COMMON_INCLUDE,
 } = require('../services/transaction.service');
 
+const imagekit = require('../helpers/teranga-imagekit'); // ⭐ IMAGEKIT
+
 // 🌍 Labels FR
 const {
   TRANSACTION_TYPES,
@@ -47,7 +49,7 @@ function parseAmount(val) {
 function normalizeCurrency(input, fallback = 'XOF') {
   if (!input) return fallback;
   const cur = String(input).toUpperCase().trim();
-  return KNOWN_CURRENCIES.size > 0 && !KNOWN_CURRENCIES.has(cur) ? fallback : cur;
+  return KNOWN_CURRENCIES.has(cur) ? cur : fallback;
 }
 
 /**
@@ -55,19 +57,20 @@ function normalizeCurrency(input, fallback = 'XOF') {
  */
 function extractUploadFile(req) {
   if (req.file) return req.file;
-  if (Array.isArray(req.files) && req.files.length > 0) return req.files[0];
-  if (req.files && !Array.isArray(req.files)) {
-    const candidates = ['proofFile', 'proof', 'file', 'attachment', 'files'];
+  if (Array.isArray(req.files) && req.files.length) return req.files[0];
+
+  if (req.files && typeof req.files === 'object') {
+    const candidates = ['proofFile', 'file', 'attachment', 'files', 'proof'];
     for (const key of candidates) {
-      const v = req.files[key];
-      if (Array.isArray(v) && v.length > 0) return v[0];
+      const arr = req.files[key];
+      if (Array.isArray(arr) && arr.length > 0) return arr[0];
     }
   }
   return null;
 }
 
 /* ============================================================
-   1️⃣ CREATE — compatible service/task/order/project + upload proofFile
+   1️⃣ CREATE — Upload proofFile → ImageKit
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -81,10 +84,11 @@ exports.create = async (req, res) => {
       currency,
       paymentMethod,
       description,
-      status, // optionnel (admin)
+      status, // seulement admin
     } = req.body || {};
 
     if (!type) return res.status(400).json({ error: 'Type de transaction requis' });
+
     const txType = String(type).trim();
     if (!ALLOWED_TYPES.has(txType))
       return res.status(400).json({ error: 'Type de transaction invalide' });
@@ -98,83 +102,65 @@ exports.create = async (req, res) => {
     const oid = toSafeInt(orderId);
     const pid = toSafeInt(projectId);
 
-    let service = null,
-      task = null,
-      order = null,
-      project = null;
-    if (sid) service = await Service.findByPk(sid);
-    if (tid) task = await Task.findByPk(tid);
-    if (oid) order = await Order.findByPk(oid);
-    if (pid) project = await Project.findByPk(pid);
+    let service = sid ? await Service.findByPk(sid) : null;
+    let task = tid ? await Task.findByPk(tid) : null;
+    let order = oid ? await Order.findByPk(oid) : null;
+    let project = pid ? await Project.findByPk(pid) : null;
 
+    /* ---------------------------
+       ⭐ Upload via ImageKit
+    ---------------------------- */
     const up = extractUploadFile(req);
-    const file = up
-      ? {
-          path: `/uploads/evidences/${up.filename}`,
-          originalName: up.originalname,
-          size: up.size,
-          mimeType: up.mimetype,
-        }
-      : null;
+    let proofFile = null;
 
-    const finalCurrency = normalizeCurrency(currency, 'XOF');
+    if (up) {
+      const upload = await imagekit.upload({
+        file: up.buffer,
+        fileName: `transaction_${Date.now()}_${up.originalname}`,
+        folder: '/teranga/transactions/',
+      });
 
-    /**
-     * 🧾 Détermination de l’utilisateur associé à la transaction
-     *
-     * 👉 CORRECTION IMPORTANTE :
-     * - Pour les transactions liées à une COMMANDE :
-     *     userId = client de la commande (order.userId)
-     * - Pour les transactions liées à un PROJET (sans commande) :
-     *     userId = utilisateur connecté (req.user.id) = auteur réel (agent, admin, client)
-     * - Pour les autres cas :
-     *     userId = utilisateur connecté
-     *
-     * Avant : ownerUserId = order?.userId || project?.clientId || req.user?.id
-     * → ça forçait userId = client du projet, même si c’est l’agent qui crée la transaction.
-     */
-    const actorUserId = req.user?.id || null; // celui qui fait réellement la transaction
+      proofFile = {
+        url: upload.url,
+        fileId: upload.fileId,
+        originalName: up.originalname,
+        mimeType: up.mimetype,
+        size: up.size,
+      };
+    }
+
+    const actorUserId = req.user.id;
     const ownerUserId = order?.userId || actorUserId;
 
     const payload = {
       userId: ownerUserId,
-      serviceId: service ? service.id : sid || null,
-      taskId: task ? task.id : tid || null,
-      orderId: order ? order.id : oid || null,
-      projectId: project ? project.id : pid || null,
+      serviceId: service?.id || sid || null,
+      taskId: task?.id || tid || null,
+      orderId: order?.id || oid || null,
+      projectId: project?.id || pid || null,
       type: txType,
       amount: parsedAmount,
-      currency: finalCurrency,
+      currency: normalizeCurrency(currency, 'XOF'),
       paymentMethod: toTrimOrNull(paymentMethod),
       description: toTrimOrNull(description),
-      proofFile: file,
+      proofFile,
       status: 'pending',
     };
 
-    /**
-     * 💡 Détermination du statut initial :
-     * - Commande payée/livrée → completed
-     * - Transaction liée à un projet → completed
-     * - Transaction indépendante → completed
-     * - Autres cas → pending
-     */
-    let finalStatus = 'pending';
     if (order && ['paid', 'delivered'].includes(order.status)) {
-      finalStatus = 'completed';
+      payload.status = 'completed';
     } else if (project || !order) {
-      finalStatus = 'completed';
+      payload.status = 'completed';
     }
-    payload.status = finalStatus;
 
-    // 🛡️ Admin peut forcer un autre statut manuellement
-    if (status && req.user?.role === 'admin') {
+    if (status && req.user.role === 'admin') {
       const s = String(status).trim();
       if (!ALLOWED_STATUSES.has(s))
         return res.status(400).json({ error: 'Statut invalide' });
       payload.status = s;
     }
 
-    // ✅ Vérifie doublon (pour éviter multiples transactions sur même commande)
+    // ✔ Évite doublons
     const existing = order
       ? await Transaction.findOne({
           where: { orderId: order.id, userId: ownerUserId, type: txType },
@@ -199,9 +185,10 @@ exports.create = async (req, res) => {
       });
     }
 
-    return res
-      .status(201)
-      .json({ message: 'Transaction enregistrée', transaction: withLabels(created) });
+    return res.status(201).json({
+      message: 'Transaction enregistrée',
+      transaction: withLabels(created),
+    });
   } catch (e) {
     console.error('❌ Erreur création transaction:', e);
     return res.status(500).json({ error: "Erreur lors de l'ajout de la transaction" });
@@ -209,7 +196,7 @@ exports.create = async (req, res) => {
 };
 
 /* ============================================================
-   2️⃣ LIST — filtres + ACL + pagination + projectId
+   2️⃣ LIST — inchangé
 ============================================================ */
 exports.list = async (req, res) => {
   try {
@@ -234,12 +221,14 @@ exports.list = async (req, res) => {
     if (type) where.type = String(type).trim();
     if (status) where.status = String(status).trim();
     if (currency) where.currency = String(currency).toUpperCase().trim();
-    if (paymentMethod) where.paymentMethod = { [Op.like]: `%${paymentMethod}%` };
+    if (paymentMethod)
+      where.paymentMethod = { [Op.like]: `%${paymentMethod}%` };
 
     const oid = toSafeInt(orderId);
     const sid = toSafeInt(serviceId);
     const tid = toSafeInt(taskId);
     const pid = toSafeInt(projectId);
+
     if (oid) where.orderId = oid;
     if (sid) where.serviceId = sid;
     if (tid) where.taskId = tid;
@@ -254,32 +243,27 @@ exports.list = async (req, res) => {
     }
 
     if (startDate || endDate) {
-      const start = startDate ? new Date(startDate) : new Date('1970-01-01T00:00:00Z');
+      const start = startDate
+        ? new Date(startDate)
+        : new Date('1970-01-01T00:00:00Z');
       const end = endDate ? new Date(endDate) : new Date();
       where.createdAt = { [Op.between]: [start, end] };
     }
 
     if (q && String(q).trim()) {
-      const needle = String(q).trim();
+      const needle = `%${String(q).trim()}%`;
       where[Op.or] = [
-        { description: { [Op.like]: `%${needle}%` } },
-        { paymentMethod: { [Op.like]: `%${needle}%` } },
-        { type: { [Op.like]: `%${needle}%` } },
-        { status: { [Op.like]: `%${needle}%` } },
+        { description: { [Op.like]: needle } },
+        { paymentMethod: { [Op.like]: needle } },
+        { type: { [Op.like]: needle } },
+        { status: { [Op.like]: needle } },
       ];
     }
 
     const { limit, offset, page } = getPagination(req);
 
-    let orderBy = [['createdAt', 'DESC']];
-    if (sort) {
-      const s = String(sort);
-      const sign = s.startsWith('-') ? 'DESC' : 'ASC';
-      const key = s.replace(/^-/, '');
-      if (['createdAt', 'amount', 'type', 'status'].includes(key)) {
-        orderBy = [[key, sign]];
-      }
-    }
+    const sortKey = sort ? sort.replace(/^-/, '') : 'createdAt';
+    const sortDir = sort && sort.startsWith('-') ? 'DESC' : 'ASC';
 
     const { rows, count } = await Transaction.findAndCountAll({
       where,
@@ -287,14 +271,16 @@ exports.list = async (req, res) => {
         { model: Order, as: 'order' },
         { model: Project, as: 'project' },
       ]),
-      order: orderBy,
+      order: [[sortKey, sortDir]],
       limit,
       offset,
       distinct: true,
     });
 
-    const enriched = rows.map(withLabels);
-    res.json({ transactions: enriched, pagination: { page, limit, total: count } });
+    res.json({
+      transactions: rows.map(withLabels),
+      pagination: { page, limit, total: count },
+    });
   } catch (e) {
     console.error('❌ Erreur list transactions:', e);
     res.status(500).json({ error: 'Erreur lors de la récupération des transactions' });
@@ -302,12 +288,13 @@ exports.list = async (req, res) => {
 };
 
 /* ============================================================
-   3️⃣ DETAIL — inclut order + project + ACL
+   3️⃣ DETAIL — inchangé
 ============================================================ */
 exports.detail = async (req, res) => {
   try {
     const id = toSafeInt(req.params.id);
-    if (!id) return res.status(400).json({ error: 'ID invalide' });
+    if (!id)
+      return res.status(400).json({ error: 'ID invalide' });
 
     const trx = await Transaction.findByPk(id, {
       include: COMMON_INCLUDE.concat([
@@ -315,25 +302,29 @@ exports.detail = async (req, res) => {
         { model: Project, as: 'project' },
       ]),
     });
-    if (!trx) return res.status(404).json({ error: 'Transaction introuvable' });
+
+    if (!trx)
+      return res.status(404).json({ error: 'Transaction introuvable' });
 
     const allowed = await canAccessTransaction(req, trx);
-    if (!allowed) return res.status(403).json({ error: 'Accès interdit' });
+    if (!allowed)
+      return res.status(403).json({ error: 'Accès interdit' });
 
     res.json({ transaction: withLabels(trx) });
   } catch (e) {
-    console.error('❌ Erreur détail transaction:', e);
+    console.error('❌ Erreur detail transaction:', e);
     res.status(500).json({ error: 'Erreur lors de la récupération de la transaction' });
   }
 };
 
 /* ============================================================
-   4️⃣ UPDATE — admin/propriétaire + sync client/order/project
+   4️⃣ UPDATE — upload ImageKit + suppression ancienne preuve
 ============================================================ */
 exports.update = async (req, res) => {
   try {
     const id = toSafeInt(req.params.id);
-    if (!id) return res.status(400).json({ error: 'ID invalide' });
+    if (!id)
+      return res.status(400).json({ error: 'ID invalide' });
 
     const trx = await Transaction.findByPk(id, {
       include: COMMON_INCLUDE.concat([
@@ -341,10 +332,13 @@ exports.update = async (req, res) => {
         { model: Project, as: 'project' },
       ]),
     });
-    if (!trx) return res.status(404).json({ error: 'Transaction introuvable' });
+
+    if (!trx)
+      return res.status(404).json({ error: 'Transaction introuvable' });
 
     const allowed = await canAccessTransaction(req, trx);
-    if (!allowed) return res.status(403).json({ error: 'Accès interdit' });
+    if (!allowed)
+      return res.status(403).json({ error: 'Accès interdit' });
 
     const {
       description,
@@ -359,29 +353,54 @@ exports.update = async (req, res) => {
       amount,
     } = req.body || {};
 
-    if (description !== undefined) trx.description = toTrimOrNull(description);
-    if (paymentMethod !== undefined) trx.paymentMethod = toTrimOrNull(paymentMethod);
+    if (description !== undefined)
+      trx.description = toTrimOrNull(description);
 
+    if (paymentMethod !== undefined)
+      trx.paymentMethod = toTrimOrNull(paymentMethod);
+
+    /* ======================================================
+       ⭐ Upload nouvelle preuve via ImageKit
+    ======================================================= */
     const up = extractUploadFile(req);
     if (up) {
+      // supprime ancienne preuve si existe
+      if (trx.proofFile?.fileId) {
+        try {
+          await imagekit.deleteFile(trx.proofFile.fileId);
+        } catch (err) {
+          console.warn('⚠️ Impossible de supprimer ancienne preuve:', err.message);
+        }
+      }
+
+      const upload = await imagekit.upload({
+        file: up.buffer,
+        fileName: `transaction_${id}_${Date.now()}_${up.originalname}`,
+        folder: '/teranga/transactions/',
+      });
+
       trx.proofFile = {
-        path: `/uploads/evidences/${up.filename}`,
+        url: upload.url,
+        fileId: upload.fileId,
         originalName: up.originalname,
-        size: up.size,
         mimeType: up.mimetype,
+        size: up.size,
       };
     }
 
-    if (serviceId !== undefined) trx.serviceId = toSafeInt(serviceId) || null;
-    if (taskId !== undefined) trx.taskId = toSafeInt(taskId) || null;
+    if (serviceId !== undefined)
+      trx.serviceId = toSafeInt(serviceId) || null;
 
-    // ⚙️ Si changement de commande : on synchronise userId = client de la commande
+    if (taskId !== undefined)
+      trx.taskId = toSafeInt(taskId) || null;
+
     if (orderId !== undefined) {
       const newOid = toSafeInt(orderId);
       if (newOid) {
         const newOrder = await Order.findByPk(newOid);
         if (!newOrder)
           return res.status(400).json({ error: 'Commande cible introuvable' });
+
         trx.orderId = newOrder.id;
         trx.userId = newOrder.userId;
       } else {
@@ -389,31 +408,20 @@ exports.update = async (req, res) => {
       }
     }
 
-    // 🏗️ Si changement de projet
     if (projectId !== undefined) {
       const newPid = toSafeInt(projectId);
       if (newPid) {
         const newProject = await Project.findByPk(newPid);
         if (!newProject)
           return res.status(400).json({ error: 'Projet cible introuvable' });
-        trx.projectId = newProject.id;
 
-        /**
-         * ❗️CORRECTION IMPORTANTE :
-         * Avant : trx.userId = newProject.clientId || trx.userId;
-         * → Cela écrasait l'auteur réel par le client du projet.
-         *
-         * Maintenant :
-         * - On NE touche PAS à trx.userId ici.
-         * - userId continue de représenter celui qui a créé la transaction.
-         * - Les clients gardent l'accès grâce à l'ACL ($project.clientId$).
-         */
+        trx.projectId = newProject.id;
       } else {
         trx.projectId = null;
       }
     }
 
-    const isAdmin = req.user?.role === 'admin';
+    const isAdmin = req.user.role === 'admin';
 
     if (status !== undefined) {
       const s = String(status).trim();
@@ -448,7 +456,6 @@ exports.update = async (req, res) => {
       trx.amount = n;
     }
 
-    // 💡 Si la commande liée est déjà payée/livrée → forcer statut = completed
     if (trx.order && ['paid', 'delivered'].includes(trx.order.status)) {
       trx.status = 'completed';
     }
@@ -462,7 +469,10 @@ exports.update = async (req, res) => {
       ]),
     });
 
-    res.json({ message: 'Transaction mise à jour', transaction: withLabels(updated) });
+    res.json({
+      message: 'Transaction mise à jour',
+      transaction: withLabels(updated),
+    });
   } catch (e) {
     console.error('❌ Erreur update transaction:', e);
     res.status(500).json({ error: 'Erreur lors de la mise à jour de la transaction' });
@@ -470,25 +480,37 @@ exports.update = async (req, res) => {
 };
 
 /* ============================================================
-   5️⃣ DELETE — admin ou propriétaire si pending
+   5️⃣ DELETE — admin ou owner pending + delete ImageKit
 ============================================================ */
 exports.remove = async (req, res) => {
   try {
     const id = toSafeInt(req.params.id);
-    if (!id) return res.status(400).json({ error: 'ID invalide' });
+    if (!id)
+      return res.status(400).json({ error: 'ID invalide' });
 
     const trx = await Transaction.findByPk(id);
-    if (!trx) return res.status(404).json({ error: 'Transaction introuvable' });
+    if (!trx)
+      return res.status(404).json({ error: 'Transaction introuvable' });
 
     const isOwner = req.user && trx.userId === req.user.id;
-    const isAdmin = req.user?.role === 'admin';
+    const isAdmin = req.user.role === 'admin';
 
     if (!(isAdmin || (isOwner && trx.status === 'pending'))) {
       return res.status(403).json({ error: 'Suppression non autorisée' });
     }
 
+    // ⭐ Supprime la preuve dans ImageKit
+    if (trx.proofFile?.fileId) {
+      try {
+        await imagekit.deleteFile(trx.proofFile.fileId);
+      } catch (err) {
+        console.warn('⚠️ Impossible de supprimer la preuve ImageKit:', err.message);
+      }
+    }
+
     await trx.destroy();
-    res.json({ message: 'Transaction supprimée' });
+
+    return res.json({ message: 'Transaction supprimée' });
   } catch (e) {
     console.error('❌ Erreur suppression transaction:', e);
     res.status(500).json({ error: 'Erreur lors de la suppression du fichier' });
@@ -496,7 +518,7 @@ exports.remove = async (req, res) => {
 };
 
 /* ============================================================
-   6️⃣ SUMMARY / 7️⃣ REPORT / 8️⃣ LIST BY ORDER — inchangés
+   6️⃣ SUMMARY / REPORT / LISTBYORDER — inchangés
 ============================================================ */
 exports.summary = async (_req, res) => {
   try {
@@ -535,9 +557,7 @@ exports.report = async (req, res) => {
 
     const totals = { revenue: 0, expense: 0, commission: 0, adjustment: 0 };
     transactions.forEach((t) => {
-      const k = t.type;
-      if (totals[k] === undefined) totals[k] = 0;
-      totals[k] += parseFloat(t.amount || 0);
+      totals[t.type] = (totals[t.type] || 0) + parseFloat(t.amount || 0);
     });
 
     const totalsWithLabels = Object.entries(totals).map(([key, value]) => ({
@@ -561,12 +581,14 @@ exports.report = async (req, res) => {
 exports.listByOrder = async (req, res) => {
   try {
     const orderId = toSafeInt(req.params.id);
-    if (!orderId) return res.status(400).json({ error: 'orderId invalide' });
+    if (!orderId)
+      return res.status(400).json({ error: 'orderId invalide' });
 
     const where = buildWhereWithACL(req);
     where.orderId = orderId;
 
     const { limit, offset, page } = getPagination(req);
+
     const { rows, count } = await Transaction.findAndCountAll({
       where,
       include: COMMON_INCLUDE.concat([{ model: Order, as: 'order' }]),
@@ -576,10 +598,14 @@ exports.listByOrder = async (req, res) => {
       distinct: true,
     });
 
-    const enriched = rows.map(withLabels);
-    res.json({ transactions: enriched, pagination: { page, limit, total: count } });
+    res.json({
+      transactions: rows.map(withLabels),
+      pagination: { page, limit, total: count },
+    });
   } catch (e) {
     console.error('❌ Erreur listByOrder transactions:', e);
-    res.status(500).json({ error: "Erreur lors de la récupération des transactions de l'ordre" });
+    res.status(500).json({
+      error: "Erreur lors de la récupération des transactions de l'ordre",
+    });
   }
 };

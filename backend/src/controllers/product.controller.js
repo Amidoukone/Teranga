@@ -3,6 +3,7 @@
 const { Op } = require('sequelize');
 const { Product, Category } = require('../../models');
 const { formatCurrency } = require('../utils/labels');
+const imagekit = require('../services/teranga-imagekit'); // ✅ ImageKit SDK
 
 /* ============================================================
    🔧 Helpers génériques
@@ -42,60 +43,52 @@ function slugify(str = '') {
 }
 
 /* ============================================================
-   🖼 Helpers images (multi-images, rétro-compatible)
+   🖼 Helpers images → version ImageKit
 ============================================================ */
+async function uploadToImageKit(file) {
+  const uploaded = await imagekit.upload({
+    file: file.buffer,
+    fileName: file.originalname,
+    folder: '/products',
+  });
+
+  return {
+    url: uploaded.url,
+    fileId: uploaded.fileId,
+  };
+}
+
 /**
- * 🔍 Extrait jusqu'à 3 chemins d'images à partir de req.file / req.files
- * - Compatible avec :
- *   • multer.single('image')       → req.file
- *   • multer.array('images', 3)    → req.files = [File, ...]
- *   • multer.fields({ name: 'images' }) → req.files.images = [File, ...]
- * - Retourne { coverImage, gallery, hasNewImages }
+ * Upload multi-images (max 3)
+ * - Supporte req.file, req.files, req.files.images etc.
+ * - Transforme TOUT en liste uniforme de { url, fileId }
  */
-function extractImagesFromRequest(req) {
-  let filePaths = [];
+async function extractImagesFromRequestImageKit(req) {
+  const collected = [];
 
-  // 1) Cas historique : un seul fichier (ex: single('image'))
-  if (req.file) {
-    filePaths.push(`/uploads/products/${req.file.filename}`);
-  }
-
-  // 2) Cas array direct : array('images', 3)
-  if (Array.isArray(req.files)) {
-    req.files.forEach((f) => {
-      if (f && f.filename) {
-        filePaths.push(`/uploads/products/${f.filename}`);
-      }
-    });
-  }
-
-  // 3) Cas fields : fields([{ name: 'image' }, { name: 'images' }, { name: 'gallery' }])
-  if (req.files && !Array.isArray(req.files) && typeof req.files === 'object') {
+  if (req.file) collected.push(req.file);
+  if (Array.isArray(req.files)) collected.push(...req.files);
+  if (req.files && typeof req.files === 'object') {
     Object.values(req.files).forEach((arr) => {
-      if (Array.isArray(arr)) {
-        arr.forEach((f) => {
-          if (f && f.filename) {
-            filePaths.push(`/uploads/products/${f.filename}`);
-          }
-        });
-      }
+      if (Array.isArray(arr)) collected.push(...arr);
     });
   }
 
-  // Nettoyage + unique + limitation à 3 images
-  filePaths = [...new Set(filePaths)].filter(Boolean);
-  if (filePaths.length > 3) {
-    filePaths = filePaths.slice(0, 3);
-  }
-
-  if (!filePaths.length) {
+  if (!collected.length) {
     return { coverImage: null, gallery: null, hasNewImages: false };
   }
 
-  const coverImage = filePaths[0];
-  const gallery = filePaths;
+  const uploads = [];
+  for (const f of collected.slice(0, 3)) {
+    const result = await uploadToImageKit(f);
+    uploads.push(result);
+  }
 
-  return { coverImage, gallery, hasNewImages: true };
+  return {
+    coverImage: uploads[0],
+    gallery: uploads,
+    hasNewImages: true,
+  };
 }
 
 /* ============================================================
@@ -105,26 +98,17 @@ function withLabels(prod) {
   if (!prod) return null;
   const p = prod.toJSON ? prod.toJSON() : prod;
 
-  // Normalisation multi-images
-  const gallery = Array.isArray(p.gallery)
-    ? p.gallery.filter(Boolean)
-    : [];
+  const gallery = Array.isArray(p.gallery) ? p.gallery : [];
 
-  // coverImage prioritaire, sinon première image de la galerie
   const cover = p.coverImage || gallery[0] || null;
 
   return {
     ...p,
-
-    // Compat historique avec le front actuel
-    image: cover,
-    imagePath: cover,
-
-    // Infos supplémentaires pour les nouvelles UIs
+    image: cover?.url || null,
+    imagePath: cover?.url || null,
     coverImage: cover,
     gallery,
     images: gallery,
-
     currencyLabel: formatCurrency(p.currency || 'XOF'),
   };
 }
@@ -140,7 +124,7 @@ function canWriteProduct(user) {
 }
 
 /* ============================================================
-   1️⃣ CREATE
+   1️⃣ CREATE (ImageKit)
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -161,24 +145,20 @@ exports.create = async (req, res) => {
 
     if (!name) return res.status(400).json({ error: 'Nom du produit requis' });
 
-    const priceNum = toNullableNumber(price);
-    if (price !== undefined && priceNum === null)
-      return res
-        .status(400)
-        .json({ error: 'Le prix doit être un nombre valide.' });
-
-    const stockNum = toSafeInt(stock);
-    if (stock !== undefined && stock !== '' && stockNum === null)
-      return res
-        .status(400)
-        .json({ error: 'Le stock doit être un entier valide.' });
-
     const cid = toSafeInt(categoryId);
     const cat = cid ? await Category.findByPk(cid) : null;
 
-    // 🖼 Multi-images : extrait coverImage + gallery à partir de req
-    const { coverImage, gallery } = extractImagesFromRequest(req);
+    const priceNum = toNullableNumber(price);
+    if (price !== undefined && priceNum === null) {
+      return res.status(400).json({ error: 'Le prix doit être un nombre valide.' });
+    }
 
+    const stockNum = toSafeInt(stock);
+
+    // ⬆️ UPLOAD IMAGEKIT
+    const { coverImage, gallery } = await extractImagesFromRequestImageKit(req);
+
+    // Slug unique
     const baseSlug = slugify(name);
     let finalSlug = baseSlug || `p-${Date.now()}`;
     let i = 1;
@@ -197,9 +177,8 @@ exports.create = async (req, res) => {
       description: toTrimOrNull(description),
       shortDescription: toTrimOrNull(shortDescription),
 
-      // 🖼 On stocke l'image principale et la galerie
       coverImage: coverImage || null,
-      gallery: gallery && gallery.length ? gallery : null,
+      gallery: gallery || [],
 
       isActive:
         typeof isActive === 'undefined'
@@ -217,10 +196,6 @@ exports.create = async (req, res) => {
     });
   } catch (e) {
     console.error('❌ Erreur create product:', e);
-    if (e?.errors?.length)
-      return res
-        .status(400)
-        .json({ error: e.errors.map((er) => er.message).join(', ') });
     return res.status(500).json({ error: e.message || 'Erreur serveur' });
   }
 };
@@ -265,9 +240,7 @@ exports.list = async (req, res) => {
     });
   } catch (e) {
     console.error('❌ Erreur list products:', e);
-    return res
-      .status(500)
-      .json({ error: 'Erreur lors de la récupération des produits' });
+    return res.status(500).json({ error: 'Erreur lors de la récupération' });
   }
 };
 
@@ -290,14 +263,12 @@ exports.detail = async (req, res) => {
     return res.json({ product: withLabels(prod) });
   } catch (e) {
     console.error('❌ Erreur detail product:', e);
-    return res
-      .status(500)
-      .json({ error: 'Erreur lors de la récupération du produit' });
+    return res.status(500).json({ error: 'Erreur lors de la récupération' });
   }
 };
 
 /* ============================================================
-   4️⃣ UPDATE
+   4️⃣ UPDATE (ImageKit)
 ============================================================ */
 exports.update = async (req, res) => {
   try {
@@ -327,56 +298,65 @@ exports.update = async (req, res) => {
       prod.categoryId = cid || null;
     }
 
-    let willRegenerateSlug = false;
+    let regenerateSlug = false;
     if (name !== undefined) {
       const newName = String(name).trim();
       if (newName && newName !== prod.name) {
         prod.name = newName;
-        willRegenerateSlug = true;
+        regenerateSlug = true;
       }
     }
 
     if (sku !== undefined) prod.sku = toTrimOrNull(sku);
+
     if (price !== undefined) {
       const priceNum = toNullableNumber(price);
       if (priceNum === null)
-        return res
-          .status(400)
-          .json({ error: 'Le prix doit être un nombre valide.' });
+        return res.status(400).json({ error: 'Prix invalide' });
       prod.price = priceNum;
     }
+
     if (currency !== undefined)
       prod.currency = String(currency).toUpperCase().trim();
 
     if (stock !== undefined) {
       const stockNum = toSafeInt(stock);
       if (stock !== '' && stockNum === null)
-        return res
-          .status(400)
-          .json({ error: 'Le stock doit être un entier valide.' });
-      if (stockNum !== null) prod.stock = stockNum;
+        return res.status(400).json({ error: 'Stock invalide' });
+      prod.stock = stockNum ?? prod.stock;
     }
 
-    if (description !== undefined)
-      prod.description = toTrimOrNull(description);
+    if (description !== undefined) prod.description = toTrimOrNull(description);
     if (shortDescription !== undefined)
       prod.shortDescription = toTrimOrNull(shortDescription);
 
     if (typeof isActive !== 'undefined')
       prod.isActive = String(isActive) === 'true' || isActive === true;
 
-    // 🖼 Multi-images pour UPDATE :
-    // - Si aucune nouvelle image envoyée → on garde coverImage + gallery actuels
-    // - Si de nouvelles images sont envoyées → on remplace coverImage + gallery
-    const { coverImage, gallery, hasNewImages } = extractImagesFromRequest(req);
+    // ⬆️ Upload ImageKit
+    const { coverImage, gallery, hasNewImages } =
+      await extractImagesFromRequestImageKit(req);
 
     if (hasNewImages) {
+      // Optionnel : supprimer anciennes images ImageKit
+      if (Array.isArray(prod.gallery)) {
+        for (const img of prod.gallery) {
+          if (img?.fileId) {
+            try {
+              await imagekit.deleteFile(img.fileId);
+            } catch (err) {
+              console.warn('⚠️ Impossible de supprimer image:', img.fileId);
+            }
+          }
+        }
+      }
+
       prod.coverImage = coverImage || null;
-      prod.gallery = gallery && gallery.length ? gallery : null;
+      prod.gallery = gallery || [];
     }
 
-    // Regénération du slug en cas de changement de nom
-    if (willRegenerateSlug && prod.name) {
+    // Regeneration du slug
+    if (regenerateSlug && prod.name) {
       const baseSlug = slugify(prod.name);
       let finalSlug = baseSlug || `p-${Date.now()}`;
       let i = 1;
@@ -402,14 +382,12 @@ exports.update = async (req, res) => {
     });
   } catch (e) {
     console.error('❌ Erreur update product:', e);
-    return res
-      .status(500)
-      .json({ error: 'Erreur lors de la mise à jour du produit' });
+    return res.status(500).json({ error: e.message || 'Erreur serveur' });
   }
 };
 
 /* ============================================================
-   5️⃣ DELETE — sécurisée, mais permet le mode "force"
+   5️⃣ DELETE
 ============================================================ */
 exports.remove = async (req, res) => {
   try {
@@ -426,16 +404,25 @@ exports.remove = async (req, res) => {
     if (prod.isActive && !force) {
       return res.status(400).json({
         error:
-          'Ce produit est encore actif. Pour supprimer définitivement, appelez DELETE /products/:id?force=true',
+          'Ce produit est actif. Pour supprimer : DELETE /products/:id?force=true',
       });
+    }
+
+    // Supprimer les images ImageKit
+    if (Array.isArray(prod.gallery)) {
+      for (const img of prod.gallery) {
+        if (img?.fileId) {
+          try {
+            await imagekit.deleteFile(img.fileId);
+          } catch (_) {}
+        }
+      }
     }
 
     await prod.destroy();
     return res.json({ message: 'Produit supprimé avec succès' });
   } catch (e) {
     console.error('❌ Erreur remove product:', e);
-    return res
-      .status(500)
-      .json({ error: 'Erreur lors de la suppression du produit' });
+    return res.status(500).json({ error: 'Erreur lors de la suppression' });
   }
 };
