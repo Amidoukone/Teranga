@@ -2,10 +2,21 @@
 
 const { Evidence, Task, Service, Property, User, Order } = require('../../models');
 const { Op } = require('sequelize');
-const imagekit = require('../helpers/teranga-imagekit'); // ⭐ ImageKit intégré ici
+const imageKit = require('../helpers/teranga-imagekit'); // 🔥 toujours correct ici
 
 // 🌍 Labels
 const { EVIDENCE_KINDS, getLabel } = require('../utils/labels');
+
+/* ======================================================
+   🛡️ Vérifier si ImageKit est activé
+====================================================== */
+function isImageKitEnabled() {
+  return Boolean(
+    process.env.IMAGEKIT_PUBLIC_KEY &&
+      process.env.IMAGEKIT_PRIVATE_KEY &&
+      process.env.IMAGEKIT_URL_ENDPOINT
+  );
+}
 
 /* ======================================================
    🧩 Helpers utilitaires
@@ -121,7 +132,39 @@ function normalizeUploadedFiles(req) {
 }
 
 /* ======================================================
-   📸 CREATE — Proofs upload → ImageKit
+   🔼 Upload — wrapper sécurisé ImageKit
+====================================================== */
+async function uploadToImageKit(file) {
+  if (!isImageKitEnabled()) {
+    console.warn('⚠️ ImageKit désactivé — upload ignoré');
+    return {
+      url: null,
+      fileId: null,
+    };
+  }
+
+  try {
+    const uploaded = await imageKit.upload({
+      file: file.buffer,
+      fileName: `evidence_${Date.now()}_${file.originalname}`,
+      folder: '/teranga/evidences',
+    });
+
+    return {
+      url: uploaded.url,
+      fileId: uploaded.fileId,
+    };
+  } catch (err) {
+    console.error(`❌ Échec upload ImageKit (${file.originalname}):`, err);
+    return {
+      url: null,
+      fileId: null,
+    };
+  }
+}
+
+/* ======================================================
+   📸 CREATE — Upload Evidence
 ====================================================== */
 exports.create = async (req, res) => {
   try {
@@ -129,13 +172,13 @@ exports.create = async (req, res) => {
     const orderId = toSafeInt(req.body?.orderId);
     const notes = req.body?.notes || null;
 
-    if (!taskId && !orderId) {
+    if (!taskId && !orderId)
       return res.status(400).json({ error: 'taskId ou orderId requis' });
-    }
 
     let task = null;
     let order = null;
 
+    // Vérification ACL tâche
     if (taskId) {
       task = await loadTaskForAcl(taskId);
       if (!task) return res.status(404).json({ error: 'Tâche introuvable' });
@@ -143,6 +186,7 @@ exports.create = async (req, res) => {
         return res.status(403).json({ error: 'Accès interdit (tâche)' });
     }
 
+    // Vérification ACL commande
     if (orderId) {
       order = await loadOrderForAcl(orderId);
       if (!order) return res.status(404).json({ error: 'Commande introuvable' });
@@ -151,31 +195,29 @@ exports.create = async (req, res) => {
     }
 
     const files = normalizeUploadedFiles(req);
-    if (!files.length) return res.status(400).json({ error: 'Aucun fichier fourni' });
+    if (!files.length)
+      return res.status(400).json({ error: 'Aucun fichier fourni' });
 
     const created = [];
 
     for (const f of files) {
-      /* ======================================================
-          🚀 Upload ImageKit
-      ====================================================== */
-      const uploaded = await imagekit.upload({
-        file: f.buffer, // ⭐ buffer du memoryStorage
-        fileName: `evidence_${Date.now()}_${f.originalname}`,
-        folder: '/teranga/evidences/',
-      });
+      // 🚀 Upload ImageKit sécurisé
+      const uploaded = await uploadToImageKit(f);
 
       const record = await Evidence.create({
         taskId: task ? task.id : taskId,
         orderId: order ? order.id : orderId,
         uploaderId: req.user.id,
+
+        // Métadonnées fichier
         kind: guessKind(f.mimetype),
         mimeType: f.mimetype || null,
         originalName: f.originalname || null,
-        filePath: uploaded.url, // ⭐ URL CDN
-        fileId: uploaded.fileId, // ⭐ important pour delete
+        filePath: uploaded.url,   // URL CDN
+        fileId: uploaded.fileId,   // Nécessaire pour delete
         fileSize: f.size || null,
         thumbnailPath: null,
+
         notes,
       });
 
@@ -195,13 +237,13 @@ exports.create = async (req, res) => {
       evidences: withIncludes.map(addLabels),
     });
   } catch (e) {
-    console.error('❌ Erreur create evidence:', e);
-    return res.status(500).json({ error: "Erreur lors de l'ajout des preuves" });
+    console.error('❌ create evidence:', e);
+    return res.status(500).json({ error: 'Erreur lors de l’ajout des preuves' });
   }
 };
 
 /* ======================================================
-   📋 LIST — ACL
+   📋 LIST — Filtrage par ACL
 ====================================================== */
 exports.list = async (req, res) => {
   try {
@@ -209,11 +251,12 @@ exports.list = async (req, res) => {
     const orderId = toSafeInt(req.query?.orderId);
 
     if (req.user.role !== 'admin' && !taskId && !orderId) {
-      return res.status(400).json({ error: 'taskId ou orderId requis pour ce rôle' });
+      return res.status(400).json({ error: 'taskId ou orderId requis' });
     }
 
     const where = {};
 
+    // Tâche
     if (taskId) {
       const task = await loadTaskForAcl(taskId);
       if (!task) return res.status(404).json({ error: 'Tâche introuvable' });
@@ -222,6 +265,7 @@ exports.list = async (req, res) => {
       where.taskId = taskId;
     }
 
+    // Commande
     if (orderId) {
       const order = await loadOrderForAcl(orderId);
       if (!order) return res.status(404).json({ error: 'Commande introuvable' });
@@ -238,7 +282,7 @@ exports.list = async (req, res) => {
 
     return res.json({ evidences: evidences.map(addLabels) });
   } catch (e) {
-    console.error('❌ Erreur list evidences:', e);
+    console.error('❌ list evidences:', e);
     return res.status(500).json({ error: 'Erreur lors de la récupération des preuves' });
   }
 };
@@ -264,13 +308,13 @@ exports.listByTask = async (req, res) => {
 
     return res.json({ evidences: evidences.map(addLabels) });
   } catch (e) {
-    console.error('❌ Erreur listByTask:', e);
+    console.error('❌ listByTask:', e);
     return res.status(500).json({ error: 'Erreur lors de la récupération des preuves' });
   }
 };
 
 /* ======================================================
-   🔹 LIST BY ORDER
+   📦 LIST BY ORDER
 ====================================================== */
 exports.listByOrder = async (req, res) => {
   try {
@@ -290,13 +334,13 @@ exports.listByOrder = async (req, res) => {
 
     return res.json({ evidences: evidences.map(addLabels) });
   } catch (e) {
-    console.error('❌ Erreur listByOrder:', e);
+    console.error('❌ listByOrder:', e);
     return res.status(500).json({ error: 'Erreur lors de la récupération des preuves' });
   }
 };
 
 /* ======================================================
-   🗑️ DELETE — ImageKit + ACL admin
+   🗑️ DELETE — suppression ImageKit + ACL 100% sécurisée
 ====================================================== */
 exports.remove = async (req, res) => {
   try {
@@ -316,16 +360,15 @@ exports.remove = async (req, res) => {
 
     if (!ev) return res.status(404).json({ error: 'Preuve introuvable' });
 
+    // Seul un admin peut supprimer
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Suppression réservée à un administrateur.' });
+      return res.status(403).json({ error: 'Suppression réservée aux administrateurs.' });
     }
 
-    /* ======================================================
-       🗑️ Suppression ImageKit 
-    ====================================================== */
-    if (ev.fileId) {
+    // Suppression ImageKit
+    if (ev.fileId && isImageKitEnabled()) {
       try {
-        await imagekit.deleteFile(ev.fileId);
+        await imageKit.deleteFile(ev.fileId);
       } catch (e) {
         console.warn('⚠️ Impossible de supprimer le fichier ImageKit:', e.message);
       }
@@ -334,7 +377,7 @@ exports.remove = async (req, res) => {
     await ev.destroy();
     return res.json({ message: 'Preuve supprimée avec succès' });
   } catch (e) {
-    console.error('❌ Erreur remove evidence:', e);
-    return res.status(500).json({ error: 'Erreur lors de la suppression du fichier' });
+    console.error('❌ remove evidence:', e);
+    return res.status(500).json({ error: 'Erreur lors de la suppression' });
   }
 };

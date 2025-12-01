@@ -1,10 +1,13 @@
 "use strict";
 
-const path = require("path");
 const { ProjectDocument, Project, User, ProjectPhase } = require("../../models");
 const { getLabel } = require("../utils/labels");
-const imagekit = require("../helpers/teranga-imagekit"); // ⚠️ ton helper ImageKit
+const imageKit = require("../helpers/teranga-imagekit");
+const path = require("path");
 
+/* =========================================================
+   🏷 Types de documents
+========================================================= */
 const DOCUMENT_KINDS = {
   contract: "Contrat",
   plan: "Plan",
@@ -14,21 +17,23 @@ const DOCUMENT_KINDS = {
 };
 
 /* =========================================================
-   🧩 Helpers autorisation & cohérence
+   🛡 ImageKit actif ?
+========================================================= */
+function isImageKitEnabled() {
+  return Boolean(
+    process.env.IMAGEKIT_PUBLIC_KEY &&
+      process.env.IMAGEKIT_PRIVATE_KEY &&
+      process.env.IMAGEKIT_URL_ENDPOINT
+  );
+}
+
+/* =========================================================
+   🧩 Helpers généraux ACL + logique
 ========================================================= */
 function isWithinOneHour(date) {
   if (!date) return false;
   const created = new Date(date).getTime();
-  if (!Number.isFinite(created)) return false;
-  return Date.now() - created <= 3600000;
-}
-
-function canClientModify(project, user) {
-  return (
-    user.role === "client" &&
-    project.clientId === user.id &&
-    isWithinOneHour(project.createdAt)
-  );
+  return Number.isFinite(created) && Date.now() - created <= 3600000;
 }
 
 function isAdmin(user) {
@@ -36,25 +41,73 @@ function isAdmin(user) {
 }
 
 function isClientOwner(project, user) {
-  return !!(
+  return (
     project &&
-    user &&
-    user.role === "client" &&
-    project.clientId === user.id
+    user?.role === "client" &&
+    String(project.clientId) === String(user.id)
+  );
+}
+
+function canClientModify(project, user) {
+  return (
+    isClientOwner(project, user) &&
+    isWithinOneHour(project.createdAt)
   );
 }
 
 function isAssignedAgent(project, user) {
-  return !!(
+  return (
     project &&
-    user &&
-    user.role === "agent" &&
-    project.agentId === user.id
+    user?.role === "agent" &&
+    String(project.agentId) === String(user.id)
   );
 }
 
 /* =========================================================
-   🔹 Upload d’un ou plusieurs documents (ImageKit)
+   🧰 Extraction fichiers Multer
+========================================================= */
+function extractFiles(req) {
+  if (req.file) return [req.file];
+  if (Array.isArray(req.files)) return req.files;
+
+  if (req.files && typeof req.files === "object") {
+    const arr = [];
+    Object.values(req.files).forEach((v) => {
+      if (Array.isArray(v)) arr.push(...v);
+    });
+    return arr;
+  }
+  return [];
+}
+
+/* =========================================================
+   🚀 Upload → ImageKit (sécurisé)
+========================================================= */
+async function uploadToImageKit(file, projectId) {
+  if (!isImageKitEnabled()) {
+    console.warn("⚠️ ImageKit désactivé — upload ignoré");
+    return { url: null, fileId: null };
+  }
+
+  try {
+    const uploaded = await imageKit.upload({
+      file: file.buffer,
+      fileName: `project_${projectId}_${Date.now()}_${file.originalname}`,
+      folder: "/teranga/projects/",
+    });
+
+    return {
+      url: uploaded.url,
+      fileId: uploaded.fileId,
+    };
+  } catch (err) {
+    console.error(`❌ Upload ImageKit échoué (${file.originalname}):`, err);
+    return { url: null, fileId: null };
+  }
+}
+
+/* =========================================================
+   🔹 UPLOAD documents projet
 ========================================================= */
 exports.upload = async (req, res) => {
   try {
@@ -62,29 +115,29 @@ exports.upload = async (req, res) => {
       return res.status(401).json({ error: "Non authentifié" });
 
     const { projectId, title, kind, notes, phaseId } = req.body;
-    const files = req.files || (req.file ? [req.file] : []);
+    const files = extractFiles(req);
 
     if (!projectId || files.length === 0)
-      return res
-        .status(400)
-        .json({ error: "projectId et fichiers requis" });
+      return res.status(400).json({ error: "projectId et fichiers requis" });
 
     const project = await Project.findByPk(projectId);
     if (!project)
       return res.status(404).json({ error: "Projet introuvable" });
 
+    // ACL
     const adminOK = isAdmin(req.user);
     const clientOK = isClientOwner(project, req.user);
     const agentOK = isAssignedAgent(project, req.user);
 
     if (!adminOK && !clientOK && !agentOK) {
       return res.status(403).json({
-        error: "Non autorisé à ajouter des documents sur ce projet.",
+        error: "Non autorisé à ajouter des documents à ce projet.",
       });
     }
 
-    // Phase optionnelle
+    // Phase (optionnelle)
     let phase = null;
+
     if (phaseId) {
       phase = await ProjectPhase.findByPk(phaseId);
       if (!phase || String(phase.projectId) !== String(project.id)) {
@@ -94,35 +147,29 @@ exports.upload = async (req, res) => {
       }
     }
 
-    /* =========================================================
-       🚀 Upload → ImageKit
-    ========================================================== */
     const createdDocs = [];
 
+    /* =========================================================
+       🚀 Upload + insert DB
+    ========================================================== */
     for (const file of files) {
-      // Upload dans ImageKit
-      const uploaded = await imagekit.upload({
-        file: file.buffer, // buffer venant de Multer memoryStorage
-        fileName: `project_${projectId}_${Date.now()}_${file.originalname}`,
-        folder: "/teranga/projects/",
-      });
+      const uploaded = await uploadToImageKit(file, projectId);
 
-      // Enregistrement DB
       const doc = await ProjectDocument.create({
         projectId,
         uploaderId: req.user.id,
         phaseId: phase ? phase.id : null,
         title: title || file.originalname || null,
         kind: kind || "other",
-        filePath: uploaded.url, // ⚠️ URL CDN ImageKit
-        fileId: uploaded.fileId, // ⚠️ pour suppression future
+        filePath: uploaded.url,
+        fileId: uploaded.fileId,
         mimeType: file.mimetype || null,
         fileSize: file.size ?? null,
         originalName: file.originalname || null,
         notes: notes || null,
       });
 
-      const created = await ProjectDocument.findByPk(doc.id, {
+      const full = await ProjectDocument.findByPk(doc.id, {
         include: [
           {
             model: User,
@@ -137,28 +184,34 @@ exports.upload = async (req, res) => {
         ],
       });
 
+      const json = full.toJSON();
+
       createdDocs.push({
-        ...created.toJSON(),
-        kindLabel: getLabel(created.kind, DOCUMENT_KINDS),
-        phaseTitle: created?.phase?.title || null,
+        ...json,
+        kindLabel: getLabel(json.kind, DOCUMENT_KINDS),
+        phaseTitle: json.phase?.title || null,
+        uploaderName:
+          `${json.uploader?.firstName || ""} ${
+            json.uploader?.lastName || ""
+          }`.trim() || json.uploader?.email || null,
       });
     }
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Document(s) ajouté(s) avec succès",
       projectId,
       documents: createdDocs,
     });
   } catch (e) {
     console.error("❌ Erreur upload document:", e);
-    res
+    return res
       .status(500)
       .json({ error: "Erreur lors de l'ajout du document" });
   }
 };
 
 /* =========================================================
-   🔹 Liste des documents d’un projet
+   🔹 LIST documents projet
 ========================================================= */
 exports.listByProject = async (req, res) => {
   try {
@@ -175,6 +228,7 @@ exports.listByProject = async (req, res) => {
     if (!project)
       return res.status(404).json({ error: "Projet introuvable" });
 
+    // ACL lecture
     if (!isAdmin(req.user)) {
       if (req.user.role === "client" && project.clientId !== req.user.id)
         return res.status(403).json({ error: "Accès non autorisé" });
@@ -200,24 +254,33 @@ exports.listByProject = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
-    res.json({
+    const formatted = docs.map((d) => {
+      const json = d.toJSON();
+      return {
+        ...json,
+        kindLabel: getLabel(json.kind, DOCUMENT_KINDS),
+        phaseTitle: json.phase?.title || null,
+        uploaderName:
+          `${json.uploader?.firstName || ""} ${
+            json.uploader?.lastName || ""
+          }`.trim() || json.uploader?.email || null,
+      };
+    });
+
+    return res.json({
       projectId,
-      documents: docs.map((d) => ({
-        ...d.toJSON(),
-        kindLabel: getLabel(d.kind, DOCUMENT_KINDS),
-        phaseTitle: d?.phase?.title || null,
-      })),
+      documents: formatted,
     });
   } catch (e) {
     console.error("❌ Erreur list documents:", e);
-    res
+    return res
       .status(500)
       .json({ error: "Erreur lors de la récupération des documents" });
   }
 };
 
 /* =========================================================
-   🔹 Suppression d’un document (ImageKit)
+   🔹 DELETE document projet
 ========================================================= */
 exports.remove = async (req, res) => {
   try {
@@ -234,32 +297,34 @@ exports.remove = async (req, res) => {
 
     const adminOK = isAdmin(req.user);
     const clientOK = canClientModify(project, req.user);
-    if (!adminOK && !clientOK)
+
+    if (!adminOK && !clientOK) {
       return res.status(403).json({
         error:
-          "Non autorisé. Les clients ne peuvent supprimer un document que dans l'heure suivant la création du projet.",
+          "Non autorisé à supprimer ce document. Un client ne peut supprimer qu'une heure après création.",
       });
+    }
 
     /* =========================================================
-       🗑️ Suppression ImageKit
+       🗑 Suppression côté ImageKit
     ========================================================== */
-    if (doc.fileId) {
+    if (doc.fileId && isImageKitEnabled()) {
       try {
-        await imagekit.deleteFile(doc.fileId);
+        await imageKit.deleteFile(doc.fileId);
       } catch (e) {
-        console.warn("⚠️ Impossible de supprimer le fichier ImageKit:", e.message);
+        console.warn("⚠️ Suppression ImageKit impossible:", e.message);
       }
     }
 
     await doc.destroy();
 
-    res.json({
+    return res.json({
       message: "Document supprimé avec succès",
       projectId: project.id,
     });
   } catch (e) {
     console.error("❌ Erreur suppression document:", e);
-    res
+    return res
       .status(500)
       .json({ error: "Erreur lors de la suppression du document" });
   }

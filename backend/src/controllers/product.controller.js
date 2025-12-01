@@ -12,15 +12,18 @@ function toSafeInt(v) {
   const n = parseInt(v, 10);
   return Number.isNaN(n) ? null : n;
 }
+
 function toTrimOrNull(v) {
   const s = (v ?? '').toString().trim();
   return s.length ? s : null;
 }
+
 function toNullableNumber(v) {
   if (v === '' || v === null || typeof v === 'undefined') return null;
   const n = parseFloat(v);
   return Number.isNaN(n) ? null : n;
 }
+
 function getPagination(req, defLimit = 50, maxLimit = 200) {
   const limit = Math.min(
     Math.max(parseInt(req.query?.limit, 10) || defLimit, 1),
@@ -30,6 +33,7 @@ function getPagination(req, defLimit = 50, maxLimit = 200) {
   const offset = (page - 1) * limit;
   return { limit, offset, page };
 }
+
 function slugify(str = '') {
   return str
     .toString()
@@ -43,31 +47,53 @@ function slugify(str = '') {
 }
 
 /* ============================================================
-   🖼 Helpers images → version ImageKit
+   🔒 ImageKit activation check
+============================================================ */
+function isImageKitEnabled() {
+  return Boolean(
+    process.env.IMAGEKIT_PUBLIC_KEY &&
+      process.env.IMAGEKIT_PRIVATE_KEY &&
+      process.env.IMAGEKIT_URL_ENDPOINT
+  );
+}
+
+/* ============================================================
+   🖼 Upload ImageKit (safe)
 ============================================================ */
 async function uploadToImageKit(file) {
-  const uploaded = await imagekit.upload({
-    file: file.buffer,
-    fileName: file.originalname,
-    folder: '/products',
-  });
+  if (!isImageKitEnabled()) {
+    console.warn('⚠️ ImageKit désactivé : upload ignoré');
+    return null;
+  }
 
-  return {
-    url: uploaded.url,
-    fileId: uploaded.fileId,
-  };
+  try {
+    const uploaded = await imageKit.upload({
+      file: file.buffer,
+      fileName: file.originalname,
+      folder: '/teranga/products',
+    });
+
+    return {
+      url: uploaded.url,
+      fileId: uploaded.fileId,
+    };
+  } catch (err) {
+    console.error(`❌ Erreur upload ImageKit (${file.originalname}):`, err);
+    return null;
+  }
 }
 
 /**
- * Upload multi-images (max 3)
- * - Supporte req.file, req.files, req.files.images etc.
- * - Transforme TOUT en liste uniforme de { url, fileId }
+ * Collecte TOUTES les images possibles dans req
+ * - max 3 images
+ * - retourne coverImage + gallery uniformisée
  */
 async function extractImagesFromRequestImageKit(req) {
   const collected = [];
 
   if (req.file) collected.push(req.file);
   if (Array.isArray(req.files)) collected.push(...req.files);
+
   if (req.files && typeof req.files === 'object') {
     Object.values(req.files).forEach((arr) => {
       if (Array.isArray(arr)) collected.push(...arr);
@@ -75,40 +101,45 @@ async function extractImagesFromRequestImageKit(req) {
   }
 
   if (!collected.length) {
-    return { coverImage: null, gallery: null, hasNewImages: false };
+    return { coverImage: null, gallery: [], hasNewImages: false };
   }
 
   const uploads = [];
+
   for (const f of collected.slice(0, 3)) {
-    const result = await uploadToImageKit(f);
-    uploads.push(result);
+    const up = await uploadToImageKit(f);
+    if (up) uploads.push(up);
   }
 
   return {
-    coverImage: uploads[0],
+    coverImage: uploads[0] || null,
     gallery: uploads,
-    hasNewImages: true,
+    hasNewImages: uploads.length > 0,
   };
 }
 
 /* ============================================================
-   🏷️ Format helpers
+   🏷️ Format produit → compatible frontend
 ============================================================ */
 function withLabels(prod) {
   if (!prod) return null;
+
   const p = prod.toJSON ? prod.toJSON() : prod;
 
   const gallery = Array.isArray(p.gallery) ? p.gallery : [];
-
   const cover = p.coverImage || gallery[0] || null;
 
   return {
     ...p,
+
+    // Compatibilité frontend :
     image: cover?.url || null,
     imagePath: cover?.url || null,
+
     coverImage: cover,
     gallery,
     images: gallery,
+
     currencyLabel: formatCurrency(p.currency || 'XOF'),
   };
 }
@@ -119,6 +150,7 @@ function withLabels(prod) {
 function canReadProduct(user) {
   return ['admin', 'agent', 'client'].includes(user?.role);
 }
+
 function canWriteProduct(user) {
   return user?.role === 'admin';
 }
@@ -143,25 +175,27 @@ exports.create = async (req, res) => {
       isActive,
     } = req.body || {};
 
-    if (!name) return res.status(400).json({ error: 'Nom du produit requis' });
+    if (!name)
+      return res.status(400).json({ error: 'Nom du produit requis' });
 
     const cid = toSafeInt(categoryId);
     const cat = cid ? await Category.findByPk(cid) : null;
 
     const priceNum = toNullableNumber(price);
     if (price !== undefined && priceNum === null) {
-      return res.status(400).json({ error: 'Le prix doit être un nombre valide.' });
+      return res.status(400).json({ error: 'Le prix doit être un nombre.' });
     }
 
     const stockNum = toSafeInt(stock);
 
-    // ⬆️ UPLOAD IMAGEKIT
+    // 🖼 Upload images
     const { coverImage, gallery } = await extractImagesFromRequestImageKit(req);
 
-    // Slug unique
+    // Génération slug unique
     const baseSlug = slugify(name);
     let finalSlug = baseSlug || `p-${Date.now()}`;
     let i = 1;
+
     while (await Product.findOne({ where: { slug: finalSlug } })) {
       finalSlug = `${baseSlug}-${i++}`;
     }
@@ -195,7 +229,7 @@ exports.create = async (req, res) => {
       product: withLabels(created),
     });
   } catch (e) {
-    console.error('❌ Erreur create product:', e);
+    console.error('❌ create product:', e);
     return res.status(500).json({ error: e.message || 'Erreur serveur' });
   }
 };
@@ -214,6 +248,7 @@ exports.list = async (req, res) => {
     const { limit, offset, page } = getPagination(req);
 
     const where = {};
+
     if (q) {
       where[Op.or] = [
         { name: { [Op.like]: `%${q}%` } },
@@ -221,6 +256,7 @@ exports.list = async (req, res) => {
         { description: { [Op.like]: `%${q}%` } },
       ];
     }
+
     if (categoryId) where.categoryId = categoryId;
     if (typeof active !== 'undefined')
       where.isActive = String(active) === 'true';
@@ -239,7 +275,7 @@ exports.list = async (req, res) => {
       pagination: { page, limit, total: count },
     });
   } catch (e) {
-    console.error('❌ Erreur list products:', e);
+    console.error('❌ list products:', e);
     return res.status(500).json({ error: 'Erreur lors de la récupération' });
   }
 };
@@ -253,16 +289,17 @@ exports.detail = async (req, res) => {
       return res.status(403).json({ error: 'Accès interdit' });
 
     const id = toSafeInt(req.params.id);
-    if (!id) return res.status(400).json({ error: 'ID produit invalide' });
+    if (!id) return res.status(400).json({ error: 'ID invalide' });
 
     const prod = await Product.findByPk(id, {
       include: [{ model: Category, as: 'category' }],
     });
+
     if (!prod) return res.status(404).json({ error: 'Produit introuvable' });
 
     return res.json({ product: withLabels(prod) });
   } catch (e) {
-    console.error('❌ Erreur detail product:', e);
+    console.error('❌ detail product:', e);
     return res.status(500).json({ error: 'Erreur lors de la récupération' });
   }
 };
@@ -293,11 +330,13 @@ exports.update = async (req, res) => {
       isActive,
     } = req.body || {};
 
+    // Category
     if (categoryId !== undefined) {
       const cid = toSafeInt(categoryId);
       prod.categoryId = cid || null;
     }
 
+    // Slug regeneration
     let regenerateSlug = false;
     if (name !== undefined) {
       const newName = String(name).trim();
@@ -307,8 +346,10 @@ exports.update = async (req, res) => {
       }
     }
 
+    // SKU
     if (sku !== undefined) prod.sku = toTrimOrNull(sku);
 
+    // Prix
     if (price !== undefined) {
       const priceNum = toNullableNumber(price);
       if (priceNum === null)
@@ -316,37 +357,39 @@ exports.update = async (req, res) => {
       prod.price = priceNum;
     }
 
+    // Devise
     if (currency !== undefined)
       prod.currency = String(currency).toUpperCase().trim();
 
+    // Stock
     if (stock !== undefined) {
       const stockNum = toSafeInt(stock);
-      if (stock !== '' && stockNum === null)
+      if (stockNum === null && stock !== '')
         return res.status(400).json({ error: 'Stock invalide' });
       prod.stock = stockNum ?? prod.stock;
     }
 
+    // Descriptions
     if (description !== undefined) prod.description = toTrimOrNull(description);
     if (shortDescription !== undefined)
       prod.shortDescription = toTrimOrNull(shortDescription);
 
+    // Actif / inactif
     if (typeof isActive !== 'undefined')
       prod.isActive = String(isActive) === 'true' || isActive === true;
 
-    // ⬆️ Upload ImageKit
+    // 🖼 Upload nouvelles images
     const { coverImage, gallery, hasNewImages } =
       await extractImagesFromRequestImageKit(req);
 
     if (hasNewImages) {
-      // Optionnel : supprimer anciennes images ImageKit
+      // Suppression anciennes images côté ImageKit
       if (Array.isArray(prod.gallery)) {
         for (const img of prod.gallery) {
           if (img?.fileId) {
             try {
-              await imagekit.deleteFile(img.fileId);
-            } catch (err) {
-              console.warn('⚠️ Impossible de supprimer image:', img.fileId);
-            }
+              await imageKit.deleteFile(img.fileId);
+            } catch (_) {}
           }
         }
       }
@@ -355,11 +398,12 @@ exports.update = async (req, res) => {
       prod.gallery = gallery || [];
     }
 
-    // Regeneration du slug
+    // Regénération du slug si besoin
     if (regenerateSlug && prod.name) {
       const baseSlug = slugify(prod.name);
       let finalSlug = baseSlug || `p-${Date.now()}`;
       let i = 1;
+
       while (
         await Product.findOne({
           where: { slug: finalSlug, id: { [Op.ne]: prod.id } },
@@ -367,6 +411,7 @@ exports.update = async (req, res) => {
       ) {
         finalSlug = `${baseSlug}-${i++}`;
       }
+
       prod.slug = finalSlug;
     }
 
@@ -381,7 +426,7 @@ exports.update = async (req, res) => {
       product: withLabels(updated),
     });
   } catch (e) {
-    console.error('❌ Erreur update product:', e);
+    console.error('❌ update product:', e);
     return res.status(500).json({ error: e.message || 'Erreur serveur' });
   }
 };
@@ -398,31 +443,35 @@ exports.remove = async (req, res) => {
     if (!id) return res.status(400).json({ error: 'ID invalide' });
 
     const force = String(req.query?.force || '').toLowerCase() === 'true';
+
     const prod = await Product.findByPk(id);
     if (!prod) return res.status(404).json({ error: 'Produit introuvable' });
 
     if (prod.isActive && !force) {
       return res.status(400).json({
         error:
-          'Ce produit est actif. Pour supprimer : DELETE /products/:id?force=true',
+          'Produit actif. Pour supprimer, utilisez : DELETE /products/:id?force=true',
       });
     }
 
-    // Supprimer les images ImageKit
+    // Suppression ImageKit
     if (Array.isArray(prod.gallery)) {
       for (const img of prod.gallery) {
         if (img?.fileId) {
           try {
-            await imagekit.deleteFile(img.fileId);
+            await imageKit.deleteFile(img.fileId);
           } catch (_) {}
         }
       }
     }
 
     await prod.destroy();
-    return res.json({ message: 'Produit supprimé avec succès' });
+
+    return res.json({
+      message: 'Produit supprimé avec succès',
+    });
   } catch (e) {
-    console.error('❌ Erreur remove product:', e);
+    console.error('❌ remove product:', e);
     return res.status(500).json({ error: 'Erreur lors de la suppression' });
   }
 };
