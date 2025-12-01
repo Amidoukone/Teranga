@@ -1,166 +1,213 @@
-'use strict';
-const { Project, ProjectPhase, User } = require('../../models');
-const { getLabel } = require('../utils/labels');
+"use strict";
 
+const { Project, ProjectPhase, User } = require("../../models");
+const { getLabel } = require("../utils/labels");
+
+/* =========================================================
+   🏷️ Labels (FR)
+========================================================= */
 const PROJECT_STATUSES = {
-  created: 'Créé',
-  in_progress: 'En cours',
-  completed: 'Terminé',
-  validated: 'Validé',
-  cancelled: 'Annulé',
+  created: "Créé",
+  in_progress: "En cours",
+  completed: "Terminé",
+  validated: "Validé",
+  cancelled: "Annulé",
 };
 
 /* =========================================================
-   Helpers
+   🧩 Helpers
 ========================================================= */
 function isWithinOneHour(date) {
   try {
     const created = new Date(date).getTime();
-    const now = Date.now();
-    return Number.isFinite(created) && now - created <= 3600000;
+    return Number.isFinite(created) && Date.now() - created <= 3600000;
   } catch {
     return false;
   }
 }
 
-function canClientEditOrDelete(project, user) {
-  return (
-    user?.role === 'client' &&
-    project?.clientId === user?.id &&
-    isWithinOneHour(project?.createdAt)
-  );
+function isAdmin(user) {
+  return user?.role === "admin";
 }
 
-function isAdmin(user) {
-  return user?.role === 'admin';
+function isClientOwner(project, user) {
+  return project && user?.role === "client" && project.clientId === user.id;
+}
+
+function canClientEditOrDelete(project, user) {
+  return isClientOwner(project, user) && isWithinOneHour(project.createdAt);
 }
 
 /* =========================================================
-   Créer un projet
+   🟢 CREATE PROJECT
 ========================================================= */
 exports.create = async (req, res) => {
   try {
-    if (!req.user?.id) return res.status(401).json({ error: 'Non authentifié' });
+    if (!req.user?.id)
+      return res.status(401).json({ error: "Non authentifié" });
 
-    const { title, type, description, budget, currency, clientId, agentId } =
-      req.body;
+    const {
+      title,
+      type,
+      description,
+      budget,
+      currency = "XOF",
+      clientId,
+      agentId,
+    } = req.body || {};
 
     if (!title || !type)
-      return res.status(400).json({ error: 'Titre et type requis' });
+      return res.status(400).json({ error: "Titre et type requis" });
 
+    // Détermination du propriétaire réel
     let targetClientId = req.user.id;
+
     if (isAdmin(req.user) && clientId) {
-      targetClientId = parseInt(clientId, 10);
+      const cid = parseInt(clientId, 10);
+      if (Number.isFinite(cid)) targetClientId = cid;
     }
 
     const project = await Project.create({
-      title,
-      type,
+      title: String(title).trim(),
+      type: String(type).trim(),
       description: description ?? null,
       budget: budget ?? null,
-      currency: currency ?? 'XOF',
+      currency: currency || "XOF",
       clientId: targetClientId,
       agentId: isAdmin(req.user) && agentId ? agentId : null,
-      status: 'created',
+      status: "created",
     });
 
-    const created = await Project.findByPk(project.id, {
+    const full = await Project.findByPk(project.id, {
       include: [
-        { model: User, as: 'client', attributes: ['id','firstName','lastName','email','role'] },
-        { model: User, as: 'agent', attributes: ['id','firstName','lastName','email','role'] },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email", "role"],
+        },
+        {
+          model: User,
+          as: "agent",
+          attributes: ["id", "firstName", "lastName", "email", "role"],
+        },
       ],
     });
 
-    res.status(201).json({
-      message: 'Projet créé avec succès',
+    return res.status(201).json({
+      message: "Projet créé avec succès",
       project: {
-        ...created.toJSON(),
-        statusLabel: getLabel(created.status, PROJECT_STATUSES),
+        ...full.toJSON(),
+        statusLabel: getLabel(full.status, PROJECT_STATUSES),
       },
     });
   } catch (e) {
-    console.error('❌ Erreur création projet:', e);
-    res.status(500).json({ error: 'Erreur lors de la création du projet' });
+    console.error("❌ Erreur création projet:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de la création du projet" });
   }
 };
 
 /* =========================================================
-   Liste des projets
+   🟡 LIST PROJECTS
 ========================================================= */
 exports.list = async (req, res) => {
   try {
     if (!req.user?.id)
-      return res.status(401).json({ error: 'Non authentifié' });
+      return res.status(401).json({ error: "Non authentifié" });
 
     const where = {};
-    if (req.user.role === 'client') where.clientId = req.user.id;
-    if (req.user.role === 'agent') where.agentId = req.user.id;
+
+    if (req.user.role === "client") where.clientId = req.user.id;
+    if (req.user.role === "agent") where.agentId = req.user.id;
 
     const projects = await Project.findAll({
       where,
       include: [
-        { model: User, as: 'client', attributes: ['id','firstName','lastName','email','role'] },
-        { model: User, as: 'agent', attributes: ['id','firstName','lastName','email','role'] },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email", "role"],
+        },
+        {
+          model: User,
+          as: "agent",
+          attributes: ["id", "firstName", "lastName", "email", "role"],
+        },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
     });
 
-    const withLabels = projects.map((p) => ({
+    const formatted = projects.map((p) => ({
       ...p.toJSON(),
       statusLabel: getLabel(p.status, PROJECT_STATUSES),
     }));
 
-    res.json({ projects: withLabels });
+    return res.json({ projects: formatted });
   } catch (e) {
-    console.error('❌ Erreur list projects:', e);
-    res.status(500).json({ error: 'Erreur lors de la récupération des projets' });
+    console.error("❌ Erreur list projects:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de la récupération des projets" });
   }
 };
 
 /* =========================================================
-   Détail d’un projet
+   🔍 DETAIL PROJECT
 ========================================================= */
 exports.detail = async (req, res) => {
   try {
     if (!req.user?.id)
-      return res.status(401).json({ error: 'Non authentifié' });
+      return res.status(401).json({ error: "Non authentifié" });
 
     const project = await Project.findByPk(req.params.id, {
       include: [
-        { model: ProjectPhase, as: 'phases' },
-        { model: User, as: 'client', attributes: ['id','firstName','lastName','email','role'] },
-        { model: User, as: 'agent', attributes: ['id','firstName','lastName','email','role'] },
+        { model: ProjectPhase, as: "phases" },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email", "role"],
+        },
+        {
+          model: User,
+          as: "agent",
+          attributes: ["id", "firstName", "lastName", "email", "role"],
+        },
       ],
     });
 
-    if (!project) return res.status(404).json({ error: 'Projet introuvable' });
+    if (!project)
+      return res.status(404).json({ error: "Projet introuvable" });
 
-    if (req.user.role === 'client' && project.clientId !== req.user.id) {
-      return res.status(403).json({ error: 'Accès non autorisé à ce projet' });
-    }
+    // ACL client
+    if (req.user.role === "client" && project.clientId !== req.user.id)
+      return res.status(403).json({ error: "Accès non autorisé à ce projet" });
 
-    res.json({
+    return res.json({
       project: {
         ...project.toJSON(),
         statusLabel: getLabel(project.status, PROJECT_STATUSES),
       },
     });
   } catch (e) {
-    console.error('❌ Erreur detail project:', e);
-    res.status(500).json({ error: 'Erreur lors de la récupération du projet' });
+    console.error("❌ Erreur detail project:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de la récupération du projet" });
   }
 };
 
 /* =========================================================
-   Mise à jour d’un projet (corrected version)
+   🟠 UPDATE PROJECT
 ========================================================= */
 exports.update = async (req, res) => {
   try {
     if (!req.user?.id)
-      return res.status(401).json({ error: 'Non authentifié' });
+      return res.status(401).json({ error: "Non authentifié" });
 
     const project = await Project.findByPk(req.params.id);
-    if (!project) return res.status(404).json({ error: 'Projet introuvable' });
+    if (!project)
+      return res.status(404).json({ error: "Projet introuvable" });
 
     const adminOK = isAdmin(req.user);
     const clientOK = canClientEditOrDelete(project, req.user);
@@ -172,15 +219,26 @@ exports.update = async (req, res) => {
       });
     }
 
-    // ⚠️ IMPORTANT : On fusionne l’ancien projet + valeurs reçues
+    const body = req.body || {};
+
+    // Construction sécurisée
     const merged = {
-      title: req.body.title ?? project.title,
-      type: req.body.type ?? project.type,
-      description: req.body.description !== undefined ? req.body.description : project.description,
-      budget: req.body.budget !== undefined ? req.body.budget : project.budget,
-      currency: req.body.currency ?? project.currency,
-      status: adminOK ? (req.body.status ?? project.status) : project.status,
-      agentId: adminOK ? (req.body.agentId ?? project.agentId) : project.agentId,
+      title: body.title ?? project.title,
+      type: body.type ?? project.type,
+      description:
+        body.description !== undefined
+          ? body.description
+          : project.description,
+      budget:
+        body.budget !== undefined ? body.budget : project.budget,
+      currency: body.currency ?? project.currency,
+
+      // ⚠️ agentId modifiable uniquement par admin
+      agentId: adminOK ? body.agentId ?? project.agentId : project.agentId,
+
+      // ⚠️ status modifiable uniquement par admin
+      status: adminOK ? body.status ?? project.status : project.status,
+
       clientId: project.clientId,
     };
 
@@ -188,37 +246,45 @@ exports.update = async (req, res) => {
 
     const updated = await Project.findByPk(project.id, {
       include: [
-        { model: User, as: 'client', attributes: ['id','firstName','lastName','email','role'] },
-        { model: User, as: 'agent', attributes: ['id','firstName','lastName','email','role'] },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email", "role"],
+        },
+        {
+          model: User,
+          as: "agent",
+          attributes: ["id", "firstName", "lastName", "email", "role"],
+        },
       ],
     });
 
-    res.json({
-      message: 'Projet mis à jour avec succès',
+    return res.json({
+      message: "Projet mis à jour avec succès",
       project: {
         ...updated.toJSON(),
         statusLabel: getLabel(updated.status, PROJECT_STATUSES),
       },
     });
   } catch (e) {
-    console.error('❌ Erreur update project:', e);
-    res.status(500).json({ error: 'Erreur lors de la mise à jour du projet' });
+    console.error("❌ Erreur update project:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de la mise à jour du projet" });
   }
 };
 
 /* =========================================================
-   Supprimer un projet
+   🔴 DELETE PROJECT
 ========================================================= */
 exports.remove = async (req, res) => {
   try {
     if (!req.user?.id)
-      return res.status(401).json({ error: 'Non authentifié' });
+      return res.status(401).json({ error: "Non authentifié" });
 
-    const project = await Project.findByPk(req.params.id, {
-      include: [{ model: User, as: 'client', attributes: ['id','firstName','lastName','email'] }],
-    });
-
-    if (!project) return res.status(404).json({ error: 'Projet introuvable' });
+    const project = await Project.findByPk(req.params.id);
+    if (!project)
+      return res.status(404).json({ error: "Projet introuvable" });
 
     const adminOK = isAdmin(req.user);
     const clientOK = canClientEditOrDelete(project, req.user);
@@ -231,9 +297,12 @@ exports.remove = async (req, res) => {
     }
 
     await project.destroy();
-    res.json({ message: 'Projet supprimé avec succès' });
+
+    return res.json({ message: "Projet supprimé avec succès" });
   } catch (e) {
-    console.error('❌ Erreur suppression projet:', e);
-    res.status(500).json({ error: 'Erreur lors de la suppression du projet' });
+    console.error("❌ Erreur suppression projet:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de la suppression du projet" });
   }
 };

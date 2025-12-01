@@ -1,40 +1,65 @@
-'use strict';
+"use strict";
 
-const { Service, User, Property, sequelize } = require('../../models');
-const { Op } = require('sequelize');
-const { SERVICE_STATUSES, SERVICE_TYPES, getLabel } = require('../utils/labels');
+const { Service, User, Property, sequelize } = require("../../models");
+const { Op } = require("sequelize");
+const {
+  SERVICE_STATUSES,
+  SERVICE_TYPES,
+  getLabel,
+} = require("../utils/labels");
 
-// Helpers
-const ALLOWED_TYPES = new Set(Object.keys(SERVICE_TYPES));
-const ALLOWED_STATUSES = new Set(Object.keys(SERVICE_STATUSES));
-
+/* ============================================================
+   🔧 Helpers généraux
+============================================================ */
 function toNullableNumber(v) {
-  if (v === '' || v === undefined || v === null) return null;
+  if (v === "" || v === undefined || v === null) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
+
 function toTrimOrNull(v) {
   if (v === undefined || v === null) return null;
   const s = String(v).trim();
   return s.length ? s : null;
 }
+
 function toSafeInt(v, fallback = null) {
   const n = parseInt(v, 10);
   return Number.isNaN(n) ? fallback : n;
 }
+
 function getPagination(req, defaultLimit = 25, maxLimit = 100) {
-  const limit = Math.min(Math.max(toSafeInt(req.query.limit, defaultLimit), 1), maxLimit);
-  const offset = Math.max(toSafeInt(req.query.offset, 0), 0);
+  const l = toSafeInt(req.query.limit, defaultLimit);
+  const o = toSafeInt(req.query.offset, 0);
+  const limit = Math.min(Math.max(l, 1), maxLimit);
+  const offset = Math.max(o, 0);
   return { limit, offset };
 }
+
 function isTrue(x) {
-  if (typeof x === 'string') return x === '1' || x.toLowerCase() === 'true';
+  if (typeof x === "string") return x === "1" || x.toLowerCase() === "true";
   return !!x;
 }
 
-/* ======================================================
-   ➕ Créer un service (client ou admin)
-====================================================== */
+const ALLOWED_TYPES = new Set(Object.keys(SERVICE_TYPES));
+const ALLOWED_STATUSES = new Set(Object.keys(SERVICE_STATUSES));
+
+/* ============================================================
+   🏷️ Helper d’ajout des labels FR
+============================================================ */
+function addLabels(service) {
+  if (!service) return null;
+  const s = service.toJSON ? service.toJSON() : service;
+  return {
+    ...s,
+    statusLabel: getLabel(s.status, SERVICE_STATUSES),
+    typeLabel: getLabel(s.type, SERVICE_TYPES),
+  };
+}
+
+/* ============================================================
+   🟢 CRÉER UN SERVICE (client ou admin)
+============================================================ */
 exports.create = async (req, res) => {
   try {
     let {
@@ -46,36 +71,56 @@ exports.create = async (req, res) => {
       contactPhone,
       address,
       budget,
-      clientId, // facultatif pour admin
+      clientId,
     } = req.body || {};
 
+    /* -------------------------
+       🔍 Validation de base
+    ------------------------- */
     propertyId = toSafeInt(propertyId);
-    if (!propertyId) return res.status(400).json({ error: 'propertyId requis' });
+    if (!propertyId)
+      return res.status(400).json({ error: "propertyId requis" });
 
-    type = String(type || '').trim();
-    title = String(title || '').trim();
+    type = String(type || "").trim();
     if (!type || !ALLOWED_TYPES.has(type))
-      return res.status(400).json({ error: 'type requis ou invalide' });
-    if (!title) return res.status(400).json({ error: 'title requis' });
+      return res.status(400).json({ error: "Type de service invalide" });
 
-    const prop = await Property.findByPk(propertyId);
-    if (!prop) return res.status(400).json({ error: 'Bien introuvable' });
+    title = String(title || "").trim();
+    if (!title) return res.status(400).json({ error: "Titre requis" });
 
-    // 🔍 Déterminer le client cible
+    const property = await Property.findByPk(propertyId);
+    if (!property)
+      return res.status(400).json({ error: "Bien immobilier introuvable" });
+
+    /* -------------------------
+       🔐 ACL : déterminer le client
+    ------------------------- */
     let targetClientId = req.user.id;
-    if (req.user.role === 'admin') {
-      if (!clientId) {
-        return res.status(400).json({ error: 'clientId requis pour la création par un admin' });
+
+    if (req.user.role === "admin") {
+      if (!clientId)
+        return res
+          .status(400)
+          .json({ error: "clientId requis pour un admin" });
+
+      const user = await User.findByPk(clientId);
+      if (!user || user.role !== "client")
+        return res
+          .status(400)
+          .json({ error: "clientId invalide (doit être un client)" });
+
+      targetClientId = user.id;
+    } else {
+      if (String(property.ownerId) !== String(req.user.id)) {
+        return res.status(403).json({
+          error: "Ce bien n'appartient pas à l'utilisateur connecté",
+        });
       }
-      const client = await User.findByPk(clientId);
-      if (!client || client.role !== 'client') {
-        return res.status(400).json({ error: 'clientId invalide (doit être un client existant)' });
-      }
-      targetClientId = client.id;
-    } else if (String(prop.ownerId) !== String(req.user.id)) {
-      return res.status(403).json({ error: "Ce bien n'appartient pas à l'utilisateur connecté" });
     }
 
+    /* -------------------------
+       📝 Création
+    ------------------------- */
     const service = await Service.create({
       clientId: targetClientId,
       agentId: null,
@@ -87,323 +132,439 @@ exports.create = async (req, res) => {
       contactPhone: toTrimOrNull(contactPhone),
       address: toTrimOrNull(address),
       budget: toNullableNumber(budget),
-      status: 'created',
+      status: "created",
     });
 
-    const created = await Service.findByPk(service.id, {
+    const full = await Service.findByPk(service.id, {
       include: [
-        { model: User, as: 'agent', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: User, as: 'client', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'address', 'photos'] },
+        {
+          model: User,
+          as: "agent",
+          attributes: ["id", "firstName", "lastName", "email"],
+        },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email"],
+        },
+        {
+          model: Property,
+          as: "property",
+          attributes: ["id", "title", "city", "address", "photos"],
+        },
       ],
     });
 
-    // 🏷️ Ajout des labels lisibles
-    const serviceWithLabels = {
-      ...created.toJSON(),
-      statusLabel: getLabel(created.status, SERVICE_STATUSES),
-      typeLabel: getLabel(created.type, SERVICE_TYPES),
-    };
-
-    return res.status(201).json({ message: 'Service créé', service: serviceWithLabels });
+    return res.status(201).json({
+      message: "Service créé",
+      service: addLabels(full),
+    });
   } catch (e) {
-    console.error('❌ Erreur création service:', e);
-    return res.status(500).json({ error: "Erreur lors de la création du service" });
+    console.error("❌ Erreur création service:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de la création du service" });
   }
 };
 
-/* ======================================================
-   📜 Liste des services client / admin
-====================================================== */
+/* ============================================================
+   📄 LISTE DES SERVICES POUR CLIENT / ADMIN
+============================================================ */
 exports.listClient = async (req, res) => {
   try {
     const { limit, offset } = getPagination(req);
     const { clientId } = req.query;
 
     const where = {};
-    if (req.user.role === 'admin') {
+
+    if (req.user.role === "admin") {
       if (clientId) where.clientId = clientId;
     } else {
       where.clientId = req.user.id;
     }
 
-    const services = await Service.findAll({
+    const rows = await Service.findAll({
       where,
       include: [
-        { model: User, as: 'client', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: User, as: 'agent', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
-        { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'address', 'photos'] },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email"],
+        },
+        {
+          model: User,
+          as: "agent",
+          attributes: ["id", "firstName", "lastName", "email"],
+        },
+        {
+          model: Property,
+          as: "property",
+          attributes: ["id", "title", "city", "address", "photos"],
+        },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
 
-    // 🏷️ Ajout des labels
-    const servicesWithLabels = services.map((s) => ({
-      ...s.toJSON(),
-      statusLabel: getLabel(s.status, SERVICE_STATUSES),
-      typeLabel: getLabel(s.type, SERVICE_TYPES),
-    }));
-
-    return res.json({ services: servicesWithLabels, pagination: { limit, offset, count: services.length } });
+    return res.json({
+      services: rows.map((s) => addLabels(s)),
+      pagination: { limit, offset, count: rows.length },
+    });
   } catch (e) {
-    console.error('❌ Erreur récupération services client/admin:', e);
-    return res.status(500).json({ error: "Erreur lors de la récupération des services" });
+    console.error("❌ erreur listClient:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de la récupération des services" });
   }
 };
 
-/* ======================================================
-   🧾 Liste tous les services (admin uniquement)
-====================================================== */
+/* ============================================================
+   🧾 LISTE TOUTES LES DEMANDES (ADMIN)
+============================================================ */
 exports.listAll = async (req, res) => {
   try {
-    if (!req.user || req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Accès interdit' });
-    }
+    if (req.user.role !== "admin")
+      return res.status(403).json({ error: "Accès interdit" });
 
     const { limit, offset } = getPagination(req);
-    const status = (req.query.status || '').trim();
+    const status = (req.query.status || "").trim();
     const unassigned = isTrue(req.query.unassigned);
-    const q = (req.query.q || '').trim();
+    const q = (req.query.q || "").trim();
 
     const where = {};
+    const andWhere = [];
+
     if (status && ALLOWED_STATUSES.has(status)) where.status = status;
     if (unassigned) where.agentId = null;
 
-    const whereAnd = [];
     if (q) {
       const like = { [Op.like]: `%${q}%` };
-      whereAnd.push({
+      andWhere.push({
         [Op.or]: [
-          { title: like }, { description: like }, { contactPerson: like },
-          { contactPhone: like }, { address: like },
-          { '$client.firstName$': like }, { '$client.lastName$': like }, { '$client.email$': like },
-          { '$property.title$': like }, { '$property.city$': like }, { '$property.address$': like },
+          { title: like },
+          { description: like },
+          { address: like },
+          { contactPerson: like },
+          { contactPhone: like },
+
+          { "$client.firstName$": like },
+          { "$client.lastName$": like },
+          { "$client.email$": like },
+
+          { "$property.title$": like },
+          { "$property.address$": like },
+          { "$property.city$": like },
         ],
       });
     }
 
-    const finalWhere = whereAnd.length ? { ...where, [Op.and]: whereAnd } : where;
+    const finalWhere =
+      andWhere.length > 0 ? { ...where, [Op.and]: andWhere } : where;
+
     const { rows, count } = await Service.findAndCountAll({
       where: finalWhere,
       include: [
-        { model: User, as: 'client', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: User, as: 'agent', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
-        { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'address'] },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email"],
+        },
+        {
+          model: User,
+          as: "agent",
+          attributes: ["id", "firstName", "lastName", "email"],
+        },
+        {
+          model: Property,
+          as: "property",
+          attributes: ["id", "title", "city", "address"],
+        },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
 
-    // 🏷️ Ajout des labels
-    const servicesWithLabels = rows.map((s) => ({
-      ...s.toJSON(),
-      statusLabel: getLabel(s.status, SERVICE_STATUSES),
-      typeLabel: getLabel(s.type, SERVICE_TYPES),
-    }));
-
-    return res.json({ services: servicesWithLabels, pagination: { limit, offset, total: count } });
+    return res.json({
+      services: rows.map(addLabels),
+      pagination: { limit, offset, total: count },
+    });
   } catch (e) {
-    console.error('❌ Erreur listAll services:', e);
-    return res.status(500).json({ error: "Erreur lors de la récupération des services" });
+    console.error("❌ erreur listAll:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de la récupération des services" });
   }
 };
 
-/* ======================================================
-   👔 Admin assigne un agent à un service
-====================================================== */
+/* ============================================================
+   👔 ADMIN ASSIGNE UN AGENT
+============================================================ */
 exports.assignAgent = async (req, res) => {
   try {
-    if (!req.user || req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Accès interdit' });
-    }
+    if (req.user.role !== "admin")
+      return res.status(403).json({ error: "Accès interdit" });
 
-    const sid = toSafeInt(req.body?.serviceId);
-    const aid = toSafeInt(req.body?.agentId);
-    if (!sid || !aid) {
-      return res.status(400).json({ error: 'serviceId et agentId requis' });
-    }
+    const serviceId = toSafeInt(req.body?.serviceId);
+    const agentId = toSafeInt(req.body?.agentId);
 
-    const updated = await sequelize.transaction(async (t) => {
-      const service = await Service.findByPk(sid, { transaction: t });
-      if (!service) throw Object.assign(new Error('Service introuvable'), { status: 404 });
-      if (['completed', 'validated'].includes(service.status)) {
-        throw Object.assign(new Error("Impossible d'assigner un service finalisé/validé"), { status: 400 });
+    if (!serviceId || !agentId)
+      return res
+        .status(400)
+        .json({ error: "serviceId et agentId requis" });
+
+    const result = await sequelize.transaction(async (t) => {
+      const service = await Service.findByPk(serviceId, { transaction: t });
+      if (!service)
+        throw Object.assign(new Error("Service introuvable"), {
+          status: 404,
+        });
+
+      if (["completed", "validated"].includes(service.status)) {
+        throw Object.assign(
+          new Error("Impossible d'assigner un service terminé/validé"),
+          { status: 400 }
+        );
       }
 
-      const agent = await User.findByPk(aid, { transaction: t });
-      if (!agent || agent.role !== 'agent') {
-        throw Object.assign(new Error("L'utilisateur cible n'est pas un agent valide"), { status: 400 });
+      const agent = await User.findByPk(agentId, { transaction: t });
+      if (!agent || agent.role !== "agent") {
+        throw Object.assign(
+          new Error("agentId invalide : ce n'est pas un agent"),
+          { status: 400 }
+        );
       }
 
-      await service.update({ agentId: aid, status: 'created' }, { transaction: t });
+      await service.update(
+        { agentId: agent.id, status: "created" },
+        { transaction: t }
+      );
 
-      return await service.reload({
+      return service.reload({
         include: [
-          { model: User, as: 'client', attributes: ['id', 'firstName', 'lastName', 'email'] },
-          { model: User, as: 'agent', attributes: ['id', 'firstName', 'lastName', 'email'] },
-          { model: Property, as: 'property', attributes: ['id', 'title', 'city'] },
+          {
+            model: User,
+            as: "client",
+            attributes: ["id", "firstName", "lastName", "email"],
+          },
+          {
+            model: User,
+            as: "agent",
+            attributes: ["id", "firstName", "lastName", "email"],
+          },
+          {
+            model: Property,
+            as: "property",
+            attributes: ["id", "title", "city"],
+          },
         ],
         transaction: t,
       });
     });
 
-    const serviceWithLabels = {
-      ...updated.toJSON(),
-      statusLabel: getLabel(updated.status, SERVICE_STATUSES),
-      typeLabel: getLabel(updated.type, SERVICE_TYPES),
-    };
-
-    return res.json({ message: 'Agent assigné avec succès', service: serviceWithLabels });
+    return res.json({
+      message: "Agent assigné",
+      service: addLabels(result),
+    });
   } catch (e) {
-    const status = e?.status || 500;
-    console.error('❌ Erreur assignAgent:', e);
-    return res.status(status).json({ error: e.message || "Erreur lors de l'assignation" });
+    const status = e.status || 500;
+    console.error("❌ erreur assignAgent:", e);
+    return res.status(status).json({ error: e.message });
   }
 };
 
-/* ======================================================
-   ✏️ Mettre à jour un service
-====================================================== */
+/* ============================================================
+   ✏️ MISE À JOUR D’UN SERVICE
+============================================================ */
 exports.updateService = async (req, res) => {
   try {
     const id = toSafeInt(req.params.id);
     const service = await Service.findByPk(id);
-    if (!service) return res.status(404).json({ error: 'Service introuvable' });
 
-    if (req.user.role !== 'admin' && service.clientId !== req.user.id) {
-      return res.status(403).json({ error: 'Non autorisé à modifier ce service' });
+    if (!service)
+      return res.status(404).json({ error: "Service introuvable" });
+
+    if (req.user.role !== "admin" && service.clientId !== req.user.id) {
+      return res
+        .status(403)
+        .json({ error: "Non autorisé à modifier ce service" });
     }
 
-    const fields = ['title', 'description', 'contactPerson', 'contactPhone', 'address', 'budget', 'status'];
+    const updatable = [
+      "title",
+      "description",
+      "contactPerson",
+      "contactPhone",
+      "address",
+      "budget",
+      "status",
+    ];
+
     const updates = {};
-    for (const f of fields) {
-      if (f in req.body) updates[f] = req.body[f];
+    for (const field of updatable) {
+      if (field in req.body) updates[field] = req.body[field];
     }
 
     await service.update(updates);
-    const updated = await Service.findByPk(id, {
+
+    const full = await Service.findByPk(id, {
       include: [
-        { model: User, as: 'client', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: User, as: 'agent', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
-        { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'address'] },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email"],
+        },
+        {
+          model: User,
+          as: "agent",
+          attributes: ["id", "firstName", "lastName", "email"],
+        },
+        {
+          model: Property,
+          as: "property",
+          attributes: ["id", "title", "city", "address"],
+        },
       ],
     });
 
-    const serviceWithLabels = {
-      ...updated.toJSON(),
-      statusLabel: getLabel(updated.status, SERVICE_STATUSES),
-      typeLabel: getLabel(updated.type, SERVICE_TYPES),
-    };
-
-    return res.json({ message: 'Service mis à jour', service: serviceWithLabels });
+    return res.json({
+      message: "Service mis à jour",
+      service: addLabels(full),
+    });
   } catch (e) {
-    console.error('❌ Erreur updateService:', e);
-    return res.status(500).json({ error: "Erreur lors de la mise à jour du service" });
+    console.error("❌ erreur updateService:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de la mise à jour du service" });
   }
 };
 
-/* ======================================================
-   ❌ Supprimer un service
-====================================================== */
+/* ============================================================
+   ❌ SUPPRESSION D’UN SERVICE
+============================================================ */
 exports.deleteService = async (req, res) => {
   try {
     const id = toSafeInt(req.params.id);
     const service = await Service.findByPk(id);
-    if (!service) return res.status(404).json({ error: 'Service introuvable' });
 
-    if (req.user.role !== 'admin' && service.clientId !== req.user.id) {
-      return res.status(403).json({ error: 'Non autorisé à supprimer ce service' });
-    }
+    if (!service)
+      return res.status(404).json({ error: "Service introuvable" });
+
+    if (req.user.role !== "admin" && req.user.id !== service.clientId)
+      return res.status(403).json({ error: "Non autorisé" });
 
     await service.destroy();
-    return res.json({ message: 'Service supprimé' });
+
+    return res.json({ message: "Service supprimé" });
   } catch (e) {
-    console.error('❌ Erreur deleteService:', e);
-    return res.status(500).json({ error: "Erreur lors de la suppression du service" });
+    console.error("❌ erreur deleteService:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de la suppression" });
   }
 };
 
-/* ======================================================
-   👷 Liste des services assignés à un agent
-====================================================== */
+/* ============================================================
+   🧑‍🔧 LISTE DES SERVICES ASSIGNÉS À UN AGENT
+============================================================ */
 exports.listAgent = async (req, res) => {
   try {
     const { limit, offset } = getPagination(req);
-    const services = await Service.findAll({
+
+    const rows = await Service.findAll({
       where: { agentId: req.user.id },
       include: [
-        { model: User, as: 'client', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'address', 'photos'] },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email"],
+        },
+        {
+          model: Property,
+          as: "property",
+          attributes: ["id", "title", "city", "address", "photos"],
+        },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
 
-    const servicesWithLabels = services.map((s) => ({
-      ...s.toJSON(),
-      statusLabel: getLabel(s.status, SERVICE_STATUSES),
-      typeLabel: getLabel(s.type, SERVICE_TYPES),
-    }));
-
-    return res.json({ services: servicesWithLabels, pagination: { limit, offset, count: services.length } });
+    return res.json({
+      services: rows.map(addLabels),
+      pagination: { limit, offset, count: rows.length },
+    });
   } catch (e) {
-    console.error('❌ Erreur récupération services agent:', e);
-    return res.status(500).json({ error: "Erreur lors de la récupération des services" });
+    console.error("❌ erreur listAgent:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de la récupération des services" });
   }
 };
 
-/* ======================================================
-   🚀 Agent démarre un service
-====================================================== */
+/* ============================================================
+   🚀 AGENT DÉMARRE UN SERVICE
+============================================================ */
 exports.startService = async (req, res) => {
   try {
-    const sid = toSafeInt(req.params.id);
-    const service = await Service.findByPk(sid);
-    if (!service) return res.status(404).json({ error: 'Service introuvable' });
-    if (service.agentId !== req.user.id) return res.status(403).json({ error: 'Non autorisé' });
-    if (service.status !== 'created') return res.status(400).json({ error: "Service déjà démarré ou terminé" });
+    const id = toSafeInt(req.params.id);
+    const service = await Service.findByPk(id);
 
-    await service.update({ status: 'in_progress' });
+    if (!service)
+      return res.status(404).json({ error: "Service introuvable" });
 
-    const updated = {
-      ...service.toJSON(),
-      statusLabel: getLabel('in_progress', SERVICE_STATUSES),
-      typeLabel: getLabel(service.type, SERVICE_TYPES),
-    };
+    if (service.agentId !== req.user.id)
+      return res.status(403).json({ error: "Non autorisé" });
 
-    return res.json({ message: 'Service démarré', service: updated });
+    if (service.status !== "created")
+      return res.status(400).json({
+        error: "Impossible de démarrer : service déjà démarré ou terminé",
+      });
+
+    await service.update({ status: "in_progress" });
+
+    return res.json({
+      message: "Service démarré",
+      service: addLabels(service),
+    });
   } catch (e) {
-    console.error('❌ Erreur startService:', e);
-    return res.status(500).json({ error: "Erreur lors du démarrage du service" });
+    console.error("❌ erreur startService:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors du démarrage du service" });
   }
 };
 
-/* ======================================================
-   ✅ Agent marque un service comme terminé
-====================================================== */
+/* ============================================================
+   ✅ AGENT TERMINE UN SERVICE
+============================================================ */
 exports.completeService = async (req, res) => {
   try {
-    const sid = toSafeInt(req.params.id);
-    const service = await Service.findByPk(sid);
-    if (!service) return res.status(404).json({ error: 'Service introuvable' });
-    if (service.agentId !== req.user.id) return res.status(403).json({ error: 'Non autorisé' });
-    if (service.status !== 'in_progress') return res.status(400).json({ error: "Service non démarré ou déjà terminé" });
+    const id = toSafeInt(req.params.id);
+    const service = await Service.findByPk(id);
 
-    await service.update({ status: 'completed' });
+    if (!service)
+      return res.status(404).json({ error: "Service introuvable" });
 
-    const updated = {
-      ...service.toJSON(),
-      statusLabel: getLabel('completed', SERVICE_STATUSES),
-      typeLabel: getLabel(service.type, SERVICE_TYPES),
-    };
+    if (service.agentId !== req.user.id)
+      return res.status(403).json({ error: "Non autorisé" });
 
-    return res.json({ message: 'Service marqué terminé', service: updated });
+    if (service.status !== "in_progress")
+      return res.status(400).json({
+        error: "Service non démarré ou déjà terminé",
+      });
+
+    await service.update({ status: "completed" });
+
+    return res.json({
+      message: "Service terminé",
+      service: addLabels(service),
+    });
   } catch (e) {
-    console.error('❌ Erreur completeService:', e);
-    return res.status(500).json({ error: "Erreur lors de la finalisation du service" });
+    console.error("❌ erreur completeService:", e);
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de la finalisation du service" });
   }
 };

@@ -162,6 +162,7 @@ export default function TransactionsPage() {
         projectId: form.projectId ? Number(form.projectId) : undefined,
       };
 
+      // Si pas lié à une commande ni projet → on force completed
       if (!payload.orderId && !payload.projectId) {
         payload.status = 'completed';
       }
@@ -604,101 +605,111 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
 
   return (
     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      {transactions.map((t) => (
-        <div
-          key={t.id}
-          className="
-            bg-white border rounded-xl shadow-sm p-5
-            hover:shadow-md transition flex flex-col
-            w-full max-w-full min-w-0 overflow-hidden
-          "
-        >
-          {/* HEADER */}
-          <div className="mb-3 min-w-0">
-            <h3
-              className="
-                text-lg font-semibold text-gray-900 
-                break-words whitespace-normal
-                w-full max-w-full
-              "
-            >
-              {t.typeLabel} — {Number(t.amount).toLocaleString()} {t.currencyLabel}
-            </h3>
+      {transactions.map((t) => {
+        // Support des anciennes transactions (proofFile.path)
+        // et des nouvelles avec ImageKit (proofFile.url)
+        const proofUrl =
+          t?.proofFile?.url ||
+          (t?.proofFile?.path ? toAbsUrl(t.proofFile.path) : '');
 
-            <span className="inline-block text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-1 rounded-full mt-1">
-              {t.statusLabel}
-            </span>
+        return (
+          <div
+            key={t.id}
+            className="
+              bg-white border rounded-xl shadow-sm p-5
+              hover:shadow-md transition flex flex-col
+              w-full max-w-full min-w-0 overflow-hidden
+            "
+          >
+            {/* HEADER */}
+            <div className="mb-3 min-w-0">
+              <h3
+                className="
+                  text-lg font-semibold text-gray-900 
+                  break-words whitespace-normal
+                  w-full max-w-full
+                "
+              >
+                {t.typeLabel} — {Number(t.amount).toLocaleString()}{' '}
+                {t.currencyLabel || t.currency}
+              </h3>
 
-            <p className="text-sm text-gray-600 mt-2 break-words whitespace-normal">
-              {t.description || 'Aucune description'}
-            </p>
+              <span className="inline-block text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-1 rounded-full mt-1">
+                {t.statusLabel}
+              </span>
+
+              <p className="text-sm text-gray-600 mt-2 break-words whitespace-normal">
+                {t.description || 'Aucune description'}
+              </p>
+            </div>
+
+            {/* META */}
+            <div className="flex-1 text-sm text-gray-700 space-y-2 min-w-0 break-words">
+
+              {t.service && (
+                <p className="break-words whitespace-normal">
+                  🔗 <strong>Service :</strong> {t.service.title}
+                </p>
+              )}
+
+              {t.task && (
+                <p className="break-words whitespace-normal">
+                  🔧 <strong>Tâche :</strong> {t.task.title}
+                </p>
+              )}
+
+              {t.project && (
+                <p className="min-w-0 break-words whitespace-normal">
+                  🏗️ <strong>Projet :</strong>{' '}
+                  <Link
+                    to={`/projects/${t.project.id}`}
+                    className="text-blue-600 hover:underline break-words whitespace-normal"
+                  >
+                    {t.project.title}
+                  </Link>
+                </p>
+              )}
+
+              {t.order && (
+                <p className="min-w-0 break-words whitespace-normal">
+                  🧾 <strong>Commande :</strong>{' '}
+                  <Link
+                    to={`/orders/${t.order.id}`}
+                    className="text-blue-600 hover:underline break-words whitespace-normal"
+                  >
+                    {t.order.code || `#${t.order.id}`}
+                  </Link>
+                </p>
+              )}
+
+              {proofUrl && (
+                <p className="min-w-0 break-words whitespace-normal">
+                  📎{' '}
+                  <a
+                    href={proofUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 hover:underline break-words"
+                  >
+                    Voir la pièce jointe
+                  </a>
+                </p>
+              )}
+            </div>
+
+            {/* FOOTER */}
+            <div className="mt-4 text-xs text-gray-500">
+              <p>
+                Créée le{' '}
+                <strong>{new Date(t.createdAt).toLocaleDateString()}</strong>
+              </p>
+              <p>
+                Par <strong>{getUserDisplayName(t.user)}</strong>
+              </p>
+            </div>
           </div>
-
-          {/* META */}
-          <div className="flex-1 text-sm text-gray-700 space-y-2 min-w-0 break-words">
-
-            {t.service && (
-              <p className="break-words whitespace-normal">
-                🔗 <strong>Service :</strong> {t.service.title}
-              </p>
-            )}
-
-            {t.task && (
-              <p className="break-words whitespace-normal">
-                🔧 <strong>Tâche :</strong> {t.task.title}
-              </p>
-            )}
-
-            {t.project && (
-              <p className="min-w-0 break-words whitespace-normal">
-                🏗️ <strong>Projet :</strong>{' '}
-                <Link
-                  to={`/projects/${t.project.id}`}
-                  className="text-blue-600 hover:underline break-words whitespace-normal"
-                >
-                  {t.project.title}
-                </Link>
-              </p>
-            )}
-
-            {t.order && (
-              <p className="min-w-0 break-words whitespace-normal">
-                🧾 <strong>Commande :</strong>{' '}
-                <Link
-                  to={`/orders/${t.order.id}`}
-                  className="text-blue-600 hover:underline break-words whitespace-normal"
-                >
-                  {t.order.code || `#${t.order.id}`}
-                </Link>
-              </p>
-            )}
-
-            {t.proofFile?.path && (
-              <p className="min-w-0 break-words whitespace-normal">
-                📎{' '}
-                <a
-                  href={toAbsUrl(t.proofFile.path)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-blue-600 hover:underline break-words"
-                >
-                  Voir la pièce jointe
-                </a>
-              </p>
-            )}
-          </div>
-
-          {/* FOOTER */}
-          <div className="mt-4 text-xs text-gray-500">
-            <p>
-              Créée le <strong>{new Date(t.createdAt).toLocaleDateString()}</strong>
-            </p>
-            <p>
-              Par <strong>{getUserDisplayName(t.user)}</strong>
-            </p>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
