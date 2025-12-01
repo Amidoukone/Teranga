@@ -4,69 +4,81 @@ const router = require('express').Router();
 const ctrl = require('../controllers/property.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
-const upload = require('../middleware/upload'); // ✅ Multer (photos)
 
-// -----------------------------------------------------------------------------
-// ROUTES PROPERTIES
-// =================
-// - Client : gérer ses biens
-// - Admin  : peut créer un bien pour un client, voir les biens d’un client, etc.
-// -----------------------------------------------------------------------------
-//
-// Rappel important : le contrôleur supporte déjà pour l’admin :
-//   - body.ownerId | body.clientId | body.ownerEmail
-//   - (fallbacks possibles via req.query.ownerId|clientId)
-// afin d’attribuer le bien à un client cible.
-// Ici, on ajoute aussi des alias/shortcuts côté routes pour plus de confort.
-// -----------------------------------------------------------------------------
+// ✅ BON middleware ImageKit (memoryStorage)
+const upload = require('../middleware/uploadProperties.middleware');
 
 /**
- * ➕ Créer un bien (client connecté OU admin pour soi-même)
- * - Upload : champ "files" (max 5)
- * - Admin : peut aussi passer ownerId|clientId|ownerEmail dans le body (géré côté ctrl)
+ * ============================================================
+ * ROUTES PROPERTIES — Version corrigée et complète
+ * ============================================================
+ * - Client : CRUD sur ses biens
+ * - Admin  : CRUD + création pour n’importe quel client
+ * - Support complet pour ImageKit (upload buffers)
+ * - Compatibilité frontend (fallbacks / alias)
+ * ============================================================
  */
-router.post('/', auth, upload.array('files', 5), ctrl.create);
+
+/* ============================================================
+   🔵 ROUTES DE BASE
+============================================================ */
 
 /**
- * 📜 Lister les biens (client: les siens / admin: tous par défaut, ou ?clientId=)
+ * ➕ Créer un bien
+ * - Client : crée pour lui-même
+ * - Admin : peut cibler ownerId | clientId | ownerEmail
  */
-router.get('/', auth, ctrl.list);
+router.post(
+  '/',
+  auth,
+  upload.array('files', 5),
+  ctrl.create
+);
 
 /**
- * 🔹 Admin : lister les biens d’un client spécifique
+ * 📜 Liste des biens (client = ses biens / admin = tous ou ?clientId=)
  */
-router.get('/client/:id', auth, requireRoles('admin'), ctrl.listByClient);
+router.get(
+  '/',
+  auth,
+  ctrl.list
+);
 
 /**
- * ✏️ Mettre à jour un bien existant (merge/remplacement des photos possible)
- * - Upload : champ "files" (max 5)
+ * ✏️ Mettre à jour un bien
  */
-router.put('/:id', auth, upload.array('files', 5), ctrl.update);
+router.put(
+  '/:id',
+  auth,
+  upload.array('files', 5),
+  ctrl.update
+);
 
 /**
  * 🗑 Supprimer un bien
  */
-router.delete('/:id', auth, ctrl.remove);
+router.delete(
+  '/:id',
+  auth,
+  ctrl.remove
+);
 
-// ============================================================================
-// 🆕 Alias/shortcuts Admin POUR CRÉER un bien au nom d’un client
-// ============================================================================
+/* ============================================================
+   🔵 ROUTES ADMIN — CRÉATION POUR UN AUTRE CLIENT
+============================================================ */
 
-/**
- * Middleware utilitaire : injecte ownerId depuis :id dans le body
- * pour simplifier l’appel POST /api/properties/client/:id (admin).
+/** 
+ * Injecte ownerId dans req.body à partir du paramètre :id
  */
 function attachOwnerIdFromParam(req, _res, next) {
   req.body = req.body || {};
-  req.body.ownerId = req.params.id; // le contrôleur validera que c’est un client
+  req.body.ownerId = req.params.id;
   next();
 }
 
 /**
- * 🆕 (ADMIN) Créer un bien pour un client précis via paramètre de route
+ * ➕ ADMIN : Créer un bien pour un client donné
  * POST /api/properties/client/:id
- * - :id = id du client cible (devient req.body.ownerId)
- * - Upload fichiers via "files" (max 5)
  */
 router.post(
   '/client/:id',
@@ -76,17 +88,15 @@ router.post(
   attachOwnerIdFromParam,
   (req, res, next) => {
     console.log(
-      `🛠️ [ROUTE] Admin crée un bien pour clientId=${req.params.id} | files=${(req.files || []).length}`
+      `🛠️ [ADMIN] createProperty via /client/:id → clientId=${req.params.id} | files=${(req.files || []).length}`
     );
     return ctrl.create(req, res, next);
   }
 );
 
 /**
- * 🆕 (ADMIN) Alias générique
+ * ➕ ADMIN : Créer un bien via ownerId | clientId | ownerEmail dans le body
  * POST /api/properties/admin
- * - Permet d’envoyer ownerId | clientId | ownerEmail dans le body (géré par ctrl)
- * - Upload via "files" (max 5)
  */
 router.post(
   '/admin',
@@ -96,22 +106,69 @@ router.post(
   (req, res, next) => {
     const { ownerId, clientId, ownerEmail } = req.body || {};
     console.log(
-      `🛠️ [ROUTE] Admin crée un bien (ownerId=${ownerId || '-'} | clientId=${
-        clientId || '-'
-      } | ownerEmail=${ownerEmail || '-'}) | files=${(req.files || []).length}`
+      `🛠️ [ADMIN] createProperty via /admin (ownerId=${ownerId} | clientId=${clientId} | email=${ownerEmail}) | files=${(req.files || []).length}`
     );
     return ctrl.create(req, res, next);
   }
 );
 
-// ============================================================================
-// 🆕 Aliases de compatibilité (lecture) utiles pour certains frontends
-// ============================================================================
+/* ============================================================
+   🔵 ROUTES ADMIN — LISTE PAR CLIENT
+============================================================ */
 
 /**
- * 🆕 (ADMIN) Alias de listByClient : /by-owner/:id
- * - Évite de casser certains clients qui appellent /properties/by-owner/:id
+ * 📜 Admin : liste des biens d’un client spécifique
  */
-router.get('/by-owner/:id', auth, requireRoles('admin'), ctrl.listByClient);
+router.get(
+  '/client/:id',
+  auth,
+  requireRoles('admin'),
+  ctrl.listByClient
+);
+
+/**
+ * 📜 Alias admin : /properties/by-owner/:id
+ */
+router.get(
+  '/by-owner/:id',
+  auth,
+  requireRoles('admin'),
+  ctrl.listByClient
+);
+
+/* ============================================================
+   🔵 COMPATIBILITÉ FRONTEND
+============================================================ */
+
+/**
+ * 🔁 Compat frontend : POST /properties/create
+ * (ancienne route utilisée dans ton frontend → évite les 404)
+ */
+router.post(
+  '/create',
+  auth,
+  upload.array('files', 5),
+  (req, res, next) => {
+    console.log("📌 Compat route POST /properties/create utilisée");
+    return ctrl.create(req, res, next);
+  }
+);
+
+/**
+ * 🔁 Compat frontend : /admin/properties/create
+ * (optionnel mais utile si d'anciens clients ou scripts l'utilisent)
+ */
+router.post(
+  '/admin/create',
+  auth,
+  requireRoles('admin'),
+  upload.array('files', 5),
+  (req, res, next) => {
+    console.log("📌 Compat route POST /admin/properties/create utilisée");
+    return ctrl.create(req, res, next);
+  }
+);
+
+/* ============================================================ */
 
 module.exports = router;

@@ -3,7 +3,7 @@
 const { Op } = require('sequelize');
 const { Product, Category } = require('../../models');
 const { formatCurrency } = require('../utils/labels');
-const imagekit = require('../services/teranga-imagekit'); // ✅ ImageKit SDK
+const imageKit = require('../helpers/teranga-imagekit');
 
 /* ============================================================
    🔧 Helpers génériques
