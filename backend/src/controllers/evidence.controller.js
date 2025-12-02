@@ -2,7 +2,7 @@
 
 const { Evidence, Task, Service, Property, User, Order } = require("../../models");
 const { Op } = require("sequelize");
-const imagekit = require("../helpers/teranga-imagekit"); // ⭐ ImageKit instance
+const imagekit = require("../helpers/teranga-imagekit");
 
 // 🌍 Labels
 const { EVIDENCE_KINDS, getLabel } = require("../utils/labels");
@@ -43,24 +43,32 @@ function addLabels(evidence) {
 }
 
 /* ======================================================
-   🔐 ACL — Tâches
+   🔐 ACL — Tâches (version robuste, sans gros include)
 ====================================================== */
 async function loadTaskForAcl(taskId) {
   if (!taskId) return null;
-  return Task.findByPk(taskId, {
-    include: [
-      {
-        model: Service,
-        as: "service",
-        attributes: ["id", "clientId", "agentId"],
-      },
-      {
-        model: Property,
-        as: "property",
-        attributes: ["id", "ownerId"],
-      },
-    ],
-  });
+
+  const task = await Task.findByPk(taskId);
+  if (!task) return null;
+
+  const t = task.toJSON();
+
+  // On attache minimalement service / property pour l’ACL
+  if (t.serviceId) {
+    const svc = await Service.findByPk(t.serviceId, {
+      attributes: ["id", "clientId", "agentId"],
+    });
+    t.service = svc ? (svc.toJSON ? svc.toJSON() : svc) : null;
+  }
+
+  if (t.propertyId) {
+    const prop = await Property.findByPk(t.propertyId, {
+      attributes: ["id", "ownerId"],
+    });
+    t.property = prop ? (prop.toJSON ? prop.toJSON() : prop) : null;
+  }
+
+  return t;
 }
 
 function canAccessTask(user, task) {
@@ -140,7 +148,7 @@ function normalizeUploadedFiles(req) {
    Compatible avec :
    - POST /tasks/:id/evidences
    - POST /orders/:id/evidences
-   - Body: taskId / orderId (optionnel si déjà dans l'URL)
+   - POST /evidences (body: taskId / orderId)
 ====================================================== */
 exports.create = async (req, res) => {
   try {
@@ -211,9 +219,7 @@ exports.create = async (req, res) => {
     const created = [];
 
     for (const f of files) {
-      // ======================================================
       // 🚀 Upload vers ImageKit
-      // ======================================================
       const uploaded = await imagekit.upload({
         file: f.buffer, // buffer (multer memoryStorage)
         fileName: `evidence_${Date.now()}_${f.originalname}`,
@@ -221,8 +227,8 @@ exports.create = async (req, res) => {
       });
 
       const record = await Evidence.create({
-        taskId: task ? task.id : taskId || null,
-        orderId: order ? order.id : orderId || null,
+        taskId: task ? task.id || task.taskId || taskId : taskId || null,
+        orderId: order ? order.id || order.orderId || orderId : orderId || null,
         uploaderId: req.user.id,
         kind: guessKind(f.mimetype),
         mimeType: f.mimetype || null,
@@ -412,7 +418,6 @@ exports.remove = async (req, res) => {
         {
           model: Task,
           as: "task",
-          include: [{ model: Service, as: "service" }],
         },
       ],
     });

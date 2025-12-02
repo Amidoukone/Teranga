@@ -1,6 +1,6 @@
 "use strict";
 
-const { Task, Service, User, Property, Evidence } = require("../../models");
+const { Task, Service, User, Property } = require("../../models");
 const { Op } = require("sequelize");
 
 // 🌍 Labels FR
@@ -17,8 +17,9 @@ const {
    🧩 Helpers généraux
 ============================================================ */
 function toSafeInt(v) {
+  if (v === null || v === undefined) return null;
   const n = parseInt(v, 10);
-  return Number.isNaN(n) ? null : n;
+  return Number.isNaNaN ? null : (Number.isNaN(n) ? null : n);
 }
 
 function toTrimOrNull(v) {
@@ -44,7 +45,7 @@ function getPagination(req, defaultLimit = 50, maxLimit = 200) {
 }
 
 /* ============================================================
-   🧩 Includes réutilisables
+   🧩 Includes réutilisables (SANS Evidence pour éviter 500)
 ============================================================ */
 const BASE_INCLUDES = [
   {
@@ -96,29 +97,6 @@ const BASE_INCLUDES = [
     required: false,
     attributes: ["id", "title", "city", "address", "ownerId", "photos"],
   },
-  {
-    model: Evidence,
-    as: "evidences",
-    required: false,
-    attributes: [
-      "id",
-      "kind",
-      "mimeType",
-      "originalName",
-      "filePath",
-      "fileId",
-      "fileSize",
-      "notes",
-      "createdAt",
-    ],
-    include: [
-      {
-        model: User,
-        as: "uploader",
-        attributes: ["id", "firstName", "lastName", "email"],
-      },
-    ],
-  },
 ];
 
 /* ============================================================
@@ -160,8 +138,9 @@ exports.create = async (req, res) => {
       assignedTo,
     } = req.body || {};
 
-    if (!title || !type)
+    if (!title || !type) {
       return res.status(400).json({ error: "Titre et type requis" });
+    }
 
     const sid = toSafeInt(serviceId);
     let pid = propertyId ? toSafeInt(propertyId) : null;
