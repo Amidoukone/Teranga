@@ -58,7 +58,7 @@ function addLabels(service) {
 }
 
 /* ============================================================
-   🟢 CRÉER UN SERVICE (client ou admin)
+   🟢 CRÉER UN SERVICE — propertyId devient OPTIONNEL
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -78,8 +78,6 @@ exports.create = async (req, res) => {
        🔍 Validation de base
     ------------------------- */
     propertyId = toSafeInt(propertyId);
-    if (!propertyId)
-      return res.status(400).json({ error: "propertyId requis" });
 
     type = String(type || "").trim();
     if (!type || !ALLOWED_TYPES.has(type))
@@ -88,9 +86,16 @@ exports.create = async (req, res) => {
     title = String(title || "").trim();
     if (!title) return res.status(400).json({ error: "Titre requis" });
 
-    const property = await Property.findByPk(propertyId);
-    if (!property)
-      return res.status(400).json({ error: "Bien immobilier introuvable" });
+    /* ----------------------------------------------------
+       OPTIONAL → Vérification du bien SEULEMENT si fourni
+    ---------------------------------------------------- */
+    let property = null;
+
+    if (propertyId) {
+      property = await Property.findByPk(propertyId);
+      if (!property)
+        return res.status(400).json({ error: "Bien immobilier introuvable" });
+    }
 
     /* -------------------------
        🔐 ACL : déterminer le client
@@ -111,11 +116,14 @@ exports.create = async (req, res) => {
 
       targetClientId = user.id;
     } else {
-      if (String(property.ownerId) !== String(req.user.id)) {
+      /* ---------------------------------------------------------
+         ACL quand propertyId est fourni :
+         - Le bien doit appartenir au client connecté
+      --------------------------------------------------------- */
+      if (property && String(property.ownerId) !== String(req.user.id))
         return res.status(403).json({
           error: "Ce bien n'appartient pas à l'utilisateur connecté",
         });
-      }
     }
 
     /* -------------------------
@@ -124,7 +132,7 @@ exports.create = async (req, res) => {
     const service = await Service.create({
       clientId: targetClientId,
       agentId: null,
-      propertyId,
+      propertyId: propertyId || null, // ← IMPORTANT
       type,
       title,
       description: toTrimOrNull(description),
@@ -376,6 +384,7 @@ exports.assignAgent = async (req, res) => {
 
 /* ============================================================
    ✏️ MISE À JOUR D’UN SERVICE
+   --> propertyId devient optionnel
 ============================================================ */
 exports.updateService = async (req, res) => {
   try {
@@ -391,6 +400,9 @@ exports.updateService = async (req, res) => {
         .json({ error: "Non autorisé à modifier ce service" });
     }
 
+    /* ---------------------------------------------------------
+       Champs modifiables
+    ---------------------------------------------------------- */
     const updatable = [
       "title",
       "description",
@@ -399,6 +411,8 @@ exports.updateService = async (req, res) => {
       "address",
       "budget",
       "status",
+      "type",
+      "propertyId", // <== devient autorisé et nullable
     ];
 
     const updates = {};
@@ -406,6 +420,35 @@ exports.updateService = async (req, res) => {
       if (field in req.body) updates[field] = req.body[field];
     }
 
+    /* ---------------------------------------------------------
+       Validation spécifique propertyId
+    ---------------------------------------------------------- */
+    if ("propertyId" in updates) {
+      const newPid = toSafeInt(updates.propertyId);
+
+      if (!newPid) {
+        updates.propertyId = null; // <-- service sans bien
+      } else {
+        const property = await Property.findByPk(newPid);
+        if (!property)
+          return res
+            .status(400)
+            .json({ error: "Bien immobilier introuvable" });
+
+        if (req.user.role !== "admin") {
+          if (String(property.ownerId) !== String(req.user.id))
+            return res.status(403).json({
+              error: "Ce bien n'appartient pas à l'utilisateur connecté",
+            });
+        }
+
+        updates.propertyId = newPid;
+      }
+    }
+
+    /* ---------------------------------------------------------
+       Mise à jour
+    ---------------------------------------------------------- */
     await service.update(updates);
 
     const full = await Service.findByPk(id, {

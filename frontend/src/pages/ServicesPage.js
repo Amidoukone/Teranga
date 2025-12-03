@@ -175,16 +175,11 @@ export default function ServicesPage() {
     try {
       setLoading(true);
 
-      if (!form.propertyId) {
-        alert('Veuillez choisir un bien.');
-        return;
-      }
-
-      const payload = {
-        ...form,
-        propertyId: parseInt(form.propertyId, 10),
-        budget: form.budget === '' ? null : parseFloat(form.budget),
-      };
+      // 👉 On ne force plus la sélection d’un bien.
+      // Le helper createService s’occupe déjà de :
+      // - ignorer propertyId si vide
+      // - caster budget correctement
+      const payload = { ...form };
 
       await createService(payload);
       alert('✅ Service créé avec succès !');
@@ -224,6 +219,8 @@ export default function ServicesPage() {
         address: form.address,
         budget: form.budget === '' ? null : parseFloat(form.budget),
         type: form.type,
+        // 👉 côté backend, propertyId n’est pas encore updatable,
+        // mais on laisse ce champ si tu décides de le gérer plus tard.
         propertyId: form.propertyId ? parseInt(form.propertyId, 10) : null,
       };
 
@@ -602,15 +599,14 @@ function ServiceForm({
           </div>
         )}
 
-        {/* Biens */}
+        {/* Biens — 👇 ici on le rend optionnel */}
         <div className="col-span-1 sm:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Bien associé *
+            Bien associé (optionnel)
           </label>
           <select
             value={form.propertyId}
             onChange={(e) => setForm({ ...form, propertyId: e.target.value })}
-            required
             disabled={user?.role === 'admin' && !form.clientId}
             className="
               w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
@@ -620,7 +616,7 @@ function ServiceForm({
             <option value="">
               {user?.role === 'admin' && !form.clientId
                 ? '— Choisir un client d’abord —'
-                : '— Choisir un bien —'}
+                : '— Aucun bien (service général) —'}
             </option>
 
             {properties.map((p) => (
@@ -851,7 +847,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
           <strong>Bien :</strong>{' '}
           {s.property?.title
             ? `${s.property.title} — ${s.property.city}`
-            : s.propertyId}
+            : 'Aucun (service indépendant)'}
         </p>
 
         <p className="break-words">
