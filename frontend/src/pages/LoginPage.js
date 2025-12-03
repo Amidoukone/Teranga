@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { login, me } from "../services/auth";
-import { Eye, EyeOff, Loader2, Lock, Mail, CheckCircle2 } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  Lock,
+  Mail,
+  CheckCircle2,
+} from "lucide-react";
 
 export default function LoginPage() {
   // Champs
@@ -18,18 +25,18 @@ export default function LoginPage() {
   const location = useLocation();
 
   /* ==========================================================
-     🔄 Affiche le message de succès (venant de /register)
+     ✔ Affiche le message de réussite (depuis /register)
   ========================================================== */
   useEffect(() => {
     const msg = location.state?.successMsg;
     if (msg) {
       setSuccessMsg(msg);
-      window.history.replaceState({}, ""); // nettoyage propre
+      window.history.replaceState({}, ""); // Nettoyage
     }
   }, [location.state]);
 
   /* ==========================================================
-     🔐 Redirection si déjà connecté
+     🔐 Redirection automatique si déjà connecté
   ========================================================== */
   useEffect(() => {
     async function check() {
@@ -53,18 +60,15 @@ export default function LoginPage() {
       await login({ email, password });
       navigate("/dashboard");
     } catch (err) {
-      console.error("Erreur login:", err);
-
-      // Récupère le vrai message backend
       const backendMsg = err?.response?.data?.error;
-      setErrorMsg(backendMsg || "Échec de connexion : identifiants invalides.");
+      setErrorMsg(backendMsg || "Échec de connexion : identifiants incorrects.");
     } finally {
       setLoading(false);
     }
   }
 
   /* ==========================================================
-     🖥️ UI
+     🖥️ UI — Version moderne & professionnelle
   ========================================================== */
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
@@ -105,7 +109,7 @@ export default function LoginPage() {
         {/* ---------- FORMULAIRE ---------- */}
         <form onSubmit={handleLogin} className="space-y-5">
 
-          {/* Email */}
+          {/* EMAIL */}
           <div>
             <label className="block text-sm font-medium text-gray-800 mb-1">
               Adresse email
@@ -127,7 +131,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Mot de passe */}
+          {/* PASSWORD */}
           <div>
             <label className="block text-sm font-medium text-gray-800 mb-1">
               Mot de passe
@@ -146,10 +150,11 @@ export default function LoginPage() {
                 required
               />
 
-              {/* Afficher / masquer */}
               <button
                 type="button"
-                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                aria-label={
+                  showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"
+                }
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-blue-600"
               >
@@ -158,12 +163,16 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Bouton */}
+          {/* BOUTON */}
           <button
             type="submit"
             disabled={loading}
             className={`w-full py-2.5 text-white font-semibold rounded-lg transition flex items-center justify-center
-              ${loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"}`}
+              ${
+                loading
+                  ? "bg-blue-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+              }`}
           >
             {loading ? (
               <>
