@@ -1,8 +1,9 @@
 // ============================================================================
-// NavBar.jsx — Version Ultra-Premium PRO 2025 (A1 – Option C)
+// NavBar.jsx — Version Ultra-Premium PRO 2025 (A1 – Option C Compact)
 // Bottom Navigation Premium • Mobile-first • Desktop Navigation
+// BottomBar compact • Onglet "Projets" déplacé dans le menu Plus
 // Desktop: Logout Button • Panel Plus visible & accessible
-// Optimisée avec React.memo, useCallback, aria-*
+// Optimisée avec React.memo, aria-* et BottomBar alignée avec pages
 // ============================================================================
 
 import {
@@ -19,7 +20,6 @@ import {
   X,
   LogOut,
   Home,
-  FolderKanban,
   Wrench,
   ReceiptEuro,
   CreditCard,
@@ -95,23 +95,24 @@ const ROLE_LINKS = {
   ],
 };
 
+/* ============================================================================ */
+/* NEW BOTTOM BAR WITHOUT PROJECTS */
+/* ============================================================================ */
+
 const BOTTOM_LINKS = {
   client: [
     { key: "dashboard", path: "/dashboard", label: "Accueil", icon: Home },
-    { key: "projects", path: "/projects", label: "Projets", icon: FolderKanban },
     { key: "services", path: "/services", label: "Services", icon: Wrench },
     { key: "transactions", path: "/transactions", label: "Flux", icon: ReceiptEuro },
   ],
   agent: [
     { key: "dashboard", path: "/dashboard", label: "Accueil", icon: Home },
-    { key: "projects", path: "/projects", label: "Projets", icon: FolderKanban },
     { key: "agentServices", path: "/agent/services", label: "Services", icon: Wrench },
     { key: "transactions", path: "/transactions", label: "Flux", icon: ReceiptEuro },
   ],
   admin: [
     { key: "dashboard", path: "/dashboard", label: "Accueil", icon: Home },
-    { key: "adminProjects", path: "/admin/projects", label: "Projets", icon: BarChart3 },
-    { key: "adminServices", path: "/admin/services", label: "Services", icon: Wrench },
+    { key: "adminServices", path: "/admin/services", label: "Services", icon: BarChart3 },
     { key: "finance", path: "/finance", label: "Finances", icon: CreditCard },
   ],
 };
@@ -119,12 +120,13 @@ const BOTTOM_LINKS = {
 /* ============================================================================ */
 /* COMPONENT */
 /* ============================================================================ */
+
 function NavBar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [user, setUser] = useState(() => getLocalUser());
-  const [loading, setLoading] = useState(() => !getLocalUser());
+  const [user, setUser] = useState(getLocalUser());
+  const [loading, setLoading] = useState(!getLocalUser());
   const [openMore, setOpenMore] = useState(false);
 
   /* LOAD USER */
@@ -148,10 +150,7 @@ function NavBar() {
     };
   }, [location.pathname]);
 
-  /* CLOSE PANEL ON NAVIGATION */
-  useEffect(() => {
-    setOpenMore(false);
-  }, [location.pathname]);
+  useEffect(() => setOpenMore(false), [location.pathname]);
 
   const handleLogout = useCallback(async () => {
     setOpenMore(false);
@@ -160,14 +159,10 @@ function NavBar() {
     navigate("/login");
   }, [navigate]);
 
-  /* HELPERS */
   const PUBLIC = ["/", "/login", "/register", "/shop", "/products"];
-
-  // ❌ plus de useMemo ici → plus de warning eslint
   const isPublic = PUBLIC.some((p) => location.pathname.startsWith(p));
 
   const role = normalizeRole(user?.role);
-
   const links = useMemo(() => ROLE_LINKS[role] || [], [role]);
   const bottomLinks = useMemo(() => BOTTOM_LINKS[role] || [], [role]);
 
@@ -184,39 +179,24 @@ function NavBar() {
   );
 
   const Logo = (
-    <img
-      src="/logo_180x180.png"
-      alt="Teranga"
-      className="w-7 h-7 object-contain"
-    />
+    <img src="/logo_180x180.png" alt="Teranga" className="w-7 h-7 object-contain" />
   );
 
   if (!user && loading) return null;
 
-  // ============================================================================  
-  // PUBLIC NAVBAR  
-  // ============================================================================  
+  /* ============================================================================ */
+  /* PUBLIC NAVBAR */
+  /* ============================================================================ */
   if (!user && isPublic) {
     return (
-      <nav
-        className="bg-slate-900/90 backdrop-blur-md text-white shadow-md px-5 py-4 sticky top-0 z-50"
-        role="navigation"
-        aria-label="Navigation publique"
-      >
+      <nav className="bg-slate-900/90 backdrop-blur-md text-white shadow-md px-5 py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-cyan-400 font-bold text-lg"
-            aria-label="Retour à la page d’accueil"
-          >
-            {Logo}
-            Teranga
+          <Link to="/" className="flex items-center gap-2 text-cyan-400 font-bold text-lg">
+            {Logo} Teranga
           </Link>
 
           <div className="flex gap-3 text-sm">
-            <Link to="/login" className="hover:text-cyan-400">
-              Connexion
-            </Link>
+            <Link to="/login" className="hover:text-cyan-400">Connexion</Link>
             <Link
               to="/register"
               className="px-4 py-1.5 bg-cyan-500 rounded-md font-semibold hover:bg-cyan-600"
@@ -229,62 +209,46 @@ function NavBar() {
     );
   }
 
-  // ============================================================================  
-  // AUTH NAVBAR (desktop + mobile header)
-  // ============================================================================  
+  /* ============================================================================ */
+  /* AUTH NAVBAR */
+  /* ============================================================================ */
   return (
     <>
-      {/* ======================================================================== */}
-      {/* TOP BAR — Desktop & Mobile */}
-      {/* ======================================================================== */}
-      <nav
-        className="bg-slate-900/95 backdrop-blur-xl text-white border-b border-slate-800 shadow-lg sticky top-0 z-50"
-        role="navigation"
-        aria-label="Navigation principale"
-      >
-        {/* TOP BAR CONTENT */}
+      {/* TOP BAR */}
+      <nav className="bg-slate-900/95 backdrop-blur-xl text-white border-b border-slate-800 shadow-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-2">
-          {/* LOGO → Homepage */}
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-cyan-400 font-bold text-lg"
-            aria-label="Retour à la page d’accueil"
-          >
-            {Logo}
-            Teranga
+
+          {/* LOGO */}
+          <Link to="/" className="flex items-center gap-2 text-cyan-400 font-bold text-lg">
+            {Logo} Teranga
           </Link>
 
-          {/* ROLE LABEL (desktop only) */}
-          <span className="hidden md:inline bg-slate-800 px-3 py-0.5 rounded-full text-[0.75rem] uppercase text-gray-300">
+          <span className="hidden md:inline bg-slate-800 px-3 py-0.5 rounded-full text-xs uppercase text-gray-300">
             {prettyRoleLabel(user?.role)}
           </span>
 
-          {/* DESKTOP LOGOUT BUTTON */}
+          {/* DESKTOP LOGOUT */}
           <button
             onClick={handleLogout}
             className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-semibold"
-            aria-label="Se déconnecter"
           >
             <LogOut size={16} />
             Déconnexion
           </button>
         </div>
 
-        {/* DESKTOP NAVIGATION LINKS */}
+        {/* DESKTOP NAV LINKS */}
         <div className="hidden md:flex items-center gap-8 max-w-7xl mx-auto px-6 py-3">
           <ul className="flex-1 flex justify-center gap-6">
             {links.map((l) => (
               <Link
                 key={l.path}
                 to={l.path}
-                aria-current={isActive(l.path) ? "page" : undefined}
-                className={`text-sm transition relative
-                  ${
-                    isActive(l.path)
-                      ? "text-cyan-400"
-                      : "text-gray-300 hover:text-white"
-                  }
-                `}
+                className={`text-sm transition relative ${
+                  isActive(l.path)
+                    ? "text-cyan-400"
+                    : "text-gray-300 hover:text-white"
+                }`}
               >
                 {l.label}
                 {isActive(l.path) && (
@@ -297,16 +261,15 @@ function NavBar() {
       </nav>
 
       {/* ======================================================================== */}
-      {/* BOTTOM NAV — Mobile only */}
+      {/* BOTTOM NAV — MOBILE ONLY (COMPACT VERSION) */}
       {/* ======================================================================== */}
-      <nav
-        className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent"
-        role="navigation"
-        aria-label="Navigation principale mobile"
-      >
+      <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent">
         <div className="mx-auto w-full flex justify-center">
-          <div className="w-full max-w-sm px-2 pb-3">
-            <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-xl flex px-1 py-1">
+          <div className="w-full max-w-xs px-2 pb-2">  
+            {/* max-w-xs au lieu de max-w-sm → BottomBar plus compacte */}
+
+            <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-xl flex px-1 py-1 gap-1">
+
               {bottomLinks.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
@@ -315,38 +278,30 @@ function NavBar() {
                   <Link
                     key={item.key}
                     to={item.path}
-                    aria-current={active ? "page" : undefined}
-                    className={`flex-1 flex flex-col items-center py-1.5 rounded-xl text-[0.75rem]
+                    className={`flex-1 flex flex-col items-center py-1 rounded-lg text-[0.7rem]
                       ${
                         active
-                          ? "bg-slate-800 text-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.35)]"
-                          : "text-gray-300 hover:bg-slate-800/50"
+                          ? "bg-slate-800 text-cyan-300 shadow-[0_0_10px_rgba(56,189,248,0.25)]"
+                          : "text-gray-300 hover:bg-slate-800/60"
                       }`}
                   >
-                    <Icon
-                      size={18}
-                      className={active ? "text-cyan-300" : "text-gray-300"}
-                    />
+                    <Icon size={17} className={active ? "text-cyan-300" : "text-gray-300"} />
                     {item.label}
                   </Link>
                 );
               })}
 
-              {/* BUTTON "PLUS" */}
+              {/* BUTTON PLUS */}
               <button
-                type="button"
-                onClick={() => setOpenMore((v) => !v)}
-                aria-label={openMore ? "Fermer le menu Plus" : "Ouvrir le menu Plus"}
-                aria-expanded={openMore}
-                aria-controls="panel-plus"
-                className={`flex-1 flex flex-col items-center py-1.5 rounded-xl text-[0.75rem]
+                onClick={() => setOpenMore(!openMore)}
+                className={`flex-1 flex flex-col items-center py-1 rounded-lg text-[0.7rem]
                   ${
                     openMore
-                      ? "bg-slate-800 text-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.35)]"
-                      : "text-gray-300 hover:bg-slate-800/50"
+                      ? "bg-slate-800 text-cyan-300 shadow-[0_0_10px_rgba(56,189,248,0.25)]"
+                      : "text-gray-300 hover:bg-slate-800/60"
                   }`}
               >
-                <MoreHorizontal size={18} />
+                <MoreHorizontal size={17} />
                 Plus
               </button>
             </div>
@@ -355,7 +310,7 @@ function NavBar() {
       </nav>
 
       {/* ======================================================================== */}
-      {/* PANEL "PLUS" — Desktop + Mobile (IMPROVED DESIGN + ACCESSIBLE) */}
+      {/* PANEL PLUS */}
       {/* ======================================================================== */}
       <AnimatePresence>
         {openMore && (
@@ -367,34 +322,20 @@ function NavBar() {
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/80 z-40"
               onClick={() => setOpenMore(false)}
-              aria-hidden="true"
             />
 
             {/* PANEL */}
             <motion.div
-              id="panel-plus"
               initial={{ opacity: 0, y: 80 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 80 }}
               transition={{ duration: 0.28 }}
               className="fixed bottom-24 inset-x-0 z-50 flex justify-center px-4"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Menu de navigation complémentaire"
             >
-              <div
-                className="
-                  w-full max-w-sm
-                  bg-slate-900/95
-                  backdrop-blur-2xl
-                  border border-slate-600/70
-                  rounded-2xl
-                  shadow-2xl
-                  overflow-hidden
-                "
-              >
+              <div className="w-full max-w-sm bg-slate-900/95 backdrop-blur-2xl border border-slate-600/70 rounded-2xl shadow-2xl overflow-hidden">
+
                 {/* HEADER */}
-                <div className="px-4 py-3 border-b border-slate-700/60 flex justify-between items-center bg-slate-800/60 backdrop-blur-xl">
+                <div className="px-4 py-3 border-b border-slate-700/60 flex justify-between items-center bg-slate-800/60">
                   <div className="flex items-center gap-2">
                     <div className="w-9 h-9 bg-cyan-500 rounded-full flex items-center justify-center text-white font-bold">
                       {user?.firstName?.[0] || user?.email?.[0] || "?"}
@@ -402,7 +343,7 @@ function NavBar() {
 
                     <div>
                       <div className="text-white text-sm font-semibold">
-                        {user?.firstName || user?.email || "Utilisateur"}
+                        {user?.firstName || user?.email}
                       </div>
                       <div className="text-gray-400 text-[0.7rem] uppercase tracking-wide">
                         {prettyRoleLabel(user?.role)}
@@ -411,9 +352,7 @@ function NavBar() {
                   </div>
 
                   <button
-                    type="button"
                     onClick={() => setOpenMore(false)}
-                    aria-label="Fermer le menu"
                     className="p-1.5 rounded-full bg-slate-800/70 hover:bg-slate-700 text-gray-300"
                   >
                     <X size={18} />
@@ -427,13 +366,11 @@ function NavBar() {
                       key={l.path}
                       to={l.path}
                       onClick={() => setOpenMore(false)}
-                      aria-current={isActive(l.path) ? "page" : undefined}
-                      className={`block px-5 py-3 text-sm transition
-                        ${
-                          isActive(l.path)
-                            ? "bg-slate-800 text-cyan-300 font-semibold"
-                            : "text-gray-200 hover:bg-slate-800/70 hover:text-white"
-                        }`}
+                      className={`block px-5 py-3 text-sm ${
+                        isActive(l.path)
+                          ? "bg-slate-800 text-cyan-300 font-semibold"
+                          : "text-gray-200 hover:bg-slate-800/70"
+                      }`}
                     >
                       {l.label}
                     </Link>
@@ -442,14 +379,13 @@ function NavBar() {
 
                 {/* LOGOUT */}
                 <button
-                  type="button"
                   onClick={handleLogout}
                   className="w-full flex justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
-                  aria-label="Se déconnecter"
                 >
                   <LogOut size={14} />
                   Déconnexion
                 </button>
+
               </div>
             </motion.div>
           </>
