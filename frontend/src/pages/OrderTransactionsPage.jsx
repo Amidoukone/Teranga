@@ -1,6 +1,6 @@
 // ============================================================
-// OrderTransactionsPage.jsx — Teranga PRODUCTION READY (Option B)
-// Clean Shop Premium + FILE_BASE + toAbsUrl + Optimisations
+// OrderTransactionsPage.jsx — Teranga PRODUCTION READY (Option B2-A)
+// Clean Shop Premium + FILE_BASE + toAbsUrl + Optimisations visuelles
 // ============================================================
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -251,17 +251,17 @@ export default function OrderTransactionsPage() {
   ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100">
+      <div className="max-w-6xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100 transition-all duration-150 ease-out">
         
         {/* HEADER — 100% responsive mobile / tablette / desktop */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 sm:mb-8">
           {/* Bloc titre */}
           <div className="max-w-full break-words">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
               💰 <span>Transactions de la commande #{id}</span>
             </h1>
             <p className="text-sm text-slate-600 mt-1 break-words">
-              Suivi des paiements et mouvements financiers.
+              Suivi des paiements et mouvements financiers associés à cette commande.
             </p>
           </div>
 
@@ -270,7 +270,7 @@ export default function OrderTransactionsPage() {
             {canCreate && (
               <button
                 onClick={() => setShowForm((v) => !v)}
-                className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 text-center"
+                className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition-all duration-150 text-center"
               >
                 {showForm ? '➖ Masquer' : '➕ Nouvelle transaction'}
               </button>
@@ -279,7 +279,7 @@ export default function OrderTransactionsPage() {
             <button
               onClick={loadTransactions}
               disabled={loading}
-              className={`w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm text-center ${
+              className={`w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm text-center transition-all duration-150 ${
                 loading
                   ? 'bg-blue-300 cursor-not-allowed text-white'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -290,9 +290,9 @@ export default function OrderTransactionsPage() {
 
             <button
               onClick={() => navigate(`/orders/${id}`)}
-              className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300 text-center"
+              className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300 text-center transition-all duration-150"
             >
-              ← Retour
+              ← Retour commande
             </button>
           </div>
         </div>
@@ -330,14 +330,14 @@ export default function OrderTransactionsPage() {
 
 function TransactionFilters({ filters, setFilters, count }) {
   return (
-    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5">
+    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm">
       {/* Ligne recherche seule — pleine largeur, plus respirable */}
       <div className="flex flex-col lg:flex-row gap-3 mb-4">
         <input
           placeholder="🔎 Rechercher (type, statut, description, méthode, utilisateur...)"
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white shadow-sm break-words"
+          className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm break-words transition-all duration-150"
         />
       </div>
 
@@ -347,7 +347,7 @@ function TransactionFilters({ filters, setFilters, count }) {
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
         >
           <option value="">Type (tous)</option>
           {Object.entries(TRANSACTION_TYPES).map(([key, label]) => (
@@ -364,14 +364,14 @@ function TransactionFilters({ filters, setFilters, count }) {
           onChange={(e) =>
             setFilters({ ...filters, payment: e.target.value })
           }
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
         />
 
         {/* Tri — prend plus de place sur les grands écrans */}
         <select
           value={filters.sort}
           onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full sm:col-span-2 lg:col-span-4"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full sm:col-span-2 lg:col-span-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
         >
           <option value="-createdAt">Plus récentes</option>
           <option value="createdAt">Plus anciennes</option>
@@ -382,14 +382,17 @@ function TransactionFilters({ filters, setFilters, count }) {
 
       {/* Bas de bloc : compteur + reset (stack sur mobile) */}
       <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-500">
-        <div>{count} transaction(s)</div>
+        <div className="inline-flex items-center gap-1">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400/80" />
+          <span>{count} transaction(s) trouvée(s)</span>
+        </div>
         <button
           onClick={() =>
             setFilters({ q: '', type: '', payment: '', sort: '-createdAt' })
           }
-          className="w-full sm:w-auto px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium text-center"
+          className="w-full sm:w-auto px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium text-center transition-all duration-150"
         >
-          Réinitialiser
+          Réinitialiser les filtres
         </button>
       </div>
     </div>
@@ -402,13 +405,13 @@ function TransactionFilters({ filters, setFilters, count }) {
 function TransactionForm({ form, setForm, handleSubmit, loading }) {
   return (
     <div className="mb-10">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">
-        ➕ Nouvelle transaction
+      <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        ➕ <span>Nouvelle transaction</span>
       </h2>
 
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 sm:p-5 rounded-xl border border-gray-200"
+        className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 sm:p-5 rounded-xl border border-gray-200 shadow-sm"
       >
         {/* Type */}
         <div>
@@ -418,7 +421,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           >
             {Object.entries(TRANSACTION_TYPES).map(([key, label]) => (
               <option key={key} value={key}>
@@ -436,11 +439,11 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
           <input
             type="number"
             step="0.01"
-            placeholder="Ex : 25000"
+            placeholder="Ex : 25 000"
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           />
         </div>
 
@@ -452,7 +455,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           >
             {Object.entries(CURRENCY_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
@@ -473,7 +476,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
             onChange={(e) =>
               setForm({ ...form, paymentMethod: e.target.value })
             }
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           />
         </div>
 
@@ -489,7 +492,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
             onChange={(e) =>
               setForm({ ...form, description: e.target.value })
             }
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           />
         </div>
 
@@ -504,7 +507,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
             onChange={(e) =>
               setForm({ ...form, proofFile: e.target.files?.[0] || null })
             }
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           />
         </div>
 
@@ -513,9 +516,9 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm ${
+            className={`w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition-all duration-150 ${
               loading
-                ? 'bg-blue-300 cursor-not-allowed'
+                ? 'bg-blue-300 cursor-not-allowed text-white'
                 : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >
@@ -553,16 +556,44 @@ function TransactionList({ transactions, loading }) {
         const userDisplay = t.user ? getUserDisplay(t.user) : 'Système';
         const currencyLabel = t.currencyLabel || t.currency || 'XOF';
 
+        // Accent subtil par type
+        let accentClass =
+          'border-l-4 border-l-slate-200';
+        if (t.type === 'revenue') {
+          accentClass = 'border-l-4 border-l-emerald-400/80';
+        } else if (t.type === 'expense') {
+          accentClass = 'border-l-4 border-l-rose-400/80';
+        } else if (t.type === 'commission') {
+          accentClass = 'border-l-4 border-l-amber-400/80';
+        } else if (t.type === 'adjustment') {
+          accentClass = 'border-l-4 border-l-blue-400/80';
+        }
+
+        // Couleurs badge type
+        let typeBadge =
+          'bg-slate-100 text-slate-700 border border-slate-200';
+        if (t.type === 'revenue') {
+          typeBadge = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+        } else if (t.type === 'expense') {
+          typeBadge = 'bg-rose-50 text-rose-700 border border-rose-200';
+        } else if (t.type === 'commission') {
+          typeBadge = 'bg-amber-50 text-amber-700 border border-amber-200';
+        } else if (t.type === 'adjustment') {
+          typeBadge = 'bg-blue-50 text-blue-700 border border-blue-200';
+        }
+
         return (
           <div
             key={t.id}
-            className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md transition"
+            className={`bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md hover:-translate-y-[1px] transition-all duration-150 ease-out ${accentClass}`}
           >
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
               {/* Left block */}
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                  <span
+                    className={`inline-flex px-2 py-0.5 text-xs rounded-full ${typeBadge}`}
+                  >
                     {t.typeLabel || t.type}
                   </span>
 
@@ -574,7 +605,7 @@ function TransactionList({ transactions, loading }) {
                 </div>
 
                 <h3 className="text-lg font-semibold text-gray-900 mt-2 break-words">
-                  {Number(t.amount || 0).toLocaleString()} {currencyLabel}
+                  {Number(t.amount || 0).toLocaleString('fr-FR')} {currencyLabel}
                 </h3>
 
                 <p className="text-sm text-gray-600 mt-1 break-words">
@@ -593,11 +624,15 @@ function TransactionList({ transactions, loading }) {
               <div className="text-xs text-gray-500 text-right mt-1 sm:mt-0 whitespace-nowrap">
                 <div>
                   Créée le{' '}
-                  <strong>{new Date(t.createdAt).toLocaleDateString()}</strong>
+                  <strong>
+                    {new Date(t.createdAt).toLocaleDateString('fr-FR')}
+                  </strong>
                 </div>
                 <div>
                   à{' '}
-                  <strong>{new Date(t.createdAt).toLocaleTimeString()}</strong>
+                  <strong>
+                    {new Date(t.createdAt).toLocaleTimeString('fr-FR')}
+                  </strong>
                 </div>
               </div>
             </div>
@@ -624,4 +659,3 @@ function TransactionList({ transactions, loading }) {
     </div>
   );
 }
-

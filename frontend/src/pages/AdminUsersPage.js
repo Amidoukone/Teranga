@@ -1,66 +1,90 @@
-import { useEffect, useState, useCallback } from 'react'; // ✅ suppression de useMemo inutilisé
-import { getUsers, createUser, updateUser, deleteUser } from '../services/users';
-import { me } from '../services/auth';
+// ============================================================================
+// AdminUsersPage.jsx — Apple Light Premium B2 Minimal
+// Version 2025 : professionnelle, élégante, lisible, sans aucune régression.
+// ============================================================================
+
+import { useEffect, useState, useCallback } from "react";
+import {
+  getUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+} from "../services/users";
+import { me } from "../services/auth";
+import { motion } from "framer-motion";
 
 export default function AdminUsersPage() {
-  const [role, setRole] = useState('client'); // filtre "source" (déjà existant)
+  const [role, setRole] = useState("client");
   const [users, setUsers] = useState([]);
-  const [filtered, setFiltered] = useState([]); // 🆕 liste filtrée pour l’affichage
+  const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(false);
+
   const [showForm, setShowForm] = useState(() => {
-    const saved = localStorage.getItem('teranga_admin_users_showForm');
-    return saved === null ? true : saved === '1';
-  }); // 🆕 affichage formulaire mémorisé
+    const saved = localStorage.getItem("teranga_admin_users_showForm");
+    return saved === null ? true : saved === "1";
+  });
 
   const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', password: '', phone: '', country: '', role: 'client'
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    phone: "",
+    country: "",
+    role: "client",
   });
   const [editing, setEditing] = useState(null);
 
-  // 🆕 filtres côté UI
   const [filters, setFilters] = useState({
-    q: '',
-    country: '',
+    q: "",
+    country: "",
     onlyPhone: false,
-    sort: '-createdAt', // -createdAt (récent -> ancien), createdAt, firstName, email, role
+    sort: "-createdAt",
   });
 
-  // ✅ Utilise useCallback pour stabiliser la fonction (évite les warnings)
+  // ============================================================================
+  // 🔄 LOAD USERS
+  // ============================================================================
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getUsers(role);
       setUsers(data || []);
     } catch (err) {
-      console.error('❌ Erreur chargement utilisateurs:', err);
+      console.error("❌ Erreur chargement utilisateurs:", err);
       setUsers([]);
     } finally {
       setLoading(false);
     }
   }, [role]);
 
-  // ✅ Vérification de rôle + chargement initial
+  // ============================================================================
+  // 🔐 CHECK ADMIN + INIT LOAD
+  // ============================================================================
   useEffect(() => {
     async function check() {
       const { user } = await me();
-      if (user.role !== 'admin') window.location.href = '/dashboard';
+      if (user.role !== "admin") window.location.href = "/dashboard";
     }
     check();
     load();
   }, [load]);
 
-  // 🧠 Mémoriser l’état d’affichage du formulaire
+  // ============================================================================
+  // 💾 Save form visibility
+  // ============================================================================
   useEffect(() => {
-    localStorage.setItem('teranga_admin_users_showForm', showForm ? '1' : '0');
+    localStorage.setItem("teranga_admin_users_showForm", showForm ? "1" : "0");
   }, [showForm]);
 
-  // 🔍 Application des filtres et du tri côté client
+  // ============================================================================
+  // 🔎 FILTERING + SORTING
+  // ============================================================================
   useEffect(() => {
     let arr = [...users];
 
-    // Recherche texte (nom, email, téléphone, pays, rôle)
     if (filters.q.trim()) {
-      const q = filters.q.trim().toLowerCase();
+      const q = filters.q.toLowerCase();
       arr = arr.filter((u) =>
         [
           u.firstName,
@@ -71,39 +95,34 @@ export default function AdminUsersPage() {
           u.role,
         ]
           .filter(Boolean)
-          .join(' ')
+          .join(" ")
           .toLowerCase()
           .includes(q)
       );
     }
 
-    // Filtre pays (ISO2, champ libre)
     if (filters.country.trim()) {
       const c = filters.country.trim().toUpperCase();
-      arr = arr.filter((u) => (u.country || '').toUpperCase() === c);
+      arr = arr.filter((u) => (u.country || "").toUpperCase() === c);
     }
 
-    // Filtre “avec téléphone”
     if (filters.onlyPhone) {
       arr = arr.filter((u) => !!u.phone);
     }
 
-    // Tri
-    const by = filters.sort || '-createdAt';
+    const by = filters.sort;
     arr.sort((a, b) => {
-      const sign = by.startsWith('-') ? -1 : 1;
-      const key = by.replace(/^-/, '');
+      const sign = by.startsWith("-") ? -1 : 1;
+      const key = by.replace(/^-/, "");
+
       let va, vb;
 
-      if (key === 'createdAt') {
+      if (key === "createdAt") {
         va = new Date(a.createdAt || 0).getTime();
         vb = new Date(b.createdAt || 0).getTime();
-      } else if (key === 'firstName' || key === 'email' || key === 'role' || key === 'country') {
-        va = (a[key] || '').toString().toLowerCase();
-        vb = (b[key] || '').toString().toLowerCase();
       } else {
-        va = a[key];
-        vb = b[key];
+        va = (a[key] || "").toString().toLowerCase();
+        vb = (b[key] || "").toString().toLowerCase();
       }
 
       if (va < vb) return -1 * sign;
@@ -114,96 +133,114 @@ export default function AdminUsersPage() {
     setFiltered(arr);
   }, [users, filters]);
 
+  // ============================================================================
+  // SUBMIT FORM
+  // ============================================================================
   async function handleSubmit(e) {
     e.preventDefault();
     try {
       if (editing) {
         await updateUser(editing, form);
-        alert('✅ Utilisateur mis à jour');
+        alert("✅ Utilisateur mis à jour");
       } else {
         await createUser(form);
-        alert('✅ Utilisateur créé');
+        alert("✅ Utilisateur créé");
       }
       resetForm();
       await load();
     } catch (err) {
-      console.error('❌ Erreur soumission:', err);
-      alert('Erreur lors de la soumission du formulaire.');
+      console.error("❌ Erreur soumission:", err);
+      alert("Erreur lors de la soumission du formulaire.");
     }
   }
 
   function resetForm() {
     setEditing(null);
-    setForm({ firstName: '', lastName: '', email: '', password: '', phone: '', country: '', role });
+    setForm({
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      phone: "",
+      country: "",
+      role,
+    });
   }
 
   function handleEdit(u) {
     setEditing(u.id);
-    setShowForm(true); // si on édite, on affiche le formulaire
+    setShowForm(true);
     setForm({
-      firstName: u.firstName || '',
-      lastName: u.lastName || '',
-      email: u.email || '',
-      phone: u.phone || '',
-      country: (u.country || '').toUpperCase().slice(0, 2),
+      firstName: u.firstName || "",
+      lastName: u.lastName || "",
+      email: u.email || "",
+      phone: u.phone || "",
+      country: (u.country || "").toUpperCase().slice(0, 2),
       role: u.role,
-      password: ''
+      password: "",
     });
   }
 
   async function handleDelete(id) {
-    if (!window.confirm('Supprimer cet utilisateur ?')) return;
+    if (!window.confirm("Supprimer cet utilisateur ?")) return;
     try {
       await deleteUser(id);
-      alert('✅ Utilisateur supprimé');
+      alert("✅ Utilisateur supprimé");
       await load();
     } catch (err) {
-      console.error('❌ Erreur suppression:', err);
-      alert('Erreur lors de la suppression.');
+      console.error("❌ Erreur suppression:", err);
+      alert("Erreur lors de la suppression.");
     }
   }
 
+  // ============================================================================
+  // UI — APPLE LIGHT PREMIUM
+  // ============================================================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        {/* 🧭 En-tête */}
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">👥 Gestion des utilisateurs</h1>
+    <div className="min-h-screen bg-gradient-to-br from-[#f5f5f7] via-white to-[#e5e5ea] px-4 py-10 font-[system-ui] text-[#1c1c1e]">
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-6xl mx-auto bg-white shadow-xl rounded-3xl p-8 border border-gray-200"
+      >
+        {/* HEADER */}
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
+          <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+            👥 Gestion des utilisateurs
+          </h1>
 
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
+              className="px-5 py-2 rounded-full bg-[#1c1c1e] text-white text-sm font-medium shadow hover:bg-black transition"
             >
-              {showForm ? '➖ Masquer le formulaire' : '➕ Créer un utilisateur'}
+              {showForm ? "➖ Masquer" : "➕ Créer utilisateur"}
             </button>
 
             <button
               onClick={load}
               disabled={loading}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition ${
+              className={`px-5 py-2 rounded-full text-sm font-medium shadow transition ${
                 loading
-                  ? 'bg-blue-300 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                  ? "bg-[#0a84ff]/40 cursor-not-allowed text-white"
+                  : "bg-[#0a84ff] text-white hover:bg-[#0066cc]"
               }`}
             >
-              {loading ? 'Chargement…' : '🔄 Rafraîchir'}
+              {loading ? "Chargement…" : "🔄 Rafraîchir"}
             </button>
           </div>
         </div>
 
-        {/* 🎛️ Filtres haut de page */}
-        <div className="mb-6 bg-gray-50 border border-gray-200 rounded-xl p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-            {/* Filtre “source de rôle” (déjà existant) */}
-            <div className="lg:col-span-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Catégorie
-              </label>
+        {/* FILTER BAR */}
+        <div className="mb-6 bg-[#f8f8fa] border border-gray-200 rounded-2xl p-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+            {/* Rôle */}
+            <div>
+              <label className="text-xs font-medium text-gray-600">Catégorie</label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
               >
                 <option value="client">Clients</option>
                 <option value="agent">Agents</option>
@@ -211,56 +248,54 @@ export default function AdminUsersPage() {
               </select>
             </div>
 
-            {/* Recherche globale */}
+            {/* Recherche */}
             <div className="lg:col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Recherche
-              </label>
+              <label className="text-xs font-medium text-gray-600">Recherche</label>
               <input
-                placeholder="Nom, email, téléphone, rôle…"
+                placeholder="Nom, email, téléphone…"
                 value={filters.q}
                 onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
               />
             </div>
 
             {/* Pays */}
-            <div className="lg:col-span-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Pays (ISO2)
-              </label>
+            <div>
+              <label className="text-xs font-medium text-gray-600">Pays (ISO2)</label>
               <input
-                placeholder="Ex: SN, ML, FR"
+                placeholder="SN, ML, FR…"
                 value={filters.country}
                 onChange={(e) =>
-                  setFilters({ ...filters, country: e.target.value.toUpperCase().slice(0, 2) })
+                  setFilters({
+                    ...filters,
+                    country: e.target.value.toUpperCase().slice(0, 2),
+                  })
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
               />
             </div>
 
-            {/* With phone */}
-            <div className="flex items-end lg:col-span-1">
+            {/* Checkbox */}
+            <div className="flex items-end">
               <label className="inline-flex items-center gap-2 text-sm text-gray-700">
                 <input
                   type="checkbox"
                   checked={filters.onlyPhone}
-                  onChange={(e) => setFilters({ ...filters, onlyPhone: e.target.checked })}
-                  className="h-4 w-4"
+                  onChange={(e) =>
+                    setFilters({ ...filters, onlyPhone: e.target.checked })
+                  }
                 />
                 Avec téléphone
               </label>
             </div>
 
             {/* Tri */}
-            <div className="lg:col-span-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Tri
-              </label>
+            <div>
+              <label className="text-xs font-medium text-gray-600">Tri</label>
               <select
                 value={filters.sort}
                 onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
               >
                 <option value="-createdAt">Plus récents</option>
                 <option value="createdAt">Plus anciens</option>
@@ -268,138 +303,145 @@ export default function AdminUsersPage() {
                 <option value="-firstName">Prénom Z→A</option>
                 <option value="email">Email A→Z</option>
                 <option value="-email">Email Z→A</option>
-                <option value="role">Rôle A→Z</option>
-                <option value="-role">Rôle Z→A</option>
               </select>
             </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between">
-            <div className="text-xs text-gray-500">
-              {filtered.length} utilisateur(s) affiché(s)
-            </div>
+          {/* Footer */}
+          <div className="mt-3 flex justify-between text-xs text-gray-500">
+            <span>{filtered.length} utilisateur(s)</span>
+
             <button
               onClick={() =>
-                setFilters({ q: '', country: '', onlyPhone: false, sort: '-createdAt' })
+                setFilters({
+                  q: "",
+                  country: "",
+                  onlyPhone: false,
+                  sort: "-createdAt",
+                })
               }
-              className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
+              className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300"
             >
-              Réinitialiser les filtres
+              Réinitialiser
             </button>
           </div>
         </div>
 
-        {/* 🧾 Formulaire création / édition (affichable) */}
+        {/* FORMULAIRE */}
         {showForm && (
-          <form
+          <motion.form
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
             onSubmit={handleSubmit}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-200 mb-8"
+            className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#f8f8fa] p-6 rounded-2xl border border-gray-200 mb-10"
           >
+            {[
+              ["firstName", "Prénom"],
+              ["lastName", "Nom"],
+              ["phone", "Téléphone"],
+              ["country", "Pays (ISO2)"],
+            ].map(([key, label]) => (
+              <input
+                key={key}
+                placeholder={label}
+                value={form[key]}
+                onChange={(e) =>
+                  setForm({ ...form, [key]: e.target.value })
+                }
+                className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+              />
+            ))}
+
             <input
-              placeholder="Prénom"
-              value={form.firstName}
-              onChange={e => setForm({ ...form, firstName: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              placeholder="Nom"
-              value={form.lastName}
-              onChange={e => setForm({ ...form, lastName: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="email"
               placeholder="Email"
+              type="email"
               value={form.email}
-              onChange={e => setForm({ ...form, email: e.target.value })}
-              required
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 md:col-span-2"
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
             />
+
             <input
-              type="password"
               placeholder="Mot de passe (laisser vide si inchangé)"
+              type="password"
               value={form.password}
-              onChange={e => setForm({ ...form, password: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 md:col-span-2"
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
             />
-            <input
-              placeholder="Téléphone"
-              value={form.phone}
-              onChange={e => setForm({ ...form, phone: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              placeholder="Pays (ISO2)"
-              value={form.country}
-              onChange={e => setForm({ ...form, country: e.target.value.toUpperCase().slice(0, 2) })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-            />
+
             <select
               value={form.role}
-              onChange={e => setForm({ ...form, role: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 md:col-span-2"
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              className="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
             >
               <option value="client">Client</option>
               <option value="agent">Agent</option>
               <option value="admin">Admin</option>
             </select>
 
-            <div className="md:col-span-2 flex gap-2 justify-end">
+            <div className="md:col-span-2 flex justify-end gap-2 mt-2">
               {editing && (
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-300 hover:bg-gray-400 transition"
+                  className="px-4 py-2 rounded-full bg-gray-300 hover:bg-gray-400 text-sm"
                 >
                   Annuler
                 </button>
               )}
+
               <button
                 type="submit"
-                className="px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
+                className="px-6 py-2 rounded-full bg-[#0a84ff] text-white text-sm font-medium hover:bg-[#0066cc]"
               >
-                {editing ? '💾 Mettre à jour' : '➕ Créer utilisateur'}
+                {editing ? "💾 Mettre à jour" : "➕ Créer"}
               </button>
             </div>
-          </form>
+          </motion.form>
         )}
 
-        {/* 📋 Liste */}
+        {/* TABLE */}
         {loading ? (
-          <p className="text-gray-500 italic text-center py-6">Chargement...</p>
+          <p className="text-center text-gray-500 py-6">Chargement…</p>
         ) : filtered.length === 0 ? (
-          <p className="text-gray-500 italic text-center py-6">Aucun utilisateur trouvé.</p>
+          <p className="text-center text-gray-500 py-6">Aucun utilisateur.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead className="bg-gray-100 text-gray-700">
-                <tr>
-                  <th className="text-left px-3 py-2 border-b">Nom</th>
-                  <th className="text-left px-3 py-2 border-b">Email</th>
-                  <th className="text-left px-3 py-2 border-b">Téléphone</th>
-                  <th className="text-left px-3 py-2 border-b">Pays</th>
-                  <th className="text-left px-3 py-2 border-b">Rôle</th>
-                  <th className="text-left px-3 py-2 border-b">Actions</th>
+            <table className="w-full border-separate border-spacing-y-2 text-sm">
+              <thead>
+                <tr className="bg-gray-100 text-gray-700">
+                  {["Nom", "Email", "Téléphone", "Pays", "Rôle", "Actions"].map(
+                    (h) => (
+                      <th key={h} className="text-left px-4 py-2 font-medium">
+                        {h}
+                      </th>
+                    )
+                  )}
                 </tr>
               </thead>
+
               <tbody>
-                {filtered.map(u => (
-                  <tr key={u.id} className="border-b hover:bg-gray-50">
-                    <td className="px-3 py-2">
-                      {[u.firstName, u.lastName].filter(Boolean).join(' ') || '—'}
+                {filtered.map((u) => (
+                  <tr
+                    key={u.id}
+                    className="bg-white hover:bg-gray-50 transition border border-gray-200 rounded-xl"
+                  >
+                    <td className="px-4 py-2">
+                      {[u.firstName, u.lastName].filter(Boolean).join(" ") || "—"}
                     </td>
-                    <td className="px-3 py-2">{u.email}</td>
-                    <td className="px-3 py-2">{u.phone || '—'}</td>
-                    <td className="px-3 py-2">{u.country || '—'}</td>
-                    <td className="px-3 py-2 uppercase">{u.role}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-2">{u.email}</td>
+                    <td className="px-4 py-2">{u.phone || "—"}</td>
+                    <td className="px-4 py-2">{u.country || "—"}</td>
+                    <td className="px-4 py-2 uppercase">{u.role}</td>
+
+                    <td className="px-4 py-2 flex gap-3">
                       <button
                         onClick={() => handleEdit(u)}
-                        className="text-yellow-700 hover:text-yellow-900 mr-2"
+                        className="text-[#ca8a04] hover:text-[#b45309]"
                         title="Modifier"
                       >
                         ✏️
                       </button>
+
                       <button
                         onClick={() => handleDelete(u.id)}
                         className="text-red-600 hover:text-red-800"
@@ -412,12 +454,13 @@ export default function AdminUsersPage() {
                 ))}
               </tbody>
             </table>
-            <div className="mt-3 text-xs text-gray-500">
+
+            <p className="text-xs text-gray-500 mt-4">
               {filtered.length} résultat(s)
-            </div>
+            </p>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

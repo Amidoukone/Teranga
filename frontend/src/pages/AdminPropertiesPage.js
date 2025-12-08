@@ -1,5 +1,6 @@
 // ============================================================================
-// AdminPropertiesPage.jsx — VERSION PRODUCTION READY (Option B, 100% stable)
+// AdminPropertiesPage.jsx — VERSION PRODUCTION READY (Apple Light Premium)
+// 100% fonctionnel, aucune régression, même logique, design modernisé.
 // ============================================================================
 
 import { useEffect, useState } from 'react';
@@ -33,7 +34,7 @@ function isPdf(path = '') {
 }
 
 // ============================================================================
-// 🧩 PAGE PRINCIPALE
+// 🧩 PAGE PRINCIPALE — Apple Light Premium
 // ============================================================================
 export default function AdminPropertiesPage() {
   const [properties, setProperties] = useState([]);
@@ -142,6 +143,7 @@ export default function AdminPropertiesPage() {
     const selected = Array.from(e.target.files || []);
     setFiles(selected);
 
+    // Nettoyage anciennes URLs
     previewUrls.forEach((u) => URL.revokeObjectURL(u));
     const previews = selected.map((f) => URL.createObjectURL(f));
     setPreviewUrls(previews);
@@ -266,294 +268,404 @@ export default function AdminPropertiesPage() {
     }));
   }
 
+  const selectedClientObj = clients.find((c) => String(c.id) === String(selectedClient));
+
   // ========================================================================
-  // 🖥️ UI
+  // 🖥️ UI — Apple Light Premium (Cartes uniquement)
   // ========================================================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-7xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
+      <div className="max-w-7xl mx-auto bg-white/90 backdrop-blur-xl shadow-[0_18px_45px_rgba(15,23,42,0.12)] rounded-3xl border border-slate-100 px-4 sm:px-8 py-6 sm:py-8 space-y-8">
 
         {/* HEADER */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">🏡 Gestion des Biens (Admin)</h1>
-          <button
-            onClick={() => loadProperties(selectedClient)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg"
-          >
-            🔄 Rafraîchir
-          </button>
-        </div>
-
-        {/* CLIENT SELECTION */}
-        <div className="mb-8 bg-gray-50 border rounded-xl p-4">
-          <h2 className="text-sm font-medium text-gray-800 mb-2">👤 Sélectionner un client</h2>
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Rechercher un client…"
-              className="flex-1 border px-3 py-2 rounded-lg text-sm"
-            />
-
-            <select
-              value={selectedClient}
-              onChange={(e) => {
-                const id = e.target.value;
-                setSelectedClient(id);
-                loadProperties(id);
-                resetForm();
-              }}
-              className="border px-3 py-2 rounded-lg text-sm"
-            >
-              <option value="">— Choisir un client —</option>
-              {filteredClients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.firstName} {c.lastName} ({c.email})
-                </option>
-              ))}
-            </select>
-
-            {selectedClient && (
-              <button
-                onClick={() => {
-                  setIsCreating(true);
-                  resetForm();
-                }}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg"
-              >
-                ➕ Ajouter un bien
-              </button>
+        <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
+              🏡 Gestion des biens
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Admin — création, édition et suivi des biens immobiliers des clients.
+            </p>
+            {selectedClientObj && (
+              <p className="text-xs text-slate-400 mt-1">
+                Client sélectionné :{' '}
+                <span className="font-medium text-slate-700">
+                  {selectedClientObj.firstName} {selectedClientObj.lastName} ({selectedClientObj.email})
+                </span>
+              </p>
             )}
           </div>
-        </div>
 
-        {/* FORM */}
-        {(isCreating || editId) && (
-          <div className="mb-10 bg-gray-50 border rounded-xl p-6 shadow-inner">
-            <h2 className="text-lg font-semibold mb-4">
-              {editId ? `✏️ Modifier le bien #${editId}` : '➕ Nouveau bien'}
+          <div className="flex flex-wrap gap-2 justify-start md:justify-end">
+            <button
+              onClick={() => loadProperties(selectedClient)}
+              className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium rounded-full bg-slate-900 text-white shadow-sm hover:bg-black transition"
+            >
+              🔄 Rafraîchir la liste
+            </button>
+          </div>
+        </header>
+
+        {/* CLIENT SELECTION */}
+        <section className="bg-slate-50/80 border border-slate-200 rounded-2xl px-4 sm:px-5 py-4 sm:py-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              👤 Sélectionner un client
             </h2>
+            {selectedClient && (
+              <span className="text-[11px] px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                {properties.length} bien(s) pour ce client
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col lg:flex-row gap-3">
+            <div className="flex-1">
+              <label className="block text-[11px] font-medium text-slate-500 mb-1">
+                Recherche client
+              </label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Nom, prénom ou email du client…"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="w-full lg:w-80">
+              <label className="block text-[11px] font-medium text-slate-500 mb-1">
+                Client
+              </label>
+              <select
+                value={selectedClient}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSelectedClient(id);
+                  loadProperties(id);
+                  resetForm();
+                }}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+              >
+                <option value="">— Choisir un client —</option>
+                {filteredClients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.firstName} {c.lastName} ({c.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedClient && (
+              <div className="flex items-end">
+                <button
+                  onClick={() => {
+                    setIsCreating(true);
+                    resetForm();
+                  }}
+                  className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium rounded-full bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition"
+                >
+                  ➕ Ajouter un bien
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* FORMULAIRE (création / édition) */}
+        {(isCreating || editId) && (
+          <section className="bg-slate-50/80 border border-slate-200 rounded-2xl px-4 sm:px-5 py-5 shadow-sm">
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <h2 className="text-base font-semibold text-slate-900">
+                {editId ? `✏️ Modifier le bien #${editId}` : '➕ Nouveau bien'}
+              </h2>
+              <span className="text-[11px] text-slate-500">
+                Les champs marqués d’un * sont obligatoires.
+              </span>
+            </div>
 
             <form
               onSubmit={editId ? handleUpdate : handleCreate}
               className="grid grid-cols-1 sm:grid-cols-2 gap-4"
             >
-              {/* Form Fields */}
-              <input
-                placeholder="Titre *"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                required
-                className="border px-3 py-2 rounded-lg text-sm"
-              />
+              {/* Titre */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-600">
+                  Titre *
+                </label>
+                <input
+                  placeholder="Ex : Maison F3 à Dakar"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  required
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                />
+              </div>
 
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="border px-3 py-2 rounded-lg text-sm"
-              >
-                <option value="house">Maison</option>
-                <option value="apartment">Appartement</option>
-                <option value="land">Terrain</option>
-                <option value="commercial">Local commercial</option>
-              </select>
+              {/* Type */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-600">
+                  Type
+                </label>
+                <select
+                  value={form.type}
+                  onChange={(e) => setForm({ ...form, type: e.target.value })}
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                >
+                  <option value="house">Maison</option>
+                  <option value="apartment">Appartement</option>
+                  <option value="land">Terrain</option>
+                  <option value="commercial">Local commercial</option>
+                </select>
+              </div>
 
-              <input
-                placeholder="Adresse *"
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                required
-                className="border px-3 py-2 rounded-lg text-sm"
-              />
+              {/* Adresse */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-600">
+                  Adresse *
+                </label>
+                <input
+                  placeholder="Adresse complète"
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  required
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                />
+              </div>
 
-              <input
-                placeholder="Ville *"
-                value={form.city}
-                onChange={(e) => setForm({ ...form, city: e.target.value })}
-                required
-                className="border px-3 py-2 rounded-lg text-sm"
-              />
+              {/* Ville */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-600">
+                  Ville *
+                </label>
+                <input
+                  placeholder="Ville"
+                  value={form.city}
+                  onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  required
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                />
+              </div>
 
-              <input
-                placeholder="Code postal"
-                value={form.postalCode}
-                onChange={(e) =>
-                  setForm({ ...form, postalCode: e.target.value })
-                }
-                className="border px-3 py-2 rounded-lg text-sm"
-              />
+              {/* Code postal */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-600">
+                  Code postal
+                </label>
+                <input
+                  placeholder="Code postal"
+                  value={form.postalCode}
+                  onChange={(e) =>
+                    setForm({ ...form, postalCode: e.target.value })
+                  }
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                />
+              </div>
 
-              <input
-                type="number"
-                placeholder="Surface (m²)"
-                value={form.surfaceArea}
-                onChange={(e) =>
-                  setForm({ ...form, surfaceArea: e.target.value })
-                }
-                className="border px-3 py-2 rounded-lg text-sm"
-              />
+              {/* Surface */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-600">
+                  Surface (m²)
+                </label>
+                <input
+                  type="number"
+                  placeholder="Surface"
+                  value={form.surfaceArea}
+                  onChange={(e) =>
+                    setForm({ ...form, surfaceArea: e.target.value })
+                  }
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                />
+              </div>
 
-              <input
-                type="number"
-                placeholder="Nombre de pièces"
-                value={form.roomCount}
-                onChange={(e) =>
-                  setForm({ ...form, roomCount: e.target.value })
-                }
-                className="border px-3 py-2 rounded-lg text-sm"
-              />
+              {/* Pièces */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-600">
+                  Nombre de pièces
+                </label>
+                <input
+                  type="number"
+                  placeholder="Nombre de pièces"
+                  value={form.roomCount}
+                  onChange={(e) =>
+                    setForm({ ...form, roomCount: e.target.value })
+                  }
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                />
+              </div>
 
-              <textarea
-                placeholder="Description"
-                value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-                rows={3}
-                className="col-span-2 border px-3 py-2 rounded-lg text-sm"
-              />
+              {/* Description */}
+              <div className="sm:col-span-2 flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-600">
+                  Description
+                </label>
+                <textarea
+                  placeholder="Informations complémentaires sur le bien…"
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                  rows={3}
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500 resize-y"
+                />
+              </div>
 
               {/* FILES */}
-              <div className="col-span-2">
-                <label className="text-sm font-medium">📁 Photos</label>
+              <div className="sm:col-span-2 flex flex-col gap-2 mt-1">
+                <label className="text-[11px] font-medium text-slate-600">
+                  📁 Photos & documents (JPG, PNG, PDF)
+                </label>
                 <input
                   type="file"
                   multiple
                   onChange={handleFileChange}
                   accept=".jpg,.jpeg,.png,.pdf"
-                  className="border px-3 py-2 w-full rounded-lg"
+                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
                 />
+                {previewUrls.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-3">
+                    {previewUrls.map((url, i) => (
+                      <img
+                        key={i}
+                        src={url}
+                        className="w-20 h-20 object-cover rounded-xl border border-slate-200 shadow-sm"
+                        alt=""
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {previewUrls.length > 0 && (
-                <div className="col-span-2 mt-3 flex flex-wrap gap-3">
-                  {previewUrls.map((url, i) => (
-                    <img
-                      key={i}
-                      src={url}
-                      className="w-24 h-24 object-cover rounded-lg border"
-                      alt=""
-                    />
-                  ))}
-                </div>
-              )}
-
-              <div className="col-span-2 mt-5 flex justify-end gap-3">
+              {/* Actions */}
+              <div className="sm:col-span-2 mt-4 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => {
                     resetForm();
                     setIsCreating(false);
                   }}
-                  className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
+                  className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="inline-flex items-center justify-center px-5 py-2 text-xs sm:text-sm font-medium rounded-full bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition"
                 >
                   {editId ? '💾 Enregistrer' : '➕ Créer'}
                 </button>
               </div>
             </form>
-          </div>
+          </section>
         )}
 
-        {/* LIST */}
-        {loading ? (
-          <p className="text-center text-gray-500 py-6 animate-pulse">
-            Chargement…
-          </p>
-        ) : properties.length === 0 ? (
-          <p className="text-center text-gray-500 italic">
-            Aucun bien trouvé.
-          </p>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {properties.map((p) => {
-              const imageUrls = (p.photos || [])
-                .filter((ph) => !isPdf(ph))
-                .map((ph) => toAbsUrl(ph));
+        {/* LISTE DES BIENS — CARTES PREMIUM */}
+        <section className="space-y-4">
+          {loading ? (
+            <p className="text-center text-slate-500 py-6 text-sm animate-pulse">
+              Chargement des biens…
+            </p>
+          ) : properties.length === 0 ? (
+            <p className="text-center text-slate-500 italic py-6 text-sm">
+              Aucun bien trouvé pour cette sélection.
+            </p>
+          ) : (
+            <>
+              <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+                <span>{properties.length} bien(s) affiché(s)</span>
+              </div>
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {properties.map((p) => {
+                  const imageUrls = (p.photos || [])
+                    .filter((ph) => !isPdf(ph))
+                    .map((ph) => toAbsUrl(ph));
 
-              return (
-                <div
-                  key={p.id}
-                  className="bg-white border rounded-xl p-4 shadow-sm hover:shadow-md transition"
-                >
-                  <div>
-                    {p.photos?.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {p.photos.map((photo, i) => {
-                          const abs = toAbsUrl(photo);
+                  return (
+                    <article
+                      key={p.id}
+                      className="bg-white/90 border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full"
+                    >
+                      {/* Photos */}
+                      {p.photos?.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {p.photos.map((photo, i) => {
+                            const abs = toAbsUrl(photo);
 
-                          if (isPdf(photo)) {
+                            if (isPdf(photo)) {
+                              return (
+                                <a
+                                  key={i}
+                                  href={abs}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="w-20 h-20 border border-slate-200 bg-slate-50 rounded-xl flex items-center justify-center text-xs text-slate-600 hover:bg-slate-100 transition"
+                                >
+                                  📄 PDF
+                                </a>
+                              );
+                            }
+
+                            const idx = imageUrls.indexOf(abs);
+
                             return (
-                              <a
+                              <img
                                 key={i}
-                                href={abs}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="w-24 h-24 border bg-gray-100 rounded-md flex items-center justify-center"
-                              >
-                                📄 PDF
-                              </a>
+                                src={abs}
+                                alt=""
+                                onClick={() =>
+                                  openLightbox(imageUrls, Math.max(idx, 0))
+                                }
+                                className="w-20 h-20 object-cover rounded-xl border border-slate-200 cursor-pointer hover:scale-[1.03] hover:shadow-sm transition-transform"
+                              />
                             );
-                          }
+                          })}
+                        </div>
+                      )}
 
-                          const idx = imageUrls.indexOf(abs);
-
-                          return (
-                            <img
-                              key={i}
-                              src={abs}
-                              alt=""
-                              onClick={() =>
-                                openLightbox(imageUrls, Math.max(idx, 0))
-                              }
-                              className="w-24 h-24 object-cover rounded-md border cursor-pointer hover:scale-105 transition-transform"
-                            />
-                          );
-                        })}
+                      {/* Infos principales */}
+                      <div className="flex-1 space-y-1.5">
+                        <h3 className="text-base font-semibold text-slate-900 line-clamp-2">
+                          {p.title}
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          {p.city} • <span className="uppercase">{p.type}</span>
+                        </p>
+                        {p.description && (
+                          <p className="text-sm text-slate-600 mt-1 line-clamp-3">
+                            {p.description}
+                          </p>
+                        )}
+                        {p.surfaceArea && (
+                          <p className="text-sm text-slate-700 mt-2">
+                            🏠 {p.surfaceArea} m² —{' '}
+                            {p.roomCount || 0} pièce(s)
+                          </p>
+                        )}
                       </div>
-                    )}
 
-                    <h3 className="text-lg font-semibold">{p.title}</h3>
-                    <p className="text-sm text-gray-600">
-                      {p.city} — {p.type}
-                    </p>
-                    {p.description && (
-                      <p className="text-sm mt-1">{p.description}</p>
-                    )}
-                    {p.surfaceArea && (
-                      <p className="text-sm mt-2 text-gray-700">
-                        🏠 {p.surfaceArea} m² — {p.roomCount || 0} pièces
-                      </p>
-                    )}
-                  </div>
+                      {/* Actions */}
+                      <div className="mt-4 flex justify-end gap-2">
+                        <button
+                          onClick={() => startEdit(p)}
+                          className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-full bg-amber-500 text-white hover:bg-amber-600 transition"
+                        >
+                          ✏️ Modifier
+                        </button>
 
-                  <div className="mt-4 flex justify-end gap-2">
-                    <button
-                      onClick={() => startEdit(p)}
-                      className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm rounded-lg"
-                    >
-                      ✏️ Modifier
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg"
-                    >
-                      ❌ Supprimer
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                        <button
+                          onClick={() => handleDelete(p.id)}
+                          className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-full bg-red-600 text-white hover:bg-red-700 transition"
+                        >
+                          ❌ Supprimer
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </section>
 
         {/* LIGHTBOX */}
         {lightbox.open && (
@@ -565,7 +677,7 @@ export default function AdminPropertiesPage() {
           >
             <button
               onClick={closeLightbox}
-              className="absolute top-6 right-6 bg-white rounded-full p-2 text-xl shadow-md"
+              className="absolute top-6 right-6 bg-white/90 hover:bg-white text-slate-800 rounded-full p-2 text-xl shadow-md transition"
             >
               ✕
             </button>
@@ -575,7 +687,7 @@ export default function AdminPropertiesPage() {
                 e.stopPropagation();
                 prevImage();
               }}
-              className="absolute left-6 top-1/2 -translate-y-1/2 bg-white rounded-full p-3 text-xl shadow-md"
+              className="absolute left-6 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-800 rounded-full p-3 text-xl shadow-md transition"
             >
               ‹
             </button>
@@ -583,7 +695,7 @@ export default function AdminPropertiesPage() {
             <img
               src={lightbox.images[lightbox.index]}
               alt=""
-              className="max-w-[90vw] max-h-[80vh] object-contain rounded-xl shadow-2xl"
+              className="max-w-[90vw] max-h-[80vh] object-contain rounded-2xl shadow-2xl border border-white/15"
               onClick={(e) => e.stopPropagation()}
             />
 
@@ -592,12 +704,12 @@ export default function AdminPropertiesPage() {
                 e.stopPropagation();
                 nextImage();
               }}
-              className="absolute right-6 top-1/2 -translate-y-1/2 bg-white rounded-full p-3 text-xl shadow-md"
+              className="absolute right-6 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-800 rounded-full p-3 text-xl shadow-md transition"
             >
               ›
             </button>
 
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white text-sm bg-black/40 px-4 py-1 rounded-full">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white text-xs bg-black/40 px-4 py-1 rounded-full">
               {lightbox.index + 1} / {lightbox.images.length}
             </div>
           </div>

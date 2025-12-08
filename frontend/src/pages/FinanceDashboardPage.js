@@ -240,7 +240,9 @@ export default function FinanceDashboardPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `transactions_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `transactions_export_${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -248,7 +250,7 @@ export default function FinanceDashboardPage() {
   // États transitoires
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
         <p className="text-gray-600 text-lg animate-pulse">Chargement…</p>
       </div>
     );
@@ -256,14 +258,14 @@ export default function FinanceDashboardPage() {
 
   if (!user || !summary) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
         <p className="text-gray-600">Aucune donnée disponible.</p>
       </div>
     );
   }
 
   // 🎨 Données pour le graphique (vue filtrée)
-  const COLORS = ['#16a34a', '#dc2626', '#2563eb', '#9333ea'];
+  const COLORS = ['#34C759', '#FF3B30', '#0A84FF', '#AF52DE']; // Apple-like palette
   const chartData = [
     { name: 'Revenus', value: summary.revenues },
     { name: 'Dépenses', value: summary.expenses },
@@ -272,36 +274,37 @@ export default function FinanceDashboardPage() {
   ];
 
   // ============================================================
-  // 🖥️ UI principale — responsive + premium
+  // 🖥️ UI principale — Apple Light, sobre & premium
   // ============================================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5f5f7] via-[#f5f5f7] to-[#e5e5ea] px-3 py-8 sm:px-4 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-white/90 backdrop-blur-sm shadow-[0_18px_45px_rgba(0,0,0,0.06)] rounded-3xl border border-[#e5e5ea] px-4 py-5 sm:px-8 sm:py-7">
         {/* 🧭 En-tête responsive */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">
-              📊 Tableau de bord financier
+            <h1 className="text-2xl sm:text-3xl font-semibold text-[#111827] tracking-tight break-words flex items-center gap-2">
+              <span className="text-xl">📊</span>
+              <span>Tableau de bord financier</span>
             </h1>
-            <p className="text-sm text-gray-600 mt-1 break-words">
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
               {user.role === 'admin'
-                ? 'Vue globale (tous rôles confondus).'
+                ? 'Vue globale sur les flux financiers (tous rôles confondus).'
                 : user.role === 'agent'
-                ? 'Vos transactions liées à vos services et tâches.'
-                : 'Vos transactions personnelles.'}
+                ? 'Vue de vos transactions liées à vos services et tâches.'
+                : 'Vue de vos transactions personnelles.'}
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:justify-end">
             <button
               onClick={() => setShowChart((s) => !s)}
-              className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
+              className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium rounded-full shadow-sm bg-[#111827] text-white hover:bg-black transition-transform transform hover:-translate-y-0.5 active:translate-y-0"
             >
-              {showChart ? '➖ Masquer le graphique' : '📈 Afficher le graphique'}
+              {showChart ? 'Masquer le graphique' : 'Afficher le graphique 📈'}
             </button>
             <button
               onClick={exportCSV}
-              className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-emerald-600 text-white hover:bg-emerald-700 transition"
+              className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium rounded-full shadow-sm border border-[#d1d5db] bg-white text-gray-800 hover:bg-[#f5f5f7] transition-transform transform hover:-translate-y-0.5 active:translate-y-0"
             >
               ⬇️ Export CSV
             </button>
@@ -309,30 +312,35 @@ export default function FinanceDashboardPage() {
         </div>
 
         {/* 🎛️ Filtres premium + responsive */}
-        <div className="mb-6 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5">
+        <div className="mb-6 bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-4 sm:px-5 sm:py-5">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
             {/* Recherche texte */}
             <div className="lg:col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
                 Recherche
               </label>
-              <input
-                placeholder="Description, moyen de paiement, service/tâche, email…"
-                value={filters.q}
-                onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 break-words"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+                  🔍
+                </span>
+                <input
+                  placeholder="Description, paiement, service/tâche, email…"
+                  value={filters.q}
+                  onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+                  className="w-full border border-[#e5e7eb] rounded-2xl pl-8 pr-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
+                />
+              </div>
             </div>
 
             {/* Type */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
                 Type
               </label>
               <select
                 value={filters.type}
                 onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
               >
                 <option value="">— Tous —</option>
                 <option value="revenue">Revenu</option>
@@ -344,13 +352,13 @@ export default function FinanceDashboardPage() {
 
             {/* Rôle (surtout admin) */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
                 Rôle
               </label>
               <select
                 value={filters.role}
                 onChange={(e) => setFilters({ ...filters, role: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
               >
                 <option value="">— Tous —</option>
                 <option value="client">Client</option>
@@ -361,7 +369,7 @@ export default function FinanceDashboardPage() {
 
             {/* Date du */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
                 Du
               </label>
               <input
@@ -370,32 +378,32 @@ export default function FinanceDashboardPage() {
                 onChange={(e) =>
                   setFilters({ ...filters, dateFrom: e.target.value })
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
               />
             </div>
 
             {/* Date au */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
                 Au
               </label>
               <input
                 type="date"
                 value={filters.dateTo}
                 onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
               />
             </div>
 
             {/* Tri */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
                 Tri
               </label>
               <select
                 value={filters.sort}
                 onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
               >
                 <option value="-createdAt">Plus récents</option>
                 <option value="createdAt">Plus anciens</option>
@@ -408,16 +416,16 @@ export default function FinanceDashboardPage() {
           {/* Ligne du bas filtres : options + reset */}
           <div className="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <label className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-700">
                 <input
                   type="checkbox"
                   checked={filters.onlyLinked}
                   onChange={(e) =>
                     setFilters({ ...filters, onlyLinked: e.target.checked })
                   }
-                  className="h-4 w-4"
+                  className="h-4 w-4 rounded border-gray-300 text-[#0a84ff] focus:ring-[#0a84ff]"
                 />
-                Uni. liées à un service/tâche
+                <span>Seulement liées à un service / tâche</span>
               </label>
 
               {/* Raccourcis de période */}
@@ -425,35 +433,35 @@ export default function FinanceDashboardPage() {
                 <button
                   type="button"
                   onClick={() => quickRange(7)}
-                  className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
+                  className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-[#e5e7eb] hover:bg-[#f3f4f6] font-medium transition"
                 >
-                  7j
+                  7 jours
                 </button>
                 <button
                   type="button"
                   onClick={() => quickRange(30)}
-                  className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
+                  className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-[#e5e7eb] hover:bg-[#f3f4f6] font-medium transition"
                 >
-                  30j
+                  30 jours
                 </button>
                 <button
                   type="button"
                   onClick={() => quickRange(90)}
-                  className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
+                  className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-[#e5e7eb] hover:bg-[#f3f4f6] font-medium transition"
                 >
-                  90j
+                  90 jours
                 </button>
               </div>
             </div>
 
             <div className="flex items-center justify-between sm:justify-end gap-2">
-              <div className="text-xs text-gray-500">
+              <div className="text-[11px] text-gray-500">
                 {filtered.length} transaction(s)
               </div>
               <button
                 type="button"
                 onClick={resetFilters}
-                className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
+                className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-[#e5e7eb] hover:bg-[#f3f4f6] font-medium transition"
               >
                 Réinitialiser
               </button>
@@ -462,10 +470,10 @@ export default function FinanceDashboardPage() {
         </div>
 
         {/* Solde & Graphique */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
           <h2
-            className={`text-xl font-bold break-words ${
-              summary.balance >= 0 ? 'text-green-600' : 'text-red-600'
+            className={`text-xl sm:text-2xl font-semibold break-words ${
+              summary.balance >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'
             }`}
           >
             Solde actuel : {formatCurrency(summary.balance)} XOF
@@ -473,7 +481,7 @@ export default function FinanceDashboardPage() {
         </div>
 
         {showChart && (
-          <div className="w-full h-72 sm:h-80 mt-4">
+          <div className="w-full h-72 sm:h-80 mt-2 mb-6 bg-white border border-[#e5e7eb] rounded-2xl shadow-sm px-2 sm:px-4 py-3 transition-transform transform hover:-translate-y-0.5">
             <ResponsiveContainer>
               <PieChart>
                 <Pie
@@ -497,8 +505,8 @@ export default function FinanceDashboardPage() {
 
         {/* 👑 Admin : breakdown par rôle (vue filtrée) */}
         {user.role === 'admin' && (
-          <div className="mt-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <div className="mt-4 mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
               👥 Détails par rôle
             </h3>
             <RoleBreakdown transactions={filtered} />
@@ -506,7 +514,7 @@ export default function FinanceDashboardPage() {
         )}
 
         {/* 📘 Détails globaux (vue filtrée) */}
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="💰 Revenus"
             value={`${formatCurrency(summary.revenues)} XOF`}
@@ -532,9 +540,9 @@ export default function FinanceDashboardPage() {
 /** 📦 Petite carte statistique */
 function StatCard({ label, value }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-      <div className="text-sm text-gray-500 break-words">{label}</div>
-      <div className="text-xl font-semibold text-gray-900 mt-1 break-words">
+    <div className="bg-white border border-[#e5e7eb] rounded-2xl p-4 shadow-sm transition-transform transform hover:-translate-y-0.5 hover:shadow-md">
+      <div className="text-xs text-gray-500 break-words">{label}</div>
+      <div className="text-lg sm:text-xl font-semibold text-gray-900 mt-1 break-words">
         {value}
       </div>
     </div>
@@ -567,9 +575,11 @@ function RoleBreakdown({ transactions }) {
       .reduce((acc, t) => acc + Number(t.amount || 0), 0);
 
   const Block = ({ title, list, showAdjustments = false }) => (
-    <div className="border border-gray-200 rounded-xl p-4 mb-3 bg-white">
-      <h4 className="font-semibold text-gray-900 mb-2 break-words">{title}</h4>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-gray-700">
+    <div className="border border-[#e5e7eb] rounded-2xl p-4 mb-3 bg-white shadow-sm">
+      <h4 className="font-semibold text-gray-900 mb-2 break-words text-sm sm:text-base">
+        {title}
+      </h4>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs sm:text-sm text-gray-700">
         <div>Revenus : {sum(list, 'revenue').toFixed(2)} XOF</div>
         <div>Dépenses : {sum(list, 'expense').toFixed(2)} XOF</div>
         <div>Commissions : {sum(list, 'commission').toFixed(2)} XOF</div>

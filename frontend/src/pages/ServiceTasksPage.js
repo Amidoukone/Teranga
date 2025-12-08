@@ -5,12 +5,13 @@ import api from "../services/api";
 import { applyLabels } from "../utils/labels";
 
 /* ========================================================================
-   🔧 PAGE : ServiceTasksPage — Option B + Version Optimale Responsive
-   - Chargement des tâches du service
+   🔧 PAGE : ServiceTasksPage — Style A Premium 2025
+   - Chargement des tâches d’un service
    - Labels cohérents (statusLabel, typeLabel…)
    - UI responsive / mobile-first
-   - Styles premium cohérents avec ServicesPage
+   - Styles premium cohérents avec ServicesPage / TasksPage
    - Gestion erreurs + états de chargement
+   - ✅ Aucune modification fonctionnelle (seule la présentation change)
 =========================================================================== */
 
 export default function ServiceTasksPage() {
@@ -68,14 +69,17 @@ export default function ServiceTasksPage() {
   }, [id, authHeaders]);
 
   /* ============================================================
-     ⏳ Écran de chargement (premium)
+     ⏳ Écran de chargement premium
   ============================================================ */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
-        <div className="text-center">
-          <p className="text-gray-600 text-lg font-medium animate-pulse">
-            Chargement des tâches…
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
+        <div className="bg-white/90 border border-gray-100 rounded-2xl shadow-xl px-6 py-5 text-center max-w-md w-full">
+          <p className="text-sm font-semibold text-gray-900 mb-1">
+            Chargement des tâches du service…
+          </p>
+          <p className="text-xs text-gray-500 animate-pulse">
+            Merci de patienter un instant.
           </p>
         </div>
       </div>
@@ -87,38 +91,55 @@ export default function ServiceTasksPage() {
   ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
-      <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100">
+      <div className="max-w-5xl mx-auto bg-white shadow-2xl rounded-3xl border border-gray-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
         {/* 🧭 EN-TÊTE */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-4 border-b border-gray-100">
           <div className="break-words">
-            <h1 className="text-2xl font-bold text-gray-900 break-words">
+            <p className="text-[0.7rem] uppercase tracking-wide text-blue-600 font-semibold mb-1">
+              Tâches liées à un service
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 break-words">
               📋 Tâches du service #{id}
             </h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              Visualisez les tâches associées à ce service et accédez aux preuves
+              détaillées pour chaque action.
+            </p>
           </div>
 
           <button
             onClick={() => navigate(-1)}
-            className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 transition"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
           >
-            ← Retour
+            <span>← Retour</span>
           </button>
         </div>
 
         {/* Message d'erreur */}
         {errorMsg && (
-          <div className="mb-6 rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700 break-words">
-            {errorMsg}
+          <div className="mb-6 rounded-2xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700 flex gap-2 items-start">
+            <span className="mt-[2px]">⚠️</span>
+            <p className="break-words">{errorMsg}</p>
           </div>
         )}
 
         {/* Liste vide */}
         {tasks.length === 0 ? (
-          <p className="text-center text-gray-500 italic py-8">
-            Aucune tâche enregistrée pour ce service.
-          </p>
+          <div className="py-10 flex flex-col items-center justify-center text-center">
+            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+              <span className="text-xl">🗂️</span>
+            </div>
+            <p className="text-sm font-semibold text-gray-800 mb-1">
+              Aucune tâche enregistrée pour ce service.
+            </p>
+            <p className="text-xs text-gray-500 max-w-sm">
+              Vous pourrez créer des tâches depuis la page principale des tâches
+              ou via les services associés pour suivre vos actions.
+            </p>
+          </div>
         ) : (
-          <div className="grid gap-6">
+          <div className="grid gap-5">
             {tasks.map((t) => (
               <TaskCard key={t.id} task={t} navigate={navigate} />
             ))}
@@ -130,53 +151,72 @@ export default function ServiceTasksPage() {
 }
 
 /* ========================================================================
-   🧩 TaskCard — carte responsive & premium
+   🧩 TaskCard — carte responsive & premium (Style A)
+   ✅ Aucune modification fonctionnelle : même navigation / mêmes infos
 =========================================================================== */
 function TaskCard({ task, navigate }) {
   const statusClass =
     task.status === "created"
-      ? "bg-gray-100 text-gray-700"
+      ? "bg-gray-100 text-gray-700 border border-gray-200"
       : task.status === "in_progress"
-      ? "bg-blue-100 text-blue-700"
+      ? "bg-blue-50 text-blue-700 border border-blue-100"
       : task.status === "completed"
-      ? "bg-green-100 text-green-700"
+      ? "bg-green-50 text-green-700 border border-green-100"
       : task.status === "validated"
-      ? "bg-emerald-100 text-emerald-700"
-      : "bg-gray-100 text-gray-500";
+      ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+      : "bg-gray-100 text-gray-500 border border-gray-200";
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 sm:p-6 hover:shadow-md transition w-full break-words">
-
+    <div
+      className="
+        bg-gradient-to-br from-slate-50 via-white to-slate-50
+        border border-gray-200 rounded-2xl shadow-sm
+        p-4 sm:p-5 hover:shadow-md hover:border-blue-100 transition
+        w-full break-words
+      "
+    >
       {/* Titre + statut */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
         <div className="min-w-0">
-          <h3 className="text-lg font-bold text-gray-900 break-words">
+          <h3 className="text-base sm:text-lg font-bold text-gray-900 break-words">
             {task.title || `Tâche #${task.id}`}
           </h3>
 
-          <p className="text-sm text-gray-600 break-words mt-1">
+          <p className="text-xs sm:text-sm text-gray-600 break-words mt-1">
             {task.description || "Aucune description fournie."}
           </p>
         </div>
 
         <div
-          className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusClass}`}
+          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[0.7rem] font-semibold whitespace-nowrap ${statusClass}`}
         >
-          {task.statusLabel ||
-            (task.status ? task.status.replace("_", " ") : "—")}
+          <span>
+            {task.status === "created"
+              ? "🕓"
+              : task.status === "in_progress"
+              ? "⚙️"
+              : task.status === "completed"
+              ? "✅"
+              : task.status === "validated"
+              ? "✔️"
+              : "⏺"}
+          </span>
+          <span>
+            {task.statusLabel ||
+              (task.status ? task.status.replace("_", " ") : "—")}
+          </span>
         </div>
       </div>
 
       {/* Détails */}
-      <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
-
+      <div className="mt-4 sm:mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-gray-700">
         <div className="break-words">
-          <span className="font-semibold">Type :</span>{" "}
+          <span className="font-semibold text-gray-800">Type :</span>{" "}
           {task.typeLabel || task.type || "—"}
         </div>
 
         <div className="break-words">
-          <span className="font-semibold">Créateur :</span>{" "}
+          <span className="font-semibold text-gray-800">Créateur :</span>{" "}
           {task.creator?.email ||
             task.creator?.name ||
             task.creatorLabel ||
@@ -184,41 +224,51 @@ function TaskCard({ task, navigate }) {
         </div>
 
         <div className="break-words">
-          <span className="font-semibold">Assigné à :</span>{" "}
+          <span className="font-semibold text-gray-800">Assigné à :</span>{" "}
           {task.assignee
-            ? `${task.assignee.firstName || ""} ${
-                task.assignee.lastName || ""
-              }`.trim() || task.assignee.email
+            ? (
+                `${task.assignee.firstName || ""} ${
+                  task.assignee.lastName || ""
+                }`.trim() || task.assignee.email
+              )
             : "Non assigné"}
         </div>
 
-        <div>
-          <span className="font-semibold">ID tâche :</span>{" "}
+        <div className="break-words">
+          <span className="font-semibold text-gray-800">ID tâche :</span>{" "}
           {task.id}
         </div>
 
         {task.createdAt && (
-          <div>
-            <span className="font-semibold">Créée le :</span>{" "}
+          <div className="break-words">
+            <span className="font-semibold text-gray-800">Créée le :</span>{" "}
             {new Date(task.createdAt).toLocaleString("fr-FR")}
           </div>
         )}
 
         {task.updatedAt && (
-          <div>
-            <span className="font-semibold">Dernière MAJ :</span>{" "}
+          <div className="break-words">
+            <span className="font-semibold text-gray-800">
+              Dernière mise à jour :
+            </span>{" "}
             {new Date(task.updatedAt).toLocaleString("fr-FR")}
           </div>
         )}
       </div>
 
       {/* Actions */}
-      <div className="mt-6">
+      <div className="mt-5 sm:mt-6">
         <button
           onClick={() => navigate(`/tasks/${task.id}/evidences`)}
-          className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          className="
+            w-full sm:w-auto inline-flex items-center justify-center gap-1
+            px-4 py-2 text-xs sm:text-sm font-medium
+            bg-blue-600 text-white rounded-lg
+            hover:bg-blue-700 active:bg-blue-800 transition
+          "
         >
-          📎 Voir preuves
+          <span>📎</span>
+          <span>Voir preuves</span>
         </button>
       </div>
     </div>

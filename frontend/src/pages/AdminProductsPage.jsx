@@ -30,7 +30,7 @@ function toAbsUrl(path = "") {
 }
 
 /* ============================================================
-   ⭐ ADMIN PRODUITS PREMIUM
+   ⭐ ADMIN PRODUITS — Apple Light Premium (Table + Miniature)
 ============================================================ */
 export default function AdminProductsPage() {
   const [user, setUser] = useState(null);
@@ -57,8 +57,8 @@ export default function AdminProductsPage() {
   const [previewGalleryUrls, setPreviewGalleryUrls] = useState([]);
 
   /* ============================================================
-     LIGHTBOX (Fix + responsive améliorée)
-  ============================================================= */
+     LIGHTBOX (Premium + responsive)
+  ============================================================ */
   const [lightbox, setLightbox] = useState({
     open: false,
     product: null,
@@ -74,6 +74,8 @@ export default function AdminProductsPage() {
 
     const fallback = product.imageUrl ? [toAbsUrl(product.imageUrl)] : [];
     const final = imgs.length ? imgs : fallback;
+
+    if (!final.length) return;
 
     setLightbox({
       open: true,
@@ -106,7 +108,7 @@ export default function AdminProductsPage() {
 
   /* ============================================================
      INIT
-  ============================================================= */
+  ============================================================ */
   useEffect(() => {
     async function init() {
       try {
@@ -143,7 +145,7 @@ export default function AdminProductsPage() {
 
   /* ============================================================
      FORM HANDLERS
-  ============================================================= */
+  ============================================================ */
   function resetForm() {
     setForm({
       name: "",
@@ -172,8 +174,7 @@ export default function AdminProductsPage() {
 
   function handleGalleryChange(files) {
     previewGalleryUrls.forEach((u) => URL.revokeObjectURL(u));
-
-    const arr = Array.from(files).slice(0, 3);
+    const arr = Array.from(files || []).slice(0, 3);
     setForm((f) => ({ ...f, imageFiles: arr }));
     setPreviewGalleryUrls(arr.map((f) => URL.createObjectURL(f)));
   }
@@ -208,20 +209,18 @@ export default function AdminProductsPage() {
     }
   }
 
-async function handleDelete(id) {
-  // Correction ESLint : utilisation explicite de window.confirm()
-  if (!window.confirm("Supprimer ce produit ?")) return;
+  async function handleDelete(id) {
+    if (!window.confirm("Supprimer ce produit ?")) return;
 
-  try {
-    await deleteProduct(`${id}?force=true`);
-    await loadProducts();
-    alert("Produit supprimé !");
-  } catch (err) {
-    console.error("❌ Erreur suppression :", err);
-    alert("Erreur suppression");
+    try {
+      await deleteProduct(`${id}?force=true`);
+      await loadProducts();
+      alert("Produit supprimé !");
+    } catch (err) {
+      console.error("❌ Erreur suppression :", err);
+      alert("Erreur suppression");
+    }
   }
-}
-
 
   function handleEdit(p) {
     setEditing(p);
@@ -243,7 +242,7 @@ async function handleDelete(id) {
 
   /* ============================================================
      FILTRAGE
-  ============================================================= */
+  ============================================================ */
   const categoriesById = useMemo(() => {
     const m = new Map();
     categories.forEach((c) => m.set(c.id, c));
@@ -260,11 +259,11 @@ async function handleDelete(id) {
 
   /* ============================================================
      RENDER
-  ============================================================= */
+  ============================================================ */
   if (!user) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        Chargement…
+      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+        <p className="text-gray-600 text-lg animate-pulse">Chargement…</p>
       </div>
     );
   }
@@ -277,11 +276,11 @@ async function handleDelete(id) {
             HEADER
         ============================================ */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
               📦 Gestion des produits
             </h1>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 mt-1">
               Connecté : <strong>{user.email}</strong> ({user.role})
             </p>
           </div>
@@ -289,17 +288,17 @@ async function handleDelete(id) {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800"
+              className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-semibold shadow-sm"
             >
-              {showForm ? "➖ Masquer" : "➕ Nouveau"}
+              {showForm ? "➖ Masquer le formulaire" : "➕ Nouveau produit"}
             </button>
 
             <button
               disabled={loading}
               onClick={loadProducts}
-              className={`px-4 py-2 rounded-xl ${
+              className={`px-4 py-2 rounded-xl text-sm font-semibold shadow-sm ${
                 loading
-                  ? "bg-blue-300 cursor-not-allowed"
+                  ? "bg-blue-300 cursor-not-allowed text-white"
                   : "bg-blue-600 hover:bg-blue-700 text-white"
               }`}
             >
@@ -313,33 +312,34 @@ async function handleDelete(id) {
         ============================================ */}
         <div className="mb-6">
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
               🔍
             </span>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un produit…"
-              className="w-full pl-10 pr-3 py-2 rounded-xl border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-blue-500"
+              placeholder="Rechercher un produit (par nom)…"
+              className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </div>
+          <p className="mt-2 text-xs text-slate-500">
+            {filteredProducts.length} produit(s) affiché(s) sur {products.length}.
+          </p>
         </div>
 
         {/* ============================================
-            FORMULAIRE (Suite -> PARTIE 2)
-        ============================================ */}
-
-        {/* ============================================================
             FORMULAIRE PRODUIT
-        ============================================================ */}
+        ============================================ */}
         {showForm && (
           <form
             onSubmit={handleSubmit}
-            className="mb-10 bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-5"
+            className="mb-8 bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-5"
           >
             {/* NOM */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">Nom *</label>
+              <label className="text-xs font-semibold text-slate-700">
+                Nom *
+              </label>
               <input
                 value={form.name}
                 required
@@ -350,7 +350,9 @@ async function handleDelete(id) {
 
             {/* PRIX */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">Prix *</label>
+              <label className="text-xs font-semibold text-slate-700">
+                Prix *
+              </label>
               <input
                 type="number"
                 required
@@ -362,7 +364,9 @@ async function handleDelete(id) {
 
             {/* DEVISE */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">Devise</label>
+              <label className="text-xs font-semibold text-slate-700">
+                Devise
+              </label>
               <select
                 value={form.currency}
                 onChange={(e) => setForm({ ...form, currency: e.target.value })}
@@ -376,7 +380,9 @@ async function handleDelete(id) {
 
             {/* STOCK */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">Stock</label>
+              <label className="text-xs font-semibold text-slate-700">
+                Stock
+              </label>
               <input
                 type="number"
                 value={form.stock}
@@ -387,10 +393,14 @@ async function handleDelete(id) {
 
             {/* CATÉGORIE */}
             <div className="md:col-span-2 flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">Catégorie</label>
+              <label className="text-xs font-semibold text-slate-700">
+                Catégorie
+              </label>
               <select
                 value={form.categoryId}
-                onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, categoryId: e.target.value })
+                }
                 className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
               >
                 <option value="">— Sans catégorie —</option>
@@ -404,22 +414,30 @@ async function handleDelete(id) {
 
             {/* DESCRIPTION */}
             <div className="md:col-span-2 flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">Description</label>
+              <label className="text-xs font-semibold text-slate-700">
+                Description
+              </label>
               <textarea
                 rows={3}
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
                 className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white min-h-[80px] resize-y"
               ></textarea>
             </div>
 
             {/* IMAGE PRINCIPALE */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">Image principale</label>
+              <label className="text-xs font-semibold text-slate-700">
+                Image principale
+              </label>
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => handleCoverChange(e.target.files?.[0] || null)}
+                onChange={(e) =>
+                  handleCoverChange(e.target.files?.[0] || null)
+                }
                 className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
               />
             </div>
@@ -440,7 +458,9 @@ async function handleDelete(id) {
 
             {/* GALERIE */}
             <div className="md:col-span-2 flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">Galerie (max 3)</label>
+              <label className="text-xs font-semibold text-slate-700">
+                Galerie (max 3)
+              </label>
               <input
                 type="file"
                 multiple
@@ -466,85 +486,152 @@ async function handleDelete(id) {
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 hover:bg-slate-300"
+                className="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 hover:bg-slate-300 text-sm font-semibold"
               >
                 Réinitialiser
               </button>
 
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                className="px-5 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow-sm text-sm font-semibold"
               >
-                {editing ? "💾 Mettre à jour" : "➕ Ajouter"}
+                {editing ? "💾 Mettre à jour" : "➕ Ajouter le produit"}
               </button>
             </div>
           </form>
         )}
 
         {/* ============================================================
-            LISTE DES PRODUITS
+            TABLEAU DES PRODUITS — Option A1 (Miniature Apple Light)
         ============================================================ */}
-        <div className="space-y-4">
-          {filteredProducts.map((p) => {
-            const imgs = (p.allImageUrls || []).map(toAbsUrl);
-            const mainImg = imgs[0] || toAbsUrl(p.imageUrl);
+        <div className="mt-4">
+          <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm bg-white">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                    Produit
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                    Prix
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                    Stock
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                    Catégorie
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-6 text-center text-slate-500 text-sm italic"
+                    >
+                      Aucun produit trouvé pour ces critères.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProducts.map((p) => {
+                    const imgs = (p.allImageUrls || []).map(toAbsUrl);
+                    const mainImg = imgs[0] || toAbsUrl(p.imageUrl);
+                    const cat = p.category || categoriesById.get(p.categoryId);
 
-            const cat = p.category || categoriesById.get(p.categoryId);
+                    return (
+                      <tr
+                        key={p.id}
+                        className="border-t border-slate-100 hover:bg-slate-50 transition-colors"
+                      >
+                        {/* Produit (miniature + infos) */}
+                        <td className="px-4 py-3 align-top">
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => openLightbox(p, 0)}
+                              className="w-14 h-14 rounded-xl border border-slate-200 overflow-hidden bg-slate-100 flex-shrink-0 hover:border-blue-400 transition"
+                            >
+                              {mainImg ? (
+                                <img
+                                  src={mainImg}
+                                  alt={p.name}
+                                  className="object-cover w-full h-full"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">
+                                  Pas d’image
+                                </div>
+                              )}
+                            </button>
 
-            return (
-              <div
-                key={p.id}
-                className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row justify-between gap-4"
-              >
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => openLightbox(p, 0)}
-                    className="w-24 h-24 rounded-xl border overflow-hidden bg-slate-100 hover:border-blue-400 transition"
-                  >
-                    {mainImg ? (
-                      <img src={mainImg} alt={p.name} className="object-cover w-full h-full" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">
-                        —
-                      </div>
-                    )}
-                  </button>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-slate-900 truncate">
+                                {p.name || "—"}
+                              </div>
+                              <div className="text-[11px] text-slate-400 mt-1">
+                                ID : #{p.id}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
 
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-900 truncate">
-                      {p.name} <span className="text-xs text-slate-400">#{p.id}</span>
-                    </h3>
-                    <p className="text-sm text-slate-700">
-                      {Number(p.price).toLocaleString()} {formatCurrency(p.currency)}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Stock : {p.stock} {cat ? `• Catégorie : ${cat.name}` : ""}
-                    </p>
-                  </div>
-                </div>
+                        {/* Prix */}
+                        <td className="px-4 py-3 align-top whitespace-nowrap">
+                          <div className="font-semibold text-slate-900">
+                            {Number(p.price || 0).toLocaleString("fr-FR")}{" "}
+                            {formatCurrency(p.currency)}
+                          </div>
+                        </td>
 
-                <div className="flex sm:flex-col gap-2 sm:items-end">
-                  <button
-                    onClick={() => handleEdit(p)}
-                    className="px-3 py-1.5 text-xs rounded-xl bg-amber-500 text-white hover:bg-amber-600"
-                  >
-                    ✏️ Modifier
-                  </button>
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="px-3 py-1.5 text-xs rounded-xl bg-red-600 text-white hover:bg-red-700"
-                  >
-                    🗑 Supprimer
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                        {/* Stock */}
+                        <td className="px-4 py-3 align-top whitespace-nowrap">
+                          <span className="text-sm text-slate-800">
+                            {p.stock ?? 0}
+                          </span>
+                        </td>
+
+                        {/* Catégorie */}
+                        <td className="px-4 py-3 align-top">
+                          <span className="text-sm text-slate-800">
+                            {cat ? cat.name : "—"}
+                          </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-4 py-3 align-top">
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(p)}
+                              className="px-3 py-1.5 text-xs rounded-xl bg-amber-500 text-white hover:bg-amber-600"
+                            >
+                              ✏️ Modifier
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(p.id)}
+                              className="px-3 py-1.5 text-xs rounded-xl bg-red-600 text-white hover:bg-red-700"
+                            >
+                              🗑 Supprimer
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {/* ============================================================
-          LIGHTBOX PREMIUM (FIX: bouton fermer toujours visible)
+          LIGHTBOX PREMIUM (Fix: bouton fermer toujours visible)
       ============================================================ */}
       {lightbox.open && lightbox.product && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4 select-none">
@@ -552,7 +639,7 @@ async function handleDelete(id) {
             className="relative bg-black rounded-2xl max-w-3xl w-full border border-slate-700 overflow-hidden"
             role="dialog"
           >
-            {/* Bouton fermer — toujours visible */}
+            {/* Bouton fermer */}
             <button
               onClick={closeLightbox}
               className="absolute top-3 right-3 z-50 bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-full text-sm font-semibold backdrop-blur-md"

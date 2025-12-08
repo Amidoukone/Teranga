@@ -1,5 +1,6 @@
 // ============================================================
-// ProductDetailPage.jsx — Teranga PRODUCTION READY (Option B)
+// ProductDetailPage.jsx — Teranga PRODUCTION READY (Style A 2025)
+// Design premium + responsive, aucune régression fonctionnelle
 // ============================================================
 
 import { useEffect, useState } from 'react';
@@ -29,6 +30,7 @@ function normalizePath(path = '') {
 
 function toAbsUrl(path = '') {
   const norm = normalizePath(path);
+  if (!norm) return '';
   if (/^https?:\/\//i.test(norm)) return norm;
 
   return (
@@ -39,7 +41,7 @@ function toAbsUrl(path = '') {
 }
 
 /* ============================================================
-   ⭐ PAGE DÉTAIL PRODUIT
+   ⭐ PAGE DÉTAIL PRODUIT — Style A
 ============================================================ */
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -82,15 +84,16 @@ export default function ProductDetailPage() {
         setLoading(false);
       }
     }
+
     if (id) loadProduct();
   }, [id]);
 
   /* ============================================================
-     🌀 Load/Errors
+     🌀 Load/Errors — écrans harmonisés Style A
   ============================================================= */
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
         <p className="text-gray-600 text-lg animate-pulse">
           Chargement du produit…
         </p>
@@ -100,13 +103,15 @@ export default function ProductDetailPage() {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <p className="text-red-600 text-lg mb-4">{error}</p>
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
+        <div className="max-w-md w-full bg-white border border-red-100 rounded-2xl shadow-lg p-6 text-center">
+          <p className="text-red-600 text-base sm:text-lg mb-4 break-words">
+            {error}
+          </p>
 
           <Link
             to="/shop"
-            className="inline-block px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition"
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
           >
             ← Retour au catalogue
           </Link>
@@ -117,14 +122,14 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <p className="text-gray-500 text-lg italic mb-4">
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
+        <div className="max-w-md w-full bg-white border border-gray-100 rounded-2xl shadow-lg p-6 text-center">
+          <p className="text-gray-500 text-base sm:text-lg italic mb-4">
             Produit introuvable.
           </p>
           <Link
             to="/shop"
-            className="inline-block px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition"
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
           >
             ← Retour au catalogue
           </Link>
@@ -187,123 +192,213 @@ export default function ProductDetailPage() {
   }
 
   /* ============================================================
-     🧱 UI PRINCIPALE
+     🧱 UI PRINCIPALE — Style A premium
   ============================================================= */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-6 py-10">
-      <div className="max-w-4xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 sm:px-6 py-10">
+      <div className="max-w-5xl mx-auto">
 
-        <div className="flex flex-col md:flex-row gap-6">
-
-          {/* ===========================
-              🖼 Bloc images
-              ========================== */}
-          <div className="w-full md:w-1/2">
-
-            {hasImages ? (
-              <>
-                {/* Image principale */}
-                <div
-                  className="relative cursor-zoom-in group"
-                  onClick={openLightbox}
-                  aria-label={`Voir image ${selectedIndex + 1} de ${images.length}`}
-                >
-                  <img
-                    src={currentImage}
-                    alt={name}
-                    className="w-full h-80 object-cover rounded-xl border border-gray-200"
-                  />
-
-                  <div className="absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/10 transition" />
-
-                  {images.length > 1 && (
-                    <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-full">
-                      {selectedIndex + 1} / {images.length}
-                    </span>
-                  )}
-                </div>
-
-                {/* Vignettes */}
-                {images.length > 1 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {images.map((img, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setSelectedIndex(idx)}
-                        className={`border rounded-lg overflow-hidden w-16 h-16 ${
-                          idx === selectedIndex
-                            ? 'ring-2 ring-blue-500 border-blue-500'
-                            : 'border-gray-200 hover:border-blue-300'
-                        }`}
-                        aria-label={`Voir la vignette ${idx + 1}`}
-                      >
-                        <img
-                          src={img}
-                          alt={`${name} vignette ${idx + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="w-full h-80 flex items-center justify-center rounded-xl border border-dashed border-gray-300 text-gray-400 text-sm bg-gray-50">
-                Aucun visuel disponible
-              </div>
-            )}
-
+        {/* HEADER / BREADCRUMB LIGHT */}
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <Link
+                to="/shop"
+                className="inline-flex items-center gap-1 hover:text-slate-700"
+              >
+                <span>Catalogue</span>
+                <span aria-hidden="true">/</span>
+              </Link>
+              <span className="font-medium text-slate-700 line-clamp-1">
+                {name}
+              </span>
+            </div>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900">
+              Détail du produit
+            </h1>
           </div>
 
-          {/* ===========================
-              📄 Bloc infos
-              ========================== */}
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {name}
-            </h1>
+          {product.id && (
+            <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full bg-white/80 border border-slate-200 text-[11px] text-slate-500 font-mono">
+              ID&nbsp;#{product.id}
+            </span>
+          )}
+        </div>
 
-            {category?.name && (
-              <p className="text-xs inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full border border-blue-100 mb-3">
-                {category.name}
-              </p>
-            )}
+        {/* CARD PRINCIPALE */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8">
+          <div className="flex flex-col md:flex-row gap-6 lg:gap-8">
 
-            <p className="text-gray-600 mb-4 whitespace-pre-line">
-              {description || 'Aucune description disponible.'}
-            </p>
+            {/* ===========================
+                🖼 Bloc images
+               =========================== */}
+            <div className="w-full md:w-1/2">
+              {hasImages ? (
+                <>
+                  {/* Image principale */}
+                  <div
+                    className="relative cursor-zoom-in group"
+                    onClick={openLightbox}
+                    aria-label={`Voir image ${selectedIndex + 1} de ${images.length}`}
+                  >
+                    <img
+                      src={currentImage}
+                      alt={name}
+                      className="
+                        w-full h-80 sm:h-96 object-cover rounded-2xl
+                        border border-slate-200
+                        shadow-sm
+                        transition-transform duration-200
+                        group-hover:scale-[1.01]
+                      "
+                    />
 
-            <p className="text-2xl font-semibold text-blue-600 mb-4">
-              {formatCurrency(currency || 'XOF')}{' '}
-              {Number(price || 0).toLocaleString()}
-            </p>
+                    {/* Overlay */}
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/30 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition" />
 
-            {typeof stock === 'number' && (
-              <p className="text-sm text-gray-500 mb-4">
-                <span className="font-medium">Stock :</span> {stock}
-              </p>
-            )}
+                    {/* Compteur d'images */}
+                    {images.length > 1 && (
+                      <span className="absolute bottom-3 right-3 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-full">
+                        {selectedIndex + 1} / {images.length}
+                      </span>
+                    )}
 
-            <Link
-              to="/shop"
-              className="inline-block mt-2 px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition"
-            >
-              ← Retour au catalogue
-            </Link>
+                    {/* Hint zoom */}
+                    <span className="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full">
+                      Cliquer pour agrandir
+                    </span>
+                  </div>
+
+                  {/* Vignettes */}
+                  {images.length > 1 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {images.map((img, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setSelectedIndex(idx)}
+                          className={`
+                            relative w-16 h-16 rounded-lg overflow-hidden border flex-shrink-0
+                            transition
+                            ${
+                              idx === selectedIndex
+                                ? 'border-blue-500 ring-2 ring-blue-400/70'
+                                : 'border-slate-200 hover:border-blue-300'
+                            }
+                          `}
+                          aria-label={`Voir la vignette ${idx + 1}`}
+                        >
+                          <img
+                            src={img}
+                            alt={`${name} vignette ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="w-full h-80 sm:h-96 flex items-center justify-center rounded-2xl border border-dashed border-slate-300 text-slate-400 text-sm bg-slate-50">
+                  Aucun visuel disponible
+                </div>
+              )}
+            </div>
+
+            {/* ===========================
+                📄 Bloc infos
+               =========================== */}
+            <div className="flex-1 flex flex-col">
+              {/* Catégorie + titre */}
+              <div className="mb-3">
+                {category?.name && (
+                  <p className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full border border-blue-100 text-[11px] font-medium mb-2">
+                    {category.name}
+                  </p>
+                )}
+
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 break-words">
+                  {name}
+                </h2>
+              </div>
+
+              {/* Prix + stock */}
+              <div className="flex flex-wrap items-center gap-4 mb-4">
+                <div>
+                  <p className="text-[11px] uppercase text-slate-400">
+                    Prix
+                  </p>
+                  <p className="text-2xl sm:text-3xl font-semibold text-blue-600">
+                    {formatCurrency(currency || 'XOF')}{' '}
+                    {Number(price || 0).toLocaleString()}
+                  </p>
+                </div>
+
+                {typeof stock === 'number' && (
+                  <div>
+                    <p className="text-[11px] uppercase text-slate-400">
+                      Stock
+                    </p>
+                    <p
+                      className={`text-sm font-semibold ${
+                        stock > 0 ? 'text-emerald-600' : 'text-rose-600'
+                      }`}
+                    >
+                      {stock > 0
+                        ? `${stock} article${stock > 1 ? 's' : ''} disponible${
+                            stock > 1 ? 's' : ''
+                          }`
+                        : 'Rupture de stock'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
+              <div className="mb-4 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                {description || 'Aucune description disponible.'}
+              </div>
+
+              {/* Métadonnées complémentaires (facultatives, mais non bloquantes) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-500 mb-6">
+                {product.createdAt && (
+                  <div>
+                    <span className="font-semibold">Créé le :</span>{' '}
+                    {new Date(product.createdAt).toLocaleDateString('fr-FR')}
+                  </div>
+                )}
+                {product.updatedAt && (
+                  <div>
+                    <span className="font-semibold">Dernière mise à jour :</span>{' '}
+                    {new Date(product.updatedAt).toLocaleDateString('fr-FR')}
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="mt-auto flex flex-wrap gap-3">
+                <Link
+                  to="/shop"
+                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
+                >
+                  ← Retour au catalogue
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ============================================================
-          💡 LIGHTBOX PLEIN ÉCRAN
-      ============================================================ */}
+          💡 LIGHTBOX PLEIN ÉCRAN — conservée, design amélioré
+      ============================================================= */}
       {lightboxOpen && hasImages && (
         <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4"
           onClick={closeLightbox}
           role="dialog"
           aria-modal="true"
+          aria-label={`Images du produit ${name}`}
         >
           {/* Close */}
           <button
@@ -312,19 +407,19 @@ export default function ProductDetailPage() {
               e.stopPropagation();
               closeLightbox();
             }}
-            className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80"
+            className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white"
             aria-label="Fermer la lightbox"
           >
             ✕
           </button>
 
-          {/* Nav */}
+          {/* Navigation */}
           {images.length > 1 && (
             <>
               <button
                 type="button"
                 onClick={goPrev}
-                className="absolute left-4 text-white text-2xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70"
+                className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
                 aria-label="Image précédente"
               >
                 ‹
@@ -333,7 +428,7 @@ export default function ProductDetailPage() {
               <button
                 type="button"
                 onClick={goNext}
-                className="absolute right-4 text-white text-2xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70"
+                className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
                 aria-label="Image suivante"
               >
                 ›
@@ -341,10 +436,11 @@ export default function ProductDetailPage() {
             </>
           )}
 
+          {/* Image principale */}
           <img
             src={currentImage}
             alt={`${name} (image ${selectedIndex + 1})`}
-            className="max-w-[90vw] max-h-[80vh] object-contain rounded-xl shadow-2xl border border-white/20"
+            className="max-w-[92vw] max-h-[80vh] object-contain rounded-xl shadow-2xl border border-white/20"
           />
 
           {images.length > 1 && (

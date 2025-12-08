@@ -1,5 +1,5 @@
 // ============================================================================
-// TasksPage.jsx — VERSION PRODUCTION READY (Option B, 100% stable & responsive)
+// TasksPage.jsx — VERSION PREMIUM 2025 (Design amélioré, 100% stable)
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -271,7 +271,7 @@ export default function TasksPage() {
   // ========================================================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100">
+      <div className="max-w-6xl mx-auto bg-white/95 shadow-2xl rounded-3xl p-4 sm:p-8 border border-gray-100">
 
         {/* HEADER */}
         <Header
@@ -279,6 +279,7 @@ export default function TasksPage() {
           setShowForm={setShowForm}
           loadTasks={loadTasks}
           loading={loading}
+          total={filtered.length}
         />
 
         {/* FILTRES */}
@@ -323,22 +324,26 @@ export default function TasksPage() {
 // 🧩 SOUS-COMPOSANTS (UI premium & responsive)
 // ============================================================================
 
-function Header({ showForm, setShowForm, loadTasks, loading }) {
+function Header({ showForm, setShowForm, loadTasks, loading, total }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7 pb-4 border-b border-gray-100">
       <div className="max-w-full break-words">
-        <h1 className="text-2xl font-bold text-gray-900">
-          📋 Gestion des Tâches
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
+          📋 Gestion des tâches
         </h1>
-        <p className="text-sm text-gray-500">
-          Créez, assignez et suivez vos tâches.
+        <p className="text-sm sm:text-base text-gray-600 mt-1">
+          Créez, assignez et suivez vos tâches opérationnelles au même endroit.
+        </p>
+        <p className="mt-2 inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+          {total} tâche(s) affichée(s) avec les filtres actuels.
         </p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
+          className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
         >
           {showForm ? '➖ Masquer le formulaire' : '➕ Nouvelle tâche'}
         </button>
@@ -346,7 +351,7 @@ function Header({ showForm, setShowForm, loadTasks, loading }) {
         <button
           onClick={loadTasks}
           disabled={loading}
-          className={`w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition ${
+          className={`w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition ${
             loading
               ? 'bg-blue-300 cursor-not-allowed text-white'
               : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -361,22 +366,26 @@ function Header({ showForm, setShowForm, loadTasks, loading }) {
 
 function TaskFilters({ filters, setFilters, services, agents, user, filteredCount }) {
   return (
-    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5">
+    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 
         {/* Recherche */}
         <input
-          placeholder="🔎 Rechercher une tâche"
+          placeholder="🔎 Rechercher une tâche (titre, description, service...)"
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-1 sm:col-span-2 lg:col-span-3 break-words"
+          className="
+            border border-gray-300 rounded-lg px-3 py-2.5 text-sm sm:text-base
+            focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+            col-span-1 sm:col-span-2 lg:col-span-3 break-words
+          "
         />
 
         {/* Type */}
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Type (tous)</option>
           {Object.entries(TASK_TYPES).map(([key, label]) => (
@@ -388,7 +397,7 @@ function TaskFilters({ filters, setFilters, services, agents, user, filteredCoun
         <select
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Statut (tous)</option>
           {Object.entries(TASK_STATUSES).map(([key, label]) => (
@@ -400,7 +409,7 @@ function TaskFilters({ filters, setFilters, services, agents, user, filteredCoun
         <select
           value={filters.priority}
           onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Priorité (toutes)</option>
           {Object.entries(TASK_PRIORITIES).map(([key, label]) => (
@@ -412,7 +421,7 @@ function TaskFilters({ filters, setFilters, services, agents, user, filteredCoun
         <select
           value={filters.service}
           onChange={(e) => setFilters({ ...filters, service: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Service (tous)</option>
           {services.map((s) => (
@@ -427,7 +436,7 @@ function TaskFilters({ filters, setFilters, services, agents, user, filteredCoun
           <select
             value={filters.agent}
             onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Agent (tous)</option>
             {agents.map((a) => (
@@ -439,8 +448,10 @@ function TaskFilters({ filters, setFilters, services, agents, user, filteredCoun
         )}
       </div>
 
-      <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="text-xs text-gray-500">{filteredCount} tâche(s)</div>
+      <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="text-xs sm:text-sm text-gray-500">
+          {filteredCount} tâche(s) trouvée(s).
+        </div>
         <button
           onClick={() =>
             setFilters({
@@ -452,38 +463,48 @@ function TaskFilters({ filters, setFilters, services, agents, user, filteredCoun
               agent: '',
             })
           }
-          className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 w-full sm:w-auto text-center"
+          className="
+            text-xs sm:text-sm px-3 py-1.5 bg-gray-200 rounded-md
+            hover:bg-gray-300 w-full sm:w-auto text-center
+          "
         >
-          Réinitialiser
+          Réinitialiser tous les filtres
         </button>
       </div>
     </div>
   );
 }
+
 function TaskForm({ form, setForm, services, agents, user, createTask }) {
   return (
     <div className="mb-10">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">
-        ➕ Créer une tâche
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">
+        ➕ Créer une nouvelle tâche
       </h2>
+      <p className="text-xs sm:text-sm text-gray-500 mb-4">
+        Renseignez les informations ci-dessous pour organiser clairement le travail à effectuer.
+      </p>
 
       <form
         onSubmit={createTask}
         className="
           grid grid-cols-1 sm:grid-cols-2 gap-4
-          bg-gray-50 p-4 sm:p-5 rounded-xl border border-gray-200
+          bg-gray-50 p-4 sm:p-5 rounded-2xl border border-gray-200
         "
       >
         {/* Service lié */}
         <div className="w-full">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Service associé *
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+            Service associé <span className="text-red-500">*</span>
           </label>
           <select
             value={form.serviceId}
             onChange={(e) => setForm({ ...form, serviceId: e.target.value })}
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="
+              w-full border border-gray-300 rounded-lg px-3 py-2
+              text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+            "
           >
             <option value="">— Choisir un service —</option>
             {services.map((s) => (
@@ -496,14 +517,17 @@ function TaskForm({ form, setForm, services, agents, user, createTask }) {
 
         {/* Type de tâche */}
         <div className="w-full">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
             Type de tâche
           </label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="
+              w-full border border-gray-300 rounded-lg px-3 py-2
+              text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+            "
           >
             {Object.entries(TASK_TYPES).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
@@ -513,88 +537,106 @@ function TaskForm({ form, setForm, services, agents, user, createTask }) {
 
         {/* Titre */}
         <div className="w-full col-span-1 sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Titre de la tâche *
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+            Titre de la tâche <span className="text-red-500">*</span>
           </label>
           <input
-            placeholder="Titre de la tâche"
+            placeholder="Ex : Inspection du bien à Hamdallaye"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 break-words"
+            className="
+              w-full border border-gray-300 rounded-lg px-3 py-2
+              text-sm sm:text-base focus:ring-2 focus:ring-blue-500 break-words
+            "
           />
         </div>
 
         {/* Description */}
         <div className="w-full col-span-1 sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
             Description
           </label>
           <textarea
-            placeholder="Description"
+            placeholder="Ajoutez des détails pour que l’agent comprenne clairement la mission."
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 break-words"
+            className="
+              w-full border border-gray-300 rounded-lg px-3 py-2
+              text-sm sm:text-base focus:ring-2 focus:ring-blue-500 break-words
+            "
           />
         </div>
 
         {/* Priorité */}
         <div className="w-full">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
             Priorité
           </label>
           <select
             value={form.priority}
             onChange={(e) => setForm({ ...form, priority: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="
+              w-full border border-gray-300 rounded-lg px-3 py-2
+              text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+            "
           >
             {Object.entries(TASK_PRIORITIES).map(([key, label]) => (
-              <option key={key} value={key}>Priorité : {label}</option>
+              <option key={key} value={key}>{label}</option>
             ))}
           </select>
         </div>
 
         {/* Date d’échéance */}
         <div className="w-full">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
             Date d’échéance
           </label>
           <input
             type="date"
             value={form.dueDate}
             onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="
+              w-full border border-gray-300 rounded-lg px-3 py-2
+              text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+            "
           />
         </div>
 
         {/* Coût estimé */}
         <div className="w-full">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
             Coût estimé (FCFA)
           </label>
           <input
             type="number"
             step="0.01"
-            placeholder="Ex: 15000"
+            placeholder="Ex : 15 000"
             value={form.estimatedCost}
             onChange={(e) => setForm({ ...form, estimatedCost: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            className="
+              w-full border border-gray-300 rounded-lg px-3 py-2
+              text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+            "
           />
         </div>
 
         {/* Assignation (admin uniquement) */}
         {user?.role === 'admin' && (
           <div className="w-full">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
               Assigné à (optionnel)
             </label>
             <select
               value={form.assignedTo}
               onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              className="
+                w-full border border-gray-300 rounded-lg px-3 py-2
+                text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+              "
             >
-              <option value="">— Assigné à (optionnel) —</option>
+              <option value="">— Aucun agent (pour l’instant) —</option>
               {agents.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.firstName || a.lastName
@@ -612,10 +654,10 @@ function TaskForm({ form, setForm, services, agents, user, createTask }) {
             type="submit"
             className="
               w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white rounded-lg
-              text-sm font-semibold hover:bg-blue-700 transition
+              text-sm sm:text-base font-semibold hover:bg-blue-700 transition
             "
           >
-            Créer tâche
+            Créer la tâche
           </button>
         </div>
       </form>
@@ -626,7 +668,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask }) {
 function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displayUser, agents }) {
   if (!tasks || tasks.length === 0) {
     return (
-      <p className="text-gray-500 italic text-center py-6">
+      <p className="text-gray-500 italic text-center py-8">
         Aucune tâche trouvée avec ces filtres.
       </p>
     );
@@ -638,25 +680,25 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
         <div
           key={t.id}
           className="
-            bg-white border border-gray-200 rounded-xl shadow-sm
+            bg-white border border-gray-200 rounded-2xl shadow-sm
             p-4 sm:p-5 hover:shadow-md transition
           "
         >
           {/* En-tête : titre + statut */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
             <div className="min-w-0 break-words">
-              <h3 className="text-lg font-semibold text-gray-900 break-words">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">
                 {t.title}
               </h3>
-              <p className="text-sm text-gray-600 mt-1 break-words">
+              <p className="text-sm sm:text-base text-gray-600 mt-1 break-words">
                 {t.description || 'Aucune description'}
               </p>
             </div>
 
             <div
               className={`
-                mt-1 sm:mt-0 px-3 py-1 rounded-full text-xs font-semibold
-                whitespace-nowrap
+                mt-1 sm:mt-0 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold
+                whitespace-nowrap self-start
                 ${
                   t.status === 'created'
                     ? 'bg-gray-100 text-gray-700'
@@ -673,7 +715,7 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
           </div>
 
           {/* Meta infos */}
-          <div className="mt-3 text-sm text-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="mt-4 text-sm sm:text-base text-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-2">
             <p className="break-words">
               <strong>Type :</strong> {t.typeLabel || TASK_TYPES[t.type]}
             </p>
@@ -699,11 +741,11 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
             <button
               onClick={() => navigate(`/tasks/${t.id}/evidences`)}
               className="
-                w-full sm:w-auto px-4 py-2 bg-blue-600 text-white text-sm
+                w-full sm:w-auto px-4 py-2 bg-blue-600 text-white text-sm sm:text-base
                 font-medium rounded-lg hover:bg-blue-700 transition
               "
             >
-              📎 Voir preuves
+              📎 Voir les preuves
             </button>
 
             {/* Assignation (admin) */}
@@ -713,7 +755,7 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
                 defaultValue=""
                 className="
                   w-full sm:w-auto border border-gray-300 rounded-lg px-3 py-2
-                  text-sm
+                  text-sm sm:text-base
                 "
               >
                 <option value="">— Assigner à un agent —</option>
@@ -730,7 +772,7 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
               <button
                 onClick={() => updateStatus(t.id, 'in_progress')}
                 className="
-                  w-full sm:w-auto px-4 py-2 bg-yellow-500 text-white text-sm
+                  w-full sm:w-auto px-4 py-2 bg-yellow-500 text-white text-sm sm:text-base
                   font-medium rounded-lg hover:bg-yellow-600 transition
                 "
               >
@@ -743,7 +785,7 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
               <button
                 onClick={() => updateStatus(t.id, 'completed')}
                 className="
-                  w-full sm:w-auto px-4 py-2 bg-green-600 text-white text-sm
+                  w-full sm:w-auto px-4 py-2 bg-green-600 text-white text-sm sm:text-base
                   font-medium rounded-lg hover:bg-green-700 transition
                 "
               >
@@ -756,7 +798,7 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
               <button
                 onClick={() => updateStatus(t.id, 'validated')}
                 className="
-                  w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white text-sm
+                  w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white text-sm sm:text-base
                   font-medium rounded-lg hover:bg-emerald-700 transition
                 "
               >

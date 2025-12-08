@@ -1,24 +1,42 @@
 // ============================================================================
-// NavBar.jsx — Version Ultra-Premium PRO 2025 (avec LOGO TERANGA)
-// Design moderne • Mobile-first • Accessible • Ultra-stable
+// NavBar.jsx — Version Ultra-Premium PRO 2025 (A1 – Option C)
+// Bottom Navigation Premium • Mobile-first • Desktop Navigation
+// Desktop: Logout Button • Panel Plus visible & accessible
+// Optimisée avec React.memo, useCallback, aria-*
 // ============================================================================
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  memo,
+} from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { me, logout, getLocalUser } from "../services/auth";
-import { Menu, X, LogOut } from "lucide-react";
+
+import {
+  X,
+  LogOut,
+  Home,
+  FolderKanban,
+  Wrench,
+  ReceiptEuro,
+  CreditCard,
+  MoreHorizontal,
+  BarChart3,
+} from "lucide-react";
+
 import { motion, AnimatePresence } from "framer-motion";
 
-// Petite latence douce UX
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
-/* ============================================================================
-   🔧 Normalisation du rôle (alignée avec Dashboard)
-============================================================================ */
-function normalizeRole(rawRole) {
-  if (!rawRole) return "client";
-  const r = String(rawRole).toLowerCase();
-
+/* ============================================================================ */
+/* ROLE */
+/* ============================================================================ */
+function normalizeRole(raw) {
+  if (!raw) return "client";
+  const r = raw.toLowerCase();
   if (r.includes("admin")) return "admin";
   if (r.includes("agent")) return "agent";
   return "client";
@@ -31,10 +49,10 @@ function prettyRoleLabel(role) {
   return "CLIENT";
 }
 
-/* ============================================================================
-   🔗 Liens statiques par rôle (hors composant pour éviter les warnings ESLint)
-============================================================================ */
-const commerceLinksCommon = [
+/* ============================================================================ */
+/* LINKS */
+/* ============================================================================ */
+const COMMON_COMMERCE = [
   { path: "/shop", label: "🛍️ Produits" },
   { path: "/orders", label: "🧾 Commandes" },
 ];
@@ -48,9 +66,8 @@ const ROLE_LINKS = {
     { path: "/tasks", label: "📋 Tâches" },
     { path: "/transactions", label: "💰 Transactions" },
     { path: "/finance", label: "📈 Finances" },
-    ...commerceLinksCommon,
+    ...COMMON_COMMERCE,
   ],
-
   agent: [
     { path: "/dashboard", label: "📊 Dashboard" },
     { path: "/projects", label: "📁 Projets assignés" },
@@ -58,143 +75,151 @@ const ROLE_LINKS = {
     { path: "/tasks", label: "📋 Tâches" },
     { path: "/transactions", label: "💰 Transactions" },
     { path: "/finance", label: "📈 Finances" },
-    ...commerceLinksCommon,
+    ...COMMON_COMMERCE,
   ],
-
   admin: [
     { path: "/dashboard", label: "📊 Dashboard" },
     { path: "/projects", label: "📁 Projets" },
     { path: "/admin/projects", label: "🧩 Gestion des projets" },
     { path: "/services", label: "🧾 Services" },
     { path: "/tasks", label: "📋 Tâches" },
-    { path: "/admin/services", label: "🧩 Gestion des services" },
+    { path: "/admin/services", label: "🧩 Gestion services" },
     { path: "/admin/agents", label: "👥 Agents" },
-    { path: "/admin/users", label: "📁 Utilisateurs" },
+    { path: "/admin/users", label: "👤 Utilisateurs" },
     { path: "/admin/properties", label: "🏡 Biens clients" },
     { path: "/transactions", label: "💰 Transactions" },
     { path: "/finance", label: "📈 Finances" },
-    ...commerceLinksCommon,
+    ...COMMON_COMMERCE,
     { path: "/admin/catalog/categories", label: "🗂️ Catégories" },
     { path: "/admin/catalog/products", label: "📦 Produits" },
   ],
 };
 
-export default function NavBar() {
-  // ⚡ Chargement instantané via cache local
-  const [user, setUser] = useState(() => getLocalUser() || null);
-  const [loading, setLoading] = useState(() => !getLocalUser());
-  const [open, setOpen] = useState(false);
+const BOTTOM_LINKS = {
+  client: [
+    { key: "dashboard", path: "/dashboard", label: "Accueil", icon: Home },
+    { key: "projects", path: "/projects", label: "Projets", icon: FolderKanban },
+    { key: "services", path: "/services", label: "Services", icon: Wrench },
+    { key: "transactions", path: "/transactions", label: "Flux", icon: ReceiptEuro },
+  ],
+  agent: [
+    { key: "dashboard", path: "/dashboard", label: "Accueil", icon: Home },
+    { key: "projects", path: "/projects", label: "Projets", icon: FolderKanban },
+    { key: "agentServices", path: "/agent/services", label: "Services", icon: Wrench },
+    { key: "transactions", path: "/transactions", label: "Flux", icon: ReceiptEuro },
+  ],
+  admin: [
+    { key: "dashboard", path: "/dashboard", label: "Accueil", icon: Home },
+    { key: "adminProjects", path: "/admin/projects", label: "Projets", icon: BarChart3 },
+    { key: "adminServices", path: "/admin/services", label: "Services", icon: Wrench },
+    { key: "finance", path: "/finance", label: "Finances", icon: CreditCard },
+  ],
+};
 
+/* ============================================================================ */
+/* COMPONENT */
+/* ============================================================================ */
+function NavBar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  /* ============================================================================
-     🔐 Synchronisation utilisateur (cache → puis /auth/me)
-  ============================================================================ */
+  const [user, setUser] = useState(() => getLocalUser());
+  const [loading, setLoading] = useState(() => !getLocalUser());
+  const [openMore, setOpenMore] = useState(false);
+
+  /* LOAD USER */
   useEffect(() => {
     let active = true;
 
-    async function fetchUser() {
+    async function load() {
       try {
         const res = await me();
-        if (!active) return;
-        setUser(res.user || null);
+        if (active) setUser(res?.user || null);
       } catch {
-        if (!active) return;
-        setUser((prev) => prev || null);
+        if (active) setUser((u) => u || null);
       } finally {
         if (active) setLoading(false);
       }
     }
 
-    fetchUser();
+    load();
     return () => {
       active = false;
     };
   }, [location.pathname]);
 
-  /* ============================================================================
-     ✨ Fermeture automatique du menu mobile après navigation
-  ============================================================================ */
+  /* CLOSE PANEL ON NAVIGATION */
   useEffect(() => {
-    setOpen(false);
+    setOpenMore(false);
   }, [location.pathname]);
 
-  /* ============================================================================
-     🚪 Déconnexion
-  ============================================================================ */
   const handleLogout = useCallback(async () => {
-    setOpen(false);
-    await delay(80);
+    setOpenMore(false);
+    await delay(120);
     logout();
-    setUser(null);
     navigate("/login");
   }, [navigate]);
 
-  /* ============================================================================
-     🌐 Détection pages publiques
-  ============================================================================ */
-  const publicRoutes = [
-    "/",
-    "/login",
-    "/register",
-    "/shop",
-    "/products",
-    "/legal",
-    "/privacy",
-    "/terms",
-  ];
+  /* HELPERS */
+  const PUBLIC = ["/", "/login", "/register", "/shop", "/products"];
 
-  const isPublic = publicRoutes.some((p) =>
-    location.pathname.startsWith(p)
+  // ❌ plus de useMemo ici → plus de warning eslint
+  const isPublic = PUBLIC.some((p) => location.pathname.startsWith(p));
+
+  const role = normalizeRole(user?.role);
+
+  const links = useMemo(() => ROLE_LINKS[role] || [], [role]);
+  const bottomLinks = useMemo(() => BOTTOM_LINKS[role] || [], [role]);
+
+  const isActive = useCallback(
+    (path) => {
+      if (!path) return false;
+      if (path === "/") return location.pathname === "/";
+      return (
+        location.pathname === path ||
+        location.pathname.startsWith(path + "/")
+      );
+    },
+    [location.pathname]
   );
 
-  /* ============================================================================
-     🔧 Préparation des liens selon rôle (toujours exécuté → ok hooks)
-  ============================================================================ */
-  const roleKey = normalizeRole(user?.role);
-  const links = useMemo(() => ROLE_LINKS[roleKey] || [], [roleKey]);
-
-  const isActive = (path) =>
-    location.pathname === path ||
-    location.pathname.startsWith(path + "/");
-
-  /* ============================================================================
-     🎨 Logo
-  ============================================================================ */
   const Logo = (
     <img
       src="/logo_180x180.png"
       alt="Teranga"
-      className="w-7 h-7 object-contain drop-shadow-md"
+      className="w-7 h-7 object-contain"
     />
   );
 
-  /* ============================================================================
-     ⏳ État de chargement initial (évite flash)
-  ============================================================================ */
   if (!user && loading) return null;
 
-  /* ============================================================================
-     🌍 NavBar publique
-  ============================================================================ */
+  // ============================================================================  
+  // PUBLIC NAVBAR  
+  // ============================================================================  
   if (!user && isPublic) {
     return (
-      <nav className="bg-slate-900/90 backdrop-blur-md text-white px-5 py-4 shadow-md sticky top-0 z-[90] border-b border-slate-800">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-cyan-400 font-bold text-lg">
+      <nav
+        className="bg-slate-900/90 backdrop-blur-md text-white shadow-md px-5 py-4 sticky top-0 z-50"
+        role="navigation"
+        aria-label="Navigation publique"
+      >
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-cyan-400 font-bold text-lg"
+            aria-label="Retour à la page d’accueil"
+          >
             {Logo}
-            <span>Teranga</span>
+            Teranga
           </Link>
 
-          <div className="flex items-center gap-5 text-sm">
-            <Link to="/login" className="hover:text-cyan-400 transition font-medium">
+          <div className="flex gap-3 text-sm">
+            <Link to="/login" className="hover:text-cyan-400">
               Connexion
             </Link>
-
             <Link
               to="/register"
-              className="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-600 rounded-md text-white font-semibold shadow-sm transition"
+              className="px-4 py-1.5 bg-cyan-500 rounded-md font-semibold hover:bg-cyan-600"
             >
               Inscription
             </Link>
@@ -204,136 +229,234 @@ export default function NavBar() {
     );
   }
 
-  /* ============================================================================
-     🧭 NavBar authentifiée
-  ============================================================================ */
+  // ============================================================================  
+  // AUTH NAVBAR (desktop + mobile header)
+  // ============================================================================  
   return (
-    <nav className="bg-slate-900/95 backdrop-blur-xl text-white shadow-xl border-b border-slate-800 sticky top-0 z-[90]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-
-        {/* MOBILE HEADER */}
-        <div className="flex items-center justify-between py-3 md:hidden">
-          <Link to="/" className="flex items-center gap-2 font-bold text-lg text-cyan-400">
+    <>
+      {/* ======================================================================== */}
+      {/* TOP BAR — Desktop & Mobile */}
+      {/* ======================================================================== */}
+      <nav
+        className="bg-slate-900/95 backdrop-blur-xl text-white border-b border-slate-800 shadow-lg sticky top-0 z-50"
+        role="navigation"
+        aria-label="Navigation principale"
+      >
+        {/* TOP BAR CONTENT */}
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-2">
+          {/* LOGO → Homepage */}
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-cyan-400 font-bold text-lg"
+            aria-label="Retour à la page d’accueil"
+          >
             {Logo}
-            <span>Teranga</span>
+            Teranga
           </Link>
 
+          {/* ROLE LABEL (desktop only) */}
+          <span className="hidden md:inline bg-slate-800 px-3 py-0.5 rounded-full text-[0.75rem] uppercase text-gray-300">
+            {prettyRoleLabel(user?.role)}
+          </span>
+
+          {/* DESKTOP LOGOUT BUTTON */}
           <button
-            aria-label="Menu mobile"
-            aria-controls="mobile-menu"
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-            className="md:hidden text-gray-300 hover:text-white transition p-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            onClick={handleLogout}
+            className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-semibold"
+            aria-label="Se déconnecter"
           >
-            {open ? <X size={26} /> : <Menu size={26} />}
+            <LogOut size={16} />
+            Déconnexion
           </button>
         </div>
 
-        {/* DESKTOP HEADER */}
-        <div className="hidden md:flex items-center gap-6 py-3">
-          {/* LOGO */}
-          <Link
-            to="/"
-            className="flex items-center gap-2 font-bold text-lg text-cyan-400 whitespace-nowrap"
-          >
-            {Logo}
-            <span>Teranga</span>
-          </Link>
-
-          {/* LIENS */}
-          <ul className="flex-1 flex flex-wrap gap-x-4 lg:gap-x-6 gap-y-1 justify-center">
-            {links.map((l) => (
-              <li key={l.path} className="whitespace-nowrap">
-                <Link
-                  to={l.path}
-                  aria-current={isActive(l.path) ? "page" : undefined}
-                  className={`
-                    text-[0.9rem] font-medium transition relative
-                    ${
-                      isActive(l.path)
-                        ? "text-cyan-400"
-                        : "text-gray-300 hover:text-white"
-                    }
-                  `}
-                >
-                  {l.label}
-                  {isActive(l.path) && (
-                    <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-cyan-400 rounded-full" />
-                  )}
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          {/* PROFIL */}
-          <div className="flex items-center gap-3 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700 max-w-xs lg:max-w-sm">
-            <div className="flex flex-col text-right truncate">
-              <div className="flex items-center justify-end gap-1">
-                <span className="text-sm font-semibold text-white truncate">
-                  {user?.firstName || user?.email || "Utilisateur"}
-                </span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block shadow" />
-              </div>
-              <span className="text-xs text-gray-400 uppercase tracking-wide">
-                {prettyRoleLabel(user?.role)}
-              </span>
-            </div>
-
-            <div className="w-9 h-9 rounded-full bg-cyan-500 text-white flex items-center justify-center font-bold uppercase shadow shrink-0">
-              {user?.firstName?.[0] || user?.email?.[0] || "?"}
-            </div>
-
-            <button
-              onClick={handleLogout}
-              className="ml-1 flex items-center gap-1 bg-red-500 hover:bg-red-600 px-3 py-1.5 text-xs rounded-md font-semibold transition shrink-0"
-            >
-              <LogOut size={14} /> Déconnexion
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* MENU MOBILE */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            id="mobile-menu"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
-            className="md:hidden bg-slate-800 border-t border-slate-700 px-6 py-4 space-y-2 overflow-hidden"
-          >
+        {/* DESKTOP NAVIGATION LINKS */}
+        <div className="hidden md:flex items-center gap-8 max-w-7xl mx-auto px-6 py-3">
+          <ul className="flex-1 flex justify-center gap-6">
             {links.map((l) => (
               <Link
                 key={l.path}
                 to={l.path}
-                onClick={() => setOpen(false)}
                 aria-current={isActive(l.path) ? "page" : undefined}
-                className={`
-                  block text-sm py-2 px-3 rounded-md transition
+                className={`text-sm transition relative
                   ${
                     isActive(l.path)
-                      ? "bg-cyan-600 text-white font-semibold"
-                      : "text-gray-300 hover:bg-slate-700 hover:text-white"
+                      ? "text-cyan-400"
+                      : "text-gray-300 hover:text-white"
                   }
                 `}
               >
                 {l.label}
+                {isActive(l.path) && (
+                  <span className="absolute left-0 -bottom-1 w-full h-[2px] bg-cyan-400 rounded-full" />
+                )}
               </Link>
             ))}
+          </ul>
+        </div>
+      </nav>
 
-            <hr className="border-slate-700 my-3" />
+      {/* ======================================================================== */}
+      {/* BOTTOM NAV — Mobile only */}
+      {/* ======================================================================== */}
+      <nav
+        className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent"
+        role="navigation"
+        aria-label="Navigation principale mobile"
+      >
+        <div className="mx-auto w-full flex justify-center">
+          <div className="w-full max-w-sm px-2 pb-3">
+            <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-xl flex px-1 py-1">
+              {bottomLinks.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
 
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-xs px-3 py-2 rounded-md font-semibold transition"
+                return (
+                  <Link
+                    key={item.key}
+                    to={item.path}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex-1 flex flex-col items-center py-1.5 rounded-xl text-[0.75rem]
+                      ${
+                        active
+                          ? "bg-slate-800 text-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.35)]"
+                          : "text-gray-300 hover:bg-slate-800/50"
+                      }`}
+                  >
+                    <Icon
+                      size={18}
+                      className={active ? "text-cyan-300" : "text-gray-300"}
+                    />
+                    {item.label}
+                  </Link>
+                );
+              })}
+
+              {/* BUTTON "PLUS" */}
+              <button
+                type="button"
+                onClick={() => setOpenMore((v) => !v)}
+                aria-label={openMore ? "Fermer le menu Plus" : "Ouvrir le menu Plus"}
+                aria-expanded={openMore}
+                aria-controls="panel-plus"
+                className={`flex-1 flex flex-col items-center py-1.5 rounded-xl text-[0.75rem]
+                  ${
+                    openMore
+                      ? "bg-slate-800 text-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.35)]"
+                      : "text-gray-300 hover:bg-slate-800/50"
+                  }`}
+              >
+                <MoreHorizontal size={18} />
+                Plus
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* ======================================================================== */}
+      {/* PANEL "PLUS" — Desktop + Mobile (IMPROVED DESIGN + ACCESSIBLE) */}
+      {/* ======================================================================== */}
+      <AnimatePresence>
+        {openMore && (
+          <>
+            {/* OVERLAY */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.65 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 z-40"
+              onClick={() => setOpenMore(false)}
+              aria-hidden="true"
+            />
+
+            {/* PANEL */}
+            <motion.div
+              id="panel-plus"
+              initial={{ opacity: 0, y: 80 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 80 }}
+              transition={{ duration: 0.28 }}
+              className="fixed bottom-24 inset-x-0 z-50 flex justify-center px-4"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Menu de navigation complémentaire"
             >
-              <LogOut size={14} /> Déconnexion
-            </button>
-          </motion.div>
+              <div
+                className="
+                  w-full max-w-sm
+                  bg-slate-900/95
+                  backdrop-blur-2xl
+                  border border-slate-600/70
+                  rounded-2xl
+                  shadow-2xl
+                  overflow-hidden
+                "
+              >
+                {/* HEADER */}
+                <div className="px-4 py-3 border-b border-slate-700/60 flex justify-between items-center bg-slate-800/60 backdrop-blur-xl">
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 bg-cyan-500 rounded-full flex items-center justify-center text-white font-bold">
+                      {user?.firstName?.[0] || user?.email?.[0] || "?"}
+                    </div>
+
+                    <div>
+                      <div className="text-white text-sm font-semibold">
+                        {user?.firstName || user?.email || "Utilisateur"}
+                      </div>
+                      <div className="text-gray-400 text-[0.7rem] uppercase tracking-wide">
+                        {prettyRoleLabel(user?.role)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setOpenMore(false)}
+                    aria-label="Fermer le menu"
+                    className="p-1.5 rounded-full bg-slate-800/70 hover:bg-slate-700 text-gray-300"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* LINKS */}
+                <div className="max-h-64 overflow-y-auto">
+                  {links.map((l) => (
+                    <Link
+                      key={l.path}
+                      to={l.path}
+                      onClick={() => setOpenMore(false)}
+                      aria-current={isActive(l.path) ? "page" : undefined}
+                      className={`block px-5 py-3 text-sm transition
+                        ${
+                          isActive(l.path)
+                            ? "bg-slate-800 text-cyan-300 font-semibold"
+                            : "text-gray-200 hover:bg-slate-800/70 hover:text-white"
+                        }`}
+                    >
+                      {l.label}
+                    </Link>
+                  ))}
+                </div>
+
+                {/* LOGOUT */}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full flex justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
+                  aria-label="Se déconnecter"
+                >
+                  <LogOut size={14} />
+                  Déconnexion
+                </button>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
-    </nav>
+    </>
   );
 }
+
+export default memo(NavBar);

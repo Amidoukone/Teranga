@@ -1,5 +1,5 @@
 // ============================================================================
-// TransactionsPage.jsx — VERSION PRODUCTION SAFE (TERANGA) — OPTIMISÉE RESPONSIVE
+// TransactionsPage.jsx — VERSION PREMIUM 2025 (TERANGA) — UX & DESIGN PRO
 // ============================================================================
 
 import { useEffect, useState } from 'react';
@@ -74,9 +74,9 @@ export default function TransactionsPage() {
     sort: '-createdAt',
   });
 
-  // ==========================================================================
+  // ========================================================================
   // 🔹 Initialisation utilisateur + données
-  // ==========================================================================
+  // ========================================================================
   useEffect(() => {
     async function init() {
       try {
@@ -99,9 +99,9 @@ export default function TransactionsPage() {
     localStorage.setItem('teranga_transactions_showForm', showForm ? '1' : '0');
   }, [showForm]);
 
-  // ==========================================================================
+  // ========================================================================
   // 🔹 Services selon rôle
-  // ==========================================================================
+  // ========================================================================
   async function loadServicesByRole(u) {
     try {
       let servs = [];
@@ -114,9 +114,9 @@ export default function TransactionsPage() {
     }
   }
 
-  // ==========================================================================
+  // ========================================================================
   // 🔹 Transactions
-  // ==========================================================================
+  // ========================================================================
   async function loadTransactions() {
     setLoading(true);
     try {
@@ -130,9 +130,9 @@ export default function TransactionsPage() {
     }
   }
 
-  // ==========================================================================
+  // ========================================================================
   // 🔹 Service → Tâches
-  // ==========================================================================
+  // ========================================================================
   async function handleServiceChange(e) {
     const serviceId = e.target.value;
     setSelectedService(serviceId);
@@ -147,9 +147,9 @@ export default function TransactionsPage() {
     }
   }
 
-  // ==========================================================================
+  // ========================================================================
   // 🔹 Soumission formulaire
-  // ==========================================================================
+  // ========================================================================
   async function handleSubmit(e) {
     e.preventDefault();
     try {
@@ -195,21 +195,23 @@ export default function TransactionsPage() {
     setSelectedService('');
   }
 
-  // ==========================================================================
+  // ========================================================================
   // 🔹 Affichage utilisateur
-  // ==========================================================================
+  // ========================================================================
   function getUserDisplayName(u) {
     if (!u) return '—';
-    const full = `${u.firstName || u.firstname || ''} ${u.lastName || u.lastname || ''}`.trim();
+    const full = `${u.firstName || u.firstname || ''} ${
+      u.lastName || u.lastname || ''
+    }`.trim();
     if (full) return full;
     if (u.name) return u.name;
     if (u.email) return u.email;
     return '—';
   }
 
-  // ==========================================================================
+  // ========================================================================
   // 🔍 Filtres premium (optimisés)
-  // ==========================================================================
+  // ========================================================================
   useEffect(() => {
     let arr = [...transactions];
     const q = filters.q.trim().toLowerCase();
@@ -236,7 +238,9 @@ export default function TransactionsPage() {
 
     if (filters.type) arr = arr.filter((t) => t.type === filters.type);
     if (filters.payment)
-      arr = arr.filter((t) => (t.paymentMethod || '').toLowerCase().includes(filters.payment));
+      arr = arr.filter((t) =>
+        (t.paymentMethod || '').toLowerCase().includes(filters.payment)
+      );
     if (filters.service) arr = arr.filter((t) => t.service?.id === Number(filters.service));
     if (filters.order) arr = arr.filter((t) => t.order?.id === Number(filters.order));
     if (filters.project) arr = arr.filter((t) => t.project?.id === Number(filters.project));
@@ -264,45 +268,52 @@ export default function TransactionsPage() {
     setFiltered(arr);
   }, [transactions, filters]);
 
-  // ==========================================================================
+  // ========================================================================
   // 🔹 UI PRINCIPALE
-  // ==========================================================================
-  if (!user)
+  // ========================================================================
+  if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-600 text-lg animate-pulse">Chargement…</p>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
+        <p className="text-gray-600 text-lg animate-pulse">
+          Chargement des transactions…
+        </p>
       </div>
     );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-6 sm:p-8 border border-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 lg:py-10">
+      <div className="max-w-6xl mx-auto bg-white/95 shadow-2xl rounded-3xl border border-gray-100 p-5 sm:p-8 lg:p-10 space-y-8">
 
         {/* HEADER */}
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              💰 Transactions
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-4 border-b border-gray-100">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
+              💰 Gestion des transactions
             </h1>
-            <p className="text-sm text-slate-600 mt-1">
-              Suivi & gestion de vos opérations financières.
+            <p className="text-sm sm:text-base text-slate-600">
+              Suivez et centralisez l’ensemble de vos opérations financières.
             </p>
+            <span className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 mt-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+              {transactions.length} transaction(s) enregistrée(s).
+            </span>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition w-full sm:w-auto"
+              className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
             >
-              {showForm ? '➖ Masquer' : '➕ Nouvelle transaction'}
+              {showForm ? '➖ Masquer le formulaire' : '➕ Nouvelle transaction'}
             </button>
 
             <button
               onClick={loadTransactions}
               disabled={loading}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition w-full sm:w-auto ${
+              className={`w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition ${
                 loading
-                  ? 'bg-blue-300 cursor-not-allowed'
+                  ? 'bg-blue-300 cursor-not-allowed text-white'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
@@ -340,25 +351,27 @@ export default function TransactionsPage() {
           loading={loading}
           getUserDisplayName={getUserDisplayName}
         />
-
       </div>
     </div>
   );
 }
 
 // ============================================================================
-// 🔹 Filtres Composant — 100% responsive & espacement optimisé
+// 🔹 Filtres Composant — UX + lisibilité
 // ============================================================================
+
 function TransactionFilters({ filters, setFilters, services, filteredCount }) {
   return (
-    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-5">
+    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-
-        {/* Recherche */}
+        {/* Recherche globale */}
         <div className="lg:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Recherche
+          </label>
           <input
-            placeholder="🔎 Rechercher une transaction…"
+            placeholder="🔎 Rechercher (type, description, service, commande...)"
             value={filters.q}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
@@ -366,54 +379,79 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
         </div>
 
         {/* Type */}
-        <select
-          value={filters.type}
-          onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full"
-        >
-          <option value="">Type</option>
-          {Object.entries(TRANSACTION_TYPES).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Type
+          </label>
+          <select
+            value={filters.type}
+            onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Tous les types</option>
+            {Object.entries(TRANSACTION_TYPES).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        {/* Paiement */}
-        <input
-          placeholder="Mode paiement"
-          value={filters.payment}
-          onChange={(e) => setFilters({ ...filters, payment: e.target.value.toLowerCase() })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full"
-        />
+        {/* Mode de paiement */}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Mode de paiement
+          </label>
+          <input
+            placeholder="Ex : Mobile Money"
+            value={filters.payment}
+            onChange={(e) =>
+              setFilters({ ...filters, payment: e.target.value.toLowerCase() })
+            }
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
 
-        {/* Service */}
-        <select
-          value={filters.service}
-          onChange={(e) => setFilters({ ...filters, service: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full"
-        >
-          <option value="">Service</option>
-          {services.map((s) => (
-            <option key={s.id} value={s.id}>{s.title}</option>
-          ))}
-        </select>
+        {/* Service lié */}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Service
+          </label>
+          <select
+            value={filters.service}
+            onChange={(e) => setFilters({ ...filters, service: e.target.value })}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Tous les services</option>
+            {services.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.title}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Tri */}
-        <select
-          value={filters.sort}
-          onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full lg:col-span-2"
-        >
-          <option value="-createdAt">Plus récentes</option>
-          <option value="createdAt">Plus anciennes</option>
-          <option value="amount">Montant croissant</option>
-          <option value="-amount">Montant décroissant</option>
-        </select>
+        <div className="lg:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Tri
+          </label>
+          <select
+            value={filters.sort}
+            onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="-createdAt">Plus récentes d’abord</option>
+            <option value="createdAt">Plus anciennes d’abord</option>
+            <option value="amount">Montant croissant</option>
+            <option value="-amount">Montant décroissant</option>
+          </select>
+        </div>
       </div>
 
       {/* Bas des filtres */}
-      <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-500">
-
-        <span>{filteredCount} transaction(s)</span>
+      <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-500">
+        <span>{filteredCount} transaction(s) après filtrage.</span>
 
         <button
           onClick={() =>
@@ -427,9 +465,9 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
               sort: '-createdAt',
             })
           }
-          className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 w-full sm:w-auto text-center"
+          className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 w-full sm:w-auto text-center font-medium"
         >
-          Réinitialiser
+          Réinitialiser tous les filtres
         </button>
       </div>
     </div>
@@ -437,8 +475,9 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
 }
 
 // ============================================================================
-// 🔹 Formulaire Transaction — Responsive amélioré
+// 🔹 Formulaire Transaction — Design premium
 // ============================================================================
+
 function TransactionForm({
   form,
   setForm,
@@ -452,134 +491,192 @@ function TransactionForm({
 }) {
   return (
     <div className="mb-10">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">➕ Nouvelle transaction</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+          ➕ Nouvelle transaction
+        </h2>
+        <p className="text-xs sm:text-sm text-gray-500">
+          Renseignez les champs ci-dessous pour enregistrer une opération.
+        </p>
+      </div>
 
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border"
+        className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 sm:p-5 rounded-2xl border border-gray-200"
       >
-        {/* type */}
+        {/* Type */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-1 block">Type</label>
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">
+            Type
+          </label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full border px-3 py-2 rounded-lg bg-white"
+            className="w-full border border-gray-300 px-3 py-2 rounded-lg bg-white text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
           >
             {Object.entries(TRANSACTION_TYPES).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
+              <option key={k} value={k}>
+                {v}
+              </option>
             ))}
           </select>
         </div>
 
-        {/* montant */}
+        {/* Montant */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-1 block">Montant</label>
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">
+            Montant <span className="text-red-500">*</span>
+          </label>
           <input
             type="number"
             step="0.01"
             required
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            className="w-full border px-3 py-2 rounded-lg bg-white"
+            className="w-full border border-gray-300 px-3 py-2 rounded-lg bg-white text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
-        {/* devise */}
+        {/* Devise */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-1 block">Devise</label>
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">
+            Devise
+          </label>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="w-full border px-3 py-2 rounded-lg bg-white"
+            className="w-full border border-gray-300 px-3 py-2 rounded-lg bg-white text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
           >
             {Object.entries(CURRENCY_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
+              <option key={k} value={k}>
+                {v}
+              </option>
             ))}
           </select>
         </div>
 
-        {/* paiement */}
-        <input
-          placeholder="Mode paiement"
-          value={form.paymentMethod}
-          onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-          className="sm:col-span-2 border px-3 py-2 rounded-lg bg-white"
-        />
+        {/* Mode de paiement */}
+        <div className="sm:col-span-1">
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">
+            Mode de paiement
+          </label>
+          <input
+            placeholder="Ex : Mobile Money, Espèces…"
+            value={form.paymentMethod}
+            onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
+            className="w-full border border-gray-300 px-3 py-2 rounded-lg bg-white text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
 
-        {/* service */}
-        <select
-          value={selectedService}
-          onChange={handleServiceChange}
-          className="sm:col-span-2 border px-3 py-2 rounded-lg bg-white"
-        >
-          <option value="">— Sans service —</option>
-          {services.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.title}
-            </option>
-          ))}
-        </select>
-
-        {/* tâches */}
-        {tasks.length > 0 && (
+        {/* Service lié */}
+        <div className="sm:col-span-2">
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">
+            Service associé
+          </label>
           <select
-            value={form.taskId}
-            onChange={(e) => setForm({ ...form, taskId: e.target.value })}
-            className="sm:col-span-2 border px-3 py-2 rounded-lg bg-white"
+            value={selectedService}
+            onChange={handleServiceChange}
+            className="w-full border border-gray-300 px-3 py-2 rounded-lg bg-white text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Aucune tâche</option>
-            {tasks.map((t) => (
-              <option key={t.id} value={t.id}>{t.title}</option>
+            <option value="">— Sans service —</option>
+            {services.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.title}
+              </option>
             ))}
           </select>
+        </div>
+
+        {/* Tâche liée */}
+        {tasks.length > 0 && (
+          <div className="sm:col-span-2">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">
+              Tâche liée (optionnel)
+            </label>
+            <select
+              value={form.taskId}
+              onChange={(e) => setForm({ ...form, taskId: e.target.value })}
+              className="w-full border border-gray-300 px-3 py-2 rounded-lg bg-white text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Aucune tâche</option>
+              {tasks.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
 
-        {/* projet */}
+        {/* Projet lié (admin/agent) */}
         {(user.role === 'admin' || user.role === 'agent') && (
-          <input
-            type="number"
-            placeholder="ID Projet"
-            value={form.projectId}
-            onChange={(e) => setForm({ ...form, projectId: e.target.value })}
-            className="sm:col-span-2 border px-3 py-2 rounded-lg bg-white"
-          />
+          <div className="sm:col-span-2">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">
+              ID Projet (optionnel)
+            </label>
+            <input
+              type="number"
+              placeholder="ID du projet"
+              value={form.projectId}
+              onChange={(e) => setForm({ ...form, projectId: e.target.value })}
+              className="w-full border border-gray-300 px-3 py-2 rounded-lg bg-white text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         )}
 
-        {/* commande */}
+        {/* Commande liée (admin/agent) */}
         {(user.role === 'admin' || user.role === 'agent') && (
-          <input
-            type="number"
-            placeholder="ID Commande"
-            value={form.orderId}
-            onChange={(e) => setForm({ ...form, orderId: e.target.value })}
-            className="sm:col-span-2 border px-3 py-2 rounded-lg bg-white"
-          />
+          <div className="sm:col-span-2">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">
+              ID Commande (optionnel)
+            </label>
+            <input
+              type="number"
+              placeholder="ID de la commande"
+              value={form.orderId}
+              onChange={(e) => setForm({ ...form, orderId: e.target.value })}
+              className="w-full border border-gray-300 px-3 py-2 rounded-lg bg-white text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         )}
 
-        {/* description */}
-        <textarea
-          placeholder="Description"
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          className="sm:col-span-2 border px-3 py-2 rounded-lg bg-white"
-        />
+        {/* Description */}
+        <div className="sm:col-span-2">
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">
+            Description
+          </label>
+          <textarea
+            placeholder="Ajoutez un commentaire ou un contexte (facultatif)…"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            className="w-full border border-gray-300 px-3 py-2 rounded-lg bg-white text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+            rows={3}
+          />
+        </div>
 
-        {/* preuve fichier */}
-        <input
-          type="file"
-          accept=".jpg,.jpeg,.png,.pdf"
-          onChange={(e) => setForm({ ...form, proofFile: e.target.files?.[0] || null })}
-          className="sm:col-span-2 border px-3 py-2 rounded-lg bg-white"
-        />
+        {/* Pièce jointe */}
+        <div className="sm:col-span-2">
+          <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">
+            Pièce jointe (image / PDF)
+          </label>
+          <input
+            type="file"
+            accept=".jpg,.jpeg,.png,.pdf"
+            onChange={(e) =>
+              setForm({ ...form, proofFile: e.target.files?.[0] || null })
+            }
+            className="w-full border border-gray-300 px-3 py-2 rounded-lg bg-white text-sm sm:text-base cursor-pointer focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
 
-        <div className="sm:col-span-2 text-right">
+        {/* Bouton submit */}
+        <div className="sm:col-span-2 text-right mt-2">
           <button
             type="submit"
             disabled={loading}
-            className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300"
+            className="px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm sm:text-base font-semibold hover:bg-blue-700 disabled:bg-blue-300 transition"
           >
-            {loading ? 'Enregistrement…' : '💾 Enregistrer'}
+            {loading ? 'Enregistrement…' : '💾 Enregistrer la transaction'}
           </button>
         </div>
       </form>
@@ -588,82 +685,100 @@ function TransactionForm({
 }
 
 // ============================================================================
-// 🔹 Liste Transactions — responsive améliorée
+// 🔹 Liste Transactions — cartes pro & lisibles
 // ============================================================================
-function TransactionList({ transactions, loading, getUserDisplayName }) {
-  if (loading)
-    return (
-      <p className="text-gray-500 italic text-center py-6">Chargement…</p>
-    );
 
-  if (transactions.length === 0)
+function TransactionList({ transactions, loading, getUserDisplayName }) {
+  if (loading) {
     return (
       <p className="text-gray-500 italic text-center py-6">
-        Aucun transaction trouvée.
+        Chargement des transactions…
       </p>
     );
+  }
+
+  if (transactions.length === 0) {
+    return (
+      <p className="text-gray-500 italic text-center py-6">
+        Aucune transaction trouvée pour ces critères.
+      </p>
+    );
+  }
 
   return (
     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {transactions.map((t) => {
-        // Support des anciennes transactions (proofFile.path)
-        // et des nouvelles avec ImageKit (proofFile.url)
+        // URL pièce jointe : compatibilité ancienne/nouvelle structure
         const proofUrl =
           t?.proofFile?.url ||
           (t?.proofFile?.path ? toAbsUrl(t.proofFile.path) : '');
+
+        // Couleur selon type
+        const isRevenue = t.type === 'revenue';
+        const typeChipClasses = isRevenue
+          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+          : 'bg-red-50 text-red-700 border-red-100';
+
+        const amountClasses = isRevenue ? 'text-emerald-700' : 'text-red-700';
 
         return (
           <div
             key={t.id}
             className="
-              bg-white border rounded-xl shadow-sm p-5
-              hover:shadow-md transition flex flex-col
+              bg-white border border-gray-200 rounded-2xl shadow-sm
+              hover:shadow-md transition
+              p-4 sm:p-5 flex flex-col
               w-full max-w-full min-w-0 overflow-hidden
             "
           >
             {/* HEADER */}
             <div className="mb-3 min-w-0">
-              <h3
-                className="
-                  text-lg font-semibold text-gray-900 
-                  break-words whitespace-normal
-                  w-full max-w-full
-                "
-              >
-                {t.typeLabel} — {Number(t.amount).toLocaleString()}{' '}
-                {t.currencyLabel || t.currency}
-              </h3>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className={`text-lg font-bold ${amountClasses} break-words`}>
+                    {Number(t.amount).toLocaleString('fr-FR')}{' '}
+                    {t.currencyLabel || t.currency}
+                  </div>
+                  <div
+                    className={`
+                      inline-flex items-center mt-1 px-2 py-0.5 rounded-full 
+                      text-[0.7rem] font-semibold border ${typeChipClasses}
+                    `}
+                  >
+                    {t.typeLabel}
+                  </div>
+                </div>
 
-              <span className="inline-block text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-1 rounded-full mt-1">
-                {t.statusLabel}
-              </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.7rem] font-medium bg-blue-50 text-blue-700 border border-blue-100 whitespace-nowrap">
+                  {t.statusLabel}
+                </span>
+              </div>
 
               <p className="text-sm text-gray-600 mt-2 break-words whitespace-normal">
-                {t.description || 'Aucune description'}
+                {t.description || 'Aucune description.'}
               </p>
             </div>
 
             {/* META */}
-            <div className="flex-1 text-sm text-gray-700 space-y-2 min-w-0 break-words">
-
+            <div className="flex-1 text-sm text-gray-700 space-y-1.5 min-w-0 break-words">
               {t.service && (
                 <p className="break-words whitespace-normal">
-                  🔗 <strong>Service :</strong> {t.service.title}
+                  🔗 <span className="font-medium">Service :</span> {t.service.title}
                 </p>
               )}
 
               {t.task && (
                 <p className="break-words whitespace-normal">
-                  🔧 <strong>Tâche :</strong> {t.task.title}
+                  🔧 <span className="font-medium">Tâche :</span> {t.task.title}
                 </p>
               )}
 
               {t.project && (
-                <p className="min-w-0 break-words whitespace-normal">
-                  🏗️ <strong>Projet :</strong>{' '}
+                <p className="break-words whitespace-normal">
+                  🏗️ <span className="font-medium">Projet :</span>{' '}
                   <Link
                     to={`/projects/${t.project.id}`}
-                    className="text-blue-600 hover:underline break-words whitespace-normal"
+                    className="text-blue-600 hover:underline break-words"
                   >
                     {t.project.title}
                   </Link>
@@ -671,11 +786,11 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
               )}
 
               {t.order && (
-                <p className="min-w-0 break-words whitespace-normal">
-                  🧾 <strong>Commande :</strong>{' '}
+                <p className="break-words whitespace-normal">
+                  🧾 <span className="font-medium">Commande :</span>{' '}
                   <Link
                     to={`/orders/${t.order.id}`}
-                    className="text-blue-600 hover:underline break-words whitespace-normal"
+                    className="text-blue-600 hover:underline break-words"
                   >
                     {t.order.code || `#${t.order.id}`}
                   </Link>
@@ -683,7 +798,7 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
               )}
 
               {proofUrl && (
-                <p className="min-w-0 break-words whitespace-normal">
+                <p className="break-words whitespace-normal">
                   📎{' '}
                   <a
                     href={proofUrl}
@@ -698,13 +813,18 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
             </div>
 
             {/* FOOTER */}
-            <div className="mt-4 text-xs text-gray-500">
+            <div className="mt-4 text-[0.75rem] text-gray-500 border-t border-gray-100 pt-2">
               <p>
                 Créée le{' '}
-                <strong>{new Date(t.createdAt).toLocaleDateString()}</strong>
+                <span className="font-medium">
+                  {new Date(t.createdAt).toLocaleDateString('fr-FR')}
+                </span>
               </p>
               <p>
-                Par <strong>{getUserDisplayName(t.user)}</strong>
+                Par{' '}
+                <span className="font-medium">
+                  {getUserDisplayName(t.user)}
+                </span>
               </p>
             </div>
           </div>

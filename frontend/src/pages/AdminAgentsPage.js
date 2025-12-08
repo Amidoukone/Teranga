@@ -1,17 +1,16 @@
-import { useEffect, useState, useCallback } from 'react';
-import api from '../services/api';
+import { useEffect, useState, useCallback } from "react";
+import api from "../services/api";
 
-// Petite validation email basique
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function AdminAgentsPage() {
   const [form, setForm] = useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    phone: '',
-    country: '',
+    email: "",
+    password: "",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    country: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -19,67 +18,63 @@ export default function AdminAgentsPage() {
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingAgents, setLoadingAgents] = useState(false);
+
   const [showForm, setShowForm] = useState(() => {
-    const saved = localStorage.getItem('teranga_admin_agents_showForm');
-    return saved === null ? true : saved === '1';
+    const saved = localStorage.getItem("teranga_admin_agents_showForm");
+    return saved === null ? true : saved === "1";
   });
 
   const [filters, setFilters] = useState({
-    q: '',
-    country: '',
+    q: "",
+    country: "",
     onlyPhone: false,
-    sort: '-createdAt',
+    sort: "-createdAt",
   });
 
-  // --- Validation ---
+  // ---------------------------------------------------------------
+  // VALIDATION
+  // ---------------------------------------------------------------
   function validate() {
     const e = {};
-    if (!form.firstName.trim()) e.firstName = 'Prénom requis';
-    if (!form.lastName.trim()) e.lastName = 'Nom requis';
+
+    if (!form.firstName.trim()) e.firstName = "Prénom requis";
+    if (!form.lastName.trim()) e.lastName = "Nom requis";
 
     const email = form.email.trim().toLowerCase();
-    if (!email || !EMAIL_RE.test(email)) e.email = 'Email invalide';
+    if (!email || !EMAIL_RE.test(email)) e.email = "Email invalide";
 
-    if (!form.password || String(form.password).length < 6) {
-      e.password = 'Mot de passe requis (6 caractères min.)';
-    }
+    if (!form.password || String(form.password).length < 6)
+      e.password = "Mot de passe requis (6 caractères min.)";
 
-    const country = (form.country || '').trim().toUpperCase();
-    if (!country || country.length !== 2) {
-      e.country = 'Pays requis au format ISO2 (ex: ML, FR)';
-    }
+    const country = (form.country || "").trim().toUpperCase();
+    if (!country || country.length !== 2)
+      e.country = "Format ISO2 requis (ex: ML, FR)";
 
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
   function handleChange(field, value) {
-    if (field === 'country') {
-      const v = (value || '').toUpperCase().slice(0, 2);
-      setForm((prev) => ({ ...prev, country: v }));
-      if (errors.country) setErrors((prev) => ({ ...prev, country: undefined }));
-      return;
+    if (field === "country") {
+      value = (value || "").toUpperCase().slice(0, 2);
     }
-
-    if (field === 'email') {
-      const v = (value || '').toLowerCase();
-      setForm((prev) => ({ ...prev, email: v }));
-      if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
-      return;
+    if (field === "email") {
+      value = (value || "").toLowerCase();
     }
-
     setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
-  // --- Chargement des agents ---
+  // ---------------------------------------------------------------
+  // LOAD AGENTS
+  // ---------------------------------------------------------------
   const loadAgents = useCallback(async () => {
     setLoadingAgents(true);
     try {
-      const { data } = await api.get('/users?role=agent');
+      const { data } = await api.get("/users?role=agent");
       setAgents(data.users || []);
     } catch (err) {
-      console.error('❌ Erreur chargement agents:', err);
+      console.error("❌ Erreur chargement agents:", err);
       setAgents([]);
     } finally {
       setLoadingAgents(false);
@@ -91,47 +86,52 @@ export default function AdminAgentsPage() {
   }, [loadAgents]);
 
   useEffect(() => {
-    localStorage.setItem('teranga_admin_agents_showForm', showForm ? '1' : '0');
+    localStorage.setItem("teranga_admin_agents_showForm", showForm ? "1" : "0");
   }, [showForm]);
 
-  // --- Filtrage et tri ---
+  // ---------------------------------------------------------------
+  // FILTRAGE & TRI
+  // ---------------------------------------------------------------
   useEffect(() => {
     let arr = [...agents];
 
+    // Recherche générale
     if (filters.q.trim()) {
       const q = filters.q.trim().toLowerCase();
       arr = arr.filter((a) =>
         [a.firstName, a.lastName, a.email, a.phone, a.country]
           .filter(Boolean)
-          .join(' ')
+          .join(" ")
           .toLowerCase()
           .includes(q)
       );
     }
 
+    // Filtre pays
     if (filters.country.trim()) {
-      const c = filters.country.trim().toUpperCase();
-      arr = arr.filter((a) => (a.country || '').toUpperCase() === c);
+      const cc = filters.country.toUpperCase();
+      arr = arr.filter((a) => (a.country || "").toUpperCase() === cc);
     }
 
+    // Filtre téléphone
     if (filters.onlyPhone) {
       arr = arr.filter((a) => !!a.phone);
     }
 
-    const by = filters.sort || '-createdAt';
+    // Tri
+    const by = filters.sort;
     arr.sort((a, b) => {
-      const sign = by.startsWith('-') ? -1 : 1;
-      const key = by.replace(/^-/, '');
+      const sign = by.startsWith("-") ? -1 : 1;
+      const key = by.replace(/^-/, "");
       let va, vb;
 
-      if (key === 'createdAt') {
+      if (key === "createdAt") {
         va = new Date(a.createdAt || 0).getTime();
         vb = new Date(b.createdAt || 0).getTime();
       } else {
-        va = (a[key] || '').toString().toLowerCase();
-        vb = (b[key] || '').toString().toLowerCase();
+        va = (a[key] || "").toString().toLowerCase();
+        vb = (b[key] || "").toString().toLowerCase();
       }
-
       if (va < vb) return -1 * sign;
       if (va > vb) return 1 * sign;
       return 0;
@@ -140,14 +140,17 @@ export default function AdminAgentsPage() {
     setFiltered(arr);
   }, [agents, filters]);
 
-  // --- Soumission du formulaire ---
+  // ---------------------------------------------------------------
+  // FORM SUBMIT
+  // ---------------------------------------------------------------
   async function handleSubmit(e) {
     e.preventDefault();
     if (!validate()) return;
 
     setLoading(true);
+
     try {
-      await api.post('/users/agents', {
+      await api.post("/users/agents", {
         email: form.email.trim().toLowerCase(),
         password: String(form.password),
         firstName: form.firstName.trim(),
@@ -156,77 +159,87 @@ export default function AdminAgentsPage() {
         country: form.country.trim().toUpperCase(),
       });
 
-      alert('✅ Agent créé avec succès');
+      alert("✅ Agent créé avec succès");
       setForm({
-        email: '',
-        password: '',
-        firstName: '',
-        lastName: '',
-        phone: '',
-        country: '',
+        email: "",
+        password: "",
+        firstName: "",
+        lastName: "",
+        phone: "",
+        country: "",
       });
+
       setErrors({});
       await loadAgents();
     } catch (err) {
-      console.error('❌ Erreur création agent:', err);
-      const msg =
-        err?.response?.data?.error || 'Erreur lors de la création de l’agent';
+      console.error("❌ Erreur création agent:", err);
+      const msg = err?.response?.data?.error || "Erreur lors de la création";
       alert(`❌ ${msg}`);
     } finally {
       setLoading(false);
     }
   }
 
+  // ---------------------------------------------------------------
+  // UI RENDER (APPLE LIGHT PREMIUM A1)
+  // ---------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        {/* === En-tête === */}
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">👤 Gestion des Agents</h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/40 to-white px-4 py-10">
+      <div className="max-w-6xl mx-auto bg-white shadow-lg shadow-slate-200/40 rounded-3xl p-8 border border-slate-200">
+
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+          <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">
+            👤 Gestion des Agents
+          </h1>
 
           <div className="flex gap-2">
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
+              className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition"
             >
-              {showForm ? '➖ Masquer le formulaire' : '➕ Ajouter un agent'}
+              {showForm ? "➖ Masquer" : "➕ Ajouter"}
             </button>
 
             <button
               onClick={loadAgents}
               disabled={loadingAgents}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition ${
+              className={`px-4 py-2 rounded-xl text-white transition ${
                 loadingAgents
-                  ? 'bg-blue-300 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                  ? "bg-blue-300 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
-              {loadingAgents ? 'Chargement…' : '🔄 Rafraîchir'}
+              {loadingAgents ? "Chargement…" : "🔄 Rafraîchir"}
             </button>
           </div>
         </div>
 
-        {/* === Filtres === */}
-        <div className="mb-6 bg-gray-50 border border-gray-200 rounded-xl p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        {/* ----------------------------- */}
+        {/* FILTRES PREMIUM */}
+        {/* ----------------------------- */}
+        <div className="mb-8 bg-slate-50 border border-slate-200 rounded-2xl p-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+
+            {/* Recherche */}
             <div className="lg:col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="text-xs font-medium text-slate-600 mb-1">
                 Recherche
               </label>
               <input
-                placeholder="Nom, email, téléphone…"
                 value={filters.q}
                 onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                placeholder="Nom, email, téléphone…"
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
+            {/* Pays */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="text-xs font-medium text-slate-600 mb-1">
                 Pays (ISO2)
               </label>
               <input
-                placeholder="Ex: SN, ML, FR"
                 value={filters.country}
                 onChange={(e) =>
                   setFilters({
@@ -234,12 +247,14 @@ export default function AdminAgentsPage() {
                     country: e.target.value.toUpperCase().slice(0, 2),
                   })
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                placeholder="ML, FR…"
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
+            {/* Téléphone */}
             <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
                 <input
                   type="checkbox"
                   checked={filters.onlyPhone}
@@ -252,8 +267,9 @@ export default function AdminAgentsPage() {
               </label>
             </div>
 
+            {/* Tri */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="text-xs font-medium text-slate-600 mb-1">
                 Tri
               </label>
               <select
@@ -261,7 +277,7 @@ export default function AdminAgentsPage() {
                 onChange={(e) =>
                   setFilters({ ...filters, sort: e.target.value })
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
               >
                 <option value="-createdAt">Plus récents</option>
                 <option value="createdAt">Plus anciens</option>
@@ -273,156 +289,144 @@ export default function AdminAgentsPage() {
             </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between">
-            <div className="text-xs text-gray-500">
-              {filtered.length} agent(s) affiché(s)
-            </div>
+          <div className="mt-4 flex items-center justify-between text-xs">
+            <span className="text-slate-500">{filtered.length} agent(s)</span>
             <button
               onClick={() =>
-                setFilters({ q: '', country: '', onlyPhone: false, sort: '-createdAt' })
+                setFilters({
+                  q: "",
+                  country: "",
+                  onlyPhone: false,
+                  sort: "-createdAt",
+                })
               }
-              className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
+              className="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 transition"
             >
               Réinitialiser
             </button>
           </div>
         </div>
 
-        {/* === Formulaire création === */}
+        {/* -------------------------------------------- */}
+        {/* FORMULAIRE PREMIUM */}
+        {/* -------------------------------------------- */}
         {showForm && (
           <form
             onSubmit={handleSubmit}
-            noValidate
-            className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-200 mb-8"
+            className="mb-10 bg-slate-50 border border-slate-200 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-5 shadow-sm"
           >
+            {[
+              { field: "firstName", label: "Prénom *", type: "text" },
+              { field: "lastName", label: "Nom *", type: "text" },
+              { field: "email", label: "Email *", type: "email" },
+              { field: "password", label: "Mot de passe (≥ 6) *", type: "password" },
+            ].map(({ field, label, type }) => (
+              <div key={field}>
+                <label className="text-xs font-medium text-slate-700">{label}</label>
+                <input
+                  type={type}
+                  value={form[field]}
+                  onChange={(e) => handleChange(field, e.target.value)}
+                  className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
+                />
+                {errors[field] && (
+                  <p className="text-xs text-red-600 mt-1">{errors[field]}</p>
+                )}
+              </div>
+            ))}
+
+            {/* Téléphone */}
             <div>
+              <label className="text-xs font-medium text-slate-700">Téléphone</label>
               <input
-                placeholder="Prénom *"
-                value={form.firstName}
-                onChange={(e) => handleChange('firstName', e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
+                value={form.phone}
+                onChange={(e) => handleChange("phone", e.target.value)}
+                className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
               />
-              {errors.firstName && (
-                <div className="text-red-600 text-xs mt-1">{errors.firstName}</div>
-              )}
             </div>
 
+            {/* Pays */}
             <div>
+              <label className="text-xs font-medium text-slate-700">
+                Pays (ISO2) *
+              </label>
               <input
-                placeholder="Nom *"
-                value={form.lastName}
-                onChange={(e) => handleChange('lastName', e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
-              />
-              {errors.lastName && (
-                <div className="text-red-600 text-xs mt-1">{errors.lastName}</div>
-              )}
-            </div>
-
-            <div>
-              <input
-                type="email"
-                placeholder="Email *"
-                value={form.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
-              />
-              {errors.email && (
-                <div className="text-red-600 text-xs mt-1">{errors.email}</div>
-              )}
-            </div>
-
-            <div>
-              <input
-                type="password"
-                placeholder="Mot de passe (≥ 6) *"
-                value={form.password}
-                onChange={(e) => handleChange('password', e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
-              />
-              {errors.password && (
-                <div className="text-red-600 text-xs mt-1">{errors.password}</div>
-              )}
-            </div>
-
-            <input
-              placeholder="Téléphone"
-              value={form.phone}
-              onChange={(e) => handleChange('phone', e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
-            />
-
-            <div>
-              <input
-                placeholder="Pays (ISO2, ex: ML, FR) *"
                 value={form.country}
-                onChange={(e) => handleChange('country', e.target.value)}
                 maxLength={2}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => handleChange("country", e.target.value)}
+                className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
               />
               {errors.country && (
-                <div className="text-red-600 text-xs mt-1">{errors.country}</div>
+                <p className="text-xs text-red-600 mt-1">{errors.country}</p>
               )}
             </div>
 
-            <div className="md:col-span-2 text-right">
+            {/* Bouton */}
+            <div className="md:col-span-2 flex justify-end">
               <button
                 type="submit"
                 disabled={loading}
-                className={`px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition ${
+                className={`px-6 py-2.5 rounded-xl shadow-sm text-white text-sm font-medium transition ${
                   loading
-                    ? 'bg-blue-300 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                    ? "bg-blue-300 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
                 }`}
               >
-                {loading ? 'Création...' : 'Créer Agent'}
+                {loading ? "Création…" : "Créer Agent"}
               </button>
             </div>
           </form>
         )}
 
-        {/* === Liste des agents === */}
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          📋 Liste des agents existants
+        {/* -------------------------------------------- */}
+        {/* TABLEAU PREMIUM (APPLE LIGHT A1) */}
+        {/* -------------------------------------------- */}
+        <h2 className="text-xl font-semibold text-slate-900 mb-4">
+          📋 Liste des agents
         </h2>
 
         {loadingAgents ? (
-          <p className="text-gray-500 italic text-center py-6">
+          <p className="text-center text-slate-500 italic py-6">
             Chargement des agents…
           </p>
         ) : filtered.length === 0 ? (
-          <p className="text-gray-500 italic text-center py-6">
+          <p className="text-center text-slate-500 italic py-6">
             Aucun agent trouvé.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead className="bg-gray-100 text-gray-700">
+          <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-100/60 text-slate-700 border-b border-slate-200">
                 <tr>
-                  <th className="text-left px-3 py-2 border-b">Nom</th>
-                  <th className="text-left px-3 py-2 border-b">Email</th>
-                  <th className="text-left px-3 py-2 border-b">Téléphone</th>
-                  <th className="text-left px-3 py-2 border-b">Pays</th>
-                  <th className="text-left px-3 py-2 border-b">Créé le</th>
+                  <th className="px-4 py-3 text-left font-medium">Nom</th>
+                  <th className="px-4 py-3 text-left font-medium">Email</th>
+                  <th className="px-4 py-3 text-left font-medium">Téléphone</th>
+                  <th className="px-4 py-3 text-left font-medium">Pays</th>
+                  <th className="px-4 py-3 text-left font-medium">Créé le</th>
                 </tr>
               </thead>
+
               <tbody>
                 {filtered.map((a) => (
-                  <tr key={a.id} className="border-b hover:bg-gray-50">
-                    <td className="px-3 py-2">
-                      {[a.firstName, a.lastName].filter(Boolean).join(' ') || '—'}
+                  <tr
+                    key={a.id}
+                    className="hover:bg-slate-50 border-b border-slate-100 transition"
+                  >
+                    <td className="px-4 py-3">
+                      {[a.firstName, a.lastName].filter(Boolean).join(" ") || "—"}
                     </td>
-                    <td className="px-3 py-2">{a.email}</td>
-                    <td className="px-3 py-2">{a.phone || '—'}</td>
-                    <td className="px-3 py-2">{a.country || '—'}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3">{a.email}</td>
+                    <td className="px-4 py-3">{a.phone || "—"}</td>
+                    <td className="px-4 py-3">{a.country || "—"}</td>
+                    <td className="px-4 py-3">
                       {new Date(a.createdAt).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="mt-3 text-xs text-gray-500">
+
+            <div className="px-4 py-2 text-xs text-slate-500">
               {filtered.length} résultat(s)
             </div>
           </div>

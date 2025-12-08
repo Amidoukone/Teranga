@@ -175,10 +175,6 @@ export default function ServicesPage() {
     try {
       setLoading(true);
 
-      // 👉 On ne force plus la sélection d’un bien.
-      // Le helper createService s’occupe déjà de :
-      // - ignorer propertyId si vide
-      // - caster budget correctement
       const payload = { ...form };
 
       await createService(payload);
@@ -219,8 +215,6 @@ export default function ServicesPage() {
         address: form.address,
         budget: form.budget === '' ? null : parseFloat(form.budget),
         type: form.type,
-        // 👉 côté backend, propertyId n’est pas encore updatable,
-        // mais on laisse ce champ si tu décides de le gérer plus tard.
         propertyId: form.propertyId ? parseInt(form.propertyId, 10) : null,
       };
 
@@ -355,14 +349,15 @@ export default function ServicesPage() {
      🔹 UI principale
   ========================================== */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 lg:py-10">
+      <div className="max-w-6xl mx-auto bg-white/95 shadow-2xl rounded-3xl border border-gray-100 p-4 sm:p-8 lg:p-10 overflow-hidden space-y-8">
         {/* HEADER */}
         <Header
           showForm={showForm}
           setShowForm={setShowForm}
           loading={loading}
           loadServices={loadServices}
+          totalCount={services.length}
         />
 
         {/* FILTRES */}
@@ -389,16 +384,22 @@ export default function ServicesPage() {
           />
         )}
 
-        <h2 className="text-xl font-semibold text-gray-900 mb-4 break-words">
-          📋 Mes services existants
-        </h2>
+        {/* LISTE DES SERVICES */}
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">
+            📋 Mes services existants
+          </h2>
+          <span className="text-xs sm:text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-full px-3 py-1">
+            {filtered.length} service(s) affiché(s)
+          </span>
+        </div>
 
         {filtered.length === 0 ? (
           <p className="text-gray-500 italic text-center py-6">
-            Aucun service correspondant.
+            Aucun service correspondant à ces critères.
           </p>
         ) : (
-          <div className="grid gap-6">
+          <div className="grid gap-5 md:grid-cols-2">
             {filtered.map((s) => (
               <ServiceCard
                 key={s.id}
@@ -417,24 +418,28 @@ export default function ServicesPage() {
 }
 
 /* ============================================================
-   🧩 HEADER (responsive, mobile-first)
+   🧩 HEADER (responsive, mobile-first, plus pro)
 ============================================================ */
-function Header({ showForm, setShowForm, loading, loadServices }) {
+function Header({ showForm, setShowForm, loading, loadServices, totalCount }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-      <div className="max-w-full break-words">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-          🛠️ Mes Services
+    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-4 border-b border-gray-100">
+      <div className="space-y-1 min-w-0">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 break-words">
+          🛠️ Gestion des services
         </h1>
-        <p className="text-sm text-gray-500">
-          Créez, suivez et gérez vos services en toute simplicité.
+        <p className="text-sm sm:text-base text-gray-600">
+          Créez, suivez et gérez vos services pour vos clients et leurs biens.
         </p>
+        <span className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 mt-1">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+          {totalCount} service(s) au total.
+        </span>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
+          className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
         >
           {showForm ? '➖ Masquer le formulaire' : '➕ Nouveau service'}
         </button>
@@ -442,7 +447,7 @@ function Header({ showForm, setShowForm, loading, loadServices }) {
         <button
           onClick={loadServices}
           disabled={loading}
-          className={`w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition ${
+          className={`w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition ${
             loading
               ? 'bg-blue-300 cursor-not-allowed text-white'
               : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
@@ -456,77 +461,106 @@ function Header({ showForm, setShowForm, loading, loadServices }) {
 }
 
 /* ============================================================
-   🧩 FILTRES (grid mobile-first)
+   🧩 FILTRES (grid mobile-first, labels + meilleure lisibilité)
 ============================================================ */
 function Filters({ filters, setFilters, properties, filteredCount }) {
   return (
-    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5">
+    <div className="mb-6 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         {/* Recherche */}
-        <input
-          placeholder="🔎 Rechercher un service"
-          value={filters.q}
-          onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-1 sm:col-span-2 lg:col-span-2 w-full"
-        />
+        <div className="col-span-1 sm:col-span-2 lg:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Recherche globale
+          </label>
+          <input
+            placeholder="🔎 Rechercher un service (titre, contact, adresse...)"
+            value={filters.q}
+            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full"
+          />
+        </div>
 
         {/* Type */}
-        <select
-          value={filters.type}
-          onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full"
-        >
-          <option value="">Type (tous)</option>
-          {Object.entries(SERVICE_TYPES).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Type
+          </label>
+          <select
+            value={filters.type}
+            onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
+          >
+            <option value="">Type (tous)</option>
+            {Object.entries(SERVICE_TYPES).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Statut */}
-        <select
-          value={filters.status}
-          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full"
-        >
-          <option value="">Statut (tous)</option>
-          {Object.entries(SERVICE_STATUSES).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Statut
+          </label>
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
+          >
+            <option value="">Statut (tous)</option>
+            {Object.entries(SERVICE_STATUSES).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Bien */}
-        <select
-          value={filters.property}
-          onChange={(e) => setFilters({ ...filters, property: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full"
-        >
-          <option value="">Bien (tous)</option>
-          {properties.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.title} — {p.city}
-            </option>
-          ))}
-        </select>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Bien associé
+          </label>
+          <select
+            value={filters.property}
+            onChange={(e) =>
+              setFilters({ ...filters, property: e.target.value })
+            }
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
+          >
+            <option value="">Bien (tous)</option>
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title} — {p.city}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Tri */}
-        <select
-          value={filters.sort}
-          onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-1 sm:col-span-2 lg:col-span-2 w-full"
-        >
-          <option value="-createdAt">Plus récents</option>
-          <option value="createdAt">Plus anciens</option>
-          <option value="title">Titre A→Z</option>
-          <option value="-title">Titre Z→A</option>
-        </select>
+        <div className="col-span-1 sm:col-span-2 lg:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Tri
+          </label>
+          <select
+            value={filters.sort}
+            onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
+          >
+            <option value="-createdAt">Plus récents</option>
+            <option value="createdAt">Plus anciens</option>
+            <option value="title">Titre A → Z</option>
+            <option value="-title">Titre Z → A</option>
+          </select>
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="text-xs text-gray-500">{filteredCount} service(s)</div>
+      <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="text-xs sm:text-sm text-gray-500">
+          {filteredCount} service(s) après filtrage.
+        </div>
         <button
           onClick={() =>
             setFilters({
@@ -537,9 +571,9 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
               sort: '-createdAt',
             })
           }
-          className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition w-full sm:w-auto text-center"
+          className="text-xs sm:text-sm px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition w-full sm:w-auto text-center"
         >
-          Réinitialiser
+          Réinitialiser tous les filtres
         </button>
       </div>
     </div>
@@ -547,7 +581,7 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
 }
 
 /* ============================================================
-   🧾 FORMULAIRE DE CRÉATION / ÉDITION (mobile-friendly)
+   🧾 FORMULAIRE DE CRÉATION / ÉDITION
 ============================================================ */
 function ServiceForm({
   user,
@@ -562,23 +596,28 @@ function ServiceForm({
   properties,
 }) {
   return (
-    <div className="mb-10">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4 break-words">
-        {editingId ? '✏️ Modifier le service' : '➕ Créer un nouveau service'}
-      </h2>
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">
+          {editingId ? '✏️ Modifier le service' : '➕ Créer un nouveau service'}
+        </h2>
+        <p className="text-xs sm:text-sm text-gray-500">
+          Renseignez les informations du service ci-dessous.
+        </p>
+      </div>
 
       <form
         onSubmit={(e) => (editingId ? handleUpdate(e) : handleSubmit(e))}
         className="
           grid grid-cols-1 sm:grid-cols-2 gap-4
-          bg-gray-50 p-4 sm:p-5 rounded-xl border border-gray-200
+          bg-gray-50 p-4 sm:p-5 rounded-2xl border border-gray-200
         "
       >
         {/* ADMIN : sélection client */}
         {user?.role === 'admin' && (
           <div className="col-span-1 sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Client associé *
+              Client associé <span className="text-red-500">*</span>
             </label>
             <select
               value={form.clientId}
@@ -586,7 +625,7 @@ function ServiceForm({
               required
               className="
                 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                focus:ring-2 focus:ring-blue-500
+                focus:ring-2 focus:ring-blue-500 bg-white
               "
             >
               <option value="">— Sélectionner un client —</option>
@@ -599,7 +638,7 @@ function ServiceForm({
           </div>
         )}
 
-        {/* Biens — 👇 ici on le rend optionnel */}
+        {/* Biens — optionnel */}
         <div className="col-span-1 sm:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Bien associé (optionnel)
@@ -610,7 +649,7 @@ function ServiceForm({
             disabled={user?.role === 'admin' && !form.clientId}
             className="
               w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-              focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100
+              focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 bg-white
             "
           >
             <option value="">
@@ -657,7 +696,7 @@ function ServiceForm({
               }
             `}
           >
-            {editingId ? '💾 Mettre à jour' : 'Créer Service'}
+            {editingId ? '💾 Mettre à jour' : 'Créer le service'}
           </button>
         </div>
       </form>
@@ -666,7 +705,7 @@ function ServiceForm({
 }
 
 /* ============================================================
-   🧩 Champs internes du formulaire (mobile-first)
+   🧩 Champs internes du formulaire
 ============================================================ */
 function ServiceFormFields({ form, setForm }) {
   return (
@@ -681,7 +720,7 @@ function ServiceFormFields({ form, setForm }) {
           onChange={(e) => setForm({ ...form, type: e.target.value })}
           className="
             w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500
+            focus:ring-2 focus:ring-blue-500 bg-white
           "
         >
           {Object.entries(SERVICE_TYPES).map(([key, label]) => (
@@ -695,10 +734,10 @@ function ServiceFormFields({ form, setForm }) {
       {/* Titre */}
       <div className="w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Titre *
+          Titre <span className="text-red-500">*</span>
         </label>
         <input
-          placeholder="Ex: Paiement facture SENELEC"
+          placeholder="Ex : Paiement facture SENELEC"
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           required
@@ -782,7 +821,7 @@ function ServiceFormFields({ form, setForm }) {
         <input
           type="number"
           step="0.01"
-          placeholder="Ex: 15000"
+          placeholder="Ex : 15000"
           value={form.budget}
           onChange={(e) => setForm({ ...form, budget: e.target.value })}
           className="
@@ -799,10 +838,19 @@ function ServiceFormFields({ form, setForm }) {
    🔍 ServiceCard (Affichage – Optimisé mobile/desktop)
 ============================================================ */
 function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
+  const statusClass =
+    s.status === 'created'
+      ? 'bg-gray-100 text-gray-700'
+      : s.status === 'in_progress'
+      ? 'bg-blue-100 text-blue-700'
+      : s.status === 'completed'
+      ? 'bg-green-100 text-green-700'
+      : 'bg-emerald-100 text-emerald-700';
+
   return (
     <div
       className="
-        bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-5
+        bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-5
         hover:shadow-md transition
         w-full max-w-full
       "
@@ -818,23 +866,14 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
           </h3>
 
           <p className="text-sm text-gray-600 mt-1 whitespace-normal break-words">
-            {s.description || 'Aucune description'}
+            {s.description || 'Aucune description.'}
           </p>
         </div>
 
         <div
           className={`
             mt-1 sm:mt-0 px-3 py-1 rounded-full text-xs font-semibold
-            whitespace-nowrap self-start
-            ${
-              s.status === 'created'
-                ? 'bg-gray-100 text-gray-700'
-                : s.status === 'in_progress'
-                ? 'bg-blue-100 text-blue-700'
-                : s.status === 'completed'
-                ? 'bg-green-100 text-green-700'
-                : 'bg-emerald-100 text-emerald-700'
-            }
+            whitespace-nowrap self-start border ${statusClass}
           `}
         >
           {s.statusLabel || s.status.replace('_', ' ')}
@@ -842,7 +881,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
       </div>
 
       {/* META */}
-      <div className="mt-4 text-sm text-gray-700 space-y-2">
+      <div className="mt-4 text-sm text-gray-700 space-y-1.5">
         <p className="break-words">
           <strong>Bien :</strong>{' '}
           {s.property?.title
@@ -870,6 +909,15 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
             ? `${s.agent.firstName} ${s.agent.lastName}`
             : 'Non assigné'}
         </p>
+
+        {s.createdAt && (
+          <p className="text-xs text-gray-500">
+            Créé le{' '}
+            <span className="font-medium">
+              {new Date(s.createdAt).toLocaleDateString('fr-FR')}
+            </span>
+          </p>
+        )}
       </div>
 
       {/* ACTIONS */}
@@ -886,7 +934,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
             rounded-lg hover:bg-blue-700 transition
           "
         >
-          📋 Voir tâches
+          📋 Voir les tâches
         </button>
 
         {user?.role === 'admin' && (

@@ -1,11 +1,11 @@
 /* eslint-disable jsx-a11y/img-redundant-alt */
 // ============================================================
-// ProductCatalogPage.jsx — Teranga PRODUCTION READY (Option B)
+// ProductCatalogPage.jsx — Teranga PRODUCTION READY (Style A 2025)
 // Clean Shop Premium + FILE_BASE + Lightbox + Optimisations
 // ============================================================
 
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';          // ⬅️ AJOUTÉ
+import { useNavigate } from 'react-router-dom';
 import { getProducts } from '../services/products';
 import { createOrder } from '../services/orders';
 import { me } from '../services/auth';
@@ -44,7 +44,7 @@ function toAbsUrl(path = '') {
 }
 
 /* ============================================================
-   ⭐ PAGE CATALOGUE PRODUITS (CLEAN SHOP PREMIUM)
+   ⭐ PAGE CATALOGUE PRODUITS (CLEAN SHOP PREMIUM — STYLE A)
 ============================================================ */
 export default function ProductCatalogPage() {
   const [user, setUser] = useState(null);
@@ -68,7 +68,7 @@ export default function ProductCatalogPage() {
   const [priceMax, setPriceMax] = useState('');
   const [sort, setSort] = useState('default');
 
-  // ⬅️ Pour redirection après commande
+  // Pour redirection après commande
   const navigate = useNavigate();
 
   /* ============================================================
@@ -87,8 +87,7 @@ export default function ProductCatalogPage() {
       } catch (e) {
         console.error('❌ Erreur chargement catalogue:', e);
         setError(
-          e?.response?.data?.error ||
-            "Impossible de charger les produits."
+          e?.response?.data?.error || "Impossible de charger les produits."
         );
       } finally {
         setLoading(false);
@@ -155,11 +154,14 @@ export default function ProductCatalogPage() {
      🛒 Création d'une commande rapide
   ============================================================ */
   async function handleOrder(product) {
-    if (!user)
-      return alert('Vous devez être connecté pour commander.');
+    if (!user) {
+      alert('Vous devez être connecté pour commander.');
+      return;
+    }
 
     if (user.role === 'admin') {
-      return alert("ℹ️ Les administrateurs ne passent pas de commandes ici.");
+      alert("ℹ️ Les administrateurs ne passent pas de commandes ici.");
+      return;
     }
 
     setSelectedProduct(product);
@@ -184,7 +186,6 @@ export default function ProductCatalogPage() {
         ],
       };
 
-      // ⬅️ On récupère la commande créée
       const newOrder = await createOrder(payload);
 
       alert(`✅ Commande créée pour ${quantity} × ${selectedProduct.name}`);
@@ -192,11 +193,9 @@ export default function ProductCatalogPage() {
       setSelectedProduct(null);
       setQuantity(1);
 
-      // ⬅️ Redirection automatique vers la commande
       if (newOrder?.id) {
         navigate(`/orders/${newOrder.id}`);
       } else if (newOrder?.order?.id) {
-        // fallback ultra safe si jamais le service renvoie { order: {...} }
         navigate(`/orders/${newOrder.order.id}`);
       } else {
         navigate('/orders');
@@ -282,22 +281,33 @@ export default function ProductCatalogPage() {
   }, [products, search, categoryFilter, priceMin, priceMax, sort]);
 
   /* ============================================================
-     🌀 États de chargement
+     🌀 États de chargement / erreur / vide
   ============================================================ */
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <p className="text-gray-600 text-lg animate-pulse">
-          Chargement du catalogue…
-        </p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
+        <div className="bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl px-6 py-5 shadow-xl">
+          <p className="text-gray-600 text-sm sm:text-lg animate-pulse text-center">
+            Chargement du catalogue…
+          </p>
+        </div>
       </div>
     );
   }
+
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="text-center max-w-md mx-auto bg-white rounded-2xl shadow-md p-6 border border-red-100">
-          <p className="text-red-600 text-lg mb-4">{error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-red-50 to-red-100 px-4">
+        <div className="max-w-md w-full bg-white border border-red-100 shadow-xl rounded-3xl px-6 py-6">
+          <h1 className="text-lg font-bold text-red-700 mb-2">
+            Une erreur est survenue
+          </h1>
+          <p className="text-sm text-red-600 mb-4 break-words">
+            {error}
+          </p>
+          <p className="text-xs text-gray-500">
+            Veuillez réessayer plus tard ou contacter le support si le problème persiste.
+          </p>
         </div>
       </div>
     );
@@ -305,69 +315,82 @@ export default function ProductCatalogPage() {
 
   if (products.length === 0) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <p className="text-gray-500 text-lg italic">
-          Aucun produit disponible pour le moment.
-        </p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
+        <div className="max-w-md w-full bg-white border border-slate-100 shadow-xl rounded-3xl px-6 py-6 text-center">
+          <p className="text-gray-500 text-sm sm:text-base italic">
+            Aucun produit disponible pour le moment.
+          </p>
+        </div>
       </div>
     );
   }
 
   /* ============================================================
-     🧱 UI PRINCIPALE — Filtres + Tri + Grille Produits
+     🧱 UI PRINCIPALE — Filtres + Tri + Grille Produits (Style A)
   ============================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 sm:px-6 py-10">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-3xl border border-slate-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
 
         {/* ==== HEADER ==== */}
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4 sm:mb-6">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[0.7rem] uppercase tracking-[0.18em] font-semibold text-blue-600 mb-1">
+              Boutique Teranga
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
               🛍️ <span>Catalogue des produits</span>
             </h1>
-            <p className="text-sm text-slate-600 mt-1">
-              Découvrez les produits disponibles dans votre espace Teranga.
+            <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-xl">
+              Explorez et commandez rapidement des produits disponibles depuis votre espace Teranga.
             </p>
           </div>
-          <div className="text-right text-xs text-slate-500">
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/70 border border-slate-200 shadow-sm">
-              {filteredProducts.length} résultat
-              {filteredProducts.length > 1 ? 's' : ''} sur {products.length}
-            </span>
+
+          <div className="flex items-end sm:items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+            <div className="flex flex-col items-end text-right">
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-[11px] text-slate-600 shadow-sm">
+                {filteredProducts.length} résultat
+                {filteredProducts.length > 1 ? 's' : ''} sur {products.length}
+              </span>
+              <span className="mt-1 text-[11px] text-slate-400">
+                Filtrez par catégorie, prix ou nom de produit.
+              </span>
+            </div>
           </div>
         </div>
 
         {/* ==== BARRE DE FILTRES ==== */}
-        <div className="mb-8 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl shadow-sm px-4 py-4 sm:px-5 sm:py-4">
+        <div className="bg-slate-50/80 backdrop-blur-sm border border-slate-200 rounded-2xl shadow-sm px-4 py-4 sm:px-5 sm:py-4 space-y-3">
+          {/* Ligne 1 : recherche + catégorie */}
           <div className="grid gap-3 md:grid-cols-4 items-end">
-
-            {/* --- Recherche --- */}
+            {/* Recherche */}
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
                 Rechercher
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                  🔍
+                </span>
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Nom, description, catégorie, #id…"
-                  className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                 />
               </div>
             </div>
 
-            {/* --- Catégorie --- */}
+            {/* Catégorie */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
                 Catégorie
               </label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white"
+                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Toutes les catégories</option>
                 {availableCategories.map((c) => (
@@ -379,13 +402,12 @@ export default function ProductCatalogPage() {
             </div>
           </div>
 
-          {/* ==== Filtres prix + reset + tri ==== */}
-          <div className="mt-3 grid gap-3 md:grid-cols-[1.2fr_1fr]">
-
-            {/* Prix */}
+          {/* Ligne 2 : prix, reset, tri */}
+          <div className="grid gap-3 md:grid-cols-[1.2fr_1fr]">
+            {/* Prix + reset */}
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
                   Prix min
                 </label>
                 <input
@@ -393,13 +415,13 @@ export default function ProductCatalogPage() {
                   min="0"
                   value={priceMin}
                   onChange={(e) => setPriceMin(e.target.value)}
-                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white"
+                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Min"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
                   Prix max
                 </label>
                 <input
@@ -407,12 +429,11 @@ export default function ProductCatalogPage() {
                   min="0"
                   value={priceMax}
                   onChange={(e) => setPriceMax(e.target.value)}
-                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white"
+                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Max"
                 />
               </div>
 
-              {/* Reset */}
               <div className="flex items-end">
                 <button
                   type="button"
@@ -423,7 +444,7 @@ export default function ProductCatalogPage() {
                     setPriceMax('');
                     setSort('default');
                   }}
-                  className="w-full text-xs font-semibold rounded-xl border border-slate-200 px-3 py-2 bg-slate-50 hover:bg-slate-100"
+                  className="w-full text-xs font-semibold rounded-xl border border-slate-200 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700"
                 >
                   Réinitialiser
                 </button>
@@ -432,13 +453,13 @@ export default function ProductCatalogPage() {
 
             {/* Tri */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
                 Trier par
               </label>
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
-                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white"
+                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="default">Recommandé</option>
                 <option value="price_asc">Prix croissant</option>
@@ -453,7 +474,7 @@ export default function ProductCatalogPage() {
 
         {/* ==== GRILLE PRODUITS ==== */}
         {filteredProducts.length === 0 ? (
-          <div className="bg-white/80 border rounded-2xl shadow-sm py-10 flex items-center justify-center">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl shadow-sm py-10 flex items-center justify-center">
             <p className="text-slate-500 text-sm">
               Aucun produit ne correspond à ces critères.
             </p>
@@ -496,7 +517,7 @@ export default function ProductCatalogPage() {
                       )}
                     </button>
                   ) : (
-                    <div className="w-full h-44 flex items-center justify-center bg-slate-100 text-slate-400">
+                    <div className="w-full h-44 flex items-center justify-center bg-slate-100 text-slate-400 text-xs">
                       Aucun visuel
                     </div>
                   )}
@@ -509,7 +530,7 @@ export default function ProductCatalogPage() {
                       </h2>
 
                       {p.category?.name && (
-                        <span className="px-2 py-0.5 rounded-full text-[11px] bg-blue-50 text-blue-700 border border-blue-100">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] bg-blue-50 text-blue-700 border border-blue-100 whitespace-nowrap">
                           {p.category.name}
                         </span>
                       )}
@@ -557,7 +578,7 @@ export default function ProductCatalogPage() {
                     {user && user.role !== 'admin' && (
                       <button
                         onClick={() => handleOrder(p)}
-                        className="mt-4 w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-xl shadow-sm bg-blue-600 text-white hover:bg-blue-700"
+                        className="mt-4 w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-xl shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
                       >
                         🛒 Commander
                       </button>
@@ -598,20 +619,20 @@ export default function ProductCatalogPage() {
                   min="1"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-4"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
 
                 <div className="flex justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setCreating(false)}
-                    className="px-4 py-2 text-sm bg-gray-200 rounded-lg hover:bg-gray-300"
+                    className="px-4 py-2 text-sm bg-gray-100 text-slate-700 rounded-lg hover:bg-gray-200"
                   >
                     Annuler
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800"
                   >
                     Confirmer
                   </button>
@@ -676,7 +697,9 @@ export default function ProductCatalogPage() {
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 text-slate-100 text-sm">
                 <div className="truncate">
-                  <span className="font-semibold">{previewProduct.name}</span>
+                  <span className="font-semibold">
+                    {previewProduct.name}
+                  </span>
                   {previewProduct.id && (
                     <span className="text-xs text-slate-400 ml-2">
                       #{previewProduct.id}
@@ -727,7 +750,6 @@ export default function ProductCatalogPage() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

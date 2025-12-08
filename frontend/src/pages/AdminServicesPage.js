@@ -119,6 +119,21 @@ export default function AdminServicesPage() {
     return s.status !== 'completed' && s.status !== 'validated';
   }
 
+  function statusBadgeClass(st) {
+    switch (st) {
+      case 'created':
+        return 'bg-slate-100 text-slate-700 border border-slate-200';
+      case 'in_progress':
+        return 'bg-blue-50 text-blue-700 border border-blue-100';
+      case 'completed':
+        return 'bg-emerald-50 text-emerald-700 border border-emerald-100';
+      case 'validated':
+        return 'bg-indigo-50 text-indigo-700 border border-indigo-100';
+      default:
+        return 'bg-gray-50 text-gray-600 border border-gray-200';
+    }
+  }
+
   if (isAdmin === null)
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -127,91 +142,164 @@ export default function AdminServicesPage() {
     );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        {/* 🧭 En-tête */}
-        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">
-            🧩 Gestion des Services (Admin)
-          </h1>
-          <button
-            onClick={loadServices}
-            disabled={loading}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition ${
-              loading
-                ? 'bg-blue-300 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-            }`}
-          >
-            {loading ? 'Chargement…' : '🔄 Rafraîchir'}
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+        {/* 🧭 En-tête Apple Light */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
+              🧩 Gestion des services
+            </h1>
+            <p className="text-sm text-slate-500 max-w-xl">
+              Vue administrateur pour suivre, filtrer et assigner les services aux agents.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+            <button
+              onClick={loadServices}
+              disabled={loading}
+              className={`inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-full shadow-sm transition ${
+                loading
+                  ? 'bg-blue-200 text-white cursor-not-allowed'
+                  : 'bg-slate-900 text-white hover:bg-black'
+              }`}
+            >
+              {loading ? 'Chargement…' : '🔄 Rafraîchir la liste'}
+            </button>
+          </div>
         </div>
 
-        {/* 🔍 Filtres */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+        {/* 🎛️ Filtres Apple-style */}
+        <section className="mb-8 bg-slate-50/80 border border-slate-200 rounded-2xl px-4 sm:px-5 py-4 sm:py-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={onlyUnassigned}
-              onChange={(e) => setOnlyUnassigned(e.target.checked)}
-              className="rounded text-blue-600 focus:ring-blue-500"
-            />
-            Non assignés
-          </label>
+            {/* Statut */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">
+                Statut du service
+              </label>
+              <select
+                value={status}
+                onChange={(e) => {
+                  setStatus(e.target.value);
+                  setOffset(0);
+                }}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <input
-            placeholder="🔎 Recherche (titre, client...)"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-          />
+            {/* Non assignés */}
+            <div className="flex flex-col justify-end">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={onlyUnassigned}
+                  onChange={(e) => {
+                    setOnlyUnassigned(e.target.checked);
+                    setOffset(0);
+                  }}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>Afficher uniquement les non assignés</span>
+              </label>
+            </div>
 
-          <select
-            value={limit}
-            onChange={(e) => {
-              setLimit(parseInt(e.target.value, 10));
-              setOffset(0);
-            }}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            {[10, 25, 50, 100].map((n) => (
-              <option key={n} value={n}>
-                Limite : {n}
-              </option>
-            ))}
-          </select>
-        </div>
+            {/* Recherche */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">
+                Recherche
+              </label>
+              <input
+                placeholder="Titre, client, description…"
+                value={q}
+                onChange={(e) => {
+                  setQ(e.target.value);
+                  setOffset(0);
+                }}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
 
-        {/* 🧾 Tableau Services */}
-        <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+            {/* Limite */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">
+                Limite par page
+              </label>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(parseInt(e.target.value, 10));
+                  setOffset(0);
+                }}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {[10, 25, 50, 100].map((n) => (
+                  <option key={n} value={n}>
+                    {n} services
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-500">
+            <span>
+              {services.length === 0
+                ? 'Aucun service pour ces filtres.'
+                : `${services.length} service(s) chargé(s) pour cette page`}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setStatus('all');
+                setOnlyUnassigned(false);
+                setQ('');
+                setLimit(25);
+                setOffset(0);
+              }}
+              className="self-start sm:self-auto inline-flex items-center px-3 py-1.5 rounded-full bg-slate-200 hover:bg-slate-300 text-[11px] font-medium transition"
+            >
+              Réinitialiser les filtres
+            </button>
+          </div>
+        </section>
+
+        {/* 🧾 Tableau Services Apple Light */}
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-100 text-gray-700 font-semibold">
+            <thead className="bg-slate-50/80 text-slate-600">
               <tr>
-                <th className="px-4 py-3 text-left">Titre / Type</th>
-                <th className="px-4 py-3 text-left">Client</th>
-                <th className="px-4 py-3 text-left">Agent</th>
-                <th className="px-4 py-3 text-left">Statut</th>
-                <th className="px-4 py-3 text-left">Assigner / Réassigner</th>
+                <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                  Titre / Type
+                </th>
+                <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                  Client
+                </th>
+                <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                  Agent
+                </th>
+                <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                  Statut
+                </th>
+                <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                  Assigner / réassigner
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {services.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
-                    className="text-center py-6 text-gray-500 italic"
+                    className="text-center py-8 text-slate-400 text-sm italic"
                   >
                     Aucun service pour ces filtres.
                   </td>
@@ -220,35 +308,62 @@ export default function AdminServicesPage() {
                 services.map((s) => (
                   <tr
                     key={s.id}
-                    className="border-t border-gray-100 hover:bg-gray-50 transition"
+                    className="hover:bg-slate-50/70 transition-colors"
                   >
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-gray-900">
-                        {s.title}
+                    {/* Titre / Type / Description */}
+                    <td className="px-4 sm:px-5 py-3 align-top">
+                      <div className="font-medium text-slate-900 break-words">
+                        {s.title || `Service #${s.id}`}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {s.type} • Budget : {s.budget ?? '—'}
+                      <div className="mt-0.5 text-xs text-slate-500">
+                        {s.type || 'Type inconnu'} • Budget :{' '}
+                        <span className="font-medium text-slate-700">
+                          {s.budget ?? '—'}
+                        </span>
                       </div>
                       {s.description && (
-                        <div className="text-xs text-gray-400 mt-1">
+                        <div className="mt-1 text-xs text-slate-400 line-clamp-2">
                           {s.description}
                         </div>
                       )}
                     </td>
 
-                    <td className="px-4 py-3">{displayUser(s.client)}</td>
-                    <td className="px-4 py-3">
-                      {s.agent ? displayUser(s.agent) : 'Non assigné'}
+                    {/* Client */}
+                    <td className="px-4 sm:px-5 py-3 align-top">
+                      <div className="text-sm text-slate-800 break-words">
+                        {displayUser(s.client)}
+                      </div>
                     </td>
-                    <td className="px-4 py-3 capitalize text-gray-700">
-                      {s.status.replace('_', ' ')}
+
+                    {/* Agent */}
+                    <td className="px-4 sm:px-5 py-3 align-top">
+                      <div className="text-sm text-slate-800 break-words">
+                        {s.agent ? displayUser(s.agent) : 'Non assigné'}
+                      </div>
                     </td>
-                    <td className="px-4 py-3">
+
+                    {/* Statut badge */}
+                    <td className="px-4 sm:px-5 py-3 align-top">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium capitalize ${statusBadgeClass(
+                          s.status
+                        )}`}
+                      >
+                        {s.status.replace('_', ' ')}
+                      </span>
+                    </td>
+
+                    {/* Select agent */}
+                    <td className="px-4 sm:px-5 py-3 align-top">
                       <select
                         disabled={!canReassign(s) || agents.length === 0}
                         value={s.agent?.id || ''}
                         onChange={(e) => handleAssign(s.id, e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
+                        className={`w-full rounded-xl border px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          !canReassign(s) || agents.length === 0
+                            ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'
+                            : 'bg-white border-slate-200'
+                        }`}
                       >
                         <option value="">— Choisir un agent —</option>
                         {agents.map((a) => (
@@ -257,6 +372,11 @@ export default function AdminServicesPage() {
                           </option>
                         ))}
                       </select>
+                      {!canReassign(s) && (
+                        <p className="mt-1 text-[11px] text-slate-400">
+                          Réassignation désactivée (service clôturé).
+                        </p>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -265,31 +385,32 @@ export default function AdminServicesPage() {
           </table>
         </div>
 
-        {/* 📄 Pagination */}
-        <div className="flex justify-between items-center mt-6 text-sm">
+        {/* 📄 Pagination minimaliste */}
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-600">
           <button
             onClick={() => setOffset(Math.max(0, offset - limit))}
             disabled={offset === 0 || loading}
-            className={`px-4 py-2 rounded-lg transition ${
+            className={`inline-flex items-center justify-center px-4 py-2 rounded-full border text-sm font-medium transition ${
               offset === 0 || loading
-                ? 'bg-gray-200 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'
             }`}
           >
             ← Précédent
           </button>
 
-          <span className="text-gray-600">
-            Offset : {offset} • Limite : {limit}
+          <span className="text-xs sm:text-sm text-slate-500">
+            Offset : <span className="font-medium">{offset}</span> • Limite :{' '}
+            <span className="font-medium">{limit}</span>
           </span>
 
           <button
             onClick={() => setOffset(offset + limit)}
             disabled={loading || services.length < limit}
-            className={`px-4 py-2 rounded-lg transition ${
+            className={`inline-flex items-center justify-center px-4 py-2 rounded-full border text-sm font-medium transition ${
               loading || services.length < limit
-                ? 'bg-gray-200 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'
             }`}
           >
             Suivant →

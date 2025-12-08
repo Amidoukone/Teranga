@@ -1,4 +1,8 @@
 // frontend/src/pages/PropertiesPage.js
+// ============================================================================
+// PropertiesPage — Version Premium 2025 (UX améliorée + Responsive + Pro)
+// ============================================================================
+
 import { useEffect, useMemo, useState } from 'react';
 import {
   getProperties,
@@ -7,6 +11,32 @@ import {
 } from '../services/properties';
 import api from '../services/api';
 import { applyLabels, PROPERTY_TYPES, PROPERTY_STATUSES } from '../utils/labels';
+
+/* ============================================================================
+// 🔧 HELPERS FICHIERS & URL
+============================================================================ */
+
+const FILE_BASE =
+  (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
+  (typeof window !== 'undefined' &&
+  window.__TERANGA_API_BASE_URL
+    ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
+    : 'http://localhost:5000');
+
+function toAbsUrl(pathOrUrl = '') {
+  if (!pathOrUrl) return '';
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  const normalized = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+  return `${FILE_BASE}${normalized}`.replace(/([^:]\/)\/+/g, '$1');
+}
+
+function isPdf(path = '') {
+  return /\.pdf($|\?)/i.test(path);
+}
+
+/* ============================================================================
+// 🧩 PAGE PRINCIPALE
+============================================================================ */
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState([]);
@@ -34,11 +64,11 @@ export default function PropertiesPage() {
   // 🖼️ Lightbox : image agrandie + navigation
   const [lightbox, setLightbox] = useState({
     open: false,
-    images: [],   // tableau d’URLs absolues (http://localhost:5000/...)
+    images: [],
     index: 0,
   });
 
-  // 🧭 Filtres de recherche et tri
+  // 🔍 Filtres de recherche et tri
   const [filters, setFilters] = useState({
     q: '',
     type: '',
@@ -62,7 +92,7 @@ export default function PropertiesPage() {
     localStorage.setItem('teranga_properties_showForm', showForm ? '1' : '0');
   }, [showForm]);
 
-  // Clavier pour lightbox (←/→/ESC)
+  // Clavier pour lightbox (← / → / ESC)
   useEffect(() => {
     if (!lightbox.open) return;
     function onKey(e) {
@@ -78,7 +108,6 @@ export default function PropertiesPage() {
   async function load() {
     try {
       const props = await getProperties();
-      // 🏷️ Ajoute les labels français si backend ne les fournit pas
       const enriched = props.map((p) => ({
         ...p,
         ...(p.typeLabel ? {} : applyLabels(p)),
@@ -90,46 +119,20 @@ export default function PropertiesPage() {
     }
   }
 
-// ==========================================
-// 🔹 Helpers d’images
-// ==========================================
-
-// Base pour les fichiers : backend en prod ou fallback local en dev
-const FILE_BASE =
-  (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
-  (typeof window !== 'undefined' && window.__TERANGA_API_BASE_URL
-    ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
-    : 'http://localhost:5000');
-
-function toAbsUrl(pathOrUrl = '') {
-  if (!pathOrUrl) return '';
-
-  // si c'est déjà une URL absolue (http/https), on ne touche pas
-  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
-
-  // on s'assure qu'il y a un seul slash entre base et chemin
-  const normalized = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
-  return `${FILE_BASE}${normalized}`.replace(/([^:]\/)\/+/g, '$1');
-}
-
-function isPdf(path = '') {
-  return /\.pdf($|\?)/i.test(path);
-}
-
-
   // ==========================================
   // 🔹 Gestion fichiers & prévisualisation
   // ==========================================
   function handleFileChange(e) {
-    const selectedFiles = Array.from(e.target.files);
+    const selectedFiles = Array.from(e.target.files || []);
     setFiles(selectedFiles);
+
     previewUrls.forEach((url) => URL.revokeObjectURL(url));
     const previews = selectedFiles.map((file) => URL.createObjectURL(file));
     setPreviewUrls(previews);
   }
 
   // ==========================================
-  // 🔹 Création et mise à jour
+  // 🔹 Création
   // ==========================================
   async function handleSubmit(e) {
     if (e?.preventDefault) e.preventDefault();
@@ -151,6 +154,9 @@ function isPdf(path = '') {
     }
   }
 
+  // ==========================================
+  // 🔹 Mise à jour
+  // ==========================================
   async function handleUpdate(id) {
     try {
       const formData = new FormData();
@@ -220,9 +226,11 @@ function isPdf(path = '') {
     const idx = Math.min(Math.max(0, startIndex), imagesAbsUrls.length - 1);
     setLightbox({ open: true, images: imagesAbsUrls, index: idx });
   }
+
   function closeLightbox() {
     setLightbox({ open: false, images: [], index: 0 });
   }
+
   function nextImage() {
     setLightbox((lb) => {
       if (!lb.open || lb.images.length === 0) return lb;
@@ -230,6 +238,7 @@ function isPdf(path = '') {
       return { ...lb, index: ni };
     });
   }
+
   function prevImage() {
     setLightbox((lb) => {
       if (!lb.open || lb.images.length === 0) return lb;
@@ -244,7 +253,6 @@ function isPdf(path = '') {
   const filtered = useMemo(() => {
     let arr = [...properties];
 
-    // Recherche texte
     if (filters.q.trim()) {
       const q = filters.q.trim().toLowerCase();
       arr = arr.filter((p) =>
@@ -266,6 +274,7 @@ function isPdf(path = '') {
 
     if (filters.type) arr = arr.filter((p) => p.type === filters.type);
     if (filters.status) arr = arr.filter((p) => p.status === filters.status);
+
     if (filters.city.trim()) {
       const c = filters.city.trim().toLowerCase();
       arr = arr.filter((p) => (p.city || '').toLowerCase().includes(c));
@@ -276,7 +285,6 @@ function isPdf(path = '') {
     if (minS !== null) arr = arr.filter((p) => (p.surfaceArea || 0) >= minS);
     if (maxS !== null) arr = arr.filter((p) => (p.surfaceArea || 0) <= maxS);
 
-    // Tri
     const by = filters.sort || '-createdAt';
     arr.sort((a, b) => {
       const sign = by.startsWith('-') ? -1 : 1;
@@ -313,7 +321,9 @@ function isPdf(path = '') {
   }, [properties]);
 
   const cityOptions = useMemo(() => {
-    const set = new Set(properties.map((p) => (p.city || '').trim()).filter(Boolean));
+    const set = new Set(
+      properties.map((p) => (p.city || '').trim()).filter(Boolean)
+    );
     return Array.from(set);
   }, [properties]);
 
@@ -321,10 +331,16 @@ function isPdf(path = '') {
   // 🔹 UI
   // ==========================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100 relative">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 lg:py-10">
+      <div className="max-w-6xl mx-auto bg-white/95 shadow-2xl rounded-3xl border border-gray-100 p-5 sm:p-8 lg:p-10 space-y-8 relative">
+
         {/* 🧭 En-tête */}
-        <Header showForm={showForm} setShowForm={setShowForm} load={load} />
+        <Header
+          showForm={showForm}
+          setShowForm={setShowForm}
+          load={load}
+          total={properties.length}
+        />
 
         {/* 🔍 Filtres */}
         <PropertyFilters
@@ -370,7 +386,6 @@ function isPdf(path = '') {
           <div
             className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm"
             onClick={(e) => {
-              // éviter la fermeture si on clique sur l’image ou les contrôles
               if (e.target === e.currentTarget) closeLightbox();
             }}
           >
@@ -384,7 +399,10 @@ function isPdf(path = '') {
             </button>
 
             <button
-              onClick={(e) => { e.stopPropagation(); prevImage(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                prevImage();
+              }}
               className="absolute left-6 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 rounded-full p-3 shadow-lg text-xl"
               aria-label="Image précédente"
               title="Précédente (←)"
@@ -400,7 +418,10 @@ function isPdf(path = '') {
             />
 
             <button
-              onClick={(e) => { e.stopPropagation(); nextImage(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                nextImage();
+              }}
               className="absolute right-6 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 rounded-full p-3 shadow-lg text-xl"
               aria-label="Image suivante"
               title="Suivante (→)"
@@ -418,27 +439,36 @@ function isPdf(path = '') {
   );
 }
 
-/* ============================================================
-   ✅ SOUS-COMPOSANTS
-============================================================ */
-function Header({ showForm, setShowForm, load }) {
+/* ============================================================================
+// ✅ SOUS-COMPOSANTS
+============================================================================ */
+
+function Header({ showForm, setShowForm, load, total }) {
   return (
-    <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">🏠 Mes Biens</h1>
-        <p className="text-sm text-gray-500">Gérez vos biens, photos et informations.</p>
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 pb-4 border-b border-gray-100">
+      <div className="space-y-1">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
+          🏠 Gestion de vos biens
+        </h1>
+        <p className="text-sm sm:text-base text-gray-600">
+          Centralisez vos biens, leurs photos et toutes les informations importantes.
+        </p>
+        <span className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 mt-2">
+          <span className="h-2 w-2 rounded-full bg-blue-500 inline-block" />
+          {total} bien(s) enregistré(s).
+        </span>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition"
+          className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
         >
           {showForm ? '➖ Masquer le formulaire' : '➕ Nouveau bien'}
         </button>
         <button
           onClick={load}
-          className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
+          className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
         >
           🔄 Rafraîchir
         </button>
@@ -447,22 +477,29 @@ function Header({ showForm, setShowForm, load }) {
   );
 }
 
-/* --- Filtres --- */
-function PropertyFilters({ filters, setFilters, typeOptions, cityOptions, filteredCount }) {
+function PropertyFilters({
+  filters,
+  setFilters,
+  typeOptions,
+  cityOptions,
+  filteredCount,
+}) {
   return (
-    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-3">
+        {/* Recherche globale */}
         <input
           placeholder="🔎 Rechercher (titre, ville, adresse...)"
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 col-span-1 lg:col-span-2"
+          className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm sm:text-base focus:ring-2 focus:ring-blue-500 col-span-1 lg:col-span-3"
         />
 
+        {/* Type */}
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Type (tous)</option>
           {Object.entries(PROPERTY_TYPES).map(([key, label]) => (
@@ -479,10 +516,11 @@ function PropertyFilters({ filters, setFilters, typeOptions, cityOptions, filter
             ))}
         </select>
 
+        {/* Statut */}
         <select
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Statut (tous)</option>
           {Object.entries(PROPERTY_STATUSES).map(([k, v]) => (
@@ -492,12 +530,13 @@ function PropertyFilters({ filters, setFilters, typeOptions, cityOptions, filter
           ))}
         </select>
 
+        {/* Ville */}
         <input
           list="cities"
           placeholder="Ville"
           value={filters.city}
           onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         />
         <datalist id="cities">
           {cityOptions.map((c) => (
@@ -505,27 +544,47 @@ function PropertyFilters({ filters, setFilters, typeOptions, cityOptions, filter
           ))}
         </datalist>
 
+        {/* Surface min */}
         <input
           type="number"
           step="0.01"
           placeholder="Surface min (m²)"
           value={filters.minSurface}
           onChange={(e) => setFilters({ ...filters, minSurface: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         />
 
+        {/* Surface max */}
         <input
           type="number"
           step="0.01"
           placeholder="Surface max (m²)"
           value={filters.maxSurface}
           onChange={(e) => setFilters({ ...filters, maxSurface: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
-        <div className="text-xs text-gray-500">{filteredCount} bien(s)</div>
+      {/* Ligne tri + reset */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex items-center gap-3 text-xs sm:text-sm text-gray-500">
+          <span>{filteredCount} bien(s) après filtrage.</span>
+          <select
+            value={filters.sort}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, sort: e.target.value }))
+            }
+            className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+          >
+            <option value="-createdAt">Plus récents d’abord</option>
+            <option value="createdAt">Plus anciens d’abord</option>
+            <option value="title">Titre (A-Z)</option>
+            <option value="-title">Titre (Z-A)</option>
+            <option value="-surface">Surface (max → min)</option>
+            <option value="surface">Surface (min → max)</option>
+          </select>
+        </div>
+
         <button
           onClick={() =>
             setFilters({
@@ -538,16 +597,16 @@ function PropertyFilters({ filters, setFilters, typeOptions, cityOptions, filter
               sort: '-createdAt',
             })
           }
-          className="text-xs px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition"
+          className="text-xs sm:text-sm px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition w-full sm:w-auto text-center"
         >
-          Réinitialiser
+          Réinitialiser tous les filtres
         </button>
       </div>
     </div>
   );
 }
 
-/* --- Formulaire --- */
+/* --- Formulaire global --- */
 function PropertyForm({
   form,
   setForm,
@@ -562,9 +621,16 @@ function PropertyForm({
 }) {
   return (
     <div className="mb-10">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">
-        {editId ? '✏️ Modifier le bien' : '➕ Ajouter un nouveau bien'}
-      </h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+          {editId ? '✏️ Modifier le bien' : '➕ Ajouter un nouveau bien'}
+        </h2>
+        {!editId && (
+          <p className="text-xs sm:text-sm text-gray-500">
+            Remplissez les informations, ajoutez des photos, puis validez.
+          </p>
+        )}
+      </div>
 
       {showPreview && !editId ? (
         <PropertyPreview
@@ -591,26 +657,56 @@ function PropertyForm({
 
 function PropertyPreview({ form, previewUrls, setShowPreview, handleSubmit }) {
   return (
-    <div className="bg-gray-50 border border-gray-200 p-6 rounded-xl mb-8">
-      <h3 className="text-lg font-semibold mb-4">Aperçu du bien</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-        <p><strong>Titre :</strong> {form.title}</p>
-        <p><strong>Type :</strong> {PROPERTY_TYPES[form.type] || form.type}</p>
-        <p><strong>Adresse :</strong> {form.address}</p>
-        <p><strong>Ville :</strong> {form.city}</p>
-        <p className="sm:col-span-2"><strong>Description :</strong> {form.description || 'Aucune description'}</p>
-        <p className="sm:col-span-2"><strong>Détails :</strong> {form.surfaceArea || '—'} m² — {form.roomCount || '—'} pièce(s)</p>
+    <div className="bg-gray-50 border border-gray-200 p-5 sm:p-6 rounded-2xl mb-8">
+      <h3 className="text-base sm:text-lg font-semibold mb-4 text-gray-900">
+        Aperçu du bien avant validation
+      </h3>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm sm:text-base">
+        <p>
+          <strong>Titre :</strong> {form.title || '—'}
+        </p>
+        <p>
+          <strong>Type :</strong> {PROPERTY_TYPES[form.type] || form.type}
+        </p>
+        <p>
+          <strong>Adresse :</strong> {form.address || '—'}
+        </p>
+        <p>
+          <strong>Ville :</strong> {form.city || '—'}
+        </p>
+        <p>
+          <strong>Code postal :</strong> {form.postalCode || '—'}
+        </p>
+        <p>
+          <strong>Surface / Pièces :</strong>{' '}
+          {form.surfaceArea || '—'} m² — {form.roomCount || '—'} pièce(s)
+        </p>
+        <p className="sm:col-span-2">
+          <strong>Description :</strong>{' '}
+          {form.description || 'Aucune description renseignée.'}
+        </p>
       </div>
 
       {previewUrls.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-3">
-          {previewUrls.map((url, i) => (
-            <img key={i} src={url} alt="preview" className="w-32 h-32 object-cover rounded-lg border" />
-          ))}
+        <div className="mt-4">
+          <p className="text-xs sm:text-sm text-gray-500 mb-2">
+            Aperçu des photos sélectionnées :
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {previewUrls.map((url, i) => (
+              <img
+                key={i}
+                src={url}
+                alt="preview"
+                className="w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-lg border border-gray-200 shadow-sm"
+              />
+            ))}
+          </div>
         </div>
       )}
 
-      <div className="flex gap-3 mt-5 justify-end">
+      <div className="flex flex-col sm:flex-row gap-3 mt-5 justify-end">
         <button
           onClick={() => setShowPreview(false)}
           className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 text-sm font-semibold"
@@ -645,105 +741,165 @@ function PropertyEditor({
         if (!editId) setShowPreview(true);
         else handleUpdate(editId);
       }}
-      className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-200"
+      className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 sm:p-5 rounded-2xl border border-gray-200"
     >
-      <input
-        placeholder="Titre *"
-        value={form.title}
-        onChange={(e) => setForm({ ...form, title: e.target.value })}
-        required
-        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-      />
+      {/* Titre */}
+      <div className="w-full">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          Titre du bien <span className="text-red-500">*</span>
+        </label>
+        <input
+          placeholder="Ex : Appartement F3 centre-ville"
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          required
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
-      <select
-        value={form.type}
-        onChange={(e) => setForm({ ...form, type: e.target.value })}
-        required
-        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-      >
-        {Object.entries(PROPERTY_TYPES).map(([key, label]) => (
-          <option key={key} value={key}>
-            {label}
-          </option>
-        ))}
-      </select>
+      {/* Type */}
+      <div className="w-full">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          Type de bien
+        </label>
+        <select
+          value={form.type}
+          onChange={(e) => setForm({ ...form, type: e.target.value })}
+          required
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+        >
+          {Object.entries(PROPERTY_TYPES).map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <input
-        placeholder="Adresse *"
-        value={form.address}
-        onChange={(e) => setForm({ ...form, address: e.target.value })}
-        required
-        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-      />
+      {/* Adresse */}
+      <div className="w-full">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          Adresse <span className="text-red-500">*</span>
+        </label>
+        <input
+          placeholder="Adresse complète"
+          value={form.address}
+          onChange={(e) => setForm({ ...form, address: e.target.value })}
+          required
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
-      <input
-        placeholder="Ville *"
-        value={form.city}
-        onChange={(e) => setForm({ ...form, city: e.target.value })}
-        required
-        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-      />
+      {/* Ville */}
+      <div className="w-full">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          Ville <span className="text-red-500">*</span>
+        </label>
+        <input
+          placeholder="Ex : Dakar"
+          value={form.city}
+          onChange={(e) => setForm({ ...form, city: e.target.value })}
+          required
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
-      <input
-        placeholder="Code postal"
-        value={form.postalCode}
-        onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
-        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-      />
+      {/* Code postal */}
+      <div className="w-full">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          Code postal
+        </label>
+        <input
+          placeholder="Code postal"
+          value={form.postalCode}
+          onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
-      <input
-        type="number"
-        step="0.01"
-        placeholder="Surface (m²)"
-        value={form.surfaceArea}
-        onChange={(e) => setForm({ ...form, surfaceArea: e.target.value })}
-        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-      />
+      {/* Surface */}
+      <div className="w-full">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          Surface (m²)
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          placeholder="Ex : 85"
+          value={form.surfaceArea}
+          onChange={(e) => setForm({ ...form, surfaceArea: e.target.value })}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
-      <input
-        type="number"
-        step="1"
-        placeholder="Nombre de pièces"
-        value={form.roomCount}
-        onChange={(e) => setForm({ ...form, roomCount: e.target.value })}
-        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-      />
+      {/* Nombre de pièces */}
+      <div className="w-full">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          Nombre de pièces
+        </label>
+        <input
+          type="number"
+          step="1"
+          placeholder="Ex : 3"
+          value={form.roomCount}
+          onChange={(e) => setForm({ ...form, roomCount: e.target.value })}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
-      <textarea
-        placeholder="Description"
-        value={form.description}
-        onChange={(e) => setForm({ ...form, description: e.target.value })}
-        className="sm:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-        rows={3}
-      />
-
+      {/* Description */}
       <div className="sm:col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          📁 Photos (max 5 fichiers)
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          Description
+        </label>
+        <textarea
+          placeholder="Ajoutez des précisions : étage, vue, état général, équipements…"
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+          rows={3}
+        />
+      </div>
+
+      {/* Fichiers */}
+      <div className="sm:col-span-2">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          📁 Photos / documents (jpg, png, pdf)
         </label>
         <input
           type="file"
           multiple
           accept=".jpg,.jpeg,.png,.pdf"
           onChange={handleFileChange}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm cursor-pointer focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base cursor-pointer focus:ring-2 focus:ring-blue-500"
         />
+        {previewUrls.length > 0 && (
+          <p className="mt-1 text-xs text-gray-500">
+            {previewUrls.length} fichier(s) sélectionné(s).
+          </p>
+        )}
       </div>
 
+      {/* Vignettes */}
       {previewUrls.length > 0 && (
-        <div className="sm:col-span-2 mt-2 flex flex-wrap gap-3">
+        <div className="sm:col-span-2 mt-3 flex flex-wrap gap-3">
           {previewUrls.map((url, i) => (
             <div
               key={i}
-              className="w-28 h-28 border border-gray-300 rounded-lg overflow-hidden shadow-sm"
+              className="w-24 h-24 sm:w-28 sm:h-28 border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white"
             >
-              <img src={url} alt={`preview-${i}`} className="w-full h-full object-cover" />
+              <img
+                src={url}
+                alt={`preview-${i}`}
+                className="w-full h-full object-cover"
+              />
             </div>
           ))}
         </div>
       )}
 
-      <div className="sm:col-span-2 text-right mt-4 flex justify-end gap-3">
+      {/* Boutons */}
+      <div className="sm:col-span-2 text-right mt-4 flex flex-col sm:flex-row gap-3 justify-end">
         {editId && (
           <button
             type="button"
@@ -755,7 +911,7 @@ function PropertyEditor({
         )}
         <button
           type="submit"
-          className="px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
+          className="px-5 py-2.5 text-sm sm:text-base font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
         >
           {editId ? '💾 Enregistrer' : '👁 Aperçu'}
         </button>
@@ -779,12 +935,16 @@ function PropertyList({
   return (
     <>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">📋 Mes biens existants</h2>
-        <span className="text-xs text-gray-500">{filtered.length} résultat(s)</span>
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+          📋 Liste de vos biens
+        </h2>
+        <span className="text-xs sm:text-sm text-gray-500">
+          {filtered.length} résultat(s)
+        </span>
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-gray-500 italic text-center py-6">
+        <p className="text-gray-500 italic text-center py-6 text-sm sm:text-base">
           Aucun bien correspondant aux critères.
         </p>
       ) : (
@@ -794,7 +954,6 @@ function PropertyList({
             const diffHours = (now - createdAt) / (1000 * 60 * 60);
             const canEditOrDelete = diffHours <= 1;
 
-            // Prépare la liste d'images absolues pour la lightbox
             const imageUrls = (p.photos || [])
               .filter((ph) => !isPdf(ph))
               .map((ph) => toAbsUrl(ph));
@@ -802,37 +961,52 @@ function PropertyList({
             return (
               <div
                 key={p.id}
-                className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition p-4 flex flex-col justify-between"
+                className="
+                  bg-white border border-gray-200 rounded-2xl shadow-sm
+                  hover:shadow-md transition p-4 sm:p-5
+                  flex flex-col justify-between
+                "
               >
                 <div>
+                  {/* Photos / PDF badges */}
                   {p.photos && p.photos.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-3">
                       {p.photos.map((photo, i) => {
                         const absUrl = toAbsUrl(photo);
                         if (isPdf(photo)) {
-                          // vignette PDF
                           return (
                             <a
                               key={i}
                               href={absUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="w-24 h-24 inline-flex items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700 hover:bg-gray-100 transition"
+                              className="
+                                w-20 h-20 sm:w-24 sm:h-24 inline-flex items-center justify-center
+                                rounded-lg border border-gray-200 bg-gray-50 text-[0.7rem] sm:text-xs
+                                font-medium text-gray-700 hover:bg-gray-100 transition
+                              "
                               title="Ouvrir le PDF dans un nouvel onglet"
                             >
                               📄 PDF
                             </a>
                           );
                         }
-                        // vignette image
                         const startIndex = imageUrls.indexOf(absUrl);
                         return (
                           <img
                             key={i}
                             src={absUrl}
                             alt={`photo-${i}`}
-                            onClick={() => openLightbox(imageUrls, Math.max(0, startIndex))}
-                            className="w-24 h-24 object-cover rounded-md border border-gray-200 cursor-zoom-in hover:scale-105 transition-transform duration-200"
+                            onClick={() =>
+                              openLightbox(
+                                imageUrls,
+                                Math.max(0, startIndex)
+                              )
+                            }
+                            className="
+                              w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border border-gray-200
+                              cursor-zoom-in hover:scale-105 transition-transform duration-200
+                            "
                             title="Cliquer pour agrandir"
                           />
                         );
@@ -840,29 +1014,33 @@ function PropertyList({
                     </div>
                   )}
 
-                  <h3 className="text-lg font-semibold text-gray-900">{p.title}</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                    {p.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-0.5">
                     {p.city} — {p.typeLabel || PROPERTY_TYPES[p.type] || p.type}
                   </p>
 
                   {p.status && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[0.7rem] font-medium bg-gray-50 text-gray-700 border border-gray-200">
                       Statut : {p.statusLabel || PROPERTY_STATUSES[p.status]}
                     </p>
                   )}
 
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-sm text-gray-500 mt-2 line-clamp-3">
                     {p.description || 'Aucune description.'}
                   </p>
 
                   {(p.surfaceArea || p.roomCount) && (
                     <p className="text-sm text-gray-700 mt-2">
-                      🏠 {p.surfaceArea ? `${p.surfaceArea} m²` : '—'} — {p.roomCount || 0} pièce(s)
+                      🏠 {p.surfaceArea ? `${p.surfaceArea} m²` : '—'} —{' '}
+                      {p.roomCount || 0} pièce(s)
                     </p>
                   )}
 
-                  <p className="text-xs text-gray-400 mt-1">
-                    Créé le {new Date(p.createdAt).toLocaleString()}
+                  <p className="text-[0.7rem] text-gray-400 mt-2">
+                    Créé le{' '}
+                    {new Date(p.createdAt).toLocaleString('fr-FR')}
                   </p>
                 </div>
 
@@ -885,20 +1063,28 @@ function PropertyList({
                             description: p.description || '',
                           });
                         }}
-                        className="bg-yellow-500 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-600 transition"
+                        className="
+                          bg-yellow-500 text-white rounded-lg px-4 py-2
+                          text-xs sm:text-sm font-medium hover:bg-yellow-600 transition
+                        "
                       >
                         ✏️ Modifier
                       </button>
 
                       <button
                         onClick={() => handleDelete(p.id, p.createdAt)}
-                        className="bg-red-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-red-700 transition"
+                        className="
+                          bg-red-600 text-white rounded-lg px-4 py-2
+                          text-xs sm:text-sm font-medium hover:bg-red-700 transition
+                        "
                       >
                         ❌ Supprimer
                       </button>
                     </>
                   ) : (
-                    <p className="text-xs text-gray-400 italic">⏰ Verrouillé (admin uniquement)</p>
+                    <p className="text-[0.7rem] sm:text-xs text-gray-400 italic">
+                      ⏰ Modifications verrouillées (délai dépassé).
+                    </p>
                   )}
                 </div>
               </div>

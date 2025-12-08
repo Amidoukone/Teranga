@@ -1,5 +1,5 @@
 // ============================================================
-// OrderDetailPage.jsx — Teranga PRODUCTION READY (Option B)
+// OrderDetailPage.jsx — Teranga PRODUCTION READY (Option B2)
 // Clean Shop Premium — Responsive — FILE_BASE system
 // ============================================================
 
@@ -55,6 +55,29 @@ function toAbsUrl(path = '') {
 }
 
 /* ============================================================
+   🧭 Timeline des statuts (visuelle + animée)
+============================================================ */
+const ORDER_STEP_DEFS = [
+  { key: 'created', label: 'Créée', icon: '📝' },
+  { key: 'processing', label: 'Traitement', icon: '⚙️' },
+  { key: 'paid', label: 'Payée', icon: '💳' },
+  { key: 'delivered', label: 'Livrée', icon: '📦' },
+  { key: 'closed', label: 'Clôturée', icon: '✅' },
+];
+
+// mapping pour statuts "exotiques"
+function mapStatusToStepKey(status = '') {
+  const s = String(status).toLowerCase();
+  if (!s) return 'created';
+  if (['created'].includes(s)) return 'created';
+  if (['processing', 'in_progress', 'pending', 'shipped'].includes(s)) return 'processing';
+  if (['paid', 'settled'].includes(s)) return 'paid';
+  if (['delivered', 'completed'].includes(s)) return 'delivered';
+  if (['cancelled', 'canceled', 'refunded'].includes(s)) return 'closed';
+  return 'created';
+}
+
+/* ============================================================
    ⭐ Page Détail Commande
 ============================================================ */
 export default function OrderDetailPage() {
@@ -81,6 +104,12 @@ export default function OrderDetailPage() {
   const fileInputRef = useRef(null);
   const [fileInputKey, setFileInputKey] = useState(() => Date.now());
 
+  // Lightbox pour les preuves (images)
+  const [evidenceLightbox, setEvidenceLightbox] = useState({
+    open: false,
+    index: 0,
+  });
+
   /* ============================================================
      👤 Affichage nom du client
   ============================================================= */
@@ -106,6 +135,44 @@ export default function OrderDetailPage() {
     const full = `${first} ${last}`.trim();
 
     return full || u.name || u.email || '—';
+  }
+
+  /* ============================================================
+     🔍 Helpers preuves
+  ============================================================= */
+  function isEvidenceImage(ev) {
+    return (ev?.mimeType || '').toLowerCase().startsWith('image/');
+  }
+
+  const imageEvidences = useMemo(
+    () => evidences.filter((ev) => isEvidenceImage(ev)),
+    [evidences]
+  );
+
+  function openEvidenceLightbox(fromEvidenceId) {
+    const idx = imageEvidences.findIndex((ev) => ev.id === fromEvidenceId);
+    if (idx === -1) return;
+    setEvidenceLightbox({ open: true, index: idx });
+  }
+
+  function closeEvidenceLightbox() {
+    setEvidenceLightbox({ open: false, index: 0 });
+  }
+
+  function prevEvidence() {
+    if (!imageEvidences.length) return;
+    setEvidenceLightbox((lb) => ({
+      open: true,
+      index: (lb.index - 1 + imageEvidences.length) % imageEvidences.length,
+    }));
+  }
+
+  function nextEvidence() {
+    if (!imageEvidences.length) return;
+    setEvidenceLightbox((lb) => ({
+      open: true,
+      index: (lb.index + 1) % imageEvidences.length,
+    }));
   }
 
   /* ============================================================
@@ -295,28 +362,31 @@ export default function OrderDetailPage() {
   const total = Number(order.totalAmount || 0);
   const currency = order.currency || 'XOF';
 
+  const statusStepKey = mapStatusToStepKey(order.orderStatus);
+  const activeStepIndex = ORDER_STEP_DEFS.findIndex((s) => s.key === statusStepKey);
+
   /* ============================================================
      ⭐ UI principale — Header + Résumé
   ============================================================= */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-10">
+      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-5 sm:p-8 border border-gray-100">
 
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
               🧾 <span>{order.code || `Commande #${order.id}`}</span>
             </h1>
-            <p className="text-sm text-slate-600 mt-1">
-              Détails complets de la commande, paiements et preuves.
+            <p className="text-sm text-slate-600">
+              Détails complets de la commande, paiements, articles et preuves.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <Link
               to="/orders"
-              className="px-4 py-2 text-sm rounded-lg bg-slate-700 text-white hover:bg-slate-800"
+              className="px-4 py-2 text-sm rounded-lg bg-slate-700 text-white hover:bg-slate-800 shadow-sm"
             >
               ← Retour
             </Link>
@@ -324,7 +394,7 @@ export default function OrderDetailPage() {
             {canAdmin && (
               <button
                 onClick={() => handleOrderUpdate({ orderStatus: 'cancelled' })}
-                className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700"
+                className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 shadow-sm"
               >
                 Annuler
               </button>
@@ -336,99 +406,159 @@ export default function OrderDetailPage() {
         <div className="grid lg:grid-cols-3 gap-4 mb-10">
 
           {/* CLIENT */}
-          <div className="bg-gray-50 border p-4 rounded-xl">
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 p-4 rounded-xl shadow-sm">
             <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
               👤 Client
             </h3>
-            <p className="font-medium text-slate-800">{customerDisplay}</p>
+            <p className="font-medium text-slate-900 break-words">{customerDisplay}</p>
 
             {order.customer?.email && (
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1 break-all">
                 {order.customer.email}
               </p>
             )}
 
             {order.customerNote && (
-              <p className="text-sm text-slate-700 mt-3">
-                <strong>Note client :</strong> {order.customerNote}
+              <p className="text-sm text-slate-700 mt-3 break-words">
+                <span className="font-semibold">Note client :</span> {order.customerNote}
               </p>
             )}
           </div>
 
-          {/* STATUTS */}
-          <div className="bg-gray-50 border p-4 rounded-xl">
-            <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-              📌 Statuts
-            </h3>
+          {/* STATUTS + TIMELINE */}
+          <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col gap-3">
+            <div>
+              <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                📌 Statuts
+              </h3>
 
-            <div className="flex flex-wrap gap-2 mb-2">
-              <span className="px-2 py-1 rounded-full bg-blue-50 text-blue-700 border text-[11px]">
-                {formatStatus(order.orderStatus, 'order')}
-              </span>
+              <div className="flex flex-wrap gap-2 mb-2">
+                <span className="px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-[11px] font-semibold">
+                  {formatStatus(order.orderStatus, 'order')}
+                </span>
 
-              <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border text-[11px]">
-                {formatStatus(order.paymentStatus, 'payment')}
-              </span>
+                <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-[11px] font-semibold">
+                  {formatStatus(order.paymentStatus, 'payment')}
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-500">
+                Créée le{' '}
+                {order.createdAt
+                  ? new Date(order.createdAt).toLocaleString()
+                  : '—'}
+              </p>
             </div>
 
-            <p className="text-xs text-slate-500">
-              Créée le{' '}
-              {order.createdAt
-                ? new Date(order.createdAt).toLocaleString()
-                : '—'}
-            </p>
+            {/* Timeline animée */}
+            <div className="mt-3">
+              <div className="flex items-center justify-between gap-1 sm:gap-2">
+                {ORDER_STEP_DEFS.map((step, index) => {
+                  const isActive = index <= activeStepIndex || activeStepIndex === -1;
+                  const isCurrent = index === activeStepIndex || activeStepIndex === -1;
 
-            {canAdmin && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                <button
-                  className="px-3 py-1 bg-white border rounded-lg text-xs hover:bg-gray-100"
-                  onClick={() => handleOrderUpdate({ orderStatus: 'created' })}
-                >
-                  Créée
-                </button>
+                  return (
+                    <div
+                      key={step.key}
+                      className="flex-1 flex flex-col items-center text-center"
+                    >
+                      <div className="relative flex items-center justify-center w-full">
+                        {/* Ligne gauche */}
+                        {index > 0 && (
+                          <div
+                            className={`hidden sm:block absolute left-0 right-1 h-[2px] ${
+                              isActive
+                                ? 'bg-gradient-to-r from-blue-500 to-emerald-500'
+                                : 'bg-slate-200'
+                            }`}
+                          />
+                        )}
 
-                <button
-                  className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs hover:bg-emerald-700"
-                  onClick={() =>
-                    handleOrderUpdate({
-                      orderStatus: 'paid',
-                      paymentStatus: 'paid',
-                    })
-                  }
-                >
-                  Payée
-                </button>
+                        {/* Point central */}
+                        <div
+                          className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-full border text-xs shadow-sm transition
+                            ${
+                              isActive
+                                ? 'bg-white border-blue-500 text-blue-600'
+                                : 'bg-slate-100 border-slate-300 text-slate-400'
+                            }
+                            ${isCurrent ? 'scale-110 ring-2 ring-blue-200' : ''}
+                          `}
+                        >
+                          <span className="text-[14px]">{step.icon}</span>
+                        </div>
 
-                <button
-                  className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700"
-                  onClick={() =>
-                    handleOrderUpdate({
-                      orderStatus: 'delivered',
-                      paymentStatus: 'paid',
-                    })
-                  }
-                >
-                  Livrée
-                </button>
+                        {/* Ligne droite */}
+                        {index < ORDER_STEP_DEFS.length - 1 && (
+                          <div
+                            className={`hidden sm:block absolute left-1 right-0 h-[2px] ${
+                              index < activeStepIndex
+                                ? 'bg-gradient-to-r from-emerald-500 to-blue-500'
+                                : 'bg-slate-200'
+                            }`}
+                          />
+                        )}
+                      </div>
+                      <div className="mt-1 text-[10px] font-medium text-slate-500">
+                        {step.label}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            )}
+
+              {canAdmin && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button
+                    className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs hover:bg-slate-50"
+                    onClick={() => handleOrderUpdate({ orderStatus: 'created' })}
+                  >
+                    Marquer créée
+                  </button>
+
+                  <button
+                    className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs hover:bg-emerald-700"
+                    onClick={() =>
+                      handleOrderUpdate({
+                        orderStatus: 'paid',
+                        paymentStatus: 'paid',
+                      })
+                    }
+                  >
+                    Marquer payée
+                  </button>
+
+                  <button
+                    className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700"
+                    onClick={() =>
+                      handleOrderUpdate({
+                        orderStatus: 'delivered',
+                        paymentStatus: 'paid',
+                      })
+                    }
+                  >
+                    Marquer livrée
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* MONTANT */}
-          <div className="bg-gray-50 border p-4 rounded-xl">
+          <div className="bg-gradient-to-br from-emerald-50 via-white to-blue-50 border border-emerald-100 p-4 rounded-xl shadow-sm">
             <h3 className="text-slate-800 font-semibold mb-2 flex items-center gap-2">
               💰 Résumé
             </h3>
 
-            <p className="text-xs text-slate-400 uppercase">Montant total</p>
+            <p className="text-xs text-slate-500 uppercase">Montant total</p>
             <p className="text-2xl font-extrabold text-blue-600">
-              {total.toLocaleString()} {formatCurrency(currency)}
+              {total.toLocaleString('fr-FR')} {formatCurrency(currency)}
             </p>
 
             {order.items?.length > 0 && (
               <p className="text-xs text-slate-500 mt-3">
                 {order.items.length} article
-                {order.items.length > 1 ? 's' : ''}
+                {order.items.length > 1 ? 's' : ''} dans cette commande.
               </p>
             )}
           </div>
@@ -438,8 +568,14 @@ export default function OrderDetailPage() {
             🧩 ARTICLES
         ============================================================ */}
         <section className="mb-10">
-          <h2 className="text-lg font-semibold text-slate-900 mb-3">
+          <h2 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
             🧩 Articles
+            {order.items?.length ? (
+              <span className="text-xs text-slate-500">
+                ({order.items.length} élément
+                {order.items.length > 1 ? 's' : ''})
+              </span>
+            ) : null}
           </h2>
 
           {order.items?.length ? (
@@ -447,10 +583,10 @@ export default function OrderDetailPage() {
               {order.items.map((it) => (
                 <div
                   key={it.id}
-                  className="bg-white border p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between gap-3"
+                  className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between gap-3"
                 >
-                  <div>
-                    <p className="font-semibold text-slate-900">
+                  <div className="space-y-1">
+                    <p className="font-semibold text-slate-900 break-words">
                       {it.product?.name || `Article #${it.id}`}
                     </p>
 
@@ -459,30 +595,30 @@ export default function OrderDetailPage() {
                     </p>
 
                     <p className="text-sm text-slate-700 mt-2">
-                      Qté : <strong>{it.quantity}</strong>
+                      Qté : <span className="font-semibold">{it.quantity}</span>
                     </p>
 
                     <p className="text-sm text-slate-700">
                       PU :{' '}
-                      <strong>
-                        {Number(it.unitPrice || it.price).toLocaleString()}{' '}
+                      <span className="font-semibold">
+                        {Number(it.unitPrice || it.price).toLocaleString('fr-FR')}{' '}
                         {formatCurrency(currency)}
-                      </strong>
+                      </span>
                     </p>
 
                     <p className="text-sm text-slate-700">
                       Total :{' '}
-                      <strong>
+                      <span className="font-semibold text-blue-700">
                         {(
                           Number(it.unitPrice || it.price) * it.quantity
-                        ).toLocaleString()}{' '}
+                        ).toLocaleString('fr-FR')}{' '}
                         {formatCurrency(currency)}
-                      </strong>
+                      </span>
                     </p>
                   </div>
 
                   {canAdmin && (
-                    <div className="flex flex-wrap gap-2 justify-end">
+                    <div className="flex flex-wrap gap-2 justify-end items-start">
                       <button
                         className="px-3 py-1 bg-amber-500 text-white rounded-lg text-xs hover:bg-amber-600"
                         onClick={() =>
@@ -513,9 +649,9 @@ export default function OrderDetailPage() {
           {canAdmin && (
             <form
               onSubmit={handleAddItem}
-              className="mt-5 bg-gray-50 border p-4 rounded-xl"
+              className="mt-5 bg-gray-50 border border-slate-200 p-4 rounded-xl shadow-sm"
             >
-              <h3 className="text-sm font-semibold mb-3">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
                 ➕ Ajouter un article
               </h3>
 
@@ -525,13 +661,13 @@ export default function OrderDetailPage() {
                   onChange={(e) =>
                     setItemForm({ ...itemForm, productId: e.target.value })
                   }
-                  className="border rounded-lg px-3 py-2 text-sm"
+                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
                 >
                   <option value="">— Sélectionner —</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} — {Number(p.price).toLocaleString()}{' '}
-                      {formatCurrency(p.currency)}
+                      {p.name} — {Number(p.price).toLocaleString('fr-FR')}{' '}
+                      {formatCurrency(p.currency || currency)}
                     </option>
                   ))}
                 </select>
@@ -543,7 +679,7 @@ export default function OrderDetailPage() {
                   onChange={(e) =>
                     setItemForm({ ...itemForm, quantity: e.target.value })
                   }
-                  className="border rounded-lg px-3 py-2 text-sm"
+                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="Quantité"
                 />
 
@@ -554,13 +690,13 @@ export default function OrderDetailPage() {
                   onChange={(e) =>
                     setItemForm({ ...itemForm, unitPrice: e.target.value })
                   }
-                  className="border rounded-lg px-3 py-2 text-sm"
+                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="PU (optionnel)"
                 />
 
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm"
                 >
                   Ajouter
                 </button>
@@ -574,20 +710,28 @@ export default function OrderDetailPage() {
         ============================================================ */}
         {canUploadProofs && (
           <section className="mb-10">
-            <h2 className="text-lg font-semibold text-slate-900 mb-3">
+            <h2 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
               📎 Preuves du paiement
+              {evidences.length > 0 && (
+                <span className="text-xs text-slate-500">
+                  ({evidences.length} fichier
+                  {evidences.length > 1 ? 's' : ''})
+                </span>
+              )}
             </h2>
 
             {/* Upload */}
             <form
               onSubmit={handleUpload}
-              className="bg-gray-50 border p-4 rounded-xl mb-5"
+              className="bg-gray-50 border border-slate-200 p-4 rounded-xl shadow-sm mb-5"
             >
               <div className="grid md:grid-cols-3 gap-3">
 
                 {/* Fichier */}
                 <div className="md:col-span-2">
-                  <label className="text-xs text-slate-600">Fichiers</label>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                    Fichiers (images ou PDF)
+                  </label>
                   <input
                     key={fileInputKey}
                     ref={fileInputRef}
@@ -595,18 +739,25 @@ export default function OrderDetailPage() {
                     multiple
                     accept=".jpg,.jpeg,.png,.pdf"
                     onChange={onFilesChange}
-                    className="w-full border px-3 py-2 rounded-lg text-sm"
+                    className="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm bg-white"
                   />
+                  {files.length > 0 && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      {files.length} fichier(s) sélectionné(s)
+                    </p>
+                  )}
                 </div>
 
                 {/* Notes */}
                 <div>
-                  <label className="text-xs text-slate-600">Notes</label>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                    Notes (optionnel)
+                  </label>
                   <input
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Commentaire…"
-                    className="w-full border px-3 py-2 rounded-lg text-sm"
+                    className="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm bg-white"
                   />
                 </div>
               </div>
@@ -617,7 +768,7 @@ export default function OrderDetailPage() {
                   disabled={uploading}
                   className={`px-4 py-2 text-sm rounded-lg shadow-sm ${
                     uploading
-                      ? 'bg-blue-300 cursor-not-allowed'
+                      ? 'bg-blue-300 cursor-not-allowed text-white'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}
                 >
@@ -628,37 +779,43 @@ export default function OrderDetailPage() {
 
             {/* Liste des preuves */}
             {evidences.length === 0 ? (
-              <p className="text-sm text-slate-500 italic">Aucune preuve.</p>
+              <p className="text-sm text-slate-500 italic">Aucune preuve enregistrée pour cette commande.</p>
             ) : (
               <div className="grid gap-4">
                 {evidences.map((ev) => {
-                  const isImage = (ev.mimeType || '').startsWith('image/');
+                  const isImage = isEvidenceImage(ev);
                   const fileUrl = toAbsUrl(ev.filePath);
 
                   return (
                     <div
                       key={ev.id}
-                      className="bg-white border p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between gap-3"
+                      className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between gap-3"
                     >
-                      <div className="flex gap-3">
-
+                      <div className="flex gap-3 w-full">
                         {/* Thumbnail */}
-                        <div className="w-16 h-16 border bg-gray-50 rounded-lg overflow-hidden">
+                        <div className="w-16 h-16 border border-slate-200 bg-slate-50 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
                           {isImage ? (
-                            <img
-                              src={fileUrl}
-                              alt={ev.originalName}
-                              className="w-full h-full object-cover"
-                            />
+                            <button
+                              type="button"
+                              onClick={() => openEvidenceLightbox(ev.id)}
+                              className="w-full h-full"
+                              title="Cliquer pour agrandir"
+                            >
+                              <img
+                                src={fileUrl}
+                                alt={ev.originalName}
+                                className="w-full h-full object-cover hover:scale-105 transition-transform"
+                              />
+                            </button>
                           ) : (
-                            <span className="text-2xl flex items-center justify-center h-full">
+                            <span className="text-2xl" aria-hidden="true">
                               📄
                             </span>
                           )}
                         </div>
 
                         {/* Infos fichier */}
-                        <div>
+                        <div className="flex-1 space-y-1 min-w-0">
                           <a
                             href={fileUrl}
                             target="_blank"
@@ -668,27 +825,29 @@ export default function OrderDetailPage() {
                             {ev.originalName || ev.filePath}
                           </a>
 
-                          <p className="text-xs text-slate-500 mt-1">
+                          <p className="text-xs text-slate-500">
                             Ajouté le{' '}
-                            {new Date(ev.createdAt).toLocaleString()} par{' '}
+                            {new Date(ev.createdAt).toLocaleString('fr-FR')} par{' '}
                             <strong>{formatUploader(ev.uploader)}</strong>
                           </p>
 
                           {ev.notes && (
-                            <p className="text-sm text-slate-700 mt-1">
-                              <strong>Notes :</strong> {ev.notes}
+                            <p className="text-sm text-slate-700">
+                              <span className="font-semibold">Notes :</span> {ev.notes}
                             </p>
                           )}
                         </div>
                       </div>
 
                       {canAdmin && (
-                        <button
-                          onClick={() => handleDeleteEvidence(ev.id)}
-                          className="px-3 py-1 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700"
-                        >
-                          Supprimer
-                        </button>
+                        <div className="flex justify-end items-start">
+                          <button
+                            onClick={() => handleDeleteEvidence(ev.id)}
+                            className="px-3 py-1 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
@@ -704,7 +863,7 @@ export default function OrderDetailPage() {
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             to={`/orders/${id}/transactions`}
-            className="px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900"
+            className="px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 shadow-sm"
           >
             💰 Voir transactions
           </Link>
@@ -716,8 +875,93 @@ export default function OrderDetailPage() {
             ← Retour commandes
           </Link>
         </div>
-
       </div>
+
+      {/* ============================================================
+          💡 LIGHTBOX PLEIN ÉCRAN POUR PREUVES (IMAGES)
+      ============================================================ */}
+      {evidenceLightbox.open && imageEvidences.length > 0 && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4"
+          onClick={closeEvidenceLightbox}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Aperçu des preuves"
+        >
+          {/* Close */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              closeEvidenceLightbox();
+            }}
+            className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white"
+            aria-label="Fermer la lightbox"
+          >
+            ✕
+          </button>
+
+          {/* Navigation */}
+          {imageEvidences.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  prevEvidence();
+                }}
+                className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
+                aria-label="Image précédente"
+              >
+                ‹
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  nextEvidence();
+                }}
+                className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
+                aria-label="Image suivante"
+              >
+                ›
+              </button>
+            </>
+          )}
+
+          {/* Contenu lightbox */}
+          <div
+            className="bg-slate-900/95 border border-slate-700 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 text-slate-100 text-sm">
+              <div className="truncate">
+                <span className="font-semibold">
+                  {imageEvidences[evidenceLightbox.index].originalName ||
+                    imageEvidences[evidenceLightbox.index].filePath}
+                </span>
+              </div>
+
+              {imageEvidences.length > 1 && (
+                <div className="text-xs text-slate-400">
+                  {evidenceLightbox.index + 1} / {imageEvidences.length}
+                </div>
+              )}
+            </div>
+
+            {/* Image principale */}
+            <div className="flex-1 flex items-center justify-center bg-black">
+              <img
+                src={toAbsUrl(imageEvidences[evidenceLightbox.index].filePath)}
+                alt={imageEvidences[evidenceLightbox.index].originalName || 'Preuve'}
+                className="max-h-[70vh] max-w-full object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
