@@ -90,6 +90,28 @@ function getImagesForProduct(p) {
 }
 
 /* ============================================================
+   💰 Helper : affichage PRO du prix (montant + devise)
+   - chiffres d’abord
+   - devise en toutes lettres + code (via formatCurrency)
+   Exemple : "12 500 Franc CFA (XOF)"
+============================================================ */
+function formatProductPrice(amount, currency = 'XOF') {
+  const numeric = Number(amount || 0);
+
+  // Format nombre façon FR (espaces pour milliers, virgule pour décimales)
+  const formattedNumber = new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(numeric);
+
+  // Utilise ton util métier pour la partie "Franc CFA (XOF) / Euro (EUR) / Dollar (USD)"
+  const label = formatCurrency(currency || 'XOF');
+
+  // ✅ Nombre AVANT la devise, style e-commerce
+  return `${formattedNumber} ${label}`;
+}
+
+/* ============================================================
    ⭐ PAGE CATALOGUE PRODUITS (CLEAN SHOP PREMIUM — STYLE A)
 ============================================================ */
 export default function ProductCatalogPage() {
@@ -331,7 +353,7 @@ export default function ProductCatalogPage() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-red-50 to-red-100 px-4">
-        <div className="max-w-md w.Full bg-white border border-red-100 shadow-xl rounded-3xl px-6 py-6">
+        <div className="max-w-md w-full bg-white border border-red-100 shadow-xl rounded-3xl px-6 py-6">
           <h1 className="text-lg font-bold text-red-700 mb-2">
             Une erreur est survenue
           </h1>
@@ -584,8 +606,7 @@ export default function ProductCatalogPage() {
                           Prix
                         </p>
                         <p className="text-lg font-bold text-blue-600">
-                          {formatCurrency(p.currency || 'XOF')}{' '}
-                          {Number(p.price || 0).toLocaleString()}
+                          {formatProductPrice(p.price, p.currency)}
                         </p>
                       </div>
 
@@ -639,8 +660,11 @@ export default function ProductCatalogPage() {
                 Commander {selectedProduct.name}
               </h2>
               <p className="text-xs text-slate-500 mb-4">
-                {formatCurrency(selectedProduct.currency || 'XOF')}{' '}
-                {Number(selectedProduct.price || 0).toLocaleString()} / unité
+                {formatProductPrice(
+                  selectedProduct.price,
+                  selectedProduct.currency || 'XOF'
+                )}{' '}
+                / unité
               </p>
 
               <form onSubmit={handleConfirmOrder}>
@@ -724,7 +748,7 @@ export default function ProductCatalogPage() {
 
             {/* Contenu lightbox */}
             <div
-              className="bg-slate-900/95 border border-slate-700 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+              className="bg-slate-900/95 border border-slate-700 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex.col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
