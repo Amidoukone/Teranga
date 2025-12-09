@@ -340,7 +340,7 @@ export default function ProductCatalogPage() {
   ============================================================ */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient.to-br from-gray-50 via-blue-50 to-blue-100">
         <div className="bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl px-6 py-5 shadow-xl">
           <p className="text-gray-600 text-sm sm:text-lg animate-pulse text-center">
             Chargement du catalogue…
@@ -384,11 +384,11 @@ export default function ProductCatalogPage() {
      🧱 UI PRINCIPALE — Filtres + Tri + Grille Produits (Style A)
   ============================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 sm:py-10">
+    <div className="min-h-screen bg-gradient.to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-3xl border border-slate-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
 
         {/* ==== HEADER ==== */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col sm:flex.row sm:items-center sm:justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[0.7rem] uppercase tracking-[0.18em] font-semibold text-blue-600 mb-1">
               Boutique Teranga
@@ -470,7 +470,7 @@ export default function ProductCatalogPage() {
                   min="0"
                   value={priceMin}
                   onChange={(e) => setPriceMin(e.target.value)}
-                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg.white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Min"
                 />
               </div>
@@ -484,7 +484,7 @@ export default function ProductCatalogPage() {
                   min="0"
                   value={priceMax}
                   onChange={(e) => setPriceMax(e.target.value)}
-                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg.white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Max"
                 />
               </div>
@@ -499,7 +499,7 @@ export default function ProductCatalogPage() {
                     setPriceMax('');
                     setSort('default');
                   }}
-                  className="w-full text-xs font-semibold rounded-xl border border-slate-200 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700"
+                  className="w-full text-xs font-semibold rounded-xl border border-slate-200 px-3 py-2 bg.white hover:bg-slate-50 text-slate-700"
                 >
                   Réinitialiser
                 </button>
@@ -514,7 +514,7 @@ export default function ProductCatalogPage() {
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
-                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg.white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="default">Recommandé</option>
                 <option value="price_asc">Prix croissant</option>
@@ -559,7 +559,7 @@ export default function ProductCatalogPage() {
                         className="w-full h-44 object-cover transition group-hover:scale-[1.03]"
                       />
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent opacity-0 group-hover:opacity-100 transition" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to.transparent opacity-0 group-hover:opacity-100 transition" />
 
                       <div className="absolute left-3 bottom-3 text-white text-[11px] bg-black/50 px-2 py-1 rounded">
                         Cliquer pour agrandir
@@ -632,7 +632,7 @@ export default function ProductCatalogPage() {
                     {user && user.role !== 'admin' && (
                       <button
                         onClick={() => handleOrder(p)}
-                        className="mt-4 w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-xl shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
+                        className="mt-4 w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-xl shadow-sm bg-blue-600 text.white hover:bg-blue-700 active:bg-blue-800 transition"
                       >
                         🛒 Commander
                       </button>
@@ -646,8 +646,8 @@ export default function ProductCatalogPage() {
 
         {/* ==== POPUP COMMANDE ==== */}
         {creating && selectedProduct && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40 px-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-slate-200 relative">
+          <div className="fixed inset-0 bg.black/50 flex items-center justify-center z-40 px-4">
+            <div className="bg.white rounded-2xl shadow-2xl p-6 max-w-sm w.full border border-slate-200 relative">
               <button
                 onClick={() => setCreating(false)}
                 aria-label="Fermer"
@@ -683,13 +683,13 @@ export default function ProductCatalogPage() {
                   <button
                     type="button"
                     onClick={() => setCreating(false)}
-                    className="px-4 py-2 text-sm bg-gray-100 text-slate-700 rounded-lg hover:bg-gray-200"
+                    className="px-4 py-2 text-sm bg.gray-100 text-slate-700 rounded-lg hover:bg.gray-200"
                   >
                     Annuler
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800"
+                    className="px-4 py-2 text-sm bg.blue-600 text.white rounded-lg hover:bg.blue-700 active:bg.blue-800"
                   >
                     Confirmer
                   </button>
@@ -700,113 +700,99 @@ export default function ProductCatalogPage() {
         )}
 
         {/* ============================================================
-            💡 LIGHTBOX PLEIN ÉCRAN
+            💡 LIGHTBOX PLEIN ÉCRAN — IMAGES UNIQUEMENT
         ============================================================ */}
-        {previewProduct && (
-          <div
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4"
-            onClick={closePreview}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Images du produit ${previewProduct.name}`}
-          >
-            {/* Bouton fermeture */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                closePreview();
-              }}
-              className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white"
-              aria-label="Fermer la lightbox"
-            >
-              ✕
-            </button>
+        {previewProduct && (() => {
+          const images = getImagesForProduct(previewProduct);
 
-            {/* Navigation */}
-            {getImagesForProduct(previewProduct).length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={goPrev}
-                  className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
-                  aria-label="Image précédente"
-                >
-                  ‹
-                </button>
+          if (!images.length) return null;
 
-                <button
-                  type="button"
-                  onClick={goNext}
-                  className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
-                  aria-label="Image suivante"
-                >
-                  ›
-                </button>
-              </>
-            )}
-
-            {/* Contenu lightbox */}
+          return (
             <div
-              className="bg-slate-900/95 border border-slate-700 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex.col overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4"
+              onClick={closePreview}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Images du produit"
             >
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 text-slate-100 text-sm">
-                <div className="truncate">
-                  <span className="font-semibold">
-                    {previewProduct.name}
-                  </span>
-                  {previewProduct.id && (
-                    <span className="text-xs text-slate-400 ml-2">
-                      #{previewProduct.id}
-                    </span>
-                  )}
+              {/* Bouton fermeture */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closePreview();
+                }}
+                className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white"
+                aria-label="Fermer la lightbox"
+              >
+                ✕
+              </button>
+
+              {/* Navigation gauche / droite */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={goPrev}
+                    className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
+                    aria-label="Image précédente"
+                  >
+                    ‹
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
+                    aria-label="Image suivante"
+                  >
+                    ›
+                  </button>
+                </>
+              )}
+
+              {/* Conteneur principal de la lightbox (images uniquement) */}
+              <div
+                className="bg-black/95 border border-slate-700 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Image principale, la plus grande possible */}
+                <div className="flex-1 flex items-center justify-center">
+                  <img
+                    src={images[previewIndex]}
+                    alt={`Image ${previewIndex + 1}`}
+                    className="max-h-[90vh] max-w-full w-auto object-contain"
+                  />
                 </div>
 
-                {getImagesForProduct(previewProduct).length > 1 && (
-                  <div className="text-xs text-slate-400">
-                    {previewIndex + 1} / {getImagesForProduct(previewProduct).length}
+                {/* Miniatures scrollables en bas */}
+                {images.length > 1 && (
+                  <div className="px-4 py-3 bg-black/80 border-t border-slate-800 flex gap-2 overflow-x-auto">
+                    {images.map((img, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setPreviewIndex(idx)}
+                        className={`relative w-16 h-16 rounded-lg overflow-hidden border flex-shrink-0 transition ${
+                          idx === previewIndex
+                            ? 'border-blue-400 ring-2 ring-blue-400/70'
+                            : 'border-slate-600 hover:border-slate-400'
+                        }`}
+                        aria-label={`Miniature ${idx + 1}`}
+                      >
+                        <img
+                          src={img}
+                          alt={`Miniature ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
-
-              {/* Image principale */}
-              <div className="flex-1 flex items-center justify-center bg-black">
-                <img
-                  src={getImagesForProduct(previewProduct)[previewIndex]}
-                  alt={`Photo ${previewIndex + 1} de ${previewProduct.name}`}
-                  className="max-h-[70vh] max-w-full object-contain rounded-lg"
-                />
-              </div>
-
-              {/* Miniatures */}
-              {getImagesForProduct(previewProduct).length > 1 && (
-                <div className="px-4 py-3 bg-slate-950/80 border-t border-slate-800 flex gap-2 overflow-x-auto">
-                  {getImagesForProduct(previewProduct).map((img, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setPreviewIndex(idx)}
-                      className={`relative w-16 h-16 rounded-lg overflow-hidden border flex-shrink-0 transition ${
-                        idx === previewIndex
-                          ? 'border-blue-400 ring-2 ring-blue-400/70'
-                          : 'border-slate-600 hover:border-slate-400'
-                      }`}
-                      aria-label={`Miniature ${idx + 1}`}
-                    >
-                      <img
-                        src={img}
-                        alt={`Miniature ${idx + 1} pour ${previewProduct.name}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );
