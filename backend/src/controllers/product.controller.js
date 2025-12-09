@@ -89,10 +89,14 @@ async function uploadToImageKit(file) {
 async function extractImagesFromRequestImageKit(req) {
   const collected = [];
 
+  // Ancien mode .single('image')
   if (req.file) collected.push(req.file);
+
+  // Mode .any() → array
   if (Array.isArray(req.files)) collected.push(...req.files);
 
-  if (req.files && typeof req.files === 'object') {
+  // Mode champs multiples nommés → objet
+  if (req.files && typeof req.files === 'object' && !Array.isArray(req.files)) {
     Object.values(req.files).forEach((arr) => {
       if (Array.isArray(arr)) collected.push(...arr);
     });
@@ -116,7 +120,7 @@ async function extractImagesFromRequestImageKit(req) {
 }
 
 /* ============================================================
-   🏷️ withLabels — totalement corrigé
+   🏷️ withLabels — version complète et FIABLE
 ============================================================ */
 function withLabels(prod) {
   if (!prod) return null;
@@ -125,7 +129,7 @@ function withLabels(prod) {
 
   const gallery = Array.isArray(p.gallery) ? p.gallery : [];
 
-  // 🔥 Correction : coverImage peut être soit STRING, soit OBJECT
+  // Couverture fiable, acceptant string ou object
   let cover = null;
 
   if (typeof p.coverImage === 'string') {
@@ -136,11 +140,34 @@ function withLabels(prod) {
     cover = gallery[0];
   }
 
+  const coverUrl = cover?.url || null;
+
+  const galleryUrls = gallery
+    .map((g) => g?.url)
+    .filter((u) => typeof u === 'string' && u.length > 0);
+
+  // Construction + déduplication des URLs
+  const rawUrls = [];
+  if (coverUrl) rawUrls.push(coverUrl);
+  rawUrls.push(...galleryUrls);
+
+  const seen = new Set();
+  const allImageUrls = rawUrls.filter((u) => {
+    if (!u || seen.has(u)) return false;
+    seen.add(u);
+    return true;
+  });
+
   return {
     ...p,
 
-    image: cover?.url || null,
-    imagePath: cover?.url || null,
+    // Pour ton frontend
+    imageUrl: coverUrl,
+    allImageUrls,
+
+    // Legacy / compat
+    image: coverUrl,
+    imagePath: coverUrl,
 
     coverImage: cover,
     gallery,
@@ -193,7 +220,6 @@ exports.create = async (req, res) => {
 
     const stockNum = toSafeInt(stock);
 
-    // Upload
     const { coverImage, gallery } = await extractImagesFromRequestImageKit(req);
 
     // Slug unique
@@ -204,7 +230,6 @@ exports.create = async (req, res) => {
       finalSlug = `${baseSlug}-${i++}`;
     }
 
-    // 🔥 CORRECTION : coverImage = STRING SEULEMENT
     const prod = await Product.create({
       categoryId: cat ? cat.id : null,
       name: String(name).trim(),
@@ -216,8 +241,11 @@ exports.create = async (req, res) => {
       description: toTrimOrNull(description),
       shortDescription: toTrimOrNull(shortDescription),
 
-      coverImage: coverImage?.url || null, // STRING — OK avec migration SQL
-      gallery: gallery.map(g => ({ url: g.url, fileId: g.fileId })),
+      // coverImage = STRING stockée en DB
+      coverImage: coverImage?.url || null,
+
+      // gallery format JSON
+      gallery: gallery.map((g) => ({ url: g.url, fileId: g.fileId })),
 
       isActive:
         typeof isActive === 'undefined'
@@ -335,13 +363,11 @@ exports.update = async (req, res) => {
       isActive,
     } = req.body || {};
 
-    // Category
     if (categoryId !== undefined) {
       const cid = toSafeInt(categoryId);
       prod.categoryId = cid || null;
     }
 
-    // Slug regen
     let regenerateSlug = false;
     if (name !== undefined) {
       const newName = String(name).trim();
@@ -351,10 +377,8 @@ exports.update = async (req, res) => {
       }
     }
 
-    // SKU
     if (sku !== undefined) prod.sku = toTrimOrNull(sku);
 
-    // Prix
     if (price !== undefined) {
       const priceNum = toNullableNumber(price);
       if (priceNum === null)
@@ -362,11 +386,9 @@ exports.update = async (req, res) => {
       prod.price = priceNum;
     }
 
-    // Devise
     if (currency !== undefined)
       prod.currency = String(currency).toUpperCase().trim();
 
-    // Stock
     if (stock !== undefined) {
       const stockNum = toSafeInt(stock);
       if (stockNum === null && stock !== '')
@@ -381,12 +403,11 @@ exports.update = async (req, res) => {
     if (typeof isActive !== 'undefined')
       prod.isActive = String(isActive) === 'true' || isActive === true;
 
-    // UPLOAD des nouvelles images
     const { coverImage, gallery, hasNewImages } =
       await extractImagesFromRequestImageKit(req);
 
     if (hasNewImages) {
-      // Delete anciennes images
+      // Suppression des anciennes images dans ImageKit
       if (Array.isArray(prod.gallery)) {
         for (const img of prod.gallery) {
           if (img?.fileId) {
@@ -397,16 +418,18 @@ exports.update = async (req, res) => {
         }
       }
 
-      // 🔥 Correction : coverImage = STRING
-      prod.coverImage = coverImage?.url || prod.coverImage;
+      // Nouvelle cover si dispo
+      if (coverImage?.url) {
+        prod.coverImage = coverImage.url;
+      }
 
-      prod.gallery = gallery.map(g => ({
+      // Nouvelle gallery
+      prod.gallery = gallery.map((g) => ({
         url: g.url,
-        fileId: g.fileId
+        fileId: g.fileId,
       }));
     }
 
-    // Slug regen
     if (regenerateSlug && prod.name) {
       const baseSlug = slugify(prod.name);
       let finalSlug = baseSlug || `p-${Date.now()}`;
@@ -462,7 +485,6 @@ exports.remove = async (req, res) => {
       });
     }
 
-    // Delete ImageKit
     if (Array.isArray(prod.gallery)) {
       for (const img of prod.gallery) {
         if (img?.fileId) {

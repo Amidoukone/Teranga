@@ -44,6 +44,52 @@ function toAbsUrl(path = '') {
 }
 
 /* ============================================================
+   🖼 Helper : récupérer toutes les images d’un produit
+   (allImageUrls, gallery, coverImage, imageUrl)
+============================================================ */
+function getImagesForProduct(p) {
+  if (!p) return [];
+
+  const urls = [];
+
+  // 1) allImageUrls généré par le backend (withLabels)
+  if (Array.isArray(p.allImageUrls)) {
+    urls.push(...p.allImageUrls);
+  }
+
+  // 2) gallery : array d'objets { url } ou strings
+  if (Array.isArray(p.gallery)) {
+    p.gallery.forEach((g) => {
+      if (g && typeof g === 'object' && g.url) {
+        urls.push(g.url);
+      } else if (typeof g === 'string') {
+        urls.push(g);
+      }
+    });
+  }
+
+  // 3) coverImage : string ou { url }
+  if (p.coverImage) {
+    if (typeof p.coverImage === 'string') {
+      urls.unshift(p.coverImage);
+    } else if (p.coverImage.url) {
+      urls.unshift(p.coverImage.url);
+    }
+  }
+
+  // 4) imageUrl (compat historique)
+  if (p.imageUrl) {
+    urls.unshift(p.imageUrl);
+  }
+
+  // 🔁 Dédup + normalisation vers URLs absolues
+  const seen = new Set();
+  return urls
+    .map((u) => toAbsUrl(u))
+    .filter((u) => u && !seen.has(u) && seen.add(u));
+}
+
+/* ============================================================
    ⭐ PAGE CATALOGUE PRODUITS (CLEAN SHOP PREMIUM — STYLE A)
 ============================================================ */
 export default function ProductCatalogPage() {
@@ -97,23 +143,6 @@ export default function ProductCatalogPage() {
   }, []);
 
   /* ============================================================
-     🧰 Helpers — Images du produit
-  ============================================================ */
-  function getImagesForProduct(p) {
-    if (!p) return [];
-
-    let gallery = Array.isArray(p.allImageUrls) ? p.allImageUrls : [];
-    gallery = gallery.map((u) => toAbsUrl(u)).filter(Boolean);
-
-    const cover = p.imageUrl ? toAbsUrl(p.imageUrl) : null;
-
-    if (gallery.length) return gallery;
-    if (cover) return [cover];
-
-    return [];
-  }
-
-  /* ============================================================
      🖼️ Lightbox controls
   ============================================================ */
   function openPreview(product, startIndex = 0) {
@@ -132,6 +161,8 @@ export default function ProductCatalogPage() {
 
   function goPrev(e) {
     if (e) e.stopPropagation();
+    if (!previewProduct) return;
+
     const imgs = getImagesForProduct(previewProduct);
     if (!imgs.length) return;
 
@@ -142,6 +173,8 @@ export default function ProductCatalogPage() {
 
   function goNext(e) {
     if (e) e.stopPropagation();
+    if (!previewProduct) return;
+
     const imgs = getImagesForProduct(previewProduct);
     if (!imgs.length) return;
 
@@ -298,7 +331,7 @@ export default function ProductCatalogPage() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-red-50 to-red-100 px-4">
-        <div className="max-w-md w-full bg-white border border-red-100 shadow-xl rounded-3xl px-6 py-6">
+        <div className="max-w-md w.Full bg-white border border-red-100 shadow-xl rounded-3xl px-6 py-6">
           <h1 className="text-lg font-bold text-red-700 mb-2">
             Une erreur est survenue
           </h1>

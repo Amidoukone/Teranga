@@ -30,6 +30,52 @@ function toAbsUrl(path = "") {
 }
 
 /* ============================================================
+   🖼 Helper : récupérer toutes les images d’un produit
+   (allImageUrls, gallery, coverImage, imageUrl)
+============================================================ */
+function getProductImages(product) {
+  if (!product) return [];
+
+  const urls = [];
+
+  // 1) allImageUrls (backend withLabels)
+  if (Array.isArray(product.allImageUrls)) {
+    urls.push(...product.allImageUrls);
+  }
+
+  // 2) gallery : [{ url }, "string", ...]
+  if (Array.isArray(product.gallery)) {
+    product.gallery.forEach((g) => {
+      if (g && typeof g === "object" && g.url) {
+        urls.push(g.url);
+      } else if (typeof g === "string") {
+        urls.push(g);
+      }
+    });
+  }
+
+  // 3) coverImage : string ou { url }
+  if (product.coverImage) {
+    if (typeof product.coverImage === "string") {
+      urls.unshift(product.coverImage);
+    } else if (product.coverImage.url) {
+      urls.unshift(product.coverImage.url);
+    }
+  }
+
+  // 4) imageUrl (compat)
+  if (product.imageUrl) {
+    urls.unshift(product.imageUrl);
+  }
+
+  // Déduplication + normalisation en URL absolues
+  const seen = new Set();
+  return urls
+    .map((u) => toAbsUrl(u))
+    .filter((u) => u && !seen.has(u) && seen.add(u));
+}
+
+/* ============================================================
    ⭐ ADMIN PRODUITS — Apple Light Premium (Table + Miniature)
 ============================================================ */
 export default function AdminProductsPage() {
@@ -68,19 +114,14 @@ export default function AdminProductsPage() {
   function openLightbox(product, index = 0) {
     if (!product) return;
 
-    const imgs = (product.allImageUrls || [])
-      .map(toAbsUrl)
-      .filter(Boolean);
+    const imgs = getProductImages(product);
 
-    const fallback = product.imageUrl ? [toAbsUrl(product.imageUrl)] : [];
-    const final = imgs.length ? imgs : fallback;
-
-    if (!final.length) return;
+    if (!imgs.length) return;
 
     setLightbox({
       open: true,
-      product: { ...product, _images: final },
-      index: Math.min(index, final.length - 1),
+      product: { ...product, _images: imgs },
+      index: Math.min(index, imgs.length - 1),
     });
   }
 
@@ -90,7 +131,8 @@ export default function AdminProductsPage() {
 
   function goPrev() {
     if (!lightbox.product) return;
-    const imgs = lightbox.product._images;
+    const imgs = lightbox.product._images || [];
+    if (!imgs.length) return;
     setLightbox((lb) => ({
       ...lb,
       index: (lb.index - 1 + imgs.length) % imgs.length,
@@ -99,7 +141,8 @@ export default function AdminProductsPage() {
 
   function goNext() {
     if (!lightbox.product) return;
-    const imgs = lightbox.product._images;
+    const imgs = lightbox.product._images || [];
+    if (!imgs.length) return;
     setLightbox((lb) => ({
       ...lb,
       index: (lb.index + 1) % imgs.length,
@@ -126,8 +169,10 @@ export default function AdminProductsPage() {
     setLoading(true);
     try {
       const prods = await getProducts({ limit: 200 });
+      // On suppose que getProducts renvoie directement un array
       setProducts(prods || []);
     } catch (e) {
+      console.error("❌ Erreur chargement produits:", e);
       alert("Erreur chargement produits");
     } finally {
       setLoading(false);
@@ -139,6 +184,7 @@ export default function AdminProductsPage() {
       const cats = await getCategories({ limit: 200 });
       setCategories(cats || []);
     } catch (e) {
+      console.error("❌ Erreur chargement catégories:", e);
       setCategories([]);
     }
   }
@@ -204,7 +250,7 @@ export default function AdminProductsPage() {
       await loadProducts();
       setShowForm(false);
     } catch (err) {
-      console.error(err);
+      console.error("❌ Erreur sauvegarde produit:", err);
       alert("Erreur sauvegarde");
     }
   }
@@ -538,8 +584,8 @@ export default function AdminProductsPage() {
                   </tr>
                 ) : (
                   filteredProducts.map((p) => {
-                    const imgs = (p.allImageUrls || []).map(toAbsUrl);
-                    const mainImg = imgs[0] || toAbsUrl(p.imageUrl);
+                    const images = getProductImages(p);
+                    const mainImg = images[0] || "";
                     const cat = p.category || categoriesById.get(p.categoryId);
 
                     return (
@@ -648,14 +694,15 @@ export default function AdminProductsPage() {
             </button>
 
             {/* Navigation gauche */}
-            {lightbox.product._images.length > 1 && (
-              <button
-                onClick={goPrev}
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
-              >
-                ◀
-              </button>
-            )}
+            {lightbox.product._images &&
+              lightbox.product._images.length > 1 && (
+                <button
+                  onClick={goPrev}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
+                >
+                  ◀
+                </button>
+              )}
 
             {/* Image */}
             <div className="flex items-center justify-center p-4">
@@ -667,14 +714,15 @@ export default function AdminProductsPage() {
             </div>
 
             {/* Navigation droite */}
-            {lightbox.product._images.length > 1 && (
-              <button
-                onClick={goNext}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
-              >
-                ▶
-              </button>
-            )}
+            {lightbox.product._images &&
+              lightbox.product._images.length > 1 && (
+                <button
+                  onClick={goNext}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
+                >
+                  ▶
+                </button>
+              )}
           </div>
         </div>
       )}
