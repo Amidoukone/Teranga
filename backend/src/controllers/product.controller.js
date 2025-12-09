@@ -83,11 +83,9 @@ async function uploadToImageKit(file) {
   }
 }
 
-/**
- * Collecte TOUTES les images possibles dans req
- * - max 3 images
- * - retourne coverImage + gallery uniformisée
- */
+/* ============================================================
+   🖼 Collecte des fichiers (multer.any)
+============================================================ */
 async function extractImagesFromRequestImageKit(req) {
   const collected = [];
 
@@ -105,7 +103,6 @@ async function extractImagesFromRequestImageKit(req) {
   }
 
   const uploads = [];
-
   for (const f of collected.slice(0, 3)) {
     const up = await uploadToImageKit(f);
     if (up) uploads.push(up);
@@ -119,7 +116,7 @@ async function extractImagesFromRequestImageKit(req) {
 }
 
 /* ============================================================
-   🏷️ Format produit → compatible frontend
+   🏷️ withLabels — totalement corrigé
 ============================================================ */
 function withLabels(prod) {
   if (!prod) return null;
@@ -127,12 +124,21 @@ function withLabels(prod) {
   const p = prod.toJSON ? prod.toJSON() : prod;
 
   const gallery = Array.isArray(p.gallery) ? p.gallery : [];
-  const cover = p.coverImage || gallery[0] || null;
+
+  // 🔥 Correction : coverImage peut être soit STRING, soit OBJECT
+  let cover = null;
+
+  if (typeof p.coverImage === 'string') {
+    cover = { url: p.coverImage };
+  } else if (p.coverImage && typeof p.coverImage === 'object') {
+    cover = p.coverImage;
+  } else if (gallery[0]) {
+    cover = gallery[0];
+  }
 
   return {
     ...p,
 
-    // Compatibilité frontend :
     image: cover?.url || null,
     imagePath: cover?.url || null,
 
@@ -156,7 +162,7 @@ function canWriteProduct(user) {
 }
 
 /* ============================================================
-   1️⃣ CREATE (ImageKit)
+   1️⃣ CREATE
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -182,24 +188,23 @@ exports.create = async (req, res) => {
     const cat = cid ? await Category.findByPk(cid) : null;
 
     const priceNum = toNullableNumber(price);
-    if (price !== undefined && priceNum === null) {
+    if (price !== undefined && priceNum === null)
       return res.status(400).json({ error: 'Le prix doit être un nombre.' });
-    }
 
     const stockNum = toSafeInt(stock);
 
-    // 🖼 Upload images
+    // Upload
     const { coverImage, gallery } = await extractImagesFromRequestImageKit(req);
 
-    // Génération slug unique
+    // Slug unique
     const baseSlug = slugify(name);
     let finalSlug = baseSlug || `p-${Date.now()}`;
     let i = 1;
-
     while (await Product.findOne({ where: { slug: finalSlug } })) {
       finalSlug = `${baseSlug}-${i++}`;
     }
 
+    // 🔥 CORRECTION : coverImage = STRING SEULEMENT
     const prod = await Product.create({
       categoryId: cat ? cat.id : null,
       name: String(name).trim(),
@@ -211,8 +216,8 @@ exports.create = async (req, res) => {
       description: toTrimOrNull(description),
       shortDescription: toTrimOrNull(shortDescription),
 
-      coverImage: coverImage || null,
-      gallery: gallery || [],
+      coverImage: coverImage?.url || null, // STRING — OK avec migration SQL
+      gallery: gallery.map(g => ({ url: g.url, fileId: g.fileId })),
 
       isActive:
         typeof isActive === 'undefined'
@@ -305,7 +310,7 @@ exports.detail = async (req, res) => {
 };
 
 /* ============================================================
-   4️⃣ UPDATE (ImageKit)
+   4️⃣ UPDATE
 ============================================================ */
 exports.update = async (req, res) => {
   try {
@@ -336,7 +341,7 @@ exports.update = async (req, res) => {
       prod.categoryId = cid || null;
     }
 
-    // Slug regeneration
+    // Slug regen
     let regenerateSlug = false;
     if (name !== undefined) {
       const newName = String(name).trim();
@@ -369,21 +374,19 @@ exports.update = async (req, res) => {
       prod.stock = stockNum ?? prod.stock;
     }
 
-    // Descriptions
     if (description !== undefined) prod.description = toTrimOrNull(description);
     if (shortDescription !== undefined)
       prod.shortDescription = toTrimOrNull(shortDescription);
 
-    // Actif / inactif
     if (typeof isActive !== 'undefined')
       prod.isActive = String(isActive) === 'true' || isActive === true;
 
-    // 🖼 Upload nouvelles images
+    // UPLOAD des nouvelles images
     const { coverImage, gallery, hasNewImages } =
       await extractImagesFromRequestImageKit(req);
 
     if (hasNewImages) {
-      // Suppression anciennes images côté ImageKit
+      // Delete anciennes images
       if (Array.isArray(prod.gallery)) {
         for (const img of prod.gallery) {
           if (img?.fileId) {
@@ -394,11 +397,16 @@ exports.update = async (req, res) => {
         }
       }
 
-      prod.coverImage = coverImage || null;
-      prod.gallery = gallery || [];
+      // 🔥 Correction : coverImage = STRING
+      prod.coverImage = coverImage?.url || prod.coverImage;
+
+      prod.gallery = gallery.map(g => ({
+        url: g.url,
+        fileId: g.fileId
+      }));
     }
 
-    // Regénération du slug si besoin
+    // Slug regen
     if (regenerateSlug && prod.name) {
       const baseSlug = slugify(prod.name);
       let finalSlug = baseSlug || `p-${Date.now()}`;
@@ -454,7 +462,7 @@ exports.remove = async (req, res) => {
       });
     }
 
-    // Suppression ImageKit
+    // Delete ImageKit
     if (Array.isArray(prod.gallery)) {
       for (const img of prod.gallery) {
         if (img?.fileId) {

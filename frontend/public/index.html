@@ -14,14 +14,25 @@
     <meta name="theme-color" content="#0ea5e9" />
 
     <!-- ======================================= -->
-    <!-- 🔥 ICONES & FAVICONS                     -->
+    <!-- 🔥 ICONES (Favicons + Apple + Android)   -->
     <!-- ======================================= -->
+
+    <!-- Favicon standard -->
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/logo_16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/logo_32x32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="%PUBLIC_URL%/logo_48x48.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="%PUBLIC_URL%/logo_64x64.png" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo_192x192.png" />
+
+    <!-- Apple Touch Icon (iOS / iPadOS) -->
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/logo_180x180.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="%PUBLIC_URL%/logo_192x192.png" />
+
+    <!-- Manifest (PWA) -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
     <!-- ======================================= -->
-    <!-- 🔍 SEO — DESCRIPTION + MOTS CLÉS         -->
+    <!-- 🔍 SEO — TITRE + DESCRIPTION + KEYWORDS -->
     <!-- ======================================= -->
     <title>Teranga – Plateforme pour la diaspora africaine</title>
 
@@ -45,7 +56,7 @@
       property="og:description"
       content="Gérez vos biens, projets et services à distance en toute transparence. Preuves, photos, vidéos, transactions claires et agents certifiés."
     />
-    <meta property="og:image" content="%PUBLIC_URL%/logo_512x512.png" />
+    <meta property="og:image" content="https://teranga-diaspora.com/logo_512x512.png" />
     <meta property="og:url" content="https://teranga-diaspora.com" />
     <meta property="og:type" content="website" />
 
@@ -56,9 +67,9 @@
     <meta name="twitter:title" content="Teranga — Diaspora & Services" />
     <meta
       name="twitter:description"
-      content="Plateforme moderne dédiée à la diaspora africaine : services, biens, projets, agents de terrain, transparence totale."
+      content="Plateforme moderne dédiée à la diaspora africaine."
     />
-    <meta name="twitter:image" content="%PUBLIC_URL%/logo_512x512.png" />
+    <meta name="twitter:image" content="https://teranga-diaspora.com/logo_512x512.png" />
 
     <!-- ======================================= -->
     <!-- 📊 SCHEMA.ORG — GOOGLE RICH RESULTS     -->
@@ -70,7 +81,7 @@
         "name": "Teranga",
         "url": "https://teranga-diaspora.com",
         "logo": "https://teranga-diaspora.com/logo_512x512.png",
-        "description": "Plateforme moderne connectant la diaspora africaine à ses biens, projets et services au pays.",
+        "description": "Plateforme moderne connectant la diaspora africaine à ses biens, projets et services.",
         "address": {
           "@type": "PostalAddress",
           "addressLocality": "Bamako",
@@ -80,8 +91,7 @@
     </script>
 
     <!-- ======================================= -->
-    <!-- 📈 GOOGLE ANALYTICS 4 (GA4)             -->
-    <!-- ID : G-5JVYGYHZ7Y                       -->
+    <!-- 📈 GOOGLE ANALYTICS 4                   -->
     <!-- ======================================= -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-5JVYGYHZ7Y"></script>
     <script>

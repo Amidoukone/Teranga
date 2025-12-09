@@ -1,4 +1,3 @@
-// backend/src/controllers/category.controller.js
 'use strict';
 
 const { Op } = require('sequelize');
@@ -68,8 +67,6 @@ function getUserRole(req) {
 ============================================================ */
 function canReadCategory(req) {
   const role = getUserRole(req);
-  // Ici tu peux décider d'ouvrir la lecture publique si tu veux :
-  // return !role || ['admin', 'agent', 'client'].includes(role);
   return ['admin', 'agent', 'client'].includes(role);
 }
 
@@ -79,7 +76,7 @@ function canWriteCategory(req) {
 }
 
 /* ============================================================
-   1️⃣ CREATE — tolérante (slug auto si absent)
+   1️⃣ CREATE — idempotent + slug auto
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -89,7 +86,7 @@ exports.create = async (req, res) => {
 
     const { name, slug, description, status = 'active' } = req.body || {};
 
-    // name requis (clé UX/DB)
+    // name requis
     const cleanName = toTrimOrNull(name);
     if (!cleanName) {
       return res.status(400).json({ error: 'Le nom de la catégorie est requis' });
@@ -101,10 +98,12 @@ exports.create = async (req, res) => {
       return res.status(400).json({ error: 'Slug invalide' });
     }
 
-    // Vérifier collision slug
+    // 🔐 Idempotence : si une catégorie avec ce slug existe déjà,
+    // on la renvoie simplement (cas double-clic / réseau lent).
     const existing = await Category.findOne({ where: { slug: finalSlug } });
     if (existing) {
-      return res.status(400).json({ error: 'Une catégorie avec ce slug existe déjà' });
+      // 200 = OK (pas une erreur), catégorie déjà existante
+      return res.status(200).json({ category: withLabels(existing), existed: true });
     }
 
     const cat = await Category.create({
@@ -204,7 +203,7 @@ exports.detail = async (req, res) => {
 };
 
 /* ============================================================
-   4️⃣ UPDATE — slug auto si fourni vide
+   4️⃣ UPDATE — slug auto si modifié
 ============================================================ */
 exports.update = async (req, res) => {
   try {
@@ -236,14 +235,15 @@ exports.update = async (req, res) => {
     // slug
     if (slug !== undefined || name !== undefined) {
       const fromBodySlug = toTrimOrNull(slug);
-      const baseForSlug = fromBodySlug || (name ? toTrimOrNull(name) : null) || cat.name;
+      const baseForSlug =
+        fromBodySlug || (name ? toTrimOrNull(name) : null) || cat.name;
+
       const newSlug = slugify(baseForSlug);
 
       if (!newSlug) {
         return res.status(400).json({ error: 'Slug invalide' });
       }
 
-      // Vérifier collision slug (autre enregistrement)
       const exists = await Category.findOne({
         where: {
           slug: newSlug,

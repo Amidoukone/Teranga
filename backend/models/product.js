@@ -15,16 +15,27 @@ module.exports = (sequelize, DataTypes) => {
   Product.init(
     {
       // 🔗 Relation catégorie
-      categoryId: { 
-        type: DataTypes.INTEGER.UNSIGNED, 
+      categoryId: {
+        type: DataTypes.INTEGER.UNSIGNED,
         allowNull: true,
-        field: 'category_id'
+        field: 'category_id',
       },
 
       // 🏷️ Identité produit
-      name: { type: DataTypes.STRING(180), allowNull: false },
-      slug: { type: DataTypes.STRING(220), allowNull: false, unique: true },
-      sku: { type: DataTypes.STRING(80), allowNull: true, unique: true },
+      name: {
+        type: DataTypes.STRING(180),
+        allowNull: false,
+      },
+      slug: {
+        type: DataTypes.STRING(220),
+        allowNull: false,
+        unique: true,
+      },
+      sku: {
+        type: DataTypes.STRING(80),
+        allowNull: true,
+        unique: true,
+      },
 
       // 💰 Prix & devise
       price: {
@@ -48,35 +59,47 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
-        field: 'is_active'
+        field: 'is_active',
       },
 
       // 📝 Descriptions
-      shortDescription: { 
-        type: DataTypes.STRING(500), 
-        allowNull: true, 
-        field: 'short_description'
+      shortDescription: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+        field: 'short_description',
       },
-      description: { type: DataTypes.TEXT, allowNull: true },
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
 
       /**
-       * 🖼 Image principale stockée sur ImageKit ou local
-       * - URL absolue (ImageKit) ou relative (/uploads/products/*.jpg)
+       * 🖼 Image principale
+       * - Stockée comme STRING (URL absolue ou relative)
+       * - Exemple :
+       *     "https://ik.imagekit.io/.../image.jpg"
+       *     "/uploads/products/image.jpg"
+       * - ⚠️ NE PAS stocker d'objet ici (pas { url, fileId }).
+       *   C’est exactement ce qu’on a corrigé dans le controller.
        */
-      coverImage: { 
-        type: DataTypes.STRING(1024), 
+      coverImage: {
+        type: DataTypes.STRING(1024),
         allowNull: true,
-        field: 'cover_image'
+        field: 'cover_image',
       },
 
       /**
        * 🖼🖼🖼 Galerie multi-images
-       * - Toujours un JSON array
-       * - URLs absolues ImageKit ou locales
+       * - Type JSON
+       * - Tableau d’objets au format :
+       *     [{ url: string, fileId: string }, ...]
+       * - Les URLs peuvent être absolues (ImageKit) ou relatives (/uploads/...)
+       * - Compatible avec l’implémentation du controller (create/update)
        */
-      gallery: { 
-        type: DataTypes.JSON, 
-        allowNull: true 
+      gallery: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        defaultValue: [],
       },
     },
     {

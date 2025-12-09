@@ -1,4 +1,3 @@
-// frontend/src/pages/AdminCategoriesPage.jsx
 import { useEffect, useState } from "react";
 import {
   getCategories,
@@ -11,9 +10,6 @@ import { me } from "../services/auth";
 /*
 ============================================================================
 📂 AdminCategoriesPage — Apple Light Premium A1
-- Design cohérent avec AdminAgents / AdminProducts
-- Aucun changement de logique métier / API
-- Formulaire + liste sous forme de cartes élégantes
 ============================================================================
 */
 
@@ -23,13 +19,13 @@ export default function AdminCategoriesPage() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [saving, setSaving] = useState(false); // 🔒 anti double-submit
 
   const [form, setForm] = useState({
     name: "",
     description: "",
   });
 
-  // Optionnel : petit filtre rapide par nom (UX+)
   const [search, setSearch] = useState("");
 
   /* ============================================================
@@ -70,10 +66,12 @@ export default function AdminCategoriesPage() {
   }
 
   /* ============================================================
-     💾 Submit
+     💾 Submit — avec verrou 'saving'
   ============================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (saving) return; // 🔒 empêche double-clic si la requête est en cours
 
     if (!form.name.trim()) {
       alert("Le nom est requis.");
@@ -81,6 +79,8 @@ export default function AdminCategoriesPage() {
     }
 
     try {
+      setSaving(true);
+
       if (editing) {
         await updateCategory(editing.id, form);
         alert("✅ Catégorie mise à jour.");
@@ -95,6 +95,8 @@ export default function AdminCategoriesPage() {
     } catch (err) {
       console.error("❌ handleSubmit:", err);
       alert("Erreur lors de l'enregistrement de la catégorie.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -134,7 +136,7 @@ export default function AdminCategoriesPage() {
   }
 
   /* ============================================================
-     🧱 RENDER PRINCIPAL — Apple Light A1
+     🧱 RENDER PRINCIPAL
   ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/40 to-white px-4 py-10">
@@ -177,7 +179,7 @@ export default function AdminCategoriesPage() {
           </div>
         </div>
 
-        {/* BARRE DE RECHERCHE (optionnelle, non bloquante) */}
+        {/* BARRE DE RECHERCHE */}
         <div className="mb-6">
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
@@ -233,9 +235,19 @@ export default function AdminCategoriesPage() {
             <div className="text-right mt-2">
               <button
                 type="submit"
-                className="px-5 py-2.5 text-sm font-semibold rounded-xl shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
+                disabled={saving}
+                className={`px-5 py-2.5 text-sm font-semibold rounded-xl shadow-sm text-white transition
+                  ${
+                    saving
+                      ? "bg-blue-300 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                  }`}
               >
-                {editing ? "💾 Mettre à jour" : "➕ Ajouter"}
+                {saving
+                  ? "Enregistrement…"
+                  : editing
+                  ? "💾 Mettre à jour"
+                  : "➕ Ajouter"}
               </button>
             </div>
           </form>
