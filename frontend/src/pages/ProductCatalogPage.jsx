@@ -227,15 +227,41 @@ export default function ProductCatalogPage() {
     e.preventDefault();
     if (!selectedProduct) return;
 
+    // ✅ Validation de la quantité AVANT l'appel API
+    const requestedQty = Number(quantity);
+
+    if (!Number.isFinite(requestedQty) || requestedQty <= 0) {
+      alert('Veuillez saisir une quantité valide (au moins 1).');
+      return;
+    }
+
+    // Si stock connu et la demande dépasse le stock → message personnalisé
+    if (typeof selectedProduct.stock === 'number') {
+      if (selectedProduct.stock <= 0) {
+        alert(
+          "Ce produit est actuellement en rupture de stock. Merci de contacter le service client pour plus d'informations."
+        );
+        return;
+      }
+
+      if (requestedQty > selectedProduct.stock) {
+        alert(
+          `La quantité demandée (${requestedQty}) dépasse le stock disponible (${selectedProduct.stock}).\n\n` +
+          'Merci de contacter le service client pour ajuster votre commande ou organiser une commande spéciale.'
+        );
+        return;
+      }
+    }
+
     try {
       setCreating(false);
 
       const payload = {
-        customerNote: `Commande de ${quantity} x ${selectedProduct.name}`,
+        customerNote: `Commande de ${requestedQty} x ${selectedProduct.name}`,
         items: [
           {
             productId: selectedProduct.id,
-            quantity: Number(quantity),
+            quantity: requestedQty,
             unitPrice: Number(selectedProduct.price || 0),
           },
         ],
@@ -243,7 +269,7 @@ export default function ProductCatalogPage() {
 
       const newOrder = await createOrder(payload);
 
-      alert(`✅ Commande créée pour ${quantity} × ${selectedProduct.name}`);
+      alert(`✅ Commande créée pour ${requestedQty} × ${selectedProduct.name}`);
 
       setSelectedProduct(null);
       setQuantity(1);
@@ -340,7 +366,7 @@ export default function ProductCatalogPage() {
   ============================================================ */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient.to-br from-gray-50 via-blue-50 to-blue-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
         <div className="bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl px-6 py-5 shadow-xl">
           <p className="text-gray-600 text-sm sm:text-lg animate-pulse text-center">
             Chargement du catalogue…
@@ -384,11 +410,11 @@ export default function ProductCatalogPage() {
      🧱 UI PRINCIPALE — Filtres + Tri + Grille Produits (Style A)
   ============================================================ */
   return (
-    <div className="min-h-screen bg-gradient.to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 sm:py-10">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-3xl border border-slate-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
 
         {/* ==== HEADER ==== */}
-        <div className="flex flex-col sm:flex.row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[0.7rem] uppercase tracking-[0.18em] font-semibold text-blue-600 mb-1">
               Boutique Teranga
@@ -470,7 +496,7 @@ export default function ProductCatalogPage() {
                   min="0"
                   value={priceMin}
                   onChange={(e) => setPriceMin(e.target.value)}
-                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg.white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Min"
                 />
               </div>
@@ -484,7 +510,7 @@ export default function ProductCatalogPage() {
                   min="0"
                   value={priceMax}
                   onChange={(e) => setPriceMax(e.target.value)}
-                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg.white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Max"
                 />
               </div>
@@ -499,7 +525,7 @@ export default function ProductCatalogPage() {
                     setPriceMax('');
                     setSort('default');
                   }}
-                  className="w-full text-xs font-semibold rounded-xl border border-slate-200 px-3 py-2 bg.white hover:bg-slate-50 text-slate-700"
+                  className="w-full text-xs font-semibold rounded-xl border border-slate-200 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700"
                 >
                   Réinitialiser
                 </button>
@@ -514,7 +540,7 @@ export default function ProductCatalogPage() {
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
-                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg.white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="default">Recommandé</option>
                 <option value="price_asc">Prix croissant</option>
@@ -559,7 +585,7 @@ export default function ProductCatalogPage() {
                         className="w-full h-44 object-cover transition group-hover:scale-[1.03]"
                       />
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to.transparent opacity-0 group-hover:opacity-100 transition" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent opacity-0 group-hover:opacity-100 transition" />
 
                       <div className="absolute left-3 bottom-3 text-white text-[11px] bg-black/50 px-2 py-1 rounded">
                         Cliquer pour agrandir
@@ -632,7 +658,7 @@ export default function ProductCatalogPage() {
                     {user && user.role !== 'admin' && (
                       <button
                         onClick={() => handleOrder(p)}
-                        className="mt-4 w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-xl shadow-sm bg-blue-600 text.white hover:bg-blue-700 active:bg-blue-800 transition"
+                        className="mt-4 w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-xl shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
                       >
                         🛒 Commander
                       </button>
@@ -644,10 +670,11 @@ export default function ProductCatalogPage() {
           </div>
         )}
 
-        {/* ==== POPUP COMMANDE ==== */}
+        {/* ==== POPUP COMMANDE (AMÉLIORÉE, LISIBLE) ==== */}
         {creating && selectedProduct && (
-          <div className="fixed inset-0 bg.black/50 flex items-center justify-center z-40 px-4">
-            <div className="bg.white rounded-2xl shadow-2xl p-6 max-w-sm w.full border border-slate-200 relative">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 px-4">
+            <div className="relative w-full max-w-sm rounded-2xl border border-slate-300 bg-white shadow-2xl">
+              {/* Bouton fermer */}
               <button
                 onClick={() => setCreating(false)}
                 aria-label="Fermer"
@@ -656,45 +683,47 @@ export default function ProductCatalogPage() {
                 ✕
               </button>
 
-              <h2 className="text-xl font-bold text-slate-900 mb-1">
-                Commander {selectedProduct.name}
-              </h2>
-              <p className="text-xs text-slate-500 mb-4">
-                {formatProductPrice(
-                  selectedProduct.price,
-                  selectedProduct.currency || 'XOF'
-                )}{' '}
-                / unité
-              </p>
+              <div className="p-6">
+                <h2 className="text-xl font-bold text-slate-900 mb-1">
+                  Commander {selectedProduct.name}
+                </h2>
+                <p className="text-xs text-slate-600 mb-4">
+                  {formatProductPrice(
+                    selectedProduct.price,
+                    selectedProduct.currency || 'XOF'
+                  )}{' '}
+                  / unité
+                </p>
 
-              <form onSubmit={handleConfirmOrder}>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Quantité
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+                <form onSubmit={handleConfirmOrder}>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Quantité
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
 
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCreating(false)}
-                    className="px-4 py-2 text-sm bg.gray-100 text-slate-700 rounded-lg hover:bg.gray-200"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-sm bg.blue-600 text.white rounded-lg hover:bg.blue-700 active:bg.blue-800"
-                  >
-                    Confirmer
-                  </button>
-                </div>
-              </form>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCreating(false)}
+                      className="px-4 py-2 text-sm bg-gray-100 text-slate-700 rounded-lg hover:bg-gray-200"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800"
+                    >
+                      Confirmer
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         )}

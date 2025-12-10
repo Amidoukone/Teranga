@@ -69,7 +69,8 @@ export default function OrderTransactionsPage() {
 
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // chargement liste
+  const [creating, setCreating] = useState(false); // 🔐 création transaction
 
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_orderTransactions_showForm');
@@ -140,18 +141,26 @@ export default function OrderTransactionsPage() {
   }, [showForm]);
 
   /* ============================================================
-      ➕ Création transaction
+      ➕ Création transaction (avec protection anti double submit)
   ============================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
+
+    // ⛔ Empêche un double clic si une création est déjà en cours
+    if (creating) return;
+
     if (!form.amount || isNaN(parseFloat(form.amount))) {
       return alert('Montant invalide.');
     }
+
     try {
+      setCreating(true); // 🔐 Verrouille le bouton d’envoi
+
       const payload = {
         ...form,
         amount: parseFloat(form.amount),
       };
+
       await createOrderTransaction(id, payload);
       alert('✅ Transaction ajoutée');
       resetForm();
@@ -159,6 +168,8 @@ export default function OrderTransactionsPage() {
     } catch (err) {
       console.error('❌ Erreur ajout transaction:', err);
       alert("Erreur lors de l'ajout.");
+    } finally {
+      setCreating(false); // 🔓 Déverrouille l’envoi, même en cas d’erreur
     }
   }
 
@@ -311,6 +322,7 @@ export default function OrderTransactionsPage() {
             setForm={setForm}
             handleSubmit={handleSubmit}
             loading={loading}
+            creating={creating} // 👈 on passe l'état de création
           />
         )}
 
@@ -322,7 +334,7 @@ export default function OrderTransactionsPage() {
       </div>
     </div>
   );
-} 
+}
 
 /* ============================================================
    🔹 Sous-composants — Filtres / Formulaire / Liste
@@ -402,7 +414,9 @@ function TransactionFilters({ filters, setFilters, count }) {
 /* ============================================================
    FORMULAIRE
 ============================================================ */
-function TransactionForm({ form, setForm, handleSubmit, loading }) {
+function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
+  const isSubmitting = loading || creating;
+
   return (
     <div className="mb-10">
       <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -515,14 +529,14 @@ function TransactionForm({ form, setForm, handleSubmit, loading }) {
         <div className="sm:col-span-2 text-right">
           <button
             type="submit"
-            disabled={loading}
+            disabled={isSubmitting}
             className={`w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition-all duration-150 ${
-              loading
+              isSubmitting
                 ? 'bg-blue-300 cursor-not-allowed text-white'
                 : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >
-            {loading ? 'Enregistrement…' : '💾 Enregistrer'}
+            {isSubmitting ? 'Enregistrement…' : '💾 Enregistrer'}
           </button>
         </div>
       </form>

@@ -64,7 +64,8 @@ export default function OrdersPage() {
   const [user, setUser] = useState(null);
 
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);           // chargement commandes
+  const [creating, setCreating] = useState(false);         // 🔐 création commande
 
   // Produits pour création rapide de commande
   const [products, setProducts] = useState([]);
@@ -149,11 +150,17 @@ export default function OrdersPage() {
   }, [showForm]);
 
   /* ============================================================
-     ➕ Création commande
+     ➕ Création commande (avec protection anti double-submit)
   ============================================================ */
   async function handleCreate(e) {
     e.preventDefault();
+
+    // ⛔ Empêche un double clic si une création est déjà en cours
+    if (creating) return;
+
     try {
+      setCreating(true); // 🔐 verrouillage
+
       const payload = {
         customerNote: form.customerNote || '',
       };
@@ -204,6 +211,8 @@ export default function OrdersPage() {
     } catch (err) {
       console.error('❌ Erreur création commande:', err);
       alert('Erreur lors de la création de la commande.');
+    } finally {
+      setCreating(false); // 🔓 déverrouillage
     }
   }
 
@@ -464,28 +473,29 @@ export default function OrdersPage() {
 
             {/* Ajouter un article */}
             <div className="mt-2 flex items-center gap-2">
-              <input
-                id="withItem"
-                type="checkbox"
-                checked={form.withItem}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    withItem: e.target.checked,
-                    productId: e.target.checked ? f.productId : '',
-                    quantity: e.target.checked ? f.quantity : 1,
-                    unitPrice: e.target.checked ? f.unitPrice : '',
-                  }))
-                }
-                className="rounded border-gray-300"
-              />
-              <label
-                htmlFor="withItem"
-                className="text-sm text-gray-700 cursor-pointer"
-              >
-                Ajouter un article dès la création
-              </label>
-            </div>
+  <input
+    id="withItem"
+    type="checkbox"
+    checked={form.withItem}
+    onChange={(e) =>
+      setForm((f) => ({
+        ...f,
+        withItem: e.target.checked,
+        productId: e.target.checked ? f.productId : '',
+        quantity: e.target.checked ? f.quantity : 1,
+        unitPrice: e.target.checked ? f.unitPrice : '',
+      }))
+    }
+    className="rounded border-gray-300"
+  />
+  <label
+    htmlFor="withItem"
+    className="text-sm text-gray-700 cursor-pointer"
+  >
+    Ajouter un article dès la création
+  </label>
+</div>
+
 
             {form.withItem && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4">
@@ -551,9 +561,14 @@ export default function OrdersPage() {
             <div className="mt-5 flex justify-end">
               <button
                 type="submit"
-                className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700"
+                disabled={creating}
+                className={`w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm ${
+                  creating
+                    ? 'bg-blue-300 cursor-not-allowed text-white'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
               >
-                ➕ Créer la commande
+                {creating ? 'Création…' : '➕ Créer la commande'}
               </button>
             </div>
           </form>

@@ -44,7 +44,9 @@ export default function TransactionsPage() {
   const [tasks, setTasks] = useState([]);
   const [selectedService, setSelectedService] = useState('');
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+
+  const [loading, setLoading] = useState(false);   // chargement de la liste
+  const [creating, setCreating] = useState(false); // 🔐 création transaction (anti double-submit)
 
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_transactions_showForm');
@@ -148,11 +150,17 @@ export default function TransactionsPage() {
   }
 
   // ========================================================================
-  // 🔹 Soumission formulaire
+  // 🔹 Soumission formulaire (avec protection anti double-submit)
   // ========================================================================
   async function handleSubmit(e) {
     e.preventDefault();
+
+    // ⛔ Empêche un double clic sur réseau lent
+    if (creating) return;
+
     try {
+      setCreating(true); // 🔐 verrouillage
+
       const payload = {
         ...form,
         amount: form.amount ? Number(form.amount) : undefined,
@@ -175,6 +183,8 @@ export default function TransactionsPage() {
       resetForm();
     } catch {
       alert("Erreur lors de l'ajout de la transaction.");
+    } finally {
+      setCreating(false); // 🔓 déverrouillage
     }
   }
 
@@ -341,6 +351,7 @@ export default function TransactionsPage() {
             services={services}
             handleSubmit={handleSubmit}
             loading={loading}
+            creating={creating}
             user={user}
           />
         )}
@@ -487,6 +498,7 @@ function TransactionForm({
   services,
   handleSubmit,
   loading,
+  creating,
   user,
 }) {
   return (
@@ -673,10 +685,14 @@ function TransactionForm({
         <div className="sm:col-span-2 text-right mt-2">
           <button
             type="submit"
-            disabled={loading}
-            className="px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm sm:text-base font-semibold hover:bg-blue-700 disabled:bg-blue-300 transition"
+            disabled={creating}
+            className={`px-5 py-2.5 rounded-lg text-sm sm:text-base font-semibold transition ${
+              creating
+                ? 'bg-blue-300 cursor-not-allowed text-white'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
           >
-            {loading ? 'Enregistrement…' : '💾 Enregistrer la transaction'}
+            {creating ? 'Enregistrement…' : '💾 Enregistrer la transaction'}
           </button>
         </div>
       </form>
