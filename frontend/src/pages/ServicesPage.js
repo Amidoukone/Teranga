@@ -737,7 +737,7 @@ function ServiceFormFields({ form, setForm }) {
           Titre <span className="text-red-500">*</span>
         </label>
         <input
-          placeholder="Ex : Paiement facture SENELEC"
+          placeholder="Ex : Paiement facture ORANGE MALI"
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           required
