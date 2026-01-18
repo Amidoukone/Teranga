@@ -1,6 +1,7 @@
 // frontend/src/services/transactions.js
 import api from './api';
 import { applyLabels, canonicalizeTransactionStatus } from '../utils/labels';
+import { mergeGeoParams, mergeGeoPayload } from './geo';
 
 /**
  * ============================================================
@@ -88,7 +89,7 @@ async function postMultipartResilient(url, payloadFields = {}, file) {
  *  - proofFile?: File
  */
 export async function createTransaction(data) {
-  const payload = {
+  const payload = mergeGeoPayload({
     type: data.type,
     amount: asDecimalString(data.amount),
     currency: data.currency,
@@ -98,7 +99,7 @@ export async function createTransaction(data) {
     taskId: asNumeric(data.taskId),
     orderId: asNumeric(data.orderId),
     projectId: asNumeric(data.projectId), // 🆕
-  };
+  });
 
   /**
    * 💡 Logique d’harmonisation du statut (alignée avec backend) :
@@ -126,14 +127,14 @@ export async function createTransaction(data) {
 
 /* ------------------- API: List ---------------------------- */
 export async function getTransactions(filters = {}) {
-  const params = cleanObj(filters);
+  const params = cleanObj(mergeGeoParams(filters));
   const { data } = await api.get('/transactions', { params });
   const transactions = data?.transactions || data?.items || [];
   return transactions.map((t) => applyLabels(t));
 }
 
 export async function getTransactionsWithMeta(filters = {}) {
-  const params = cleanObj(filters);
+  const params = cleanObj(mergeGeoParams(filters));
   const { data } = await api.get('/transactions', { params });
   const transactions = (data?.transactions || data?.items || []).map((t) => applyLabels(t));
   return {
@@ -193,7 +194,9 @@ export async function getFinancialSummary() {
 }
 
 export async function getTransactionReport(params = {}) {
-  const { data } = await api.get('/transactions/report', { params: cleanObj(params) });
+  const { data } = await api.get('/transactions/report', {
+    params: cleanObj(mergeGeoParams(params)),
+  });
   return data;
 }
 

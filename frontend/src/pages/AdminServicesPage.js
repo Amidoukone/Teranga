@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { me } from '../services/auth';
+import { getGeoParams } from '../services/geo';
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Tous les statuts' },
@@ -68,6 +69,12 @@ export default function AdminServicesPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+
+      // 🌍 Geo scope (multi-pays / régions) — injecté sans casser le reste
+      const geoParams = getGeoParams();
+      if (geoParams.countryId) params.set('countryId', String(geoParams.countryId));
+      if (geoParams.regionId) params.set('regionId', String(geoParams.regionId));
+
       if (status !== 'all') params.set('status', status);
       if (onlyUnassigned) params.set('unassigned', '1');
       if (q.trim()) params.set('q', q.trim());
@@ -349,7 +356,7 @@ export default function AdminServicesPage() {
                           s.status
                         )}`}
                       >
-                        {s.status.replace('_', ' ')}
+                        {String(s.status || '').replace('_', ' ')}
                       </span>
                     </td>
 

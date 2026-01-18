@@ -18,6 +18,7 @@ import {
 } from '../services/transactions';
 import FinanceWidget from '../components/FinanceWidget';
 import api from '../services/api';
+import { getGeoParams } from '../services/geo';
 
 /* ============================================================================
    🔧 UTILITAIRES
@@ -145,27 +146,28 @@ export default function DashboardPage() {
       }
 
       // ========= 📦 NOUVELLES DONNÉES : BIENS / TÂCHES / PROJETS / COMMANDES =========
+      const geoParams = getGeoParams();
       const [propsRes, tasksRes, projectsRes, ordersRes] = await Promise.all([
         api
-          .get('/properties')
+          .get('/properties', { params: geoParams })
           .catch((err) => {
             console.error('⚠️ Erreur chargement biens Dashboard:', err);
             return { data: {} };
           }),
         api
-          .get('/tasks')
+          .get('/tasks', { params: geoParams })
           .catch((err) => {
             console.error('⚠️ Erreur chargement tâches Dashboard:', err);
             return { data: {} };
           }),
         api
-          .get('/projects')
+          .get('/projects', { params: geoParams })
           .catch((err) => {
             console.error('⚠️ Erreur chargement projets Dashboard:', err);
             return { data: {} };
           }),
         api
-          .get('/orders')
+          .get('/projects', { params: geoParams })
           .catch((err) => {
             console.error('⚠️ Erreur chargement commandes Dashboard:', err);
             return { data: {} };

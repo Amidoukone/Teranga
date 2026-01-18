@@ -1,11 +1,13 @@
+// frontend/src/services/services.js
 import api from './api';
+import { mergeGeoParams, mergeGeoPayload } from './geo';
 
 /**
  * 👤 Liste des services du client connecté
  * GET /api/services/me
  */
 export async function getMyServices() {
-  const { data } = await api.get('/services/me');
+  const { data } = await api.get('/services/me', { params: mergeGeoParams() });
   return data.services || [];
 }
 
@@ -14,7 +16,9 @@ export async function getMyServices() {
  * GET /api/services/agent/services
  */
 export async function getAgentServices() {
-  const { data } = await api.get('/services/agent/services');
+  const { data } = await api.get('/services/agent/services', {
+    params: mergeGeoParams(),
+  });
   return data.services || [];
 }
 
@@ -23,7 +27,9 @@ export async function getAgentServices() {
  * GET /api/services
  */
 export async function getAllServicesAdmin(params = {}) {
-  const { data } = await api.get('/services', { params });
+  const { data } = await api.get('/services', {
+    params: mergeGeoParams(params),
+  });
   return data.services || [];
 }
 
@@ -32,7 +38,7 @@ export async function getAllServicesAdmin(params = {}) {
  * POST /api/services
  */
 export async function createService(form) {
-  const payload = {
+  const payload = mergeGeoPayload({
     ...form,
     propertyId:
       form?.propertyId !== undefined && form.propertyId !== ''
@@ -42,7 +48,7 @@ export async function createService(form) {
       form?.budget === '' || form?.budget === undefined
         ? undefined
         : Number(form.budget),
-  };
+  });
 
   const { data } = await api.post('/services', payload, {
     headers: { 'Content-Type': 'application/json' },

@@ -1,6 +1,7 @@
 // frontend/src/services/properties.js
 import api from './api';
 import { applyLabels } from '../utils/labels';
+import { appendGeoFormData, mergeGeoParams } from './geo';
 
 /**
  * ============================================================
@@ -58,6 +59,10 @@ function buildFormData(form = {}, files = [], extra = {}) {
 
   // Fichiers
   (files || []).forEach((file) => formData.append('files', file));
+
+  // ✅ Injecte countryId/regionId si sélectionnés (sans écraser si déjà présents)
+  appendGeoFormData(formData);
+
   return formData;
 }
 
@@ -68,11 +73,11 @@ function buildFormData(form = {}, files = [], extra = {}) {
 export async function getProperties() {
   try {
     const data = await tryEndpoints('get', [
-      { url: '/properties' },
+      { url: '/properties', params: mergeGeoParams() },
       { url: '/properties/me' },
       { url: '/properties/mine' },
       { url: '/admin/properties?scope=me' },
-      { url: '/properties', params: { owner: 'me' } },
+      { url: '/properties', params: mergeGeoParams({ owner: 'me' }) },
     ]);
 
     const list = data.properties || data.rows || data.list || [];
@@ -90,11 +95,11 @@ export async function getClientProperties(clientId) {
   if (!clientId) return [];
   try {
     const data = await tryEndpoints('get', [
-      { url: '/properties', params: { clientId } },
-      { url: `/properties/client/${clientId}` },
-      { url: '/admin/properties', params: { clientId } },
-      { url: '/properties', params: { ownerId: clientId } },
-      { url: `/properties/by-owner/${clientId}` }, // alias backend ajouté
+      { url: '/properties', params: mergeGeoParams({ clientId }) },
+      { url: `/properties/client/${clientId}`, params: mergeGeoParams() },
+      { url: '/admin/properties', params: mergeGeoParams({ clientId }) },
+      { url: '/properties', params: mergeGeoParams({ ownerId: clientId }) },
+      { url: `/properties/by-owner/${clientId}`, params: mergeGeoParams() }, // alias backend ajouté
     ]);
 
     const list = data.properties || data.rows || data.list || [];
@@ -111,8 +116,8 @@ export async function getClientProperties(clientId) {
 export async function getAllProperties() {
   try {
     const data = await tryEndpoints('get', [
-      { url: '/properties', params: { all: 'true' } },
-      { url: '/admin/properties' },
+      { url: '/properties', params: mergeGeoParams({ all: 'true' }) },
+      { url: '/admin/properties', params: mergeGeoParams() },
       { url: '/properties/all' },
     ]);
 
@@ -143,7 +148,10 @@ export async function getAllProperties() {
  */
 export async function createProperty(form, files = [], adminTarget = null) {
   // Cas simple (client standard OU admin sans cible) => comportement historique
-  if (!adminTarget || (!adminTarget.ownerId && !adminTarget.clientId && !adminTarget.ownerEmail)) {
+  if (
+    !adminTarget ||
+    (!adminTarget.ownerId && !adminTarget.clientId && !adminTarget.ownerEmail)
+  ) {
     const formData = buildFormData(form, files);
     try {
       const data = await tryEndpoints(
@@ -180,7 +188,10 @@ export async function createProperty(form, files = [], adminTarget = null) {
       return applyLabels(created);
     } catch (e) {
       // On log puis on continue sur les fallbacks
-      console.warn('⚠️ Fallback Admin create: /properties/client/:id non dispo, on tente alias/body…', e?.response?.status);
+      console.warn(
+        '⚠️ Fallback Admin create: /properties/client/:id non dispo, on tente alias/body…',
+        e?.response?.status
+      );
     }
   }
 
@@ -200,7 +211,10 @@ export async function createProperty(form, files = [], adminTarget = null) {
     const created = data.property || data.item || data.result;
     return applyLabels(created);
   } catch (e) {
-    console.warn('⚠️ Fallback Admin create: /properties/admin non dispo, on tente /properties avec body…', e?.response?.status);
+    console.warn(
+      '⚠️ Fallback Admin create: /properties/admin non dispo, on tente /properties avec body…',
+      e?.response?.status
+    );
   }
 
   // 3) Fallback ultime : /properties (classique) + ownerId|clientId|ownerEmail dans le body

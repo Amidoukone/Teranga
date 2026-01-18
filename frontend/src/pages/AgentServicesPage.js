@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
 import { applyLabels, SERVICE_STATUSES, SERVICE_TYPES } from '../utils/labels';
+import { getGeoParams } from '../services/geo';
 
 const TOKEN_KEY = 'teranga_token';
 
@@ -25,6 +26,7 @@ export default function AgentServicesPage() {
       const token = localStorage.getItem(TOKEN_KEY);
       const { data } = await api.get('/services/agent/services', {
         headers: { Authorization: `Bearer ${token}` },
+        params: getGeoParams(),
       });
 
       const enriched = (data.services || []).map((s) =>

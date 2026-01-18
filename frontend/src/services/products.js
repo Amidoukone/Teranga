@@ -1,6 +1,7 @@
 // frontend/src/services/products.js
 import api, { getFileUrl } from './api';
 import { applyLabels } from '../utils/labels';
+import { appendGeoFormData, mergeGeoParams } from './geo';
 
 /* -----------------------------------------------------------
  * 🧩 Normalisation produit
@@ -19,14 +20,15 @@ function normalizeProduct(raw = {}) {
   // Compat :
   //  - anciens champs: image, imagePath
   //  - nouveaux champs: coverImage, gallery (JSON en DB)
-  const coverPath =
-    p.imagePath || p.image || p.coverImage || null;
+  const coverPath = p.imagePath || p.image || p.coverImage || null;
 
   // gallery brute venant de l’API (optionnelle)
   const rawGallery =
-    Array.isArray(p.gallery) ? p.gallery :
-    Array.isArray(p.images) ? p.images :
-    [];
+    Array.isArray(p.gallery)
+      ? p.gallery
+      : Array.isArray(p.images)
+      ? p.images
+      : [];
 
   // 🔹 2) Construction de l’URL principale (imageUrl)
   let imageUrl = '';
@@ -50,11 +52,9 @@ function normalizeProduct(raw = {}) {
     .filter((url) => url && url !== imageUrl);
 
   // 🔹 4) Exposition des helpers d’images
-  p.imageUrl = imageUrl || '';          // utilisé partout dans ton front actuel
-  p.galleryUrls = galleryUrls;          // pour carrousel / lightbox
-  p.allImageUrls = imageUrl
-    ? [imageUrl, ...galleryUrls]
-    : [...galleryUrls];
+  p.imageUrl = imageUrl || '';
+  p.galleryUrls = galleryUrls;
+  p.allImageUrls = imageUrl ? [imageUrl, ...galleryUrls] : [...galleryUrls];
 
   // 🔹 Conversion numérique propre (comme avant)
   if (p.price !== undefined && p.price !== null) {
@@ -86,10 +86,7 @@ function toFormData(payload = {}) {
 
     // 🔸 Gestion de l’image principale (compat existant)
     // - Avant : imageFile (File) ou image (File) → champ "image"
-    if (
-      (key === 'imageFile' || key === 'image') &&
-      val instanceof File
-    ) {
+    if ((key === 'imageFile' || key === 'image') && val instanceof File) {
       fd.append('image', val);
       return;
     }
@@ -100,7 +97,7 @@ function toFormData(payload = {}) {
     if (key === 'imageFiles' && Array.isArray(val)) {
       val
         .filter((f) => f instanceof File)
-        .slice(0, 3) // tu peux lever cette limite si besoin
+        .slice(0, 3)
         .forEach((file) => {
           fd.append('images', file);
         });
@@ -118,6 +115,9 @@ function toFormData(payload = {}) {
     fd.append(key, val);
   });
 
+  // ✅ Injecte countryId/regionId si sélectionnés (sans écraser si déjà présents)
+  appendGeoFormData(fd);
+
   return fd;
 }
 
@@ -128,7 +128,7 @@ function toFormData(payload = {}) {
  * Retourne un tableau de produits normalisés
  * --------------------------------------------------------- */
 export async function getProducts(params = {}) {
-  const { data } = await api.get('/products', { params });
+  const { data } = await api.get('/products', { params: mergeGeoParams(params) });
   const items = data?.items || data?.products || [];
   return items.map(normalizeProduct);
 }

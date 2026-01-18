@@ -13,6 +13,7 @@ import {
   TASK_STATUSES,
   applyLabels,
 } from '../utils/labels';
+import { getGeoParams } from '../services/geo';
 
 // ============================================================================
 // 🧩 PAGE PRINCIPALE
@@ -76,7 +77,10 @@ export default function TasksPage() {
   const loadTasks = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/tasks', { headers: authHeader });
+            const { data } = await api.get('/tasks', {
+        headers: authHeader,
+        params: getGeoParams(),
+      });
 
       const enriched = (data.tasks || []).map((t) => ({
         ...t,
@@ -111,7 +115,7 @@ export default function TasksPage() {
         else if (u.user.role === 'admin') {
           try {
             const [{ data: allServices }, { data: agentsRes }] = await Promise.all([
-              api.get('/services', { headers: authHeader }),
+              api.get('/services', { headers: authHeader, params: getGeoParams() }),
               api.get('/users', { params: { role: 'agent' }, headers: authHeader }),
             ]);
 

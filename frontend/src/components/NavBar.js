@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "framer-motion";
+import GeoSelector from "./GeoSelector";
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
@@ -227,6 +228,11 @@ function NavBar() {
             {prettyRoleLabel(user?.role)}
           </span>
 
+          {/* ✅ GEO SELECTOR (DESKTOP ONLY) */}
+          <div className="hidden md:flex items-center">
+            <GeoSelector />
+          </div>
+
           {/* DESKTOP LOGOUT */}
           <button
             onClick={handleLogout}
@@ -265,7 +271,7 @@ function NavBar() {
       {/* ======================================================================== */}
       <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent">
         <div className="mx-auto w-full flex justify-center">
-          <div className="w-full max-w-xs px-2 pb-2">  
+          <div className="w-full max-w-xs px-2 pb-2">
             {/* max-w-xs au lieu de max-w-sm → BottomBar plus compacte */}
 
             <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-xl flex px-1 py-1 gap-1">

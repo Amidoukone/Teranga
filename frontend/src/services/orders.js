@@ -6,6 +6,7 @@ import {
   canonicalizeOrderStatus,
   canonicalizePaymentStatus,
 } from '../utils/labels';
+import { mergeGeoParams, mergeGeoPayload } from './geo';
 
 /* -----------------------------------------------------------
  * Helpers locaux
@@ -41,28 +42,32 @@ function stripUndefined(obj) {
 function prepareOrderPayload(raw = {}) {
   const p = { ...raw };
 
-  // Harmonisation des noms acceptés par le backend (qui supporte status | orderStatus, note | customerNote)
+  // Harmonisation des noms acceptés par le backend
   const orderStatus = p.orderStatus ?? p.status;
   const paymentStatus = p.paymentStatus;
 
-  // Canonicalisation pour coller aux ENUM MySQL
-  if (orderStatus !== undefined) p.status = canonicalizeOrderStatus(orderStatus);
-  if (paymentStatus !== undefined) p.paymentStatus = canonicalizePaymentStatus(paymentStatus);
+  // Canonicalisation ENUM
+  if (orderStatus !== undefined)
+    p.status = canonicalizeOrderStatus(orderStatus);
 
-  // Casting des numériques — on n'envoie que si fournis
+  if (paymentStatus !== undefined)
+    p.paymentStatus = canonicalizePaymentStatus(paymentStatus);
+
+  // Casting numériques
   if ('subtotal' in p) p.subtotal = toNumberOr(p.subtotal, undefined);
   if ('tax' in p) p.tax = toNumberOr(p.tax, undefined);
   if ('shipping' in p) p.shipping = toNumberOr(p.shipping, undefined);
   if ('discount' in p) p.discount = toNumberOr(p.discount, undefined);
   if ('total' in p) p.total = toNumberOr(p.total, undefined);
-  if ('totalAmount' in p) p.total = toNumberOr(p.totalAmount, undefined);
+  if ('totalAmount' in p)
+    p.total = toNumberOr(p.totalAmount, undefined);
 
   // Normalisation note
   if ('customerNote' in p && !('note' in p)) {
     p.note = p.customerNote;
   }
 
-  // Currency en UPPER si fourni
+  // Currency
   if (typeof p.currency === 'string') {
     p.currency = p.currency.toUpperCase();
   }
@@ -71,28 +76,29 @@ function prepareOrderPayload(raw = {}) {
 }
 
 /**
- * Harmonise le payload d'un item avant envoi :
- * - cast numériques (productId, quantity, unitPrice)
- * - laisse undefined si non fournis (le back applique ses défauts)
+ * Harmonise le payload d'un item
  */
 function prepareOrderItemPayload(raw = {}) {
   const b = { ...raw };
-  if (b.productId !== undefined) b.productId = toNumberOr(b.productId, undefined);
-  if (b.quantity !== undefined) b.quantity = toNumberOr(b.quantity, undefined);
-  if (b.unitPrice !== undefined) b.unitPrice = toNumberOr(b.unitPrice, undefined);
+  if (b.productId !== undefined)
+    b.productId = toNumberOr(b.productId, undefined);
+  if (b.quantity !== undefined)
+    b.quantity = toNumberOr(b.quantity, undefined);
+  if (b.unitPrice !== undefined)
+    b.unitPrice = toNumberOr(b.unitPrice, undefined);
   return stripUndefined(b);
 }
 
 /* -----------------------------------------------------------
- * Normalisation Order & OrderItem (réponses API → UI)
+ * Normalisation Order & OrderItem (API → UI)
  * --------------------------------------------------------- */
 function normalizeOrderItem(raw = {}) {
   const item = { ...raw };
 
-  // Compat rétro : si l’API renvoie "price", on le recopie en unitPrice pour la cohérence UI
   if (item.unitPrice === undefined && isNumberLike(item.price)) {
     item.unitPrice = Number(item.price);
   }
+
   if (item.quantity !== undefined) item.quantity = Number(item.quantity);
   if (item.unitPrice !== undefined) item.unitPrice = Number(item.unitPrice);
 
@@ -102,7 +108,6 @@ function normalizeOrderItem(raw = {}) {
 function normalizeOrder(raw = {}) {
   const o = { ...raw };
 
-  // totalAmount (alias front) → conserve une valeur numérique fiable
   if (o.totalAmount !== undefined && o.totalAmount !== null) {
     const n = Number(o.totalAmount);
     if (!Number.isNaN(n)) o.totalAmount = n;
@@ -111,42 +116,42 @@ function normalizeOrder(raw = {}) {
     if (!Number.isNaN(n)) o.totalAmount = n;
   }
 
-  // Items labellisés & normalisés
-  o.items = Array.isArray(o.items) ? o.items.map(normalizeOrderItem) : [];
+  o.items = Array.isArray(o.items)
+    ? o.items.map(normalizeOrderItem)
+    : [];
 
-  // Applique labels + harmonise orderStatus/paymentStatus (via applyLabels qui utilise les canonicalizers)
   return applyLabels(o);
 }
 
 /* -----------------------------------------------------------
- * GET /orders (liste)
- * Accepte params (q, status, paymentStatus, page, limit, sort, userId, etc.)
- * On canonicalise status/paymentStatus si fournis pour le back.
+ * GET /orders
  * --------------------------------------------------------- */
 export async function getOrders(params = {}) {
   const query = { ...params };
 
-  // Canonicalisation des statuts si fournis
-  if (query.status) query.status = canonicalizeOrderStatus(query.status);
+  if (query.status)
+    query.status = canonicalizeOrderStatus(query.status);
+
   if (query.payment || query.paymentStatus) {
-    // certains appels front utilisent "payment", on le mappe vers paymentStatus
     const p = query.payment ?? query.paymentStatus;
     delete query.payment;
     query.paymentStatus = canonicalizePaymentStatus(p);
   }
 
-  // Sécurisation des paramètres numériques classiques (non-cassant)
   if ('page' in query) query.page = toIntOr(query.page, undefined);
   if ('limit' in query) query.limit = toIntOr(query.limit, undefined);
   if ('userId' in query) query.userId = toIntOr(query.userId, undefined);
 
-  const { data } = await api.get('/orders', { params: stripUndefined(query) });
+  const { data } = await api.get('/orders', {
+    params: stripUndefined(mergeGeoParams(query)),
+  });
+
   const items = data?.items || data?.orders || [];
   return items.map(normalizeOrder);
 }
 
 /* -----------------------------------------------------------
- * GET /orders/:id (détail)
+ * GET /orders/:id
  * --------------------------------------------------------- */
 export async function getOrderById(id) {
   const { data } = await api.get(`/orders/${id}`);
@@ -155,17 +160,17 @@ export async function getOrderById(id) {
 }
 
 /* -----------------------------------------------------------
- * POST /orders (création)
+ * POST /orders
  * --------------------------------------------------------- */
 export async function createOrder(payload) {
-  const body = prepareOrderPayload(payload);
+  const body = prepareOrderPayload(mergeGeoPayload(payload));
   const { data } = await api.post('/orders', body);
   const order = data?.order ?? data;
   return normalizeOrder(order);
 }
 
 /* -----------------------------------------------------------
- * PUT /orders/:id (mise à jour)
+ * PUT /orders/:id
  * --------------------------------------------------------- */
 export async function updateOrder(id, payload) {
   const body = prepareOrderPayload(payload);
@@ -183,7 +188,7 @@ export async function deleteOrder(id) {
 }
 
 /* -----------------------------------------------------------
- * POST /orders/:id/items (ajout item)
+ * POST /orders/:id/items
  * --------------------------------------------------------- */
 export async function addOrderItem(orderId, payload) {
   const body = prepareOrderItemPayload(payload);
@@ -193,11 +198,14 @@ export async function addOrderItem(orderId, payload) {
 }
 
 /* -----------------------------------------------------------
- * PUT /orders/:id/items/:itemId (maj item)
+ * PUT /orders/:id/items/:itemId
  * --------------------------------------------------------- */
 export async function updateOrderItem(orderId, itemId, payload) {
   const body = prepareOrderItemPayload(payload);
-  const { data } = await api.put(`/orders/${orderId}/items/${itemId}`, body);
+  const { data } = await api.put(
+    `/orders/${orderId}/items/${itemId}`,
+    body
+  );
   const item = data?.item ?? data;
   return normalizeOrderItem(item);
 }
@@ -206,7 +214,9 @@ export async function updateOrderItem(orderId, itemId, payload) {
  * DELETE /orders/:id/items/:itemId
  * --------------------------------------------------------- */
 export async function deleteOrderItem(orderId, itemId) {
-  const { data } = await api.delete(`/orders/${orderId}/items/${itemId}`);
+  const { data } = await api.delete(
+    `/orders/${orderId}/items/${itemId}`
+  );
   return data;
 }
 

@@ -1,6 +1,7 @@
 // frontend/src/services/tasks.js
 import api from './api';
 import { applyLabels } from '../utils/labels';
+import { mergeGeoParams, mergeGeoPayload } from './geo';
 
 /**
  * ============================================================
@@ -17,7 +18,7 @@ import { applyLabels } from '../utils/labels';
  * (admin → toutes, agent → assignées, client → liées à ses services/propriétés)
  */
 export async function getTasks() {
-  const { data } = await api.get('/tasks');
+  const { data } = await api.get('/tasks', { params: mergeGeoParams() });
   const tasks = data?.tasks || [];
   return tasks.map((t) => applyLabels(t));
 }
@@ -38,7 +39,7 @@ export async function getTasksByService(serviceId) {
  * @param {object} form - Données du formulaire
  */
 export async function createTask(form) {
-  const payload = {
+  const payload = mergeGeoPayload({
     ...form,
     serviceId:
       form?.serviceId && form.serviceId !== ''
@@ -53,7 +54,7 @@ export async function createTask(form) {
         ? null
         : parseFloat(form.estimatedCost),
     dueDate: form?.dueDate ? new Date(form.dueDate) : null,
-  };
+  });
 
   const { data } = await api.post('/tasks', payload, {
     headers: { 'Content-Type': 'application/json' },

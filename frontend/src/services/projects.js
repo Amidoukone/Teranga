@@ -1,6 +1,7 @@
 // frontend/src/services/projects.js
 import api from './api';
 import { applyLabels } from '../utils/labels';
+import { mergeGeoParams, mergeGeoPayload } from './geo';
 
 /**
  * ============================================================
@@ -29,7 +30,7 @@ function toNumberOrNull(v) {
  * @param {object} params
  */
 export async function getProjects(params = {}) {
-  const { data } = await api.get('/projects', { params });
+  const { data } = await api.get('/projects', { params: mergeGeoParams(params) });
   const list = data?.projects || [];
   // ⚠️ On précise bien la catégorie 'project' pour éviter les effets de bord
   return list.map((p) => applyLabels(p, 'project'));
@@ -52,7 +53,7 @@ export async function getProjectById(id) {
  * @param {object} form
  */
 export async function createProject(form = {}) {
-  const payload = {
+  const payload = mergeGeoPayload({
     title: form?.title,
     type: form?.type,
     description: form?.description || null,
@@ -68,7 +69,7 @@ export async function createProject(form = {}) {
       form?.agentId !== undefined && form.agentId !== ''
         ? Number(form.agentId)
         : undefined,
-  };
+  });
 
   const { data } = await api.post('/projects', payload, {
     headers: { 'Content-Type': 'application/json' },
@@ -228,14 +229,10 @@ export async function getProjectDocuments(projectId) {
 /**
  * 🔹 Upload de documents
  * @param {number|string} projectId
- * @param {File[]} files                     - fichiers à uploader
- * @param {string} [notes='']                - notes facultatives
- * @param {number|string|null} [phaseId]     - pour associer à une phase (optionnel)
- * @param {{ title?: string, kind?: 'contract'|'plan'|'report'|'photo'|'other' }} [meta] - champs métiers optionnels
- *
- * ➜ Compatible avec le backend (controller upload):
- *    - supporte title, kind, notes, phaseId
- *    - le backend vérifie que phaseId appartient bien au projectId
+ * @param {File[]} files
+ * @param {string} [notes='']
+ * @param {number|string|null} [phaseId]
+ * @param {{ title?: string, kind?: 'contract'|'plan'|'report'|'photo'|'other' }} [meta]
  */
 export async function uploadProjectDocuments(
   projectId,
@@ -252,7 +249,7 @@ export async function uploadProjectDocuments(
     formData.append('phaseId', String(phaseId));
   }
   if (meta?.title) formData.append('title', meta.title);
-  if (meta?.kind) formData.append('kind', meta.kind); // 'contract'|'plan'|'report'|'photo'|'other'
+  if (meta?.kind) formData.append('kind', meta.kind);
 
   files.forEach((f) => formData.append('files', f));
 
