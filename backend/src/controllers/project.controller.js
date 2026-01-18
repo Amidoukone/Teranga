@@ -17,6 +17,12 @@ const PROJECT_STATUSES = {
 /* =========================================================
    🧩 Helpers
 ========================================================= */
+function toSafeInt(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = parseInt(String(v), 10);
+  return Number.isNaN(n) ? null : n;
+}
+
 function isWithinOneHour(date) {
   try {
     const created = new Date(date).getTime();
@@ -54,17 +60,21 @@ exports.create = async (req, res) => {
       currency = "XOF",
       clientId,
       agentId,
+      countryId,
+      regionId,
     } = req.body || {};
 
     if (!title || !type)
       return res.status(400).json({ error: "Titre et type requis" });
 
-    // Détermination du propriétaire réel
+    /* -----------------------------
+       🎯 Détermination du client
+    ----------------------------- */
     let targetClientId = req.user.id;
 
     if (isAdmin(req.user) && clientId) {
-      const cid = parseInt(clientId, 10);
-      if (Number.isFinite(cid)) targetClientId = cid;
+      const cid = toSafeInt(clientId);
+      if (cid) targetClientId = cid;
     }
 
     const project = await Project.create({
@@ -74,8 +84,12 @@ exports.create = async (req, res) => {
       budget: budget ?? null,
       currency: currency || "XOF",
       clientId: targetClientId,
-      agentId: isAdmin(req.user) && agentId ? agentId : null,
+      agentId: isAdmin(req.user) ? toSafeInt(agentId) : null,
       status: "created",
+
+      // 🌍 Multi-pays / région
+      countryId: toSafeInt(countryId),
+      regionId: toSafeInt(regionId),
     });
 
     const full = await Project.findByPk(project.id, {
@@ -118,8 +132,16 @@ exports.list = async (req, res) => {
 
     const where = {};
 
+    // 🔐 ACL
     if (req.user.role === "client") where.clientId = req.user.id;
     if (req.user.role === "agent") where.agentId = req.user.id;
+
+    // 🌍 Filtres géographiques (admin / agent)
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
+
+    if (countryId) where.countryId = countryId;
+    if (regionId) where.regionId = regionId;
 
     const projects = await Project.findAll({
       where,
@@ -160,7 +182,10 @@ exports.detail = async (req, res) => {
     if (!req.user?.id)
       return res.status(401).json({ error: "Non authentifié" });
 
-    const project = await Project.findByPk(req.params.id, {
+    const id = toSafeInt(req.params.id);
+    if (!id) return res.status(400).json({ error: "ID invalide" });
+
+    const project = await Project.findByPk(id, {
       include: [
         { model: ProjectPhase, as: "phases" },
         {
@@ -179,9 +204,10 @@ exports.detail = async (req, res) => {
     if (!project)
       return res.status(404).json({ error: "Projet introuvable" });
 
-    // ACL client
-    if (req.user.role === "client" && project.clientId !== req.user.id)
+    // 🔐 ACL client
+    if (req.user.role === "client" && project.clientId !== req.user.id) {
       return res.status(403).json({ error: "Accès non autorisé à ce projet" });
+    }
 
     return res.json({
       project: {
@@ -205,7 +231,10 @@ exports.update = async (req, res) => {
     if (!req.user?.id)
       return res.status(401).json({ error: "Non authentifié" });
 
-    const project = await Project.findByPk(req.params.id);
+    const id = toSafeInt(req.params.id);
+    if (!id) return res.status(400).json({ error: "ID invalide" });
+
+    const project = await Project.findByPk(id);
     if (!project)
       return res.status(404).json({ error: "Projet introuvable" });
 
@@ -221,7 +250,6 @@ exports.update = async (req, res) => {
 
     const body = req.body || {};
 
-    // Construction sécurisée
     const merged = {
       title: body.title ?? project.title,
       type: body.type ?? project.type,
@@ -233,11 +261,23 @@ exports.update = async (req, res) => {
         body.budget !== undefined ? body.budget : project.budget,
       currency: body.currency ?? project.currency,
 
-      // ⚠️ agentId modifiable uniquement par admin
-      agentId: adminOK ? body.agentId ?? project.agentId : project.agentId,
+      // 🔐 Admin only
+      agentId: adminOK
+        ? toSafeInt(body.agentId ?? project.agentId)
+        : project.agentId,
 
-      // ⚠️ status modifiable uniquement par admin
       status: adminOK ? body.status ?? project.status : project.status,
+
+      // 🌍 multi-pays
+      countryId:
+        body.countryId !== undefined || body.country_id !== undefined
+          ? toSafeInt(body.countryId ?? body.country_id)
+          : project.countryId,
+
+      regionId:
+        body.regionId !== undefined || body.region_id !== undefined
+          ? toSafeInt(body.regionId ?? body.region_id)
+          : project.regionId,
 
       clientId: project.clientId,
     };
@@ -282,7 +322,10 @@ exports.remove = async (req, res) => {
     if (!req.user?.id)
       return res.status(401).json({ error: "Non authentifié" });
 
-    const project = await Project.findByPk(req.params.id);
+    const id = toSafeInt(req.params.id);
+    if (!id) return res.status(400).json({ error: "ID invalide" });
+
+    const project = await Project.findByPk(id);
     if (!project)
       return res.status(404).json({ error: "Projet introuvable" });
 

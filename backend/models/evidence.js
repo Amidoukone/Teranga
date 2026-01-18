@@ -21,22 +21,34 @@ module.exports = (sequelize, DataTypes) => {
         as: 'order',
         onDelete: 'SET NULL',
       });
+
+      // 🌍 Multi-pays (logique uniquement)
+      if (models.Country) {
+        Evidence.belongsTo(models.Country, {
+          foreignKey: 'countryId',
+          as: 'country',
+        });
+      }
+
+      if (models.Region) {
+        Evidence.belongsTo(models.Region, {
+          foreignKey: 'regionId',
+          as: 'region',
+        });
+      }
     }
   }
 
   Evidence.init(
     {
-      // FK
       taskId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
       uploaderId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
-
       orderId: {
         type: DataTypes.INTEGER.UNSIGNED,
         allowNull: true,
-        field: 'order_id', // correspond exactement à ta colonne
+        field: 'order_id',
       },
 
-      // Type & métadonnées
       kind: {
         type: DataTypes.ENUM('photo', 'document', 'receipt', 'other'),
         allowNull: false,
@@ -45,30 +57,28 @@ module.exports = (sequelize, DataTypes) => {
 
       mimeType: { type: DataTypes.STRING, allowNull: true },
       originalName: { type: DataTypes.STRING, allowNull: true },
-
-      // ⭐ URL CDN ImageKit
       filePath: { type: DataTypes.STRING, allowNull: false },
-
-      // ⭐ Identifiant ImageKit (manquant dans ton ancien modèle)
       fileId: { type: DataTypes.STRING, allowNull: true },
-
       fileSize: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
-
-      // Peut stocker un future thumbnail généré automatiquement
       thumbnailPath: { type: DataTypes.STRING, allowNull: true },
-
       notes: { type: DataTypes.TEXT, allowNull: true },
+
+      // 🌍 Scope géographique
+      countryId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+      regionId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
     },
     {
       sequelize,
       modelName: 'Evidence',
       tableName: 'evidences',
-
+      timestamps: true, // ✅ createdAt / updatedAt camelCase (prod)
       indexes: [
         { fields: ['taskId'] },
         { fields: ['uploaderId'] },
         { fields: ['order_id'] },
         { fields: ['kind'] },
+        { fields: ['countryId'] },
+        { fields: ['regionId'] },
       ],
     }
   );

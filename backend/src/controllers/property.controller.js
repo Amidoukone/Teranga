@@ -91,7 +91,7 @@ async function uploadPhotosToImageKit(files = []) {
   // Si ImageKit n'est pas configuré, on log et on ignore l'upload
   if (!isImageKitEnabled()) {
     console.warn(
-      '⚠️ ImageKit désactivé ou mal configuré. Les fichiers ne seront pas uploadés.'
+      "⚠️ ImageKit désactivé ou mal configuré. Les fichiers ne seront pas uploadés."
     );
     return results;
   }
@@ -133,7 +133,7 @@ async function deleteImageKitFiles(photoObjects = []) {
   // Si ImageKit n'est pas configuré, inutile d'essayer de supprimer
   if (!isImageKitEnabled()) {
     console.warn(
-      '⚠️ ImageKit désactivé ou mal configuré. Suppression distante ignorée.'
+      "⚠️ ImageKit désactivé ou mal configuré. Suppression distante ignorée."
     );
     return;
   }
@@ -277,6 +277,10 @@ exports.create = async (req, res) => {
       roomCount,
       description,
       status,
+
+      // 🌍 Multi-pays (nouveau, non bloquant)
+      countryId,
+      regionId,
     } = req.body || {};
 
     if (!title || !type || !address || !city)
@@ -327,6 +331,11 @@ exports.create = async (req, res) => {
       roomCount: toNullableNumber(roomCount),
       description: toTrimOrNull(description),
       status: status ? String(status).trim() : 'active',
+
+      // 🌍 Multi-pays: admin peut définir, sinon null (non bloquant)
+      countryId: req.user.role === 'admin' ? toSafeInt(countryId) : null,
+      regionId: req.user.role === 'admin' ? toSafeInt(regionId) : null,
+
       photos, // en base : [{ url, fileId }, ...]
     });
 
@@ -385,6 +394,14 @@ exports.update = async (req, res) => {
     if (body.roomCount !== undefined)
       updates.roomCount = toNullableNumber(body.roomCount);
 
+    // 🌍 Multi-pays : admin uniquement (compat snake_case)
+    if (req.user.role === 'admin') {
+      if (body.countryId !== undefined || body.country_id !== undefined)
+        updates.countryId = toSafeInt(body.countryId ?? body.country_id);
+      if (body.regionId !== undefined || body.region_id !== undefined)
+        updates.regionId = toSafeInt(body.regionId ?? body.region_id);
+    }
+
     // 🔥 Nouveau upload
     let newPhotos = [];
     if (req.files?.length) {
@@ -392,8 +409,7 @@ exports.update = async (req, res) => {
     }
 
     if (newPhotos.length) {
-      const replace =
-        String(body.replacePhotos || '').toLowerCase() === 'true';
+      const replace = String(body.replacePhotos || '').toLowerCase() === 'true';
 
       if (replace) {
         // On supprime les anciens fichiers côté ImageKit (si config OK)

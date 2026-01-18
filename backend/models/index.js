@@ -30,10 +30,12 @@ const sequelize = config.use_env_variable
       logging: isProd ? false : console.log,
     });
 
-// 🚫 BLOQUER SHOW TABLES EN PROD (PlanetScale)
-if (isProd) {
-  sequelize.getQueryInterface().showAllTables = async () => [];
-}
+/**
+ * ✅ IMPORTANT:
+ * - Ne pas override showAllTables() en prod.
+ * - PlanetScale est "safe" tant que tu n'utilises pas sequelize.sync().
+ * - Tes migrations doivent pouvoir lire SequelizeMeta correctement.
+ */
 
 fs.readdirSync(__dirname)
   .filter((file) =>

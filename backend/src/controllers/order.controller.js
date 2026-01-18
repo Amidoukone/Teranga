@@ -16,7 +16,8 @@ const {
    🔧 Helpers
 ============================================================ */
 function toSafeInt(v) {
-  const n = parseInt(v, 10);
+  if (v === null || v === undefined || v === '') return null;
+  const n = parseInt(String(v), 10);
   return Number.isNaN(n) ? null : n;
 }
 
@@ -26,12 +27,16 @@ function toTrimOrNull(v) {
 }
 
 function toNullableNumber(v) {
+  if (v === null || v === undefined || v === '') return null;
   const n = parseFloat(v);
   return Number.isNaN(n) ? null : n;
 }
 
 function getPagination(req, defLimit = 50, maxLimit = 200) {
-  const limit = Math.min(Math.max(parseInt(req.query?.limit, 10) || defLimit, 1), maxLimit);
+  const limit = Math.min(
+    Math.max(parseInt(req.query?.limit, 10) || defLimit, 1),
+    maxLimit
+  );
   const page = Math.max(parseInt(req.query?.page, 10) || 1, 1);
   const offset = (page - 1) * limit;
   return { limit, offset, page };
@@ -42,19 +47,21 @@ function getPagination(req, defLimit = 50, maxLimit = 200) {
  */
 function normalizeOrderPayload(body = {}) {
   return {
-    status: (body.orderStatus ?? body.status ?? 'created'),
-    paymentStatus: (body.paymentStatus ?? 'unpaid'),
-    paymentMethod: (body.paymentMethod ?? 'other'),
-    channel: (body.channel ?? 'web'),
-    currency: (body.currency ?? 'XOF'),
-    subtotal: (body.subtotal ?? null),
-    tax: (body.tax ?? null),
-    shipping: (body.shipping ?? null),
-    discount: (body.discount ?? null),
-    total: (body.totalAmount ?? body.total ?? null),
-    note: (body.customerNote ?? body.note ?? null),
-    userId: (body.userId ?? null),
+    status: body.orderStatus ?? body.status ?? 'created',
+    paymentStatus: body.paymentStatus ?? 'unpaid',
+    paymentMethod: body.paymentMethod ?? 'other',
+    channel: body.channel ?? 'web',
+    currency: body.currency ?? 'XOF',
+    subtotal: body.subtotal ?? null,
+    tax: body.tax ?? null,
+    shipping: body.shipping ?? null,
+    discount: body.discount ?? null,
+    total: body.totalAmount ?? body.total ?? null,
+    note: body.customerNote ?? body.note ?? null,
+    userId: body.userId ?? null,
     items: body.items ?? [],
+    countryId: body.countryId ?? body.country_id ?? null,
+    regionId: body.regionId ?? body.region_id ?? null,
   };
 }
 
@@ -73,6 +80,7 @@ function withLabels(o) {
     channelLabel: getLabel(order.channel, ORDER_CHANNELS),
     currencyLabel: formatCurrency(order.currency),
 
+    // legacy compat
     orderStatus: order.status,
     customerNote: order.notes ?? null,
     totalAmount: order.total ?? 0,
@@ -84,7 +92,7 @@ function withLabels(o) {
     out.items = out.items.map((it) => ({
       ...it,
       itemStatus: it.status ?? null,
-      lineTotal: it.total ?? (Number(it.quantity || 0) * Number(it.price || 0)),
+      lineTotal: it.total ?? Number(it.quantity || 0) * Number(it.price || 0),
     }));
   }
 
@@ -106,7 +114,9 @@ function canWriteOrder(user, order = null) {
   if (user.role === 'admin') return true;
   if (user.role === 'client') {
     if (!order) return true;
-    return order.userId === user.id && ['created', 'processing'].includes(order.status);
+    return (
+      order.userId === user.id && ['created', 'processing'].includes(order.status)
+    );
   }
   return false;
 }
@@ -117,16 +127,19 @@ function canWriteOrder(user, order = null) {
 async function recomputeTotals(orderId) {
   const items = await OrderItem.findAll({ where: { orderId } });
   let subtotal = 0;
+
   for (const it of items) {
     const qty = Math.max(parseFloat(it.quantity || 0), 0);
     const price = Math.max(parseFloat(it.price || 0), 0);
     const line = qty * price;
+
     if (line !== it.total) {
       it.total = line;
       await it.save();
     }
     subtotal += line;
   }
+
   return { subtotal };
 }
 
@@ -146,8 +159,9 @@ function syncPaymentStatus(order) {
 ============================================================ */
 exports.create = async (req, res) => {
   try {
-    if (!canWriteOrder(req.user, null))
+    if (!canWriteOrder(req.user, null)) {
       return res.status(403).json({ error: 'Accès interdit' });
+    }
 
     const norm = normalizeOrderPayload(req.body);
 
@@ -156,28 +170,32 @@ exports.create = async (req, res) => {
         ? toSafeInt(norm.userId) || req.user.id
         : req.user.id;
 
+    // ✅ scope multi-pays (nullable)
+    const scopeCountryId = toSafeInt(norm.countryId);
+    const scopeRegionId = toSafeInt(norm.regionId);
+
     // 1) Création de la commande (sans items pour l’instant)
     const order = await Order.create({
       userId: ownerId,
       status: norm.status,
       paymentStatus: norm.paymentStatus,
       paymentMethod: norm.paymentMethod,
-      currency: norm.currency.toUpperCase(),
+      currency: String(norm.currency || 'XOF').toUpperCase(),
       subtotal: toNullableNumber(norm.subtotal) ?? 0,
       tax: toNullableNumber(norm.tax) ?? 0,
       shipping: toNullableNumber(norm.shipping) ?? 0,
       total: 0,
       notes: toTrimOrNull(norm.note),
+
+      // ✅ multi-pays
+      countryId: scopeCountryId,
+      regionId: scopeRegionId,
     });
 
     const items = Array.isArray(norm.items) ? norm.items : [];
 
     /* --------------------------------------------------------
        2) Prévalidation des stocks pour tous les items
-       - On regroupe les quantités par produit
-       - On vérifie que le stock est suffisant
-       - En cas d’insuffisance → on supprime la commande vide
-         et on renvoie une 400 propre.
     -------------------------------------------------------- */
     const qtyByProductId = new Map();
 
@@ -197,20 +215,14 @@ exports.create = async (req, res) => {
 
       for (const [pid, totalQty] of qtyByProductId.entries()) {
         const product = productsById.get(pid);
-        if (!product) {
-          // Produit introuvable → on laisse passer (pas de stock géré)
-          continue;
-        }
+        if (!product) continue;
 
         const rawStock = product.stock;
-        if (rawStock === null || typeof rawStock === 'undefined') {
-          // Stock non géré sur ce produit → on ne bloque pas
-          continue;
-        }
+        if (rawStock === null || typeof rawStock === 'undefined') continue;
 
         const currentStock = Number(rawStock);
         if (!Number.isNaN(currentStock) && currentStock < totalQty) {
-          await order.destroy(); // rollback de la commande vide
+          await order.destroy(); // rollback commande vide
           return res.status(400).json({
             error: `Stock insuffisant pour le produit "${product.name}". Disponible : ${currentStock}, demandé : ${totalQty}.`,
           });
@@ -224,11 +236,9 @@ exports.create = async (req, res) => {
     if (items.length > 0) {
       for (const it of items) {
         const pid = toSafeInt(it.productId);
-        // On réutilise le produit préchargé si possible
+
         let product = pid ? productsById.get(pid) : null;
-        if (!product && pid) {
-          product = await Product.findByPk(pid);
-        }
+        if (!product && pid) product = await Product.findByPk(pid);
 
         const name = product ? product.name : it.name || '—';
         const price =
@@ -245,7 +255,6 @@ exports.create = async (req, res) => {
           total: price * qty,
         });
 
-        // Décrémentation effective du stock si géré
         if (product && product.stock !== null && typeof product.stock !== 'undefined') {
           const currentStock = Number(product.stock);
           if (!Number.isNaN(currentStock)) {
@@ -262,6 +271,7 @@ exports.create = async (req, res) => {
     const { subtotal } = await recomputeTotals(order.id);
     const total =
       subtotal + parseFloat(order.tax || 0) + parseFloat(order.shipping || 0);
+
     order.subtotal = subtotal;
     order.total = total;
 
@@ -275,29 +285,37 @@ exports.create = async (req, res) => {
       ],
     });
 
-    res.status(201).json({ order: withLabels(created) });
+    return res.status(201).json({ order: withLabels(created) });
   } catch (e) {
     console.error('❌ create order:', e);
     const msg = e?.message || '';
     if (msg.toLowerCase().includes('stock insuffisant')) {
       return res.status(400).json({ error: msg });
     }
-    res.status(500).json({ error: "Erreur lors de la création de la commande." });
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la création de la commande.' });
   }
 };
 
 /* ============================================================
-   2️⃣ LIST — Liste paginée + filtres
+   2️⃣ LIST — Liste paginée + filtres (+ multi-pays)
 ============================================================ */
 exports.list = async (req, res) => {
   try {
     const { limit, offset, page } = getPagination(req);
+
     const q = toTrimOrNull(req.query?.q);
     const status = toTrimOrNull(req.query?.status);
     const paymentStatus = toTrimOrNull(req.query?.paymentStatus);
     const userId = toSafeInt(req.query?.userId);
 
+    // ✅ multi-pays filters
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
+
     const where = {};
+
     if (q) {
       where[Op.or] = [
         { notes: { [Op.like]: `%${q}%` } },
@@ -307,8 +325,17 @@ exports.list = async (req, res) => {
     if (status) where.status = status;
     if (paymentStatus) where.paymentStatus = paymentStatus;
 
-    if (req.user.role === 'client') where.userId = req.user.id;
-    else if (userId) where.userId = userId;
+    if (req.user.role === 'client') {
+      where.userId = req.user.id;
+      // ⚠️ On ne force pas country/region ici pour ne pas casser legacy,
+      // mais si le frontend les envoie, on peut filtrer.
+      if (countryId) where.countryId = countryId;
+      if (regionId) where.regionId = regionId;
+    } else {
+      if (userId) where.userId = userId;
+      if (countryId) where.countryId = countryId;
+      if (regionId) where.regionId = regionId;
+    }
 
     const { rows, count } = await Order.findAndCountAll({
       where,
@@ -319,13 +346,15 @@ exports.list = async (req, res) => {
       distinct: true,
     });
 
-    res.json({
+    return res.json({
       orders: rows.map(withLabels),
       pagination: { page, limit, count },
     });
   } catch (e) {
     console.error('❌ list orders:', e);
-    res.status(500).json({ error: 'Erreur lors de la récupération des commandes.' });
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la récupération des commandes.' });
   }
 };
 
@@ -345,17 +374,21 @@ exports.detail = async (req, res) => {
     });
 
     if (!order) return res.status(404).json({ error: 'Commande introuvable.' });
-    if (!canReadOrder(req.user, order)) return res.status(403).json({ error: 'Accès interdit.' });
+    if (!canReadOrder(req.user, order)) {
+      return res.status(403).json({ error: 'Accès interdit.' });
+    }
 
-    res.json({ order: withLabels(order) });
+    return res.json({ order: withLabels(order) });
   } catch (e) {
     console.error('❌ detail order:', e);
-    res.status(500).json({ error: 'Erreur lors de la récupération de la commande.' });
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la récupération de la commande.' });
   }
 };
 
 /* ============================================================
-   4️⃣ UPDATE — Mise à jour avec cohérence transaction
+   4️⃣ UPDATE — Mise à jour + multi-pays + cohérence transaction
 ============================================================ */
 exports.update = async (req, res) => {
   try {
@@ -364,22 +397,34 @@ exports.update = async (req, res) => {
 
     const order = await Order.findByPk(id);
     if (!order) return res.status(404).json({ error: 'Commande introuvable.' });
-    if (!canWriteOrder(req.user, order))
+    if (!canWriteOrder(req.user, order)) {
       return res.status(403).json({ error: 'Accès interdit.' });
+    }
 
     const norm = normalizeOrderPayload(req.body);
 
     if (norm.status) order.status = norm.status;
     if (norm.paymentStatus) order.paymentStatus = norm.paymentStatus;
     if (norm.paymentMethod) order.paymentMethod = norm.paymentMethod;
-    if (norm.currency) order.currency = norm.currency.toUpperCase();
+    if (norm.currency) order.currency = String(norm.currency).toUpperCase();
     if (norm.tax !== null) order.tax = toNullableNumber(norm.tax) ?? 0;
     if (norm.shipping !== null) order.shipping = toNullableNumber(norm.shipping) ?? 0;
     if (norm.note !== undefined) order.notes = toTrimOrNull(norm.note);
 
+    // ✅ multi-pays update: admin uniquement (anti-régression / anti-spoof)
+    if (req.user.role === 'admin') {
+      if (norm.countryId !== null && norm.countryId !== undefined) {
+        order.countryId = toSafeInt(norm.countryId);
+      }
+      if (norm.regionId !== null && norm.regionId !== undefined) {
+        order.regionId = toSafeInt(norm.regionId);
+      }
+    }
+
     const { subtotal } = await recomputeTotals(order.id);
     const total =
       subtotal + parseFloat(order.tax || 0) + parseFloat(order.shipping || 0);
+
     order.subtotal = subtotal;
     order.total = total;
 
@@ -407,10 +452,23 @@ exports.update = async (req, res) => {
             paymentMethod: order.paymentMethod || 'inconnu',
             description: `Paiement de la commande ${order.code || `#${order.id}`}`,
             status: 'completed',
+
+            // ✅ scope multi-pays (si ta Transaction a ces champs)
+            countryId: order.countryId ?? null,
+            regionId: order.regionId ?? null,
           });
           console.log(`✅ Transaction automatique créée pour la commande ${order.id}`);
         } else if (existingTx.status !== 'completed') {
           existingTx.status = 'completed';
+
+          // ✅ (safe) aligner scope si manquant
+          if (existingTx.countryId == null && order.countryId != null) {
+            existingTx.countryId = order.countryId;
+          }
+          if (existingTx.regionId == null && order.regionId != null) {
+            existingTx.regionId = order.regionId;
+          }
+
           await existingTx.save();
           console.log(`🔄 Transaction ${existingTx.id} mise à jour en "completed"`);
         }
@@ -426,10 +484,12 @@ exports.update = async (req, res) => {
       ],
     });
 
-    res.json({ order: withLabels(updated) });
+    return res.json({ order: withLabels(updated) });
   } catch (e) {
     console.error('❌ update order:', e);
-    res.status(500).json({ error: 'Erreur lors de la mise à jour de la commande.' });
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la mise à jour de la commande.' });
   }
 };
 
@@ -441,11 +501,16 @@ exports.remove = async (req, res) => {
     const id = toSafeInt(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID invalide.' });
 
-    const order = await Order.findByPk(id, { include: [{ model: OrderItem, as: 'items' }] });
+    const order = await Order.findByPk(id, {
+      include: [{ model: OrderItem, as: 'items' }],
+    });
     if (!order) return res.status(404).json({ error: 'Commande introuvable.' });
 
     if (req.user.role === 'client') {
-      if (order.userId !== req.user.id || !['created', 'processing'].includes(order.status)) {
+      if (
+        order.userId !== req.user.id ||
+        !['created', 'processing'].includes(order.status)
+      ) {
         return res.status(403).json({ error: 'Suppression non autorisée.' });
       }
     } else if (req.user.role !== 'admin') {
@@ -462,9 +527,11 @@ exports.remove = async (req, res) => {
     }
 
     await order.destroy();
-    res.json({ message: 'Commande supprimée avec succès.' });
+    return res.json({ message: 'Commande supprimée avec succès.' });
   } catch (e) {
     console.error('❌ remove order:', e);
-    res.status(500).json({ error: 'Erreur lors de la suppression de la commande.' });
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la suppression de la commande.' });
   }
 };

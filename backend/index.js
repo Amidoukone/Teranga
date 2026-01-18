@@ -75,11 +75,14 @@ function pickExpressRouter(mod) {
 
 function loadRouter(routeFsPath, mountPath) {
   try {
+    // ✅ IMPORTANT: require RELATIF (pas de path.resolve) pour éviter
+    // des chemins inattendus sur Windows/circular require
     const mod = require(routeFsPath);
     const router = pickExpressRouter(mod);
 
     if (!router) {
-      const keys = mod && typeof mod === 'object' ? Object.keys(mod) : '(aucune clé)';
+      const keys =
+        mod && typeof mod === 'object' ? Object.keys(mod) : '(aucune clé)';
       console.error(`❌ Routeur invalide pour ${mountPath}`);
       console.error(`   Fichier: ${routeFsPath}`);
       console.error(`   Clés exportées: ${keys}`);
@@ -89,7 +92,10 @@ function loadRouter(routeFsPath, mountPath) {
     app.use(mountPath, router);
     console.log(`✅ Routeur chargé : ${mountPath}`);
   } catch (err) {
-    console.error(`❌ Échec du chargement du routeur "${routeFsPath}" pour ${mountPath}:`, err.message);
+    console.error(
+      `❌ Échec du chargement du routeur "${routeFsPath}" pour ${mountPath}:`,
+      err.message
+    );
   }
 }
 
@@ -104,6 +110,11 @@ loadRouter('./src/routes/service.routes', '/api/services');
 loadRouter('./src/routes/task.routes', '/api/tasks');
 loadRouter('./src/routes/evidence.routes', '/api/evidences');
 loadRouter('./src/routes/transaction.routes', '/api/transactions');
+
+// ✅ Multi-pays / franchise
+loadRouter('./src/routes/country.routes', '/api/countries');
+loadRouter('./src/routes/region.routes', '/api/regions');
+loadRouter('./src/routes/franchise.routes', '/api/franchises');
 
 // Module Projets
 loadRouter('./src/routes/project.routes', '/api/projects');
@@ -151,6 +162,12 @@ const PORT = process.env.PORT || 5000;
 
 async function start() {
   try {
+    if (!sequelize) {
+      throw new Error(
+        "Sequelize n'est pas initialisé. Vérifie ./models/index.js et la config DB."
+      );
+    }
+
     await sequelize.authenticate();
     console.log('✅ Connexion MySQL OK');
 

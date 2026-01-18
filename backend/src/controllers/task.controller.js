@@ -19,7 +19,7 @@ const {
 function toSafeInt(v) {
   if (v === null || v === undefined) return null;
   const n = parseInt(v, 10);
-  return Number.isNaNaN ? null : (Number.isNaN(n) ? null : n);
+  return Number.isNaN(n) ? null : n;
 }
 
 function toTrimOrNull(v) {
@@ -45,7 +45,7 @@ function getPagination(req, defaultLimit = 50, maxLimit = 200) {
 }
 
 /* ============================================================
-   🧩 Includes réutilisables (SANS Evidence pour éviter 500)
+   🧩 Includes réutilisables
 ============================================================ */
 const BASE_INCLUDES = [
   {
@@ -72,6 +72,8 @@ const BASE_INCLUDES = [
       "clientId",
       "agentId",
       "propertyId",
+      "countryId",
+      "regionId",
     ],
     include: [
       {
@@ -95,12 +97,12 @@ const BASE_INCLUDES = [
     model: Property,
     as: "property",
     required: false,
-    attributes: ["id", "title", "city", "address", "ownerId", "photos"],
+    attributes: ["id", "title", "city", "address", "ownerId", "photos", "countryId", "regionId"],
   },
 ];
 
 /* ============================================================
-   🏷️ Ajouter les labels FR
+   🏷️ Labels FR
 ============================================================ */
 function addLabels(task) {
   if (!task) return null;
@@ -123,6 +125,7 @@ function addLabels(task) {
 
 /* ============================================================
    🟢 CREATE TASK
+   - Héritage Service → Property → Pays/Région
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -138,20 +141,30 @@ exports.create = async (req, res) => {
       assignedTo,
     } = req.body || {};
 
-    if (!title || !type) {
+    if (!title || !type)
       return res.status(400).json({ error: "Titre et type requis" });
-    }
 
     const sid = toSafeInt(serviceId);
     let pid = propertyId ? toSafeInt(propertyId) : null;
 
-    // Auto-récupération propertyId depuis service
-    if (!pid && sid) {
-      const serv = await Service.findByPk(sid, {
-        attributes: ["propertyId"],
+    let service = null;
+    if (sid) {
+      service = await Service.findByPk(sid, {
+        attributes: ["propertyId", "countryId", "regionId"],
       });
-      if (serv) pid = serv.propertyId || null;
+      if (!pid && service) pid = service.propertyId || null;
     }
+
+    const property = pid
+      ? await Property.findByPk(pid, {
+          attributes: ["countryId", "regionId"],
+        })
+      : null;
+
+    const geoCountryId =
+      service?.countryId ?? property?.countryId ?? null;
+    const geoRegionId =
+      service?.regionId ?? property?.regionId ?? null;
 
     const created = await Task.create({
       serviceId: sid || null,
@@ -165,15 +178,18 @@ exports.create = async (req, res) => {
       dueDate: dueDate ? new Date(dueDate) : null,
       estimatedCost: toNullableNumber(estimatedCost),
       status: "created",
+      countryId: geoCountryId,
+      regionId: geoRegionId,
     });
 
     const full = await Task.findByPk(created.id, {
       include: BASE_INCLUDES,
     });
 
-    return res
-      .status(201)
-      .json({ message: "Tâche créée", task: addLabels(full) });
+    return res.status(201).json({
+      message: "Tâche créée",
+      task: addLabels(full),
+    });
   } catch (e) {
     console.error("❌ Erreur création tâche:", e);
     return res.status(500).json({
@@ -188,20 +204,16 @@ exports.create = async (req, res) => {
 exports.list = async (req, res) => {
   try {
     const { limit, offset } = getPagination(req);
-
     const where = {};
 
     if (req.query.serviceId)
       where.serviceId = toSafeInt(req.query.serviceId);
-
     if (req.query.assignedTo)
       where.assignedTo = toSafeInt(req.query.assignedTo);
-
     if (req.query.status)
       where.status = String(req.query.status).trim();
-
-    if (req.query.type) where.type = String(req.query.type).trim();
-
+    if (req.query.type)
+      where.type = String(req.query.type).trim();
     if (req.query.priority)
       where.priority = String(req.query.priority).trim();
 
@@ -234,9 +246,9 @@ exports.list = async (req, res) => {
     });
   } catch (e) {
     console.error("❌ Erreur list tasks:", e);
-    return res
-      .status(500)
-      .json({ error: "Erreur lors de la récupération des tâches" });
+    return res.status(500).json({
+      error: "Erreur lors de la récupération des tâches",
+    });
   }
 };
 
@@ -251,7 +263,6 @@ exports.listByService = async (req, res) => {
 
     const where = { serviceId };
 
-    // ACL
     if (req.user.role === "agent") {
       where[Op.or] = [
         { assignedTo: req.user.id },
@@ -271,14 +282,12 @@ exports.listByService = async (req, res) => {
       subQuery: false,
     });
 
-    return res.json({
-      tasks: tasks.map(addLabels),
-    });
+    return res.json({ tasks: tasks.map(addLabels) });
   } catch (e) {
     console.error("❌ Erreur listByService:", e);
-    return res
-      .status(500)
-      .json({ error: "Erreur lors de la récupération des tâches" });
+    return res.status(500).json({
+      error: "Erreur lors de la récupération des tâches",
+    });
   }
 };
 
@@ -290,20 +299,18 @@ exports.updateStatus = async (req, res) => {
     const id = toSafeInt(req.params.id);
     const newStatus = String(req.body?.status || "").trim();
 
-    if (!id) return res.status(400).json({ error: "ID invalide" });
+    if (!id)
+      return res.status(400).json({ error: "ID invalide" });
 
     const task = await Task.findByPk(id, { include: BASE_INCLUDES });
     if (!task)
       return res.status(404).json({ error: "Tâche introuvable" });
 
-    // ACL
     if (req.user.role === "agent" && task.assignedTo !== req.user.id)
       return res.status(403).json({ error: "Non autorisé" });
-
     if (req.user.role === "client" && task.creatorId !== req.user.id)
       return res.status(403).json({ error: "Non autorisé" });
 
-    // Transitions autorisées
     const allowedTransitions = {
       created: ["in_progress"],
       in_progress: ["completed"],
@@ -319,9 +326,9 @@ exports.updateStatus = async (req, res) => {
     }
 
     if (newStatus === "validated" && req.user.role !== "admin") {
-      return res
-        .status(403)
-        .json({ error: "Seul un admin peut valider une tâche" });
+      return res.status(403).json({
+        error: "Seul un admin peut valider une tâche",
+      });
     }
 
     await task.update({ status: newStatus });
@@ -336,9 +343,9 @@ exports.updateStatus = async (req, res) => {
     });
   } catch (e) {
     console.error("❌ Erreur updateStatus:", e);
-    return res
-      .status(500)
-      .json({ error: "Erreur lors de la mise à jour du statut" });
+    return res.status(500).json({
+      error: "Erreur lors de la mise à jour du statut",
+    });
   }
 };
 
@@ -351,12 +358,14 @@ exports.assignAgent = async (req, res) => {
     const agentId = toSafeInt(req.body?.agentId);
 
     if (!id || !agentId)
-      return res
-        .status(400)
-        .json({ error: "Paramètres manquants (id, agentId)" });
+      return res.status(400).json({
+        error: "Paramètres manquants (id, agentId)",
+      });
 
     if (req.user.role !== "admin")
-      return res.status(403).json({ error: "Réservé aux administrateurs" });
+      return res.status(403).json({
+        error: "Réservé aux administrateurs",
+      });
 
     const task = await Task.findByPk(id);
     if (!task)
@@ -364,8 +373,7 @@ exports.assignAgent = async (req, res) => {
 
     if (task.status !== "created") {
       return res.status(400).json({
-        error:
-          "Impossible de réassigner une tâche déjà démarrée ou terminée",
+        error: "Impossible de réassigner une tâche déjà démarrée ou terminée",
       });
     }
 
@@ -385,8 +393,8 @@ exports.assignAgent = async (req, res) => {
     });
   } catch (e) {
     console.error("❌ Erreur assignAgent:", e);
-    return res
-      .status(500)
-      .json({ error: "Erreur lors de l'assignation de la tâche" });
+    return res.status(500).json({
+      error: "Erreur lors de l'assignation de la tâche",
+    });
   }
 };

@@ -89,13 +89,9 @@ async function uploadToImageKit(file) {
 async function extractImagesFromRequestImageKit(req) {
   const collected = [];
 
-  // Ancien mode .single('image')
   if (req.file) collected.push(req.file);
-
-  // Mode .any() → array
   if (Array.isArray(req.files)) collected.push(...req.files);
 
-  // Mode champs multiples nommés → objet
   if (req.files && typeof req.files === 'object' && !Array.isArray(req.files)) {
     Object.values(req.files).forEach((arr) => {
       if (Array.isArray(arr)) collected.push(...arr);
@@ -126,19 +122,12 @@ function withLabels(prod) {
   if (!prod) return null;
 
   const p = prod.toJSON ? prod.toJSON() : prod;
-
   const gallery = Array.isArray(p.gallery) ? p.gallery : [];
 
-  // Couverture fiable, acceptant string ou object
   let cover = null;
-
-  if (typeof p.coverImage === 'string') {
-    cover = { url: p.coverImage };
-  } else if (p.coverImage && typeof p.coverImage === 'object') {
-    cover = p.coverImage;
-  } else if (gallery[0]) {
-    cover = gallery[0];
-  }
+  if (typeof p.coverImage === 'string') cover = { url: p.coverImage };
+  else if (p.coverImage && typeof p.coverImage === 'object') cover = p.coverImage;
+  else if (gallery[0]) cover = gallery[0];
 
   const coverUrl = cover?.url || null;
 
@@ -146,7 +135,6 @@ function withLabels(prod) {
     .map((g) => g?.url)
     .filter((u) => typeof u === 'string' && u.length > 0);
 
-  // Construction + déduplication des URLs
   const rawUrls = [];
   if (coverUrl) rawUrls.push(coverUrl);
   rawUrls.push(...galleryUrls);
@@ -160,19 +148,13 @@ function withLabels(prod) {
 
   return {
     ...p,
-
-    // Pour ton frontend
     imageUrl: coverUrl,
     allImageUrls,
-
-    // Legacy / compat
     image: coverUrl,
     imagePath: coverUrl,
-
     coverImage: cover,
     gallery,
     images: gallery,
-
     currencyLabel: formatCurrency(p.currency || 'XOF'),
   };
 }
@@ -206,6 +188,8 @@ exports.create = async (req, res) => {
       description,
       shortDescription,
       isActive,
+      countryId,
+      regionId,
     } = req.body || {};
 
     if (!name)
@@ -219,10 +203,8 @@ exports.create = async (req, res) => {
       return res.status(400).json({ error: 'Le prix doit être un nombre.' });
 
     const stockNum = toSafeInt(stock);
-
     const { coverImage, gallery } = await extractImagesFromRequestImageKit(req);
 
-    // Slug unique
     const baseSlug = slugify(name);
     let finalSlug = baseSlug || `p-${Date.now()}`;
     let i = 1;
@@ -240,17 +222,14 @@ exports.create = async (req, res) => {
       stock: stockNum ?? 0,
       description: toTrimOrNull(description),
       shortDescription: toTrimOrNull(shortDescription),
-
-      // coverImage = STRING stockée en DB
       coverImage: coverImage?.url || null,
-
-      // gallery format JSON
       gallery: gallery.map((g) => ({ url: g.url, fileId: g.fileId })),
-
       isActive:
         typeof isActive === 'undefined'
           ? true
           : String(isActive) === 'true' || isActive === true,
+      countryId: toSafeInt(countryId),
+      regionId: toSafeInt(regionId),
     });
 
     const created = await Product.findByPk(prod.id, {
@@ -361,6 +340,8 @@ exports.update = async (req, res) => {
       description,
       shortDescription,
       isActive,
+      countryId,
+      regionId,
     } = req.body || {};
 
     if (categoryId !== undefined) {
@@ -403,11 +384,16 @@ exports.update = async (req, res) => {
     if (typeof isActive !== 'undefined')
       prod.isActive = String(isActive) === 'true' || isActive === true;
 
+    if (countryId !== undefined || req.body?.country_id !== undefined)
+      prod.countryId = toSafeInt(countryId ?? req.body?.country_id);
+
+    if (regionId !== undefined || req.body?.region_id !== undefined)
+      prod.regionId = toSafeInt(regionId ?? req.body?.region_id);
+
     const { coverImage, gallery, hasNewImages } =
       await extractImagesFromRequestImageKit(req);
 
     if (hasNewImages) {
-      // Suppression des anciennes images dans ImageKit
       if (Array.isArray(prod.gallery)) {
         for (const img of prod.gallery) {
           if (img?.fileId) {
@@ -418,23 +404,14 @@ exports.update = async (req, res) => {
         }
       }
 
-      // Nouvelle cover si dispo
-      if (coverImage?.url) {
-        prod.coverImage = coverImage.url;
-      }
-
-      // Nouvelle gallery
-      prod.gallery = gallery.map((g) => ({
-        url: g.url,
-        fileId: g.fileId,
-      }));
+      if (coverImage?.url) prod.coverImage = coverImage.url;
+      prod.gallery = gallery.map((g) => ({ url: g.url, fileId: g.fileId }));
     }
 
     if (regenerateSlug && prod.name) {
       const baseSlug = slugify(prod.name);
       let finalSlug = baseSlug || `p-${Date.now()}`;
       let i = 1;
-
       while (
         await Product.findOne({
           where: { slug: finalSlug, id: { [Op.ne]: prod.id } },
@@ -442,7 +419,6 @@ exports.update = async (req, res) => {
       ) {
         finalSlug = `${baseSlug}-${i++}`;
       }
-
       prod.slug = finalSlug;
     }
 
@@ -474,7 +450,6 @@ exports.remove = async (req, res) => {
     if (!id) return res.status(400).json({ error: 'ID invalide' });
 
     const force = String(req.query?.force || '').toLowerCase() === 'true';
-
     const prod = await Product.findByPk(id);
     if (!prod) return res.status(404).json({ error: 'Produit introuvable' });
 
@@ -497,9 +472,7 @@ exports.remove = async (req, res) => {
 
     await prod.destroy();
 
-    return res.json({
-      message: 'Produit supprimé avec succès',
-    });
+    return res.json({ message: 'Produit supprimé avec succès' });
   } catch (e) {
     console.error('❌ remove product:', e);
     return res.status(500).json({ error: 'Erreur lors de la suppression' });

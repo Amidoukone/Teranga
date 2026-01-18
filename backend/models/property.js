@@ -10,8 +10,27 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       Property.belongsTo(models.User, {
         foreignKey: 'ownerId',
-        as: 'owner'
+        as: 'owner',
       });
+
+      /**
+       * 🌍 Multi-pays (associations logiques uniquement)
+       * - Pas de FK DB (PlanetScale friendly)
+       * - Permet include: [{ model: Country, as: 'country' }]
+       */
+      if (models.Country) {
+        Property.belongsTo(models.Country, {
+          foreignKey: 'countryId',
+          as: 'country',
+        });
+      }
+
+      if (models.Region) {
+        Property.belongsTo(models.Region, {
+          foreignKey: 'regionId',
+          as: 'region',
+        });
+      }
     }
   }
 
@@ -19,15 +38,15 @@ module.exports = (sequelize, DataTypes) => {
     {
       ownerId: {
         type: DataTypes.INTEGER.UNSIGNED,
-        allowNull: false
+        allowNull: false,
       },
 
       title: { type: DataTypes.STRING, allowNull: false },
-      description: DataTypes.TEXT,
+      description: { type: DataTypes.TEXT, allowNull: true },
 
       type: {
         type: DataTypes.ENUM('house', 'apartment', 'land', 'commercial'),
-        allowNull: false
+        allowNull: false,
       },
 
       address: { type: DataTypes.TEXT, allowNull: false },
@@ -37,28 +56,58 @@ module.exports = (sequelize, DataTypes) => {
       latitude: {
         type: DataTypes.DECIMAL(10, 7),
         allowNull: true,
-        set(v) { this.setDataValue('latitude', toNullableNumber(v)); }
+        set(v) {
+          this.setDataValue('latitude', toNullableNumber(v));
+        },
       },
+
       longitude: {
         type: DataTypes.DECIMAL(10, 7),
         allowNull: true,
-        set(v) { this.setDataValue('longitude', toNullableNumber(v)); }
+        set(v) {
+          this.setDataValue('longitude', toNullableNumber(v));
+        },
       },
 
       surfaceArea: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
-        set(v) { this.setDataValue('surfaceArea', toNullableNumber(v)); }
+        set(v) {
+          this.setDataValue('surfaceArea', toNullableNumber(v));
+        },
       },
+
       roomCount: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        set(v) { this.setDataValue('roomCount', toNullableNumber(v)); }
+        set(v) {
+          this.setDataValue('roomCount', toNullableNumber(v));
+        },
       },
 
       status: {
         type: DataTypes.ENUM('active', 'inactive', 'sold'),
-        defaultValue: 'active'
+        defaultValue: 'active',
+      },
+
+      /**
+       * ============================================================
+       * 🌍 Multi-pays / franchise (NOUVEAU – non bloquant)
+       * ============================================================
+       * - Ajouté par migration : properties.countryId / properties.regionId
+       * - Nullable pour éviter toute régression
+       * - Renseigné par :
+       *    • backfill (Mali/Bamako)
+       *    • resolveGeoScope / héritage (user/franchise) côté backend
+       */
+      countryId: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
+      },
+
+      regionId: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
       },
 
       /**
@@ -69,13 +118,20 @@ module.exports = (sequelize, DataTypes) => {
       photos: {
         type: DataTypes.JSON,
         allowNull: true,
-        defaultValue: []
-      }
+        defaultValue: [],
+      },
     },
     {
       sequelize,
       modelName: 'Property',
-      tableName: 'properties'
+      tableName: 'properties',
+
+      /**
+       * ✅ Timestamps
+       * - Aligné avec ta prod : createdAt/updatedAt camelCase
+       * - On laisse la config globale (define.timestamps=true) faire le job
+       */
+      timestamps: true,
     }
   );
 

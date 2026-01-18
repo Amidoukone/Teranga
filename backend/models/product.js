@@ -7,112 +7,78 @@ module.exports = (sequelize, DataTypes) => {
       Product.belongsTo(models.Category, {
         foreignKey: 'categoryId',
         as: 'category',
-        onDelete: 'SET NULL',
       });
+
+      if (models.Country) {
+        Product.belongsTo(models.Country, {
+          foreignKey: 'countryId',
+          as: 'country',
+        });
+      }
+
+      if (models.Region) {
+        Product.belongsTo(models.Region, {
+          foreignKey: 'regionId',
+          as: 'region',
+        });
+      }
     }
   }
 
   Product.init(
     {
-      // 🔗 Relation catégorie
       categoryId: {
         type: DataTypes.INTEGER.UNSIGNED,
         allowNull: true,
         field: 'category_id',
       },
 
-      // 🏷️ Identité produit
-      name: {
-        type: DataTypes.STRING(180),
-        allowNull: false,
-      },
-      slug: {
-        type: DataTypes.STRING(220),
-        allowNull: false,
-        unique: true,
-      },
-      sku: {
-        type: DataTypes.STRING(80),
-        allowNull: true,
-        unique: true,
-      },
+      name: { type: DataTypes.STRING(180), allowNull: false },
+      slug: { type: DataTypes.STRING(220), allowNull: false, unique: true },
+      sku: { type: DataTypes.STRING(80), allowNull: true, unique: true },
 
-      // 💰 Prix & devise
-      price: {
-        type: DataTypes.DECIMAL(12, 2),
-        allowNull: false,
-        defaultValue: 0,
-      },
-      currency: {
-        type: DataTypes.STRING(10),
-        allowNull: false,
-        defaultValue: 'XOF',
-      },
+      price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0 },
+      currency: { type: DataTypes.STRING(10), defaultValue: 'XOF' },
 
-      // 📦 Stock & statut
-      stock: {
-        type: DataTypes.INTEGER.UNSIGNED,
-        allowNull: false,
-        defaultValue: 0,
-      },
+      stock: { type: DataTypes.INTEGER.UNSIGNED, defaultValue: 0 },
       isActive: {
         type: DataTypes.BOOLEAN,
-        allowNull: false,
         defaultValue: true,
         field: 'is_active',
       },
 
-      // 📝 Descriptions
+      countryId: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
+        field: 'country_id',
+      },
+      regionId: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
+        field: 'region_id',
+      },
+
       shortDescription: {
         type: DataTypes.STRING(500),
-        allowNull: true,
         field: 'short_description',
       },
-      description: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
+      description: { type: DataTypes.TEXT },
 
-      /**
-       * 🖼 Image principale
-       * - Stockée comme STRING (URL absolue ou relative)
-       * - Exemple :
-       *     "https://ik.imagekit.io/.../image.jpg"
-       *     "/uploads/products/image.jpg"
-       * - ⚠️ NE PAS stocker d'objet ici (pas { url, fileId }).
-       *   C’est exactement ce qu’on a corrigé dans le controller.
-       */
-      coverImage: {
-        type: DataTypes.STRING(1024),
-        allowNull: true,
-        field: 'cover_image',
-      },
-
-      /**
-       * 🖼🖼🖼 Galerie multi-images
-       * - Type JSON
-       * - Tableau d’objets au format :
-       *     [{ url: string, fileId: string }, ...]
-       * - Les URLs peuvent être absolues (ImageKit) ou relatives (/uploads/...)
-       * - Compatible avec l’implémentation du controller (create/update)
-       */
-      gallery: {
-        type: DataTypes.JSON,
-        allowNull: true,
-        defaultValue: [],
-      },
+      coverImage: { type: DataTypes.STRING(1024), field: 'cover_image' },
+      gallery: { type: DataTypes.JSON, defaultValue: [] },
     },
     {
       sequelize,
       modelName: 'Product',
       tableName: 'products',
-      underscored: true,
-
+      timestamps: true, // ✅ createdAt / updatedAt camelCase
       indexes: [
         { fields: ['slug'], unique: true },
         { fields: ['sku'], unique: true },
         { fields: ['category_id'] },
         { fields: ['is_active'] },
+        { fields: ['country_id'] },
+        { fields: ['region_id'] },
       ],
     }
   );

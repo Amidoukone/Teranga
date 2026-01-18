@@ -33,6 +33,25 @@ module.exports = (sequelize, DataTypes) => {
         as: 'order',
         onDelete: 'SET NULL',
       });
+
+      /**
+       * 🌍 Multi-pays (associations logiques uniquement)
+       * - Pas de FK DB (PlanetScale friendly)
+       * - Permet include: [{ model: Country, as: 'country' }]
+       */
+      if (models.Country) {
+        Transaction.belongsTo(models.Country, {
+          foreignKey: 'countryId',
+          as: 'country',
+        });
+      }
+
+      if (models.Region) {
+        Transaction.belongsTo(models.Region, {
+          foreignKey: 'regionId',
+          as: 'region',
+        });
+      }
     }
   }
 
@@ -94,11 +113,25 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.JSON,
         allowNull: true,
       },
+
+      /**
+       * ============================================================
+       * 🌍 Multi-pays / franchise (NOUVEAU – non bloquant)
+       * ============================================================
+       * - Ajouté par migration : transactions.countryId / transactions.regionId
+       * - Nullable pour ne rien casser en prod
+       * - Rempli par :
+       *    • backfill (Mali/Bamako) migration
+       *    • resolveGeoScope / héritage depuis Order/Service/Task/Project
+       */
+      countryId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+      regionId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
     },
     {
       sequelize,
       modelName: 'Transaction',
       tableName: 'transactions',
+      timestamps: true, // ✅ createdAt/updatedAt camelCase (aligné prod)
 
       indexes: [
         { fields: ['userId'] },
@@ -109,6 +142,10 @@ module.exports = (sequelize, DataTypes) => {
         { fields: ['type'] },
         { fields: ['status'] },
         { fields: ['createdAt'] },
+
+        // ✅ multi-pays
+        { fields: ['countryId'] },
+        { fields: ['regionId'] },
       ],
     }
   );

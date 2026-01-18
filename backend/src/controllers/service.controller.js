@@ -45,7 +45,7 @@ const ALLOWED_TYPES = new Set(Object.keys(SERVICE_TYPES));
 const ALLOWED_STATUSES = new Set(Object.keys(SERVICE_STATUSES));
 
 /* ============================================================
-   🏷️ Helper d’ajout des labels FR
+   🏷️ Labels FR
 ============================================================ */
 function addLabels(service) {
   if (!service) return null;
@@ -58,7 +58,9 @@ function addLabels(service) {
 }
 
 /* ============================================================
-   🟢 CRÉER UN SERVICE — propertyId devient OPTIONNEL
+   🟢 CRÉER UN SERVICE
+   - propertyId optionnel
+   - multi-pays SAFE (aucune régression)
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -72,6 +74,10 @@ exports.create = async (req, res) => {
       address,
       budget,
       clientId,
+
+      // 🌍 NOUVEAU (optionnel, admin only)
+      countryId,
+      regionId,
     } = req.body || {};
 
     /* -------------------------
@@ -87,7 +93,7 @@ exports.create = async (req, res) => {
     if (!title) return res.status(400).json({ error: "Titre requis" });
 
     /* ----------------------------------------------------
-       OPTIONAL → Vérification du bien SEULEMENT si fourni
+       OPTIONAL → Vérification du bien
     ---------------------------------------------------- */
     let property = null;
 
@@ -98,7 +104,7 @@ exports.create = async (req, res) => {
     }
 
     /* -------------------------
-       🔐 ACL : déterminer le client
+       🔐 ACL : client cible
     ------------------------- */
     let targetClientId = req.user.id;
 
@@ -116,15 +122,26 @@ exports.create = async (req, res) => {
 
       targetClientId = user.id;
     } else {
-      /* ---------------------------------------------------------
-         ACL quand propertyId est fourni :
-         - Le bien doit appartenir au client connecté
-      --------------------------------------------------------- */
       if (property && String(property.ownerId) !== String(req.user.id))
         return res.status(403).json({
           error: "Ce bien n'appartient pas à l'utilisateur connecté",
         });
     }
+
+    /* ----------------------------------------------------
+       🌍 Résolution GEO (STRICTEMENT ADDITIVE)
+       priorité :
+       1. property
+       2. admin explicite
+       3. null (backfill déjà fait)
+    ---------------------------------------------------- */
+    const resolvedCountryId =
+      property?.countryId ??
+      (req.user.role === "admin" ? toSafeInt(countryId) : null);
+
+    const resolvedRegionId =
+      property?.regionId ??
+      (req.user.role === "admin" ? toSafeInt(regionId) : null);
 
     /* -------------------------
        📝 Création
@@ -132,7 +149,7 @@ exports.create = async (req, res) => {
     const service = await Service.create({
       clientId: targetClientId,
       agentId: null,
-      propertyId: propertyId || null, // ← IMPORTANT
+      propertyId: propertyId || null,
       type,
       title,
       description: toTrimOrNull(description),
@@ -141,25 +158,17 @@ exports.create = async (req, res) => {
       address: toTrimOrNull(address),
       budget: toNullableNumber(budget),
       status: "created",
+
+      // 🌍 multi-pays (SAFE PROD)
+      countryId: resolvedCountryId,
+      regionId: resolvedRegionId,
     });
 
     const full = await Service.findByPk(service.id, {
       include: [
-        {
-          model: User,
-          as: "agent",
-          attributes: ["id", "firstName", "lastName", "email"],
-        },
-        {
-          model: User,
-          as: "client",
-          attributes: ["id", "firstName", "lastName", "email"],
-        },
-        {
-          model: Property,
-          as: "property",
-          attributes: ["id", "title", "city", "address", "photos"],
-        },
+        { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
+        { model: User, as: "client", attributes: ["id", "firstName", "lastName", "email"] },
+        { model: Property, as: "property", attributes: ["id", "title", "city", "address", "photos"] },
       ],
     });
 
@@ -177,6 +186,7 @@ exports.create = async (req, res) => {
 
 /* ============================================================
    📄 LISTE DES SERVICES POUR CLIENT / ADMIN
+   (INCHANGÉ)
 ============================================================ */
 exports.listClient = async (req, res) => {
   try {
@@ -194,21 +204,9 @@ exports.listClient = async (req, res) => {
     const rows = await Service.findAll({
       where,
       include: [
-        {
-          model: User,
-          as: "client",
-          attributes: ["id", "firstName", "lastName", "email"],
-        },
-        {
-          model: User,
-          as: "agent",
-          attributes: ["id", "firstName", "lastName", "email"],
-        },
-        {
-          model: Property,
-          as: "property",
-          attributes: ["id", "title", "city", "address", "photos"],
-        },
+        { model: User, as: "client", attributes: ["id", "firstName", "lastName", "email"] },
+        { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
+        { model: Property, as: "property", attributes: ["id", "title", "city", "address", "photos"] },
       ],
       order: [["createdAt", "DESC"]],
       limit,
@@ -216,7 +214,7 @@ exports.listClient = async (req, res) => {
     });
 
     return res.json({
-      services: rows.map((s) => addLabels(s)),
+      services: rows.map(addLabels),
       pagination: { limit, offset, count: rows.length },
     });
   } catch (e) {
@@ -229,6 +227,7 @@ exports.listClient = async (req, res) => {
 
 /* ============================================================
    🧾 LISTE TOUTES LES DEMANDES (ADMIN)
+   (INCHANGÉ)
 ============================================================ */
 exports.listAll = async (req, res) => {
   try {
@@ -255,11 +254,9 @@ exports.listAll = async (req, res) => {
           { address: like },
           { contactPerson: like },
           { contactPhone: like },
-
           { "$client.firstName$": like },
           { "$client.lastName$": like },
           { "$client.email$": like },
-
           { "$property.title$": like },
           { "$property.address$": like },
           { "$property.city$": like },
@@ -273,21 +270,9 @@ exports.listAll = async (req, res) => {
     const { rows, count } = await Service.findAndCountAll({
       where: finalWhere,
       include: [
-        {
-          model: User,
-          as: "client",
-          attributes: ["id", "firstName", "lastName", "email"],
-        },
-        {
-          model: User,
-          as: "agent",
-          attributes: ["id", "firstName", "lastName", "email"],
-        },
-        {
-          model: Property,
-          as: "property",
-          attributes: ["id", "title", "city", "address"],
-        },
+        { model: User, as: "client", attributes: ["id", "firstName", "lastName", "email"] },
+        { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
+        { model: Property, as: "property", attributes: ["id", "title", "city", "address"] },
       ],
       order: [["createdAt", "DESC"]],
       limit,
@@ -305,6 +290,7 @@ exports.listAll = async (req, res) => {
       .json({ error: "Erreur lors de la récupération des services" });
   }
 };
+
 
 /* ============================================================
    👔 ADMIN ASSIGNE UN AGENT
@@ -611,3 +597,4 @@ exports.completeService = async (req, res) => {
       .json({ error: "Erreur lors de la finalisation du service" });
   }
 };
+
