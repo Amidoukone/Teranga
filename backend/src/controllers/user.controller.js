@@ -3,6 +3,7 @@
 const bcrypt = require('bcrypt');
 const { Op } = require('sequelize');
 const { User } = require('../../models');
+const { applyGeoScope, getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
 
 // ————————————————————————
 // Helpers
@@ -11,11 +12,17 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const COUNTRY_NAME_TO_ISO2 = {
   'mali': 'ML', 'sénégal': 'SN', 'senegal': 'SN',
-  "côte d'ivoire": 'CI', 'cote d’ivoire': 'CI', 'cote d ivoire': 'CI',
+  "côte d\'ivoire": 'CI', 'cote d’ivoire': 'CI', 'cote d ivoire': 'CI',
   'ivory coast': 'CI', 'burkina faso': 'BF', 'niger': 'NE', 'guinée': 'GN',
   'guinee': 'GN', 'ghana': 'GH', 'togo': 'TG', 'benin': 'BJ',
   'france': 'FR', 'royaume-uni': 'GB', 'uk': 'GB', 'united states': 'US', 'usa': 'US'
 };
+
+function toSafeInt(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = parseInt(String(v), 10);
+  return Number.isNaN(n) ? null : n;
+}
 
 function toSafeUser(u) {
   if (!u) return null;
@@ -26,9 +33,11 @@ function toSafeUser(u) {
     lastName: u.lastName,
     phone: u.phone,
     country: u.country,
+    countryId: u.countryId ?? null,
+    regionId: u.regionId ?? null,
     role: u.role,
     createdAt: u.createdAt,
-    updatedAt: u.updatedAt
+    updatedAt: u.updatedAt,
   };
 }
 
@@ -48,7 +57,7 @@ function normalizeCountry(input) {
 // CONTRÔLEURS EXISTANTS
 // ————————————————————————
 
-/** 🔹 Créer un agent (admin only) */
+/** 🔹 Créer un agent (admin only, master inclus via scope) */
 exports.createAgent = async (req, res) => {
   try {
     if (!req.user || req.user.role !== 'admin') {
@@ -70,13 +79,13 @@ exports.createAgent = async (req, res) => {
     }
 
     const countryIso2 = normalizeCountry(country);
-
     const exists = await User.findOne({ where: { email } });
     if (exists) {
       return res.status(400).json({ error: 'Email déjà utilisé' });
     }
 
     const passwordHash = await bcrypt.hash(String(password), 10);
+    const scope = getUserGeoScope(req.user);
 
     const agent = await User.create({
       email,
@@ -86,6 +95,8 @@ exports.createAgent = async (req, res) => {
       phone: phone || null,
       country: countryIso2,
       role: 'agent',
+      countryId: isGlobalAdmin(req.user) ? toSafeInt(req.body?.countryId) : scope.countryId,
+      regionId: isGlobalAdmin(req.user) ? toSafeInt(req.body?.regionId) : scope.regionId,
     });
 
     return res.status(201).json({
@@ -93,10 +104,6 @@ exports.createAgent = async (req, res) => {
       agent: toSafeUser(agent),
     });
   } catch (e) {
-    const status = e?.status || 500;
-    if (status !== 500) {
-      return res.status(status).json({ error: e.message });
-    }
     console.error('❌ Erreur création agent:', e);
     return res.status(500).json({ error: "Erreur lors de la création de l’agent" });
   }
@@ -110,15 +117,12 @@ exports.listByRole = async (req, res) => {
     }
 
     const role = String(req.query.role || '').trim().toLowerCase();
-    if (!role) {
-      return res.status(400).json({ error: 'Paramètre role requis (ex: role=agent)' });
-    }
     if (!['client', 'agent', 'admin'].includes(role)) {
       return res.status(400).json({ error: 'Rôle invalide' });
     }
 
     const q = (req.query.q || '').trim();
-    const where = { role };
+    let where = { role };
 
     if (q) {
       where[Op.or] = [
@@ -130,7 +134,7 @@ exports.listByRole = async (req, res) => {
     }
 
     const users = await User.findAll({
-      where,
+      where: applyGeoScope(where, req.user),
       attributes: [
         'id',
         'email',
@@ -138,6 +142,8 @@ exports.listByRole = async (req, res) => {
         'lastName',
         'phone',
         'country',
+        'countryId',
+        'regionId',
         'role',
         'createdAt',
         'updatedAt',
@@ -168,18 +174,21 @@ exports.me = async (req, res) => {
 // NOUVEAUX ENDPOINTS ADMIN CRUD
 // ————————————————————————
 
-/** 🔹 Créer un utilisateur (admin) */
+/** 🔹 Créer un utilisateur */
 exports.createUser = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, phone, country, role } = req.body;
-    if (!email || !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Email invalide' });
-    if (!password || password.length < 6) return res.status(400).json({ error: 'Mot de passe trop court' });
-    if (!['client', 'agent', 'admin'].includes(role)) return res.status(400).json({ error: 'Rôle invalide' });
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
 
-    const exists = await User.findOne({ where: { email } });
-    if (exists) return res.status(400).json({ error: 'Email déjà utilisé' });
+    const { email, password, firstName, lastName, phone, country, role } = req.body;
+    if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Email invalide' });
+    if (!['client', 'agent', 'admin'].includes(role))
+      return res.status(400).json({ error: 'Rôle invalide' });
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const scope = getUserGeoScope(req.user);
+
     const u = await User.create({
       email: email.toLowerCase().trim(),
       passwordHash,
@@ -187,7 +196,9 @@ exports.createUser = async (req, res) => {
       lastName: lastName?.trim() || null,
       phone: phone?.trim() || null,
       country: normalizeCountry(country),
-      role
+      role,
+      countryId: isGlobalAdmin(req.user) ? toSafeInt(req.body?.countryId) : scope.countryId,
+      regionId: isGlobalAdmin(req.user) ? toSafeInt(req.body?.regionId) : scope.regionId,
     });
 
     res.status(201).json({ user: toSafeUser(u) });
@@ -212,6 +223,10 @@ exports.getById = async (req, res) => {
 /** 🔹 Mettre à jour un utilisateur */
 exports.updateUser = async (req, res) => {
   try {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
     const u = await User.findByPk(req.params.id);
     if (!u) return res.status(404).json({ error: 'Utilisateur introuvable' });
 
@@ -219,12 +234,15 @@ exports.updateUser = async (req, res) => {
     if (role && !['client', 'agent', 'admin'].includes(role))
       return res.status(400).json({ error: 'Rôle invalide' });
 
+    const scope = getUserGeoScope(req.user);
     const updateData = {
       firstName: firstName?.trim() || null,
       lastName: lastName?.trim() || null,
       phone: phone?.trim() || null,
       country: country ? normalizeCountry(country) : u.country,
-      role: role || u.role
+      role: role || u.role,
+      countryId: isGlobalAdmin(req.user) ? toSafeInt(req.body?.countryId) : scope.countryId,
+      regionId: isGlobalAdmin(req.user) ? toSafeInt(req.body?.regionId) : scope.regionId,
     };
 
     if (password && password.length >= 6) {
@@ -242,6 +260,10 @@ exports.updateUser = async (req, res) => {
 /** 🔹 Supprimer un utilisateur */
 exports.deleteUser = async (req, res) => {
   try {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
     const u = await User.findByPk(req.params.id);
     if (!u) return res.status(404).json({ error: 'Utilisateur introuvable' });
     await u.destroy();

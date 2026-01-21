@@ -1,6 +1,6 @@
 // ============================================================
 // frontend/src/pages/ProjectDetailPage.jsx
-// Version Premium Responsive — PARTIE 1 / 2
+// Version Premium Responsive — MASTER SAFE — PARTIE 1 / 2
 // ============================================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
@@ -17,18 +17,14 @@ import {
   updateProject,
 } from "../services/projects";
 import { applyLabels, CURRENCY_LABELS } from "../utils/labels";
-import {
-  getTransactions,
-  createTransaction,
-} from "../services/transactions";
+import { getTransactions, createTransaction } from "../services/transactions";
+import { normalizeRole, isMasterUser } from "../utils/role";
 
 /* ============================================================
    🌐 FILE_BASE + Helpers
 ============================================================ */
 const FILE_BASE =
-  window.__TERANGA_FILE_BASE_URL ||
-  process.env.REACT_APP_FILE_BASE_URL ||
-  "";
+  window.__TERANGA_FILE_BASE_URL || process.env.REACT_APP_FILE_BASE_URL || "";
 
 function normalizePath(path = "") {
   if (!path) return "";
@@ -42,11 +38,7 @@ function toAbsUrl(path = "") {
   const norm = normalizePath(path);
   if (/^https?:\/\//i.test(norm)) return norm;
 
-  return (
-    FILE_BASE.replace(/\/$/, "") +
-    "/" +
-    norm.replace(/^\//, "")
-  );
+  return FILE_BASE.replace(/\/$/, "") + "/" + norm.replace(/^\//, "");
 }
 
 /* ============================================================
@@ -69,17 +61,10 @@ function Badge({ color = "gray", children }) {
   );
 }
 
-function Btn({
-  variant = "primary",
-  size = "md",
-  children,
-  className = "",
-  ...props
-}) {
+function Btn({ variant = "primary", size = "md", children, className = "", ...props }) {
   const styles = {
     primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-400",
-    secondary:
-      "bg-slate-100 text-slate-800 hover:bg-slate-200 focus:ring-slate-300",
+    secondary: "bg-slate-100 text-slate-800 hover:bg-slate-200 focus:ring-slate-300",
     danger: "bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-400",
     warning: "bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-400",
     ghost:
@@ -110,6 +95,7 @@ function Btn({
 
 /* ============================================================
    🧾 Auteur transaction
+   ✅ IMPORTANT : sera utilisé dans la table transactions (PARTIE 2)
 ============================================================ */
 function getTransactionAuthorLabel(t) {
   if (!t) return "—";
@@ -169,10 +155,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       onSuccess?.();
     } catch (err) {
       console.error("❌ Transaction error:", err);
-      alert(
-        err?.response?.data?.error ||
-          "Erreur lors de la création de la transaction."
-      );
+      alert(err?.response?.data?.error || "Erreur lors de la création de la transaction.");
     } finally {
       setSaving(false);
     }
@@ -233,9 +216,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       <input
         type="file"
         accept=".jpg,.jpeg,.png,.pdf"
-        onChange={(e) =>
-          setForm({ ...form, proofFile: e.target.files?.[0] || null })
-        }
+        onChange={(e) => setForm({ ...form, proofFile: e.target.files?.[0] || null })}
         className="sm:col-span-2 text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white w-full block min-w-0"
       />
 
@@ -247,12 +228,8 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
     </form>
   );
 }
-
 /* ============================================================
-   PAGE PRINCIPALE ProjectDetailPage — (suite PARTIE 2)
-============================================================ */
-/* ============================================================
-   🧠 PAGE PRINCIPALE ProjectDetailPage — PARTIE 2 / 2
+   🧠 PAGE PRINCIPALE — ProjectDetailPage (PARTIE 2 / 2)
 ============================================================ */
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -283,15 +260,21 @@ export default function ProjectDetailPage() {
 
   const [now, setNow] = useState(Date.now());
 
-  // rafraîchissement fenêtre édition client (1h)
+  // refresh fenêtre client (1h)
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
 
-  const isAdmin = user?.role === "admin";
-  const isAgent = user?.role === "agent";
-  const isClient = user?.role === "client";
+  /* ============================================================
+     🔐 Roles & Permissions (MASTER SAFE)
+  ============================================================ */
+  const role = normalizeRole(user?.role);
+  const isAdmin = role === "admin";
+  const isAgent = role === "agent";
+  const isClient = role === "client";
+  const isMaster = isMasterUser(user); // UX uniquement
+
   const isAssignedAgent = isAgent && project?.agent?.id === user?.id;
 
   const clientCanAddDocs = isClient;
@@ -310,7 +293,6 @@ export default function ProjectDetailPage() {
 
   const clientCanModifyOrDelete = isClient && withinOneHour;
 
-  // chrono restant
   const timeLeftText = useMemo(() => {
     if (!clientCanModifyOrDelete || !createdAtMs) return "";
     const msLeft = 3600000 - (now - createdAtMs);
@@ -320,7 +302,7 @@ export default function ProjectDetailPage() {
   }, [clientCanModifyOrDelete, createdAtMs, now]);
 
   /* ============================================================
-     🔹 Chargement
+     🔹 Load project (backend gère scope)
   ============================================================ */
   const loadProject = useCallback(async (pid) => {
     if (!pid) return;
@@ -351,13 +333,14 @@ export default function ProjectDetailPage() {
     (async () => {
       try {
         const { user: u } = await me();
+        if (!isMounted.current) return;
         setUser(u);
         await loadProject(id);
       } catch (e) {
         console.error("❌ init:", e);
         setErrorMsg("Erreur de chargement.");
       } finally {
-        setLoading(false);
+        if (isMounted.current) setLoading(false);
       }
     })();
 
@@ -367,7 +350,7 @@ export default function ProjectDetailPage() {
   }, [id, loadProject]);
 
   /* ============================================================
-     🔹 Statut project (admin)
+     🔹 Update status (admin/master = admin)
   ============================================================ */
   async function handleStatusChange(newStatus) {
     if (!isAdmin) return;
@@ -382,7 +365,7 @@ export default function ProjectDetailPage() {
   }
 
   /* ============================================================
-     🔹 Totaux financiers
+     💰 Totaux financiers
   ============================================================ */
   const totals = useMemo(() => {
     const rev = transactions
@@ -393,23 +376,16 @@ export default function ProjectDetailPage() {
       .filter((t) => t.type === "expense")
       .reduce((s, t) => s + Number(t.amount || 0), 0);
 
-    return {
-      revenues: rev,
-      expenses: exp,
-      balance: rev - exp,
-    };
+    return { revenues: rev, expenses: exp, balance: rev - exp };
   }, [transactions]);
 
   /* ============================================================
-     🔹 Phases
+     🗂️ Phases
   ============================================================ */
   async function handlePhaseSubmit(e) {
     e.preventDefault();
     try {
-      const payload = {
-        ...phaseForm,
-        projectId: project.id,
-      };
+      const payload = { ...phaseForm, projectId: project.id };
       if (editPhaseId) payload.id = editPhaseId;
 
       await saveProjectPhase(payload);
@@ -422,17 +398,12 @@ export default function ProjectDetailPage() {
   }
 
   function resetPhaseForm() {
-    setPhaseForm({
-      title: "",
-      description: "",
-      startDate: "",
-      endDate: "",
-    });
+    setPhaseForm({ title: "", description: "", startDate: "", endDate: "" });
     setEditPhaseId(null);
   }
 
   /* ============================================================
-     🔹 Documents — RESPONSIVE FIX
+     📎 Documents
   ============================================================ */
   function handleFileChange(e) {
     setFiles(Array.from(e.target.files || []));
@@ -440,7 +411,6 @@ export default function ProjectDetailPage() {
 
   async function handleUploadDocuments(e) {
     e.preventDefault();
-
     try {
       await uploadProjectDocuments(
         project.id,
@@ -450,7 +420,6 @@ export default function ProjectDetailPage() {
         { title: docTitle || undefined, kind: docKind || "other" }
       );
 
-      // reset
       setFiles([]);
       setNotes("");
       setDocTitle("");
@@ -475,14 +444,12 @@ export default function ProjectDetailPage() {
   }
 
   /* ============================================================
-     🔹 Rendu
+     🎨 Rendu
   ============================================================ */
   if (loading)
     return (
       <div className="flex justify-center items-center min-h-screen bg-slate-50">
-        <p className="text-blue-700 text-lg animate-pulse font-medium">
-          Chargement…
-        </p>
+        <p className="text-blue-700 text-lg animate-pulse font-medium">Chargement…</p>
       </div>
     );
 
@@ -508,37 +475,19 @@ export default function ProjectDetailPage() {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="max-w-6xl mx-auto">
+        {/* BACK */}
+        <button
+          onClick={() => navigate("/projects")}
+          className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 mb-4"
+        >
+          <span className="text-lg">←</span> Retour
+        </button>
 
-        {/* ========================= BACK BUTTON ========================= */}
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => navigate("/projects")}
-            className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
-          >
-            <span className="text-lg">←</span> Retour
-          </button>
-        </div>
-
-        {/* ========================= CARD PRINCIPALE ========================= */}
+        {/* CARD */}
         <div className="bg-white shadow-lg rounded-3xl border border-slate-100 p-6 md:p-8 space-y-10">
-
-          {/* ----------------------- HEADER ----------------------- */}
+          {/* HEADER */}
           <div className="flex flex-col md:flex-row md:justify-between gap-6">
             <div className="space-y-3 flex-1 min-w-0">
-
-              <div className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 text-xs text-slate-500 rounded-full">
-                <span>Projet #{project.id}</span>
-                {project.createdAt && (
-                  <>
-                    <span className="opacity-40">•</span>
-                    <span>
-                      Créé le{" "}
-                      {new Date(project.createdAt).toLocaleString("fr-FR")}
-                    </span>
-                  </>
-                )}
-              </div>
-
               <h1 className="text-2xl md:text-3xl font-bold text-slate-900 break-words">
                 {project.title}
               </h1>
@@ -564,9 +513,10 @@ export default function ProjectDetailPage() {
                   <Badge color="blue">Statut : {statusLabel}</Badge>
                 )}
 
+                {isMaster && <Badge color="yellow">MASTER</Badge>}
+
                 <Badge color="green">
-                  💰 Budget :{" "}
-                  {Number(project.budget || 0).toLocaleString("fr-FR")} XOF
+                  💰 Budget : {Number(project.budget || 0).toLocaleString("fr-FR")} XOF
                 </Badge>
 
                 {isClient && (
@@ -579,7 +529,7 @@ export default function ProjectDetailPage() {
               </div>
             </div>
 
-            {/* SYNTHÈSE FINANCIÈRE */}
+            {/* FINANCES */}
             <div className="w-full md:w-80 bg-slate-50 border border-slate-200 rounded-2xl p-4">
               <h3 className="text-xs font-semibold text-slate-500 uppercase">
                 Synthèse financière
@@ -604,9 +554,7 @@ export default function ProjectDetailPage() {
                   <span className="font-medium">Solde</span>
                   <span
                     className={`font-semibold ${
-                      totals.balance >= 0
-                        ? "text-emerald-700"
-                        : "text-rose-700"
+                      totals.balance >= 0 ? "text-emerald-700" : "text-rose-700"
                     }`}
                   >
                     {totals.balance.toLocaleString("fr-FR")} XOF
@@ -620,7 +568,6 @@ export default function ProjectDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* ----------- LARGE COLUMN : Transactions + Phases ----------- */}
             <div className="lg:col-span-2 space-y-8">
-
               {/* ---------------- TRANSACTIONS LIEES ---------------- */}
               <section>
                 <h2 className="text-lg font-semibold text-slate-900 mb-3">
@@ -636,9 +583,7 @@ export default function ProjectDetailPage() {
                 )}
 
                 {transactions.length === 0 ? (
-                  <p className="text-slate-500 italic text-sm">
-                    Aucune transaction.
-                  </p>
+                  <p className="text-slate-500 italic text-sm">Aucune transaction.</p>
                 ) : (
                   <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm">
                     <table className="min-w-full text-xs md:text-sm">
@@ -657,22 +602,23 @@ export default function ProjectDetailPage() {
                       <tbody>
                         {transactions.map((t) => (
                           <tr key={t.id} className="border-t border-slate-100">
-                            <td className="px-3 py-2">{t.typeLabel}</td>
+                            <td className="px-3 py-2">{t.typeLabel || t.type}</td>
                             <td className="px-3 py-2">
-                              {Number(t.amount).toLocaleString("fr-FR")}
+                              {Number(t.amount || 0).toLocaleString("fr-FR")}
                             </td>
-                            <td className="px-3 py-2">{t.currency}</td>
-                            <td className="px-3 py-2">
-                              {t.paymentMethod || "—"}
-                            </td>
+                            <td className="px-3 py-2">{t.currency || "—"}</td>
+                            <td className="px-3 py-2">{t.paymentMethod || "—"}</td>
+
+                            {/* ✅ UTILISATION = supprime l’erreur eslint/ts */}
                             <td className="px-3 py-2">
                               {getTransactionAuthorLabel(t)}
                             </td>
-                            <td className="px-3 py-2">{t.statusLabel}</td>
+
+                            <td className="px-3 py-2">{t.statusLabel || t.status || "—"}</td>
                             <td className="px-3 py-2">
-                              {new Date(t.createdAt).toLocaleDateString(
-                                "fr-FR"
-                              )}
+                              {t.createdAt
+                                ? new Date(t.createdAt).toLocaleDateString("fr-FR")
+                                : "—"}
                             </td>
                           </tr>
                         ))}
@@ -696,9 +642,7 @@ export default function ProjectDetailPage() {
                     <input
                       placeholder="Titre *"
                       value={phaseForm.title}
-                      onChange={(e) =>
-                        setPhaseForm({ ...phaseForm, title: e.target.value })
-                      }
+                      onChange={(e) => setPhaseForm({ ...phaseForm, title: e.target.value })}
                       required
                       className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
@@ -707,10 +651,7 @@ export default function ProjectDetailPage() {
                       placeholder="Description"
                       value={phaseForm.description}
                       onChange={(e) =>
-                        setPhaseForm({
-                          ...phaseForm,
-                          description: e.target.value,
-                        })
+                        setPhaseForm({ ...phaseForm, description: e.target.value })
                       }
                       className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
@@ -719,10 +660,7 @@ export default function ProjectDetailPage() {
                       type="date"
                       value={phaseForm.startDate}
                       onChange={(e) =>
-                        setPhaseForm({
-                          ...phaseForm,
-                          startDate: e.target.value,
-                        })
+                        setPhaseForm({ ...phaseForm, startDate: e.target.value })
                       }
                       className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
@@ -731,22 +669,14 @@ export default function ProjectDetailPage() {
                       type="date"
                       value={phaseForm.endDate}
                       onChange={(e) =>
-                        setPhaseForm({
-                          ...phaseForm,
-                          endDate: e.target.value,
-                        })
+                        setPhaseForm({ ...phaseForm, endDate: e.target.value })
                       }
                       className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
 
                     <div className="md:col-span-2 flex justify-end gap-2">
                       {editPhaseId && (
-                        <Btn
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={resetPhaseForm}
-                        >
+                        <Btn type="button" variant="secondary" size="sm" onClick={resetPhaseForm}>
                           Annuler
                         </Btn>
                       )}
@@ -759,9 +689,7 @@ export default function ProjectDetailPage() {
                 )}
 
                 {phases.length === 0 ? (
-                  <p className="text-slate-500 italic text-sm">
-                    Aucune phase enregistrée.
-                  </p>
+                  <p className="text-slate-500 italic text-sm">Aucune phase enregistrée.</p>
                 ) : (
                   <div className="grid md:grid-cols-2 gap-5">
                     {phases.map((ph) => (
@@ -784,16 +712,12 @@ export default function ProjectDetailPage() {
                             <p className="text-[11px] text-slate-500 mt-1">
                               Début :
                               {ph.startDate
-                                ? new Date(ph.startDate).toLocaleDateString(
-                                    "fr-FR"
-                                  )
+                                ? new Date(ph.startDate).toLocaleDateString("fr-FR")
                                 : " —"}
                               {" • "}
                               Fin :
                               {ph.endDate
-                                ? new Date(ph.endDate).toLocaleDateString(
-                                    "fr-FR"
-                                  )
+                                ? new Date(ph.endDate).toLocaleDateString("fr-FR")
                                 : " —"}
                             </p>
                           </div>
@@ -808,12 +732,8 @@ export default function ProjectDetailPage() {
                                   setPhaseForm({
                                     title: ph.title,
                                     description: ph.description || "",
-                                    startDate: ph.startDate
-                                      ? ph.startDate.slice(0, 10)
-                                      : "",
-                                    endDate: ph.endDate
-                                      ? ph.endDate.slice(0, 10)
-                                      : "",
+                                    startDate: ph.startDate ? ph.startDate.slice(0, 10) : "",
+                                    endDate: ph.endDate ? ph.endDate.slice(0, 10) : "",
                                   });
                                 }}
                               >
@@ -824,8 +744,7 @@ export default function ProjectDetailPage() {
                                 variant="danger"
                                 size="xs"
                                 onClick={async () => {
-                                  if (!window.confirm("Supprimer cette phase ?"))
-                                    return;
+                                  if (!window.confirm("Supprimer cette phase ?")) return;
                                   try {
                                     await deleteProjectPhase(ph.id);
                                     await loadProject(project.id);
@@ -849,9 +768,7 @@ export default function ProjectDetailPage() {
             {/* ----------- RIGHT COLUMN — DOCUMENTS ----------- */}
             <div className="space-y-6">
               <section>
-                <h2 className="text-lg font-semibold text-slate-900 mb-3">
-                  📎 Documents
-                </h2>
+                <h2 className="text-lg font-semibold text-slate-900 mb-3">📎 Documents</h2>
 
                 {(isAdmin || clientCanAddDocs || agentCanAddDocs) && (
                   <form
@@ -862,7 +779,6 @@ export default function ProjectDetailPage() {
                       grid grid-cols-1 sm:grid-cols-2 gap-4
                     "
                   >
-                    {/* File input */}
                     <div className="sm:col-span-2">
                       <input
                         type="file"
@@ -879,14 +795,10 @@ export default function ProjectDetailPage() {
                       />
                     </div>
 
-                    {/* Select phase */}
                     <select
                       value={selectedPhaseId}
                       onChange={(e) => setSelectedPhaseId(e.target.value)}
-                      className="
-                        border border-slate-300 rounded-lg 
-                        px-3 py-2 text-xs w-full min-w-0
-                      "
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
                     >
                       <option value="">— Phase (optionnel)</option>
                       {phases.map((ph) => (
@@ -896,25 +808,17 @@ export default function ProjectDetailPage() {
                       ))}
                     </select>
 
-                    {/* Title */}
                     <input
                       placeholder="Titre (optionnel)"
                       value={docTitle}
                       onChange={(e) => setDocTitle(e.target.value)}
-                      className="
-                        border border-slate-300 rounded-lg 
-                        px-3 py-2 text-xs w-full min-w-0
-                      "
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
                     />
 
-                    {/* Kind */}
                     <select
                       value={docKind}
                       onChange={(e) => setDocKind(e.target.value)}
-                      className="
-                        border border-slate-300 rounded-lg 
-                        px-3 py-2 text-xs w-full min-w-0
-                      "
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
                     >
                       <option value="other">Autre</option>
                       <option value="contract">Contrat</option>
@@ -923,15 +827,11 @@ export default function ProjectDetailPage() {
                       <option value="photo">Photo</option>
                     </select>
 
-                    {/* Notes */}
                     <input
                       placeholder="Notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="
-                        border border-slate-300 rounded-lg 
-                        px-3 py-2 text-xs w-full min-w-0
-                      "
+                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
                     />
 
                     <div className="sm:col-span-2 flex justify-end">
@@ -942,21 +842,14 @@ export default function ProjectDetailPage() {
                   </form>
                 )}
 
-                {/* LISTE DOCUMENTS */}
                 {documents.length === 0 ? (
-                  <p className="text-slate-500 italic text-sm">
-                    Aucun document.
-                  </p>
+                  <p className="text-slate-500 italic text-sm">Aucun document.</p>
                 ) : (
                   <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
                     {documents.map((doc) => (
                       <div
                         key={doc.id}
-                        className="
-                          border border-slate-200 rounded-2xl 
-                          p-3.5 bg-white shadow-sm 
-                          flex flex-col min-w-0
-                        "
+                        className="border border-slate-200 rounded-2xl p-3.5 bg-white shadow-sm flex flex-col min-w-0"
                       >
                         <div className="space-y-1 min-w-0">
                           <p className="font-semibold text-sm text-slate-900 break-words">
@@ -978,9 +871,7 @@ export default function ProjectDetailPage() {
                           </p>
 
                           {doc.notes && (
-                            <p className="text-xs text-slate-700 break-words">
-                              {doc.notes}
-                            </p>
+                            <p className="text-xs text-slate-700 break-words">{doc.notes}</p>
                           )}
                         </div>
 
@@ -995,16 +886,11 @@ export default function ProjectDetailPage() {
                           </a>
 
                           {(isAdmin || clientCanModifyOrDelete) && (
-                            <Btn
-                              onClick={() => handleDeleteDocument(doc.id)}
-                              variant="danger"
-                              size="xs"
-                            >
+                            <Btn onClick={() => handleDeleteDocument(doc.id)} variant="danger" size="xs">
                               🗑️
                             </Btn>
                           )}
                         </div>
-
                       </div>
                     ))}
                   </div>

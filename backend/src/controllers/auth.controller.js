@@ -70,6 +70,8 @@ exports.register = async (req, res) => {
       phone: phone || null,
       country: country || null,
       role: 'client', // rôle par défaut cohérent avec ta structure
+      // countryId / regionId restent null pour rétro-compatibilité,
+      // et peuvent être backfill Mali/Bamako via migrations/seed si tu le fais.
     });
 
     return res.status(201).json({
@@ -128,7 +130,14 @@ exports.login = async (req, res) => {
 
     let token;
     try {
-      token = signAccess({ id: user.id, role: user.role });
+      // ✅ Ajout du scope géographique dans le token (utile côté client/front)
+      // ⚠️ La source de vérité reste la DB (auth.middleware prod-safe)
+      token = signAccess({
+        id: user.id,
+        role: user.role,
+        countryId: user.countryId ?? null,
+        regionId: user.regionId ?? null,
+      });
     } catch (jwtErr) {
       console.error('❌ Erreur signature JWT:', jwtErr.message);
       return res.status(500).json({ error: 'Configuration serveur invalide (JWT)' });
@@ -143,6 +152,8 @@ exports.login = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        countryId: user.countryId ?? null,
+        regionId: user.regionId ?? null,
       },
     });
   } catch (e) {
@@ -163,7 +174,17 @@ exports.me = async (req, res) => {
     }
 
     const user = await User.findByPk(userId, {
-      attributes: ['id', 'email', 'firstName', 'lastName', 'role', 'lastLogin', 'createdAt'],
+      attributes: [
+        'id',
+        'email',
+        'firstName',
+        'lastName',
+        'role',
+        'countryId',
+        'regionId',
+        'lastLogin',
+        'createdAt',
+      ],
     });
 
     if (!user) {

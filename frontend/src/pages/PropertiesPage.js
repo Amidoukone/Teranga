@@ -1,6 +1,7 @@
 // frontend/src/pages/PropertiesPage.js
 // ============================================================================
-// PropertiesPage — Version Premium 2025 (UX améliorée + Responsive + Pro)
+// PropertiesPage — Version Premium 2025
+// Client / Admin / Master / Multi-pays READY — ZERO régression
 // ============================================================================
 
 import { useEffect, useMemo, useState } from 'react';
@@ -10,23 +11,28 @@ import {
   deleteProperty,
 } from '../services/properties';
 import api from '../services/api';
-import { applyLabels, PROPERTY_TYPES, PROPERTY_STATUSES } from '../utils/labels';
+import {
+  applyLabels,
+  PROPERTY_TYPES,
+  PROPERTY_STATUSES,
+} from '../utils/labels';
 
-/* ============================================================================
-// 🔧 HELPERS FICHIERS & URL
-============================================================================ */
-
+// ============================================================================
+// 🌍 FILE_BASE — Standard Teranga (Render / Netlify / CDN / Multi-pays SAFE)
+// ============================================================================
 const FILE_BASE =
   (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
   (typeof window !== 'undefined' &&
   window.__TERANGA_API_BASE_URL
     ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
-    : 'http://localhost:5000');
+    : '');
 
 function toAbsUrl(pathOrUrl = '') {
   if (!pathOrUrl) return '';
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
-  const normalized = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+  const normalized = pathOrUrl.startsWith('/')
+    ? pathOrUrl
+    : `/${pathOrUrl}`;
   return `${FILE_BASE}${normalized}`.replace(/([^:]\/)\/+/g, '$1');
 }
 
@@ -34,12 +40,15 @@ function isPdf(path = '') {
   return /\.pdf($|\?)/i.test(path);
 }
 
-/* ============================================================================
+// ============================================================================
 // 🧩 PAGE PRINCIPALE
-============================================================================ */
-
+// ============================================================================
 export default function PropertiesPage() {
+  // --------------------------------------------------------------------------
+  // STATE
+  // --------------------------------------------------------------------------
   const [properties, setProperties] = useState([]);
+
   const [form, setForm] = useState({
     title: '',
     type: 'house',
@@ -50,25 +59,26 @@ export default function PropertiesPage() {
     roomCount: '',
     description: '',
   });
+
   const [files, setFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [editId, setEditId] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
 
-  // 🧭 État d'affichage du formulaire (persisté)
+  // Affichage formulaire persisté
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_properties_showForm');
     return saved === null ? true : saved === '1';
   });
 
-  // 🖼️ Lightbox : image agrandie + navigation
+  // Lightbox
   const [lightbox, setLightbox] = useState({
     open: false,
     images: [],
     index: 0,
   });
 
-  // 🔍 Filtres de recherche et tri
+  // Filtres
   const [filters, setFilters] = useState({
     q: '',
     type: '',
@@ -79,127 +89,139 @@ export default function PropertiesPage() {
     sort: '-createdAt',
   });
 
-  // ==========================================
-  // 🔹 Chargement initial
-  // ==========================================
+  // --------------------------------------------------------------------------
+  // INIT
+  // --------------------------------------------------------------------------
   useEffect(() => {
     load();
-    return () => previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('teranga_properties_showForm', showForm ? '1' : '0');
+    localStorage.setItem(
+      'teranga_properties_showForm',
+      showForm ? '1' : '0'
+    );
   }, [showForm]);
 
-  // Clavier pour lightbox (← / → / ESC)
+  // Lightbox keyboard
   useEffect(() => {
     if (!lightbox.open) return;
+
     function onKey(e) {
       if (e.key === 'Escape') closeLightbox();
       if (e.key === 'ArrowRight') nextImage();
       if (e.key === 'ArrowLeft') prevImage();
     }
+
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lightbox.open, lightbox.index, lightbox.images]);
 
+  // --------------------------------------------------------------------------
+  // LOAD PROPERTIES
+  // --------------------------------------------------------------------------
   async function load() {
     try {
       const props = await getProperties();
-      const enriched = props.map((p) => ({
-        ...p,
-        ...(p.typeLabel ? {} : applyLabels(p)),
-      }));
+      const enriched = (props || []).map((p) =>
+        p.typeLabel ? p : applyLabels(p)
+      );
       setProperties(enriched);
     } catch (e) {
-      console.error('❌ Erreur chargement propriétés:', e);
+      console.error('❌ load properties:', e);
       alert('Erreur lors du chargement des biens.');
     }
   }
 
-  // ==========================================
-  // 🔹 Gestion fichiers & prévisualisation
-  // ==========================================
+  // --------------------------------------------------------------------------
+  // FILES
+  // --------------------------------------------------------------------------
   function handleFileChange(e) {
-    const selectedFiles = Array.from(e.target.files || []);
-    setFiles(selectedFiles);
+    const selected = Array.from(e.target.files || []);
+    setFiles(selected);
 
-    previewUrls.forEach((url) => URL.revokeObjectURL(url));
-    const previews = selectedFiles.map((file) => URL.createObjectURL(file));
+    previewUrls.forEach((u) => URL.revokeObjectURL(u));
+    const previews = selected.map((f) => URL.createObjectURL(f));
     setPreviewUrls(previews);
   }
 
-  // ==========================================
-  // 🔹 Création
-  // ==========================================
+  // --------------------------------------------------------------------------
+  // CREATE
+  // --------------------------------------------------------------------------
   async function handleSubmit(e) {
     if (e?.preventDefault) e.preventDefault();
 
-    const formToSend = {
+    const payload = {
       ...form,
-      surfaceArea: form.surfaceArea === '' ? null : parseFloat(form.surfaceArea),
-      roomCount: form.roomCount === '' ? null : parseInt(form.roomCount, 10),
+      surfaceArea:
+        form.surfaceArea === '' ? null : Number(form.surfaceArea),
+      roomCount:
+        form.roomCount === '' ? null : Number(form.roomCount),
     };
 
     try {
-      await createProperty(formToSend, files);
+      await createProperty(payload, files);
       alert('✅ Bien créé avec succès');
       resetForm();
       load();
     } catch (e) {
-      console.error('❌ Erreur création bien:', e);
+      console.error('❌ create property:', e);
       alert('Erreur lors de la création du bien.');
     }
   }
 
-  // ==========================================
-  // 🔹 Mise à jour
-  // ==========================================
+  // --------------------------------------------------------------------------
+  // UPDATE
+  // --------------------------------------------------------------------------
   async function handleUpdate(id) {
     try {
       const formData = new FormData();
-      Object.entries(form).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) formData.append(key, value);
+      Object.entries(form).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) formData.append(k, v);
       });
       files.forEach((f) => formData.append('files', f));
+
       await api.put(`/properties/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      alert('✅ Bien mis à jour avec succès');
+
+      alert('✅ Bien mis à jour');
       resetForm();
       load();
     } catch (e) {
-      console.error('❌ Erreur update bien:', e);
-      alert('Erreur lors de la mise à jour du bien.');
+      console.error('❌ update property:', e);
+      alert('Erreur lors de la mise à jour.');
     }
   }
 
-  // ==========================================
-  // 🔹 Suppression
-  // ==========================================
+  // --------------------------------------------------------------------------
+  // DELETE (≤ 1h)
+  // --------------------------------------------------------------------------
   async function handleDelete(id, createdAt) {
-    const oneHourAgo = Date.now() - 3600 * 1000;
     const created = new Date(createdAt).getTime();
-
-    if (created < oneHourAgo) {
-      alert("❌ Suppression non autorisée (plus d'une heure écoulée)");
+    if (Date.now() - created > 3600 * 1000) {
+      alert("❌ Suppression non autorisée (délai dépassé)");
       return;
     }
-    if (!window.confirm('Confirmer la suppression de ce bien ?')) return;
+
+    if (!window.confirm('Confirmer la suppression ?')) return;
+
     try {
       await deleteProperty(id);
       load();
     } catch (e) {
-      console.error('❌ Erreur suppression bien:', e);
-      alert('Erreur lors de la suppression du bien.');
+      console.error('❌ delete property:', e);
+      alert('Erreur lors de la suppression.');
     }
   }
 
-  // ==========================================
-  // 🔹 Réinitialisation du formulaire
-  // ==========================================
+  // --------------------------------------------------------------------------
+  // RESET
+  // --------------------------------------------------------------------------
   function resetForm() {
     setForm({
       title: '',
@@ -211,20 +233,24 @@ export default function PropertiesPage() {
       roomCount: '',
       description: '',
     });
-    previewUrls.forEach((url) => URL.revokeObjectURL(url));
+
+    previewUrls.forEach((u) => URL.revokeObjectURL(u));
     setFiles([]);
     setPreviewUrls([]);
     setEditId(null);
     setShowPreview(false);
   }
 
-  // ==========================================
-  // 🔹 Lightbox controls
-  // ==========================================
-  function openLightbox(imagesAbsUrls = [], startIndex = 0) {
-    if (!Array.isArray(imagesAbsUrls) || imagesAbsUrls.length === 0) return;
-    const idx = Math.min(Math.max(0, startIndex), imagesAbsUrls.length - 1);
-    setLightbox({ open: true, images: imagesAbsUrls, index: idx });
+  // --------------------------------------------------------------------------
+  // LIGHTBOX
+  // --------------------------------------------------------------------------
+  function openLightbox(images = [], index = 0) {
+    if (!images.length) return;
+    setLightbox({
+      open: true,
+      images,
+      index: Math.min(Math.max(0, index), images.length - 1),
+    });
   }
 
   function closeLightbox() {
@@ -232,29 +258,28 @@ export default function PropertiesPage() {
   }
 
   function nextImage() {
-    setLightbox((lb) => {
-      if (!lb.open || lb.images.length === 0) return lb;
-      const ni = (lb.index + 1) % lb.images.length;
-      return { ...lb, index: ni };
-    });
+    setLightbox((lb) => ({
+      ...lb,
+      index: (lb.index + 1) % lb.images.length,
+    }));
   }
 
   function prevImage() {
-    setLightbox((lb) => {
-      if (!lb.open || lb.images.length === 0) return lb;
-      const pi = (lb.index - 1 + lb.images.length) % lb.images.length;
-      return { ...lb, index: pi };
-    });
+    setLightbox((lb) => ({
+      ...lb,
+      index:
+        (lb.index - 1 + lb.images.length) % lb.images.length,
+    }));
   }
 
-  // ==========================================
-  // 🔹 Filtres et tri côté client
-  // ==========================================
+  // --------------------------------------------------------------------------
+  // FILTERING & SORTING
+  // --------------------------------------------------------------------------
   const filtered = useMemo(() => {
     let arr = [...properties];
 
     if (filters.q.trim()) {
-      const q = filters.q.trim().toLowerCase();
+      const q = filters.q.toLowerCase();
       arr = arr.filter((p) =>
         [
           p.title,
@@ -273,24 +298,34 @@ export default function PropertiesPage() {
     }
 
     if (filters.type) arr = arr.filter((p) => p.type === filters.type);
-    if (filters.status) arr = arr.filter((p) => p.status === filters.status);
+    if (filters.status)
+      arr = arr.filter((p) => p.status === filters.status);
 
     if (filters.city.trim()) {
-      const c = filters.city.trim().toLowerCase();
-      arr = arr.filter((p) => (p.city || '').toLowerCase().includes(c));
+      const c = filters.city.toLowerCase();
+      arr = arr.filter((p) =>
+        (p.city || '').toLowerCase().includes(c)
+      );
     }
 
-    const minS = filters.minSurface ? parseFloat(filters.minSurface) : null;
-    const maxS = filters.maxSurface ? parseFloat(filters.maxSurface) : null;
-    if (minS !== null) arr = arr.filter((p) => (p.surfaceArea || 0) >= minS);
-    if (maxS !== null) arr = arr.filter((p) => (p.surfaceArea || 0) <= maxS);
+    const minS = filters.minSurface
+      ? Number(filters.minSurface)
+      : null;
+    const maxS = filters.maxSurface
+      ? Number(filters.maxSurface)
+      : null;
+
+    if (minS !== null)
+      arr = arr.filter((p) => (p.surfaceArea || 0) >= minS);
+    if (maxS !== null)
+      arr = arr.filter((p) => (p.surfaceArea || 0) <= maxS);
 
     const by = filters.sort || '-createdAt';
     arr.sort((a, b) => {
       const sign = by.startsWith('-') ? -1 : 1;
       const key = by.replace(/^-/, '');
-      let va, vb;
 
+      let va, vb;
       if (key === 'createdAt') {
         va = new Date(a.createdAt).getTime();
         vb = new Date(b.createdAt).getTime();
@@ -298,8 +333,8 @@ export default function PropertiesPage() {
         va = (a.title || '').toLowerCase();
         vb = (b.title || '').toLowerCase();
       } else if (key === 'surface') {
-        va = parseFloat(a.surfaceArea || 0);
-        vb = parseFloat(b.surfaceArea || 0);
+        va = Number(a.surfaceArea || 0);
+        vb = Number(b.surfaceArea || 0);
       } else {
         va = a[key];
         vb = b[key];
@@ -315,25 +350,27 @@ export default function PropertiesPage() {
 
   const now = new Date();
 
-  const typeOptions = useMemo(() => {
-    const set = new Set(properties.map((p) => p.type).filter(Boolean));
-    return Array.from(set);
-  }, [properties]);
+  const typeOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(properties.map((p) => p.type).filter(Boolean))
+      ),
+    [properties]
+  );
 
-  const cityOptions = useMemo(() => {
-    const set = new Set(
-      properties.map((p) => (p.city || '').trim()).filter(Boolean)
-    );
-    return Array.from(set);
-  }, [properties]);
+  const cityOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          properties.map((p) => (p.city || '').trim()).filter(Boolean)
+        )
+      ),
+    [properties]
+  );
 
-  // ==========================================
-  // 🔹 UI
-  // ==========================================
-  return (
+    return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 lg:py-10">
       <div className="max-w-6xl mx-auto bg-white/95 shadow-2xl rounded-3xl border border-gray-100 p-5 sm:p-8 lg:p-10 space-y-8 relative">
-
         {/* 🧭 En-tête */}
         <Header
           showForm={showForm}
@@ -998,10 +1035,7 @@ function PropertyList({
                             src={absUrl}
                             alt={`photo-${i}`}
                             onClick={() =>
-                              openLightbox(
-                                imageUrls,
-                                Math.max(0, startIndex)
-                              )
+                              openLightbox(imageUrls, Math.max(0, startIndex))
                             }
                             className="
                               w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border border-gray-200
@@ -1039,8 +1073,7 @@ function PropertyList({
                   )}
 
                   <p className="text-[0.7rem] text-gray-400 mt-2">
-                    Créé le{' '}
-                    {new Date(p.createdAt).toLocaleString('fr-FR')}
+                    Créé le {new Date(p.createdAt).toLocaleString('fr-FR')}
                   </p>
                 </div>
 

@@ -1,29 +1,52 @@
 // backend/src/middleware/roles.middleware.js
+'use strict';
 
 /**
  * Middleware d'autorisations par rôles pour Teranga.
  *
  * Hypothèses :
  * - Le middleware d'authentification (auth.middleware) a déjà validé le JWT
- *   et placé l'objet utilisateur dans req.user = { id, role, ... }.
+ *   et placé l'objet utilisateur dans req.user = { id, role, countryId?, regionId? }.
  *
- * Exemples d'usage :
- *   const auth = require('./auth.middleware');
- *   const { requireRoles, requireAdmin, requireSelfOrRoles } = require('./roles.middleware');
+ * IMPORTANT :
+ * - Les rôles techniques restent STRICTEMENT :
+ *   'client' | 'agent' | 'admin'
+ * - Le concept de "master" est un STATUT LOGIQUE :
+ *   admin + scope géographique (countryId / regionId)
+ *   → il n'est PAS un rôle.
+ *   → il n'est PAS géré ici (il est géré via les filtres/ACL côté services/controllers).
  *
- *   // Route réservée aux admins :
- *   router.post('/agents', auth, requireAdmin, ctrl.createAgent);
- *
- *   // Route accessible aux agents et admins :
- *   router.get('/secure', auth, requireRoles('agent', 'admin'), ctrl.secureEndpoint);
- *
- *   // Route accessible au propriétaire de la ressource OU à un admin :
- *   // (ex : /users/:id, paramKey = 'id')
- *   router.get('/users/:id', auth, requireSelfOrRoles('id', 'admin'), ctrl.getUserProfile);
+ * ✅ Objectif : garder 100% rétro-compatible, sans régression.
+ * ✅ Ajout : helper "isGlobalAdmin" exposé (optionnel), utile dans l'app.
  */
 
 const VALID_ROLES = new Set(['client', 'agent', 'admin']);
 
+/* =========================================================
+   🔧 Helpers (non cassants)
+========================================================= */
+function getUserGeoScope(reqOrUser) {
+  const u = reqOrUser?.user ? reqOrUser.user : reqOrUser;
+  return {
+    countryId: u?.countryId ?? null,
+    regionId: u?.regionId ?? null,
+  };
+}
+
+/**
+ * Admin global = admin sans scope (countryId=null ET regionId=null)
+ * Master = admin avec scope (countryId!=null OU regionId!=null)
+ */
+function isGlobalAdmin(reqOrUser) {
+  const u = reqOrUser?.user ? reqOrUser.user : reqOrUser;
+  if (u?.role !== 'admin') return false;
+  const { countryId, regionId } = getUserGeoScope(u);
+  return countryId == null && regionId == null;
+}
+
+/* =========================================================
+   ✅ requireRoles
+========================================================= */
 /**
  * Vérifie que l'utilisateur connecté possède au moins un des rôles autorisés.
  * @param  {...'client'|'agent'|'admin'} allowedRoles
@@ -36,13 +59,14 @@ function requireRoles(...allowedRoles) {
     // Erreur de configuration côté code (dev)
     throw new Error(
       'roles.middleware: requireRoles() appelé sans rôle valide. ' +
-      'Utilise: requireRoles("client"|"agent"|"admin", ...)'
+        'Utilise: requireRoles("client"|"agent"|"admin", ...)'
     );
   }
 
   return (req, res, next) => {
     try {
       const userRole = req.user?.role;
+
       if (!userRole) {
         return res.status(401).json({ error: 'Non authentifié' });
       }
@@ -58,9 +82,16 @@ function requireRoles(...allowedRoles) {
   };
 }
 
+/* =========================================================
+   ✅ requireSelfOrRoles
+========================================================= */
 /**
- * Autorise si l'utilisateur est "propriétaire" (paramètre de route) OU possède
- * un rôle parmi ceux autorisés (ex: admin). Utile pour /users/:id, /properties/:id, etc.
+ * Autorise si l'utilisateur est "propriétaire" (paramètre de route)
+ * OU possède un rôle parmi ceux autorisés (ex: admin).
+ *
+ * Exemple :
+ *   router.get('/users/:id', auth, requireSelfOrRoles('id', 'admin'), ctrl.getUserProfile);
+ *
  * @param {string} paramKey - Nom du paramètre de route (ex: 'id')
  * @param  {...'client'|'agent'|'admin'} allowedRoles
  * @returns Express middleware
@@ -71,13 +102,14 @@ function requireSelfOrRoles(paramKey = 'id', ...allowedRoles) {
   if (normalized.length === 0) {
     throw new Error(
       'roles.middleware: requireSelfOrRoles() appelé sans rôle valide. ' +
-      'Utilise: requireSelfOrRoles("id", "admin") par ex.'
+        'Utilise: requireSelfOrRoles("id", "admin") par ex.'
     );
   }
 
   return (req, res, next) => {
     try {
       const user = req.user;
+
       if (!user?.role) {
         return res.status(401).json({ error: 'Non authentifié' });
       }
@@ -94,7 +126,9 @@ function requireSelfOrRoles(paramKey = 'id', ...allowedRoles) {
   };
 }
 
-// Raccourcis pratiques
+/* =========================================================
+   ✅ Raccourcis pratiques (inchangés)
+========================================================= */
 const requireAdmin = requireRoles('admin');
 const requireAgent = requireRoles('agent');
 const requireClient = requireRoles('client');
@@ -105,4 +139,8 @@ module.exports = {
   requireAdmin,
   requireAgent,
   requireClient,
+
+  // Helpers optionnels (non utilisés si tu ne les importes pas)
+  getUserGeoScope,
+  isGlobalAdmin,
 };

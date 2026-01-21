@@ -12,11 +12,20 @@ const {
   formatCurrency,
 } = require('../utils/labels');
 
+// ✅ Geo-scope (master = admin scoped)
+const geo = require('../utils/geoScope');
+const applyGeoScope = geo.applyGeoScope;
+const getUserGeoScope = geo.getUserGeoScope;
+const isGlobalAdmin =
+  geo.isGlobalAdmin ||
+  ((u) => u?.role === 'admin' && !(u?.countryId || u?.regionId));
+
 /* ============================================================
    🔧 Helpers utilitaires
 ============================================================ */
 function toSafeInt(v) {
-  const n = parseInt(v, 10);
+  if (v === null || v === undefined || v === '') return null;
+  const n = parseInt(String(v), 10);
   return Number.isNaN(n) ? null : n;
 }
 
@@ -26,12 +35,16 @@ function toTrimOrNull(v) {
 }
 
 function toNullableNumber(v) {
+  if (v === null || v === undefined || v === '') return null;
   const n = parseFloat(v);
   return Number.isNaN(n) ? null : n;
 }
 
 function getPagination(req, defLimit = 100, maxLimit = 500) {
-  const limit = Math.min(Math.max(parseInt(req.query?.limit, 10) || defLimit, 1), maxLimit);
+  const limit = Math.min(
+    Math.max(parseInt(req.query?.limit, 10) || defLimit, 1),
+    maxLimit
+  );
   const page = Math.max(parseInt(req.query?.page, 10) || 1, 1);
   const offset = (page - 1) * limit;
   return { limit, offset, page };
@@ -52,6 +65,74 @@ function getOrderId(req) {
 }
 
 /* ============================================================
+   🌍 Scope helpers (Order = source de vérité)
+============================================================ */
+function applyOrderScopeWhere(where, req) {
+  // Client: uniquement ses commandes
+  if (req.user?.role === 'client') {
+    return { ...where, userId: req.user.id };
+  }
+
+  // Admin global: pas de filtre géographique
+  if (isGlobalAdmin(req.user)) return where;
+
+  // Admin scoped (master) / agent: filtrage geo
+  return applyGeoScope ? applyGeoScope(where, req.user) : where;
+}
+
+/**
+ * Vérifie qu'une commande est accessible dans le scope courant.
+ * - Client: order.userId === self
+ * - Admin global: ok
+ * - Master/admin scoped/agent: order.countryId/regionId doit matcher le scope user
+ */
+function canAccessOrderByScope(req, order) {
+  if (!req.user || !order) return false;
+
+  if (req.user.role === 'client') {
+    return order.userId === req.user.id;
+  }
+
+  if (isGlobalAdmin(req.user)) return true;
+
+  const scope = getUserGeoScope ? getUserGeoScope(req.user) : { countryId: null, regionId: null };
+
+  // Si user scoped par region => order.regionId doit matcher
+  if (scope.regionId) {
+    return String(order.regionId ?? order.region_id) === String(scope.regionId);
+  }
+  // Sinon scoped par country => order.countryId doit matcher
+  if (scope.countryId) {
+    return String(order.countryId ?? order.country_id) === String(scope.countryId);
+  }
+
+  // admin sans scope => global (mais normalement isGlobalAdmin déjà géré)
+  return true;
+}
+
+/**
+ * Vérifie qu'un produit est accessible dans le scope (si besoin).
+ * On reste "safe": si user scoped et que le produit a countryId/regionId,
+ * il doit matcher.
+ */
+function canAccessProductByScope(req, product) {
+  if (!req.user || !product) return false;
+
+  if (req.user.role === 'client') return true;
+  if (isGlobalAdmin(req.user)) return true;
+
+  const scope = getUserGeoScope ? getUserGeoScope(req.user) : { countryId: null, regionId: null };
+
+  const pRegion = product.regionId ?? product.region_id ?? null;
+  const pCountry = product.countryId ?? product.country_id ?? null;
+
+  if (scope.regionId) return String(pRegion) === String(scope.regionId);
+  if (scope.countryId) return String(pCountry) === String(scope.countryId);
+
+  return true;
+}
+
+/* ============================================================
    🏷️ Labels & aliases
 ============================================================ */
 function withItemLabels(item) {
@@ -69,7 +150,7 @@ function withItemLabels(item) {
 
 function withOrderLabels(order) {
   if (!order) return null;
-  const o = order.toJSON ? order.toJSON() : order;
+  const o = order.toJSON ? o.toJSON() : order;
 
   const out = {
     ...o,
@@ -156,9 +237,20 @@ exports.create = async (req, res) => {
     const orderId = getOrderId(req);
     if (!orderId) return res.status(400).json({ error: 'orderId requis' });
 
-    const order = await Order.findByPk(orderId);
+    // ✅ Charger commande et appliquer scope
+    const order = await Order.findOne({
+      where: applyOrderScopeWhere({ id: orderId }, req),
+    });
     if (!order) return res.status(404).json({ error: 'Commande introuvable' });
-    if (!canWriteOnOrder(req.user, order)) return res.status(403).json({ error: 'Accès interdit' });
+
+    // ✅ Vérif scope stricte (admin scoped/master/agent)
+    if (!canAccessOrderByScope(req, order)) {
+      return res.status(403).json({ error: 'Commande hors scope (accès interdit)' });
+    }
+
+    if (!canWriteOnOrder(req.user, order)) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
 
     const { productId, name, sku, unitPrice, quantity, status = 'created' } = req.body || {};
 
@@ -168,6 +260,14 @@ exports.create = async (req, res) => {
     if (productId) {
       pid = toSafeInt(productId);
       product = pid ? await Product.findByPk(pid) : null;
+
+      // ✅ Si user scoped et produit trouvé => vérifier scope produit
+      if (product && !canAccessProductByScope(req, product)) {
+        return res.status(403).json({ error: 'Produit hors scope (accès interdit)' });
+      }
+
+      // ✅ Si user scoped et pas de produit => on laisse passer (legacy),
+      // mais dans ce cas ce sera un item "manuel" sans contrôle stock.
     }
 
     const qty = toSafeInt(quantity) ?? 1;
@@ -216,7 +316,7 @@ exports.create = async (req, res) => {
       ],
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       item: withItemLabels(created),
       order: withOrderLabels(orderWithLabels || updatedOrder),
     });
@@ -226,10 +326,9 @@ exports.create = async (req, res) => {
     if (msg.toLowerCase().includes('stock insuffisant')) {
       return res.status(400).json({ error: msg });
     }
-    res.status(500).json({ error: "Erreur lors de l'ajout de l'article à la commande." });
+    return res.status(500).json({ error: "Erreur lors de l'ajout de l'article à la commande." });
   }
 };
-
 /* ============================================================
    2️⃣ LIST — Items d’une commande
 ============================================================ */
@@ -238,33 +337,42 @@ exports.list = async (req, res) => {
     const orderId = getOrderId(req);
     if (!orderId) return res.status(400).json({ error: 'orderId requis' });
 
-    const order = await Order.findByPk(orderId);
+    const order = await Order.findOne({
+      where: applyOrderScopeWhere({ id: orderId }, req),
+    });
     if (!order) return res.status(404).json({ error: 'Commande introuvable' });
-    if (!canReadOnOrder(req.user, order)) return res.status(403).json({ error: 'Accès interdit' });
+
+    if (!canAccessOrderByScope(req, order)) {
+      return res.status(403).json({ error: 'Commande hors scope (accès interdit)' });
+    }
+
+    if (!canReadOnOrder(req.user, order)) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
 
     const { limit, offset, page } = getPagination(req);
 
     const { rows, count } = await OrderItem.findAndCountAll({
-      where: { orderId },
+      where: { orderId: order.id },
       include: [{ model: Product, as: 'product' }],
       order: [['createdAt', 'DESC']],
       limit,
       offset,
     });
 
-    res.json({
+    return res.json({
       items: rows.map(withItemLabels),
       pagination: { page, limit, count },
     });
   } catch (e) {
     console.error('❌ list orderItems:', e);
-    res.status(500).json({ error: 'Erreur lors de la récupération des articles.' });
+    return res.status(500).json({ error: 'Erreur lors de la récupération des articles.' });
   }
 };
 
 /* ============================================================
    3️⃣ UPDATE — Modification d’un article
-   (⚠️ On laisse le stock tel quel pour éviter d’ajouter trop de complexité)
+   (⚠️ Le stock n’est pas ajusté ici pour éviter toute régression)
 ============================================================ */
 exports.update = async (req, res) => {
   try {
@@ -274,16 +382,27 @@ exports.update = async (req, res) => {
     const item = await OrderItem.findByPk(id);
     if (!item) return res.status(404).json({ error: 'Article introuvable' });
 
-    const order = await Order.findByPk(item.orderId);
+    const order = await Order.findOne({
+      where: applyOrderScopeWhere({ id: item.orderId }, req),
+    });
     if (!order) return res.status(404).json({ error: 'Commande introuvable' });
-    if (!canWriteOnOrder(req.user, order)) return res.status(403).json({ error: 'Accès interdit' });
+
+    if (!canAccessOrderByScope(req, order)) {
+      return res.status(403).json({ error: 'Commande hors scope (accès interdit)' });
+    }
+
+    if (!canWriteOnOrder(req.user, order)) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
 
     const { name, sku, unitPrice, quantity, status } = req.body || {};
 
     if (name !== undefined) item.name = toTrimOrNull(name) || item.name;
     if (sku !== undefined) item.sku = toTrimOrNull(sku);
-    if (unitPrice !== undefined) item.unitPrice = toNullableNumber(unitPrice) ?? item.unitPrice;
-    if (quantity !== undefined) item.quantity = toSafeInt(quantity) ?? item.quantity;
+    if (unitPrice !== undefined)
+      item.unitPrice = toNullableNumber(unitPrice) ?? item.unitPrice;
+    if (quantity !== undefined)
+      item.quantity = toSafeInt(quantity) ?? item.quantity;
     if (status !== undefined) item.status = String(status).trim();
 
     await item.save();
@@ -302,20 +421,19 @@ exports.update = async (req, res) => {
       ],
     });
 
-    res.json({
+    return res.json({
       item: withItemLabels(updated),
       order: withOrderLabels(orderWithLabels),
     });
   } catch (e) {
     console.error('❌ update orderItem:', e);
-    res.status(500).json({ error: "Erreur lors de la mise à jour de l'article." });
+    return res.status(500).json({ error: "Erreur lors de la mise à jour de l'article." });
   }
 };
 
 /* ============================================================
    4️⃣ DELETE — Suppression d’un article
-   (ici on ne recrédite pas le stock pour rester simple/cohérent
-    avec ton besoin initial : décrément à la commande)
+   (⚠️ On ne recrédite PAS le stock — logique existante conservée)
 ============================================================ */
 exports.remove = async (req, res) => {
   try {
@@ -325,12 +443,16 @@ exports.remove = async (req, res) => {
     const item = await OrderItem.findByPk(id);
     if (!item) return res.status(404).json({ error: 'Article introuvable' });
 
-    const order = await Order.findByPk(item.orderId, {
+    const order = await Order.findOne({
+      where: applyOrderScopeWhere({ id: item.orderId }, req),
       include: [{ model: User, as: 'user', attributes: ['id', 'email'] }],
     });
     if (!order) return res.status(404).json({ error: 'Commande introuvable' });
 
-    // Permissions
+    if (!canAccessOrderByScope(req, order)) {
+      return res.status(403).json({ error: 'Commande hors scope (accès interdit)' });
+    }
+
     const isClientAllowed =
       req.user.role === 'client' &&
       order.userId === req.user.id &&
@@ -349,12 +471,12 @@ exports.remove = async (req, res) => {
       include: [{ model: OrderItem, as: 'items' }],
     });
 
-    res.json({
+    return res.json({
       message: 'Article supprimé avec succès.',
       order: withOrderLabels(orderWithLabels),
     });
   } catch (e) {
     console.error('❌ remove orderItem:', e);
-    res.status(500).json({ error: "Erreur lors de la suppression de l'article." });
+    return res.status(500).json({ error: "Erreur lors de la suppression de l'article." });
   }
 };

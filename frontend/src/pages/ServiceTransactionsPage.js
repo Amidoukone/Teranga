@@ -6,16 +6,20 @@ import { getTransactions, createTransaction } from "../services/transactions";
 import api from "../services/api";
 import { applyLabels } from "../utils/labels";
 
-/* ============================================================================    
-   🌍 FILE_BASE + normalizePath + toAbsUrl — PRODUCTION READY
+/* ============================================================================
+   🌍 FILE_BASE + normalizePath + toAbsUrl — PRODUCTION READY (SSR safe)
 ============================================================================ */
 const RAW_API =
-  window.__TERANGA_API_BASE_URL ||
+  (typeof window !== "undefined" &&
+    (window.__TERANGA_API_BASE_URL || process.env.REACT_APP_API_BASE_URL)) ||
   process.env.REACT_APP_API_BASE_URL ||
   "";
 
 export const FILE_BASE =
-  window.__TERANGA_FILE_BASE_URL ||
+  (typeof window !== "undefined" &&
+    (window.__TERANGA_FILE_BASE_URL ||
+      RAW_API.replace(/\/api\/?$/, "") ||
+      "")) ||
   RAW_API.replace(/\/api\/?$/, "") ||
   "";
 
@@ -23,7 +27,6 @@ export const FILE_BASE =
 function normalizePath(path = "") {
   if (!path) return "";
   const clean = String(path).replace(/\\/g, "/").trim();
-
   if (/^https?:\/\//i.test(clean)) return clean;
   const fixed = clean.startsWith("/") ? clean : `/${clean}`;
   return fixed.replace(/\/{2,}/g, "/");
@@ -34,11 +37,74 @@ function toAbsUrl(path = "") {
   const norm = normalizePath(path);
   if (!norm) return "";
   if (/^https?:\/\//i.test(norm)) return norm;
-
   return FILE_BASE.replace(/\/$/, "") + "/" + norm.replace(/^\//, "");
 }
 
-/* ============================================================================    
+/* ============================================================================
+   🎨 STYLE INPUTS (remplace "form-input" cassé + évite window.formInputStyle)
+============================================================================ */
+const FORM_INPUT =
+  "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white " +
+  "focus:outline-none focus:ring-2 focus:ring-blue-600 transition";
+
+/* ============================================================================
+   🔗 Proof resolver (ImageKit + legacy)
+   - backend peut renvoyer: proofFile.url, proofFile.path, proofFile.filePath
+   - ou proofFile string, ou proofFile = { url, fileId, ... }
+============================================================================ */
+function getProofHrefFromTransaction(t) {
+  const pf = t?.proofFile;
+
+  // 1) Si backend renvoie directement une string
+  if (typeof pf === "string") return toAbsUrl(pf);
+
+  // 2) ImageKit: url directe (absolue)
+  if (pf?.url) return toAbsUrl(pf.url);
+
+  // 3) Legacy: path / filePath
+  if (pf?.path) return toAbsUrl(pf.path);
+  if (pf?.filePath) return toAbsUrl(pf.filePath);
+
+  // 4) Certains backends: { file: { path } }
+  if (pf?.file?.path) return toAbsUrl(pf.file.path);
+
+  return "";
+}
+
+/* ============================================================================
+   🧾 Payload builder (FormData si fichier)
+   - évite régressions: createTransaction(payload) support JSON sans fichier
+   - et support multipart si proofFile présent (upload.any() côté backend)
+============================================================================ */
+function buildCreateTransactionPayload(payload) {
+  const hasFile = payload?.proofFile instanceof File;
+
+  if (!hasFile) {
+    // JSON simple (compatible existant)
+    const clean = { ...payload };
+    if (!clean.proofFile) delete clean.proofFile;
+    return clean;
+  }
+
+  // FormData (robuste prod)
+  const fd = new FormData();
+
+  Object.entries(payload || {}).forEach(([k, v]) => {
+    if (v === undefined || v === null || v === "") return;
+
+    if (k === "proofFile") {
+      // ✅ backend tolère plusieurs noms, mais on envoie "proofFile"
+      fd.append("proofFile", v);
+      return;
+    }
+
+    fd.append(k, String(v));
+  });
+
+  return fd;
+}
+
+/* ============================================================================
    📄 PAGE : ServiceTransactionsPage — VERSION PREMIUM STYLE A 2025
 ============================================================================ */
 export default function ServiceTransactionsPage() {
@@ -55,33 +121,41 @@ export default function ServiceTransactionsPage() {
   const [form, setForm] = useState({
     type: "expense",
     amount: "",
+    // ✅ multi-pays : laisse backend normaliser (fallback XOF)
+    currency: "XOF",
     description: "",
     taskId: "",
     proofFile: null,
   });
 
-  /* ============================================================================    
+  /* ============================================================================
      🔐 Auth headers
   ============================================================================ */
   const authHeaders = useMemo(() => {
     const token =
-      localStorage.getItem("teranga_token") ||
-      localStorage.getItem("token");
+      (typeof window !== "undefined" &&
+        (localStorage.getItem("teranga_token") ||
+          localStorage.getItem("token"))) ||
+      null;
 
     return token ? { Authorization: `Bearer ${token}` } : {};
   }, []);
 
-  /* ============================================================================    
-     📥 Charger transactions
+  /* ============================================================================
+     📥 Charger transactions (robuste: array ou {transactions})
   ============================================================================ */
   const fetchTransactions = useCallback(async () => {
     try {
       const data = await getTransactions({ serviceId: id });
 
-      const enriched = (data || []).map((t) =>
-        t.statusLabel || t.typeLabel || t.currencyLabel
-          ? t
-          : applyLabels(t)
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.transactions)
+        ? data.transactions
+        : [];
+
+      const enriched = (list || []).map((t) =>
+        t?.statusLabel || t?.typeLabel || t?.currencyLabel ? t : applyLabels(t)
       );
 
       setTransactions(enriched);
@@ -91,7 +165,7 @@ export default function ServiceTransactionsPage() {
     }
   }, [id]);
 
-  /* ============================================================================    
+  /* ============================================================================
      📥 Charger tâches
   ============================================================================ */
   const fetchTasks = useCallback(async () => {
@@ -99,14 +173,14 @@ export default function ServiceTransactionsPage() {
       const { data } = await api.get(`/tasks/service/${id}`, {
         headers: authHeaders,
       });
-      setTasks(data.tasks || []);
+      setTasks(data?.tasks || []);
     } catch (err) {
       console.error("❌ Erreur fetchTasks:", err);
       setTasks([]);
     }
   }, [id, authHeaders]);
 
-  /* ============================================================================    
+  /* ============================================================================
      🚀 Initialisation
   ============================================================================ */
   useEffect(() => {
@@ -122,9 +196,12 @@ export default function ServiceTransactionsPage() {
         await Promise.all([fetchTransactions(), fetchTasks()]);
       } catch (err) {
         console.error("❌ Erreur init:", err);
-        localStorage.removeItem("teranga_token");
-        localStorage.removeItem("token");
-        window.location.href = "/login";
+
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("teranga_token");
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -136,8 +213,11 @@ export default function ServiceTransactionsPage() {
     };
   }, [fetchTransactions, fetchTasks]);
 
-  /* ============================================================================    
-     ➕ Création transaction
+  /* ============================================================================
+     ➕ Création transaction (admin/agent/master)
+     - ✅ anti double submit
+     - ✅ payload FormData si fichier
+     - ✅ currency inclus (multi-pays)
   ============================================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
@@ -149,6 +229,7 @@ export default function ServiceTransactionsPage() {
       return alert("Montant invalide.");
     }
 
+    if (submitting) return; // anti double clic
     setSubmitting(true);
 
     try {
@@ -157,17 +238,21 @@ export default function ServiceTransactionsPage() {
         taskId: form.taskId ? parseInt(form.taskId, 10) : undefined,
         type: form.type,
         amount: amountNum,
+        currency: form.currency || "XOF",
         description: form.description || undefined,
         proofFile: form.proofFile || null,
       };
 
-      await createTransaction(payload);
+      const finalPayload = buildCreateTransactionPayload(payload);
+
+      await createTransaction(finalPayload);
 
       alert("✅ Transaction ajoutée avec succès");
 
       setForm({
         type: "expense",
         amount: "",
+        currency: "XOF",
         description: "",
         taskId: "",
         proofFile: null,
@@ -182,7 +267,7 @@ export default function ServiceTransactionsPage() {
     }
   }
 
-  /* ============================================================================    
+  /* ============================================================================
      ⏳ Loading
   ============================================================================ */
   if (loading) {
@@ -205,13 +290,16 @@ export default function ServiceTransactionsPage() {
     );
   }
 
-  /* ============================================================================    
+  // ✅ master inclus (multi-pays / ACL backend)
+  const canCreate =
+    user?.role === "admin" || user?.role === "agent" || user?.role === "master";
+
+  /* ============================================================================
      🎨 UI principale — STYLE A PREMIUM
   ============================================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
       <div className="max-w-5xl mx-auto bg-white shadow-2xl rounded-3xl border border-gray-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-10">
-
         {/* 🧭 HEADER PREMIUM */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="min-w-0">
@@ -236,22 +324,26 @@ export default function ServiceTransactionsPage() {
           </button>
         </div>
 
-        {/* ➕ FORMULAIRE PREMIUM */}
-        <TransactionForm
-          form={form}
-          setForm={setForm}
-          tasks={tasks}
-          submitting={submitting}
-          handleSubmit={handleSubmit}
-        />
+        {/* ➕ FORMULAIRE PREMIUM (si autorisé) */}
+        {canCreate && (
+          <TransactionForm
+            form={form}
+            setForm={setForm}
+            tasks={tasks}
+            submitting={submitting}
+            handleSubmit={handleSubmit}
+          />
+        )}
 
         {/* 📜 HISTORIQUE PREMIUM */}
-        <TransactionHistory transactions={transactions} />
+        <TransactionHistory
+          transactions={transactions}
+          getProofHref={getProofHrefFromTransaction}
+        />
       </div>
     </div>
   );
 }
-
 /* ============================================================================
    🧩 FORMULAIRE — PREMIUM STYLE A
 ============================================================================ */
@@ -271,7 +363,7 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="form-input"
+            className={FORM_INPUT}
           >
             <option value="revenue">Revenu</option>
             <option value="expense">Dépense</option>
@@ -281,7 +373,7 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
         </FormGroup>
 
         {/* Montant */}
-        <FormGroup label="Montant (FCFA)">
+        <FormGroup label="Montant">
           <input
             type="number"
             step="0.01"
@@ -289,8 +381,24 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
-            className="form-input"
+            className={FORM_INPUT}
           />
+        </FormGroup>
+
+        {/* Devise (multi-pays) */}
+        <FormGroup label="Devise">
+          <select
+            value={form.currency}
+            onChange={(e) => setForm({ ...form, currency: e.target.value })}
+            className={FORM_INPUT}
+          >
+            {/* ✅ fallback simple (tu peux enrichir via utils/labels si tu veux) */}
+            <option value="XOF">FCFA (XOF)</option>
+            <option value="XAF">FCFA (XAF)</option>
+            <option value="EUR">Euro (EUR)</option>
+            <option value="USD">Dollar (USD)</option>
+            <option value="GBP">Livre (GBP)</option>
+          </select>
         </FormGroup>
 
         {/* Tâche liée */}
@@ -298,7 +406,7 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
           <select
             value={form.taskId}
             onChange={(e) => setForm({ ...form, taskId: e.target.value })}
-            className="form-input"
+            className={FORM_INPUT}
           >
             <option value="">— Aucune tâche —</option>
             {tasks.map((t) => (
@@ -315,7 +423,7 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
-            className="form-input"
+            className={FORM_INPUT}
             placeholder="Description ou détails…"
           />
         </FormGroup>
@@ -331,23 +439,25 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
                 proofFile: e.target.files?.[0] || null,
               })
             }
-            className="form-input"
+            className={FORM_INPUT}
           />
+          {form.proofFile && (
+            <p className="text-xs text-slate-500 mt-1 break-all">
+              Fichier sélectionné : <strong>{form.proofFile.name}</strong>
+            </p>
+          )}
         </FormGroup>
 
         {/* Bouton */}
-        <div className="col-span-2 flex justify-end">
+        <div className="col-span-1 sm:col-span-2 flex justify-end">
           <button
             type="submit"
             disabled={submitting}
-            className={`
-              px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition
-              ${
-                submitting
-                  ? "bg-blue-300 cursor-not-allowed text-white"
-                  : "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800"
-              }
-            `}
+            className={`px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition ${
+              submitting
+                ? "bg-blue-300 cursor-not-allowed text-white"
+                : "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800"
+            }`}
           >
             {submitting ? "Ajout…" : "Ajouter la transaction"}
           </button>
@@ -372,9 +482,9 @@ function FormGroup({ label, children, full }) {
 }
 
 /* ============================================================================
-   🧩 HISTORIQUE — Premium Style A
+   🧩 HISTORIQUE — Premium Style A (proofs ImageKit + legacy)
 ============================================================================ */
-function TransactionHistory({ transactions }) {
+function TransactionHistory({ transactions, getProofHref }) {
   return (
     <div>
       <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
@@ -392,6 +502,17 @@ function TransactionHistory({ transactions }) {
             const amount = Number(t.amount || 0).toLocaleString("fr-FR");
             const currency = t.currencyLabel || t.currency || "";
 
+            const proofHref = getProofHref ? getProofHref(t) : "";
+
+            const createdAtDisplay = t.createdAt
+              ? new Date(t.createdAt).toLocaleString("fr-FR")
+              : "Date inconnue";
+
+            const createdBy =
+              t.user?.email ||
+              `${t.user?.firstName || ""} ${t.user?.lastName || ""}`.trim() ||
+              "—";
+
             return (
               <div
                 key={t.id}
@@ -408,11 +529,7 @@ function TransactionHistory({ transactions }) {
                     </p>
                   </div>
 
-                  <div className="text-xs text-gray-500">
-                    {t.createdAt
-                      ? new Date(t.createdAt).toLocaleString("fr-FR")
-                      : "Date inconnue"}
-                  </div>
+                  <div className="text-xs text-gray-500">{createdAtDisplay}</div>
                 </div>
 
                 {/* DETAILS */}
@@ -423,11 +540,11 @@ function TransactionHistory({ transactions }) {
                     </p>
                   )}
 
-                  {t.proofFile?.path && (
+                  {proofHref && (
                     <p className="break-words">
                       📎{" "}
                       <a
-                        href={toAbsUrl(t.proofFile.path)}
+                        href={proofHref}
                         target="_blank"
                         rel="noreferrer"
                         className="text-blue-600 hover:underline break-all"
@@ -438,12 +555,7 @@ function TransactionHistory({ transactions }) {
                   )}
 
                   <p className="text-xs text-gray-500 break-words">
-                    Enregistré par{" "}
-                    <strong>
-                      {t.user?.email ||
-                        `${t.user?.firstName || ""} ${t.user?.lastName || ""}`.trim() ||
-                        "—"}
-                    </strong>
+                    Enregistré par <strong>{createdBy}</strong>
                   </p>
                 </div>
               </div>
@@ -454,12 +566,3 @@ function TransactionHistory({ transactions }) {
     </div>
   );
 }
-
-/* ============================================================================    
-   STYLE GLOBAL INPUT (uniformisation)
-============================================================================ */
-const inputBase =
-  "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 bg-white";
-
-// On applique aux champs du formulaire
-window.formInputStyle = inputBase;

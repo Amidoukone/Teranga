@@ -5,7 +5,7 @@
 // ============================================================
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // ⬅️ useNavigate
+import { Link, useNavigate } from 'react-router-dom';
 import { getOrders, createOrder } from '../services/orders';
 import { getProducts } from '../services/products';
 import { me } from '../services/auth';
@@ -58,14 +58,23 @@ function getPaymentStatusStyle(status) {
 }
 
 /* ============================================================
+   ✅ Helpers API (compat array OU { orders/products })
+============================================================ */
+function normalizeListResponse(data, key) {
+  if (Array.isArray(data)) return data;
+  const arr = data?.[key];
+  return Array.isArray(arr) ? arr : [];
+}
+
+/* ============================================================
    ⭐ Page Commandes — Clean Shop Premium (Style B)
 ============================================================ */
 export default function OrdersPage() {
   const [user, setUser] = useState(null);
 
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);           // chargement commandes
-  const [creating, setCreating] = useState(false);         // 🔐 création commande
+  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   // Produits pour création rapide de commande
   const [products, setProducts] = useState([]);
@@ -91,7 +100,7 @@ export default function OrdersPage() {
     unitPrice: '',
   });
 
-  const navigate = useNavigate(); // ⬅️ Pour redirection après création
+  const navigate = useNavigate();
 
   /* ============================================================
      🔄 Loaders (useCallback pour éviter les recréations)
@@ -100,7 +109,7 @@ export default function OrdersPage() {
     setLoading(true);
     try {
       const data = await getOrders();
-      setOrders(Array.isArray(data) ? data : []);
+      setOrders(normalizeListResponse(data, 'orders'));
     } catch (e) {
       console.error('❌ Erreur chargement commandes:', e);
       alert('Erreur lors du chargement des commandes.');
@@ -113,8 +122,8 @@ export default function OrdersPage() {
   const loadProducts = useCallback(async () => {
     setLoadingProducts(true);
     try {
-      const prods = await getProducts({ limit: 200 });
-      setProducts(prods || []);
+      const data = await getProducts({ limit: 200 });
+      setProducts(normalizeListResponse(data, 'products'));
     } catch (e) {
       console.error('❌ Erreur chargement produits:', e);
       setProducts([]);
@@ -127,9 +136,12 @@ export default function OrdersPage() {
      🔄 Initialisation
   ============================================================ */
   useEffect(() => {
+    let mounted = true;
+
     async function init() {
       try {
         const ud = await me();
+        if (!mounted) return;
         setUser(ud.user);
         await Promise.all([loadOrders(), loadProducts()]);
       } catch (e) {
@@ -141,7 +153,11 @@ export default function OrdersPage() {
         }
       }
     }
+
     init();
+    return () => {
+      mounted = false;
+    };
   }, [loadOrders, loadProducts]);
 
   // Persistance de l’affichage du formulaire
@@ -154,21 +170,17 @@ export default function OrdersPage() {
   ============================================================ */
   async function handleCreate(e) {
     e.preventDefault();
-
-    // ⛔ Empêche un double clic si une création est déjà en cours
     if (creating) return;
 
     try {
-      setCreating(true); // 🔐 verrouillage
+      setCreating(true);
 
       const payload = {
         customerNote: form.customerNote || '',
       };
 
       if (form.withItem && form.productId) {
-        const prod = products.find(
-          (p) => String(p.id) === String(form.productId)
-        );
+        const prod = products.find((p) => String(p.id) === String(form.productId));
 
         const unit =
           form.unitPrice !== '' && form.unitPrice !== null
@@ -179,12 +191,11 @@ export default function OrdersPage() {
           {
             productId: Number(form.productId),
             quantity: Number(form.quantity) > 0 ? Number(form.quantity) : 1,
-            unitPrice: unit,
+            unitPrice: Number.isFinite(unit) ? unit : 0,
           },
         ];
       }
 
-      // ⬅️ On récupère la commande créée
       const newOrder = await createOrder(payload);
 
       // Reset propre
@@ -198,65 +209,65 @@ export default function OrdersPage() {
 
       alert('✅ Commande créée avec succès.');
 
-      // ⬅️ Redirection automatique vers la commande
-      if (newOrder?.id) {
-        navigate(`/orders/${newOrder.id}`);
-      } else if (newOrder?.order?.id) {
-        // fallback si l'API renvoie { order: {...} }
-        navigate(`/orders/${newOrder.order.id}`);
+      // Redirection automatique vers la commande
+      const id = newOrder?.id || newOrder?.order?.id;
+      if (id) {
+        navigate(`/orders/${id}`);
       } else {
-        // Si on n'arrive pas à récupérer l'id, on reste sur la page et on recharge
         await loadOrders();
       }
     } catch (err) {
       console.error('❌ Erreur création commande:', err);
       alert('Erreur lors de la création de la commande.');
     } finally {
-      setCreating(false); // 🔓 déverrouillage
+      setCreating(false);
     }
   }
 
   /* ============================================================
-     🎛️ Filtres + tri (mémoïsés)
+     🎛️ Filtres + tri (mémoïsés) — canon robustes
   ============================================================ */
   const filtered = useMemo(() => {
     return (orders || [])
       .filter((o) => {
-        if (!filters.q.trim()) return true;
-        const q = filters.q.trim().toLowerCase();
-        return (
-          [
-            o.code,
-            o.customer?.email,
-            o.customerNote,
-            o.orderStatus,
-            o.paymentStatus,
-            o.currency,
-            String(o.totalAmount ?? ''),
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase()
-            .includes(q)
-        );
+        const term = (filters.q || '').trim().toLowerCase();
+        if (!term) return true;
+
+        const blob = [
+          o.code,
+          o.customer?.email,
+          o.customerNote,
+          o.orderStatus,
+          o.paymentStatus,
+          o.currency,
+          String(o.totalAmount ?? ''),
+          String(o.id ?? ''),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        return blob.includes(term);
       })
       .filter((o) => {
         if (!filters.status) return true;
-        const canon = canonicalizeOrderStatus(filters.status);
-        return o.orderStatus === canon;
+        const want = canonicalizeOrderStatus(filters.status);
+        const got = canonicalizeOrderStatus(o.orderStatus);
+        return got === want;
       })
       .filter((o) => {
         if (!filters.payment) return true;
-        const canon = canonicalizePaymentStatus(filters.payment);
-        return o.paymentStatus === canon;
+        const want = canonicalizePaymentStatus(filters.payment);
+        const got = canonicalizePaymentStatus(o.paymentStatus);
+        return got === want;
       })
       .sort((a, b) => {
         const by = filters.sort || '-createdAt';
         const sign = by.startsWith('-') ? -1 : 1;
         const key = by.replace(/^-/, '');
 
-        let va = a[key];
-        let vb = b[key];
+        let va = a?.[key];
+        let vb = b?.[key];
 
         if (key === 'createdAt') {
           va = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -309,6 +320,7 @@ export default function OrdersPage() {
             </Link>
 
             <button
+              type="button"
               onClick={() => setShowForm((v) => !v)}
               className="w-full sm:w-auto px-4 py-2 text-sm bg-slate-900 text-white font-semibold rounded-lg shadow-sm hover:bg-black text-center"
             >
@@ -316,6 +328,7 @@ export default function OrdersPage() {
             </button>
 
             <button
+              type="button"
               onClick={loadOrders}
               disabled={loading}
               className={`w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm text-center ${
@@ -379,7 +392,6 @@ export default function OrdersPage() {
                 <option value="processing">En traitement</option>
                 <option value="shipped">Expédiée</option>
                 <option value="delivered">Livrée</option>
-                <option value="paid">Payée</option>
                 <option value="cancelled">Annulée</option>
                 <option value="refunded">Remboursée</option>
               </select>
@@ -415,6 +427,8 @@ export default function OrdersPage() {
               >
                 <option value="-createdAt">Plus récentes</option>
                 <option value="createdAt">Plus anciennes</option>
+                <option value="-totalAmount">Montant décroissant</option>
+                <option value="totalAmount">Montant croissant</option>
               </select>
             </div>
           </div>
@@ -433,16 +447,14 @@ export default function OrdersPage() {
             </div>
 
             <button
-              onClick={() =>
-                setFilters({ q: '', status: '', payment: '', sort: '-createdAt' })
-              }
+              type="button"
+              onClick={() => setFilters({ q: '', status: '', payment: '', sort: '-createdAt' })}
               className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium w-full sm:w-auto text-center"
             >
               Réinitialiser tous les filtres
             </button>
           </div>
         </div>
-
         {/* ===================================================== */}
         {/* ➕ Formulaire création commande (Premium Responsive) */}
         {/* ===================================================== */}
@@ -473,29 +485,28 @@ export default function OrdersPage() {
 
             {/* Ajouter un article */}
             <div className="mt-2 flex items-center gap-2">
-  <input
-    id="withItem"
-    type="checkbox"
-    checked={form.withItem}
-    onChange={(e) =>
-      setForm((f) => ({
-        ...f,
-        withItem: e.target.checked,
-        productId: e.target.checked ? f.productId : '',
-        quantity: e.target.checked ? f.quantity : 1,
-        unitPrice: e.target.checked ? f.unitPrice : '',
-      }))
-    }
-    className="rounded border-gray-300"
-  />
-  <label
-    htmlFor="withItem"
-    className="text-sm text-gray-700 cursor-pointer"
-  >
-    Ajouter un article dès la création
-  </label>
-</div>
-
+              <input
+                id="withItem"
+                type="checkbox"
+                checked={form.withItem}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    withItem: e.target.checked,
+                    productId: e.target.checked ? f.productId : '',
+                    quantity: e.target.checked ? f.quantity : 1,
+                    unitPrice: e.target.checked ? f.unitPrice : '',
+                  }))
+                }
+                className="rounded border-gray-300"
+              />
+              <label
+                htmlFor="withItem"
+                className="text-sm text-gray-700 cursor-pointer"
+              >
+                Ajouter un article dès la création
+              </label>
+            </div>
 
             {form.withItem && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4">
@@ -515,7 +526,8 @@ export default function OrdersPage() {
                     <option value="">— Sélectionner —</option>
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} — {Number(p.price || 0).toLocaleString('fr-FR')}{' '}
+                        {p.name} —{' '}
+                        {Number(p.price || 0).toLocaleString('fr-FR')}{' '}
                         {formatCurrency(p.currency || 'XOF')}
                       </option>
                     ))}
@@ -551,7 +563,7 @@ export default function OrdersPage() {
                       setForm((f) => ({ ...f, unitPrice: e.target.value }))
                     }
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-                    placeholder="Laisser vide pour PU du produit"
+                    placeholder="PU du produit par défaut"
                   />
                 </div>
               </div>
@@ -602,7 +614,7 @@ export default function OrdersPage() {
                   key={o.id}
                   className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition w-full break-words overflow-hidden"
                 >
-                  {/* Bandeau supérieur (code + date + stats) */}
+                  {/* Bandeau supérieur */}
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 px-4 sm:px-5 pt-4 pb-3 border-b border-gray-100 bg-slate-50/60">
                     <div className="min-w-0">
                       <h3 className="text-base sm:text-lg font-semibold text-gray-900 break-words">
@@ -621,29 +633,26 @@ export default function OrdersPage() {
                       </span>
                       {o.updatedAt && (
                         <span className="mt-0.5">
-                          Dernière mise à jour :{' '}
+                          MAJ :{' '}
                           {new Date(o.updatedAt).toLocaleString('fr-FR')}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Corps : infos principales + timeline statuts */}
+                  {/* Corps */}
                   <div className="px-4 sm:px-5 py-4 flex flex-col gap-3">
-                    {/* Ligne 1 : Client / Montant */}
                     <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
                       <div className="text-sm text-gray-700 space-y-1">
-                        <p className="break-words">
+                        <p>
                           <span className="font-medium text-gray-800">
                             Client :
                           </span>{' '}
                           {o.customer?.email || '—'}
                         </p>
                         {o.customerNote && (
-                          <p className="break-words text-xs text-gray-500">
-                            <span className="font-medium text-gray-600">
-                              Note :
-                            </span>{' '}
+                          <p className="text-xs text-gray-500">
+                            <span className="font-medium">Note :</span>{' '}
                             {o.customerNote}
                           </p>
                         )}
@@ -651,7 +660,7 @@ export default function OrdersPage() {
 
                       <div className="text-right">
                         <p className="text-[11px] uppercase text-slate-400">
-                          Montant total
+                          Montant
                         </p>
                         <p className="text-lg font-bold text-blue-600">
                           {total.toLocaleString('fr-FR')}{' '}
@@ -660,27 +669,25 @@ export default function OrdersPage() {
                       </div>
                     </div>
 
-                    {/* Ligne 2 : Statuts (badges) */}
-                    <div className="flex flex-wrap gap-2 items-center mt-1">
+                    {/* Statuts */}
+                    <div className="flex flex-wrap gap-2 items-center">
                       <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${orderStatusClass}`}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current bg-opacity-70 mr-1.5" />
                         Commande : {orderStatusChip}
                       </span>
 
                       <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${paymentStatusClass}`}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current bg-opacity-70 mr-1.5" />
                         Paiement : {paymentStatusChip}
                       </span>
                     </div>
                   </div>
 
-                  {/* Footer : actions */}
+                  {/* Actions */}
                   <div className="px-4 sm:px-5 pb-4 pt-2 border-t border-gray-100 bg-slate-50/60">
-                    <div className="mt-2 flex flex-col sm:flex-row flex-wrap gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Link
                         to={`/orders/${o.id}`}
                         className="w-full sm:w-auto px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-center"
@@ -692,7 +699,7 @@ export default function OrdersPage() {
                         to={`/orders/${o.id}/transactions`}
                         className="w-full sm:w-auto px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 text-center"
                       >
-                        💰 Voir transactions
+                        💰 Transactions
                       </Link>
                     </div>
                   </div>

@@ -1,5 +1,6 @@
 // ============================================================================
-// TasksPage.jsx — VERSION PREMIUM 2025 (Design amélioré, 100% stable)
+// TasksPage.jsx — VERSION PREMIUM 2025
+// MASTER SAFE — Multi-pays backend-driven — PARTIE 1 / 2
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -13,7 +14,7 @@ import {
   TASK_STATUSES,
   applyLabels,
 } from '../utils/labels';
-import { getGeoParams } from '../services/geo';
+import { normalizeRole, isMasterUser } from '../utils/role';
 
 // ============================================================================
 // 🧩 PAGE PRINCIPALE
@@ -24,7 +25,6 @@ export default function TasksPage() {
   const [services, setServices] = useState([]);
   const [agents, setAgents] = useState([]);
   const [user, setUser] = useState(null);
-
   const [loading, setLoading] = useState(false);
 
   const [showForm, setShowForm] = useState(() => {
@@ -35,8 +35,16 @@ export default function TasksPage() {
   const navigate = useNavigate();
 
   // ========================================================================
-  // Formulaire
+  // 🔐 Rôles (MASTER SAFE)
+  // =========================================================================
+  const role = normalizeRole(user?.role);
+  const isAdmin = role === 'admin';
+  const isMaster = isMasterUser(user); // UX uniquement
+  const isAdminLike = isAdmin; // MASTER = admin côté UI
+
   // ========================================================================
+  // Formulaire
+  // =========================================================================
   const [form, setForm] = useState({
     serviceId: '',
     title: '',
@@ -50,7 +58,7 @@ export default function TasksPage() {
 
   // ========================================================================
   // Filtres
-  // ========================================================================
+  // =========================================================================
   const [filters, setFilters] = useState({
     q: '',
     type: '',
@@ -62,7 +70,7 @@ export default function TasksPage() {
 
   // ========================================================================
   // Auth header
-  // ========================================================================
+  // =========================================================================
   const authHeader = useMemo(() => {
     const token =
       localStorage.getItem('teranga_token') ||
@@ -72,14 +80,13 @@ export default function TasksPage() {
   }, []);
 
   // ========================================================================
-  // Chargement des tâches
-  // ========================================================================
+  // Chargement des tâches (backend applique le scope geo)
+  // =========================================================================
   const loadTasks = useCallback(async () => {
     setLoading(true);
     try {
-            const { data } = await api.get('/tasks', {
+      const { data } = await api.get('/tasks', {
         headers: authHeader,
-        params: getGeoParams(),
       });
 
       const enriched = (data.tasks || []).map((t) => ({
@@ -98,26 +105,30 @@ export default function TasksPage() {
 
   // ========================================================================
   // Initialisation
-  // ========================================================================
+  // =========================================================================
   useEffect(() => {
     async function init() {
       try {
-        const u = await me();
-        setUser(u.user);
+        const { user: u } = await me();
+        setUser(u);
 
-        /** CLIENT */
-        if (u.user.role === 'client') {
+        // CLIENT
+        if (u.role === 'client') {
           const servs = await getMyServices();
           setServices(servs || []);
         }
 
-        /** ADMIN */
-        else if (u.user.role === 'admin') {
+        // ADMIN / MASTER
+        else if (u.role === 'admin') {
           try {
-            const [{ data: allServices }, { data: agentsRes }] = await Promise.all([
-              api.get('/services', { headers: authHeader, params: getGeoParams() }),
-              api.get('/users', { params: { role: 'agent' }, headers: authHeader }),
-            ]);
+            const [{ data: allServices }, { data: agentsRes }] =
+              await Promise.all([
+                api.get('/services', { headers: authHeader }),
+                api.get('/users', {
+                  params: { role: 'agent' },
+                  headers: authHeader,
+                }),
+              ]);
 
             const enrichedServices = (allServices?.services || []).map((s) => ({
               ...s,
@@ -127,7 +138,10 @@ export default function TasksPage() {
             setServices(enrichedServices);
             setAgents(agentsRes?.users || []);
           } catch (err) {
-            console.error('❌ Erreur chargement services/agents (admin):', err);
+            console.error(
+              '❌ Erreur chargement services/agents (admin/master):',
+              err
+            );
           }
         }
 
@@ -148,9 +162,9 @@ export default function TasksPage() {
     localStorage.setItem('teranga_tasks_showForm', showForm ? '1' : '0');
   }, [showForm]);
 
-  // ========================================================================
-  // Création d'une tâche
-  // ========================================================================
+    // ========================================================================
+  // Création d'une tâche (CLIENT + ADMIN/MASTER)
+  // =========================================================================
   async function createTask(e) {
     e.preventDefault();
 
@@ -185,26 +199,30 @@ export default function TasksPage() {
       await loadTasks();
     } catch (err) {
       console.error('❌ Erreur création tâche:', err);
-      alert('Erreur lors de la création de la tâche ❌');
+      alert(
+        err?.response?.data?.error || 'Erreur lors de la création de la tâche ❌'
+      );
     }
   }
 
   // ========================================================================
   // Changements de statut
-  // ========================================================================
+  // =========================================================================
   async function updateStatus(id, status) {
     try {
       await api.put(`/tasks/${id}/status`, { status }, { headers: authHeader });
       await loadTasks();
     } catch (err) {
       console.error('❌ Erreur maj statut:', err);
-      alert("Erreur lors de la mise à jour du statut ❌");
+      alert(
+        err?.response?.data?.error || "Erreur lors de la mise à jour du statut ❌"
+      );
     }
   }
 
   // ========================================================================
-  // Assignation agent
-  // ========================================================================
+  // Assignation agent (ADMIN + MASTER)
+  // =========================================================================
   async function updateAssignment(taskId, agentId) {
     if (!agentId) return;
     try {
@@ -217,13 +235,13 @@ export default function TasksPage() {
       await loadTasks();
     } catch (err) {
       console.error('❌ Erreur assignation tâche:', err);
-      alert("Erreur lors de l'assignation de la tâche.");
+      alert(err?.response?.data?.error || "Erreur lors de l'assignation.");
     }
   }
 
   // ========================================================================
   // Affichage nom utilisateur
-  // ========================================================================
+  // =========================================================================
   function displayUser(u) {
     if (!u) return '—';
     return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email;
@@ -231,7 +249,7 @@ export default function TasksPage() {
 
   // ========================================================================
   // Filtrage local
-  // ========================================================================
+  // =========================================================================
   useEffect(() => {
     let arr = [...tasks];
 
@@ -255,28 +273,24 @@ export default function TasksPage() {
 
     if (filters.type) arr = arr.filter((t) => t.type === filters.type);
     if (filters.status) arr = arr.filter((t) => t.status === filters.status);
-    if (filters.priority) arr = arr.filter((t) => t.priority === filters.priority);
+    if (filters.priority)
+      arr = arr.filter((t) => t.priority === filters.priority);
 
     if (filters.service)
-      arr = arr.filter(
-        (t) => t.service?.id === parseInt(filters.service, 10)
-      );
+      arr = arr.filter((t) => t.service?.id === parseInt(filters.service, 10));
 
     if (filters.agent)
-      arr = arr.filter(
-        (t) => t.assignee?.id === parseInt(filters.agent, 10)
-      );
+      arr = arr.filter((t) => t.assignee?.id === parseInt(filters.agent, 10));
 
     setFiltered(arr);
   }, [filters, tasks]);
 
   // ========================================================================
   // UI
-  // ========================================================================
+  // =========================================================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
       <div className="max-w-6xl mx-auto bg-white/95 shadow-2xl rounded-3xl p-4 sm:p-8 border border-gray-100">
-
         {/* HEADER */}
         <Header
           showForm={showForm}
@@ -284,6 +298,7 @@ export default function TasksPage() {
           loadTasks={loadTasks}
           loading={loading}
           total={filtered.length}
+          isMaster={isMaster}
         />
 
         {/* FILTRES */}
@@ -294,10 +309,11 @@ export default function TasksPage() {
           agents={agents}
           user={user}
           filteredCount={filtered.length}
+          isAdminLike={isAdminLike}
         />
 
         {/* FORMULAIRE */}
-        {showForm && (user?.role === 'client' || user?.role === 'admin') && (
+        {showForm && (role === 'client' || isAdminLike) && (
           <TaskForm
             form={form}
             setForm={setForm}
@@ -305,6 +321,7 @@ export default function TasksPage() {
             agents={agents}
             user={user}
             createTask={createTask}
+            isAdminLike={isAdminLike}
           />
         )}
 
@@ -312,13 +329,14 @@ export default function TasksPage() {
         <TaskList
           tasks={filtered}
           user={user}
+          role={role}
+          isAdminLike={isAdminLike}
           updateStatus={updateStatus}
           updateAssignment={updateAssignment}
           navigate={navigate}
           displayUser={displayUser}
           agents={agents}
         />
-
       </div>
     </div>
   );
@@ -328,7 +346,7 @@ export default function TasksPage() {
 // 🧩 SOUS-COMPOSANTS (UI premium & responsive)
 // ============================================================================
 
-function Header({ showForm, setShowForm, loadTasks, loading, total }) {
+function Header({ showForm, setShowForm, loadTasks, loading, total, isMaster }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7 pb-4 border-b border-gray-100">
       <div className="max-w-full break-words">
@@ -338,10 +356,19 @@ function Header({ showForm, setShowForm, loadTasks, loading, total }) {
         <p className="text-sm sm:text-base text-gray-600 mt-1">
           Créez, assignez et suivez vos tâches opérationnelles au même endroit.
         </p>
-        <p className="mt-2 inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-          {total} tâche(s) affichée(s) avec les filtres actuels.
-        </p>
+
+        <div className="mt-2 flex flex-wrap gap-2 items-center">
+          <p className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+            {total} tâche(s) affichée(s) avec les filtres actuels.
+          </p>
+
+          {isMaster && (
+            <p className="inline-flex items-center gap-2 text-xs sm:text-sm text-amber-800 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200">
+              ⭐ MASTER
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -368,11 +395,18 @@ function Header({ showForm, setShowForm, loadTasks, loading, total }) {
   );
 }
 
-function TaskFilters({ filters, setFilters, services, agents, user, filteredCount }) {
+function TaskFilters({
+  filters,
+  setFilters,
+  services,
+  agents,
+  user,
+  filteredCount,
+  isAdminLike,
+}) {
   return (
     <div className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-
         {/* Recherche */}
         <input
           placeholder="🔎 Rechercher une tâche (titre, description, service...)"
@@ -393,7 +427,9 @@ function TaskFilters({ filters, setFilters, services, agents, user, filteredCoun
         >
           <option value="">Type (tous)</option>
           {Object.entries(TASK_TYPES).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
+            <option key={key} value={key}>
+              {label}
+            </option>
           ))}
         </select>
 
@@ -405,7 +441,9 @@ function TaskFilters({ filters, setFilters, services, agents, user, filteredCoun
         >
           <option value="">Statut (tous)</option>
           {Object.entries(TASK_STATUSES).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
+            <option key={key} value={key}>
+              {label}
+            </option>
           ))}
         </select>
 
@@ -417,7 +455,9 @@ function TaskFilters({ filters, setFilters, services, agents, user, filteredCoun
         >
           <option value="">Priorité (toutes)</option>
           {Object.entries(TASK_PRIORITIES).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
+            <option key={key} value={key}>
+              {label}
+            </option>
           ))}
         </select>
 
@@ -435,8 +475,8 @@ function TaskFilters({ filters, setFilters, services, agents, user, filteredCoun
           ))}
         </select>
 
-        {/* Agent (admin uniquement) */}
-        {user?.role === 'admin' && (
+        {/* Agent (admin/master uniquement) */}
+        {isAdminLike && (
           <select
             value={filters.agent}
             onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
@@ -479,7 +519,7 @@ function TaskFilters({ filters, setFilters, services, agents, user, filteredCoun
   );
 }
 
-function TaskForm({ form, setForm, services, agents, user, createTask }) {
+function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLike }) {
   return (
     <div className="mb-10">
       <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">
@@ -534,7 +574,9 @@ function TaskForm({ form, setForm, services, agents, user, createTask }) {
             "
           >
             {Object.entries(TASK_TYPES).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
+              <option key={key} value={key}>
+                {label}
+              </option>
             ))}
           </select>
         </div>
@@ -587,7 +629,9 @@ function TaskForm({ form, setForm, services, agents, user, createTask }) {
             "
           >
             {Object.entries(TASK_PRIORITIES).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
+              <option key={key} value={key}>
+                {label}
+              </option>
             ))}
           </select>
         </div>
@@ -626,8 +670,8 @@ function TaskForm({ form, setForm, services, agents, user, createTask }) {
           />
         </div>
 
-        {/* Assignation (admin uniquement) */}
-        {user?.role === 'admin' && (
+        {/* Assignation (admin/master uniquement) */}
+        {isAdminLike && (
           <div className="w-full">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
               Assigné à (optionnel)
@@ -669,7 +713,17 @@ function TaskForm({ form, setForm, services, agents, user, createTask }) {
   );
 }
 
-function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displayUser, agents }) {
+function TaskList({
+  tasks,
+  user,
+  role,
+  isAdminLike,
+  updateStatus,
+  updateAssignment,
+  navigate,
+  displayUser,
+  agents,
+}) {
   if (!tasks || tasks.length === 0) {
     return (
       <p className="text-gray-500 italic text-center py-8">
@@ -724,7 +778,8 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
               <strong>Type :</strong> {t.typeLabel || TASK_TYPES[t.type]}
             </p>
             <p className="break-words">
-              <strong>Priorité :</strong> {t.priorityLabel || TASK_PRIORITIES[t.priority]}
+              <strong>Priorité :</strong>{' '}
+              {t.priorityLabel || TASK_PRIORITIES[t.priority]}
             </p>
             <p className="break-words">
               <strong>Service :</strong> {t.service?.title || t.serviceId}
@@ -735,12 +790,7 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
           </div>
 
           {/* Actions */}
-          <div
-            className="
-              mt-4 flex flex-col sm:flex-row flex-wrap gap-2
-              w-full sm:w-auto
-            "
-          >
+          <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
             {/* PREUVES */}
             <button
               onClick={() => navigate(`/tasks/${t.id}/evidences`)}
@@ -752,8 +802,8 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
               📎 Voir les preuves
             </button>
 
-            {/* Assignation (admin) */}
-            {user?.role === 'admin' && !t.assignee && t.status === 'created' && (
+            {/* Assignation (admin/master) */}
+            {isAdminLike && !t.assignee && t.status === 'created' && (
               <select
                 onChange={(e) => updateAssignment(t.id, e.target.value)}
                 defaultValue=""
@@ -772,7 +822,7 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
             )}
 
             {/* Agent → Démarrer */}
-            {user?.role === 'agent' && t.status === 'created' && (
+            {role === 'agent' && t.status === 'created' && (
               <button
                 onClick={() => updateStatus(t.id, 'in_progress')}
                 className="
@@ -785,7 +835,7 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
             )}
 
             {/* Agent → Terminer */}
-            {user?.role === 'agent' && t.status === 'in_progress' && (
+            {role === 'agent' && t.status === 'in_progress' && (
               <button
                 onClick={() => updateStatus(t.id, 'completed')}
                 className="
@@ -797,8 +847,8 @@ function TaskList({ tasks, user, updateStatus, updateAssignment, navigate, displ
               </button>
             )}
 
-            {/* Admin → Valider */}
-            {user?.role === 'admin' && t.status === 'completed' && (
+            {/* Admin/master UI → Valider (backend reste la vérité : admin only) */}
+            {isAdminLike && role === 'admin' && t.status === 'completed' && (
               <button
                 onClick={() => updateStatus(t.id, 'validated')}
                 className="

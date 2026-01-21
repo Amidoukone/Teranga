@@ -32,8 +32,8 @@ function isWithinOneHour(date) {
   }
 }
 
-function isAdmin(user) {
-  return user?.role === "admin";
+function isAdminLike(user) {
+  return user?.role === "admin" || user?.role === "master";
 }
 
 function isClientOwner(project, user) {
@@ -60,8 +60,12 @@ exports.create = async (req, res) => {
       currency = "XOF",
       clientId,
       agentId,
+
+      // 🌍 GEO (optionnel, admin/master)
       countryId,
       regionId,
+      country_id,
+      region_id,
     } = req.body || {};
 
     if (!title || !type)
@@ -72,7 +76,7 @@ exports.create = async (req, res) => {
     ----------------------------- */
     let targetClientId = req.user.id;
 
-    if (isAdmin(req.user) && clientId) {
+    if (isAdminLike(req.user) && clientId) {
       const cid = toSafeInt(clientId);
       if (cid) targetClientId = cid;
     }
@@ -84,12 +88,17 @@ exports.create = async (req, res) => {
       budget: budget ?? null,
       currency: currency || "XOF",
       clientId: targetClientId,
-      agentId: isAdmin(req.user) ? toSafeInt(agentId) : null,
+      agentId: isAdminLike(req.user) ? toSafeInt(agentId) : null,
       status: "created",
 
-      // 🌍 Multi-pays / région
-      countryId: toSafeInt(countryId),
-      regionId: toSafeInt(regionId),
+      // 🌍 Multi-pays (non destructif)
+      countryId: isAdminLike(req.user)
+        ? toSafeInt(countryId ?? country_id)
+        : null,
+
+      regionId: isAdminLike(req.user)
+        ? toSafeInt(regionId ?? region_id)
+        : null,
     });
 
     const full = await Project.findByPk(project.id, {
@@ -136,7 +145,7 @@ exports.list = async (req, res) => {
     if (req.user.role === "client") where.clientId = req.user.id;
     if (req.user.role === "agent") where.agentId = req.user.id;
 
-    // 🌍 Filtres géographiques (admin / agent)
+    // 🌍 Filtres géographiques (admin/master/agent)
     const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
     const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
 
@@ -160,12 +169,12 @@ exports.list = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
-    const formatted = projects.map((p) => ({
-      ...p.toJSON(),
-      statusLabel: getLabel(p.status, PROJECT_STATUSES),
-    }));
-
-    return res.json({ projects: formatted });
+    return res.json({
+      projects: projects.map((p) => ({
+        ...p.toJSON(),
+        statusLabel: getLabel(p.status, PROJECT_STATUSES),
+      })),
+    });
   } catch (e) {
     console.error("❌ Erreur list projects:", e);
     return res
@@ -204,7 +213,6 @@ exports.detail = async (req, res) => {
     if (!project)
       return res.status(404).json({ error: "Projet introuvable" });
 
-    // 🔐 ACL client
     if (req.user.role === "client" && project.clientId !== req.user.id) {
       return res.status(403).json({ error: "Accès non autorisé à ce projet" });
     }
@@ -238,7 +246,7 @@ exports.update = async (req, res) => {
     if (!project)
       return res.status(404).json({ error: "Projet introuvable" });
 
-    const adminOK = isAdmin(req.user);
+    const adminOK = isAdminLike(req.user);
     const clientOK = canClientEditOrDelete(project, req.user);
 
     if (!adminOK && !clientOK) {
@@ -250,7 +258,7 @@ exports.update = async (req, res) => {
 
     const body = req.body || {};
 
-    const merged = {
+    await project.update({
       title: body.title ?? project.title,
       type: body.type ?? project.type,
       description:
@@ -261,28 +269,24 @@ exports.update = async (req, res) => {
         body.budget !== undefined ? body.budget : project.budget,
       currency: body.currency ?? project.currency,
 
-      // 🔐 Admin only
+      // 🔐 Admin/master only
       agentId: adminOK
         ? toSafeInt(body.agentId ?? project.agentId)
         : project.agentId,
 
       status: adminOK ? body.status ?? project.status : project.status,
 
-      // 🌍 multi-pays
+      // 🌍 GEO (non destructif)
       countryId:
-        body.countryId !== undefined || body.country_id !== undefined
+        adminOK && (body.countryId !== undefined || body.country_id !== undefined)
           ? toSafeInt(body.countryId ?? body.country_id)
           : project.countryId,
 
       regionId:
-        body.regionId !== undefined || body.region_id !== undefined
+        adminOK && (body.regionId !== undefined || body.region_id !== undefined)
           ? toSafeInt(body.regionId ?? body.region_id)
           : project.regionId,
-
-      clientId: project.clientId,
-    };
-
-    await project.update(merged);
+    });
 
     const updated = await Project.findByPk(project.id, {
       include: [
@@ -329,7 +333,7 @@ exports.remove = async (req, res) => {
     if (!project)
       return res.status(404).json({ error: "Projet introuvable" });
 
-    const adminOK = isAdmin(req.user);
+    const adminOK = isAdminLike(req.user);
     const clientOK = canClientEditOrDelete(project, req.user);
 
     if (!adminOK && !clientOK) {

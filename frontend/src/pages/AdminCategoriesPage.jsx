@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+// ============================== PARTIE 1 / 2 ==============================
+// frontend/src/pages/AdminCategoriesPage.jsx
+import { useEffect, useMemo, useState } from "react";
 import {
   getCategories,
   createCategory,
@@ -9,9 +11,46 @@ import { me } from "../services/auth";
 
 /*
 ============================================================================
-📂 AdminCategoriesPage — Apple Light Premium A1
+📂 AdminCategoriesPage — Apple Light Premium A1 (Multi-pays + MASTER safe)
+============================================================================
+✅ Objectif:
+- Garder 100% des fonctionnalités existantes (CRUD + recherche + anti double-submit)
+- Ajouter une compatibilité "master" multi-pays sans casser la prod
+  - master explicite: user.role === "master"
+  - master implicite: user.role === "admin" + (countryId/regionId) => admin scoped
+- Ne rien imposer au backend (on reste rétro-compatible)
+- Ne pas casser tes services (getCategories/create/update/delete)
 ============================================================================
 */
+
+function isTruthyId(v) {
+  if (v === null || v === undefined) return false;
+  const s = String(v).trim();
+  if (!s) return false;
+  if (s === "0") return false;
+  return true;
+}
+
+function computeIsMaster(user) {
+  if (!user) return false;
+  if (user.role === "master") return true;
+
+  // Admin scoped (master implicite) : admin + scope geo
+  if (
+    user.role === "admin" &&
+    (isTruthyId(user.countryId) || isTruthyId(user.regionId))
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function computeCanWrite(user) {
+  if (!user) return false;
+  // On conserve la logique actuelle: seuls admin/master peuvent écrire
+  return user.role === "admin" || user.role === "master";
+}
 
 export default function AdminCategoriesPage() {
   const [user, setUser] = useState(null);
@@ -21,6 +60,9 @@ export default function AdminCategoriesPage() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false); // 🔒 anti double-submit
 
+  // ✅ Ajout: état d'erreur UI (n'enlève rien, remplace juste certains alert)
+  const [errorMsg, setErrorMsg] = useState("");
+
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -28,29 +70,46 @@ export default function AdminCategoriesPage() {
 
   const [search, setSearch] = useState("");
 
+  // ✅ Flags: n’impacte pas le fonctionnement, juste l’UX/affichage
+  const isMaster = useMemo(() => computeIsMaster(user), [user]);
+  const canWrite = useMemo(() => computeCanWrite(user), [user]);
+
   /* ============================================================
-     🔄 Initialisation
+     🔄 Initialisation (inchangé fonctionnellement)
   ============================================================ */
   useEffect(() => {
+    let mounted = true;
+
     async function init() {
       try {
         const ud = await me();
+        if (!mounted) return;
         setUser(ud.user);
         await loadCategories();
       } catch (err) {
         console.error("❌ init AdminCategoriesPage:", err);
+        if (!mounted) return;
+        setErrorMsg("Erreur lors du chargement de la session.");
       }
     }
+
     init();
+
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadCategories() {
     setLoading(true);
+    setErrorMsg("");
     try {
       const cats = await getCategories();
       setCategories(cats || []);
     } catch (err) {
       console.error("❌ loadCategories:", err);
+      setErrorMsg("Erreur lors du chargement des catégories.");
       alert("Erreur lors du chargement des catégories.");
     } finally {
       setLoading(false);
@@ -58,7 +117,7 @@ export default function AdminCategoriesPage() {
   }
 
   /* ============================================================
-     🧹 Reset form
+     🧹 Reset form (inchangé)
   ============================================================ */
   function resetForm() {
     setForm({ name: "", description: "" });
@@ -66,10 +125,15 @@ export default function AdminCategoriesPage() {
   }
 
   /* ============================================================
-     💾 Submit — avec verrou 'saving'
+     💾 Submit — avec verrou 'saving' (inchangé + guard write)
   ============================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (!canWrite) {
+      alert("Accès interdit.");
+      return;
+    }
 
     if (saving) return; // 🔒 empêche double-clic si la requête est en cours
 
@@ -80,6 +144,7 @@ export default function AdminCategoriesPage() {
 
     try {
       setSaving(true);
+      setErrorMsg("");
 
       if (editing) {
         await updateCategory(editing.id, form);
@@ -94,6 +159,7 @@ export default function AdminCategoriesPage() {
       setShowForm(false);
     } catch (err) {
       console.error("❌ handleSubmit:", err);
+      setErrorMsg("Erreur lors de l'enregistrement de la catégorie.");
       alert("Erreur lors de l'enregistrement de la catégorie.");
     } finally {
       setSaving(false);
@@ -101,22 +167,29 @@ export default function AdminCategoriesPage() {
   }
 
   /* ============================================================
-     🗑 Suppression
+     🗑 Suppression (inchangé + guard write)
   ============================================================ */
   async function handleDelete(id) {
+    if (!canWrite) {
+      alert("Accès interdit.");
+      return;
+    }
+
     if (!window.confirm("Supprimer cette catégorie ?")) return;
 
     try {
+      setErrorMsg("");
       await deleteCategory(id);
       await loadCategories();
     } catch (err) {
       console.error("❌ deleteCategory:", err);
+      setErrorMsg("Erreur lors de la suppression.");
       alert("Erreur lors de la suppression.");
     }
   }
 
   /* ============================================================
-     🔎 Filtrage simple par nom
+     🔎 Filtrage simple par nom (inchangé)
   ============================================================ */
   const filteredCategories = categories.filter((c) => {
     const term = search.trim().toLowerCase();
@@ -125,7 +198,7 @@ export default function AdminCategoriesPage() {
   });
 
   /* ============================================================
-     🧱 UI LOADING GLOBAL (user)
+     🧱 UI LOADING GLOBAL (user) (inchangé)
   ============================================================ */
   if (!user) {
     return (
@@ -135,32 +208,70 @@ export default function AdminCategoriesPage() {
     );
   }
 
+  // ============================== PARTIE 2 / 2 ==============================
+// ============================== PARTIE 2 / 2 ==============================
+// (suite) frontend/src/pages/AdminCategoriesPage.jsx
+
   /* ============================================================
-     🧱 RENDER PRINCIPAL
+     🧱 RENDER PRINCIPAL (conserve toute la structure + ajoute badges/guards)
   ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/40 to-white px-4 py-10">
       <div className="max-w-5xl mx-auto bg-white shadow-lg shadow-slate-200/40 rounded-3xl p-8 border border-slate-200">
-
         {/* HEADER */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
               📂 <span>Gestion des catégories</span>
             </h1>
-            <p className="text-sm text-slate-600 mt-1">
-              Connecté en tant que{" "}
-              <strong>{user.email}</strong> ({user.role})
+
+            <p className="text-sm text-slate-600 mt-1 flex flex-wrap items-center gap-2">
+              <span>
+                Connecté en tant que <strong>{user.email}</strong> ({user.role})
+              </span>
+
+              {/* ✅ Badge master/admin scoped (n'impacte pas les fonctions) */}
+              {isMaster && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.7rem] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                  MASTER
+                </span>
+              )}
+
+              {/* ✅ Lecture seule si pas admin/master */}
+              {!canWrite && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.7rem] font-semibold border bg-amber-50 text-amber-700 border-amber-200">
+                  🔒 Lecture seule
+                </span>
+              )}
             </p>
+
+            {/* ✅ Optionnel: info scope si présent (safe) */}
+            {(isTruthyId(user.countryId) || isTruthyId(user.regionId)) && (
+              <p className="text-xs text-slate-500 mt-2">
+                Scope :{" "}
+                {isTruthyId(user.regionId)
+                  ? `Région #${user.regionId}`
+                  : `Pays #${user.countryId}`}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => {
+                if (!canWrite) {
+                  alert("Accès interdit.");
+                  return;
+                }
                 if (showForm) resetForm();
                 setShowForm((v) => !v);
               }}
-              className="px-4 py-2 text-sm font-semibold rounded-xl shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
+              disabled={!canWrite}
+              className={`px-4 py-2 text-sm font-semibold rounded-xl shadow-sm transition ${
+                canWrite
+                  ? "bg-slate-900 text-white hover:bg-slate-800"
+                  : "bg-slate-200 text-slate-500 cursor-not-allowed"
+              }`}
             >
               {showForm ? "➖ Masquer le formulaire" : "➕ Nouvelle catégorie"}
             </button>
@@ -178,6 +289,14 @@ export default function AdminCategoriesPage() {
             </button>
           </div>
         </div>
+
+        {/* ✅ Message d’erreur (nouveau, sans enlever les alert existants) */}
+        {errorMsg && (
+          <div className="mb-6 rounded-2xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700 flex gap-2 items-start">
+            <span className="mt-[2px]">⚠️</span>
+            <p className="break-words">{errorMsg}</p>
+          </div>
+        )}
 
         {/* BARRE DE RECHERCHE */}
         <div className="mb-6">
@@ -211,7 +330,10 @@ export default function AdminCategoriesPage() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={!canWrite}
+                className={`w-full border rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  canWrite ? "border-slate-300" : "border-slate-200 opacity-70"
+                }`}
               />
             </div>
 
@@ -227,18 +349,34 @@ export default function AdminCategoriesPage() {
                 onChange={(e) =>
                   setForm({ ...form, description: e.target.value })
                 }
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
+                disabled={!canWrite}
+                className={`w-full border rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y ${
+                  canWrite ? "border-slate-300" : "border-slate-200 opacity-70"
+                }`}
               ></textarea>
             </div>
 
             {/* Actions */}
-            <div className="text-right mt-2">
+            <div className="text-right mt-2 flex flex-wrap justify-end gap-2">
+              {editing && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetForm();
+                    setShowForm(false);
+                  }}
+                  className="px-5 py-2.5 text-sm font-semibold rounded-xl shadow-sm bg-slate-200 text-slate-700 hover:bg-slate-300 transition"
+                >
+                  Annuler
+                </button>
+              )}
+
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || !canWrite}
                 className={`px-5 py-2.5 text-sm font-semibold rounded-xl shadow-sm text-white transition
                   ${
-                    saving
+                    saving || !canWrite
                       ? "bg-blue-300 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
                   }`}
@@ -283,6 +421,10 @@ export default function AdminCategoriesPage() {
                 <div className="flex flex-wrap gap-2 sm:flex-nowrap justify-end">
                   <button
                     onClick={() => {
+                      if (!canWrite) {
+                        alert("Accès interdit.");
+                        return;
+                      }
                       setForm({
                         name: c.name || "",
                         description: c.description || "",
@@ -290,14 +432,24 @@ export default function AdminCategoriesPage() {
                       setEditing(c);
                       setShowForm(true);
                     }}
-                    className="px-3 py-1.5 text-xs sm:text-sm rounded-xl bg-amber-500 text-white hover:bg-amber-600 transition shadow-sm"
+                    disabled={!canWrite}
+                    className={`px-3 py-1.5 text-xs sm:text-sm rounded-xl transition shadow-sm ${
+                      canWrite
+                        ? "bg-amber-500 text-white hover:bg-amber-600"
+                        : "bg-amber-200 text-amber-700 cursor-not-allowed"
+                    }`}
                   >
                     ✏️ Modifier
                   </button>
 
                   <button
                     onClick={() => handleDelete(c.id)}
-                    className="px-3 py-1.5 text-xs sm:text-sm rounded-xl bg-red-600 text-white hover:bg-red-700 transition shadow-sm"
+                    disabled={!canWrite}
+                    className={`px-3 py-1.5 text-xs sm:text-sm rounded-xl transition shadow-sm ${
+                      canWrite
+                        ? "bg-red-600 text-white hover:bg-red-700"
+                        : "bg-red-200 text-red-700 cursor-not-allowed"
+                    }`}
                   >
                     🗑 Supprimer
                   </button>

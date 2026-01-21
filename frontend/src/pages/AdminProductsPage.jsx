@@ -115,7 +115,6 @@ export default function AdminProductsPage() {
     if (!product) return;
 
     const imgs = getProductImages(product);
-
     if (!imgs.length) return;
 
     setLightbox({
@@ -163,17 +162,22 @@ export default function AdminProductsPage() {
       }
     }
     init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadProducts() {
     setLoading(true);
     try {
-      const prods = await getProducts({ limit: 200 });
-      // On suppose que getProducts renvoie directement un array
-      setProducts(prods || []);
+      const res = await getProducts({ limit: 200 });
+
+      // Compat: certains services renvoient {products, pagination}
+      const list = Array.isArray(res) ? res : res?.products;
+
+      setProducts(list || []);
     } catch (e) {
       console.error("❌ Erreur chargement produits:", e);
       alert("Erreur chargement produits");
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -181,8 +185,12 @@ export default function AdminProductsPage() {
 
   async function loadCategories() {
     try {
-      const cats = await getCategories({ limit: 200 });
-      setCategories(cats || []);
+      const res = await getCategories({ limit: 200 });
+
+      // Compat: certains services renvoient {categories, pagination}
+      const list = Array.isArray(res) ? res : res?.categories;
+
+      setCategories(list || []);
     } catch (e) {
       console.error("❌ Erreur chargement catégories:", e);
       setCategories([]);
@@ -298,9 +306,7 @@ export default function AdminProductsPage() {
   const filteredProducts = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return products;
-    return products.filter((p) =>
-      (p.name || "").toLowerCase().includes(term)
-    );
+    return products.filter((p) => (p.name || "").toLowerCase().includes(term));
   }, [products, search]);
 
   /* ============================================================
@@ -317,7 +323,6 @@ export default function AdminProductsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-xl p-4 sm:p-6 md:p-8 border border-slate-100">
-
         {/* ============================================
             HEADER
         ============================================ */}
@@ -444,9 +449,7 @@ export default function AdminProductsPage() {
               </label>
               <select
                 value={form.categoryId}
-                onChange={(e) =>
-                  setForm({ ...form, categoryId: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
                 className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
               >
                 <option value="">— Sans catégorie —</option>
@@ -481,9 +484,7 @@ export default function AdminProductsPage() {
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) =>
-                  handleCoverChange(e.target.files?.[0] || null)
-                }
+                onChange={(e) => handleCoverChange(e.target.files?.[0] || null)}
                 className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
               />
             </div>
@@ -547,7 +548,7 @@ export default function AdminProductsPage() {
           </form>
         )}
 
-        {/* ============================================================
+         {/* ============================================================
             TABLEAU DES PRODUITS — Option A1 (Miniature Apple Light)
         ============================================================ */}
         <div className="mt-4">
@@ -572,6 +573,7 @@ export default function AdminProductsPage() {
                   </th>
                 </tr>
               </thead>
+
               <tbody>
                 {filteredProducts.length === 0 ? (
                   <tr>
@@ -586,14 +588,15 @@ export default function AdminProductsPage() {
                   filteredProducts.map((p) => {
                     const images = getProductImages(p);
                     const mainImg = images[0] || "";
-                    const cat = p.category || categoriesById.get(p.categoryId);
+                    const cat =
+                      p.category || categoriesById.get(p.categoryId);
 
                     return (
                       <tr
                         key={p.id}
                         className="border-t border-slate-100 hover:bg-slate-50 transition-colors"
                       >
-                        {/* Produit (miniature + infos) */}
+                        {/* PRODUIT */}
                         <td className="px-4 py-3 align-top">
                           <div className="flex items-center gap-3">
                             <button
@@ -625,7 +628,7 @@ export default function AdminProductsPage() {
                           </div>
                         </td>
 
-                        {/* Prix */}
+                        {/* PRIX */}
                         <td className="px-4 py-3 align-top whitespace-nowrap">
                           <div className="font-semibold text-slate-900">
                             {Number(p.price || 0).toLocaleString("fr-FR")}{" "}
@@ -633,21 +636,21 @@ export default function AdminProductsPage() {
                           </div>
                         </td>
 
-                        {/* Stock */}
+                        {/* STOCK */}
                         <td className="px-4 py-3 align-top whitespace-nowrap">
                           <span className="text-sm text-slate-800">
                             {p.stock ?? 0}
                           </span>
                         </td>
 
-                        {/* Catégorie */}
+                        {/* CATÉGORIE */}
                         <td className="px-4 py-3 align-top">
                           <span className="text-sm text-slate-800">
                             {cat ? cat.name : "—"}
                           </span>
                         </td>
 
-                        {/* Actions */}
+                        {/* ACTIONS */}
                         <td className="px-4 py-3 align-top">
                           <div className="flex flex-wrap gap-2">
                             <button
@@ -677,7 +680,7 @@ export default function AdminProductsPage() {
       </div>
 
       {/* ============================================================
-          LIGHTBOX PREMIUM (Fix: bouton fermer toujours visible)
+          LIGHTBOX PREMIUM (navigation active)
       ============================================================ */}
       {lightbox.open && lightbox.product && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4 select-none">
@@ -694,15 +697,14 @@ export default function AdminProductsPage() {
             </button>
 
             {/* Navigation gauche */}
-            {lightbox.product._images &&
-              lightbox.product._images.length > 1 && (
-                <button
-                  onClick={goPrev}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
-                >
-                  ◀
-                </button>
-              )}
+            {lightbox.product._images.length > 1 && (
+              <button
+                onClick={goPrev}
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
+              >
+                ◀
+              </button>
+            )}
 
             {/* Image */}
             <div className="flex items-center justify-center p-4">
@@ -714,18 +716,18 @@ export default function AdminProductsPage() {
             </div>
 
             {/* Navigation droite */}
-            {lightbox.product._images &&
-              lightbox.product._images.length > 1 && (
-                <button
-                  onClick={goNext}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
-                >
-                  ▶
-                </button>
-              )}
+            {lightbox.product._images.length > 1 && (
+              <button
+                onClick={goNext}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
+              >
+                ▶
+              </button>
+            )}
           </div>
         </div>
       )}
     </div>
   );
 }
+

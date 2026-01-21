@@ -60,16 +60,54 @@ function getPagination(req, defaultLimit = 25, maxLimit = 200) {
 }
 
 /* =========================================================
+   🔐 Helpers GEO (master = admin scoped)
+   - Admin global : role=admin ET (countryId==null && regionId==null)
+   - Master : role=admin ET (countryId!=null OU regionId!=null)
+========================================================= */
+function isAdmin(user) {
+  return user?.role === 'admin';
+}
+
+function getUserGeoScope(user) {
+  return {
+    countryId: user?.countryId ?? null,
+    regionId: user?.regionId ?? null,
+  };
+}
+
+function isGlobalAdmin(user) {
+  if (!isAdmin(user)) return false;
+  const { countryId, regionId } = getUserGeoScope(user);
+  return countryId == null && regionId == null;
+}
+
+function applyGeoScope(where, user) {
+  if (!isAdmin(user)) return where;
+  if (isGlobalAdmin(user)) return where;
+
+  const { countryId, regionId } = getUserGeoScope(user);
+
+  // Non-destructif : on n’écrase pas un filtre déjà fourni explicitement
+  if (countryId != null && where.countryId == null) where.countryId = countryId;
+  if (regionId != null && where.regionId == null) where.regionId = regionId;
+
+  return where;
+}
+
+/* =========================================================
    🔐 WHERE + ACL par rôle
    - filtre par serviceId / taskId / orderId / projectId
-   - applique les règles admin / agent / client
+   - applique les règles admin global / master (admin scoped) / agent / client
+   - conserve les filtres existants (search, dates, etc.)
 ========================================================= */
 function buildWhereWithACL(req) {
   const where = {};
-  const sid = toSafeInt(req.query.serviceId);
-  const tid = toSafeInt(req.query.taskId);
-  const oid = toSafeInt(req.query.orderId);
-  const pid = toSafeInt(req.query.projectId);
+  const query = req?.query || {};
+
+  const sid = toSafeInt(query.serviceId);
+  const tid = toSafeInt(query.taskId);
+  const oid = toSafeInt(query.orderId);
+  const pid = toSafeInt(query.projectId);
 
   // 🔗 filtres directs sur les IDs liés
   if (sid) where.serviceId = sid;
@@ -77,18 +115,15 @@ function buildWhereWithACL(req) {
   if (oid) where.orderId = oid;
   if (pid) where.projectId = pid;
 
-  // type / status
-  if (req.query.type) where.type = req.query.type;
-  if (req.query.status) where.status = req.query.status;
+  // type / status (legacy)
+  if (query.type) where.type = String(query.type).trim();
+  if (query.status) where.status = String(query.status).trim();
 
   // filtrage par date
-  if (req.query.startDate && req.query.endDate) {
-    const start = new Date(req.query.startDate);
-    const end = new Date(req.query.endDate);
-    if (
-      Number.isFinite(start.getTime()) &&
-      Number.isFinite(end.getTime())
-    ) {
+  if (query.startDate && query.endDate) {
+    const start = new Date(query.startDate);
+    const end = new Date(query.endDate);
+    if (Number.isFinite(start.getTime()) && Number.isFinite(end.getTime())) {
       where.createdAt = { [Op.between]: [start, end] };
     }
   }
@@ -97,10 +132,12 @@ function buildWhereWithACL(req) {
   const userId = req.user?.id;
 
   // ======================================================
-  // ACL par rôle
+  // ACL par rôle + GEO scope
   // ======================================================
   if (role === 'admin') {
-    // admin : accès complet → pas de contrainte supplémentaire
+    // ✅ Admin global: accès complet
+    // ✅ Master (admin scoped): applique countryId/regionId automatiquement
+    applyGeoScope(where, req.user);
   } else if (role === 'agent') {
     // Agent :
     //  - transactions créées par lui
@@ -128,7 +165,7 @@ function buildWhereWithACL(req) {
   }
 
   // Recherche texte simple (description + paymentMethod)
-  const q = (req.query.q || '').trim();
+  const q = (query.q || '').trim();
   if (q) {
     where[Op.and] = where[Op.and] || [];
     where[Op.and].push({
@@ -146,37 +183,38 @@ function buildWhereWithACL(req) {
    🔗 Includes communs pour toutes les queries de Transaction
    - permet ACL avec $alias.colonne$
    - permet affichage (service, task, order, project, user)
+   - ✅ Ajoute countryId/regionId sur les modules (si présents) pour debug/filtre
 ========================================================= */
 const COMMON_INCLUDE = [
   {
     model: User,
     as: 'user',
     required: false,
-    attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
+    attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'countryId', 'regionId'],
   },
   {
     model: Service,
     as: 'service',
     required: false,
-    attributes: ['id', 'title', 'clientId', 'agentId'],
+    attributes: ['id', 'title', 'clientId', 'agentId', 'countryId', 'regionId'],
   },
   {
     model: Task,
     as: 'task',
     required: false,
-    attributes: ['id', 'title', 'serviceId', 'assignedTo', 'creatorId'],
+    attributes: ['id', 'title', 'serviceId', 'assignedTo', 'creatorId', 'countryId', 'regionId'],
   },
   {
     model: Order,
     as: 'order',
     required: false,
-    attributes: ['id', 'code', 'status', 'userId'],
+    attributes: ['id', 'code', 'status', 'userId', 'countryId', 'regionId'],
   },
   {
     model: Project,
     as: 'project',
     required: false,
-    attributes: ['id', 'title', 'clientId', 'agentId', 'status'],
+    attributes: ['id', 'title', 'clientId', 'agentId', 'status', 'countryId', 'regionId'],
   },
 ];
 
@@ -184,27 +222,51 @@ const COMMON_INCLUDE = [
    🔐 canAccessTransaction
    - vérifie l'accès à une transaction donnée
    - recharge la transaction avec COMMON_INCLUDE si besoin
+   - ✅ applique aussi le scope GEO pour master (admin scoped)
 ========================================================= */
 async function canAccessTransaction(req, trx) {
   try {
     const role = req.user?.role;
     const userId = req.user?.id;
     if (!role || !userId) return false;
-    if (role === 'admin') return true;
 
-    // S’assurer d’avoir les alias nécessaires
-    const hasAll =
-      trx?.user ||
-      trx?.service ||
-      trx?.task ||
-      trx?.order ||
-      trx?.project;
+    // ✅ Admin global: OK
+    // ✅ Master (admin scoped): OK seulement si trx dans le scope
+    if (role === 'admin') {
+      if (isGlobalAdmin(req.user)) return true;
+
+      // si trx a déjà countryId/regionId => check direct, sinon reload
+      const scope = getUserGeoScope(req.user);
+
+      const trxCountryId = trx?.countryId ?? null;
+      const trxRegionId = trx?.regionId ?? null;
+
+      // Si on a les infos, on valide sans reload
+      if (trxCountryId != null || trxRegionId != null) {
+        if (scope.countryId != null && trxCountryId !== scope.countryId) return false;
+        if (scope.regionId != null && trxRegionId !== scope.regionId) return false;
+        return true;
+      }
+
+      // Sinon recharge et check
+      const re = await Transaction.findByPk(trx.id, { include: COMMON_INCLUDE });
+      if (!re) return false;
+
+      const cId = re.countryId ?? null;
+      const rId = re.regionId ?? null;
+
+      if (scope.countryId != null && cId !== scope.countryId) return false;
+      if (scope.regionId != null && rId !== scope.regionId) return false;
+
+      return true;
+    }
+
+    // S’assurer d’avoir les alias nécessaires (pour agent/client)
+    const hasAll = trx?.user || trx?.service || trx?.task || trx?.order || trx?.project;
 
     let t = trx;
     if (!hasAll) {
-      t = await Transaction.findByPk(trx.id, {
-        include: COMMON_INCLUDE,
-      });
+      t = await Transaction.findByPk(trx.id, { include: COMMON_INCLUDE });
       if (!t) return false;
     }
 
@@ -241,4 +303,9 @@ module.exports = {
   buildWhereWithACL,
   COMMON_INCLUDE,
   canAccessTransaction,
+
+  // exports utilitaires GEO (optionnels, non cassants)
+  applyGeoScope,
+  getUserGeoScope,
+  isGlobalAdmin,
 };

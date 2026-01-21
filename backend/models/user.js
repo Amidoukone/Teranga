@@ -4,10 +4,30 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     static associate(models) {
-      // Exemple d’associations futures :
+      // Associations existantes / futures
       // User.hasMany(models.Property, { foreignKey: 'ownerId', as: 'properties' });
       // User.hasMany(models.Service, { foreignKey: 'clientId', as: 'servicesRequested' });
       // User.hasMany(models.Service, { foreignKey: 'agentId', as: 'servicesAssigned' });
+    }
+
+    /**
+     * 🔎 Helpers logiques (NON persistés)
+     * Ces getters ne touchent pas à la DB
+     */
+
+    get isAdmin() {
+      return this.role === 'admin';
+    }
+
+    get isMaster() {
+      return (
+        this.role === 'admin' &&
+        (this.countryId !== null || this.regionId !== null)
+      );
+    }
+
+    get isGlobalAdmin() {
+      return this.role === 'admin' && !this.countryId && !this.regionId;
     }
   }
 
@@ -16,50 +36,74 @@ module.exports = (sequelize, DataTypes) => {
       email: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true
+        unique: true,
       },
+
       passwordHash: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: false,
       },
+
       firstName: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true,
       },
+
       lastName: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true,
       },
+
       phone: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true,
       },
+
+      // Ancien champ legacy (ISO pays)
       country: {
-        type: DataTypes.STRING(2), // code pays (ex: ML, FR…)
-        allowNull: true
+        type: DataTypes.STRING(2), // ex: ML, FR
+        allowNull: true,
       },
+
+      // ✅ NOUVEAU : scope géographique (multi-pays / franchise)
+      countryId: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
+        field: 'country_id',
+      },
+
+      regionId: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
+        field: 'region_id',
+      },
+
       role: {
+        // ❗ ENUM inchangé pour PlanetScale
         type: DataTypes.ENUM('client', 'agent', 'admin'),
         allowNull: false,
-        defaultValue: 'client' // par défaut lors de l'inscription publique
+        defaultValue: 'client',
       },
+
       emailVerified: {
         type: DataTypes.BOOLEAN,
-        defaultValue: false
+        defaultValue: false,
       },
+
       phoneVerified: {
         type: DataTypes.BOOLEAN,
-        defaultValue: false
+        defaultValue: false,
       },
+
       lastLogin: {
         type: DataTypes.DATE,
-        allowNull: true
-      }
+        allowNull: true,
+      },
     },
     {
       sequelize,
       modelName: 'User',
-      tableName: 'users' // ✅ correspond à ta DB (minuscule)
+      tableName: 'users',
     }
   );
 

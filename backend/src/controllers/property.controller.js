@@ -13,6 +13,14 @@ const {
 const imageKit = require('../helpers/teranga-imagekit');
 const path = require('path');
 
+// ✅ GeoScope (master = admin scoped)
+const geo = require('../utils/geoScope');
+const applyGeoScope = geo.applyGeoScope;
+const getUserGeoScope = geo.getUserGeoScope;
+const isGlobalAdmin =
+  geo.isGlobalAdmin ||
+  ((u) => u?.role === 'admin' && !(u?.countryId || u?.regionId));
+
 /* ============================================================
    Helpers utilitaires
 ============================================================ */
@@ -26,7 +34,8 @@ const toTrimOrNull = (v) => {
 };
 
 const toSafeInt = (v, fallback = null) => {
-  const n = parseInt(v, 10);
+  if (v === null || v === undefined || v === '') return fallback;
+  const n = parseInt(String(v), 10);
   return Number.isNaN(n) ? fallback : n;
 };
 
@@ -46,6 +55,32 @@ function isImageKitEnabled() {
       process.env.IMAGEKIT_PRIVATE_KEY &&
       process.env.IMAGEKIT_URL_ENDPOINT
   );
+}
+
+/* ============================================================
+   Helpers GeoScope
+============================================================ */
+function toScopeFromObj(obj) {
+  if (!obj) return { countryId: null, regionId: null };
+  return {
+    countryId: toSafeInt(obj.countryId ?? obj.country_id, null),
+    regionId: toSafeInt(obj.regionId ?? obj.region_id, null),
+  };
+}
+
+function canAccessByGeoScope(user, resource) {
+  if (!user) return false;
+  if (isGlobalAdmin(user)) return true;
+
+  const scope = getUserGeoScope ? getUserGeoScope(user) : { countryId: null, regionId: null };
+  const r = toScopeFromObj(resource);
+
+  // rétro-compat : si la resource n’a pas de scope, on autorise
+  if (!r.countryId && !r.regionId) return true;
+
+  if (scope.regionId) return String(r.regionId) === String(scope.regionId);
+  if (scope.countryId) return String(r.countryId) === String(scope.countryId);
+  return true;
 }
 
 /* ============================================================
@@ -154,7 +189,7 @@ async function deleteImageKitFiles(photoObjects = []) {
 }
 
 /* ============================================================
-   LIST all (client/admin)
+   LIST all (client/admin/master/agent) + scope
 ============================================================ */
 exports.list = async (req, res) => {
   try {
@@ -181,16 +216,31 @@ exports.list = async (req, res) => {
       });
     }
 
-    // 🔐 ACL
-    if (req.user.role === 'admin') {
+    // 🔐 ACL + GeoScope
+    // - admin global: tout (optionnel filtre clientId)
+    // - master/admin scoped: tout dans scope (optionnel filtre clientId)
+    // - agent: lecture dans scope uniquement (pas de filtre clientId sauf si voulu)
+    // - client: uniquement ses biens
+    if (isGlobalAdmin(req.user)) {
       if (clientId) where.ownerId = toSafeInt(clientId);
+    } else if (req.user.role === 'admin' || req.user.role === 'master') {
+      if (clientId) where.ownerId = toSafeInt(clientId);
+      // scope appliqué plus bas
+    } else if (req.user.role === 'agent') {
+      // lecture seulement + scope (pas de filtre ownerId)
+      // si tu veux limiter l'agent à ses propres clients/assignations, on le fera après.
     } else {
       where.ownerId = req.user.id;
     }
 
-    const finalWhere = whereAnd.length
+    let finalWhere = whereAnd.length
       ? { ...where, [Op.and]: whereAnd }
       : where;
+
+    // 🌍 Appliquer scope pour master/admin scoped/agent
+    if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'master' || req.user.role === 'agent')) {
+      finalWhere = applyGeoScope ? applyGeoScope(finalWhere, req.user) : finalWhere;
+    }
 
     const { rows, count } = await Property.findAndCountAll({
       where: finalWhere,
@@ -219,19 +269,26 @@ exports.list = async (req, res) => {
 };
 
 /* ============================================================
-   LIST by client (ADMIN)
+   LIST by client (ADMIN/MASTER) + scope
 ============================================================ */
 exports.listByClient = async (req, res) => {
   try {
-    if (req.user.role !== 'admin')
+    if (!req.user || !['admin', 'master'].includes(req.user.role)) {
       return res.status(403).json({ error: 'Accès interdit' });
+    }
 
     const { limit, offset } = getPagination(req);
     const cid = toSafeInt(req.params.id);
     if (!cid) return res.status(400).json({ error: 'clientId requis' });
 
+    // master/admin scoped: on ne peut lister que dans son scope
+    let where = { ownerId: cid };
+    if (!isGlobalAdmin(req.user)) {
+      where = applyGeoScope ? applyGeoScope(where, req.user) : where;
+    }
+
     const { rows, count } = await Property.findAndCountAll({
-      where: { ownerId: cid },
+      where,
       include: [
         {
           model: User,
@@ -281,42 +338,87 @@ exports.create = async (req, res) => {
       // 🌍 Multi-pays (nouveau, non bloquant)
       countryId,
       regionId,
+      country_id,
+      region_id,
     } = req.body || {};
 
-    if (!title || !type || !address || !city)
+    if (!title || !type || !address || !city) {
       return res
         .status(400)
         .json({ error: 'title, type, address, city sont requis' });
+    }
 
     /* 🔐 Résolution propriétaire */
     let targetOwnerId = req.user.id;
 
-    if (req.user.role === 'admin') {
+    // admin/master peuvent créer pour un client
+    if (req.user.role === 'admin' || req.user.role === 'master') {
       const candidateId = toSafeInt(ownerId) || toSafeInt(clientId) || null;
 
       if (candidateId) {
         const user = await User.findByPk(candidateId);
-        if (!user)
-          return res
-            .status(400)
-            .json({ error: 'ownerId/clientId invalide' });
-        if (user.role !== 'client')
-          return res
-            .status(400)
-            .json({ error: 'Le propriétaire doit être un client' });
+        if (!user) {
+          return res.status(400).json({ error: 'ownerId/clientId invalide' });
+        }
+        if (user.role !== 'client') {
+          return res.status(400).json({ error: 'Le propriétaire doit être un client' });
+        }
         targetOwnerId = user.id;
       } else if (ownerEmail) {
         const user = await User.findOne({ where: { email: ownerEmail } });
-        if (!user || user.role !== 'client')
-          return res
-            .status(400)
-            .json({ error: 'ownerEmail invalide ou non client' });
+        if (!user || user.role !== 'client') {
+          return res.status(400).json({ error: 'ownerEmail invalide ou non client' });
+        }
         targetOwnerId = user.id;
       }
     }
 
     /* 🔥 Upload ImageKit (non bloquant en cas d’erreur) */
     const photos = req.files?.length ? await uploadPhotosToImageKit(req.files) : [];
+
+    // 🌍 Multi-pays :
+    // - admin global : peut définir librement
+    // - master/admin scoped : doit rester dans scope, et on force si nécessaire
+    // - client/agent : non bloquant => null
+    const desiredCountryId = toSafeInt(countryId ?? country_id, null);
+    const desiredRegionId = toSafeInt(regionId ?? region_id, null);
+
+    let finalCountryId = null;
+    let finalRegionId = null;
+
+    if (isGlobalAdmin(req.user)) {
+      finalCountryId = desiredCountryId;
+      finalRegionId = desiredRegionId;
+    } else if (req.user.role === 'admin' || req.user.role === 'master') {
+      const scope = getUserGeoScope ? getUserGeoScope(req.user) : { countryId: null, regionId: null };
+
+      // si scope region => on force region (et country optionnel)
+      if (scope.regionId) {
+        finalRegionId = scope.regionId;
+        finalCountryId = scope.countryId ?? desiredCountryId ?? null;
+
+        if (desiredRegionId && String(desiredRegionId) !== String(scope.regionId)) {
+          return res.status(403).json({ error: 'regionId hors scope' });
+        }
+        if (scope.countryId && desiredCountryId && String(desiredCountryId) !== String(scope.countryId)) {
+          return res.status(403).json({ error: 'countryId hors scope' });
+        }
+      } else if (scope.countryId) {
+        finalCountryId = scope.countryId;
+        finalRegionId = desiredRegionId ?? null;
+
+        if (desiredCountryId && String(desiredCountryId) !== String(scope.countryId)) {
+          return res.status(403).json({ error: 'countryId hors scope' });
+        }
+      } else {
+        // admin scoped sans scope réel => fallback permissif
+        finalCountryId = desiredCountryId;
+        finalRegionId = desiredRegionId;
+      }
+    } else {
+      finalCountryId = null;
+      finalRegionId = null;
+    }
 
     const created = await Property.create({
       ownerId: targetOwnerId,
@@ -332,9 +434,9 @@ exports.create = async (req, res) => {
       description: toTrimOrNull(description),
       status: status ? String(status).trim() : 'active',
 
-      // 🌍 Multi-pays: admin peut définir, sinon null (non bloquant)
-      countryId: req.user.role === 'admin' ? toSafeInt(countryId) : null,
-      regionId: req.user.role === 'admin' ? toSafeInt(regionId) : null,
+      // 🌍 Multi-pays
+      countryId: finalCountryId,
+      regionId: finalRegionId,
 
       photos, // en base : [{ url, fileId }, ...]
     });
@@ -349,15 +451,20 @@ exports.create = async (req, res) => {
       ],
     });
 
+    // ✅ sécurité : si master/admin scoped, vérifier qu'on renvoie bien une property dans scope
+    if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'master')) {
+      if (!canAccessByGeoScope(req.user, property)) {
+        return res.status(403).json({ error: 'Bien créé hors scope (bloqué)' });
+      }
+    }
+
     return res.status(201).json({
       message: 'Bien créé',
       property: addLabels(property),
     });
   } catch (e) {
     console.error('❌ create property:', e);
-    return res
-      .status(500)
-      .json({ error: 'Erreur lors de la création du bien' });
+    return res.status(500).json({ error: 'Erreur lors de la création du bien' });
   }
 };
 
@@ -367,20 +474,42 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const id = toSafeInt(req.params.id);
+    if (!id) return res.status(400).json({ error: 'ID invalide' });
+
     const p = await Property.findByPk(id);
     if (!p) return res.status(404).json({ error: 'Bien introuvable' });
 
-    // 🔐 ACL
-    if (req.user.role !== 'admin' && String(p.ownerId) !== String(req.user.id))
+    // 🔐 ACL de base
+    const isOwner = String(p.ownerId) === String(req.user.id);
+    const isAdminOrMaster = ['admin', 'master'].includes(req.user.role);
+
+    if (!isAdminOrMaster && !isOwner) {
       return res.status(403).json({ error: 'Non autorisé' });
+    }
 
-    const updates = {};
+    // 🌍 ACL GeoScope (master/admin scoped)
+    if (isAdminOrMaster && !isGlobalAdmin(req.user)) {
+      if (!canAccessByGeoScope(req.user, p)) {
+        return res.status(403).json({ error: 'Bien hors scope géographique' });
+      }
+    }
+
     const body = req.body || {};
+    const updates = {};
 
-    const fields = ['title', 'type', 'address', 'city', 'description', 'status'];
+    const fields = [
+      'title',
+      'type',
+      'address',
+      'city',
+      'description',
+      'status',
+    ];
 
     for (const key of fields) {
-      if (body[key] !== undefined) updates[key] = toTrimOrNull(body[key]);
+      if (body[key] !== undefined) {
+        updates[key] = toTrimOrNull(body[key]);
+      }
     }
 
     if (body.postalCode !== undefined)
@@ -394,15 +523,61 @@ exports.update = async (req, res) => {
     if (body.roomCount !== undefined)
       updates.roomCount = toNullableNumber(body.roomCount);
 
-    // 🌍 Multi-pays : admin uniquement (compat snake_case)
-    if (req.user.role === 'admin') {
-      if (body.countryId !== undefined || body.country_id !== undefined)
-        updates.countryId = toSafeInt(body.countryId ?? body.country_id);
-      if (body.regionId !== undefined || body.region_id !== undefined)
-        updates.regionId = toSafeInt(body.regionId ?? body.region_id);
+    /* ========================================================
+       🌍 Multi-pays UPDATE
+       - admin global : libre
+       - master/admin scoped : uniquement dans son scope
+       - client : interdit
+    ======================================================== */
+    if (isAdminOrMaster) {
+      const desiredCountryId = toSafeInt(
+        body.countryId ?? body.country_id,
+        null
+      );
+      const desiredRegionId = toSafeInt(
+        body.regionId ?? body.region_id,
+        null
+      );
+
+      if (isGlobalAdmin(req.user)) {
+        if (body.countryId !== undefined || body.country_id !== undefined)
+          updates.countryId = desiredCountryId;
+        if (body.regionId !== undefined || body.region_id !== undefined)
+          updates.regionId = desiredRegionId;
+      } else {
+        const scope = getUserGeoScope
+          ? getUserGeoScope(req.user)
+          : { countryId: null, regionId: null };
+
+        // scope région prioritaire
+        if (scope.regionId) {
+          if (
+            desiredRegionId &&
+            String(desiredRegionId) !== String(scope.regionId)
+          ) {
+            return res.status(403).json({ error: 'regionId hors scope' });
+          }
+          updates.regionId = scope.regionId;
+          updates.countryId =
+            scope.countryId ?? desiredCountryId ?? p.countryId ?? null;
+        } else if (scope.countryId) {
+          if (
+            desiredCountryId &&
+            String(desiredCountryId) !== String(scope.countryId)
+          ) {
+            return res.status(403).json({ error: 'countryId hors scope' });
+          }
+          updates.countryId = scope.countryId;
+          if (body.regionId !== undefined || body.region_id !== undefined) {
+            updates.regionId = desiredRegionId;
+          }
+        }
+      }
     }
 
-    // 🔥 Nouveau upload
+    /* ========================================================
+       🔥 Gestion photos (ImageKit)
+    ======================================================== */
     let newPhotos = [];
     if (req.files?.length) {
       newPhotos = await uploadPhotosToImageKit(req.files);
@@ -412,7 +587,6 @@ exports.update = async (req, res) => {
       const replace = String(body.replacePhotos || '').toLowerCase() === 'true';
 
       if (replace) {
-        // On supprime les anciens fichiers côté ImageKit (si config OK)
         await deleteImageKitFiles(p.photos || []);
         updates.photos = newPhotos;
       } else {
@@ -450,15 +624,28 @@ exports.update = async (req, res) => {
 exports.remove = async (req, res) => {
   try {
     const id = toSafeInt(req.params.id);
-    const p = await Property.findByPk(id);
+    if (!id) return res.status(400).json({ error: 'ID invalide' });
 
+    const p = await Property.findByPk(id);
     if (!p) return res.status(404).json({ error: 'Bien introuvable' });
 
-    if (req.user.role !== 'admin' && String(p.ownerId) !== String(req.user.id))
-      return res.status(403).json({ error: 'Non autorisé' });
+    const isOwner = String(p.ownerId) === String(req.user.id);
+    const isAdminOrMaster = ['admin', 'master'].includes(req.user.role);
 
-    // Supprime les fichiers distants si possible
+    if (!isAdminOrMaster && !isOwner) {
+      return res.status(403).json({ error: 'Non autorisé' });
+    }
+
+    // 🌍 GeoScope
+    if (isAdminOrMaster && !isGlobalAdmin(req.user)) {
+      if (!canAccessByGeoScope(req.user, p)) {
+        return res.status(403).json({ error: 'Bien hors scope géographique' });
+      }
+    }
+
+    // 🗑️ Suppression ImageKit (safe)
     await deleteImageKitFiles(p.photos || []);
+
     await p.destroy();
 
     return res.json({ message: 'Bien supprimé' });

@@ -1,9 +1,13 @@
 // ============================================================================
 // AdminPropertiesPage.jsx — VERSION PRODUCTION READY (Apple Light Premium)
+// ✅ Master + multi-pays compatible (backend GeoScope)
+// ✅ FILE_BASE prod-safe (pas de localhost)
+// ✅ Photos: support string | {url,fileId} (ImageKit) | legacy
+// ✅ Lightbox + previews sans erreurs (revokeObjectURL safe)
 // 100% fonctionnel, aucune régression, même logique, design modernisé.
 // ============================================================================
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   getAllProperties,
   getClientProperties,
@@ -11,32 +15,75 @@ import {
   createPropertyForClient,
 } from '../services/properties';
 import api from '../services/api';
+import { me } from '../services/auth';
 
 // ============================================================================
-// 🌍 FILE_BASE + toAbsUrl — Standard Teranga (PRODUCTION SAFE)
+// 🌍 FILE_BASE + normalizePath + toAbsUrl — Standard Teranga (PRODUCTION SAFE)
+// - Compatible Render/Netlify
+// - SSR safe
+// - No localhost fallback (évite bugs prod multi-pays)
 // ============================================================================
 const FILE_BASE =
-  (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
   (typeof window !== 'undefined' &&
-  window.__TERANGA_API_BASE_URL
-    ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
-    : 'http://localhost:5000');
+    (window.__TERANGA_FILE_BASE_URL ||
+      (window.__TERANGA_API_BASE_URL
+        ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
+        : ''))) ||
+  '';
+
+function normalizePath(path = '') {
+  if (!path) return '';
+  const p = String(path).trim().replace(/\\/g, '/');
+  if (/^https?:\/\//i.test(p)) return p;
+  const fixed = p.startsWith('/') ? p : `/${p}`;
+  return fixed.replace(/\/{2,}/g, '/');
+}
 
 function toAbsUrl(path = '') {
-  if (!path) return '';
-  if (/^https?:\/\//i.test(path)) return path;
-  const clean = path.startsWith('/') ? path : `/${path}`;
-  return `${FILE_BASE}${clean}`.replace(/([^:]\/)\/+/g, '$1');
+  const norm = normalizePath(path);
+  if (!norm) return '';
+  if (/^https?:\/\//i.test(norm)) return norm;
+  return FILE_BASE.replace(/\/$/, '') + norm;
 }
 
 function isPdf(path = '') {
-  return /\.pdf($|\?)/i.test(path);
+  return /\.pdf($|\?)/i.test(String(path || ''));
+}
+
+// ============================================================================
+// 🧩 Normalisation Photos (ImageKit + legacy)
+// - backend peut renvoyer: ["https://..."] (déjà ok)
+// - ou [{url,fileId}, ...]
+// - ou {photos:[{url}...]} (selon couches)
+// ============================================================================
+function normalizePhotoValue(photo) {
+  if (!photo) return '';
+  if (typeof photo === 'string') return photo;
+  if (typeof photo === 'object' && photo.url) return photo.url;
+  if (typeof photo === 'object' && photo.path) return photo.path;
+  if (typeof photo === 'object' && photo.filePath) return photo.filePath;
+  return '';
+}
+
+// ============================================================================
+// 🧩 Safe revokeObjectURL (évite erreurs si url http)
+// ============================================================================
+function safeRevoke(url) {
+  try {
+    if (url && typeof url === 'string' && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
+  } catch {
+    // no-op
+  }
 }
 
 // ============================================================================
 // 🧩 PAGE PRINCIPALE — Apple Light Premium
 // ============================================================================
 export default function AdminPropertiesPage() {
+  const [user, setUser] = useState(null);
+
   const [properties, setProperties] = useState([]);
   const [clients, setClients] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
@@ -56,14 +103,17 @@ export default function AdminPropertiesPage() {
     surfaceArea: '',
     roomCount: '',
     description: '',
+    // 🌍 Multi-pays (optionnel — backend gère scope)
+    // countryId: '',
+    // regionId: '',
   });
 
   const [files, setFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
 
-  // ========================================================================
+  // ==========================================================================
   // 🖼️ LIGHTBOX (Agrandissement + Navigation)
-  // ========================================================================
+  // ==========================================================================
   const [lightbox, setLightbox] = useState({
     open: false,
     images: [],
@@ -72,26 +122,40 @@ export default function AdminPropertiesPage() {
 
   useEffect(() => {
     if (!lightbox.open) return;
+
     function onKey(e) {
       if (e.key === 'Escape') closeLightbox();
       if (e.key === 'ArrowRight') nextImage();
       if (e.key === 'ArrowLeft') prevImage();
     }
+
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lightbox.open, lightbox.index]);
 
-  // ========================================================================
-  // 🔹 Initialisation
-  // ========================================================================
+  // ==========================================================================
+  // 🔹 Initialisation (auth + clients + biens)
+  // ==========================================================================
   useEffect(() => {
-    loadClients();
-    loadProperties();
+    (async () => {
+      try {
+        const u = await me();
+        setUser(u.user);
+        await Promise.all([loadClients(), loadProperties()]);
+      } catch (e) {
+        console.error('❌ init AdminPropertiesPage:', e);
+        localStorage.removeItem('teranga_token');
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ========================================================================
-  // 🔹 Charger Clients
-  // ========================================================================
+  // ==========================================================================
+  // 🔹 Charger Clients (admin/master scoped: backend filtre via GeoScope si appliqué)
+  // ==========================================================================
   async function loadClients() {
     try {
       const { data } = await api.get('/users?role=client');
@@ -103,17 +167,27 @@ export default function AdminPropertiesPage() {
     }
   }
 
-  // ========================================================================
+  // ==========================================================================
   // 🔹 Charger Propriétés
-  // ========================================================================
+  // - master/admin scoped: backend filtre via GeoScope automatiquement
+  // ==========================================================================
   async function loadProperties(clientId) {
     try {
       setLoading(true);
+
       let props = clientId
         ? await getClientProperties(clientId)
         : await getAllProperties();
 
-      setProperties(props || []);
+      // normalise property.photos (string | object)
+      const normalized = (props || []).map((p) => {
+        const photos = Array.isArray(p?.photos)
+          ? p.photos.map(normalizePhotoValue).filter(Boolean)
+          : [];
+        return { ...p, photos };
+      });
+
+      setProperties(normalized);
     } catch (e) {
       console.error('❌ Erreur biens:', e);
     } finally {
@@ -121,11 +195,14 @@ export default function AdminPropertiesPage() {
     }
   }
 
-  // ========================================================================
+  // ==========================================================================
   // 🔹 Recherche Client
-  // ========================================================================
+  // ==========================================================================
   useEffect(() => {
-    if (!searchTerm.trim()) return setFilteredClients(clients);
+    if (!searchTerm.trim()) {
+      setFilteredClients(clients);
+      return;
+    }
     const term = searchTerm.toLowerCase();
     const filtered = clients.filter(
       (c) =>
@@ -136,22 +213,24 @@ export default function AdminPropertiesPage() {
     setFilteredClients(filtered);
   }, [searchTerm, clients]);
 
-  // ========================================================================
-  // 🔹 Gestion Upload
-  // ========================================================================
+  // ==========================================================================
+  // 🔹 Gestion Upload + previews
+  // ==========================================================================
   function handleFileChange(e) {
     const selected = Array.from(e.target.files || []);
     setFiles(selected);
 
-    // Nettoyage anciennes URLs
-    previewUrls.forEach((u) => URL.revokeObjectURL(u));
+    // Nettoyage anciennes URLs (uniquement blob)
+    previewUrls.forEach(safeRevoke);
+
+    // Previews blob pour fichiers locaux
     const previews = selected.map((f) => URL.createObjectURL(f));
     setPreviewUrls(previews);
   }
 
-  // ========================================================================
+  // ==========================================================================
   // 🔹 Ajouter Bien
-  // ========================================================================
+  // ==========================================================================
   async function handleCreate(e) {
     e.preventDefault();
 
@@ -166,15 +245,15 @@ export default function AdminPropertiesPage() {
       resetForm();
       setIsCreating(false);
       loadProperties(selectedClient);
-    } catch (e) {
-      console.error('❌ Erreur création:', e);
-      alert("Erreur lors de la création du bien.");
+    } catch (e2) {
+      console.error('❌ Erreur création:', e2);
+      alert('Erreur lors de la création du bien.');
     }
   }
 
-  // ========================================================================
+  // ==========================================================================
   // 🔹 Modifier Bien
-  // ========================================================================
+  // ==========================================================================
   function startEdit(p) {
     setEditId(p.id);
     setIsCreating(false);
@@ -188,12 +267,23 @@ export default function AdminPropertiesPage() {
       surfaceArea: p.surfaceArea || '',
       roomCount: p.roomCount || '',
       description: p.description || '',
+      // 🌍 Multi-pays (optionnel) — si tu ajoutes plus tard les champs UI
+      // countryId: p.countryId || '',
+      // regionId: p.regionId || '',
     });
 
     setFiles([]);
-    previewUrls.forEach((u) => URL.revokeObjectURL(u));
 
-    const previews = (p.photos || []).map((photo) => toAbsUrl(photo));
+    // Nettoyage anciennes previews blob uniquement
+    previewUrls.forEach(safeRevoke);
+
+    // Ici on affiche en preview les photos existantes (URL absolues),
+    // sans les "revoke" ensuite (safeRevoke ne touchera pas http)
+    const previews = (p.photos || [])
+      .map(normalizePhotoValue)
+      .filter(Boolean)
+      .map((photo) => toAbsUrl(photo));
+
     setPreviewUrls(previews);
   }
 
@@ -205,32 +295,34 @@ export default function AdminPropertiesPage() {
       alert('Bien mis à jour avec succès.');
       resetForm();
       loadProperties(selectedClient);
-    } catch (e) {
-      console.error('❌ Update:', e);
+    } catch (e2) {
+      console.error('❌ Update:', e2);
       alert('Erreur lors de la mise à jour.');
     }
   }
 
-  // ========================================================================
+  // ==========================================================================
   // 🔹 Supprimer Bien
-  // ========================================================================
+  // ==========================================================================
   async function handleDelete(id) {
     if (!window.confirm('Supprimer ce bien ?')) return;
     try {
       await api.delete(`/properties/${id}`);
       loadProperties(selectedClient);
     } catch (e) {
+      console.error('❌ delete property:', e);
       alert('Erreur lors de la suppression.');
     }
   }
 
-  // ========================================================================
+  // ==========================================================================
   // 🔹 Reset Form
-  // ========================================================================
+  // ==========================================================================
   function resetForm() {
     setEditId(null);
     setFiles([]);
-    previewUrls.forEach((u) => URL.revokeObjectURL(u));
+
+    previewUrls.forEach(safeRevoke);
     setPreviewUrls([]);
 
     setForm({
@@ -242,12 +334,14 @@ export default function AdminPropertiesPage() {
       surfaceArea: '',
       roomCount: '',
       description: '',
+      // countryId: '',
+      // regionId: '',
     });
   }
 
-  // ========================================================================
+  // ==========================================================================
   // 🔹 Lightbox Controls
-  // ========================================================================
+  // ==========================================================================
   function openLightbox(images, index = 0) {
     if (!images || !images.length) return;
     setLightbox({ open: true, images, index });
@@ -268,15 +362,17 @@ export default function AdminPropertiesPage() {
     }));
   }
 
-  const selectedClientObj = clients.find((c) => String(c.id) === String(selectedClient));
+  const selectedClientObj = useMemo(
+    () => clients.find((c) => String(c.id) === String(selectedClient)),
+    [clients, selectedClient]
+  );
 
-  // ========================================================================
+  // ==========================================================================
   // 🖥️ UI — Apple Light Premium (Cartes uniquement)
-  // ========================================================================
+  // ==========================================================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
       <div className="max-w-7xl mx-auto bg-white/90 backdrop-blur-xl shadow-[0_18px_45px_rgba(15,23,42,0.12)] rounded-3xl border border-slate-100 px-4 sm:px-8 py-6 sm:py-8 space-y-8">
-
         {/* HEADER */}
         <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="min-w-0">
@@ -284,14 +380,21 @@ export default function AdminPropertiesPage() {
               🏡 Gestion des biens
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Admin — création, édition et suivi des biens immobiliers des clients.
+              Admin/Master — création, édition et suivi des biens immobiliers des clients.
             </p>
+
             {selectedClientObj && (
               <p className="text-xs text-slate-400 mt-1">
                 Client sélectionné :{' '}
                 <span className="font-medium text-slate-700">
                   {selectedClientObj.firstName} {selectedClientObj.lastName} ({selectedClientObj.email})
                 </span>
+              </p>
+            )}
+
+            {user?.role === 'master' && (
+              <p className="text-[11px] text-slate-500 mt-2">
+                🌍 Mode <strong>Master</strong> : la liste et les actions sont automatiquement limitées au scope pays/région côté backend.
               </p>
             )}
           </div>
@@ -477,7 +580,6 @@ export default function AdminPropertiesPage() {
                   className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
                 />
               </div>
-
               {/* Pièces */}
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-slate-600">
@@ -522,6 +624,7 @@ export default function AdminPropertiesPage() {
                   accept=".jpg,.jpeg,.png,.pdf"
                   className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
                 />
+
                 {previewUrls.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-3">
                     {previewUrls.map((url, i) => (
@@ -574,6 +677,7 @@ export default function AdminPropertiesPage() {
               <div className="flex items-center justify-between text-xs text-slate-500 px-1">
                 <span>{properties.length} bien(s) affiché(s)</span>
               </div>
+
               <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                 {properties.map((p) => {
                   const imageUrls = (p.photos || [])
@@ -630,15 +734,27 @@ export default function AdminPropertiesPage() {
                         <p className="text-xs text-slate-500">
                           {p.city} • <span className="uppercase">{p.type}</span>
                         </p>
+
                         {p.description && (
                           <p className="text-sm text-slate-600 mt-1 line-clamp-3">
                             {p.description}
                           </p>
                         )}
+
                         {p.surfaceArea && (
                           <p className="text-sm text-slate-700 mt-2">
-                            🏠 {p.surfaceArea} m² —{' '}
-                            {p.roomCount || 0} pièce(s)
+                            🏠 {p.surfaceArea} m² — {p.roomCount || 0} pièce(s)
+                          </p>
+                        )}
+
+                        {(p.countryId || p.regionId) && (
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            🌍{' '}
+                            {p.regionId
+                              ? `Région #${p.regionId}`
+                              : p.countryId
+                              ? `Pays #${p.countryId}`
+                              : null}
                           </p>
                         )}
                       </div>

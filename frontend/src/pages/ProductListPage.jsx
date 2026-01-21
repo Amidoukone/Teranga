@@ -4,48 +4,88 @@
  * 🛍️ ProductListPage — Teranga PRODUCTION READY (Style A 2025)
  * ----------------------------------------------------------------
  * - Liste des produits avec design premium & responsive
- * - Compatible multi-images (imageUrl + allImageUrls)
+ * - Compatible multi-images (imageUrl + allImageUrls + coverImage + gallery)
  * - Utilise FILE_BASE + toAbsUrl pour les environnements de prod
- * - Aucune régression de logique, uniquement amélioration UI
+ * - Compatible réponses API: array direct OU { products, pagination }
+ * - Aucune régression de logique, uniquement alignement + robustesse
  * ----------------------------------------------------------------
  */
 
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { getProducts } from '../services/products';
-import { formatCurrency } from '../utils/labels';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { getProducts } from "../services/products";
+import { formatCurrency } from "../utils/labels";
 
 /* =========================================================
    🌍 FILE_BASE + normalizePath + toAbsUrl
    (même logique que ProductCatalogPage, harmonisation)
 ========================================================= */
 const FILE_BASE =
-  (typeof window !== 'undefined' &&
+  (typeof window !== "undefined" &&
     (window.__TERANGA_FILE_BASE_URL ||
       window.__TERANGA_API_BASE_URL ||
-      '')) ||
-  '';
+      "")) ||
+  "";
 
-function normalizePath(path = '') {
-  if (!path) return '';
-  const p = String(path).trim().replace(/\\/g, '/');
+function normalizePath(path = "") {
+  if (!path) return "";
+  const p = String(path).trim().replace(/\\/g, "/");
 
   if (/^https?:\/\//i.test(p)) return p;
 
-  const start = p.startsWith('/') ? p : '/' + p;
-  return start.replace(/\/{2,}/g, '/');
+  const start = p.startsWith("/") ? p : "/" + p;
+  return start.replace(/\/{2,}/g, "/");
 }
 
-function toAbsUrl(path = '') {
+function toAbsUrl(path = "") {
   const norm = normalizePath(path);
-  if (!norm) return '';
+  if (!norm) return "";
   if (/^https?:\/\//i.test(norm)) return norm;
 
-  return (
-    FILE_BASE.replace(/\/$/, '') +
-    '/' +
-    norm.replace(/^\//, '')
-  );
+  return FILE_BASE.replace(/\/$/, "") + "/" + norm.replace(/^\//, "");
+}
+
+/* =========================================================
+   🖼 Helpers images (robuste, rétro-compatible)
+   - backend withLabels => imageUrl, allImageUrls, coverImage, gallery
+========================================================= */
+function getProductImages(product) {
+  if (!product) return [];
+
+  const urls = [];
+
+  // 1) allImageUrls (backend withLabels)
+  if (Array.isArray(product.allImageUrls) && product.allImageUrls.length) {
+    urls.push(...product.allImageUrls);
+  }
+
+  // 2) coverImage (string ou { url })
+  if (product.coverImage) {
+    if (typeof product.coverImage === "string") {
+      urls.unshift(product.coverImage);
+    } else if (product.coverImage?.url) {
+      urls.unshift(product.coverImage.url);
+    }
+  }
+
+  // 3) imageUrl legacy/compat
+  if (product.imageUrl) {
+    urls.unshift(product.imageUrl);
+  }
+
+  // 4) gallery : [{ url }, "string", ...]
+  if (Array.isArray(product.gallery) && product.gallery.length) {
+    product.gallery.forEach((g) => {
+      if (g && typeof g === "object" && g.url) urls.push(g.url);
+      else if (typeof g === "string") urls.push(g);
+    });
+  }
+
+  // Déduplication + normalisation en URL absolues
+  const seen = new Set();
+  return urls
+    .map((u) => toAbsUrl(u))
+    .filter((u) => u && !seen.has(u) && (seen.add(u), true));
 }
 
 /* =========================================================
@@ -54,17 +94,23 @@ function toAbsUrl(path = '') {
 export default function ProductListPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function loadProducts() {
       try {
         setLoading(true);
-        const prods = await getProducts();
-        setProducts(prods || []);
-        setError('');
+
+        // ✅ compat: getProducts peut renvoyer:
+        // - un array directement
+        // - ou { products, pagination }
+        const res = await getProducts();
+        const prods = Array.isArray(res) ? res : res?.products;
+
+        setProducts(Array.isArray(prods) ? prods : []);
+        setError("");
       } catch (e) {
-        console.error('❌ Erreur chargement produits:', e);
+        console.error("❌ Erreur chargement produits:", e);
         const msg =
           e?.response?.data?.error ||
           "Impossible de charger les produits pour le moment.";
@@ -131,7 +177,6 @@ export default function ProductListPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 sm:px-6 py-10">
       <div className="max-w-6xl mx-auto">
-
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
           <div>
@@ -145,7 +190,7 @@ export default function ProductListPage() {
 
           <div className="text-right text-xs text-slate-500">
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/80 border border-slate-200 shadow-sm">
-              {products.length} produit{products.length > 1 ? 's' : ''}
+              {products.length} produit{products.length > 1 ? "s" : ""}
             </span>
           </div>
         </div>
@@ -154,20 +199,20 @@ export default function ProductListPage() {
         <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl shadow-sm p-4 sm:p-5">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {products.map((p) => {
-              // 🔹 Multi-images avec FILE_BASE + toAbsUrl (harmonisé)
-              const rawImages =
-                Array.isArray(p.allImageUrls) && p.allImageUrls.length
-                  ? p.allImageUrls
-                  : p.imageUrl
-                  ? [p.imageUrl]
-                  : [];
-
-              const images = rawImages
-                .map((img) => toAbsUrl(img))
-                .filter(Boolean);
-
+              const images = getProductImages(p);
               const mainImg = images[0] || null;
               const hasMulti = images.length > 1;
+
+              const currencyLabel =
+                p.currencyLabel ||
+                formatCurrency((p.currency || "XOF").toUpperCase());
+
+              const priceNumber = Number(p.price || 0);
+
+              const excerpt =
+                (p.shortDescription && String(p.shortDescription).trim()) ||
+                (p.description && String(p.description).trim()) ||
+                "";
 
               return (
                 <Link
@@ -196,7 +241,7 @@ export default function ProductListPage() {
 
                       {hasMulti && (
                         <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-full">
-                          {images.length} image{images.length > 1 ? 's' : ''}
+                          {images.length} image{images.length > 1 ? "s" : ""}
                         </span>
                       )}
                     </div>
@@ -211,9 +256,9 @@ export default function ProductListPage() {
                     {/* Titre + réf */}
                     <div className="flex items-start justify-between gap-2">
                       <h2 className="text-base font-semibold text-slate-900 line-clamp-2">
-                        {p.name}
+                        {p.name || "—"}
                       </h2>
-                      {p.id && (
+                      {p.id != null && (
                         <span className="text-[10px] text-slate-400 font-mono bg-slate-50 border border-slate-200 rounded-full px-2 py-0.5">
                           #{p.id}
                         </span>
@@ -222,9 +267,7 @@ export default function ProductListPage() {
 
                     {/* Description courte */}
                     <p className="text-slate-600 flex-1 mt-1 text-sm line-clamp-3">
-                      {p.description
-                        ? p.description
-                        : 'Pas de description.'}
+                      {excerpt ? excerpt : "Pas de description."}
                     </p>
 
                     {/* Prix */}
@@ -234,8 +277,7 @@ export default function ProductListPage() {
                           Prix
                         </p>
                         <p className="text-lg font-bold text-blue-600">
-                          {formatCurrency(p.currency || 'XOF')}{' '}
-                          {Number(p.price || 0).toLocaleString()}
+                          {priceNumber.toLocaleString("fr-FR")} {currencyLabel}
                         </p>
                       </div>
                     </div>

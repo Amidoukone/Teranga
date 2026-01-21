@@ -1,9 +1,13 @@
 // ============================================================
 // ProductDetailPage.jsx — Teranga PRODUCTION READY (Style A 2025)
-// Design premium + responsive, aucune régression fonctionnelle
+// Design premium + responsive, 0 régression fonctionnelle
+// - Images robustes (allImageUrls + gallery + coverImage + imageUrl)
+// - FILE_BASE + toAbsUrl (Render/Netlify/Prod)
+// - Lightbox + navigation + miniatures
 // ============================================================
 
-import { useEffect, useState } from 'react';
+/* eslint-disable jsx-a11y/img-redundant-alt */
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getProductById } from '../services/products';
 import { formatCurrency } from '../utils/labels';
@@ -33,11 +37,51 @@ function toAbsUrl(path = '') {
   if (!norm) return '';
   if (/^https?:\/\//i.test(norm)) return norm;
 
-  return (
-    FILE_BASE.replace(/\/$/, '') +
-    '/' +
-    norm.replace(/^\//, '')
-  );
+  return FILE_BASE.replace(/\/$/, '') + '/' + norm.replace(/^\//, '');
+}
+
+/* ============================================================
+   🖼 IMAGES — robuste & rétro-compatible backend
+   Sources possibles:
+   - allImageUrls: array de strings (déjà prêt côté backend)
+   - gallery: [{url}, "string", ...]
+   - coverImage: "string" ou {url}
+   - imageUrl: "string"
+============================================================ */
+function getImagesForProduct(p) {
+  if (!p) return [];
+
+  const urls = [];
+
+  // 1) allImageUrls (prioritaire)
+  if (Array.isArray(p.allImageUrls)) {
+    urls.push(...p.allImageUrls);
+  }
+
+  // 2) gallery
+  if (Array.isArray(p.gallery)) {
+    p.gallery.forEach((g) => {
+      if (g && typeof g === 'object' && g.url) urls.push(g.url);
+      else if (typeof g === 'string') urls.push(g);
+    });
+  }
+
+  // 3) coverImage (en premier)
+  if (p.coverImage) {
+    if (typeof p.coverImage === 'string') urls.unshift(p.coverImage);
+    else if (p.coverImage.url) urls.unshift(p.coverImage.url);
+  }
+
+  // 4) imageUrl (compat historique)
+  if (p.imageUrl) {
+    urls.unshift(p.imageUrl);
+  }
+
+  // Dédup + absolu
+  const seen = new Set();
+  return urls
+    .map((u) => toAbsUrl(u))
+    .filter((u) => u && !seen.has(u) && (seen.add(u), true));
 }
 
 /* ============================================================
@@ -45,6 +89,7 @@ function toAbsUrl(path = '') {
 ============================================================ */
 export default function ProductDetailPage() {
   const { id } = useParams();
+
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -53,24 +98,24 @@ export default function ProductDetailPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   /* ============================================================
-     🔄 Load product
-  ============================================================= */
+     🔄 Load product (master/multi-pays friendly)
+     - Compat si API renvoie `product` ou l'objet direct
+  ============================================================ */
   useEffect(() => {
+    let mounted = true;
+
     async function loadProduct() {
       try {
         setLoading(true);
-        const prod = await getProductById(id);
 
-        // NORMALISATION ABSOLUE DES IMAGES
-        const cover = prod.imageUrl ? toAbsUrl(prod.imageUrl) : null;
-        const gallery = Array.isArray(prod.allImageUrls)
-          ? prod.allImageUrls.map(toAbsUrl)
-          : [];
+        const res = await getProductById(id);
 
-        prod.imageUrl = cover;
-        prod.allImageUrls = gallery;
+        // ✅ compat: res peut être l'objet produit ou { product }
+        const prod = res?.product ? res.product : res;
 
-        setProduct(prod);
+        if (!mounted) return;
+
+        setProduct(prod || null);
         setSelectedIndex(0);
         setLightboxOpen(false);
         setError('');
@@ -79,18 +124,34 @@ export default function ProductDetailPage() {
         const msg =
           e?.response?.data?.error ||
           "Impossible de charger ce produit pour le moment.";
-        setError(msg);
+        if (mounted) setError(msg);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
 
     if (id) loadProduct();
+
+    return () => {
+      mounted = false;
+    };
   }, [id]);
 
   /* ============================================================
-     🌀 Load/Errors — écrans harmonisés Style A
-  ============================================================= */
+     🧮 Images dérivées (memo)
+  ============================================================ */
+  const images = useMemo(() => {
+    if (!product) return [];
+    return getImagesForProduct(product);
+  }, [product]);
+
+  const hasImages = images.length > 0;
+  const safeIndex = Math.min(Math.max(selectedIndex, 0), Math.max(images.length - 1, 0));
+  const currentImage = hasImages ? images[safeIndex] : null;
+
+  /* ============================================================
+     🌀 Load / Error / Not found
+  ============================================================ */
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
@@ -139,48 +200,20 @@ export default function ProductDetailPage() {
   }
 
   /* ============================================================
-     🖼 Construction des images (normalisées)
-  ============================================================= */
-  const {
-    name,
-    description,
-    price,
-    currency,
-    stock,
-    category,
-    imageUrl,
-    allImageUrls,
-  } = product;
-
-  const images =
-    Array.isArray(allImageUrls) && allImageUrls.length
-      ? allImageUrls
-      : imageUrl
-      ? [imageUrl]
-      : [];
-
-  const hasImages = images.length > 0;
-  const currentImage = hasImages ? images[selectedIndex] : null;
-
-  /* ============================================================
      🖼 Lightbox navigation
-  ============================================================= */
+  ============================================================ */
   function goPrev(e) {
     if (e) e.stopPropagation();
     if (!hasImages) return;
 
-    setSelectedIndex((prev) =>
-      prev === 0 ? images.length - 1 : prev - 1
-    );
+    setSelectedIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   }
 
   function goNext(e) {
     if (e) e.stopPropagation();
     if (!hasImages) return;
 
-    setSelectedIndex((prev) =>
-      prev === images.length - 1 ? 0 : prev + 1
-    );
+    setSelectedIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   }
 
   function openLightbox() {
@@ -191,20 +224,31 @@ export default function ProductDetailPage() {
     setLightboxOpen(false);
   }
 
+  const {
+    name,
+    description,
+    price,
+    currency,
+    stock,
+    category,
+    createdAt,
+    updatedAt,
+  } = product;
+
   /* ============================================================
      🧱 UI PRINCIPALE — Style A premium
-  ============================================================= */
+  ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 sm:px-6 py-10">
       <div className="max-w-5xl mx-auto">
 
         {/* HEADER / BREADCRUMB LIGHT */}
         <div className="flex items-center justify-between gap-3 mb-5">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-2 text-xs text-slate-500 min-w-0">
               <Link
                 to="/shop"
-                className="inline-flex items-center gap-1 hover:text-slate-700"
+                className="inline-flex items-center gap-1 hover:text-slate-700 flex-shrink-0"
               >
                 <span>Catalogue</span>
                 <span aria-hidden="true">/</span>
@@ -239,15 +283,19 @@ export default function ProductDetailPage() {
                   <div
                     className="relative cursor-zoom-in group"
                     onClick={openLightbox}
-                    aria-label={`Voir image ${selectedIndex + 1} de ${images.length}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Voir image ${safeIndex + 1} de ${images.length}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') openLightbox();
+                    }}
                   >
                     <img
                       src={currentImage}
                       alt={name}
                       className="
                         w-full h-80 sm:h-96 object-cover rounded-2xl
-                        border border-slate-200
-                        shadow-sm
+                        border border-slate-200 shadow-sm
                         transition-transform duration-200
                         group-hover:scale-[1.01]
                       "
@@ -256,10 +304,10 @@ export default function ProductDetailPage() {
                     {/* Overlay */}
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/30 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition" />
 
-                    {/* Compteur d'images */}
+                    {/* Compteur */}
                     {images.length > 1 && (
                       <span className="absolute bottom-3 right-3 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-full">
-                        {selectedIndex + 1} / {images.length}
+                        {safeIndex + 1} / {images.length}
                       </span>
                     )}
 
@@ -281,7 +329,7 @@ export default function ProductDetailPage() {
                             relative w-16 h-16 rounded-lg overflow-hidden border flex-shrink-0
                             transition
                             ${
-                              idx === selectedIndex
+                              idx === safeIndex
                                 ? 'border-blue-500 ring-2 ring-blue-400/70'
                                 : 'border-slate-200 hover:border-blue-300'
                             }
@@ -304,7 +352,6 @@ export default function ProductDetailPage() {
                 </div>
               )}
             </div>
-
             {/* ===========================
                 📄 Bloc infos
                =========================== */}
@@ -330,7 +377,7 @@ export default function ProductDetailPage() {
                   </p>
                   <p className="text-2xl sm:text-3xl font-semibold text-blue-600">
                     {formatCurrency(currency || 'XOF')}{' '}
-                    {Number(price || 0).toLocaleString()}
+                    {Number(price || 0).toLocaleString('fr-FR')}
                   </p>
                 </div>
 
@@ -359,18 +406,18 @@ export default function ProductDetailPage() {
                 {description || 'Aucune description disponible.'}
               </div>
 
-              {/* Métadonnées complémentaires (facultatives, mais non bloquantes) */}
+              {/* Métadonnées */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-500 mb-6">
-                {product.createdAt && (
+                {createdAt && (
                   <div>
                     <span className="font-semibold">Créé le :</span>{' '}
-                    {new Date(product.createdAt).toLocaleDateString('fr-FR')}
+                    {new Date(createdAt).toLocaleDateString('fr-FR')}
                   </div>
                 )}
-                {product.updatedAt && (
+                {updatedAt && (
                   <div>
                     <span className="font-semibold">Dernière mise à jour :</span>{' '}
-                    {new Date(product.updatedAt).toLocaleDateString('fr-FR')}
+                    {new Date(updatedAt).toLocaleDateString('fr-FR')}
                   </div>
                 )}
               </div>
@@ -390,8 +437,8 @@ export default function ProductDetailPage() {
       </div>
 
       {/* ============================================================
-          💡 LIGHTBOX PLEIN ÉCRAN — conservée, design amélioré
-      ============================================================= */}
+          💡 LIGHTBOX PLEIN ÉCRAN — images uniquement
+      ============================================================ */}
       {lightboxOpen && hasImages && (
         <div
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4"
@@ -400,7 +447,7 @@ export default function ProductDetailPage() {
           aria-modal="true"
           aria-label={`Images du produit ${name}`}
         >
-          {/* Close */}
+          {/* Bouton fermer */}
           <button
             type="button"
             onClick={(e) => {
@@ -436,16 +483,17 @@ export default function ProductDetailPage() {
             </>
           )}
 
-          {/* Image principale */}
+          {/* Image */}
           <img
             src={currentImage}
-            alt={`${name} (image ${selectedIndex + 1})`}
+            alt={`${name} (image ${safeIndex + 1})`}
             className="max-w-[92vw] max-h-[80vh] object-contain rounded-xl shadow-2xl border border-white/20"
           />
 
+          {/* Compteur */}
           {images.length > 1 && (
             <div className="absolute bottom-4 text-white text-xs bg-black/40 px-3 py-1 rounded-full">
-              {selectedIndex + 1} / {images.length}
+              {safeIndex + 1} / {images.length}
             </div>
           )}
         </div>

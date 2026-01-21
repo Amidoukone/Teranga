@@ -7,11 +7,19 @@ const imagekit = require("../helpers/teranga-imagekit");
 // 🌍 Labels
 const { EVIDENCE_KINDS, getLabel } = require("../utils/labels");
 
+// ✅ GeoScope (master = admin scoped)
+const geo = require("../utils/geoScope");
+const applyGeoScope = geo.applyGeoScope;
+const getUserGeoScope = geo.getUserGeoScope;
+const isGlobalAdmin =
+  geo.isGlobalAdmin ||
+  ((u) => u?.role === "admin" && !(u?.countryId || u?.regionId));
+
 /* ======================================================
    🧩 Helpers utilitaires
 ====================================================== */
 function toSafeInt(v) {
-  if (v === null || v === undefined) return null;
+  if (v === null || v === undefined || v === "") return null;
   const n = parseInt(String(v), 10);
   return Number.isNaN(n) ? null : n;
 }
@@ -43,6 +51,37 @@ function addLabels(evidence) {
 }
 
 /* ======================================================
+   🌍 Scope helpers (source de vérité = resource liée)
+====================================================== */
+function getScopeFromResource(resource) {
+  if (!resource) return { countryId: null, regionId: null };
+  return {
+    countryId: toSafeInt(resource.countryId ?? resource.country_id),
+    regionId: toSafeInt(resource.regionId ?? resource.region_id),
+  };
+}
+
+function canAccessGeoScope(user, resource) {
+  if (!user) return false;
+
+  // Admin global => OK
+  if (isGlobalAdmin(user)) return true;
+
+  // Client/agent/admin scoped/master => vérifier via scope user
+  const scope = getUserGeoScope ? getUserGeoScope(user) : { countryId: null, regionId: null };
+  const r = getScopeFromResource(resource);
+
+  // Si resource n'a pas de scope => on autorise pour rétro-compat (legacy)
+  if (!r.countryId && !r.regionId) return true;
+
+  if (scope.regionId) return String(r.regionId) === String(scope.regionId);
+  if (scope.countryId) return String(r.countryId) === String(scope.countryId);
+
+  // user sans scope => considéré global (mais normalement admin global déjà catch)
+  return true;
+}
+
+/* ======================================================
    🔐 ACL — Tâches
 ====================================================== */
 async function loadTaskForAcl(taskId) {
@@ -51,7 +90,7 @@ async function loadTaskForAcl(taskId) {
   const task = await Task.findByPk(taskId);
   if (!task) return null;
 
-  const t = task.toJSON();
+  const t = task.toJSON ? task.toJSON() : task;
 
   if (t.serviceId) {
     const svc = await Service.findByPk(t.serviceId, {
@@ -72,19 +111,33 @@ async function loadTaskForAcl(taskId) {
 
 function canAccessTask(user, task) {
   if (!user || !task) return false;
-  if (user.role === "admin") return true;
+
+  // ✅ Admin global => OK
+  if (isGlobalAdmin(user)) return true;
+
+  // ✅ Admin scoped/master => autorisé mais limité par scope geo
+  if (user.role === "admin") return canAccessGeoScope(user, task);
+  if (user.role === "master") return canAccessGeoScope(user, task);
 
   if (user.role === "agent") {
-    if (task.assignedTo === user.id) return true;
-    if (task.service && task.service.agentId === user.id) return true;
-    return false;
+    // ACL métier existante
+    let ok = false;
+    if (task.assignedTo === user.id) ok = true;
+    if (task.service && task.service.agentId === user.id) ok = true;
+
+    // ✅ + scope geo
+    return ok && canAccessGeoScope(user, task.service || task.property || task);
   }
 
   if (user.role === "client") {
-    if (task.creatorId === user.id) return true;
-    if (task.service && task.service.clientId === user.id) return true;
-    if (task.property && task.property.ownerId === user.id) return true;
-    return false;
+    // ACL métier existante
+    let ok = false;
+    if (task.creatorId === user.id) ok = true;
+    if (task.service && task.service.clientId === user.id) ok = true;
+    if (task.property && task.property.ownerId === user.id) ok = true;
+
+    // Client: ne force pas scope (rétro-compat) mais si task scoped => ok
+    return ok;
   }
 
   return false;
@@ -100,12 +153,24 @@ async function loadOrderForAcl(orderId) {
 
 function canAccessOrder(user, order) {
   if (!user || !order) return false;
-  if (user.role === "admin") return true;
+
+  // ✅ Admin global => OK
+  if (isGlobalAdmin(user)) return true;
+
+  // ✅ Admin scoped/master => autorisé mais limité par scope geo
+  if (user.role === "admin") return canAccessGeoScope(user, order);
+  if (user.role === "master") return canAccessGeoScope(user, order);
 
   const uid = String(user.id);
-  if (user.role === "client")
+
+  if (user.role === "client") {
     return String(order.userId) === uid || String(order.clientId) === uid;
-  if (user.role === "agent") return String(order.agentId) === uid;
+  }
+
+  if (user.role === "agent") {
+    const ok = String(order.agentId) === uid;
+    return ok && canAccessGeoScope(user, order);
+  }
 
   return false;
 }
@@ -132,8 +197,9 @@ function normalizeUploadedFiles(req) {
 ====================================================== */
 exports.create = async (req, res) => {
   try {
-    if (!req.user?.id)
+    if (!req.user?.id) {
       return res.status(401).json({ error: "Non authentifié" });
+    }
 
     const bodyTaskId = toSafeInt(req.body?.taskId);
     const bodyOrderId = toSafeInt(req.body?.orderId);
@@ -149,8 +215,9 @@ exports.create = async (req, res) => {
     }
 
     const notes = req.body?.notes || null;
-    if (!taskId && !orderId)
+    if (!taskId && !orderId) {
       return res.status(400).json({ error: "taskId ou orderId requis" });
+    }
 
     let task = null;
     let order = null;
@@ -158,23 +225,35 @@ exports.create = async (req, res) => {
     if (taskId) {
       task = await loadTaskForAcl(taskId);
       if (!task) return res.status(404).json({ error: "Tâche introuvable" });
-      if (!canAccessTask(req.user, task))
+      if (!canAccessTask(req.user, task)) {
         return res.status(403).json({ error: "Accès interdit pour cette tâche" });
+      }
     }
 
     if (orderId) {
       order = await loadOrderForAcl(orderId);
       if (!order) return res.status(404).json({ error: "Commande introuvable" });
-      if (!canAccessOrder(req.user, order))
+      if (!canAccessOrder(req.user, order)) {
         return res.status(403).json({ error: "Accès interdit pour cette commande" });
+      }
     }
 
     const files = normalizeUploadedFiles(req);
-    if (!files.length)
+    if (!files.length) {
       return res.status(400).json({ error: "Aucun fichier fourni" });
+    }
 
-    const geoCountryId = task?.countryId ?? order?.countryId ?? null;
-    const geoRegionId = task?.regionId ?? order?.regionId ?? null;
+    // 🌍 Héritage strict depuis la ressource liée (Task/Order)
+    const geoCountryId = toSafeInt(task?.countryId ?? order?.countryId) ?? null;
+    const geoRegionId = toSafeInt(task?.regionId ?? order?.regionId) ?? null;
+
+    // ✅ Si utilisateur scoped : il doit matcher le scope de la ressource liée
+    if (!isGlobalAdmin(req.user)) {
+      const linked = task || order;
+      if (linked && !canAccessGeoScope(req.user, linked)) {
+        return res.status(403).json({ error: "Ressource hors scope (accès interdit)" });
+      }
+    }
 
     const created = [];
 
@@ -208,7 +287,13 @@ exports.create = async (req, res) => {
 
     const withIncludes = await Evidence.findAll({
       where: { id: { [Op.in]: created.map((c) => c.id) } },
-      include: [{ model: User, as: "uploader", attributes: ["id", "firstName", "lastName", "email"] }],
+      include: [
+        {
+          model: User,
+          as: "uploader",
+          attributes: ["id", "firstName", "lastName", "email"],
+        },
+      ],
       order: [["createdAt", "DESC"]],
     });
 
@@ -221,18 +306,17 @@ exports.create = async (req, res) => {
     return res.status(500).json({ error: "Erreur lors de l'ajout des preuves" });
   }
 };
-
-
 /* ======================================================
-   📋 LIST — avec ACL, utilisé notamment par admin
-   /evidences?taskId=...&orderId=...
+   📋 LIST — avec ACL + scope géographique
+   GET /evidences?taskId=...&orderId=...
 ====================================================== */
 exports.list = async (req, res) => {
   try {
     const taskId = toSafeInt(req.query?.taskId);
     const orderId = toSafeInt(req.query?.orderId);
 
-    if (req.user.role !== "admin" && !taskId && !orderId) {
+    // ⚠️ Sécurité : hors admin global, il faut un contexte
+    if (!isGlobalAdmin(req.user) && !taskId && !orderId) {
       return res.status(400).json({
         error: "taskId ou orderId requis pour ce rôle",
       });
@@ -242,28 +326,29 @@ exports.list = async (req, res) => {
 
     if (taskId) {
       const task = await loadTaskForAcl(taskId);
-      if (!task)
-        return res.status(404).json({ error: "Tâche introuvable" });
-      if (!canAccessTask(req.user, task))
-        return res
-          .status(403)
-          .json({ error: "Accès interdit pour cette tâche" });
+      if (!task) return res.status(404).json({ error: "Tâche introuvable" });
+      if (!canAccessTask(req.user, task)) {
+        return res.status(403).json({ error: "Accès interdit pour cette tâche" });
+      }
       where.taskId = taskId;
     }
 
     if (orderId) {
       const order = await loadOrderForAcl(orderId);
-      if (!order)
-        return res.status(404).json({ error: "Commande introuvable" });
-      if (!canAccessOrder(req.user, order))
-        return res
-          .status(403)
-          .json({ error: "Accès interdit pour cette commande" });
+      if (!order) return res.status(404).json({ error: "Commande introuvable" });
+      if (!canAccessOrder(req.user, order)) {
+        return res.status(403).json({ error: "Accès interdit pour cette commande" });
+      }
       where.orderId = orderId;
     }
 
+    // 🌍 Filtrage géographique (admin scoped / master)
+    const finalWhere = applyGeoScope
+      ? applyGeoScope(where, req.user)
+      : where;
+
     const evidences = await Evidence.findAll({
-      where,
+      where: finalWhere,
       include: [
         {
           model: User,
@@ -289,17 +374,24 @@ exports.list = async (req, res) => {
 exports.listByTask = async (req, res) => {
   try {
     const taskId = toSafeInt(req.params?.id || req.params?.taskId);
-    if (!taskId)
+    if (!taskId) {
       return res.status(400).json({ error: "ID de tâche invalide" });
+    }
 
     const task = await loadTaskForAcl(taskId);
-    if (!task)
+    if (!task) {
       return res.status(404).json({ error: "Tâche introuvable" });
-    if (!canAccessTask(req.user, task))
+    }
+    if (!canAccessTask(req.user, task)) {
       return res.status(403).json({ error: "Accès interdit" });
+    }
+
+    const where = applyGeoScope
+      ? applyGeoScope({ taskId }, req.user)
+      : { taskId };
 
     const evidences = await Evidence.findAll({
-      where: { taskId },
+      where,
       include: [
         {
           model: User,
@@ -325,17 +417,24 @@ exports.listByTask = async (req, res) => {
 exports.listByOrder = async (req, res) => {
   try {
     const orderId = toSafeInt(req.params?.id || req.params?.orderId);
-    if (!orderId)
+    if (!orderId) {
       return res.status(400).json({ error: "ID de commande invalide" });
+    }
 
     const order = await loadOrderForAcl(orderId);
-    if (!order)
+    if (!order) {
       return res.status(404).json({ error: "Commande introuvable" });
-    if (!canAccessOrder(req.user, order))
+    }
+    if (!canAccessOrder(req.user, order)) {
       return res.status(403).json({ error: "Accès interdit" });
+    }
+
+    const where = applyGeoScope
+      ? applyGeoScope({ orderId }, req.user)
+      : { orderId };
 
     const evidences = await Evidence.findAll({
-      where: { orderId },
+      where,
       include: [
         {
           model: User,
@@ -356,13 +455,15 @@ exports.listByOrder = async (req, res) => {
 };
 
 /* ======================================================
-   🗑️ DELETE — admin uniquement + suppression ImageKit
+   🗑️ DELETE — admin global / admin scoped / master (scope)
    DELETE /evidences/:id
 ====================================================== */
 exports.remove = async (req, res) => {
   try {
     const id = toSafeInt(req.params?.id);
-    if (!id) return res.status(400).json({ error: "ID invalide" });
+    if (!id) {
+      return res.status(400).json({ error: "ID invalide" });
+    }
 
     const ev = await Evidence.findByPk(id, {
       include: [
@@ -371,17 +472,24 @@ exports.remove = async (req, res) => {
           as: "uploader",
           attributes: ["id", "email", "role"],
         },
-        {
-          model: Task,
-          as: "task",
-        },
+        { model: Task, as: "task" },
+        { model: Order, as: "order" },
       ],
     });
 
-    if (!ev)
+    if (!ev) {
       return res.status(404).json({ error: "Preuve introuvable" });
+    }
 
-    if (req.user.role !== "admin") {
+    // 🔐 ACL suppression
+    if (isGlobalAdmin(req.user)) {
+      // OK
+    } else if (req.user.role === "admin" || req.user.role === "master") {
+      const linked = ev.task || ev.order;
+      if (linked && !canAccessGeoScope(req.user, linked)) {
+        return res.status(403).json({ error: "Suppression hors scope interdite" });
+      }
+    } else {
       return res.status(403).json({
         error: "Suppression réservée à un administrateur.",
       });
@@ -409,4 +517,3 @@ exports.remove = async (req, res) => {
     });
   }
 };
-

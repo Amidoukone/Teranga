@@ -2,10 +2,8 @@
 
 const { Op } = require('sequelize');
 const { Category, Product } = require('../../models');
-const {
-  CATEGORY_STATUSES,
-  getLabel,
-} = require('../utils/labels');
+const { CATEGORY_STATUSES, getLabel } = require('../utils/labels');
+const { applyGeoScope, getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
 
 /* ============================================================
    🔧 Helpers génériques
@@ -35,11 +33,11 @@ function slugify(input) {
   if (!input) return null;
   return String(input)
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')  // accents
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, '-')      // non alphanum -> -
-    .replace(/^-+|-+$/g, '');         // trim -
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 /**
@@ -76,7 +74,7 @@ function canWriteCategory(req) {
 }
 
 /* ============================================================
-   1️⃣ CREATE — idempotent + slug auto
+   1️⃣ CREATE — idempotent + slug auto + scope
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -85,25 +83,29 @@ exports.create = async (req, res) => {
     }
 
     const { name, slug, description, status = 'active' } = req.body || {};
-
-    // name requis
     const cleanName = toTrimOrNull(name);
+
     if (!cleanName) {
       return res.status(400).json({ error: 'Le nom de la catégorie est requis' });
     }
 
-    // slug : autoriser vide -> slugify(name)
     let finalSlug = toTrimOrNull(slug) || slugify(cleanName);
     if (!finalSlug) {
       return res.status(400).json({ error: 'Slug invalide' });
     }
 
-    // 🔐 Idempotence : si une catégorie avec ce slug existe déjà,
-    // on la renvoie simplement (cas double-clic / réseau lent).
-    const existing = await Category.findOne({ where: { slug: finalSlug } });
+    const scope = getUserGeoScope(req.user);
+
+    // 🔐 Idempotence + scope
+    const existing = await Category.findOne({
+      where: applyGeoScope({ slug: finalSlug }, req.user),
+    });
+
     if (existing) {
-      // 200 = OK (pas une erreur), catégorie déjà existante
-      return res.status(200).json({ category: withLabels(existing), existed: true });
+      return res.status(200).json({
+        category: withLabels(existing),
+        existed: true,
+      });
     }
 
     const cat = await Category.create({
@@ -111,6 +113,12 @@ exports.create = async (req, res) => {
       slug: finalSlug,
       description: toTrimOrNull(description),
       status: toTrimOrNull(status) || 'active',
+      country_id: isGlobalAdmin(req.user)
+        ? toSafeInt(req.body?.countryId ?? req.body?.country_id)
+        : scope.countryId,
+      region_id: isGlobalAdmin(req.user)
+        ? toSafeInt(req.body?.regionId ?? req.body?.region_id)
+        : scope.regionId,
     });
 
     res.status(201).json({ category: withLabels(cat) });
@@ -121,7 +129,7 @@ exports.create = async (req, res) => {
 };
 
 /* ============================================================
-   2️⃣ LIST — recherche + pagination
+   2️⃣ LIST — recherche + pagination + scope
 ============================================================ */
 exports.list = async (req, res) => {
   try {
@@ -133,7 +141,7 @@ exports.list = async (req, res) => {
     const status = toTrimOrNull(req.query?.status);
     const { limit, offset, page } = getPagination(req);
 
-    const where = {};
+    let where = {};
 
     if (q) {
       where[Op.or] = [
@@ -146,6 +154,8 @@ exports.list = async (req, res) => {
     if (status) {
       where.status = status;
     }
+
+    where = applyGeoScope(where, req.user);
 
     const { rows, count } = await Category.findAndCountAll({
       where,
@@ -166,7 +176,7 @@ exports.list = async (req, res) => {
 };
 
 /* ============================================================
-   3️⃣ DETAIL — avec premiers produits liés (aperçu)
+   3️⃣ DETAIL — avec produits liés + scope
 ============================================================ */
 exports.detail = async (req, res) => {
   try {
@@ -179,7 +189,8 @@ exports.detail = async (req, res) => {
       return res.status(400).json({ error: 'ID invalide' });
     }
 
-    const cat = await Category.findByPk(id, {
+    const cat = await Category.findOne({
+      where: applyGeoScope({ id }, req.user),
       include: [
         {
           model: Product,
@@ -203,7 +214,7 @@ exports.detail = async (req, res) => {
 };
 
 /* ============================================================
-   4️⃣ UPDATE — slug auto si modifié
+   4️⃣ UPDATE — slug auto + scope
 ============================================================ */
 exports.update = async (req, res) => {
   try {
@@ -216,14 +227,16 @@ exports.update = async (req, res) => {
       return res.status(400).json({ error: 'ID invalide' });
     }
 
-    const cat = await Category.findByPk(id);
+    const cat = await Category.findOne({
+      where: applyGeoScope({ id }, req.user),
+    });
+
     if (!cat) {
       return res.status(404).json({ error: 'Catégorie introuvable' });
     }
 
     const { name, slug, description, status } = req.body || {};
 
-    // name
     if (name !== undefined) {
       const cleanName = toTrimOrNull(name);
       if (!cleanName) {
@@ -232,24 +245,27 @@ exports.update = async (req, res) => {
       cat.name = cleanName;
     }
 
-    // slug
     if (slug !== undefined || name !== undefined) {
-      const fromBodySlug = toTrimOrNull(slug);
       const baseForSlug =
-        fromBodySlug || (name ? toTrimOrNull(name) : null) || cat.name;
+        toTrimOrNull(slug) ||
+        (name ? toTrimOrNull(name) : null) ||
+        cat.name;
 
       const newSlug = slugify(baseForSlug);
-
       if (!newSlug) {
         return res.status(400).json({ error: 'Slug invalide' });
       }
 
       const exists = await Category.findOne({
-        where: {
-          slug: newSlug,
-          id: { [Op.ne]: cat.id },
-        },
+        where: applyGeoScope(
+          {
+            slug: newSlug,
+            id: { [Op.ne]: cat.id },
+          },
+          req.user
+        ),
       });
+
       if (exists) {
         return res.status(400).json({ error: 'Une autre catégorie utilise déjà ce slug' });
       }
@@ -257,12 +273,10 @@ exports.update = async (req, res) => {
       cat.slug = newSlug;
     }
 
-    // description
     if (description !== undefined) {
       cat.description = toTrimOrNull(description);
     }
 
-    // status
     if (status !== undefined) {
       const cleanStatus = toTrimOrNull(status);
       if (!cleanStatus) {
@@ -280,7 +294,7 @@ exports.update = async (req, res) => {
 };
 
 /* ============================================================
-   5️⃣ DELETE — empêche suppression si produits associés
+   5️⃣ DELETE — empêche suppression si produits associés + scope
 ============================================================ */
 exports.remove = async (req, res) => {
   try {
@@ -293,7 +307,8 @@ exports.remove = async (req, res) => {
       return res.status(400).json({ error: 'ID invalide' });
     }
 
-    const cat = await Category.findByPk(id, {
+    const cat = await Category.findOne({
+      where: applyGeoScope({ id }, req.user),
       include: [{ model: Product, as: 'products' }],
     });
 

@@ -1,6 +1,7 @@
 // ============================================================================
 // App.js — Teranga Platform (Version Premium PRO 2025)
 // Navigation • Routage protégé • SEO dynamique • GA4 tracking
+// ✅ MASTER support (admin + geo scope) sans régression
 // ============================================================================
 
 import { useEffect } from 'react';
@@ -8,7 +9,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import NavBar from './components/NavBar';
 import Analytics from './components/Analytics';
-import SetSeo from "./components/SetSeo"; // ✅ Nouvelle source unique SEO
+import SetSeo from './components/SetSeo'; // ✅ Source unique SEO
 import { GeoProvider } from './contexts/GeoContext';
 
 // 🌐 Pages publiques
@@ -56,7 +57,7 @@ import OrderTransactionsPage from './pages/OrderTransactionsPage';
 
 // 🔐 Auth
 import { getToken, getLocalUser } from './services/auth';
-
+import { normalizeRole } from './utils/role'; // ✅ ensure roles are canonical (admin/agent/client)
 
 // ============================================================================
 // 🧭 Scroll automatique
@@ -75,31 +76,65 @@ function ScrollToTop() {
   return null;
 }
 
+// ============================================================================
+// 🔐 Helpers Auth / Role (MASTER safe)
+// - IMPORTANT: "master" n'est pas un rôle backend.
+//   Un MASTER = admin + (countryId || regionId)
+// - Donc côté routes : on garde allow=['admin'] pour les écrans admin.
+//   Le scope est géré par backend + GeoContext / filtres.
+// ============================================================================
+function getSession() {
+  const token = getToken();
+  const user = getLocalUser();
+
+  // Rétro-compat: certains fronts stockent user mais pas token (ou inverse)
+  const hasSession = Boolean(token || user);
+
+  const role = normalizeRole(user?.role);
+  const isAdmin = role === 'admin';
+  const isAgent = role === 'agent';
+  const isClient = role === 'client';
+
+  const isMaster = Boolean(isAdmin && (user?.countryId || user?.regionId));
+
+  return { token, user, hasSession, role, isAdmin, isAgent, isClient, isMaster };
+}
 
 // ============================================================================
 // 🔐 Auth Guards
 // ============================================================================
 function RequireAuth({ children }) {
   const location = useLocation();
-  const token = getToken();
-  const user = getLocalUser();
+  const { hasSession } = getSession();
 
-  if (!token && !user) {
+  if (!hasSession) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
   return children;
 }
 
+/**
+ * RequireRole:
+ * - compare avec role normalisé (admin/agent/client)
+ * - IMPORTANT: un MASTER doit passer comme "admin"
+ *   => allow=['admin'] reste correct
+ */
 function RequireRole({ allow = [], children }) {
   const location = useLocation();
-  const user = getLocalUser();
-  const token = getToken();
+  const { hasSession, role } = getSession();
 
-  if (!user && !token) {
+  if (!hasSession) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (allow.length === 0 || allow.includes(user?.role)) {
+  // Si allow vide => aucune restriction spécifique
+  if (allow.length === 0) return children;
+
+  const normalizedAllow = Array.isArray(allow)
+    ? allow.map((r) => normalizeRole(r))
+    : [];
+
+  if (normalizedAllow.includes(role)) {
     return children;
   }
 
@@ -107,15 +142,12 @@ function RequireRole({ allow = [], children }) {
 }
 
 function PublicOnly({ children }) {
-  const token = getToken();
-  const user = getLocalUser();
-
-  if (token || user) {
+  const { hasSession } = getSession();
+  if (hasSession) {
     return <Navigate to="/dashboard" replace />;
   }
   return children;
 }
-
 
 // ============================================================================
 // 🧩 App (Final)
@@ -124,7 +156,6 @@ export default function App() {
   return (
     <GeoProvider>
       <div className="min-h-screen flex flex-col bg-gray-50 text-gray-800">
-
         <ScrollToTop />
         <NavBar />
 
@@ -133,7 +164,6 @@ export default function App() {
 
         <main className="flex-1 container mx-auto px-4 py-6">
           <Routes>
-
             {/* ============================= */}
             {/* 🌐 PAGES PUBLIQUES           */}
             {/* ============================= */}
@@ -394,7 +424,10 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* 👑 ADMIN                    */}
+            {/* 👑 ADMIN (inclut MASTER)     */}
+            {/* - MASTER = admin + scope geo
+                donc allow=['admin'] reste correct
+            */}
             {/* ============================= */}
             <Route
               path="/admin/projects"
@@ -506,14 +539,14 @@ export default function App() {
                 </>
               }
             />
-
           </Routes>
         </main>
 
         {/* FOOTER */}
         <footer className="bg-gray-100 border-t border-gray-200 py-4 text-center text-sm text-gray-600">
           © {new Date().getFullYear()}{' '}
-          <span className="font-semibold text-blue-600">Teranga</span> — Tous droits réservés.
+          <span className="font-semibold text-blue-600">Teranga</span> — Tous
+          droits réservés.
         </footer>
       </div>
     </GeoProvider>

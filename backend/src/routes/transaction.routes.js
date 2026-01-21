@@ -12,8 +12,9 @@ const upload = require('../middleware/uploadEvidence.middleware');
 /**
  * ROUTES TRANSACTIONS
  * =========================
- * - Client, agent et admin peuvent consulter/créer/mettre à jour/supprimer leurs transactions
- * - Admin a accès aux agrégats (summary/report)
+ * - Client, agent, admin, master peuvent consulter/créer/mettre à jour/supprimer
+ *   leurs transactions (ACL dans le contrôleur)
+ * - Admin/master : accès aux agrégats (summary/report) (scope appliqué côté ACL)
  *
  * Conventions (cohérence avec orderId) :
  * - GET  /api/transactions?orderId=...   -> liste filtrée par commande (ACL dans contrôleur)
@@ -55,79 +56,76 @@ function injectOrderIdQuery(req, _res, next) {
 }
 
 /* ===================================================================
-   🧮 ADMIN : agrégats
+   🧮 ADMIN / MASTER : agrégats
 =================================================================== */
-router.get('/summary', auth, requireRoles('admin'), ctrl.summary);
-router.get('/report', auth, requireRoles('admin'), ctrl.report);
+router.get('/summary', auth, requireRoles('admin', 'master'), ctrl.summary);
+router.get('/report', auth, requireRoles('admin', 'master'), ctrl.report);
 
 /* ===================================================================
    📖 LECTURE
-   - La route "/" supporte les filtres standards + orderId via query (?orderId=)
 =================================================================== */
-router.get('/', auth, requireRoles('client', 'agent', 'admin'), ctrl.list);
+router.get(
+  '/',
+  auth,
+  requireRoles('client', 'agent', 'admin', 'master'),
+  ctrl.list
+);
 
 // Détail d’une transaction
-router.get('/:id', auth, requireRoles('client', 'agent', 'admin'), ctrl.detail);
+router.get(
+  '/:id',
+  auth,
+  requireRoles('client', 'agent', 'admin', 'master'),
+  ctrl.detail
+);
 
 /* ===================================================================
    ✍️ CRÉATION / 🔁 MISE À JOUR / 🗑️ SUPPRESSION
-   - Création : peut être liée à serviceId, taskId, orderId
-   - Pièce jointe éventuelle "preuve de paiement" (images/pdf) — upload.any()
-   - On laisse le contrôleur gérer quel fichier prendre si plusieurs
 =================================================================== */
 router.post(
   '/',
   auth,
-  requireRoles('client', 'agent', 'admin'),
-  // ✅ Accepte n’importe quel nom de champ fichier (proofFile, proof, file, attachment, files…)
-  upload.any(),
+  requireRoles('client', 'agent', 'admin', 'master'),
+  upload.any(), // ✅ tolérant aux différents noms de champ fichier
   ctrl.create
 );
 
 router.put(
   '/:id',
   auth,
-  requireRoles('client', 'agent', 'admin'),
-  // ✅ Idem pour la mise à jour
-  upload.any(),
+  requireRoles('client', 'agent', 'admin', 'master'),
+  upload.any(), // ✅ idem pour la mise à jour
   ctrl.update
 );
 
 router.delete(
   '/:id',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requireRoles('client', 'agent', 'admin', 'master'),
   ctrl.remove
 );
 
 /* ===================================================================
    🔗 ALIAS REST LIÉS AUX COMMANDES (orderId)
-   - GET  /api/transactions/order/:id    -> liste des transactions d’une commande
-   - POST /api/transactions/order/:id    -> crée une transaction liée à la commande :id
 =================================================================== */
 
 // Lister les transactions d'une commande (alias REST)
-// -> injecte req.query.orderId, réutilise ctrl.list (ACL incluse)
 router.get(
   '/order/:id',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requireRoles('client', 'agent', 'admin', 'master'),
   injectOrderIdQuery,
   ctrl.list
 );
 
 // Créer une transaction directement sous une commande (alias REST)
-// -> injecte req.body.orderId = :id, puis réutilise toute la logique de ctrl.create
 router.post(
   '/order/:id',
   auth,
-  requireRoles('client', 'agent', 'admin'),
-  upload.any(),          // ✅ tolérant aux différents noms de champ fichier
-  injectOrderIdFromParam,
+  requireRoles('client', 'agent', 'admin', 'master'),
+  upload.any(),
+  injectOrderIdFromParam, // ⚠️ après multer si besoin (ici ok, multer remplit req.body mais on force orderId)
   ctrl.create
 );
 
-/* ===================================================================
-   ✅ Export : Express Router pur (compatible avec le chargeur dynamique)
-=================================================================== */
 module.exports = router;

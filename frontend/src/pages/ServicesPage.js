@@ -9,9 +9,10 @@ import { applyLabels, SERVICE_TYPES, SERVICE_STATUSES } from '../utils/labels';
 
 /* ============================================================
    🧠 Page Services — Premium Pro 2025 (responsive & production-ready)
-   - Gestion des services (client + admin)
+   - Gestion des services (client + admin/master)
    - Création / édition / suppression
    - Filtres avancés + tri
+   ✅ Multi-pays MASTER: UI uniquement (backend applique le scope)
 ============================================================ */
 export default function ServicesPage() {
   const [services, setServices] = useState([]);
@@ -49,6 +50,23 @@ export default function ServicesPage() {
     address: '',
     budget: '',
   });
+
+/* ==========================================
+   ✅ Helpers MASTER (frontend-only)
+   MASTER = admin avec scope (countryId || regionId)
+========================================== */
+const isMasterUser = useCallback((u) => {
+  if (!u) return false;
+  return u.role === 'admin' && (u.countryId != null || u.regionId != null);
+}, []);
+
+const roleLabel = useMemo(() => {
+  if (!user) return '';
+  if (user.role === 'admin') return isMasterUser(user) ? 'MASTER' : 'ADMINISTRATEUR';
+  if (user.role === 'agent') return 'AGENT';
+  return 'CLIENT';
+}, [user, isMasterUser]);
+
 
   /* ==========================================
      ✅ Auth headers
@@ -116,6 +134,7 @@ export default function ServicesPage() {
 
   const loadClients = useCallback(async () => {
     try {
+      // ✅ backend filtre automatiquement via scope (admin global = tous, master = scope)
       const { data } = await api.get('/users?role=client', authHeaders);
       setClients(data.users || []);
     } catch (e) {
@@ -136,9 +155,16 @@ export default function ServicesPage() {
           return;
         }
 
+        // Cette page = client + admin (donc admin global + master)
+        if (!['client', 'admin'].includes(u.role)) {
+          navigate('/dashboard');
+          return;
+        }
+
         setUser(u);
         await loadServices();
 
+        // ✅ admin global OU master (toujours role=admin, scope géré côté backend)
         if (u.role === 'admin') {
           await loadClients();
         } else {
@@ -152,7 +178,7 @@ export default function ServicesPage() {
     init();
   }, [loadClients, loadMyProperties, loadServices, navigate]);
 
-  // Lorsqu’un admin choisit un client, charger ses biens
+  // Lorsqu’un admin/master choisit un client, charger ses biens
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
     if (form.clientId) {
@@ -175,7 +201,15 @@ export default function ServicesPage() {
     try {
       setLoading(true);
 
+      // ✅ IMPORTANT : ne pas injecter countryId/regionId ici
+      // Backend applique le scope sur base de req.user
       const payload = { ...form };
+
+      // ⚠️ sécurité UI : admin/master => clientId obligatoire (backend l’exige)
+      if (user?.role === 'admin' && !payload.clientId) {
+        alert('Veuillez sélectionner un client.');
+        return;
+      }
 
       await createService(payload);
       alert('✅ Service créé avec succès !');
@@ -218,6 +252,7 @@ export default function ServicesPage() {
         propertyId: form.propertyId ? parseInt(form.propertyId, 10) : null,
       };
 
+      // ✅ admin/master : clientId autorisé si renseigné (backend supporte)
       if (user?.role === 'admin' && form.clientId) {
         payload.clientId = parseInt(form.clientId, 10);
       }
@@ -285,7 +320,6 @@ export default function ServicesPage() {
     });
     setEditingId(null);
   }
-
   /* ==========================================
      🔹 Filtrage + Tri (local)
   ========================================== */
@@ -358,6 +392,8 @@ export default function ServicesPage() {
           loading={loading}
           loadServices={loadServices}
           totalCount={services.length}
+          roleLabel={roleLabel}
+          user={user}
         />
 
         {/* FILTRES */}
@@ -420,7 +456,15 @@ export default function ServicesPage() {
 /* ============================================================
    🧩 HEADER (responsive, mobile-first, plus pro)
 ============================================================ */
-function Header({ showForm, setShowForm, loading, loadServices, totalCount }) {
+function Header({ showForm, setShowForm, loading, loadServices, totalCount, roleLabel, user }) {
+  const scopeText = (() => {
+    if (!user || user.role !== 'admin') return null;
+    const c = user.countryId != null ? `countryId=${user.countryId}` : null;
+    const r = user.regionId != null ? `regionId=${user.regionId}` : null;
+    if (!c && !r) return null;
+    return [c, r].filter(Boolean).join(' • ');
+  })();
+
   return (
     <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-4 border-b border-gray-100">
       <div className="space-y-1 min-w-0">
@@ -430,10 +474,33 @@ function Header({ showForm, setShowForm, loading, loadServices, totalCount }) {
         <p className="text-sm sm:text-base text-gray-600">
           Créez, suivez et gérez vos services pour vos clients et leurs biens.
         </p>
-        <span className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 mt-1">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-          {totalCount} service(s) au total.
-        </span>
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <span className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+            {totalCount} service(s) au total.
+          </span>
+
+          {roleLabel && (
+            <span
+              className={`inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 rounded-full border ${
+                roleLabel === 'MASTER'
+                  ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                  : roleLabel === 'ADMINISTRATEUR'
+                  ? 'bg-slate-50 text-slate-700 border-slate-200'
+                  : 'bg-gray-50 text-gray-600 border-gray-200'
+              }`}
+            >
+              {roleLabel}
+            </span>
+          )}
+
+          {!!scopeText && (
+            <span className="inline-flex items-center text-xs sm:text-sm px-3 py-1.5 rounded-full border bg-white text-gray-600 border-gray-200">
+              🌍 {scopeText}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -525,9 +592,7 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
           </label>
           <select
             value={filters.property}
-            onChange={(e) =>
-              setFilters({ ...filters, property: e.target.value })
-            }
+            onChange={(e) => setFilters({ ...filters, property: e.target.value })}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
           >
             <option value="">Bien (tous)</option>
@@ -595,6 +660,8 @@ function ServiceForm({
   loading,
   properties,
 }) {
+  const isAdminOrMaster = user?.role === 'admin';
+
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-3 gap-2">
@@ -613,8 +680,8 @@ function ServiceForm({
           bg-gray-50 p-4 sm:p-5 rounded-2xl border border-gray-200
         "
       >
-        {/* ADMIN : sélection client */}
-        {user?.role === 'admin' && (
+        {/* ADMIN/MASTER : sélection client */}
+        {isAdminOrMaster && (
           <div className="col-span-1 sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Client associé <span className="text-red-500">*</span>
@@ -646,14 +713,14 @@ function ServiceForm({
           <select
             value={form.propertyId}
             onChange={(e) => setForm({ ...form, propertyId: e.target.value })}
-            disabled={user?.role === 'admin' && !form.clientId}
+            disabled={isAdminOrMaster && !form.clientId}
             className="
               w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
               focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 bg-white
             "
           >
             <option value="">
-              {user?.role === 'admin' && !form.clientId
+              {isAdminOrMaster && !form.clientId
                 ? '— Choisir un client d’abord —'
                 : '— Aucun bien (service général) —'}
             </option>
@@ -838,6 +905,8 @@ function ServiceFormFields({ form, setForm }) {
    🔍 ServiceCard (Affichage – Optimisé mobile/desktop)
 ============================================================ */
 function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
+  const isAdminOrMaster = user?.role === 'admin';
+
   const statusClass =
     s.status === 'created'
       ? 'bg-gray-100 text-gray-700'
@@ -876,7 +945,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
             whitespace-nowrap self-start border ${statusClass}
           `}
         >
-          {s.statusLabel || s.status.replace('_', ' ')}
+          {s.statusLabel || String(s.status || '').replace('_', ' ')}
         </div>
       </div>
 
@@ -937,7 +1006,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
           📋 Voir les tâches
         </button>
 
-        {user?.role === 'admin' && (
+        {isAdminOrMaster && (
           <>
             <button
               onClick={() => startEdit(s)}

@@ -1,3 +1,4 @@
+// backend/src/routes/project.routes.js
 'use strict';
 
 const router = require('express').Router();
@@ -13,23 +14,23 @@ const { requireRoles } = require('../middleware/roles.middleware');
      • peut mettre à jour/supprimer ≤ 1h (contrôlé côté controller)
    - Agent:
      • peut lister/voir les projets qui lui sont assignés
-   - Admin:
-     • tout accès
+   - Admin / Master:
+     • tout accès (scope géré côté contrôleur/service)
 ========================================================= */
-router.post('/',  auth, requireRoles('client', 'admin'),              ctrl.create);
-router.get('/',   auth, requireRoles('client', 'agent', 'admin'),     ctrl.list);
-router.get('/:id',auth, requireRoles('client', 'agent', 'admin'),     ctrl.detail);
-router.put('/:id',auth, requireRoles('client', 'admin'),              ctrl.update);
-router.delete('/:id', auth, requireRoles('client', 'admin'),          ctrl.remove);
+router.post('/', auth, requireRoles('client', 'admin', 'master'), ctrl.create);
+router.get('/', auth, requireRoles('client', 'agent', 'admin', 'master'), ctrl.list);
+router.get('/:id', auth, requireRoles('client', 'agent', 'admin', 'master'), ctrl.detail);
+router.put('/:id', auth, requireRoles('client', 'admin', 'master'), ctrl.update);
+router.delete('/:id', auth, requireRoles('client', 'admin', 'master'), ctrl.remove);
 
 /* =========================================================
-   🧩 Assignation d’un agent à un projet (ADMIN uniquement)
+   🧩 Assignation d’un agent à un projet (ADMIN/MASTER uniquement)
    - POST /api/projects/assign
    - Body: { projectId: number, agentId: number|null }
      • agentId = null → désassigner l’agent
    - Sécurisée et idempotente, réponses enrichies
 ========================================================= */
-router.post('/assign', auth, requireRoles('admin'), async (req, res) => {
+router.post('/assign', auth, requireRoles('admin', 'master'), async (req, res) => {
   try {
     const { projectId, agentId } = req.body || {};
 
@@ -69,10 +70,19 @@ router.post('/assign', auth, requireRoles('admin'), async (req, res) => {
     if (currentAgentId === targetAgentId) {
       const hydrated = await Project.findByPk(project.id, {
         include: [
-          { model: User, as: 'client', attributes: ['id', 'firstName', 'lastName', 'email', 'role'] },
-          { model: User, as: 'agent',  attributes: ['id', 'firstName', 'lastName', 'email', 'role'] },
+          {
+            model: User,
+            as: 'client',
+            attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
+          },
+          {
+            model: User,
+            as: 'agent',
+            attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
+          },
         ],
       });
+
       return res.json({
         message:
           targetAgentId === null
@@ -89,8 +99,16 @@ router.post('/assign', auth, requireRoles('admin'), async (req, res) => {
     // ✅ Recharger le projet enrichi pour la réponse
     const updated = await Project.findByPk(project.id, {
       include: [
-        { model: User, as: 'client', attributes: ['id', 'firstName', 'lastName', 'email', 'role'] },
-        { model: User, as: 'agent',  attributes: ['id', 'firstName', 'lastName', 'email', 'role'] },
+        {
+          model: User,
+          as: 'client',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
+        },
+        {
+          model: User,
+          as: 'agent',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
+        },
       ],
     });
 
@@ -103,7 +121,9 @@ router.post('/assign', auth, requireRoles('admin'), async (req, res) => {
     res.json({ message: msg, project: updated });
   } catch (e) {
     console.error('❌ Erreur assignation projet:', e);
-    res.status(500).json({ error: "Erreur lors de l’assignation de l’agent au projet." });
+    res
+      .status(500)
+      .json({ error: "Erreur lors de l’assignation de l’agent au projet." });
   }
 });
 

@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { me } from '../services/auth';
-import { getGeoParams } from '../services/geo';
+import { isMasterUser } from '../utils/role';
 
+/* ============================================================
+   🔧 Constantes
+============================================================ */
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Tous les statuts' },
   { value: 'created', label: 'Créés' },
@@ -15,7 +18,10 @@ const STATUS_OPTIONS = [
 export default function AdminServicesPage() {
   const navigate = useNavigate();
 
+  const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(null);
+  const [isMaster, setIsMaster] = useState(false);
+
   const [services, setServices] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -25,7 +31,7 @@ export default function AdminServicesPage() {
   const [onlyUnassigned, setOnlyUnassigned] = useState(false);
   const [q, setQ] = useState('');
 
-  // Pagination simple
+  // Pagination
   const [limit, setLimit] = useState(25);
   const [offset, setOffset] = useState(0);
 
@@ -33,56 +39,82 @@ export default function AdminServicesPage() {
     () => ({
       headers: {
         Authorization: `Bearer ${
-          localStorage.getItem('teranga_token') || localStorage.getItem('token')
+          localStorage.getItem('teranga_token') ||
+          localStorage.getItem('token')
         }`,
       },
     }),
     []
   );
 
-  // Vérifie si admin
+  /* ============================================================
+     🔐 Vérification ADMIN / MASTER
+  ============================================================ */
   useEffect(() => {
-    me()
-      .then(({ user }) => {
+    let active = true;
+
+    async function checkAccess() {
+      try {
+        const { user } = await me();
+        if (!active) return;
+
         if (!user || user.role !== 'admin') {
           navigate('/dashboard');
-        } else {
-          setIsAdmin(true);
+          return;
         }
-      })
-      .catch(() => navigate('/login'));
+
+        setCurrentUser(user);
+        setIsAdmin(true);
+        setIsMaster(isMasterUser(user));
+      } catch (e) {
+        navigate('/login');
+      }
+    }
+
+    checkAccess();
+    return () => {
+      active = false;
+    };
   }, [navigate]);
 
-  // --- fonctions stabilisées pour satisfaire react-hooks/exhaustive-deps ---
-
+  /* ============================================================
+     👥 Chargement agents (admin/master)
+     ⚠️ Aucun filtrage frontend — backend scope only
+  ============================================================ */
   const loadAgents = useCallback(async () => {
     try {
       const { data } = await api.get('/users?role=agent', authHeaders);
-      setAgents(data.users || []);
+      setAgents(data?.users || []);
     } catch (err) {
       console.error('❌ Erreur chargement agents:', err);
       setAgents([]);
     }
   }, [authHeaders]);
 
+  /* ============================================================
+     📄 Chargement services
+     ⚠️ IMPORTANT :
+     - PAS de countryId / regionId en query
+     - Le backend applique déjà le scope
+  ============================================================ */
   const loadServices = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
 
-      // 🌍 Geo scope (multi-pays / régions) — injecté sans casser le reste
-      const geoParams = getGeoParams();
-      if (geoParams.countryId) params.set('countryId', String(geoParams.countryId));
-      if (geoParams.regionId) params.set('regionId', String(geoParams.regionId));
-
       if (status !== 'all') params.set('status', status);
       if (onlyUnassigned) params.set('unassigned', '1');
       if (q.trim()) params.set('q', q.trim());
+
       params.set('limit', String(limit));
       params.set('offset', String(offset));
 
-      const { data } = await api.get(`/services?${params.toString()}`, authHeaders);
-      setServices(data.services || []);
+      const { data } = await api.get(
+        `/services?${params.toString()}`,
+        authHeaders
+      );
+
+      setServices(data?.services || []);
     } catch (e) {
       console.error('❌ Erreur chargement services:', e);
       setServices([]);
@@ -91,24 +123,32 @@ export default function AdminServicesPage() {
     }
   }, [authHeaders, status, onlyUnassigned, q, limit, offset]);
 
-  // Charger agents une fois admin validé
+  /* ============================================================
+     🔁 Initialisation
+  ============================================================ */
   useEffect(() => {
     if (isAdmin) {
       loadAgents();
     }
   }, [isAdmin, loadAgents]);
 
-  // Charger services quand filtres/pagination changent
   useEffect(() => {
     if (isAdmin) {
       loadServices();
     }
   }, [isAdmin, loadServices]);
 
+  /* ============================================================
+     🔄 Assignation agent
+  ============================================================ */
   async function handleAssign(serviceId, agentId) {
     if (!agentId) return;
     try {
-      await api.post('/services/assign', { serviceId, agentId }, authHeaders);
+      await api.post(
+        '/services/assign',
+        { serviceId, agentId },
+        authHeaders
+      );
       await loadServices();
     } catch (e) {
       console.error('❌ Erreur assignation:', e);
@@ -116,6 +156,9 @@ export default function AdminServicesPage() {
     }
   }
 
+  /* ============================================================
+     🧠 Helpers UI
+  ============================================================ */
   function displayUser(u) {
     if (!u) return '—';
     const name = [u.firstName, u.lastName].filter(Boolean).join(' ');
@@ -141,17 +184,17 @@ export default function AdminServicesPage() {
     }
   }
 
-  if (isAdmin === null)
+  if (isAdmin === null) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <p className="text-gray-500 text-lg animate-pulse">Chargement…</p>
       </div>
     );
+  }
 
-  return (
+    return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-
         {/* 🧭 En-tête Apple Light */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="space-y-1">
@@ -159,8 +202,33 @@ export default function AdminServicesPage() {
               🧩 Gestion des services
             </h1>
             <p className="text-sm text-slate-500 max-w-xl">
-              Vue administrateur pour suivre, filtrer et assigner les services aux agents.
+              Vue administrateur pour suivre, filtrer et assigner les services
+              aux agents.
             </p>
+
+            {/* ✅ Badge scope (UX only, backend = source de vérité) */}
+            {currentUser && (
+              <div className="pt-2 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-700">
+                    {isMaster ? 'MASTER' : 'ADMINISTRATEUR'}
+                  </span>
+                  {isMaster ? (
+                    <span className="text-slate-500">
+                      Périmètre :
+                      {currentUser?.countryId != null
+                        ? ` Pays #${currentUser.countryId}`
+                        : ''}
+                      {currentUser?.regionId != null
+                        ? ` · Région #${currentUser.regionId}`
+                        : ''}
+                    </span>
+                  ) : (
+                    <span className="text-slate-500">Accès global</span>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
@@ -181,7 +249,6 @@ export default function AdminServicesPage() {
         {/* 🎛️ Filtres Apple-style */}
         <section className="mb-8 bg-slate-50/80 border border-slate-200 rounded-2xl px-4 sm:px-5 py-4 sm:py-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-
             {/* Statut */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-slate-600">
@@ -301,6 +368,7 @@ export default function AdminServicesPage() {
                 </th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-slate-100">
               {services.length === 0 ? (
                 <tr>

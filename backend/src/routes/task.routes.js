@@ -1,3 +1,4 @@
+// backend/src/routes/task.routes.js
 'use strict';
 
 const router = require('express').Router();
@@ -7,17 +8,17 @@ const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
 const uploadEvidence = require('../middleware/uploadEvidence.middleware');
 
-// ➕ Créer une tâche (client ou admin)
-router.post('/', auth, requireRoles('client', 'admin'), ctrl.create);
+// ➕ Créer une tâche (client ou admin/master)
+router.post('/', auth, requireRoles('client', 'admin', 'master'), ctrl.create);
 
 // 📋 Lister les tâches
-router.get('/', auth, requireRoles('client', 'agent', 'admin'), ctrl.list);
+router.get('/', auth, requireRoles('client', 'agent', 'admin', 'master'), ctrl.list);
 
 // 📋 Lister les tâches d’un service
 router.get(
   '/service/:serviceId',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requireRoles('client', 'agent', 'admin', 'master'),
   ctrl.listByService
 );
 
@@ -25,25 +26,25 @@ router.get(
 router.put(
   '/:id/status',
   auth,
-  requireRoles('agent', 'admin'),
+  requireRoles('agent', 'admin', 'master'),
   ctrl.updateStatus
 );
 
-// 🧩 Nouveau : assigner une tâche à un agent (admin uniquement)
+// 🧩 Assigner une tâche à un agent (admin/master)
 router.put(
   '/:id/assign',
   auth,
-  requireRoles('admin'),
+  requireRoles('admin', 'master'),
   ctrl.assignAgent
 );
 
-// ✅ Alias "evidences" pour gestion des preuves liées à une tâche
+// ✅ Alias "evidences" pour preuves liées à une tâche
 
 // Récupérer les preuves d'une tâche
 router.get(
   '/:id/evidences',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requireRoles('client', 'agent', 'admin', 'master'),
   evCtrl.listByTask
 );
 
@@ -51,8 +52,7 @@ router.get(
 router.post(
   '/:id/evidences',
   auth,
-  requireRoles('client', 'agent', 'admin'),
-  // ✅ Middleware tolérant: accepte "files", "proofFile", "proof" etc.
+  requireRoles('client', 'agent', 'admin', 'master'),
   uploadEvidence.anyCompat(),
   (req, _res, next) => {
     req.body = req.body || {};

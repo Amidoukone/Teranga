@@ -1,6 +1,9 @@
 // ============================================================
 // OrderTransactionsPage.jsx — Teranga PRODUCTION READY (Option B2-A)
 // Clean Shop Premium + FILE_BASE + toAbsUrl + Optimisations visuelles
+// ✅ MASTER + Multi-pays ready (aligné backend 2025)
+// ✅ Zéro régression : toutes fonctionnalités conservées
+// ✅ Robustesse: payloads API (array vs {transactions}), preuves ImageKit (url/path/filePath)
 // ============================================================
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -19,6 +22,7 @@ import {
 /* ============================================================
    🌍 PRODUCTION CONFIG — FILE_BASE / normalizePath / toAbsUrl()
    Compatible Render + Netlify, aucun localhost
+   ✅ Safe: support absolute URLs, slashes propres
 ============================================================ */
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -31,23 +35,19 @@ function normalizePath(path = '') {
   if (!path) return '';
   const p = String(path).trim().replace(/\\/g, '/');
   if (/^https?:\/\//i.test(p)) return p;
-  const start = p.startsWith('/') ? p : '/' + p;
-  return start.replace(/\/{2,}/g, '/');
+  const fixed = p.startsWith('/') ? p : '/' + p;
+  return fixed.replace(/\/{2,}/g, '/');
 }
 
 function toAbsUrl(path = '') {
   const norm = normalizePath(path);
+  if (!norm) return '';
   if (/^https?:\/\//i.test(norm)) return norm;
-
-  return (
-    FILE_BASE.replace(/\/$/, '') +
-    '/' +
-    norm.replace(/^\//, '')
-  );
+  return FILE_BASE.replace(/\/$/, '') + norm;
 }
 
 /* ============================================================
-   Helpers
+   Helpers (display + proof url)
 ============================================================ */
 function getUserDisplay(u) {
   if (!u) return '—';
@@ -60,6 +60,35 @@ function getUserDisplay(u) {
   return '—';
 }
 
+/**
+ * ✅ Preuve (ImageKit / legacy / file system)
+ * Backend Transaction.proofFile peut être:
+ * - { url, fileId, originalName, mimeType, size }
+ * - { path } (legacy)
+ * - { filePath } (legacy)
+ * - string url/path
+ */
+function getProofHref(t) {
+  const pf = t?.proofFile;
+  if (!pf) return '';
+
+  if (typeof pf === 'string') {
+    // si c'est déjà une URL absolue => ok, sinon => FILE_BASE
+    return toAbsUrl(pf);
+  }
+
+  const url =
+    pf.url ||
+    pf.path ||
+    pf.filePath ||
+    pf.file_url ||
+    pf.file ||
+    pf.location ||
+    '';
+
+  return url ? toAbsUrl(url) : '';
+}
+
 /* ============================================================
    ⭐ PAGE PRINCIPALE
 ============================================================ */
@@ -68,15 +97,19 @@ export default function OrderTransactionsPage() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
+
+  // Liste
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false); // chargement liste
   const [creating, setCreating] = useState(false); // 🔐 création transaction
 
+  // UI
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_orderTransactions_showForm');
     return saved === null ? true : saved === '1';
   });
 
+  // Form
   const [form, setForm] = useState({
     type: 'revenue',
     amount: '',
@@ -86,6 +119,7 @@ export default function OrderTransactionsPage() {
     proofFile: null,
   });
 
+  // Filtres
   const [filters, setFilters] = useState({
     q: '',
     type: '',
@@ -94,20 +128,24 @@ export default function OrderTransactionsPage() {
   });
 
   /* ============================================================
-      Chargement transactions
+      Chargement transactions (robuste: array vs {transactions})
   ============================================================ */
   const loadTransactions = useCallback(async () => {
     if (!id) return;
+
     setLoading(true);
     try {
       const data = await getOrderTransactions(id);
-      const labeled = (data || []).map((t) =>
-        t.statusLabel ? t : applyLabels(t)
-      );
+
+      // ✅ backend peut renvoyer [] OU { transactions: [], pagination: {} }
+      const arr = Array.isArray(data) ? data : data?.transactions || [];
+
+      const labeled = (arr || []).map((t) => (t?.statusLabel ? t : applyLabels(t)));
       setTransactions(labeled);
     } catch (err) {
       console.error('❌ Erreur chargement transactions commande:', err);
       alert('Erreur lors du chargement des transactions.');
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
@@ -133,6 +171,7 @@ export default function OrderTransactionsPage() {
     })();
   }, [loadTransactions]);
 
+  // Persistance affichage formulaire
   useEffect(() => {
     localStorage.setItem(
       'teranga_orderTransactions_showForm',
@@ -141,7 +180,9 @@ export default function OrderTransactionsPage() {
   }, [showForm]);
 
   /* ============================================================
-      ➕ Création transaction (avec protection anti double submit)
+      ➕ Création transaction (anti double-submit)
+      ✅ MASTER support (backend: requireRoles inclut master)
+      ✅ Preuve: service s’occupe du multipart; ici on garde la structure
   ============================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
@@ -156,12 +197,14 @@ export default function OrderTransactionsPage() {
     try {
       setCreating(true); // 🔐 Verrouille le bouton d’envoi
 
+      // ✅ payload stable (service gère proofFile = File -> FormData si besoin)
       const payload = {
         ...form,
         amount: parseFloat(form.amount),
       };
 
       await createOrderTransaction(id, payload);
+
       alert('✅ Transaction ajoutée');
       resetForm();
       await loadTransactions();
@@ -188,7 +231,7 @@ export default function OrderTransactionsPage() {
       🔍 Filtres et tri
   ============================================================ */
   const filteredTransactions = useMemo(() => {
-    let arr = [...transactions];
+    let arr = [...(transactions || [])];
 
     if (filters.q.trim()) {
       const q = filters.q.trim().toLowerCase();
@@ -222,18 +265,19 @@ export default function OrderTransactionsPage() {
     arr.sort((a, b) => {
       const sign = by.startsWith('-') ? -1 : 1;
       const key = by.replace(/^-/, '');
+
       let va;
       let vb;
 
       if (key === 'createdAt') {
-        va = new Date(a.createdAt).getTime();
-        vb = new Date(b.createdAt).getTime();
+        va = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+        vb = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
       } else if (key === 'amount') {
-        va = Number(a.amount ?? 0);
-        vb = Number(b.amount ?? 0);
+        va = Number(a?.amount ?? 0);
+        vb = Number(b?.amount ?? 0);
       } else {
-        va = a[key];
-        vb = b[key];
+        va = a?.[key];
+        vb = b?.[key];
       }
 
       if (va < vb) return -1 * sign;
@@ -255,7 +299,8 @@ export default function OrderTransactionsPage() {
     );
   }
 
-  const canCreate = user.role === 'admin' || user.role === 'agent';
+  // ✅ Ajout master (sans retirer admin/agent)
+  const canCreate = ['admin', 'agent', 'master'].includes(user.role);
 
   /* ============================================================
       Rendu principal
@@ -263,7 +308,7 @@ export default function OrderTransactionsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100 transition-all duration-150 ease-out">
-        
+
         {/* HEADER — 100% responsive mobile / tablette / desktop */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 sm:mb-8">
           {/* Bloc titre */}
@@ -322,7 +367,7 @@ export default function OrderTransactionsPage() {
             setForm={setForm}
             handleSubmit={handleSubmit}
             loading={loading}
-            creating={creating} // 👈 on passe l'état de création
+            creating={creating} // 👈 état de création
           />
         )}
 
@@ -330,6 +375,7 @@ export default function OrderTransactionsPage() {
         <TransactionList
           transactions={filteredTransactions}
           loading={loading}
+          getProofHref={getProofHref}
         />
       </div>
     </div>
@@ -373,9 +419,7 @@ function TransactionFilters({ filters, setFilters, count }) {
         <input
           placeholder="Méthode paiement"
           value={filters.payment}
-          onChange={(e) =>
-            setFilters({ ...filters, payment: e.target.value })
-          }
+          onChange={(e) => setFilters({ ...filters, payment: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
         />
 
@@ -398,10 +442,9 @@ function TransactionFilters({ filters, setFilters, count }) {
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-400/80" />
           <span>{count} transaction(s) trouvée(s)</span>
         </div>
+
         <button
-          onClick={() =>
-            setFilters({ q: '', type: '', payment: '', sort: '-createdAt' })
-          }
+          onClick={() => setFilters({ q: '', type: '', payment: '', sort: '-createdAt' })}
           className="w-full sm:w-auto px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium text-center transition-all duration-150"
         >
           Réinitialiser les filtres
@@ -487,9 +530,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
           <input
             placeholder="Ex : MoMo, Virement..."
             value={form.paymentMethod}
-            onChange={(e) =>
-              setForm({ ...form, paymentMethod: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
             className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           />
         </div>
@@ -503,9 +544,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
             rows={3}
             placeholder="Description (optionnelle)"
             value={form.description}
-            onChange={(e) =>
-              setForm({ ...form, description: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           />
         </div>
@@ -518,9 +557,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
           <input
             type="file"
             accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
-            onChange={(e) =>
-              setForm({ ...form, proofFile: e.target.files?.[0] || null })
-            }
+            onChange={(e) => setForm({ ...form, proofFile: e.target.files?.[0] || null })}
             className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           />
         </div>
@@ -545,9 +582,14 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
 }
 
 /* ============================================================
-   LISTE DES TRANSACTIONS
+   LISTE DES TRANSACTIONS — PARTIE 2 / 2
+   (à coller directement à la suite de la PARTIE 1)
+   ✅ Zéro régression
+   ✅ Support ImageKit / legacy proofs
+   ✅ UI premium + responsive
 ============================================================ */
-function TransactionList({ transactions, loading }) {
+
+function TransactionList({ transactions, loading, getProofHref }) {
   if (loading) {
     return (
       <p className="text-gray-500 italic text-center py-6">
@@ -556,7 +598,7 @@ function TransactionList({ transactions, loading }) {
     );
   }
 
-  if (transactions.length === 0) {
+  if (!transactions || transactions.length === 0) {
     return (
       <p className="text-gray-500 italic text-center py-6">
         Aucune transaction trouvée.
@@ -570,31 +612,26 @@ function TransactionList({ transactions, loading }) {
         const userDisplay = t.user ? getUserDisplay(t.user) : 'Système';
         const currencyLabel = t.currencyLabel || t.currency || 'XOF';
 
-        // Accent subtil par type
-        let accentClass =
-          'border-l-4 border-l-slate-200';
-        if (t.type === 'revenue') {
-          accentClass = 'border-l-4 border-l-emerald-400/80';
-        } else if (t.type === 'expense') {
-          accentClass = 'border-l-4 border-l-rose-400/80';
-        } else if (t.type === 'commission') {
-          accentClass = 'border-l-4 border-l-amber-400/80';
-        } else if (t.type === 'adjustment') {
-          accentClass = 'border-l-4 border-l-blue-400/80';
-        }
+        // 🎨 Accent visuel par type
+        let accentClass = 'border-l-4 border-l-slate-200';
+        if (t.type === 'revenue') accentClass = 'border-l-4 border-l-emerald-400/80';
+        else if (t.type === 'expense') accentClass = 'border-l-4 border-l-rose-400/80';
+        else if (t.type === 'commission') accentClass = 'border-l-4 border-l-amber-400/80';
+        else if (t.type === 'adjustment') accentClass = 'border-l-4 border-l-blue-400/80';
 
-        // Couleurs badge type
+        // 🏷 Badge type
         let typeBadge =
           'bg-slate-100 text-slate-700 border border-slate-200';
-        if (t.type === 'revenue') {
+        if (t.type === 'revenue')
           typeBadge = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-        } else if (t.type === 'expense') {
+        else if (t.type === 'expense')
           typeBadge = 'bg-rose-50 text-rose-700 border border-rose-200';
-        } else if (t.type === 'commission') {
+        else if (t.type === 'commission')
           typeBadge = 'bg-amber-50 text-amber-700 border border-amber-200';
-        } else if (t.type === 'adjustment') {
+        else if (t.type === 'adjustment')
           typeBadge = 'bg-blue-50 text-blue-700 border border-blue-200';
-        }
+
+        const proofHref = getProofHref ? getProofHref(t) : '';
 
         return (
           <div
@@ -602,7 +639,7 @@ function TransactionList({ transactions, loading }) {
             className={`bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md hover:-translate-y-[1px] transition-all duration-150 ease-out ${accentClass}`}
           >
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-              {/* Left block */}
+              {/* Bloc gauche */}
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span
@@ -634,31 +671,36 @@ function TransactionList({ transactions, loading }) {
                 )}
               </div>
 
-              {/* Right block */}
+              {/* Bloc droit */}
               <div className="text-xs text-gray-500 text-right mt-1 sm:mt-0 whitespace-nowrap">
                 <div>
                   Créée le{' '}
                   <strong>
-                    {new Date(t.createdAt).toLocaleDateString('fr-FR')}
+                    {t.createdAt
+                      ? new Date(t.createdAt).toLocaleDateString('fr-FR')
+                      : '—'}
                   </strong>
                 </div>
                 <div>
                   à{' '}
                   <strong>
-                    {new Date(t.createdAt).toLocaleTimeString('fr-FR')}
+                    {t.createdAt
+                      ? new Date(t.createdAt).toLocaleTimeString('fr-FR')
+                      : '—'}
                   </strong>
                 </div>
               </div>
             </div>
 
+            {/* Footer carte */}
             <div className="mt-3 flex flex-col sm:flex-row justify-between text-sm gap-1 sm:gap-0">
               <div className="text-xs text-gray-500">
                 Saisie par <strong>{userDisplay}</strong>
               </div>
 
-              {t.proofFile?.path && (
+              {proofHref && (
                 <a
-                  href={toAbsUrl(t.proofFile.path)}
+                  href={proofHref}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center text-xs font-medium text-blue-600 hover:underline"
@@ -673,3 +715,4 @@ function TransactionList({ transactions, loading }) {
     </div>
   );
 }
+

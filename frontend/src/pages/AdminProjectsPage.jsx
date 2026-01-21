@@ -1,7 +1,7 @@
 // frontend/src/pages/AdminProjectsPage.jsx
 // ============================================================================
-// AdminProjectsPage.jsx — VERSION PRODUCTION READY (Option A Apple Light)
-// Table Premium, design cohérent avec le backoffice Teranga
+// AdminProjectsPage.jsx — VERSION PRODUCTION READY (Apple Light PRO)
+// Admin GLOBAL + MASTER (admin + geo scope) — ZÉRO RÉGRESSION
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -15,6 +15,10 @@ import {
 } from '../services/projects';
 import { createTransaction } from '../services/transactions';
 import { CURRENCY_LABELS } from '../utils/labels';
+import {
+  normalizeRole,
+  isMasterUser,
+} from '../utils/role';
 
 /* ============================================================
    🔧 Typologies et statuts
@@ -35,9 +39,7 @@ const PROJECT_STATUSES = [
 ];
 
 /* ============================================================
-   💰 Formulaire de transaction liée à un projet
-   - Utilise createTransaction (service global)
-   - Conserve proofFile pour compat backend
+   💰 Formulaire transaction projet (inchangé)
 ============================================================ */
 function ProjectTransactionForm({ project, onClose, onSuccess }) {
   const [form, setForm] = useState({
@@ -64,8 +66,8 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
       await createTransaction(payload);
 
       alert('✅ Transaction enregistrée avec succès');
-      if (typeof onSuccess === 'function') onSuccess();
-      if (typeof onClose === 'function') onClose();
+      onSuccess?.();
+      onClose?.();
     } catch (err) {
       console.error('❌ Erreur création transaction projet:', err);
       alert(
@@ -141,13 +143,12 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
           </select>
         </div>
 
-        {/* Méthode de paiement */}
+        {/* Méthode paiement */}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             Méthode de paiement (optionnel)
           </label>
           <input
-            placeholder="Ex : MoMo, Virement..."
             value={form.paymentMethod}
             onChange={(e) =>
               setForm({ ...form, paymentMethod: e.target.value })
@@ -158,12 +159,9 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
 
         {/* Description */}
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Description (optionnelle)
-          </label>
           <textarea
             rows={2}
-            placeholder="Détail de la transaction..."
+            placeholder="Détail de la transaction…"
             value={form.description}
             onChange={(e) =>
               setForm({ ...form, description: e.target.value })
@@ -172,37 +170,20 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
           />
         </div>
 
-        {/* Pièce jointe */}
-        <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Pièce jointe (optionnelle)
-          </label>
-          <input
-            type="file"
-            accept=".jpg,.jpeg,.png,.pdf"
-            onChange={(e) =>
-              setForm({ ...form, proofFile: e.target.files?.[0] || null })
-            }
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
         {/* Boutons */}
-        <div className="sm:col-span-2 flex justify-end gap-2 flex-wrap mt-1">
+        <div className="sm:col-span-2 flex justify-end gap-2 mt-1">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 transition"
+            className="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-200"
           >
             Annuler
           </button>
           <button
             type="submit"
             disabled={loading}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg text-white transition ${
-              loading
-                ? 'bg-blue-300 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700'
+            className={`px-4 py-2 text-xs font-semibold rounded-lg text-white ${
+              loading ? 'bg-blue-300' : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
             {loading ? 'Enregistrement…' : '💾 Enregistrer'}
@@ -215,6 +196,8 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
 
 /* ============================================================
    🧠 Page principale : Administration des projets (Admin only)
+   - ADMIN GLOBAL et MASTER (admin + scope)
+   - AUCUN filtre geo côté frontend : le backend est source de vérité
 ============================================================ */
 export default function AdminProjectsPage() {
   const navigate = useNavigate();
@@ -224,6 +207,9 @@ export default function AdminProjectsPage() {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [openTrxProjectId, setOpenTrxProjectId] = useState(null);
+
+  // 🔎 Infos session (me)
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Filtres locaux
   const [filters, setFilters] = useState({
@@ -241,9 +227,13 @@ export default function AdminProjectsPage() {
       : { headers: {} };
   }, []);
 
+  // MASTER = admin + scope geo (déduction frontend)
+  const isMaster = useMemo(() => isMasterUser(currentUser), [currentUser]);
+
   /* ============================================================
      👮 Vérification admin via /auth/me
-  ============================================================ */
+     - MASTER passe comme admin (role backend = 'admin')
+============================================================ */
   useEffect(() => {
     let active = true;
 
@@ -258,11 +248,15 @@ export default function AdminProjectsPage() {
           return;
         }
 
-        if (user.role !== 'admin') {
+        const role = normalizeRole(user?.role);
+
+        // IMPORTANT: MASTER est admin (role === 'admin')
+        if (role !== 'admin') {
           navigate('/dashboard');
           return;
         }
 
+        setCurrentUser(user);
         setIsAdmin(true);
       } catch (err) {
         console.error('❌ Erreur /auth/me (AdminProjectsPage):', err);
@@ -279,7 +273,9 @@ export default function AdminProjectsPage() {
 
   /* ============================================================
      👥 Chargement des agents (admin)
-  ============================================================ */
+     - Aucune régression: même endpoint, même param role=agent
+     - IMPORTANT: le backend applique le scope automatiquement si MASTER
+============================================================ */
   const loadAgents = useCallback(async () => {
     try {
       const { data } = await api.get('/users', {
@@ -295,7 +291,8 @@ export default function AdminProjectsPage() {
 
   /* ============================================================
      📁 Chargement des projets
-  ============================================================ */
+     - Aucun filtre geo ajouté (backend applique scope)
+============================================================ */
   const loadProjects = useCallback(async () => {
     setLoading(true);
     try {
@@ -311,7 +308,7 @@ export default function AdminProjectsPage() {
 
   /* ============================================================
      🔁 Initialisation quand on sait qu'on est admin
-  ============================================================ */
+============================================================ */
   useEffect(() => {
     if (!isAdmin) return;
     loadProjects();
@@ -320,7 +317,9 @@ export default function AdminProjectsPage() {
 
   /* ============================================================
      👤 Assignation agent au projet
-  ============================================================ */
+     - Pas de logique "master" en rôle
+     - Backend gère le scope (si MASTER, la liste d'agents est déjà scope)
+============================================================ */
   async function handleAssign(projectId, agentId) {
     try {
       const toSend = agentId ? Number(agentId) : null;
@@ -335,7 +334,9 @@ export default function AdminProjectsPage() {
 
   /* ============================================================
      🔄 Changement de statut
-  ============================================================ */
+     - Aucun changement de payload destructif
+     - NOTE: on conserve exactement les champs utilisés en prod
+============================================================ */
   async function handleStatusChange(projectId, newStatus) {
     try {
       const proj = projects.find((p) => p.id === projectId);
@@ -354,7 +355,10 @@ export default function AdminProjectsPage() {
         agentId: proj.agentId ?? proj.agent?.id ?? undefined,
       };
 
+      // IMPORTANT: pas d'ajout countryId/regionId ici
+      // Le backend applique le scope et gère la sécurité.
       await updateProject(projectId, payload);
+
       await loadProjects();
       alert('✅ Statut mis à jour avec succès');
     } catch (err) {
@@ -364,8 +368,8 @@ export default function AdminProjectsPage() {
   }
 
   /* ============================================================
-     🧮 Application des filtres
-  ============================================================ */
+     🧮 Application des filtres (locaux, sans geo)
+============================================================ */
   const filteredProjects = useMemo(() => {
     let arr = [...projects];
 
@@ -408,7 +412,7 @@ export default function AdminProjectsPage() {
 
   /* ============================================================
      ⏳ Écran de chargement avant de savoir si admin
-  ============================================================ */
+============================================================ */
   if (isAdmin === null) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -419,7 +423,7 @@ export default function AdminProjectsPage() {
 
   /* ============================================================
      🎨 Rendu principal — Apple Light Premium
-  ============================================================ */
+============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 px-3 sm:px-4 py-8 sm:py-10">
       <div className="max-w-7xl mx-auto bg-white shadow-xl rounded-2xl border border-gray-100 px-4 sm:px-8 py-6 sm:py-8">
@@ -433,6 +437,28 @@ export default function AdminProjectsPage() {
               Suivi des projets clients, assignation des agents et gestion des
               transactions liées.
             </p>
+
+            {/* ✅ Info scope (UX seulement, aucun filtre frontend) */}
+            {currentUser && (
+              <div className="mt-2 text-xs text-gray-500">
+                <span className="inline-flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full border border-gray-200 bg-gray-50 text-gray-700">
+                    {isMaster ? 'MASTER' : 'ADMINISTRATEUR'}
+                  </span>
+                  {isMaster && (
+                    <span className="text-gray-500">
+                      Périmètre :
+                      {currentUser?.countryId != null
+                        ? ` Pays #${currentUser.countryId}`
+                        : ''}
+                      {currentUser?.regionId != null
+                        ? ` · Région #${currentUser.regionId}`
+                        : ''}
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -518,9 +544,7 @@ export default function AdminProjectsPage() {
               {projects.length}
             </div>
             <button
-              onClick={() =>
-                setFilters({ q: '', status: 'all', type: 'all' })
-              }
+              onClick={() => setFilters({ q: '', status: 'all', type: 'all' })}
               className="w-full sm:w-auto px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium text-gray-700 text-center transition"
             >
               Réinitialiser les filtres
@@ -550,6 +574,7 @@ export default function AdminProjectsPage() {
                 </th>
               </tr>
             </thead>
+
             <tbody>
               {filteredProjects.length === 0 ? (
                 <tr>
@@ -569,13 +594,15 @@ export default function AdminProjectsPage() {
                     : '—';
 
                   const clientName = p.client
-                    ? `${p.client.firstName || ''} ${p.client.lastName || ''}`.trim() ||
+                    ? `${p.client.firstName || ''} ${p.client.lastName || ''}`
+                        .trim() ||
                       p.client.email ||
                       '—'
                     : '—';
 
                   const agentName = p.agent
-                    ? `${p.agent.firstName || ''} ${p.agent.lastName || ''}`.trim() ||
+                    ? `${p.agent.firstName || ''} ${p.agent.lastName || ''}`
+                        .trim() ||
                       p.agent.email ||
                       'Non assigné'
                     : 'Non assigné';
@@ -644,16 +671,14 @@ export default function AdminProjectsPage() {
                           {/* Assignation agent */}
                           <select
                             value={p.agent?.id || ''}
-                            onChange={(e) =>
-                              handleAssign(p.id, e.target.value)
-                            }
+                            onChange={(e) => handleAssign(p.id, e.target.value)}
                             className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="">— Assigner un agent —</option>
                             {agents.map((a) => (
                               <option key={a.id} value={a.id}>
-                                {`${a.firstName || ''} ${a.lastName || ''}`.trim() ||
-                                  a.email}
+                                {`${a.firstName || ''} ${a.lastName || ''}`
+                                  .trim() || a.email}
                               </option>
                             ))}
                           </select>
@@ -669,7 +694,9 @@ export default function AdminProjectsPage() {
                                 : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                             }`}
                           >
-                            {trxOpen ? '➖ Fermer la transaction' : '💰 Ajouter une transaction'}
+                            {trxOpen
+                              ? '➖ Fermer la transaction'
+                              : '💰 Ajouter une transaction'}
                           </button>
 
                           {/* Formulaire transaction liée */}

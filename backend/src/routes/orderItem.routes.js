@@ -2,7 +2,7 @@
 'use strict';
 
 const express = require('express');
-const flatRouter = express.Router();                     // Routes "plates": /api/order-items
+const flatRouter = express.Router();                        // Routes "plates": /api/order-items
 const nestedRouter = express.Router({ mergeParams: true }); // Routes "imbriquées": /api/orders/:orderId/items
 
 const ctrl = require('../controllers/orderItem.controller');
@@ -17,10 +17,10 @@ const { requireRoles } = require('../middleware/roles.middleware');
    - PUT    /:id         -> maj item
    - DELETE /:id         -> supprimer item
 ===================================================================== */
-flatRouter.post('/',  auth, requireRoles('admin', 'client'),              ctrl.create);
-flatRouter.get('/',   auth, requireRoles('admin', 'agent', 'client'),     ctrl.list);   // ?orderId=...
-flatRouter.put('/:id',auth, requireRoles('admin', 'client'),              ctrl.update);
-flatRouter.delete('/:id', auth, requireRoles('admin', 'client'),          ctrl.remove);
+flatRouter.post('/', auth, requireRoles('admin', 'master', 'client'), ctrl.create);
+flatRouter.get('/', auth, requireRoles('admin', 'master', 'agent', 'client'), ctrl.list); // ?orderId=...
+flatRouter.put('/:id', auth, requireRoles('admin', 'master', 'client'), ctrl.update);
+flatRouter.delete('/:id', auth, requireRoles('admin', 'master', 'client'), ctrl.remove);
 
 /* =====================================================================
    ROUTES IMBRIQUÉES (NOUVEAU)
@@ -33,10 +33,10 @@ flatRouter.delete('/:id', auth, requireRoles('admin', 'client'),          ctrl.r
    ⚠️ mergeParams:true permet à ctrl.* d'accéder à req.params.orderId,
    ce que ton contrôleur sait déjà gérer via getOrderId(req).
 ===================================================================== */
-nestedRouter.post('/',   auth, requireRoles('admin', 'client'),           ctrl.create);
-nestedRouter.get('/',    auth, requireRoles('admin', 'agent', 'client'),  ctrl.list);
-nestedRouter.put('/:id', auth, requireRoles('admin', 'client'),           ctrl.update);
-nestedRouter.delete('/:id', auth, requireRoles('admin', 'client'),        ctrl.remove);
+nestedRouter.post('/', auth, requireRoles('admin', 'master', 'client'), ctrl.create);
+nestedRouter.get('/', auth, requireRoles('admin', 'master', 'agent', 'client'), ctrl.list);
+nestedRouter.put('/:id', auth, requireRoles('admin', 'master', 'client'), ctrl.update);
+nestedRouter.delete('/:id', auth, requireRoles('admin', 'master', 'client'), ctrl.remove);
 
 /* =====================================================================
    EXPORTS

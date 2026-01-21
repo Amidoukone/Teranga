@@ -2,6 +2,7 @@
 // ============================================================
 // ProductCatalogPage.jsx — Teranga PRODUCTION READY (Style A 2025)
 // Clean Shop Premium + FILE_BASE + Lightbox + Optimisations
+// + compat multi-pays / master (backend-driven)
 // ============================================================
 
 import { useEffect, useMemo, useState } from 'react';
@@ -13,7 +14,7 @@ import { formatCurrency } from '../utils/labels';
 
 /* ============================================================
    🌍 PRODUCTION CONFIG — FILE_BASE / toAbsUrl()
-   Compatible Render + Netlify, aucun localhost
+   Compatible Render + Netlify, aucun localhost forcé
 ============================================================ */
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -34,13 +35,10 @@ function normalizePath(path = '') {
 
 function toAbsUrl(path = '') {
   const norm = normalizePath(path);
+  if (!norm) return '';
   if (/^https?:\/\//i.test(norm)) return norm;
 
-  return (
-    FILE_BASE.replace(/\/$/, '') +
-    '/' +
-    norm.replace(/^\//, '')
-  );
+  return FILE_BASE.replace(/\/$/, '') + '/' + norm.replace(/^\//, '');
 }
 
 /* ============================================================
@@ -52,62 +50,52 @@ function getImagesForProduct(p) {
 
   const urls = [];
 
-  // 1) allImageUrls généré par le backend (withLabels)
+  // 1) allImageUrls (backend withLabels)
   if (Array.isArray(p.allImageUrls)) {
     urls.push(...p.allImageUrls);
   }
 
-  // 2) gallery : array d'objets { url } ou strings
+  // 2) gallery : [{ url }, "string", ...]
   if (Array.isArray(p.gallery)) {
     p.gallery.forEach((g) => {
-      if (g && typeof g === 'object' && g.url) {
-        urls.push(g.url);
-      } else if (typeof g === 'string') {
-        urls.push(g);
-      }
+      if (g && typeof g === 'object' && g.url) urls.push(g.url);
+      else if (typeof g === 'string') urls.push(g);
     });
   }
 
   // 3) coverImage : string ou { url }
   if (p.coverImage) {
-    if (typeof p.coverImage === 'string') {
-      urls.unshift(p.coverImage);
-    } else if (p.coverImage.url) {
-      urls.unshift(p.coverImage.url);
-    }
+    if (typeof p.coverImage === 'string') urls.unshift(p.coverImage);
+    else if (p.coverImage.url) urls.unshift(p.coverImage.url);
   }
 
-  // 4) imageUrl (compat historique)
+  // 4) imageUrl (compat)
   if (p.imageUrl) {
     urls.unshift(p.imageUrl);
   }
 
-  // 🔁 Dédup + normalisation vers URLs absolues
+  // Déduplication + normalisation en URL absolues
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
-    .filter((u) => u && !seen.has(u) && seen.add(u));
+    .filter((u) => u && !seen.has(u) && (seen.add(u), true));
 }
 
 /* ============================================================
    💰 Helper : affichage PRO du prix (montant + devise)
-   - chiffres d’abord
-   - devise en toutes lettres + code (via formatCurrency)
    Exemple : "12 500 Franc CFA (XOF)"
 ============================================================ */
 function formatProductPrice(amount, currency = 'XOF') {
   const numeric = Number(amount || 0);
 
-  // Format nombre façon FR (espaces pour milliers, virgule pour décimales)
   const formattedNumber = new Intl.NumberFormat('fr-FR', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(numeric);
 
-  // Utilise ton util métier pour la partie "Franc CFA (XOF) / Euro (EUR) / Dollar (USD)"
   const label = formatCurrency(currency || 'XOF');
 
-  // ✅ Nombre AVANT la devise, style e-commerce
+  // Nombre AVANT la devise (style e-commerce)
   return `${formattedNumber} ${label}`;
 }
 
@@ -136,21 +124,27 @@ export default function ProductCatalogPage() {
   const [priceMax, setPriceMax] = useState('');
   const [sort, setSort] = useState('default');
 
-  // Pour redirection après commande
   const navigate = useNavigate();
 
   /* ============================================================
      🔹 1) Init user + produits
+     ✅ compat: getProducts() retourne soit Array, soit { products, pagination }
+     ✅ master/multi-pays: backend scoper via token + geoScope
   ============================================================ */
   useEffect(() => {
+    let mounted = true;
+
     async function init() {
       try {
-        const { user } = await me();
-        setUser(user);
+        const ud = await me();
+        if (!mounted) return;
+        setUser(ud?.user || null);
 
-        const prods = await getProducts({ limit: 200 });
-        setProducts(prods || []);
+        const res = await getProducts({ limit: 200 });
 
+        // compat: array direct OU {products}
+        const prods = Array.isArray(res) ? res : res?.products;
+        setProducts(Array.isArray(prods) ? prods : []);
         setError('');
       } catch (e) {
         console.error('❌ Erreur chargement catalogue:', e);
@@ -158,14 +152,18 @@ export default function ProductCatalogPage() {
           e?.response?.data?.error || "Impossible de charger les produits."
         );
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
+
     init();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   /* ============================================================
-     🖼️ Lightbox controls
+     🖼️ Lightbox controls (utilisés => pas de warnings)
   ============================================================ */
   function openPreview(product, startIndex = 0) {
     const imgs = getImagesForProduct(product);
@@ -188,9 +186,7 @@ export default function ProductCatalogPage() {
     const imgs = getImagesForProduct(previewProduct);
     if (!imgs.length) return;
 
-    setPreviewIndex((prev) =>
-      prev === 0 ? imgs.length - 1 : prev - 1
-    );
+    setPreviewIndex((prev) => (prev === 0 ? imgs.length - 1 : prev - 1));
   }
 
   function goNext(e) {
@@ -200,15 +196,13 @@ export default function ProductCatalogPage() {
     const imgs = getImagesForProduct(previewProduct);
     if (!imgs.length) return;
 
-    setPreviewIndex((prev) =>
-      prev === imgs.length - 1 ? 0 : prev + 1
-    );
+    setPreviewIndex((prev) => (prev === imgs.length - 1 ? 0 : prev + 1));
   }
 
   /* ============================================================
-     🛒 Création d'une commande rapide
+     🛒 Création d'une commande rapide (logique existante conservée)
   ============================================================ */
-  async function handleOrder(product) {
+  function handleOrder(product) {
     if (!user) {
       alert('Vous devez être connecté pour commander.');
       return;
@@ -220,6 +214,7 @@ export default function ProductCatalogPage() {
     }
 
     setSelectedProduct(product);
+    setQuantity(1);
     setCreating(true);
   }
 
@@ -227,7 +222,6 @@ export default function ProductCatalogPage() {
     e.preventDefault();
     if (!selectedProduct) return;
 
-    // ✅ Validation de la quantité AVANT l'appel API
     const requestedQty = Number(quantity);
 
     if (!Number.isFinite(requestedQty) || requestedQty <= 0) {
@@ -247,7 +241,7 @@ export default function ProductCatalogPage() {
       if (requestedQty > selectedProduct.stock) {
         alert(
           `La quantité demandée (${requestedQty}) dépasse le stock disponible (${selectedProduct.stock}).\n\n` +
-          'Merci de contacter le service client pour ajuster votre commande ou organiser une commande spéciale.'
+            'Merci de contacter le service client pour ajuster votre commande ou organiser une commande spéciale.'
         );
         return;
       }
@@ -274,13 +268,10 @@ export default function ProductCatalogPage() {
       setSelectedProduct(null);
       setQuantity(1);
 
-      if (newOrder?.id) {
-        navigate(`/orders/${newOrder.id}`);
-      } else if (newOrder?.order?.id) {
-        navigate(`/orders/${newOrder.order.id}`);
-      } else {
-        navigate('/orders');
-      }
+      // compat: API peut renvoyer order ou id direct
+      const id = newOrder?.id || newOrder?.order?.id;
+      if (id) navigate(`/orders/${id}`);
+      else navigate('/orders');
     } catch (err) {
       console.error('❌ Erreur création commande:', err);
       alert("Erreur lors de la création de la commande.");
@@ -288,7 +279,7 @@ export default function ProductCatalogPage() {
   }
 
   /* ============================================================
-     🧮 Dérivés — catégories disponibles
+     🧮 Catégories disponibles (dérivées)
   ============================================================ */
   const availableCategories = useMemo(() => {
     const map = new Map();
@@ -383,11 +374,10 @@ export default function ProductCatalogPage() {
           <h1 className="text-lg font-bold text-red-700 mb-2">
             Une erreur est survenue
           </h1>
-          <p className="text-sm text-red-600 mb-4 break-words">
-            {error}
-          </p>
+          <p className="text-sm text-red-600 mb-4 break-words">{error}</p>
           <p className="text-xs text-gray-500">
-            Veuillez réessayer plus tard ou contacter le support si le problème persiste.
+            Veuillez réessayer plus tard ou contacter le support si le problème
+            persiste.
           </p>
         </div>
       </div>
@@ -423,7 +413,8 @@ export default function ProductCatalogPage() {
               🛍️ <span>Catalogue des produits</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-xl">
-              Explorez et commandez rapidement des produits disponibles depuis votre espace Teranga.
+              Explorez et commandez rapidement des produits disponibles depuis
+              votre espace Teranga.
             </p>
           </div>
 
@@ -552,8 +543,6 @@ export default function ProductCatalogPage() {
             </div>
           </div>
         </div>
-
-        {/* ==== GRILLE PRODUITS ==== */}
         {filteredProducts.length === 0 ? (
           <div className="bg-slate-50 border border-slate-200 rounded-2xl shadow-sm py-10 flex items-center justify-center">
             <p className="text-slate-500 text-sm">
@@ -563,8 +552,8 @@ export default function ProductCatalogPage() {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProducts.map((p) => {
-              const imgs = getImagesForProduct(p);
-              const thumb = imgs[0] || null;
+              const images = getImagesForProduct(p);
+              const mainImg = images[0] || null;
 
               return (
                 <div
@@ -572,7 +561,7 @@ export default function ProductCatalogPage() {
                   className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:border-blue-200 transition overflow-hidden flex flex-col"
                 >
                   {/* Image */}
-                  {thumb ? (
+                  {mainImg ? (
                     <button
                       type="button"
                       onClick={() => openPreview(p, 0)}
@@ -580,20 +569,21 @@ export default function ProductCatalogPage() {
                       aria-label={`Voir images de ${p.name}`}
                     >
                       <img
-                        src={thumb}
+                        src={mainImg}
                         alt={p.name}
-                        className="w-full h-44 object-cover transition group-hover:scale-[1.03]"
+                        className="w-full h-44 object-cover transition-transform duration-200 group-hover:scale-[1.03]"
                       />
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent opacity-0 group-hover:opacity-100 transition" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition" />
 
                       <div className="absolute left-3 bottom-3 text-white text-[11px] bg-black/50 px-2 py-1 rounded">
                         Cliquer pour agrandir
                       </div>
 
-                      {imgs.length > 1 && (
+                      {images.length > 1 && (
                         <span className="absolute right-3 bottom-3 text-[11px] bg-black/60 text-white px-2 py-0.5 rounded">
-                          {imgs.length} photos
+                          {images.length} photo
+                          {images.length > 1 ? 's' : ''}
                         </span>
                       )}
                     </button>
@@ -648,7 +638,9 @@ export default function ProductCatalogPage() {
                                 : 'text-rose-600'
                             }`}
                           >
-                            {p.stock > 0 ? `${p.stock} dispo` : 'Rupture'}
+                            {p.stock > 0
+                              ? `${p.stock} dispo`
+                              : 'Rupture'}
                           </p>
                         </div>
                       )}
@@ -670,15 +662,16 @@ export default function ProductCatalogPage() {
           </div>
         )}
 
-        {/* ==== POPUP COMMANDE (AMÉLIORÉE, LISIBLE) ==== */}
+        {/* ============================================================
+            POPUP COMMANDE — UX PREMIUM
+        ============================================================ */}
         {creating && selectedProduct && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 px-4">
             <div className="relative w-full max-w-sm rounded-2xl border border-slate-300 bg-white shadow-2xl">
-              {/* Bouton fermer */}
               <button
                 onClick={() => setCreating(false)}
-                aria-label="Fermer"
                 className="absolute top-3 right-3 text-slate-500 hover:text-slate-800"
+                aria-label="Fermer"
               >
                 ✕
               </button>
@@ -729,11 +722,10 @@ export default function ProductCatalogPage() {
         )}
 
         {/* ============================================================
-            💡 LIGHTBOX PLEIN ÉCRAN — IMAGES UNIQUEMENT
+            LIGHTBOX PLEIN ÉCRAN — IMAGES UNIQUEMENT
         ============================================================ */}
         {previewProduct && (() => {
           const images = getImagesForProduct(previewProduct);
-
           if (!images.length) return null;
 
           return (
@@ -742,29 +734,26 @@ export default function ProductCatalogPage() {
               onClick={closePreview}
               role="dialog"
               aria-modal="true"
-              aria-label="Images du produit"
             >
-              {/* Bouton fermeture */}
+              {/* Fermer */}
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   closePreview();
                 }}
-                className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white"
-                aria-label="Fermer la lightbox"
+                className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80"
               >
                 ✕
               </button>
 
-              {/* Navigation gauche / droite */}
+              {/* Navigation */}
               {images.length > 1 && (
                 <>
                   <button
                     type="button"
                     onClick={goPrev}
-                    className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
-                    aria-label="Image précédente"
+                    className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70"
                   >
                     ‹
                   </button>
@@ -772,29 +761,25 @@ export default function ProductCatalogPage() {
                   <button
                     type="button"
                     onClick={goNext}
-                    className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
-                    aria-label="Image suivante"
+                    className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70"
                   >
                     ›
                   </button>
                 </>
               )}
 
-              {/* Conteneur principal de la lightbox (images uniquement) */}
               <div
                 className="bg-black/95 border border-slate-700 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Image principale, la plus grande possible */}
                 <div className="flex-1 flex items-center justify-center">
                   <img
                     src={images[previewIndex]}
                     alt={`Image ${previewIndex + 1}`}
-                    className="max-h-[90vh] max-w-full w-auto object-contain"
+                    className="max-h-[90vh] max-w-full object-contain"
                   />
                 </div>
 
-                {/* Miniatures scrollables en bas */}
                 {images.length > 1 && (
                   <div className="px-4 py-3 bg-black/80 border-t border-slate-800 flex gap-2 overflow-x-auto">
                     {images.map((img, idx) => (
@@ -802,12 +787,11 @@ export default function ProductCatalogPage() {
                         key={idx}
                         type="button"
                         onClick={() => setPreviewIndex(idx)}
-                        className={`relative w-16 h-16 rounded-lg overflow-hidden border flex-shrink-0 transition ${
+                        className={`w-16 h-16 rounded-lg overflow-hidden border ${
                           idx === previewIndex
                             ? 'border-blue-400 ring-2 ring-blue-400/70'
                             : 'border-slate-600 hover:border-slate-400'
                         }`}
-                        aria-label={`Miniature ${idx + 1}`}
                       >
                         <img
                           src={img}

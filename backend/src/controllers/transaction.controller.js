@@ -100,7 +100,8 @@ function extractUploadFile(req) {
 
 /**
  * GEO helper : déduire countryId / regionId depuis modules liés
- * - On garde la logique "non-destructive": si rien n'est disponible => null
+ * - Non destructif
+ * - Compatible legacy
  */
 async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
   const sid = toSafeInt(serviceId);
@@ -108,30 +109,38 @@ async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
   const oid = toSafeInt(orderId);
   const pid = toSafeInt(projectId);
 
-  // ⚠️ On ne suppose pas que tous les modèles ont ces colonnes,
-  // mais si elles existent, Sequelize les renverra.
   const [service, task, order, project] = await Promise.all([
-    sid ? Service.findByPk(sid, { attributes: ["id", "countryId", "regionId"] }) : null,
-    tid ? Task.findByPk(tid, { attributes: ["id", "countryId", "regionId"] }) : null,
-    oid ? Order.findByPk(oid, { attributes: ["id", "countryId", "regionId", "userId", "status"] }) : null,
-    pid ? Project.findByPk(pid, { attributes: ["id", "countryId", "regionId"] }) : null,
+    sid
+      ? Service.findByPk(sid, { attributes: ["id", "countryId", "regionId"] })
+      : null,
+    tid
+      ? Task.findByPk(tid, { attributes: ["id", "countryId", "regionId"] })
+      : null,
+    oid
+      ? Order.findByPk(oid, {
+          attributes: ["id", "countryId", "regionId", "userId", "status"],
+        })
+      : null,
+    pid
+      ? Project.findByPk(pid, { attributes: ["id", "countryId", "regionId"] })
+      : null,
   ]);
 
-  const countryId =
-    service?.countryId ??
-    task?.countryId ??
-    project?.countryId ??
-    order?.countryId ??
-    null;
+  return {
+    countryId:
+      service?.countryId ??
+      task?.countryId ??
+      project?.countryId ??
+      order?.countryId ??
+      null,
 
-  const regionId =
-    service?.regionId ??
-    task?.regionId ??
-    project?.regionId ??
-    order?.regionId ??
-    null;
-
-  return { countryId: countryId ?? null, regionId: regionId ?? null };
+    regionId:
+      service?.regionId ??
+      task?.regionId ??
+      project?.regionId ??
+      order?.regionId ??
+      null,
+  };
 }
 
 /* ============================================================================
@@ -177,8 +186,10 @@ async function uploadProofToImageKit(file) {
 
 /* ============================================================================
  * 1️⃣ CREATE TRANSACTION
- * ✅ Intégration GEO: countryId / regionId (admin: override possible)
- * ============================================================================ */
+ * - admin global / master scoped / client safe
+ * - GEO auto + override admin/master (scope géré via ACL service)
+ * ============================================================================
+ */
 exports.create = async (req, res) => {
   try {
     const {
@@ -193,60 +204,66 @@ exports.create = async (req, res) => {
       description,
       status,
 
-      // ✅ GEO
+      // 🌍 GEO (admin/master only)
       countryId,
       regionId,
+      country_id,
+      region_id,
     } = req.body || {};
 
-    if (!type)
+    if (!type) {
       return res.status(400).json({ error: "Type de transaction requis" });
+    }
 
     const txType = String(type).trim();
-    if (!ALLOWED_TYPES.has(txType))
+    if (!ALLOWED_TYPES.has(txType)) {
       return res.status(400).json({ error: "Type de transaction invalide" });
+    }
 
     const parsedAmount = parseAmount(amount);
-    if (parsedAmount === null)
+    if (parsedAmount === null) {
       return res.status(400).json({ error: "Montant invalide" });
+    }
 
     const sid = toSafeInt(serviceId);
     const tid = toSafeInt(taskId);
     const oid = toSafeInt(orderId);
     const pid = toSafeInt(projectId);
 
-    let service = sid ? await Service.findByPk(sid) : null;
-    let task = tid ? await Task.findByPk(tid) : null;
-    let order = oid ? await Order.findByPk(oid) : null;
-    let project = pid ? await Project.findByPk(pid) : null;
+    // Chargement des liens (non bloquant si absent)
+    const [service, task, order, project] = await Promise.all([
+      sid ? Service.findByPk(sid) : null,
+      tid ? Task.findByPk(tid) : null,
+      oid ? Order.findByPk(oid) : null,
+      pid ? Project.findByPk(pid) : null,
+    ]);
 
     /* -------------------------------
        📎 Upload preuve via ImageKit
        ------------------------------- */
     const up = extractUploadFile(req);
-    let proofFile = null;
+    const proofFile = up ? await uploadProofToImageKit(up) : null;
 
-    if (up) proofFile = await uploadProofToImageKit(up);
+    // Owner userId : si transaction liée à une commande -> userId commande
+    const ownerUserId = order?.userId ?? req.user.id;
 
-    const userId = req.user.id;
-    const ownerUserId = order?.userId || userId;
-
-    // ✅ GEO : on déduit depuis liens, puis fallback body (admin)
+    // 🌍 GEO (priorité = liens -> override admin/master -> null)
     const inferredGeo = await resolveGeoFromLinks({
-      serviceId: service?.id || sid,
-      taskId: task?.id || tid,
-      orderId: order?.id || oid,
-      projectId: project?.id || pid,
+      serviceId: sid,
+      taskId: tid,
+      orderId: oid,
+      projectId: pid,
     });
 
-    const isAdmin = req.user?.role === "admin";
-    const bodyCountryId = toSafeInt(countryId);
-    const bodyRegionId = toSafeInt(regionId);
+    const isAdminLike = ["admin", "master"].includes(req.user?.role);
+    const bodyCountryId = toSafeInt(countryId ?? country_id);
+    const bodyRegionId = toSafeInt(regionId ?? region_id);
 
-    const finalCountryId = isAdmin
+    const finalCountryId = isAdminLike
       ? (inferredGeo.countryId ?? bodyCountryId ?? null)
       : (inferredGeo.countryId ?? null);
 
-    const finalRegionId = isAdmin
+    const finalRegionId = isAdminLike
       ? (inferredGeo.regionId ?? bodyRegionId ?? null)
       : (inferredGeo.regionId ?? null);
 
@@ -256,15 +273,17 @@ exports.create = async (req, res) => {
       taskId: task?.id || tid || null,
       orderId: order?.id || oid || null,
       projectId: project?.id || pid || null,
+
       type: txType,
       amount: parsedAmount,
       currency: normalizeCurrency(currency, "XOF"),
       paymentMethod: toTrimOrNull(paymentMethod),
       description: toTrimOrNull(description),
       proofFile,
+
       status: "pending",
 
-      // ✅ GEO persisté
+      // 🌍 GEO persisté
       countryId: finalCountryId,
       regionId: finalRegionId,
     };
@@ -276,13 +295,14 @@ exports.create = async (req, res) => {
       payload.status = "completed";
     }
 
-    if (status && req.user.role === "admin") {
+    // Admin seul peut forcer le status arbitrairement
+    if (status && req.user?.role === "admin") {
       const s = String(status).trim();
       if (ALLOWED_STATUSES.has(s)) payload.status = s;
     }
 
     // 🔄 Prévention doublon (transaction unique par order + type)
-    let created;
+    let created = null;
 
     const existing = order
       ? await Transaction.findOne({
@@ -293,7 +313,7 @@ exports.create = async (req, res) => {
     if (existing) {
       existing.amount = parsedAmount;
 
-      // ✅ Si on détecte une geo manquante, on la complète (sans casser l'existant)
+      // ✅ Compléter GEO si manquante (non destructif)
       if (existing.countryId == null && payload.countryId != null) {
         existing.countryId = payload.countryId;
       }
@@ -301,13 +321,26 @@ exports.create = async (req, res) => {
         existing.regionId = payload.regionId;
       }
 
+      // ✅ Compléter preuve si on a upload
+      if (proofFile && !existing.proofFile) {
+        existing.proofFile = proofFile;
+      }
+
       if (existing.status !== "completed" && payload.status === "completed") {
         existing.status = "completed";
       }
+
       await existing.save();
-      created = existing;
+
+      created = await Transaction.findByPk(existing.id, {
+        include: COMMON_INCLUDE.concat([
+          { model: Order, as: "order" },
+          { model: Project, as: "project" },
+        ]),
+      });
     } else {
       const trx = await Transaction.create(payload);
+
       created = await Transaction.findByPk(trx.id, {
         include: COMMON_INCLUDE.concat([
           { model: Order, as: "order" },
@@ -334,6 +367,7 @@ exports.create = async (req, res) => {
 exports.list = async (req, res) => {
   try {
     const where = buildWhereWithACL(req);
+
     const {
       q,
       type,
@@ -351,12 +385,12 @@ exports.list = async (req, res) => {
       sort,
     } = req.query || {};
 
-    // Filtres
+    // Filtres simples
     if (type) where.type = String(type).trim();
     if (status) where.status = String(status).trim();
     if (currency) where.currency = String(currency).toUpperCase().trim();
     if (paymentMethod)
-      where.paymentMethod = { [Op.like]: `%${paymentMethod}%` };
+      where.paymentMethod = { [Op.like]: `%${String(paymentMethod)}%` };
 
     const oid = toSafeInt(orderId);
     const sid = toSafeInt(serviceId);
@@ -368,6 +402,7 @@ exports.list = async (req, res) => {
     if (tid) where.taskId = tid;
     if (pid) where.projectId = pid;
 
+    // Montants
     const minA = parseAmount(minAmount);
     const maxA = parseAmount(maxAmount);
     if (minA !== null || maxA !== null) {
@@ -376,6 +411,7 @@ exports.list = async (req, res) => {
       if (maxA !== null) where.amount[Op.lte] = maxA;
     }
 
+    // Dates
     if (startDate || endDate) {
       const start = startDate
         ? new Date(startDate)
@@ -384,6 +420,7 @@ exports.list = async (req, res) => {
       where.createdAt = { [Op.between]: [start, end] };
     }
 
+    // Recherche fulltext (light)
     if (q && String(q).trim()) {
       const needle = `%${String(q).trim()}%`;
       where[Op.or] = [
@@ -396,8 +433,8 @@ exports.list = async (req, res) => {
 
     const { limit, offset, page } = getPagination(req);
 
-    const sortKey = sort ? sort.replace(/^-/, "") : "createdAt";
-    const sortDir = sort && sort.startsWith("-") ? "DESC" : "ASC";
+    const sortKey = sort ? String(sort).replace(/^-/, "") : "createdAt";
+    const sortDir = sort && String(sort).startsWith("-") ? "DESC" : "ASC";
 
     const { rows, count } = await Transaction.findAndCountAll({
       where,
@@ -455,7 +492,7 @@ exports.detail = async (req, res) => {
 
 /* ============================================================================
  * 4️⃣ UPDATE (preuve + champs + ACL)
- * ✅ Intégration GEO: countryId / regionId (admin only)
+ * ✅ GEO: countryId / regionId (admin/master only)
  * - Recalcule GEO quand les liens changent, sans casser l'existant
  * ============================================================================ */
 exports.update = async (req, res) => {
@@ -488,7 +525,7 @@ exports.update = async (req, res) => {
       type,
       amount,
 
-      // ✅ GEO (admin only)
+      // ✅ GEO (admin/master only) camelCase + snake_case
       countryId,
       regionId,
       country_id,
@@ -503,24 +540,21 @@ exports.update = async (req, res) => {
        📸 Nouvelle preuve : suppr + re-upload
        --------------------------------------- */
     const up = extractUploadFile(req);
-
     if (up) {
       if (trx.proofFile?.fileId) {
         try {
           await imageKit.deleteFile(trx.proofFile.fileId);
         } catch (err) {
-          console.warn(
-            "⚠️ Impossible de supprimer ancienne preuve:",
-            err.message
-          );
+          console.warn("⚠️ Impossible de supprimer ancienne preuve:", err.message);
         }
       }
       trx.proofFile = await uploadProofToImageKit(up);
     }
 
-    const isAdmin = req.user.role === "admin";
+    const isAdmin = req.user?.role === "admin";
+    const isAdminLike = ["admin", "master"].includes(req.user?.role);
 
-    // On track si les liens changent => recalcul GEO
+    // Track si liens changent => recalcul GEO non destructif
     let linkChanged = false;
 
     if (serviceId !== undefined) {
@@ -562,32 +596,36 @@ exports.update = async (req, res) => {
       linkChanged = true;
     }
 
+    // Champs sensibles: admin/master only (mais status strict admin si tu veux)
     if (status !== undefined) {
       const s = String(status).trim();
       if (!ALLOWED_STATUSES.has(s))
         return res.status(400).json({ error: "Statut invalide" });
 
-      if (!isAdmin)
+      // ✅ On garde la règle forte: seul admin peut changer le status
+      if (!isAdmin) {
         return res.status(403).json({
           error: "Seul un administrateur peut modifier le statut",
         });
+      }
 
       trx.status = s;
     }
 
     if (currency !== undefined) {
-      if (!isAdmin)
+      if (!isAdminLike)
         return res.status(403).json({
-          error: "Seul un admin peut modifier la devise",
+          error: "Seul un admin/master peut modifier la devise",
         });
       trx.currency = normalizeCurrency(currency, trx.currency || "XOF");
     }
 
     if (type !== undefined) {
-      if (!isAdmin)
+      if (!isAdminLike)
         return res.status(403).json({
-          error: "Seul un admin peut modifier le type",
+          error: "Seul un admin/master peut modifier le type",
         });
+
       const t = String(type).trim();
       if (!ALLOWED_TYPES.has(t))
         return res.status(400).json({ error: "Type invalide" });
@@ -595,31 +633,27 @@ exports.update = async (req, res) => {
     }
 
     if (amount !== undefined) {
-      if (!isAdmin)
+      if (!isAdminLike)
         return res.status(403).json({
-          error: "Seul un admin peut modifier le montant",
+          error: "Seul un admin/master peut modifier le montant",
         });
+
       const n = parseAmount(amount);
       if (n === null)
         return res.status(400).json({ error: "Montant invalide" });
       trx.amount = n;
     }
 
-    // ✅ GEO (admin only)
-    // - Admin peut forcer via countryId/regionId (camelCase ou snake_case)
-    // - Sinon, si les liens changent (ou si geo vide), on recalcule depuis les modules
-    if (isAdmin) {
-      const bodyCountry = toSafeInt(countryId ?? country_id);
-      const bodyRegion = toSafeInt(regionId ?? region_id);
+    // ✅ GEO (admin/master only)
+    const geoCountrySent = countryId !== undefined || country_id !== undefined;
+    const geoRegionSent = regionId !== undefined || region_id !== undefined;
 
-      if (countryId !== undefined || country_id !== undefined) {
-        trx.countryId = bodyCountry;
-      }
-      if (regionId !== undefined || region_id !== undefined) {
-        trx.regionId = bodyRegion;
-      }
+    if (isAdminLike) {
+      if (geoCountrySent) trx.countryId = toSafeInt(countryId ?? country_id);
+      if (geoRegionSent) trx.regionId = toSafeInt(regionId ?? region_id);
     }
 
+    // ✅ Recalc GEO si liens changent OU si geo manquante
     if (linkChanged || trx.countryId == null || trx.regionId == null) {
       const inferredGeo = await resolveGeoFromLinks({
         serviceId: trx.serviceId,
@@ -629,18 +663,24 @@ exports.update = async (req, res) => {
       });
 
       // Non-destructif: complète seulement si null,
-      // sauf admin a explicitement envoyé une valeur.
-      if (trx.countryId == null && inferredGeo.countryId != null) {
+      // sauf si admin/master a explicitement envoyé une valeur (déjà posée au-dessus).
+      if (trx.countryId == null && !geoCountrySent && inferredGeo.countryId != null) {
         trx.countryId = inferredGeo.countryId;
       }
-      if (trx.regionId == null && inferredGeo.regionId != null) {
+      if (trx.regionId == null && !geoRegionSent && inferredGeo.regionId != null) {
         trx.regionId = inferredGeo.regionId;
       }
     }
 
-    // Finalisation auto si Order payé
+    // Finalisation auto si Order payé (nécessite parfois re-fetch)
     if (trx.order && ["paid", "delivered"].includes(trx.order.status)) {
       trx.status = "completed";
+    } else if (trx.orderId && !trx.order) {
+      // Si include n'a pas refresh après changement de orderId
+      const ord = await Order.findByPk(trx.orderId, { attributes: ["id", "status"] });
+      if (ord && ["paid", "delivered"].includes(ord.status)) {
+        trx.status = "completed";
+      }
     }
 
     await trx.save();
@@ -676,9 +716,10 @@ exports.remove = async (req, res) => {
     if (!trx)
       return res.status(404).json({ error: "Transaction introuvable" });
 
-    const isOwner = req.user && trx.userId === req.user.id;
-    const isAdmin = req.user.role === "admin";
+    const isOwner = req.user && String(trx.userId) === String(req.user.id);
+    const isAdmin = req.user?.role === "admin";
 
+    // Règle stable: admin peut tout supprimer, owner seulement si pending
     if (!(isAdmin || (isOwner && trx.status === "pending"))) {
       return res.status(403).json({ error: "Suppression non autorisée" });
     }
@@ -687,7 +728,10 @@ exports.remove = async (req, res) => {
       try {
         await imageKit.deleteFile(trx.proofFile.fileId);
       } catch (err) {
-        console.warn("⚠️ Impossible de supprimer la preuve ImageKit:", err.message);
+        console.warn(
+          "⚠️ Impossible de supprimer la preuve ImageKit:",
+          err.message
+        );
       }
     }
 
@@ -741,6 +785,7 @@ exports.summary = async (_req, res) => {
 exports.report = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
+
     const start = startDate
       ? new Date(startDate)
       : new Date(Date.now() - 30 * 864e5);
@@ -753,11 +798,7 @@ exports.report = async (req, res) => {
       include: [
         { model: User, as: "user", attributes: ["id", "email", "role"] },
         { model: Order, as: "order", attributes: ["id", "code", "status"] },
-        {
-          model: Project,
-          as: "project",
-          attributes: ["id", "title", "status"],
-        },
+        { model: Project, as: "project", attributes: ["id", "title", "status"] },
       ],
       order: [["createdAt", "ASC"]],
     });
@@ -770,7 +811,8 @@ exports.report = async (req, res) => {
     };
 
     transactions.forEach((t) => {
-      totals[t.type] = (totals[t.type] || 0) + parseFloat(t.amount || 0);
+      const k = t.type;
+      totals[k] = (totals[k] || 0) + parseFloat(t.amount || 0);
     });
 
     const totalsWithLabels = Object.entries(totals).map(([key, value]) => ({

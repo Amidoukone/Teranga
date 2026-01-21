@@ -1,6 +1,6 @@
 // ============================================================
 // OrderDetailPage.jsx — Teranga PRODUCTION READY (Option B2)
-// Clean Shop Premium — Responsive — FILE_BASE system
+// Clean Shop Premium — Responsive — FILE_BASE system (multi-pays)
 // ============================================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -15,6 +15,7 @@ import {
 } from '../services/orders';
 
 import { getProducts } from '../services/products';
+
 import {
   uploadOrderEvidences,
   getOrderEvidences,
@@ -31,7 +32,7 @@ import {
 } from '../utils/labels';
 
 /* ============================================================
-   🌍 FILE_BASE + normalizePath + toAbsUrl
+   🌍 FILE_BASE + normalizePath + toAbsUrl (multi-pays / master)
 ============================================================ */
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -50,7 +51,9 @@ function normalizePath(path = '') {
 
 function toAbsUrl(path = '') {
   const norm = normalizePath(path);
+  if (!norm) return '';
   if (/^https?:\/\//i.test(norm)) return norm;
+  // FILE_BASE déjà sans trailing slash dans la plupart des cas
   return FILE_BASE.replace(/\/$/, '') + norm;
 }
 
@@ -65,15 +68,14 @@ const ORDER_STEP_DEFS = [
   { key: 'closed', label: 'Clôturée', icon: '✅' },
 ];
 
-// mapping pour statuts "exotiques"
 function mapStatusToStepKey(status = '') {
-  const s = String(status).toLowerCase();
+  const s = String(status || '').toLowerCase();
   if (!s) return 'created';
   if (['created'].includes(s)) return 'created';
   if (['processing', 'in_progress', 'pending', 'shipped'].includes(s)) return 'processing';
   if (['paid', 'settled'].includes(s)) return 'paid';
   if (['delivered', 'completed'].includes(s)) return 'delivered';
-  if (['cancelled', 'canceled', 'refunded'].includes(s)) return 'closed';
+  if (['cancelled', 'canceled', 'refunded', 'closed'].includes(s)) return 'closed';
   return 'created';
 }
 
@@ -90,12 +92,14 @@ export default function OrderDetailPage() {
 
   const [loading, setLoading] = useState(true);
 
+  // Form ajout article
   const [itemForm, setItemForm] = useState({
     productId: '',
     quantity: 1,
     unitPrice: '',
   });
 
+  // Preuves
   const [files, setFiles] = useState([]);
   const [notes, setNotes] = useState('');
   const [evidences, setEvidences] = useState([]);
@@ -104,15 +108,15 @@ export default function OrderDetailPage() {
   const fileInputRef = useRef(null);
   const [fileInputKey, setFileInputKey] = useState(() => Date.now());
 
-  // Lightbox pour les preuves (images)
+  // Lightbox preuves (images)
   const [evidenceLightbox, setEvidenceLightbox] = useState({
     open: false,
     index: 0,
   });
 
   /* ============================================================
-     👤 Affichage nom du client
-  ============================================================= */
+     👤 Affichage client
+  ============================================================ */
   const customerDisplay = useMemo(() => {
     if (!order?.customer) return '—';
     const c = order.customer;
@@ -120,39 +124,34 @@ export default function OrderDetailPage() {
     const first = c.firstName ?? c.firstname ?? '';
     const last = c.lastName ?? c.lastname ?? '';
 
-    const full = `${first} ${last}`.trim();
-    return full || c.name || c.email || '—';
+    return `${first} ${last}`.trim() || c.name || c.email || '—';
   }, [order]);
 
   /* ============================================================
      👤 Affichage uploader (preuves)
-  ============================================================= */
+  ============================================================ */
   function formatUploader(u) {
     if (!u) return '—';
-
     const first = u.firstName ?? u.firstname ?? '';
     const last = u.lastName ?? u.lastname ?? '';
-    const full = `${first} ${last}`.trim();
-
-    return full || u.name || u.email || '—';
+    return `${first} ${last}`.trim() || u.name || u.email || '—';
   }
 
   /* ============================================================
      🔍 Helpers preuves
-  ============================================================= */
+  ============================================================ */
   function isEvidenceImage(ev) {
     return (ev?.mimeType || '').toLowerCase().startsWith('image/');
   }
 
-  const imageEvidences = useMemo(
-    () => evidences.filter((ev) => isEvidenceImage(ev)),
-    [evidences]
-  );
+  const imageEvidences = useMemo(() => {
+    return (evidences || []).filter((ev) => isEvidenceImage(ev));
+  }, [evidences]);
 
-  function openEvidenceLightbox(fromEvidenceId) {
-    const idx = imageEvidences.findIndex((ev) => ev.id === fromEvidenceId);
-    if (idx === -1) return;
-    setEvidenceLightbox({ open: true, index: idx });
+  // ✅ UTILISÉ dans la liste des preuves (vignettes)
+  function openEvidenceLightbox(fromId) {
+    const idx = imageEvidences.findIndex((e) => e.id === fromId);
+    if (idx >= 0) setEvidenceLightbox({ open: true, index: idx });
   }
 
   function closeEvidenceLightbox() {
@@ -176,14 +175,14 @@ export default function OrderDetailPage() {
   }
 
   /* ============================================================
-     🔄 Initialisation
-  ============================================================= */
+     🔄 Initialisation sécurisée (master / multi-pays)
+  ============================================================ */
   const init = useCallback(async () => {
     try {
       const ud = await me();
       setUser(ud.user);
 
-      const [o, prods] = await Promise.all([
+      const [o, prodsRes] = await Promise.all([
         getOrderById(id),
         getProducts({ limit: 200 }),
       ]);
@@ -194,15 +193,20 @@ export default function OrderDetailPage() {
       }
 
       setOrder(o);
-      setProducts(prods || []);
 
-      const evs = await getOrderEvidences(id);
-      setEvidences(evs || []);
+      const prods = Array.isArray(prodsRes) ? prodsRes : prodsRes?.products;
+      setProducts(Array.isArray(prods) ? prods : []);
+
+      const evsRes = await getOrderEvidences(id);
+      const evs = Array.isArray(evsRes) ? evsRes : evsRes?.evidences;
+      setEvidences(Array.isArray(evs) ? evs : []);
     } catch (e) {
       if (e?.response?.status === 401) {
         localStorage.removeItem('teranga_token');
         localStorage.removeItem('token');
         navigate('/login');
+      } else {
+        console.error('❌ init OrderDetailPage:', e);
       }
     } finally {
       setLoading(false);
@@ -218,9 +222,15 @@ export default function OrderDetailPage() {
     setOrder(o || null);
   }, [id]);
 
+  const refreshEvidences = useCallback(async () => {
+    const evsRes = await getOrderEvidences(id);
+    const evs = Array.isArray(evsRes) ? evsRes : evsRes?.evidences;
+    setEvidences(Array.isArray(evs) ? evs : []);
+  }, [id]);
+
   /* ============================================================
      🔄 Mise à jour statut commande
-  ============================================================= */
+  ============================================================ */
   async function handleOrderUpdate(patch) {
     try {
       const payload = {};
@@ -234,16 +244,16 @@ export default function OrderDetailPage() {
 
       await updateOrder(id, payload);
       await refresh();
-
       alert('✅ Commande mise à jour.');
-    } catch {
+    } catch (e) {
+      console.error('❌ update order:', e);
       alert('Erreur mise à jour commande.');
     }
   }
 
   /* ============================================================
      🧩 Gestion articles
-  ============================================================= */
+  ============================================================ */
   async function handleAddItem(e) {
     e.preventDefault();
 
@@ -263,11 +273,10 @@ export default function OrderDetailPage() {
       await addOrderItem(id, payload);
 
       setItemForm({ productId: '', quantity: 1, unitPrice: '' });
-
       await refresh();
       alert('✅ Article ajouté.');
-    } catch (err) {
-      console.error(err);
+    } catch (e2) {
+      console.error('❌ add item:', e2);
       alert('Erreur ajout article.');
     }
   }
@@ -276,7 +285,8 @@ export default function OrderDetailPage() {
     try {
       await updateOrderItem(id, itemId, patch);
       await refresh();
-    } catch {
+    } catch (e) {
+      console.error('❌ update item:', e);
       alert('Erreur mise à jour article.');
     }
   }
@@ -287,14 +297,15 @@ export default function OrderDetailPage() {
     try {
       await deleteOrderItem(id, itemId);
       await refresh();
-    } catch {
+    } catch (e) {
+      console.error('❌ delete item:', e);
       alert('Erreur suppression article.');
     }
   }
 
   /* ============================================================
      📎 Gestion preuves
-  ============================================================= */
+  ============================================================ */
   function onFilesChange(ev) {
     const selected = Array.from(ev.target.files || []);
     setFiles(selected);
@@ -314,11 +325,10 @@ export default function OrderDetailPage() {
       if (fileInputRef.current) fileInputRef.current.value = '';
       setFileInputKey(Date.now());
 
-      const evs = await getOrderEvidences(id);
-      setEvidences(evs || []);
-
+      await refreshEvidences();
       alert('✅ Preuves ajoutées.');
-    } catch {
+    } catch (e2) {
+      console.error('❌ upload evidences:', e2);
       alert('Erreur upload fichiers.');
     } finally {
       setUploading(false);
@@ -330,16 +340,15 @@ export default function OrderDetailPage() {
 
     try {
       await deleteOrderEvidence(evId);
-      const evs = await getOrderEvidences(id);
-      setEvidences(evs || []);
-    } catch {
+      await refreshEvidences();
+    } catch (e) {
+      console.error('❌ delete evidence:', e);
       alert('Erreur suppression preuve.');
     }
   }
-
   /* ============================================================
      ⏳ Loading + commande introuvable
-  ============================================================= */
+  ============================================================ */
   if (!user || loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
@@ -356,8 +365,9 @@ export default function OrderDetailPage() {
     );
   }
 
-  const canAdmin = user.role === 'admin';
-  const canUploadProofs = ['admin', 'agent', 'client'].includes(user.role);
+  // ✅ Multi-pays / master: on autorise admin + master aux actions admin
+  const canAdmin = user.role === 'admin' || user.role === 'master';
+  const canUploadProofs = ['admin', 'agent', 'client', 'master'].includes(user.role);
 
   const total = Number(order.totalAmount || 0);
   const currency = order.currency || 'XOF';
@@ -366,20 +376,19 @@ export default function OrderDetailPage() {
   const activeStepIndex = ORDER_STEP_DEFS.findIndex((s) => s.key === statusStepKey);
 
   /* ============================================================
-     ⭐ UI principale — Header + Résumé
-  ============================================================= */
+     ⭐ UI PRINCIPALE
+  ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-10">
       <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-5 sm:p-8 border border-gray-100">
-
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              🧾 <span>{order.code || `Commande #${order.id}`}</span>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-words">
+              🧾 {order.code || `Commande #${order.id}`}
             </h1>
             <p className="text-sm text-slate-600">
-              Détails complets de la commande, paiements, articles et preuves.
+              Détails complets de la commande, articles, paiements et preuves.
             </p>
           </div>
 
@@ -402,9 +411,8 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* CLIENT + STATUTS + MONTANT */}
+        {/* RÉSUMÉ */}
         <div className="grid lg:grid-cols-3 gap-4 mb-10">
-
           {/* CLIENT */}
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 p-4 rounded-xl shadow-sm">
             <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
@@ -413,9 +421,7 @@ export default function OrderDetailPage() {
             <p className="font-medium text-slate-900 break-words">{customerDisplay}</p>
 
             {order.customer?.email && (
-              <p className="text-xs text-slate-500 mt-1 break-all">
-                {order.customer.email}
-              </p>
+              <p className="text-xs text-slate-500 mt-1 break-all">{order.customer.email}</p>
             )}
 
             {order.customerNote && (
@@ -426,122 +432,63 @@ export default function OrderDetailPage() {
           </div>
 
           {/* STATUTS + TIMELINE */}
-          <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col gap-3">
-            <div>
-              <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                📌 Statuts
-              </h3>
+          <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-slate-200 p-4 rounded-xl shadow-sm">
+            <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+              📌 Statuts
+            </h3>
 
-              <div className="flex flex-wrap gap-2 mb-2">
-                <span className="px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-[11px] font-semibold">
-                  {formatStatus(order.orderStatus, 'order')}
-                </span>
-
-                <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-[11px] font-semibold">
-                  {formatStatus(order.paymentStatus, 'payment')}
-                </span>
-              </div>
-
-              <p className="text-xs text-slate-500">
-                Créée le{' '}
-                {order.createdAt
-                  ? new Date(order.createdAt).toLocaleString()
-                  : '—'}
-              </p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              <span className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-xs font-semibold">
+                Commande : {formatStatus(order.orderStatus, 'order')}
+              </span>
+              <span className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-xs font-semibold">
+                Paiement : {formatStatus(order.paymentStatus, 'payment')}
+              </span>
             </div>
 
-            {/* Timeline animée */}
-            <div className="mt-3">
-              <div className="flex items-center justify-between gap-1 sm:gap-2">
-                {ORDER_STEP_DEFS.map((step, index) => {
-                  const isActive = index <= activeStepIndex || activeStepIndex === -1;
-                  const isCurrent = index === activeStepIndex || activeStepIndex === -1;
-
-                  return (
-                    <div
-                      key={step.key}
-                      className="flex-1 flex flex-col items-center text-center"
-                    >
-                      <div className="relative flex items-center justify-center w-full">
-                        {/* Ligne gauche */}
-                        {index > 0 && (
-                          <div
-                            className={`hidden sm:block absolute left-0 right-1 h-[2px] ${
-                              isActive
-                                ? 'bg-gradient-to-r from-blue-500 to-emerald-500'
-                                : 'bg-slate-200'
-                            }`}
-                          />
-                        )}
-
-                        {/* Point central */}
-                        <div
-                          className={`relative z-10 flex items-center justify-center w-7 h-7 rounded-full border text-xs shadow-sm transition
-                            ${
-                              isActive
-                                ? 'bg-white border-blue-500 text-blue-600'
-                                : 'bg-slate-100 border-slate-300 text-slate-400'
-                            }
-                            ${isCurrent ? 'scale-110 ring-2 ring-blue-200' : ''}
-                          `}
-                        >
-                          <span className="text-[14px]">{step.icon}</span>
-                        </div>
-
-                        {/* Ligne droite */}
-                        {index < ORDER_STEP_DEFS.length - 1 && (
-                          <div
-                            className={`hidden sm:block absolute left-1 right-0 h-[2px] ${
-                              index < activeStepIndex
-                                ? 'bg-gradient-to-r from-emerald-500 to-blue-500'
-                                : 'bg-slate-200'
-                            }`}
-                          />
-                        )}
-                      </div>
-                      <div className="mt-1 text-[10px] font-medium text-slate-500">
-                        {step.label}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {canAdmin && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <button
-                    className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs hover:bg-slate-50"
-                    onClick={() => handleOrderUpdate({ orderStatus: 'created' })}
-                  >
-                    Marquer créée
-                  </button>
-
-                  <button
-                    className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs hover:bg-emerald-700"
-                    onClick={() =>
-                      handleOrderUpdate({
-                        orderStatus: 'paid',
-                        paymentStatus: 'paid',
-                      })
-                    }
-                  >
-                    Marquer payée
-                  </button>
-
-                  <button
-                    className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700"
-                    onClick={() =>
-                      handleOrderUpdate({
-                        orderStatus: 'delivered',
-                        paymentStatus: 'paid',
-                      })
-                    }
-                  >
-                    Marquer livrée
-                  </button>
+            <div className="flex items-center gap-2">
+              {ORDER_STEP_DEFS.map((s, i) => (
+                <div
+                  key={s.key}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs border transition ${
+                    i <= activeStepIndex
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-slate-100 text-slate-400 border-slate-200'
+                  }`}
+                  title={s.label}
+                >
+                  {s.icon}
                 </div>
-              )}
+              ))}
             </div>
+
+            {canAdmin && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  className="px-3 py-1 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  onClick={() =>
+                    handleOrderUpdate({
+                      orderStatus: 'paid',
+                      paymentStatus: 'paid',
+                    })
+                  }
+                >
+                  Marquer payée
+                </button>
+
+                <button
+                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  onClick={() =>
+                    handleOrderUpdate({
+                      orderStatus: 'delivered',
+                      paymentStatus: 'paid',
+                    })
+                  }
+                >
+                  Marquer livrée
+                </button>
+              </div>
+            )}
           </div>
 
           {/* MONTANT */}
@@ -557,87 +504,82 @@ export default function OrderDetailPage() {
 
             {order.items?.length > 0 && (
               <p className="text-xs text-slate-500 mt-3">
-                {order.items.length} article
-                {order.items.length > 1 ? 's' : ''} dans cette commande.
+                {order.items.length} article{order.items.length > 1 ? 's' : ''}.
               </p>
             )}
           </div>
         </div>
 
-        {/* ============================================================
-            🧩 ARTICLES
-        ============================================================ */}
+        {/* ===================== ARTICLES ===================== */}
         <section className="mb-10">
           <h2 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
             🧩 Articles
             {order.items?.length ? (
               <span className="text-xs text-slate-500">
-                ({order.items.length} élément
-                {order.items.length > 1 ? 's' : ''})
+                ({order.items.length} élément{order.items.length > 1 ? 's' : ''})
               </span>
             ) : null}
           </h2>
 
           {order.items?.length ? (
             <div className="grid gap-4">
-              {order.items.map((it) => (
-                <div
-                  key={it.id}
-                  className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between gap-3"
-                >
-                  <div className="space-y-1">
-                    <p className="font-semibold text-slate-900 break-words">
-                      {it.product?.name || `Article #${it.id}`}
-                    </p>
+              {order.items.map((it) => {
+                const unit = Number(it.unitPrice || it.price || 0);
+                const lineTotal = unit * Number(it.quantity || 0);
 
-                    <p className="text-xs text-slate-500 mt-1">
-                      ID article : #{it.id}
-                    </p>
+                return (
+                  <div
+                    key={it.id}
+                    className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between gap-3"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <p className="font-semibold text-slate-900 break-words">
+                        {it.product?.name || `Article #${it.id}`}
+                      </p>
 
-                    <p className="text-sm text-slate-700 mt-2">
-                      Qté : <span className="font-semibold">{it.quantity}</span>
-                    </p>
+                      <p className="text-xs text-slate-500">
+                        ID article : #{it.id}
+                      </p>
 
-                    <p className="text-sm text-slate-700">
-                      PU :{' '}
-                      <span className="font-semibold">
-                        {Number(it.unitPrice || it.price).toLocaleString('fr-FR')}{' '}
-                        {formatCurrency(currency)}
-                      </span>
-                    </p>
+                      <p className="text-sm text-slate-700">
+                        Qté : <span className="font-semibold">{it.quantity}</span>
+                      </p>
 
-                    <p className="text-sm text-slate-700">
-                      Total :{' '}
-                      <span className="font-semibold text-blue-700">
-                        {(
-                          Number(it.unitPrice || it.price) * it.quantity
-                        ).toLocaleString('fr-FR')}{' '}
-                        {formatCurrency(currency)}
-                      </span>
-                    </p>
-                  </div>
+                      <p className="text-sm text-slate-700">
+                        PU :{' '}
+                        <span className="font-semibold">
+                          {unit.toLocaleString('fr-FR')} {formatCurrency(currency)}
+                        </span>
+                      </p>
 
-                  {canAdmin && (
-                    <div className="flex flex-wrap gap-2 justify-end items-start">
-                      <button
-                        className="px-3 py-1 bg-amber-500 text-white rounded-lg text-xs hover:bg-amber-600"
-                        onClick={() =>
-                          handleUpdateItem(it.id, { itemStatus: 'cancelled' })
-                        }
-                      >
-                        Annuler
-                      </button>
-
-                      <button
-                        className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700"
-                        onClick={() => handleDeleteItem(it.id)}
-                      >
-                        Supprimer
-                      </button>
+                      <p className="text-sm text-slate-700">
+                        Total :{' '}
+                        <span className="font-semibold text-blue-700">
+                          {lineTotal.toLocaleString('fr-FR')} {formatCurrency(currency)}
+                        </span>
+                      </p>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {canAdmin && (
+                      <div className="flex flex-wrap gap-2 justify-end items-start">
+                        <button
+                          className="px-3 py-1 bg-amber-500 text-white rounded-lg text-xs hover:bg-amber-600"
+                          onClick={() => handleUpdateItem(it.id, { itemStatus: 'cancelled' })}
+                        >
+                          Annuler
+                        </button>
+
+                        <button
+                          className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700"
+                          onClick={() => handleDeleteItem(it.id)}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-slate-500 italic">
@@ -645,7 +587,7 @@ export default function OrderDetailPage() {
             </p>
           )}
 
-          {/* Ajout d’article - Admin seulement */}
+          {/* Ajout d’article - Admin/Master */}
           {canAdmin && (
             <form
               onSubmit={handleAddItem}
@@ -658,15 +600,13 @@ export default function OrderDetailPage() {
               <div className="grid md:grid-cols-4 gap-3">
                 <select
                   value={itemForm.productId}
-                  onChange={(e) =>
-                    setItemForm({ ...itemForm, productId: e.target.value })
-                  }
+                  onChange={(e) => setItemForm({ ...itemForm, productId: e.target.value })}
                   className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
                 >
                   <option value="">— Sélectionner —</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} — {Number(p.price).toLocaleString('fr-FR')}{' '}
+                      {p.name} — {Number(p.price || 0).toLocaleString('fr-FR')}{' '}
                       {formatCurrency(p.currency || currency)}
                     </option>
                   ))}
@@ -676,9 +616,7 @@ export default function OrderDetailPage() {
                   type="number"
                   min={1}
                   value={itemForm.quantity}
-                  onChange={(e) =>
-                    setItemForm({ ...itemForm, quantity: e.target.value })
-                  }
+                  onChange={(e) => setItemForm({ ...itemForm, quantity: e.target.value })}
                   className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="Quantité"
                 />
@@ -687,9 +625,7 @@ export default function OrderDetailPage() {
                   type="number"
                   step="0.01"
                   value={itemForm.unitPrice}
-                  onChange={(e) =>
-                    setItemForm({ ...itemForm, unitPrice: e.target.value })
-                  }
+                  onChange={(e) => setItemForm({ ...itemForm, unitPrice: e.target.value })}
                   className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="PU (optionnel)"
                 />
@@ -705,17 +641,14 @@ export default function OrderDetailPage() {
           )}
         </section>
 
-        {/* ============================================================
-            📎 PREUVES
-        ============================================================ */}
+        {/* ===================== PREUVES ===================== */}
         {canUploadProofs && (
           <section className="mb-10">
             <h2 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
               📎 Preuves du paiement
               {evidences.length > 0 && (
                 <span className="text-xs text-slate-500">
-                  ({evidences.length} fichier
-                  {evidences.length > 1 ? 's' : ''})
+                  ({evidences.length} fichier{evidences.length > 1 ? 's' : ''})
                 </span>
               )}
             </h2>
@@ -726,8 +659,6 @@ export default function OrderDetailPage() {
               className="bg-gray-50 border border-slate-200 p-4 rounded-xl shadow-sm mb-5"
             >
               <div className="grid md:grid-cols-3 gap-3">
-
-                {/* Fichier */}
                 <div className="md:col-span-2">
                   <label className="text-xs font-semibold text-slate-600 mb-1 block">
                     Fichiers (images ou PDF)
@@ -748,7 +679,6 @@ export default function OrderDetailPage() {
                   )}
                 </div>
 
-                {/* Notes */}
                 <div>
                   <label className="text-xs font-semibold text-slate-600 mb-1 block">
                     Notes (optionnel)
@@ -779,11 +709,13 @@ export default function OrderDetailPage() {
 
             {/* Liste des preuves */}
             {evidences.length === 0 ? (
-              <p className="text-sm text-slate-500 italic">Aucune preuve enregistrée pour cette commande.</p>
+              <p className="text-sm text-slate-500 italic">
+                Aucune preuve enregistrée pour cette commande.
+              </p>
             ) : (
               <div className="grid gap-4">
                 {evidences.map((ev) => {
-                  const isImage = isEvidenceImage(ev);
+                  const isImg = isEvidenceImage(ev);
                   const fileUrl = toAbsUrl(ev.filePath);
 
                   return (
@@ -792,9 +724,9 @@ export default function OrderDetailPage() {
                       className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between gap-3"
                     >
                       <div className="flex gap-3 w-full">
-                        {/* Thumbnail */}
+                        {/* ✅ THUMBNAIL + openEvidenceLightbox() => plus d'erreur unused */}
                         <div className="w-16 h-16 border border-slate-200 bg-slate-50 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
-                          {isImage ? (
+                          {isImg ? (
                             <button
                               type="button"
                               onClick={() => openEvidenceLightbox(ev.id)}
@@ -803,7 +735,7 @@ export default function OrderDetailPage() {
                             >
                               <img
                                 src={fileUrl}
-                                alt={ev.originalName}
+                                alt={ev.originalName || 'Preuve'}
                                 className="w-full h-full object-cover hover:scale-105 transition-transform"
                               />
                             </button>
@@ -827,12 +759,14 @@ export default function OrderDetailPage() {
 
                           <p className="text-xs text-slate-500">
                             Ajouté le{' '}
-                            {new Date(ev.createdAt).toLocaleString('fr-FR')} par{' '}
-                            <strong>{formatUploader(ev.uploader)}</strong>
+                            {ev.createdAt
+                              ? new Date(ev.createdAt).toLocaleString('fr-FR')
+                              : '—'}{' '}
+                            par <strong>{formatUploader(ev.uploader)}</strong>
                           </p>
 
                           {ev.notes && (
-                            <p className="text-sm text-slate-700">
+                            <p className="text-sm text-slate-700 break-words">
                               <span className="font-semibold">Notes :</span> {ev.notes}
                             </p>
                           )}
@@ -842,6 +776,7 @@ export default function OrderDetailPage() {
                       {canAdmin && (
                         <div className="flex justify-end items-start">
                           <button
+                            type="button"
                             onClick={() => handleDeleteEvidence(ev.id)}
                             className="px-3 py-1 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700"
                           >
@@ -857,9 +792,7 @@ export default function OrderDetailPage() {
           </section>
         )}
 
-        {/* ============================================================
-            🔗 BOTTOM LINKS
-        ============================================================ */}
+        {/* BOTTOM LINKS */}
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             to={`/orders/${id}/transactions`}
@@ -955,7 +888,9 @@ export default function OrderDetailPage() {
             <div className="flex-1 flex items-center justify-center bg-black">
               <img
                 src={toAbsUrl(imageEvidences[evidenceLightbox.index].filePath)}
-                alt={imageEvidences[evidenceLightbox.index].originalName || 'Preuve'}
+                alt={
+                  imageEvidences[evidenceLightbox.index].originalName || 'Preuve'
+                }
                 className="max-h-[70vh] max-w-full object-contain rounded-lg"
               />
             </div>

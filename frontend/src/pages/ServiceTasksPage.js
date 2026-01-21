@@ -1,17 +1,24 @@
+// ============================================================
 // frontend/src/pages/ServiceTasksPage.jsx
-import { useEffect, useState, useMemo } from "react";
+// Version Premium 2025 — MASTER SAFE (multi-pays) — PARTIE 1 / 2
+// ============================================================
+
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { applyLabels } from "../utils/labels";
+import { me } from "../services/auth";
+import { getGeoParams } from "../services/geo";
+import { normalizeRole, isMasterUser } from "../utils/role";
 
 /* ========================================================================
-   🔧 PAGE : ServiceTasksPage — Style A Premium 2025
+   🔧 PAGE : ServiceTasksPage — Style A Premium 2025 (MASTER SAFE)
    - Chargement des tâches d’un service
    - Labels cohérents (statusLabel, typeLabel…)
    - UI responsive / mobile-first
-   - Styles premium cohérents avec ServicesPage / TasksPage
-   - Gestion erreurs + états de chargement
-   - ✅ Aucune modification fonctionnelle (seule la présentation change)
+   - ✅ Aucune régression : même endpoint / même navigation preuves
+   - ✅ Multi-pays : envoie params geo (admin scoped/master) comme le reste de l’app
+   - ✅ Permissions : admin/master/agent/client (affichage) — backend reste source de vérité
 =========================================================================== */
 
 export default function ServiceTasksPage() {
@@ -21,6 +28,7 @@ export default function ServiceTasksPage() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [user, setUser] = useState(null);
 
   /* ============================================================
      🔐 Auth headers (production-safe)
@@ -30,43 +38,77 @@ export default function ServiceTasksPage() {
       localStorage.getItem("teranga_token") ||
       localStorage.getItem("token");
 
-    return {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    };
+    return token ? { Authorization: `Bearer ${token}` } : {};
   }, []);
 
   /* ============================================================
-     📥 Chargement des tâches
+     🔐 Rôles (UX uniquement) — backend = source de vérité
+  ============================================================ */
+  const role = normalizeRole(user?.role);
+  const isAdmin = role === "admin";
+  const isAgent = role === "agent";
+  const isClient = role === "client";
+  const isMaster = isMasterUser(user); // MASTER = admin scoped (UX tag)
+
+  /* ============================================================
+     📥 Chargement des tâches (MASTER SAFE + Geo Params)
+  ============================================================ */
+  const loadTasks = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      setLoading(true);
+      setErrorMsg("");
+
+      const { data } = await api.get(`/tasks/service/${id}`, {
+        headers: authHeaders,
+        params: getGeoParams(), // ✅ multi-pays : scope admin/master
+      });
+
+      const rawTasks = data?.tasks || [];
+
+      // Labels FR : si backend ne renvoie pas déjà statusLabel/typeLabel/...
+      const withLabels = rawTasks.map((t) => (t?.statusLabel ? t : applyLabels(t)));
+
+      setTasks(withLabels);
+    } catch (err) {
+      console.error("❌ Erreur chargement tâches:", err);
+      setErrorMsg(
+        "Erreur lors du chargement des tâches du service. Veuillez réessayer."
+      );
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [id, authHeaders]);
+
+  /* ============================================================
+     🚀 Init : user + tasks
   ============================================================ */
   useEffect(() => {
-    async function load() {
-      if (!id) return;
+    let active = true;
 
+    async function init() {
       try {
-        setLoading(true);
-        setErrorMsg("");
-
-        const { data } = await api.get(`/tasks/service/${id}`, authHeaders);
-
-        const rawTasks = data?.tasks || [];
-
-        // Application labels (FR) si le backend ne les fournit pas
-        const withLabels = rawTasks.map((t) => applyLabels(t));
-
-        setTasks(withLabels);
-      } catch (err) {
-        console.error("❌ Erreur chargement tâches:", err);
-        setErrorMsg(
-          "Erreur lors du chargement des tâches du service. Veuillez réessayer."
-        );
-        setTasks([]);
+        const u = await me();
+        if (!active) return;
+        setUser(u?.user || null);
+      } catch (e) {
+        // si besoin, laisse l’app gérer ailleurs (middleware / router)
+        console.error("❌ me() ServiceTasksPage:", e);
       } finally {
-        setLoading(false);
+        if (active) {
+          await loadTasks();
+        }
       }
     }
 
-    load();
-  }, [id, authHeaders]);
+    init();
+
+    return () => {
+      active = false;
+    };
+  }, [loadTasks]);
 
   /* ============================================================
      ⏳ Écran de chargement premium
@@ -92,16 +134,41 @@ export default function ServiceTasksPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
       <div className="max-w-5xl mx-auto bg-white shadow-2xl rounded-3xl border border-gray-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-
         {/* 🧭 EN-TÊTE */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-4 border-b border-gray-100">
           <div className="break-words">
             <p className="text-[0.7rem] uppercase tracking-wide text-blue-600 font-semibold mb-1">
               Tâches liées à un service
             </p>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 break-words">
-              📋 Tâches du service #{id}
-            </h1>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 break-words">
+                📋 Tâches du service #{id}
+              </h1>
+
+              {/* Badge UX — sans impact backend */}
+              {isMaster && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                  MASTER
+                </span>
+              )}
+              {isAdmin && !isMaster && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-slate-50 text-slate-700 border border-slate-200">
+                  ADMIN
+                </span>
+              )}
+              {isAgent && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                  AGENT
+                </span>
+              )}
+              {isClient && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  CLIENT
+                </span>
+              )}
+            </div>
+
             <p className="text-xs sm:text-sm text-gray-500 mt-1">
               Visualisez les tâches associées à ce service et accédez aux preuves
               détaillées pour chaque action.
@@ -124,7 +191,7 @@ export default function ServiceTasksPage() {
           </div>
         )}
 
-        {/* Liste vide */}
+              {/* Liste vide */}
         {tasks.length === 0 ? (
           <div className="py-10 flex flex-col items-center justify-center text-center">
             <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
@@ -141,7 +208,14 @@ export default function ServiceTasksPage() {
         ) : (
           <div className="grid gap-5">
             {tasks.map((t) => (
-              <TaskCard key={t.id} task={t} navigate={navigate} />
+              <TaskCard
+                key={t.id}
+                task={t}
+                navigate={navigate}
+                // UX only: donne le rôle courant (sans changer l’ACL backend)
+                userRole={role}
+                isMaster={isMaster}
+              />
             ))}
           </div>
         )}
@@ -152,9 +226,10 @@ export default function ServiceTasksPage() {
 
 /* ========================================================================
    🧩 TaskCard — carte responsive & premium (Style A)
-   ✅ Aucune modification fonctionnelle : même navigation / mêmes infos
+   ✅ Aucune régression : même navigation / mêmes infos
+   ✅ MASTER SAFE : aucun filtrage côté UI, backend gère le scope/ACL
 =========================================================================== */
-function TaskCard({ task, navigate }) {
+function TaskCard({ task, navigate, userRole, isMaster }) {
   const statusClass =
     task.status === "created"
       ? "bg-gray-100 text-gray-700 border border-gray-200"
@@ -165,6 +240,33 @@ function TaskCard({ task, navigate }) {
       : task.status === "validated"
       ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
       : "bg-gray-100 text-gray-500 border border-gray-200";
+
+  const statusIcon =
+    task.status === "created"
+      ? "🕓"
+      : task.status === "in_progress"
+      ? "⚙️"
+      : task.status === "completed"
+      ? "✅"
+      : task.status === "validated"
+      ? "✔️"
+      : "⏺";
+
+  const creatorLabel =
+    task.creator?.email ||
+    task.creator?.name ||
+    task.creatorLabel ||
+    (task.creator
+      ? `${task.creator.firstName || ""} ${task.creator.lastName || ""}`.trim()
+      : "") ||
+    "—";
+
+  const assigneeLabel = task.assignee
+    ? (
+        `${task.assignee.firstName || ""} ${task.assignee.lastName || ""}`.trim() ||
+        task.assignee.email
+      )
+    : "Non assigné";
 
   return (
     <div
@@ -178,9 +280,33 @@ function TaskCard({ task, navigate }) {
       {/* Titre + statut */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
         <div className="min-w-0">
-          <h3 className="text-base sm:text-lg font-bold text-gray-900 break-words">
-            {task.title || `Tâche #${task.id}`}
-          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-gray-900 break-words">
+              {task.title || `Tâche #${task.id}`}
+            </h3>
+
+            {/* Badge rôle (UX only) */}
+            {isMaster && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                MASTER
+              </span>
+            )}
+            {userRole === "admin" && !isMaster && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-slate-50 text-slate-700 border border-slate-200">
+                ADMIN
+              </span>
+            )}
+            {userRole === "agent" && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                AGENT
+              </span>
+            )}
+            {userRole === "client" && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                CLIENT
+              </span>
+            )}
+          </div>
 
           <p className="text-xs sm:text-sm text-gray-600 break-words mt-1">
             {task.description || "Aucune description fournie."}
@@ -190,21 +316,8 @@ function TaskCard({ task, navigate }) {
         <div
           className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[0.7rem] font-semibold whitespace-nowrap ${statusClass}`}
         >
-          <span>
-            {task.status === "created"
-              ? "🕓"
-              : task.status === "in_progress"
-              ? "⚙️"
-              : task.status === "completed"
-              ? "✅"
-              : task.status === "validated"
-              ? "✔️"
-              : "⏺"}
-          </span>
-          <span>
-            {task.statusLabel ||
-              (task.status ? task.status.replace("_", " ") : "—")}
-          </span>
+          <span>{statusIcon}</span>
+          <span>{task.statusLabel || (task.status ? task.status.replace("_", " ") : "—")}</span>
         </div>
       </div>
 
@@ -217,21 +330,12 @@ function TaskCard({ task, navigate }) {
 
         <div className="break-words">
           <span className="font-semibold text-gray-800">Créateur :</span>{" "}
-          {task.creator?.email ||
-            task.creator?.name ||
-            task.creatorLabel ||
-            "—"}
+          {creatorLabel}
         </div>
 
         <div className="break-words">
           <span className="font-semibold text-gray-800">Assigné à :</span>{" "}
-          {task.assignee
-            ? (
-                `${task.assignee.firstName || ""} ${
-                  task.assignee.lastName || ""
-                }`.trim() || task.assignee.email
-              )
-            : "Non assigné"}
+          {assigneeLabel}
         </div>
 
         <div className="break-words">
@@ -274,3 +378,4 @@ function TaskCard({ task, navigate }) {
     </div>
   );
 }
+

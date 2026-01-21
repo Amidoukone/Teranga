@@ -1,6 +1,7 @@
 // ============================================================================
 // AdminUsersPage.jsx — Apple Light Premium B2 Minimal
-// Version 2025 : professionnelle, élégante, lisible, sans aucune régression.
+// Version 2025 — ADMIN GLOBAL & MASTER (admin + geo scope)
+// ZÉRO RÉGRESSION • BACKEND SOURCE OF TRUTH
 // ============================================================================
 
 import { useEffect, useState, useCallback } from "react";
@@ -12,8 +13,12 @@ import {
 } from "../services/users";
 import { me } from "../services/auth";
 import { motion } from "framer-motion";
+import { normalizeRole, isMasterUser } from "../utils/role";
 
 export default function AdminUsersPage() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(null);
+
   const [role, setRole] = useState("client");
   const [users, setUsers] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -33,6 +38,7 @@ export default function AdminUsersPage() {
     country: "",
     role: "client",
   });
+
   const [editing, setEditing] = useState(null);
 
   const [filters, setFilters] = useState({
@@ -42,8 +48,48 @@ export default function AdminUsersPage() {
     sort: "-createdAt",
   });
 
+  // MASTER = admin + scope (frontend déduction)
+  const isMaster = isMasterUser(currentUser);
+
   // ============================================================================
-  // 🔄 LOAD USERS
+  // 🔐 CHECK ADMIN + LOAD ME
+  // ============================================================================
+  useEffect(() => {
+    let active = true;
+
+    async function check() {
+      try {
+        const res = await me();
+        if (!active) return;
+
+        const user = res?.user;
+        if (!user) {
+          window.location.href = "/login";
+          return;
+        }
+
+        const role = normalizeRole(user.role);
+        if (role !== "admin") {
+          window.location.href = "/dashboard";
+          return;
+        }
+
+        setCurrentUser(user);
+        setIsAdmin(true);
+      } catch (e) {
+        console.error("❌ Erreur /me (AdminUsersPage):", e);
+        window.location.href = "/login";
+      }
+    }
+
+    check();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // ============================================================================
+  // 🔄 LOAD USERS (backend applique le scope)
   // ============================================================================
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,27 +104,23 @@ export default function AdminUsersPage() {
     }
   }, [role]);
 
-  // ============================================================================
-  // 🔐 CHECK ADMIN + INIT LOAD
-  // ============================================================================
   useEffect(() => {
-    async function check() {
-      const { user } = await me();
-      if (user.role !== "admin") window.location.href = "/dashboard";
-    }
-    check();
+    if (!isAdmin) return;
     load();
-  }, [load]);
+  }, [isAdmin, load]);
 
   // ============================================================================
   // 💾 Save form visibility
   // ============================================================================
   useEffect(() => {
-    localStorage.setItem("teranga_admin_users_showForm", showForm ? "1" : "0");
+    localStorage.setItem(
+      "teranga_admin_users_showForm",
+      showForm ? "1" : "0"
+    );
   }, [showForm]);
 
   // ============================================================================
-  // 🔎 FILTERING + SORTING
+  // 🔎 FILTERING + SORTING (LOCAL UNIQUEMENT)
   // ============================================================================
   useEffect(() => {
     let arr = [...users];
@@ -134,18 +176,24 @@ export default function AdminUsersPage() {
   }, [users, filters]);
 
   // ============================================================================
-  // SUBMIT FORM
+  // SUBMIT FORM (MASTER SAFE)
   // ============================================================================
   async function handleSubmit(e) {
     e.preventDefault();
     try {
+      const payload = { ...form };
+
+      // 🔒 MASTER: le scope country/region est imposé backend
+      // => on n'essaie jamais de le forcer côté frontend
+
       if (editing) {
-        await updateUser(editing, form);
+        await updateUser(editing, payload);
         alert("✅ Utilisateur mis à jour");
       } else {
-        await createUser(form);
+        await createUser(payload);
         alert("✅ Utilisateur créé");
       }
+
       resetForm();
       await load();
     } catch (err) {
@@ -194,6 +242,16 @@ export default function AdminUsersPage() {
   }
 
   // ============================================================================
+  // ⏳ LOADING GUARD
+  // ============================================================================
+  if (isAdmin === null) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-500 animate-pulse">Chargement…</p>
+      </div>
+    );
+  }
+  // ============================================================================
   // UI — APPLE LIGHT PREMIUM
   // ============================================================================
   return (
@@ -205,9 +263,38 @@ export default function AdminUsersPage() {
       >
         {/* HEADER */}
         <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
-            👥 Gestion des utilisateurs
-          </h1>
+          <div className="min-w-0">
+            <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+              👥 Gestion des utilisateurs
+            </h1>
+
+            {/* ✅ Info scope (UX seulement, aucun filtre frontend) */}
+            {currentUser && (
+              <div className="mt-2 text-xs text-gray-500">
+                <span className="inline-flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full border border-gray-200 bg-gray-50 text-gray-700">
+                    {isMaster ? "MASTER" : "ADMINISTRATEUR"}
+                  </span>
+
+                  {isMaster && (
+                    <span className="text-gray-500">
+                      Périmètre :
+                      {currentUser?.countryId != null
+                        ? ` Pays #${currentUser.countryId}`
+                        : ""}
+                      {currentUser?.regionId != null
+                        ? ` · Région #${currentUser.regionId}`
+                        : ""}
+                    </span>
+                  )}
+
+                  {!isMaster && (
+                    <span className="text-gray-500">Accès global</span>
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
 
           <div className="flex gap-3">
             <button
@@ -236,7 +323,9 @@ export default function AdminUsersPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Rôle */}
             <div>
-              <label className="text-xs font-medium text-gray-600">Catégorie</label>
+              <label className="text-xs font-medium text-gray-600">
+                Catégorie
+              </label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
@@ -250,7 +339,9 @@ export default function AdminUsersPage() {
 
             {/* Recherche */}
             <div className="lg:col-span-2">
-              <label className="text-xs font-medium text-gray-600">Recherche</label>
+              <label className="text-xs font-medium text-gray-600">
+                Recherche
+              </label>
               <input
                 placeholder="Nom, email, téléphone…"
                 value={filters.q}
@@ -261,7 +352,9 @@ export default function AdminUsersPage() {
 
             {/* Pays */}
             <div>
-              <label className="text-xs font-medium text-gray-600">Pays (ISO2)</label>
+              <label className="text-xs font-medium text-gray-600">
+                Pays (ISO2)
+              </label>
               <input
                 placeholder="SN, ML, FR…"
                 value={filters.country}
@@ -294,7 +387,9 @@ export default function AdminUsersPage() {
               <label className="text-xs font-medium text-gray-600">Tri</label>
               <select
                 value={filters.sort}
-                onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
+                onChange={(e) =>
+                  setFilters({ ...filters, sort: e.target.value })
+                }
                 className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
               >
                 <option value="-createdAt">Plus récents</option>
@@ -345,9 +440,7 @@ export default function AdminUsersPage() {
                 key={key}
                 placeholder={label}
                 value={form[key]}
-                onChange={(e) =>
-                  setForm({ ...form, [key]: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                 className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
               />
             ))}
@@ -377,6 +470,15 @@ export default function AdminUsersPage() {
               <option value="agent">Agent</option>
               <option value="admin">Admin</option>
             </select>
+
+            {/* ✅ Note UX: MASTER scope imposé backend */}
+            {isMaster && (
+              <div className="md:col-span-2 text-xs text-gray-500">
+                ℹ️ Vous êtes <strong>MASTER</strong> : le périmètre géographique
+                (pays/région) des utilisateurs créés ou modifiés est imposé par
+                votre profil.
+              </div>
+            )}
 
             <div className="md:col-span-2 flex justify-end gap-2 mt-2">
               {editing && (
@@ -426,7 +528,8 @@ export default function AdminUsersPage() {
                     className="bg-white hover:bg-gray-50 transition border border-gray-200 rounded-xl"
                   >
                     <td className="px-4 py-2">
-                      {[u.firstName, u.lastName].filter(Boolean).join(" ") || "—"}
+                      {[u.firstName, u.lastName].filter(Boolean).join(" ") ||
+                        "—"}
                     </td>
                     <td className="px-4 py-2">{u.email}</td>
                     <td className="px-4 py-2">{u.phone || "—"}</td>
