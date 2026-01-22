@@ -255,7 +255,7 @@ exports.create = async (req, res) => {
       projectId: pid,
     });
 
-    const isAdminLike = ["admin", "master"].includes(req.user?.role);
+    const isAdminLike = req.user?.role === "admin";
     const bodyCountryId = toSafeInt(countryId ?? country_id);
     const bodyRegionId = toSafeInt(regionId ?? region_id);
 
@@ -552,7 +552,7 @@ exports.update = async (req, res) => {
     }
 
     const isAdmin = req.user?.role === "admin";
-    const isAdminLike = ["admin", "master"].includes(req.user?.role);
+    const isAdminLike = req.user?.role === "admin";
 
     // Track si liens changent => recalcul GEO non destructif
     let linkChanged = false;

@@ -117,7 +117,6 @@ function canAccessTask(user, task) {
 
   // ✅ Admin scoped/master => autorisé mais limité par scope geo
   if (user.role === "admin") return canAccessGeoScope(user, task);
-  if (user.role === "master") return canAccessGeoScope(user, task);
 
   if (user.role === "agent") {
     // ACL métier existante
@@ -159,7 +158,6 @@ function canAccessOrder(user, order) {
 
   // ✅ Admin scoped/master => autorisé mais limité par scope geo
   if (user.role === "admin") return canAccessGeoScope(user, order);
-  if (user.role === "master") return canAccessGeoScope(user, order);
 
   const uid = String(user.id);
 
@@ -484,7 +482,7 @@ exports.remove = async (req, res) => {
     // 🔐 ACL suppression
     if (isGlobalAdmin(req.user)) {
       // OK
-    } else if (req.user.role === "admin" || req.user.role === "master") {
+    } else if (req.user.role === "admin") {
       const linked = ev.task || ev.order;
       if (linked && !canAccessGeoScope(req.user, linked)) {
         return res.status(403).json({ error: "Suppression hors scope interdite" });
