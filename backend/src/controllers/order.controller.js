@@ -363,7 +363,8 @@ exports.create = async (req, res) => {
 
         const name = product ? product.name : it.name || '—';
         const price =
-          toNullableNumber(it.unitPrice) ?? (product ? product.price : 0);
+          toNullableNumber(it.unitPrice ?? it.price) ??
+          (product ? product.price : 0);
         const qty = toSafeInt(it.quantity) ?? 1;
 
         await OrderItem.create({

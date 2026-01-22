@@ -33,7 +33,7 @@ function isWithinOneHour(date) {
 }
 
 function isAdminLike(user) {
-  return user?.role === "admin" || user?.role === "master";
+  return user?.role === "admin";
 }
 
 function isClientOwner(project, user) {

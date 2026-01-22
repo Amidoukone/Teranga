@@ -21,6 +21,15 @@ function isGlobalAdmin(user) {
   return !countryId && !regionId;
 }
 
+function isAdminRole(user) {
+  return user?.role === "admin";
+}
+
+function isScopedAdmin(user) {
+  if (!isAdminRole(user)) return false;
+  return !isGlobalAdmin(user);
+}
+
 function applyGeoScope(where = {}, user) {
   if (!user) return where;
 
@@ -60,4 +69,6 @@ module.exports = {
   getUserGeoScope,
   toSafeInt,
   isGlobalAdmin,
+  isAdminRole,
+  isScopedAdmin,
 };

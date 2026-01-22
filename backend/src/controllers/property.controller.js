@@ -223,7 +223,7 @@ exports.list = async (req, res) => {
     // - client: uniquement ses biens
     if (isGlobalAdmin(req.user)) {
       if (clientId) where.ownerId = toSafeInt(clientId);
-    } else if (req.user.role === 'admin' || req.user.role === 'master') {
+    } else if (req.user.role === 'admin') {
       if (clientId) where.ownerId = toSafeInt(clientId);
       // scope appliqué plus bas
     } else if (req.user.role === 'agent') {
@@ -238,7 +238,7 @@ exports.list = async (req, res) => {
       : where;
 
     // 🌍 Appliquer scope pour master/admin scoped/agent
-    if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'master' || req.user.role === 'agent')) {
+    if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'agent')) {
       finalWhere = applyGeoScope ? applyGeoScope(finalWhere, req.user) : finalWhere;
     }
 
@@ -273,7 +273,7 @@ exports.list = async (req, res) => {
 ============================================================ */
 exports.listByClient = async (req, res) => {
   try {
-    if (!req.user || !['admin', 'master'].includes(req.user.role)) {
+    if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
@@ -352,7 +352,7 @@ exports.create = async (req, res) => {
     let targetOwnerId = req.user.id;
 
     // admin/master peuvent créer pour un client
-    if (req.user.role === 'admin' || req.user.role === 'master') {
+    if (req.user.role === 'admin') {
       const candidateId = toSafeInt(ownerId) || toSafeInt(clientId) || null;
 
       if (candidateId) {
@@ -389,7 +389,7 @@ exports.create = async (req, res) => {
     if (isGlobalAdmin(req.user)) {
       finalCountryId = desiredCountryId;
       finalRegionId = desiredRegionId;
-    } else if (req.user.role === 'admin' || req.user.role === 'master') {
+    } else if (req.user.role === 'admin') {
       const scope = getUserGeoScope ? getUserGeoScope(req.user) : { countryId: null, regionId: null };
 
       // si scope region => on force region (et country optionnel)
@@ -452,7 +452,7 @@ exports.create = async (req, res) => {
     });
 
     // ✅ sécurité : si master/admin scoped, vérifier qu'on renvoie bien une property dans scope
-    if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'master')) {
+    if (!isGlobalAdmin(req.user) && req.user.role === 'admin') {
       if (!canAccessByGeoScope(req.user, property)) {
         return res.status(403).json({ error: 'Bien créé hors scope (bloqué)' });
       }
@@ -481,7 +481,7 @@ exports.update = async (req, res) => {
 
     // 🔐 ACL de base
     const isOwner = String(p.ownerId) === String(req.user.id);
-    const isAdminOrMaster = ['admin', 'master'].includes(req.user.role);
+    const isAdminOrMaster = req.user.role === 'admin';
 
     if (!isAdminOrMaster && !isOwner) {
       return res.status(403).json({ error: 'Non autorisé' });
@@ -630,7 +630,7 @@ exports.remove = async (req, res) => {
     if (!p) return res.status(404).json({ error: 'Bien introuvable' });
 
     const isOwner = String(p.ownerId) === String(req.user.id);
-    const isAdminOrMaster = ['admin', 'master'].includes(req.user.role);
+    const isAdminOrMaster = req.user.role === 'admin';
 
     if (!isAdminOrMaster && !isOwner) {
       return res.status(403).json({ error: 'Non autorisé' });
