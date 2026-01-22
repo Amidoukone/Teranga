@@ -13,7 +13,7 @@ import {
 } from "../services/users";
 import { me } from "../services/auth";
 import { motion } from "framer-motion";
-import { normalizeRole, isMasterUser } from "../utils/role";
+import { normalizeRole, isMasterUser, prettyRoleLabel } from "../utils/role";
 import { useGeo } from "../contexts/GeoContext";
 
 export default function AdminUsersPage() {
@@ -564,7 +564,9 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-2">{u.email}</td>
                     <td className="px-4 py-2">{u.phone || "—"}</td>
                     <td className="px-4 py-2">{u.country || "—"}</td>
-                    <td className="px-4 py-2 uppercase">{u.role}</td>
+                    <td className="px-4 py-2 uppercase">
+                      {prettyRoleLabel(u)}
+                    </td>
 
                     <td className="px-4 py-2 flex gap-3">
                       <button

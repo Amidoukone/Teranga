@@ -8,6 +8,7 @@ import {
   deleteCategory,
 } from "../services/categories";
 import { me } from "../services/auth";
+import { isGlobalAdminUser, isMasterUser } from "../utils/role";
 
 /*
 ============================================================================
@@ -34,22 +35,7 @@ function isTruthyId(v) {
 function computeIsMaster(user) {
   if (!user) return false;
   if (user.role === "master") return true;
-
-  // Admin scoped (master implicite) : admin + scope geo
-  if (
-    user.role === "admin" &&
-    (isTruthyId(user.countryId) || isTruthyId(user.regionId))
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-function computeCanWrite(user) {
-  if (!user) return false;
-  // On conserve la logique actuelle: seuls admin/master peuvent écrire
-  return user.role === "admin" || user.role === "master";
+  return isMasterUser(user);
 }
 
 export default function AdminCategoriesPage() {
@@ -72,7 +58,7 @@ export default function AdminCategoriesPage() {
 
   // ✅ Flags: n’impacte pas le fonctionnement, juste l’UX/affichage
   const isMaster = useMemo(() => computeIsMaster(user), [user]);
-  const canWrite = useMemo(() => computeCanWrite(user), [user]);
+  const canWrite = useMemo(() => isGlobalAdminUser(user), [user]);
 
   /* ============================================================
      🔄 Initialisation (inchangé fonctionnellement)
