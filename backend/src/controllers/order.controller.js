@@ -124,6 +124,20 @@ function applyOrderScopeWhere(where, req, { allowClientProvidedScope = true } = 
   return applyGeoScope ? applyGeoScope(where, req.user) : where;
 }
 
+/**
+ * Scope produit (création commande) :
+ * - Admin global : pas de filtre
+ * - Admin scoped / agent : filtre geo
+ * - Client : pas de filtre geo (catalogue global), rétro-compatible
+ */
+function applyProductScopeWhere(where, req) {
+  if (isGlobalAdmin(req.user)) return where;
+  if (req.user?.role === 'admin' || req.user?.role === 'agent') {
+    return applyGeoScope ? applyGeoScope(where, req.user) : where;
+  }
+  return where;
+}
+
 /* ============================================================
    ✅ Normalise un payload venant du frontend (legacy & nouveau)
 ============================================================ */
@@ -297,7 +311,7 @@ exports.create = async (req, res) => {
 
       // ✅ Filtre produits par scope (admin global => pas filtré)
       const products = await Product.findAll({
-        where: applyOrderScopeWhere({ id: productIds }, req, { allowClientProvidedScope: false }),
+        where: applyProductScopeWhere({ id: productIds }, req),
       });
 
       products.forEach((p) => productsById.set(p.id, p));
@@ -343,7 +357,7 @@ exports.create = async (req, res) => {
         if (!product && pid) {
           // ✅ Respect scope produit
           product = await Product.findOne({
-            where: applyOrderScopeWhere({ id: pid }, req, { allowClientProvidedScope: false }),
+            where: applyProductScopeWhere({ id: pid }, req),
           });
         }
 

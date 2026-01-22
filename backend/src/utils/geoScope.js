@@ -24,6 +24,9 @@ function isGlobalAdmin(user) {
 function applyGeoScope(where = {}, user) {
   if (!user) return where;
 
+  const role = user?.role;
+  if (!["admin", "agent"].includes(role)) return where;
+
   if (isGlobalAdmin(user)) return where;
 
   const { countryId, regionId } = getUserGeoScope(user);
