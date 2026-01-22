@@ -6,6 +6,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import api from "../services/api";
+import { mergeGeoPayload } from "../services/geo";
 
 /* ============================================================================
 // 🔐 CONSTANTES
@@ -192,14 +193,17 @@ export default function AdminAgentsPage() {
     setLoading(true);
 
     try {
-      await api.post("/users/agents", {
-        email: form.email.trim().toLowerCase(),
-        password: String(form.password),
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        phone: form.phone.trim() || undefined,
-        country: form.country.trim().toUpperCase(),
-      });
+      await api.post(
+        "/users/agents",
+        mergeGeoPayload({
+          email: form.email.trim().toLowerCase(),
+          password: String(form.password),
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          phone: form.phone.trim() || undefined,
+          country: form.country.trim().toUpperCase(),
+        })
+      );
 
       alert("✅ Agent créé avec succès");
 

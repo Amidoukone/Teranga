@@ -1,5 +1,6 @@
 // frontend/src/services/users.js
 import api from './api';
+import { mergeGeoPayload } from './geo';
 
 /**
  * 🔹 Récupère les utilisateurs par rôle (client, agent, admin)
@@ -21,7 +22,7 @@ export async function getUser(id) {
  * 🔹 Crée un utilisateur (admin only)
  */
 export async function createUser(payload) {
-  const { data } = await api.post('/users', payload);
+  const { data } = await api.post('/users', mergeGeoPayload(payload));
   return data.user;
 }
 
