@@ -10,14 +10,41 @@ export default function GeoSelector() {
     setCountry,
     setRegion,
     loading,
+    canSelect,
+    isScopedAdmin,
   } = useGeo();
 
   const countryOptions = useMemo(() => countries || [], [countries]);
   const regionOptions = useMemo(() => regions || [], [regions]);
 
+  if (!canSelect && !isScopedAdmin) {
+    return null;
+  }
+
   if (loading) {
     return (
       <div className="text-xs text-gray-400">Chargement zones…</div>
+    );
+  }
+
+  const selectedCountry = countryOptions.find((c) => String(c.id) === String(countryId));
+  const selectedRegion = regionOptions.find((r) => String(r.id) === String(regionId));
+
+  if (isScopedAdmin) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-gray-200">
+        <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-cyan-300">
+          Scope
+        </span>
+        <span className="text-gray-200">
+          {selectedCountry?.name || (countryId ? `Pays #${countryId}` : 'Pays')}
+        </span>
+        {regionId && (
+          <span className="text-gray-400">
+            • {selectedRegion?.name || `Région #${regionId}`}
+          </span>
+        )}
+      </div>
     );
   }
 
