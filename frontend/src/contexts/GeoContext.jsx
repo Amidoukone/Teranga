@@ -3,6 +3,7 @@ import { getCountries } from '../services/countries';
 import { getRegions } from '../services/regions';
 import { getGeoSelection, setGeoSelection } from '../services/geo';
 import { getLocalUser, getToken } from '../services/auth';
+import { normalizeRole } from '../utils/role';
 
 const GeoContext = createContext(null);
 
@@ -13,7 +14,20 @@ export function GeoProvider({ children }) {
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const isAuthenticated = Boolean(getToken() || getLocalUser());
+  const user = getLocalUser();
+  const role = normalizeRole(user?.role);
+  const isAuthenticated = Boolean(getToken() || user);
+  const isAdmin = role === 'admin';
+  const scopedCountryId = user?.countryId ?? null;
+  const scopedRegionId = user?.regionId ?? null;
+  const isScopedAdmin = isAdmin && (scopedCountryId != null || scopedRegionId != null);
+  const canSelect = isAdmin && !isScopedAdmin;
+
+  const clearSelection = useCallback(() => {
+    setCountryId(null);
+    setRegionId(null);
+    setGeoSelection({ countryId: null, regionId: null });
+  }, []);
 
   const refreshRegions = useCallback(async (nextCountryId) => {
     if (!nextCountryId || !isAuthenticated) {
@@ -34,7 +48,12 @@ export function GeoProvider({ children }) {
     let active = true;
     async function load() {
       if (!isAuthenticated) {
-        if (active) setLoading(false);
+        if (active) {
+          setCountries([]);
+          setRegions([]);
+          clearSelection();
+          setLoading(false);
+        }
         return;
       }
       try {
@@ -50,7 +69,29 @@ export function GeoProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [isAuthenticated]);
+  }, [clearSelection, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    if (isScopedAdmin) {
+      setCountryId(scopedCountryId);
+      setRegionId(scopedRegionId);
+      setGeoSelection({ countryId: scopedCountryId, regionId: scopedRegionId });
+      return;
+    }
+
+    if (!isAdmin) {
+      clearSelection();
+    }
+  }, [
+    clearSelection,
+    isAdmin,
+    isAuthenticated,
+    isScopedAdmin,
+    scopedCountryId,
+    scopedRegionId,
+  ]);
 
   useEffect(() => {
     refreshRegions(countryId);
@@ -61,13 +102,15 @@ export function GeoProvider({ children }) {
   }, [countryId, regionId]);
 
   const setCountry = useCallback((next) => {
+    if (!canSelect) return;
     setCountryId(next || null);
     setRegionId(null);
-  }, []);
+  }, [canSelect]);
 
   const setRegion = useCallback((next) => {
+    if (!canSelect) return;
     setRegionId(next || null);
-  }, []);
+  }, [canSelect]);
 
   const value = useMemo(
     () => ({
@@ -78,8 +121,20 @@ export function GeoProvider({ children }) {
       setCountry,
       setRegion,
       loading,
+      canSelect,
+      isScopedAdmin,
     }),
-    [countryId, regionId, countries, regions, setCountry, setRegion, loading]
+    [
+      countryId,
+      regionId,
+      countries,
+      regions,
+      setCountry,
+      setRegion,
+      loading,
+      canSelect,
+      isScopedAdmin,
+    ]
   );
 
   return <GeoContext.Provider value={value}>{children}</GeoContext.Provider>;
