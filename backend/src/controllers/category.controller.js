@@ -2,6 +2,7 @@
 
 const { Op } = require('sequelize');
 const { Category, Product } = require('../../models');
+const { isGlobalAdmin } = require('../utils/geoScope');
 const { CATEGORY_STATUSES, getLabel } = require('../utils/labels');
 
 /* ============================================================
@@ -72,7 +73,7 @@ function canReadCategory(req) {
 
 function canWriteCategory(req) {
   const role = getUserRole(req);
-  return role === 'admin';
+  return role === 'admin' && isGlobalAdmin(req.user);
 }
 
 /* ============================================================

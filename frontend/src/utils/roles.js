@@ -17,6 +17,14 @@ export function isMasterUser(user) {
   );
 }
 
+export function isGlobalAdminUser(user) {
+  return (
+    normalizeRole(user?.role) === 'admin' &&
+    !Boolean(user?.countryId) &&
+    !Boolean(user?.regionId)
+  );
+}
+
 export function prettyRoleLabel(userOrRole) {
   if (typeof userOrRole === 'string') {
     const r = normalizeRole(userOrRole);
