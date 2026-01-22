@@ -144,13 +144,14 @@ function withItemLabels(item) {
     statusLabel: getLabel(it.status, ORDER_ITEM_STATUSES),
     // 🔁 alias compatibilité frontend
     itemStatus: it.status ?? null,
-    lineTotal: it.total ?? Number(it.quantity || 0) * Number(it.unitPrice || 0),
+    unitPrice: it.price ?? it.unitPrice ?? 0,
+    lineTotal: it.total ?? Number(it.quantity || 0) * Number(it.price || 0),
   };
 }
 
 function withOrderLabels(order) {
   if (!order) return null;
-  const o = order.toJSON ? o.toJSON() : order;
+  const o = order.toJSON ? order.toJSON() : order;
 
   const out = {
     ...o,
@@ -202,7 +203,7 @@ async function recomputeOrderTotals(orderId) {
 
   for (const it of items) {
     const qty = Math.max(parseFloat(it.quantity || 0), 0);
-    const price = Math.max(parseFloat(it.unitPrice || 0), 0);
+    const price = Math.max(parseFloat(it.price || 0), 0);
     const line = qty * price;
 
     if (line !== it.total) {
@@ -252,7 +253,7 @@ exports.create = async (req, res) => {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
-    const { productId, name, sku, unitPrice, quantity, status = 'created' } = req.body || {};
+    const { productId, name, sku, unitPrice, price, quantity, status = 'created' } = req.body || {};
 
     // Vérifie si le produit existe
     let product = null;
@@ -287,7 +288,7 @@ exports.create = async (req, res) => {
       productId: product ? product.id : pid,
       name: toTrimOrNull(name) || product?.name || '—',
       sku: toTrimOrNull(sku) || product?.sku || null,
-      unitPrice: toNullableNumber(unitPrice) ?? (product?.price ?? 0),
+      price: toNullableNumber(unitPrice ?? price) ?? (product?.price ?? 0),
       quantity: qty,
       total: 0,
       status: String(status).trim(),
@@ -395,12 +396,12 @@ exports.update = async (req, res) => {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
-    const { name, sku, unitPrice, quantity, status } = req.body || {};
+    const { name, sku, unitPrice, price, quantity, status } = req.body || {};
 
     if (name !== undefined) item.name = toTrimOrNull(name) || item.name;
     if (sku !== undefined) item.sku = toTrimOrNull(sku);
-    if (unitPrice !== undefined)
-      item.unitPrice = toNullableNumber(unitPrice) ?? item.unitPrice;
+    if (unitPrice !== undefined || price !== undefined)
+      item.price = toNullableNumber(unitPrice ?? price) ?? item.price;
     if (quantity !== undefined)
       item.quantity = toSafeInt(quantity) ?? item.quantity;
     if (status !== undefined) item.status = String(status).trim();
