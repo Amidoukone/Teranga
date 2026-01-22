@@ -15,7 +15,7 @@ const upload = require('../middleware/uploadProperties.middleware');
  * ============================================================
  * - Client : CRUD sur ses biens (ACL fine côté controller)
  * - Admin  : CRUD + création pour n’importe quel client
- * - Master : mêmes routes que admin, mais scope appliqué côté backend (country/region)
+ * - Admin scoped : mêmes routes que admin, scope appliqué côté backend (country/region)
  * - Support complet ImageKit (upload buffers)
  * - Compatibilité frontend (fallbacks / alias)
  * ============================================================
@@ -28,12 +28,12 @@ const upload = require('../middleware/uploadProperties.middleware');
 /**
  * ➕ Créer un bien
  * - Client : crée pour lui-même
- * - Admin/Master : peut cibler ownerId | clientId | ownerEmail (géré côté controller)
+ * - Admin : peut cibler ownerId | clientId | ownerEmail (géré côté controller)
  */
 router.post(
   '/',
   auth,
-  requireRoles('client', 'admin', 'master'),
+  requireRoles('client', 'admin'),
   upload.array('files', 5),
   ctrl.create
 );
@@ -41,12 +41,12 @@ router.post(
 /**
  * 📜 Liste des biens
  * - Client : ses biens
- * - Admin/Master : tous ou filtres (?clientId=...) (géré côté controller)
+ * - Admin : tous ou filtres (?clientId=...) (géré côté controller)
  */
 router.get(
   '/',
   auth,
-  requireRoles('client', 'admin', 'master'),
+  requireRoles('client', 'admin'),
   ctrl.list
 );
 
@@ -56,7 +56,7 @@ router.get(
 router.put(
   '/:id',
   auth,
-  requireRoles('client', 'admin', 'master'),
+  requireRoles('client', 'admin'),
   upload.array('files', 5),
   ctrl.update
 );
@@ -67,12 +67,12 @@ router.put(
 router.delete(
   '/:id',
   auth,
-  requireRoles('client', 'admin', 'master'),
+  requireRoles('client', 'admin'),
   ctrl.remove
 );
 
 /* ============================================================
-   🔵 ROUTES ADMIN/MASTER — CRÉATION POUR UN AUTRE CLIENT
+   🔵 ROUTES ADMIN — CRÉATION POUR UN AUTRE CLIENT
 ============================================================ */
 
 /**
@@ -85,62 +85,62 @@ function attachOwnerIdFromParam(req, _res, next) {
 }
 
 /**
- * ➕ ADMIN/MASTER : Créer un bien pour un client donné
+ * ➕ ADMIN : Créer un bien pour un client donné
  * POST /api/properties/client/:id
  */
 router.post(
   '/client/:id',
   auth,
-  requireRoles('admin', 'master'),
+  requireRoles('admin'),
   upload.array('files', 5),
   attachOwnerIdFromParam,
   (req, res, next) => {
     console.log(
-      `🛠️ [ADMIN/MASTER] createProperty via /client/:id → clientId=${req.params.id} | files=${(req.files || []).length}`
+      `🛠️ [ADMIN] createProperty via /client/:id → clientId=${req.params.id} | files=${(req.files || []).length}`
     );
     return ctrl.create(req, res, next);
   }
 );
 
 /**
- * ➕ ADMIN/MASTER : Créer un bien via ownerId | clientId | ownerEmail dans le body
+ * ➕ ADMIN : Créer un bien via ownerId | clientId | ownerEmail dans le body
  * POST /api/properties/admin
  */
 router.post(
   '/admin',
   auth,
-  requireRoles('admin', 'master'),
+  requireRoles('admin'),
   upload.array('files', 5),
   (req, res, next) => {
     const { ownerId, clientId, ownerEmail } = req.body || {};
     console.log(
-      `🛠️ [ADMIN/MASTER] createProperty via /admin (ownerId=${ownerId} | clientId=${clientId} | email=${ownerEmail}) | files=${(req.files || []).length}`
+      `🛠️ [ADMIN] createProperty via /admin (ownerId=${ownerId} | clientId=${clientId} | email=${ownerEmail}) | files=${(req.files || []).length}`
     );
     return ctrl.create(req, res, next);
   }
 );
 
 /* ============================================================
-   🔵 ROUTES ADMIN/MASTER — LISTE PAR CLIENT
+   🔵 ROUTES ADMIN — LISTE PAR CLIENT
 ============================================================ */
 
 /**
- * 📜 Admin/Master : liste des biens d’un client spécifique
+ * 📜 Admin : liste des biens d’un client spécifique
  */
 router.get(
   '/client/:id',
   auth,
-  requireRoles('admin', 'master'),
+  requireRoles('admin'),
   ctrl.listByClient
 );
 
 /**
- * 📜 Alias admin/master : /properties/by-owner/:id
+ * 📜 Alias admin : /properties/by-owner/:id
  */
 router.get(
   '/by-owner/:id',
   auth,
-  requireRoles('admin', 'master'),
+  requireRoles('admin'),
   ctrl.listByClient
 );
 
@@ -154,7 +154,7 @@ router.get(
 router.post(
   '/create',
   auth,
-  requireRoles('client', 'admin', 'master'),
+  requireRoles('client', 'admin'),
   upload.array('files', 5),
   (req, res, next) => {
     console.log('📌 Compat route POST /properties/create utilisée');
@@ -168,7 +168,7 @@ router.post(
 router.post(
   '/admin/create',
   auth,
-  requireRoles('admin', 'master'),
+  requireRoles('admin'),
   upload.array('files', 5),
   (req, res, next) => {
     console.log('📌 Compat route POST /admin/properties/create utilisée');

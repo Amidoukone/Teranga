@@ -8,7 +8,7 @@ const {
   getLabel,
 } = require("../utils/labels");
 
-// 🌍 GeoScope utils (admin global / master / admin scoped)
+// 🌍 GeoScope utils (admin global / admin scoped)
 let applyGeoScope = null;
 let getUserGeoScope = null;
 try {
@@ -60,7 +60,7 @@ function isGlobalAdmin(user) {
 function canAccessByGeoScope(user, resource) {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
-  if (!["admin", "master"].includes(user.role)) return true;
+  if (user.role !== "admin") return true;
 
   const scope = getUserGeoScope
     ? getUserGeoScope(user)
@@ -99,7 +99,7 @@ function addLabels(service) {
 /* ============================================================
    🟢 CRÉER UN SERVICE
    - multi-pays SAFE
-   - admin global / master / admin scoped OK
+   - admin global / admin scoped OK
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -135,11 +135,11 @@ exports.create = async (req, res) => {
 
     let targetClientId = req.user.id;
 
-    if (["admin", "master"].includes(req.user.role)) {
+    if (req.user.role === "admin") {
       if (!clientId)
         return res
           .status(400)
-          .json({ error: "clientId requis pour un admin/master" });
+          .json({ error: "clientId requis pour un admin" });
 
       const user = await User.findByPk(clientId);
       if (!user || user.role !== "client")
@@ -156,21 +156,12 @@ exports.create = async (req, res) => {
     }
 
     const resolvedCountryId =
-      property?.countryId ??
-      (["admin", "master"].includes(req.user.role)
-        ? toSafeInt(countryId)
-        : null);
+      property?.countryId ?? (req.user.role === "admin" ? toSafeInt(countryId) : null);
 
     const resolvedRegionId =
-      property?.regionId ??
-      (["admin", "master"].includes(req.user.role)
-        ? toSafeInt(regionId)
-        : null);
+      property?.regionId ?? (req.user.role === "admin" ? toSafeInt(regionId) : null);
 
-    if (
-      ["admin", "master"].includes(req.user.role) &&
-      !isGlobalAdmin(req.user)
-    ) {
+    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
       if (
         !canAccessByGeoScope(req.user, {
           countryId: resolvedCountryId,
@@ -220,7 +211,7 @@ exports.create = async (req, res) => {
 };
 
 /* ============================================================
-   📄 LISTE DES SERVICES CLIENT / ADMIN / MASTER
+   📄 LISTE DES SERVICES CLIENT / ADMIN
 ============================================================ */
 exports.listClient = async (req, res) => {
   try {
@@ -229,7 +220,7 @@ exports.listClient = async (req, res) => {
 
     let where = {};
 
-    if (["admin", "master"].includes(req.user.role)) {
+    if (req.user.role === "admin") {
       if (clientId) where.clientId = toSafeInt(clientId);
     } else {
       where.clientId = req.user.id;
@@ -264,11 +255,11 @@ exports.listClient = async (req, res) => {
 };
 
 /* ============================================================
-   🧾 LISTE TOUTES LES DEMANDES (ADMIN / MASTER)
+   🧾 LISTE TOUTES LES DEMANDES (ADMIN)
 ============================================================ */
 exports.listAll = async (req, res) => {
   try {
-    if (!["admin", "master"].includes(req.user.role))
+    if (req.user.role !== "admin")
       return res.status(403).json({ error: "Accès interdit" });
 
     const { limit, offset } = getPagination(req);
@@ -337,11 +328,11 @@ exports.listAll = async (req, res) => {
    👔 ADMIN ASSIGNE UN AGENT
 ============================================================ */
 /* ============================================================
-   👔 ADMIN / MASTER ASSIGNE UN AGENT
+   👔 ADMIN ASSIGNE UN AGENT
 ============================================================ */
 exports.assignAgent = async (req, res) => {
   try {
-    if (!["admin", "master"].includes(req.user.role))
+    if (req.user.role !== "admin")
       return res.status(403).json({ error: "Accès interdit" });
 
     const serviceId = toSafeInt(req.body?.serviceId);
@@ -358,10 +349,7 @@ exports.assignAgent = async (req, res) => {
         throw Object.assign(new Error("Service introuvable"), { status: 404 });
 
       // 🔐 Scope géographique
-      if (
-        ["admin", "master"].includes(req.user.role) &&
-        !isGlobalAdmin(req.user)
-      ) {
+      if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
         if (!canAccessByGeoScope(req.user, service)) {
           throw Object.assign(
             new Error("Service hors scope géographique"),
@@ -425,7 +413,7 @@ exports.assignAgent = async (req, res) => {
 
 /* ============================================================
    ✏️ MISE À JOUR D’UN SERVICE
-   - master/admin scoped SAFE
+   - admin scoped SAFE
 ============================================================ */
 exports.updateService = async (req, res) => {
   try {
@@ -435,20 +423,14 @@ exports.updateService = async (req, res) => {
     if (!service)
       return res.status(404).json({ error: "Service introuvable" });
 
-    if (
-      !["admin", "master"].includes(req.user.role) &&
-      service.clientId !== req.user.id
-    ) {
+    if (req.user.role !== "admin" && service.clientId !== req.user.id) {
       return res
         .status(403)
         .json({ error: "Non autorisé à modifier ce service" });
     }
 
     // 🔐 Scope géographique
-    if (
-      ["admin", "master"].includes(req.user.role) &&
-      !isGlobalAdmin(req.user)
-    ) {
+    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, service)) {
         return res
           .status(403)
@@ -484,10 +466,7 @@ exports.updateService = async (req, res) => {
             .status(400)
             .json({ error: "Bien immobilier introuvable" });
 
-        if (
-          !["admin", "master"].includes(req.user.role) &&
-          String(property.ownerId) !== String(req.user.id)
-        ) {
+        if (req.user.role !== "admin" && String(property.ownerId) !== String(req.user.id)) {
           return res.status(403).json({
             error: "Ce bien n'appartient pas à l'utilisateur connecté",
           });
@@ -544,16 +523,10 @@ exports.deleteService = async (req, res) => {
     if (!service)
       return res.status(404).json({ error: "Service introuvable" });
 
-    if (
-      !["admin", "master"].includes(req.user.role) &&
-      req.user.id !== service.clientId
-    )
+    if (req.user.role !== "admin" && req.user.id !== service.clientId)
       return res.status(403).json({ error: "Non autorisé" });
 
-    if (
-      ["admin", "master"].includes(req.user.role) &&
-      !isGlobalAdmin(req.user)
-    ) {
+    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, service)) {
         return res
           .status(403)

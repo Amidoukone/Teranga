@@ -12,7 +12,7 @@ const {
   formatCurrency,
 } = require('../utils/labels');
 
-// ✅ Geo-scope (master = admin scoped)
+// ✅ Geo-scope (admin scoped)
 const geo = require('../utils/geoScope');
 const applyGeoScope = geo.applyGeoScope;
 const getUserGeoScope = geo.getUserGeoScope;
@@ -66,7 +66,7 @@ function readRegionIdFrom(obj) {
 /**
  * Scope final à appliquer à la création :
  * - Admin global : peut définir via payload
- * - Admin scoped (master) : scope imposé depuis req.user
+ * - Admin scoped : scope imposé depuis req.user
  * - Agent : (si jamais autorisé un jour) scope imposé
  * - Client : rétro-compatible (ne force pas), accepte si fourni
  */
@@ -80,7 +80,7 @@ function getEffectiveScopeForCreate(req, norm) {
     };
   }
 
-  // Admin scoped (master) / agent : scope imposé
+  // Admin scoped / agent : scope imposé
   if (req.user?.role === 'admin' || req.user?.role === 'agent') {
     return {
       countryId: userScope.countryId,
@@ -99,7 +99,7 @@ function getEffectiveScopeForCreate(req, norm) {
  * Applique un scope à un WHERE Order.
  * - Client: toujours userId = self, + scope optionnel si fourni en query
  * - Admin global: pas de filtre géographique
- * - Admin scoped (master): filtré via applyGeoScope
+ * - Admin scoped: filtré via applyGeoScope
  * - Agent: filtré via applyGeoScope
  */
 function applyOrderScopeWhere(where, req, { allowClientProvidedScope = true } = {}) {
@@ -200,7 +200,7 @@ function withLabels(o) {
 ============================================================ */
 function canReadOrder(user, order) {
   if (!user) return false;
-  // Admin = global ou scoped (master), Agent = lecture
+  // Admin = global ou scoped, Agent = lecture
   if (user.role === 'admin' || user.role === 'agent') return true;
   if (user.role === 'client') return order?.userId === user.id;
   return false;
@@ -208,7 +208,7 @@ function canReadOrder(user, order) {
 
 function canWriteOrder(user, order = null) {
   if (!user) return false;
-  // Admin = global ou scoped (master)
+  // Admin = global ou scoped
   if (user.role === 'admin') return true;
   if (user.role === 'client') {
     if (!order) return true;
@@ -293,7 +293,7 @@ exports.create = async (req, res) => {
 
     /* --------------------------------------------------------
        2) Prévalidation des stocks pour tous les items
-       ✅ Ajout scope produit : master/admin scoped ne peut pas commander hors scope
+       ✅ Ajout scope produit : admin scoped ne peut pas commander hors scope
     -------------------------------------------------------- */
     const qtyByProductId = new Map();
 
@@ -316,7 +316,7 @@ exports.create = async (req, res) => {
 
       products.forEach((p) => productsById.set(p.id, p));
 
-      // Si master/admin scoped, et qu’un produit n’est pas visible => bloquer
+      // Si admin scoped, et qu’un produit n’est pas visible => bloquer
       if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'agent')) {
         for (const pid of productIds) {
           if (!productsById.has(pid)) {

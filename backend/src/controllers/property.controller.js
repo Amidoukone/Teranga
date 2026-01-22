@@ -13,7 +13,7 @@ const {
 const imageKit = require('../helpers/teranga-imagekit');
 const path = require('path');
 
-// ✅ GeoScope (master = admin scoped)
+// ✅ GeoScope (admin scoped)
 const geo = require('../utils/geoScope');
 const applyGeoScope = geo.applyGeoScope;
 const getUserGeoScope = geo.getUserGeoScope;
@@ -189,7 +189,7 @@ async function deleteImageKitFiles(photoObjects = []) {
 }
 
 /* ============================================================
-   LIST all (client/admin/master/agent) + scope
+   LIST all (client/admin/agent) + scope
 ============================================================ */
 exports.list = async (req, res) => {
   try {
@@ -218,7 +218,7 @@ exports.list = async (req, res) => {
 
     // 🔐 ACL + GeoScope
     // - admin global: tout (optionnel filtre clientId)
-    // - master/admin scoped: tout dans scope (optionnel filtre clientId)
+    // - admin scoped: tout dans scope (optionnel filtre clientId)
     // - agent: lecture dans scope uniquement (pas de filtre clientId sauf si voulu)
     // - client: uniquement ses biens
     if (isGlobalAdmin(req.user)) {
@@ -281,7 +281,7 @@ exports.listByClient = async (req, res) => {
     const cid = toSafeInt(req.params.id);
     if (!cid) return res.status(400).json({ error: 'clientId requis' });
 
-    // master/admin scoped: on ne peut lister que dans son scope
+    // admin scoped: on ne peut lister que dans son scope
     let where = { ownerId: cid };
     if (!isGlobalAdmin(req.user)) {
       where = applyGeoScope ? applyGeoScope(where, req.user) : where;
@@ -378,7 +378,7 @@ exports.create = async (req, res) => {
 
     // 🌍 Multi-pays :
     // - admin global : peut définir librement
-    // - master/admin scoped : doit rester dans scope, et on force si nécessaire
+    // - admin scoped : doit rester dans scope, et on force si nécessaire
     // - client/agent : non bloquant => null
     const desiredCountryId = toSafeInt(countryId ?? country_id, null);
     const desiredRegionId = toSafeInt(regionId ?? region_id, null);
@@ -487,7 +487,7 @@ exports.update = async (req, res) => {
       return res.status(403).json({ error: 'Non autorisé' });
     }
 
-    // 🌍 ACL GeoScope (master/admin scoped)
+    // 🌍 ACL GeoScope (admin scoped)
     if (isAdminOrMaster && !isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, p)) {
         return res.status(403).json({ error: 'Bien hors scope géographique' });
@@ -526,7 +526,7 @@ exports.update = async (req, res) => {
     /* ========================================================
        🌍 Multi-pays UPDATE
        - admin global : libre
-       - master/admin scoped : uniquement dans son scope
+       - admin scoped : uniquement dans son scope
        - client : interdit
     ======================================================== */
     if (isAdminOrMaster) {

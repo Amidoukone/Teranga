@@ -185,7 +185,7 @@ function readBodyRegionId(req) {
 /**
  * Retourne un objet d’assignation de scope pour Product.create / Product.update :
  * - Admin global: peut choisir country/region depuis body
- * - Admin scoped (master): scope imposé depuis req.user
+ * - Admin scoped : scope imposé depuis req.user
  *
  * IMPORTANT :
  * - Commerce est en snake_case: country_id / region_id
@@ -439,7 +439,7 @@ exports.update = async (req, res) => {
 
     // 🌍 scope update:
     // - admin global peut changer le scope
-    // - admin scoped (master) ne peut pas sortir de son scope (on impose)
+    // - admin scoped ne peut pas sortir de son scope (on impose)
     const scopeAssignments = buildProductScopeAssignments(req);
 
     // Si admin global n’a PAS envoyé de scope, on ne force pas à null :

@@ -7,7 +7,7 @@ const imagekit = require("../helpers/teranga-imagekit");
 // 🌍 Labels
 const { EVIDENCE_KINDS, getLabel } = require("../utils/labels");
 
-// ✅ GeoScope (master = admin scoped)
+// ✅ GeoScope (admin scoped)
 const geo = require("../utils/geoScope");
 const applyGeoScope = geo.applyGeoScope;
 const getUserGeoScope = geo.getUserGeoScope;
@@ -67,7 +67,7 @@ function canAccessGeoScope(user, resource) {
   // Admin global => OK
   if (isGlobalAdmin(user)) return true;
 
-  // Client/agent/admin scoped/master => vérifier via scope user
+  // Client/agent/admin scoped => vérifier via scope user
   const scope = getUserGeoScope ? getUserGeoScope(user) : { countryId: null, regionId: null };
   const r = getScopeFromResource(resource);
 
@@ -115,7 +115,7 @@ function canAccessTask(user, task) {
   // ✅ Admin global => OK
   if (isGlobalAdmin(user)) return true;
 
-  // ✅ Admin scoped/master => autorisé mais limité par scope geo
+  // ✅ Admin scoped => autorisé mais limité par scope geo
   if (user.role === "admin") return canAccessGeoScope(user, task);
 
   if (user.role === "agent") {
@@ -156,7 +156,7 @@ function canAccessOrder(user, order) {
   // ✅ Admin global => OK
   if (isGlobalAdmin(user)) return true;
 
-  // ✅ Admin scoped/master => autorisé mais limité par scope geo
+  // ✅ Admin scoped => autorisé mais limité par scope geo
   if (user.role === "admin") return canAccessGeoScope(user, order);
 
   const uid = String(user.id);
@@ -340,7 +340,7 @@ exports.list = async (req, res) => {
       where.orderId = orderId;
     }
 
-    // 🌍 Filtrage géographique (admin scoped / master)
+    // 🌍 Filtrage géographique (admin scoped)
     const finalWhere = applyGeoScope
       ? applyGeoScope(where, req.user)
       : where;
@@ -453,7 +453,7 @@ exports.listByOrder = async (req, res) => {
 };
 
 /* ======================================================
-   🗑️ DELETE — admin global / admin scoped / master (scope)
+   🗑️ DELETE — admin global / admin scoped (scope)
    DELETE /evidences/:id
 ====================================================== */
 exports.remove = async (req, res) => {

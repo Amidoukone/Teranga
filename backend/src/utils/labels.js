@@ -119,6 +119,14 @@ const CURRENCY_SYMBOLS = {
   GBP: '£',
 };
 
+// -----------------------------
+// 🗂️ Catégories (commerce)
+// -----------------------------
+const CATEGORY_STATUSES = {
+  active: 'Active',
+  inactive: 'Inactive',
+};
+
 /**
  * Retourne le label français correspondant à une clé technique.
  * @param {string} key
@@ -154,6 +162,7 @@ module.exports = {
   TASK_PRIORITIES,
   TASK_STATUSES,
   EVIDENCE_KINDS,
+  CATEGORY_STATUSES,
   TRANSACTION_TYPES,
   TRANSACTION_STATUSES,
   CURRENCY_LABELS,

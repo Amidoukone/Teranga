@@ -57,7 +57,7 @@ function normalizeCountry(input) {
 // CONTRÔLEURS EXISTANTS
 // ————————————————————————
 
-/** 🔹 Créer un agent (admin only, master inclus via scope) */
+/** 🔹 Créer un agent (admin only, admin scoped via scope) */
 exports.createAgent = async (req, res) => {
   try {
     if (!req.user || req.user.role !== 'admin') {

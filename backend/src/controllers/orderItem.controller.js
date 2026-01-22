@@ -12,7 +12,7 @@ const {
   formatCurrency,
 } = require('../utils/labels');
 
-// ✅ Geo-scope (master = admin scoped)
+// ✅ Geo-scope (admin scoped)
 const geo = require('../utils/geoScope');
 const applyGeoScope = geo.applyGeoScope;
 const getUserGeoScope = geo.getUserGeoScope;
@@ -76,7 +76,7 @@ function applyOrderScopeWhere(where, req) {
   // Admin global: pas de filtre géographique
   if (isGlobalAdmin(req.user)) return where;
 
-  // Admin scoped (master) / agent: filtrage geo
+  // Admin scoped / agent: filtrage geo
   return applyGeoScope ? applyGeoScope(where, req.user) : where;
 }
 
@@ -244,7 +244,7 @@ exports.create = async (req, res) => {
     });
     if (!order) return res.status(404).json({ error: 'Commande introuvable' });
 
-    // ✅ Vérif scope stricte (admin scoped/master/agent)
+    // ✅ Vérif scope stricte (admin scoped/agent)
     if (!canAccessOrderByScope(req, order)) {
       return res.status(403).json({ error: 'Commande hors scope (accès interdit)' });
     }

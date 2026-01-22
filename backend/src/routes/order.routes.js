@@ -14,13 +14,13 @@ const { nested: orderItemsRouter } = require('./orderItem.routes');
 const uploadEvidence = require('../middleware/uploadEvidence.middleware');
 
 /* =====================================================================
-   ✅ Routes CRUD de base (inchangées + master ajouté)
+   ✅ Routes CRUD de base
 ===================================================================== */
-router.post('/', auth, requireRoles('admin', 'master', 'client'), ctrl.create);
-router.get('/', auth, requireRoles('admin', 'master', 'agent', 'client'), ctrl.list);
-router.get('/:id', auth, requireRoles('admin', 'master', 'agent', 'client'), ctrl.detail);
-router.put('/:id', auth, requireRoles('admin', 'master', 'client'), ctrl.update);
-router.delete('/:id', auth, requireRoles('admin', 'master', 'client'), ctrl.remove);
+router.post('/', auth, requireRoles('admin', 'client'), ctrl.create);
+router.get('/', auth, requireRoles('admin', 'agent', 'client'), ctrl.list);
+router.get('/:id', auth, requireRoles('admin', 'agent', 'client'), ctrl.detail);
+router.put('/:id', auth, requireRoles('admin', 'client'), ctrl.update);
+router.delete('/:id', auth, requireRoles('admin', 'client'), ctrl.remove);
 
 /* =====================================================================
    🧩 Routes imbriquées — Items de commande
@@ -50,7 +50,7 @@ function injectOrderIdFromParams(req, _res, next) {
 router.get(
   '/:orderId/evidences',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   mapOrderParamToId,
   evidenceCtrl.listByOrder
 );
@@ -58,7 +58,7 @@ router.get(
 router.post(
   '/:orderId/evidences',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   uploadEvidence.anyCompat(),
   injectOrderIdFromParams,
   evidenceCtrl.create

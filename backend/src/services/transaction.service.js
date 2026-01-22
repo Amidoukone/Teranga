@@ -60,9 +60,9 @@ function getPagination(req, defaultLimit = 25, maxLimit = 200) {
 }
 
 /* =========================================================
-   🔐 Helpers GEO (master = admin scoped)
+   🔐 Helpers GEO (admin scoped)
    - Admin global : role=admin ET (countryId==null && regionId==null)
-   - Master : role=admin ET (countryId!=null OU regionId!=null)
+   - Admin scoped : role=admin ET (countryId!=null OU regionId!=null)
 ========================================================= */
 function isAdmin(user) {
   return user?.role === 'admin';
@@ -97,7 +97,7 @@ function applyGeoScope(where, user) {
 /* =========================================================
    🔐 WHERE + ACL par rôle
    - filtre par serviceId / taskId / orderId / projectId
-   - applique les règles admin global / master (admin scoped) / agent / client
+   - applique les règles admin global / admin scoped / agent / client
    - conserve les filtres existants (search, dates, etc.)
 ========================================================= */
 function buildWhereWithACL(req) {
@@ -136,7 +136,7 @@ function buildWhereWithACL(req) {
   // ======================================================
   if (role === 'admin') {
     // ✅ Admin global: accès complet
-    // ✅ Master (admin scoped): applique countryId/regionId automatiquement
+    // ✅ Admin scoped: applique countryId/regionId automatiquement
     applyGeoScope(where, req.user);
   } else if (role === 'agent') {
     // Agent :
@@ -222,7 +222,7 @@ const COMMON_INCLUDE = [
    🔐 canAccessTransaction
    - vérifie l'accès à une transaction donnée
    - recharge la transaction avec COMMON_INCLUDE si besoin
-   - ✅ applique aussi le scope GEO pour master (admin scoped)
+   - ✅ applique aussi le scope GEO pour admin scoped
 ========================================================= */
 async function canAccessTransaction(req, trx) {
   try {

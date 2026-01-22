@@ -5,7 +5,7 @@ const { getLabel } = require("../utils/labels");
 const imageKit = require("../helpers/teranga-imagekit");
 const path = require("path");
 
-// ✅ GEO scope (admin global vs admin scoped = "master logique")
+// ✅ GEO scope (admin global vs admin scoped)
 const { getUserGeoScope, isGlobalAdmin } = require("../utils/geoScope");
 
 /* =========================================================
@@ -70,7 +70,7 @@ function isAssignedAgent(project, user) {
 }
 
 /**
- * ✅ Admin scoped GEO ("master logique") :
+ * ✅ Admin scoped GEO :
  * - admin global => accès total
  * - admin scoped => seulement projets dans son scope (countryId / regionId)
  * ⚠️ Non-destructif: si le projet n'a pas de geo, on autorise (legacy safe)

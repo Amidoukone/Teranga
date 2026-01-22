@@ -61,7 +61,7 @@ exports.create = async (req, res) => {
       clientId,
       agentId,
 
-      // 🌍 GEO (optionnel, admin/master)
+      // 🌍 GEO (optionnel, admin)
       countryId,
       regionId,
       country_id,
@@ -145,7 +145,7 @@ exports.list = async (req, res) => {
     if (req.user.role === "client") where.clientId = req.user.id;
     if (req.user.role === "agent") where.agentId = req.user.id;
 
-    // 🌍 Filtres géographiques (admin/master/agent)
+    // 🌍 Filtres géographiques (admin/agent)
     const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
     const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
 
@@ -269,7 +269,7 @@ exports.update = async (req, res) => {
         body.budget !== undefined ? body.budget : project.budget,
       currency: body.currency ?? project.currency,
 
-      // 🔐 Admin/master only
+      // 🔐 Admin only
       agentId: adminOK
         ? toSafeInt(body.agentId ?? project.agentId)
         : project.agentId,
