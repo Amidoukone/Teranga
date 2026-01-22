@@ -58,6 +58,18 @@ export default function AdminAgentsPage() {
     sort: "-createdAt",
   });
 
+  const {
+    countryId: geoCountryId,
+    regionId: geoRegionId,
+    countries,
+    regions,
+    isScopedRole,
+    canSelect,
+  } = useGeo();
+
+  const geoCountry = countries?.find((c) => String(c.id) === String(geoCountryId));
+  const geoRegion = regions?.find((r) => String(r.id) === String(geoRegionId));
+
   /* ========================================================================
    * VALIDATION
    * ====================================================================== */
@@ -129,6 +141,12 @@ export default function AdminAgentsPage() {
   useEffect(() => {
     let arr = [...agents];
 
+    if (geoRegionId) {
+      arr = arr.filter((a) => String(a.regionId ?? "") === String(geoRegionId));
+    } else if (geoCountryId) {
+      arr = arr.filter((a) => String(a.countryId ?? "") === String(geoCountryId));
+    }
+
     // Recherche globale
     if (filters.q.trim()) {
       const q = filters.q.trim().toLowerCase();
@@ -181,7 +199,7 @@ export default function AdminAgentsPage() {
     });
 
     setFiltered(arr);
-  }, [agents, filters]);
+  }, [agents, filters, geoCountryId, geoRegionId]);
 
   /* ========================================================================
    * SUBMIT CREATE AGENT
@@ -238,9 +256,21 @@ export default function AdminAgentsPage() {
 
         {/* ================= HEADER ================= */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-          <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">
-            👤 Gestion des Agents
-          </h1>
+          <div>
+            <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">
+              👤 Gestion des Agents
+            </h1>
+            {geoCountryId && !isScopedRole && (
+              <p className="text-xs text-slate-500 mt-1">
+                Filtre:
+                {` ${geoCountry?.name || `Pays #${geoCountryId}`}`}
+                {geoRegionId
+                  ? ` · ${geoRegion?.name || `Région #${geoRegionId}`}`
+                  : ""}
+                {canSelect ? " (sélection)" : ""}
+              </p>
+            )}
+          </div>
 
           <div className="flex gap-2">
             <button
