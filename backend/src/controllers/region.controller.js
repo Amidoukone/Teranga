@@ -1,6 +1,7 @@
 'use strict';
 
 const { Region, Country } = require('../../models');
+const { getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
 
 /* ======================================================
    🧩 Helpers
@@ -17,13 +18,13 @@ function toTrimOrNull(v) {
   return s.length ? s : null;
 }
 
-function requireAdmin(req, res) {
+function requireGlobalAdmin(req, res) {
   if (!req.user?.role) {
     res.status(401).json({ error: 'Non authentifié' });
     return false;
   }
-  if (req.user.role !== 'admin') {
-    res.status(403).json({ error: 'Accès réservé à un administrateur' });
+  if (req.user.role !== 'admin' || !isGlobalAdmin(req.user)) {
+    res.status(403).json({ error: 'Accès réservé à un administrateur global' });
     return false;
   }
   return true;
@@ -41,13 +42,26 @@ exports.list = async (req, res) => {
     const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
 
     const includeInactive =
-      req.user?.role === 'admin' && String(req.query?.includeInactive) === 'true';
+      isGlobalAdmin(req.user) && String(req.query?.includeInactive) === 'true';
 
     const includeCountry = String(req.query?.includeCountry) === 'true';
 
     const where = {};
     if (!includeInactive) where.isActive = true;
     if (countryId) where.countryId = countryId;
+
+    if (req.user?.role === 'admin' && !isGlobalAdmin(req.user)) {
+      const { countryId: scopedCountryId, regionId: scopedRegionId } =
+        getUserGeoScope(req.user);
+
+      if (scopedRegionId) {
+        where.id = scopedRegionId;
+      } else if (scopedCountryId) {
+        where.countryId = scopedCountryId;
+      } else {
+        where.id = 0;
+      }
+    }
 
     const rows = await Region.findAll({
       where,
@@ -71,7 +85,7 @@ exports.list = async (req, res) => {
 ====================================================== */
 exports.create = async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!requireGlobalAdmin(req, res)) return;
 
     const { countryId, country_id, name, code, isActive } = req.body || {};
 
@@ -114,7 +128,7 @@ exports.create = async (req, res) => {
 ====================================================== */
 exports.update = async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!requireGlobalAdmin(req, res)) return;
 
     const id = toSafeInt(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID invalide' });

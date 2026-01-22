@@ -19,27 +19,11 @@ import {
 import FinanceWidget from '../components/FinanceWidget';
 import api from '../services/api';
 import { getGeoParams } from '../services/geo';
+import { normalizeRole, prettyRoleLabel } from '../utils/role';
 
 /* ============================================================================
    🔧 UTILITAIRES
 =========================================================================== */
-
-// Normalisation rôle (comme dans NavBar)
-function normalizeRole(rawRole) {
-  if (!rawRole) return 'client';
-  const r = String(rawRole).toLowerCase();
-
-  if (r.includes('admin')) return 'admin';
-  if (r.includes('agent')) return 'agent';
-  return 'client';
-}
-
-function prettyRoleLabel(role) {
-  const r = normalizeRole(role);
-  if (r === 'admin') return 'ADMINISTRATEUR';
-  if (r === 'agent') return 'AGENT';
-  return 'CLIENT';
-}
 
 function formatAmount(value) {
   return Number(value || 0).toLocaleString('fr-FR');

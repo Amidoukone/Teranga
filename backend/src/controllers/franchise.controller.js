@@ -1,6 +1,7 @@
 'use strict';
 
 const { Franchise, Country, Region } = require('../../models');
+const { getUserGeoScope, isGlobalAdmin, canAccessGeoResource } = require('../utils/geoScope');
 
 /* ======================================================
    🧩 Helpers
@@ -46,6 +47,19 @@ exports.list = async (req, res) => {
     if (countryId) where.countryId = countryId;
     if (regionId) where.regionId = regionId;
 
+    if (req.user?.role === 'admin' && !isGlobalAdmin(req.user)) {
+      const { countryId: scopedCountryId, regionId: scopedRegionId } =
+        getUserGeoScope(req.user);
+
+      if (scopedRegionId) {
+        where.regionId = scopedRegionId;
+      } else if (scopedCountryId) {
+        where.countryId = scopedCountryId;
+      } else {
+        where.id = 0;
+      }
+    }
+
     const rows = await Franchise.findAll({
       where,
       order: [['createdAt', 'DESC']],
@@ -88,6 +102,29 @@ exports.create = async (req, res) => {
 
     const cid = toSafeInt(countryId ?? country_id);
     if (!cid) return res.status(400).json({ error: 'countryId requis' });
+
+    if (req.user?.role === 'admin' && !isGlobalAdmin(req.user)) {
+      const { countryId: scopedCountryId, regionId: scopedRegionId } =
+        getUserGeoScope(req.user);
+
+      if (scopedRegionId) {
+        const rid = toSafeInt(regionId ?? region_id);
+        if (!rid || String(rid) !== String(scopedRegionId)) {
+          return res.status(403).json({
+            error: 'Accès interdit hors de votre région.',
+          });
+        }
+        if (scopedCountryId && String(cid) !== String(scopedCountryId)) {
+          return res.status(403).json({
+            error: 'Accès interdit hors de votre pays.',
+          });
+        }
+      } else if (scopedCountryId && String(cid) !== String(scopedCountryId)) {
+        return res.status(403).json({
+          error: 'Accès interdit hors de votre pays.',
+        });
+      }
+    }
 
     const country = await Country.findByPk(cid);
     if (!country) return res.status(400).json({ error: 'Pays introuvable' });
@@ -169,6 +206,14 @@ exports.update = async (req, res) => {
     const franchise = await Franchise.findByPk(id);
     if (!franchise) return res.status(404).json({ error: 'Franchise introuvable' });
 
+    if (req.user?.role === 'admin' && !isGlobalAdmin(req.user)) {
+      if (!canAccessGeoResource(franchise, req.user)) {
+        return res.status(403).json({
+          error: 'Accès interdit hors de votre périmètre.',
+        });
+      }
+    }
+
     const { type, regionId, region_id, legalName, status } = req.body || {};
 
     // Type
@@ -183,6 +228,15 @@ exports.update = async (req, res) => {
     // Region change
     if (regionId !== undefined || region_id !== undefined) {
       const rid = toSafeInt(regionId ?? region_id);
+
+      if (req.user?.role === 'admin' && !isGlobalAdmin(req.user)) {
+        const { regionId: scopedRegionId } = getUserGeoScope(req.user);
+        if (scopedRegionId && String(rid) !== String(scopedRegionId)) {
+          return res.status(403).json({
+            error: 'Accès interdit hors de votre région.',
+          });
+        }
+      }
 
       if (franchise.type === 'REGIONAL' && !rid) {
         return res
