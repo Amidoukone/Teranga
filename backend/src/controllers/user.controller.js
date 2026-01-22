@@ -59,22 +59,11 @@ function normalizeCountry(input) {
   throw err;
 }
 
-function resolveIsoCandidate(input) {
-  const trimmed = toTrimOrNull(input);
-  if (!trimmed) return null;
-  if (trimmed.length === 2) return trimmed.toUpperCase();
-  try {
-    return normalizeCountry(trimmed);
-  } catch {
-    return null;
-  }
-}
-
-async function findCountryByInput(input, { allowCreate = false } = {}) {
+async function findCountryByInput(input) {
   const trimmed = toTrimOrNull(input);
   if (!trimmed) return null;
 
-  const isoCandidate = resolveIsoCandidate(trimmed);
+  const isoCandidate = trimmed.length === 2 ? trimmed.toUpperCase() : null;
   const normalizedName = trimmed.toLowerCase();
 
   const matches = await Country.findAll({
@@ -87,7 +76,11 @@ async function findCountryByInput(input, { allowCreate = false } = {}) {
     limit: 2,
   });
 
-  if (matches.length === 1) return matches[0];
+  if (matches.length === 0) {
+    const err = new Error(`Pays introuvable pour "${trimmed}"`);
+    err.status = 400;
+    throw err;
+  }
 
   if (matches.length > 1) {
     const err = new Error(`Pays ambigu pour "${trimmed}" (précise le nom exact)`);
@@ -95,34 +88,10 @@ async function findCountryByInput(input, { allowCreate = false } = {}) {
     throw err;
   }
 
-  if (!allowCreate) {
-    const err = new Error(`Pays introuvable pour "${trimmed}"`);
-    err.status = 400;
-    throw err;
-  }
-
-  const isoCode = isoCandidate;
-  if (!isoCode) {
-    const err = new Error(
-      `Pays introuvable pour "${trimmed}" (fournis un ISO2 ou ajoute ce pays)`
-    );
-    err.status = 400;
-    throw err;
-  }
-
-  const existingByIso = await Country.findOne({ where: { isoCode } });
-  if (existingByIso) return existingByIso;
-
-  return Country.create({
-    name: trimmed,
-    isoCode,
-    currency: 'XOF',
-    defaultLanguage: 'fr',
-    isActive: true,
-  });
+  return matches[0];
 }
 
-async function findRegionByInput(input, codeInput, countryId, { allowCreate = false } = {}) {
+async function findRegionByInput(input, codeInput, countryId) {
   const name = toTrimOrNull(input);
   const code = toTrimOrNull(codeInput);
   if (!name && !code) return null;
@@ -139,7 +108,11 @@ async function findRegionByInput(input, codeInput, countryId, { allowCreate = fa
     limit: 2,
   });
 
-  if (matches.length === 1) return matches[0];
+  if (matches.length === 0) {
+    const err = new Error(`Région introuvable pour "${name || code}"`);
+    err.status = 400;
+    throw err;
+  }
 
   if (matches.length > 1) {
     const err = new Error(
@@ -149,27 +122,10 @@ async function findRegionByInput(input, codeInput, countryId, { allowCreate = fa
     throw err;
   }
 
-  if (!allowCreate) {
-    const err = new Error(`Région introuvable pour "${name || code}"`);
-    err.status = 400;
-    throw err;
-  }
-
-  if (!countryId) {
-    const err = new Error('Impossible de créer la région sans pays');
-    err.status = 400;
-    throw err;
-  }
-
-  return Region.create({
-    countryId,
-    name: name || code,
-    code: code ? code.toUpperCase() : null,
-    isActive: true,
-  });
+  return matches[0];
 }
 
-async function resolveGeoScopeInput(body = {}, { allowCreate = false } = {}) {
+async function resolveGeoScopeInput(body = {}) {
   const rawCountryId = toSafeInt(body?.countryId ?? body?.country_id);
   const rawRegionId = toSafeInt(body?.regionId ?? body?.region_id);
 
@@ -194,16 +150,12 @@ async function resolveGeoScopeInput(body = {}, { allowCreate = false } = {}) {
   );
 
   if (!countryId && (scopeCountryInput || scopeCountryIso)) {
-    const country = await findCountryByInput(scopeCountryIso || scopeCountryInput, {
-      allowCreate,
-    });
+    const country = await findCountryByInput(scopeCountryIso || scopeCountryInput);
     countryId = country?.id ?? null;
   }
 
   if (!regionId && (scopeRegionInput || scopeRegionCode)) {
-    const region = await findRegionByInput(scopeRegionInput, scopeRegionCode, countryId, {
-      allowCreate,
-    });
+    const region = await findRegionByInput(scopeRegionInput, scopeRegionCode, countryId);
     regionId = region?.id ?? null;
 
     if (!countryId) {
@@ -378,14 +330,7 @@ exports.createUser = async (req, res) => {
 
     let resolvedScope = { countryId: null, regionId: null, hasGeoInput: false };
     if (isGlobalAdmin(req.user)) {
-      try {
-        resolvedScope = await resolveGeoScopeInput(req.body, { allowCreate: true });
-      } catch (err) {
-        if (err?.status) {
-          return res.status(err.status).json({ error: err.message });
-        }
-        throw err;
-      }
+      resolvedScope = await resolveGeoScopeInput(req.body);
     }
 
     const u = await User.create({
@@ -451,17 +396,10 @@ exports.updateUser = async (req, res) => {
     let nextRegionId = u.regionId ?? null;
 
     if (isGlobalAdmin(req.user)) {
-      try {
-        const resolvedScope = await resolveGeoScopeInput(req.body, { allowCreate: true });
-        if (resolvedScope.hasGeoInput) {
-          nextCountryId = resolvedScope.countryId;
-          nextRegionId = resolvedScope.regionId;
-        }
-      } catch (err) {
-        if (err?.status) {
-          return res.status(err.status).json({ error: err.message });
-        }
-        throw err;
+      const resolvedScope = await resolveGeoScopeInput(req.body);
+      if (resolvedScope.hasGeoInput) {
+        nextCountryId = resolvedScope.countryId;
+        nextRegionId = resolvedScope.regionId;
       }
     } else {
       nextCountryId = scope.countryId;
