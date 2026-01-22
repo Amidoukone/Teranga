@@ -292,7 +292,7 @@ export default function AdminUsersPage() {
               <div className="mt-2 text-xs text-gray-500">
                 <span className="inline-flex items-center gap-2 flex-wrap">
                   <span className="px-2 py-0.5 rounded-full border border-gray-200 bg-gray-50 text-gray-700">
-                    {isMaster ? "MASTER" : "ADMINISTRATEUR"}
+                    {prettyRoleLabel(currentUser)}
                   </span>
 
                   {isMaster && (
