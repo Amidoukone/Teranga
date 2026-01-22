@@ -451,7 +451,7 @@ exports.assignAgent = async (req, res) => {
       });
     }
 
-    // ✅ admin peut assigner (avec scope)
+    // ✅ admin + master peuvent assigner (avec scope)
     if (req.user.role !== "admin") {
       return res.status(403).json({
         error: "Réservé aux administrateurs",
@@ -479,7 +479,7 @@ exports.assignAgent = async (req, res) => {
       return res.status(400).json({ error: "Agent invalide" });
     }
 
-    // (optionnel mais recommandé) : si admin scoped, empêcher d'assigner un agent hors scope
+    // (optionnel mais recommandé) : si admin scoped/master, empêcher d'assigner un agent hors scope
     if (!isGlobalAdmin(req.user) && req.user.role === "admin") {
       // si ton User a countryId/regionId, on protège
       const pseudoAgent = {

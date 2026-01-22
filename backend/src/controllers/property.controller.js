@@ -237,7 +237,7 @@ exports.list = async (req, res) => {
       ? { ...where, [Op.and]: whereAnd }
       : where;
 
-    // 🌍 Appliquer scope pour admin scoped/agent
+    // 🌍 Appliquer scope pour master/admin scoped/agent
     if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'agent')) {
       finalWhere = applyGeoScope ? applyGeoScope(finalWhere, req.user) : finalWhere;
     }
@@ -351,7 +351,7 @@ exports.create = async (req, res) => {
     /* 🔐 Résolution propriétaire */
     let targetOwnerId = req.user.id;
 
-    // admin peut créer pour un client
+    // admin/master peuvent créer pour un client
     if (req.user.role === 'admin') {
       const candidateId = toSafeInt(ownerId) || toSafeInt(clientId) || null;
 
@@ -451,7 +451,7 @@ exports.create = async (req, res) => {
       ],
     });
 
-    // ✅ sécurité : si admin scoped, vérifier qu'on renvoie bien une property dans scope
+    // ✅ sécurité : si master/admin scoped, vérifier qu'on renvoie bien une property dans scope
     if (!isGlobalAdmin(req.user) && req.user.role === 'admin') {
       if (!canAccessByGeoScope(req.user, property)) {
         return res.status(403).json({ error: 'Bien créé hors scope (bloqué)' });
