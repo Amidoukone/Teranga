@@ -19,27 +19,11 @@ import {
 import FinanceWidget from '../components/FinanceWidget';
 import api from '../services/api';
 import { getGeoParams } from '../services/geo';
+import { normalizeRole, prettyRoleLabel } from '../utils/role';
 
 /* ============================================================================
    🔧 UTILITAIRES
 =========================================================================== */
-
-// Normalisation rôle (comme dans NavBar)
-function normalizeRole(rawRole) {
-  if (!rawRole) return 'client';
-  const r = String(rawRole).toLowerCase();
-
-  if (r.includes('admin')) return 'admin';
-  if (r.includes('agent')) return 'agent';
-  return 'client';
-}
-
-function prettyRoleLabel(role) {
-  const r = normalizeRole(role);
-  if (r === 'admin') return 'ADMINISTRATEUR';
-  if (r === 'agent') return 'AGENT';
-  return 'CLIENT';
-}
 
 function formatAmount(value) {
   return Number(value || 0).toLocaleString('fr-FR');
@@ -330,7 +314,7 @@ export default function DashboardPage() {
               <p className="text-sm sm:text-base text-gray-600 mt-1">
                 Rôle :
                 <span className="font-semibold text-blue-700 uppercase ml-1">
-                  {prettyRoleLabel(user.role)}
+                  {prettyRoleLabel(user)}
                 </span>
               </p>
               {/* ✅ Message EXACT, personnalisé par le prénom */}
@@ -345,7 +329,7 @@ export default function DashboardPage() {
           {/* Badge rôle + solde global */}
           <div className="flex flex-col items-start md:items-end gap-3">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-              {prettyRoleLabel(user.role)}
+              {prettyRoleLabel(user)}
             </span>
 
             <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 shadow-sm min-w-[200px]">
