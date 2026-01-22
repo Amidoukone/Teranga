@@ -7,7 +7,6 @@
 import { useEffect, useState, useCallback } from "react";
 import api from "../services/api";
 import { mergeGeoPayload } from "../services/geo";
-import { useGeo } from "../contexts/GeoContext";
 
 /* ============================================================================
 // 🔐 CONSTANTES

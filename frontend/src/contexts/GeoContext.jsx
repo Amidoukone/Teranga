@@ -18,12 +18,10 @@ export function GeoProvider({ children }) {
   const role = normalizeRole(user?.role);
   const isAuthenticated = Boolean(getToken() || user);
   const isAdmin = role === 'admin';
-  const isAgent = role === 'agent';
   const scopedCountryId = user?.countryId ?? null;
   const scopedRegionId = user?.regionId ?? null;
-  const hasScope = scopedCountryId != null || scopedRegionId != null;
-  const isScopedRole = hasScope && (isAdmin || isAgent);
-  const canSelect = isAdmin && !isScopedRole;
+  const isScopedAdmin = isAdmin && (scopedCountryId != null || scopedRegionId != null);
+  const canSelect = isAdmin && !isScopedAdmin;
 
   const clearSelection = useCallback(() => {
     setCountryId(null);
@@ -76,7 +74,7 @@ export function GeoProvider({ children }) {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    if (isScopedRole) {
+    if (isScopedAdmin) {
       setCountryId(scopedCountryId);
       setRegionId(scopedRegionId);
       setGeoSelection({ countryId: scopedCountryId, regionId: scopedRegionId });
@@ -90,7 +88,7 @@ export function GeoProvider({ children }) {
     clearSelection,
     isAdmin,
     isAuthenticated,
-    isScopedRole,
+    isScopedAdmin,
     scopedCountryId,
     scopedRegionId,
   ]);
@@ -124,7 +122,7 @@ export function GeoProvider({ children }) {
       setRegion,
       loading,
       canSelect,
-      isScopedRole,
+      isScopedAdmin,
     }),
     [
       countryId,
@@ -135,7 +133,7 @@ export function GeoProvider({ children }) {
       setRegion,
       loading,
       canSelect,
-      isScopedRole,
+      isScopedAdmin,
     ]
   );
 
