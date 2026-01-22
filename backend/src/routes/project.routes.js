@@ -14,23 +14,23 @@ const { requireRoles } = require('../middleware/roles.middleware');
      • peut mettre à jour/supprimer ≤ 1h (contrôlé côté controller)
    - Agent:
      • peut lister/voir les projets qui lui sont assignés
-   - Admin / Master:
+   - Admin:
      • tout accès (scope géré côté contrôleur/service)
 ========================================================= */
-router.post('/', auth, requireRoles('client', 'admin', 'master'), ctrl.create);
-router.get('/', auth, requireRoles('client', 'agent', 'admin', 'master'), ctrl.list);
-router.get('/:id', auth, requireRoles('client', 'agent', 'admin', 'master'), ctrl.detail);
-router.put('/:id', auth, requireRoles('client', 'admin', 'master'), ctrl.update);
-router.delete('/:id', auth, requireRoles('client', 'admin', 'master'), ctrl.remove);
+router.post('/', auth, requireRoles('client', 'admin'), ctrl.create);
+router.get('/', auth, requireRoles('client', 'agent', 'admin'), ctrl.list);
+router.get('/:id', auth, requireRoles('client', 'agent', 'admin'), ctrl.detail);
+router.put('/:id', auth, requireRoles('client', 'admin'), ctrl.update);
+router.delete('/:id', auth, requireRoles('client', 'admin'), ctrl.remove);
 
 /* =========================================================
-   🧩 Assignation d’un agent à un projet (ADMIN/MASTER uniquement)
+   🧩 Assignation d’un agent à un projet (ADMIN uniquement)
    - POST /api/projects/assign
    - Body: { projectId: number, agentId: number|null }
      • agentId = null → désassigner l’agent
    - Sécurisée et idempotente, réponses enrichies
 ========================================================= */
-router.post('/assign', auth, requireRoles('admin', 'master'), async (req, res) => {
+router.post('/assign', auth, requireRoles('admin'), async (req, res) => {
   try {
     const { projectId, agentId } = req.body || {};
 

@@ -3,7 +3,7 @@
 const { Task, Service, User, Property } = require("../../models");
 const { Op } = require("sequelize");
 
-// 🌍 Geo scope utils (master/admin scoped)
+// 🌍 Geo scope utils (admin scoped)
 let applyGeoScope = null;
 let getUserGeoScope = null;
 try {
@@ -58,9 +58,9 @@ function getPagination(req, defaultLimit = 50, maxLimit = 200) {
 }
 
 /**
- * ✅ Admin global vs admin scoped/master
+ * ✅ Admin global vs admin scoped
  * - admin global : role=admin ET (countryId/regionId NULL)
- * - admin scoped/master : role=admin|master avec countryId/regionId renseignés
+ * - admin scoped : role=admin avec countryId/regionId renseignés
  */
 function isGlobalAdmin(user) {
   if (!user) return false;
@@ -71,14 +71,14 @@ function isGlobalAdmin(user) {
 }
 
 /**
- * ✅ Vérifie qu'une ressource est dans le scope geo du user (admin scoped/master)
+ * ✅ Vérifie qu'une ressource est dans le scope geo du user (admin scoped)
  * - priorité région
  * - fallback pays
  */
 function canAccessByGeoScope(user, resource) {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
-  if (!["admin", "master"].includes(user.role)) return true; // autres rôles: pas de scope
+  if (user.role !== "admin") return true; // autres rôles: pas de scope
   const scope = getUserGeoScope
     ? getUserGeoScope(user)
     : { countryId: toSafeInt(user.countryId), regionId: toSafeInt(user.regionId) };
@@ -173,7 +173,7 @@ function addLabels(task) {
 /* ============================================================
    🟢 CREATE TASK
    - Héritage Service → Property → Pays/Région
-   - Scope: admin scoped/master ne peut créer que dans son scope (si scope existe)
+   - Scope: admin scoped ne peut créer que dans son scope (si scope existe)
 ============================================================ */
 exports.create = async (req, res) => {
   try {
@@ -213,8 +213,8 @@ exports.create = async (req, res) => {
     const geoCountryId = service?.countryId ?? property?.countryId ?? null;
     const geoRegionId = service?.regionId ?? property?.regionId ?? null;
 
-    // 🌍 Scope admin scoped/master
-    if (["admin", "master"].includes(req.user.role) && !isGlobalAdmin(req.user)) {
+    // 🌍 Scope admin scoped
+    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
       const pseudo = { countryId: geoCountryId, regionId: geoRegionId };
       if (!canAccessByGeoScope(req.user, pseudo)) {
         return res.status(403).json({ error: "Création hors scope géographique" });
@@ -254,7 +254,7 @@ exports.create = async (req, res) => {
 /* ============================================================
    🟡 LIST TASKS
    - ACL existante conservée
-   - + GeoScope admin scoped/master (filtre sur Task.countryId/regionId)
+   - + GeoScope admin scoped (filtre sur Task.countryId/regionId)
 ============================================================ */
 exports.list = async (req, res) => {
   try {
@@ -282,10 +282,10 @@ exports.list = async (req, res) => {
       ];
     }
 
-    // 🌍 GeoScope (admin scoped/master)
+    // 🌍 GeoScope (admin scoped)
     if (applyGeoScope) {
       where = applyGeoScope(where, req.user);
-    } else if (["admin", "master"].includes(req.user.role) && !isGlobalAdmin(req.user)) {
+    } else if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
       // fallback minimal si geoScope util absent
       const c = toSafeInt(req.user.countryId);
       const r = toSafeInt(req.user.regionId);
@@ -341,10 +341,10 @@ exports.listByService = async (req, res) => {
       ];
     }
 
-    // 🌍 GeoScope (admin scoped/master)
+    // 🌍 GeoScope (admin scoped)
     if (applyGeoScope) {
       where = applyGeoScope(where, req.user);
-    } else if (["admin", "master"].includes(req.user.role) && !isGlobalAdmin(req.user)) {
+    } else if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
       const c = toSafeInt(req.user.countryId);
       const r = toSafeInt(req.user.regionId);
       if (r) where.regionId = r;
@@ -371,7 +371,7 @@ exports.listByService = async (req, res) => {
 /* ============================================================
    🟠 UPDATE STATUS
    - ACL existante conservée
-   - + GeoScope admin scoped/master
+   - + GeoScope admin scoped
 ============================================================ */
 exports.updateStatus = async (req, res) => {
   try {
@@ -383,8 +383,8 @@ exports.updateStatus = async (req, res) => {
     const task = await Task.findByPk(id, { include: BASE_INCLUDES });
     if (!task) return res.status(404).json({ error: "Tâche introuvable" });
 
-    // 🌍 Scope admin scoped/master
-    if (["admin", "master"].includes(req.user.role) && !isGlobalAdmin(req.user)) {
+    // 🌍 Scope admin scoped
+    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, task)) {
         return res.status(403).json({ error: "Tâche hors scope géographique" });
       }
@@ -413,8 +413,7 @@ exports.updateStatus = async (req, res) => {
     }
 
     if (newStatus === "validated" && req.user.role !== "admin") {
-      // master/admin scoped ne valide pas si tu veux garder "admin only"
-      // (si tu veux autoriser master, on change la condition)
+      // admin scoped ne valide pas si tu veux garder "admin only"
       return res.status(403).json({
         error: "Seul un admin peut valider une tâche",
       });
@@ -439,7 +438,7 @@ exports.updateStatus = async (req, res) => {
 /* ============================================================
    🟣 ASSIGN AGENT (ADMIN)
    - admin global : OK
-   - master/admin scoped : OK dans son scope
+   - admin scoped : OK dans son scope
 ============================================================ */
 exports.assignAgent = async (req, res) => {
   try {
@@ -452,8 +451,8 @@ exports.assignAgent = async (req, res) => {
       });
     }
 
-    // ✅ admin + master peuvent assigner (avec scope)
-    if (!["admin", "master"].includes(req.user.role)) {
+    // ✅ admin peut assigner (avec scope)
+    if (req.user.role !== "admin") {
       return res.status(403).json({
         error: "Réservé aux administrateurs",
       });
@@ -462,7 +461,7 @@ exports.assignAgent = async (req, res) => {
     const task = await Task.findByPk(id, { include: BASE_INCLUDES });
     if (!task) return res.status(404).json({ error: "Tâche introuvable" });
 
-    // 🌍 Scope admin scoped/master
+    // 🌍 Scope admin scoped
     if (!isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, task)) {
         return res.status(403).json({ error: "Tâche hors scope géographique" });
@@ -480,8 +479,8 @@ exports.assignAgent = async (req, res) => {
       return res.status(400).json({ error: "Agent invalide" });
     }
 
-    // (optionnel mais recommandé) : si admin scoped/master, empêcher d'assigner un agent hors scope
-    if (!isGlobalAdmin(req.user) && (req.user.role === "master" || req.user.role === "admin")) {
+    // (optionnel mais recommandé) : si admin scoped, empêcher d'assigner un agent hors scope
+    if (!isGlobalAdmin(req.user) && req.user.role === "admin") {
       // si ton User a countryId/regionId, on protège
       const pseudoAgent = {
         countryId: agent.countryId ?? agent.country_id ?? null,

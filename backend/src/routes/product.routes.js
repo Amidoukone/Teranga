@@ -11,7 +11,7 @@ const upload = require('../middleware/uploadProduct.middleware'); // ✅ multer 
  * ============================================================
  * 🛒 Routes Produits (API)
  * ============================================================
- * - Auth + ACL par rôle (admin / master / agent / client)
+ * - Auth + ACL par rôle (admin / agent / client)
  * - Upload fichiers produit via multer
  * - ✅ Multi-images supportées :
  *     • Ancien mode : single('image') → req.file
@@ -25,7 +25,7 @@ const upload = require('../middleware/uploadProduct.middleware'); // ✅ multer 
 router.post(
   '/',
   auth,
-  requireRoles('admin', 'master'),
+  requireRoles('admin'),
   upload.any(),
   ctrl.create
 );
@@ -34,7 +34,7 @@ router.post(
 router.get(
   '/',
   auth,
-  requireRoles('admin', 'master', 'agent', 'client'),
+  requireRoles('admin', 'agent', 'client'),
   ctrl.list
 );
 
@@ -42,7 +42,7 @@ router.get(
 router.get(
   '/:id',
   auth,
-  requireRoles('admin', 'master', 'agent', 'client'),
+  requireRoles('admin', 'agent', 'client'),
   ctrl.detail
 );
 
@@ -50,7 +50,7 @@ router.get(
 router.put(
   '/:id',
   auth,
-  requireRoles('admin', 'master'),
+  requireRoles('admin'),
   upload.any(),
   ctrl.update
 );
@@ -59,7 +59,7 @@ router.put(
 router.delete(
   '/:id',
   auth,
-  requireRoles('admin', 'master'),
+  requireRoles('admin'),
   ctrl.remove
 );
 

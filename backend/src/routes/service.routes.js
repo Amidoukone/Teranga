@@ -10,7 +10,7 @@ const { requireRoles } = require('../middleware/roles.middleware');
  * ROUTES SERVICES
  * =========================
  * - Admin  : gérer tous les services, assigner des agents
- * - Master : gérer services dans son scope (filtré côté controller/service)
+ * - Admin scoped : gérer services dans son scope (filtré côté controller/service)
  * - Client : gérer ses services
  * - Agent  : voir et exécuter ses services assignés
  */
@@ -29,30 +29,30 @@ function useHandler(name) {
 }
 
 /* ======================================================
-   👑 ADMIN / MASTER
+   👑 ADMIN
 ====================================================== */
 
-// 🔹 Liste tous les services (admin global + master scoped)
-router.get('/', auth, requireRoles('admin', 'master'), useHandler('listAll'));
+// 🔹 Liste tous les services (admin global + admin scoped)
+router.get('/', auth, requireRoles('admin'), useHandler('listAll'));
 
 // 🔹 Assigner un agent à un service
-router.post('/assign', auth, requireRoles('admin', 'master'), useHandler('assignAgent'));
+router.post('/assign', auth, requireRoles('admin'), useHandler('assignAgent'));
 
-// 🔹 Mettre à jour un service (admin/master + client propriétaire)
-router.put('/:id', auth, requireRoles('admin', 'master', 'client'), useHandler('updateService'));
+// 🔹 Mettre à jour un service (admin + client propriétaire)
+router.put('/:id', auth, requireRoles('admin', 'client'), useHandler('updateService'));
 
-// 🔹 Supprimer un service (admin/master + client propriétaire)
-router.delete('/:id', auth, requireRoles('admin', 'master', 'client'), useHandler('deleteService'));
+// 🔹 Supprimer un service (admin + client propriétaire)
+router.delete('/:id', auth, requireRoles('admin', 'client'), useHandler('deleteService'));
 
 /* ======================================================
-   👤 CLIENT & ADMIN/MASTER
+   👤 CLIENT & ADMIN
 ====================================================== */
 
 // 🔹 Créer un service
-router.post('/', auth, requireRoles('client', 'admin', 'master'), useHandler('create'));
+router.post('/', auth, requireRoles('client', 'admin'), useHandler('create'));
 
 // 🔹 Liste des services du client connecté
-router.get('/me', auth, requireRoles('client', 'admin', 'master'), useHandler('listClient'));
+router.get('/me', auth, requireRoles('client', 'admin'), useHandler('listClient'));
 
 /* ======================================================
    ⚙️ AGENT

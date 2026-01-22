@@ -8,17 +8,17 @@ const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
 const uploadEvidence = require('../middleware/uploadEvidence.middleware');
 
-// ➕ Créer une tâche (client ou admin/master)
-router.post('/', auth, requireRoles('client', 'admin', 'master'), ctrl.create);
+// ➕ Créer une tâche (client ou admin)
+router.post('/', auth, requireRoles('client', 'admin'), ctrl.create);
 
 // 📋 Lister les tâches
-router.get('/', auth, requireRoles('client', 'agent', 'admin', 'master'), ctrl.list);
+router.get('/', auth, requireRoles('client', 'agent', 'admin'), ctrl.list);
 
 // 📋 Lister les tâches d’un service
 router.get(
   '/service/:serviceId',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   ctrl.listByService
 );
 
@@ -26,15 +26,15 @@ router.get(
 router.put(
   '/:id/status',
   auth,
-  requireRoles('agent', 'admin', 'master'),
+  requireRoles('agent', 'admin'),
   ctrl.updateStatus
 );
 
-// 🧩 Assigner une tâche à un agent (admin/master)
+// 🧩 Assigner une tâche à un agent (admin)
 router.put(
   '/:id/assign',
   auth,
-  requireRoles('admin', 'master'),
+  requireRoles('admin'),
   ctrl.assignAgent
 );
 
@@ -44,7 +44,7 @@ router.put(
 router.get(
   '/:id/evidences',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   evCtrl.listByTask
 );
 
@@ -52,7 +52,7 @@ router.get(
 router.post(
   '/:id/evidences',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   uploadEvidence.anyCompat(),
   (req, _res, next) => {
     req.body = req.body || {};

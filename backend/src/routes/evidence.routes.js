@@ -16,7 +16,7 @@ const uploadEvidence = require('../middleware/uploadEvidence.middleware');
 router.post(
   '/',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   uploadEvidence.anyCompat(),
   ctrl.create
 );
@@ -27,7 +27,7 @@ router.post(
 router.get(
   '/',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   ctrl.list
 );
 
@@ -37,7 +37,7 @@ router.get(
 router.get(
   '/task/:id',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   ctrl.listByTask
 );
 
@@ -47,7 +47,7 @@ router.get(
 router.get(
   '/order/:id',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   ctrl.listByOrder
 );
 
@@ -57,7 +57,7 @@ router.get(
 router.post(
   '/task/:id',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   uploadEvidence.anyCompat(),
   (req, _res, next) => {
     req.body = req.body || {};
@@ -73,7 +73,7 @@ router.post(
 router.post(
   '/order/:id',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   uploadEvidence.anyCompat(),
   (req, _res, next) => {
     req.body = req.body || {};

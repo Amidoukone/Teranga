@@ -3,7 +3,6 @@
 const { Op } = require('sequelize');
 const { Category, Product } = require('../../models');
 const { CATEGORY_STATUSES, getLabel } = require('../utils/labels');
-const { applyGeoScope, getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
 
 /* ============================================================
    🔧 Helpers génériques
@@ -46,10 +45,13 @@ function slugify(input) {
 function withLabels(cat) {
   if (!cat) return null;
   const c = cat.toJSON ? cat.toJSON() : cat;
+  const statusKey = c.isActive ? 'active' : 'inactive';
 
   return {
     ...c,
-    statusLabel: getLabel(c.status, CATEGORY_STATUSES),
+    status: statusKey,
+    statusLabel: getLabel(statusKey, CATEGORY_STATUSES),
+    categoryStatus: statusKey,
   };
 }
 
@@ -82,7 +84,7 @@ exports.create = async (req, res) => {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
-    const { name, slug, description, status = 'active' } = req.body || {};
+    const { name, slug, description, status, isActive } = req.body || {};
     const cleanName = toTrimOrNull(name);
 
     if (!cleanName) {
@@ -94,11 +96,9 @@ exports.create = async (req, res) => {
       return res.status(400).json({ error: 'Slug invalide' });
     }
 
-    const scope = getUserGeoScope(req.user);
-
     // 🔐 Idempotence + scope
     const existing = await Category.findOne({
-      where: applyGeoScope({ slug: finalSlug }, req.user),
+      where: { slug: finalSlug },
     });
 
     if (existing) {
@@ -108,17 +108,19 @@ exports.create = async (req, res) => {
       });
     }
 
+    const normalizedStatus = toTrimOrNull(status);
+    const activeFlag =
+      typeof isActive !== 'undefined'
+        ? String(isActive) === 'true' || isActive === true
+        : normalizedStatus === 'inactive'
+          ? false
+          : true;
+
     const cat = await Category.create({
       name: cleanName,
       slug: finalSlug,
       description: toTrimOrNull(description),
-      status: toTrimOrNull(status) || 'active',
-      country_id: isGlobalAdmin(req.user)
-        ? toSafeInt(req.body?.countryId ?? req.body?.country_id)
-        : scope.countryId,
-      region_id: isGlobalAdmin(req.user)
-        ? toSafeInt(req.body?.regionId ?? req.body?.region_id)
-        : scope.regionId,
+      isActive: activeFlag,
     });
 
     res.status(201).json({ category: withLabels(cat) });
@@ -152,10 +154,9 @@ exports.list = async (req, res) => {
     }
 
     if (status) {
-      where.status = status;
+      if (status === 'active') where.isActive = true;
+      if (status === 'inactive') where.isActive = false;
     }
-
-    where = applyGeoScope(where, req.user);
 
     const { rows, count } = await Category.findAndCountAll({
       where,
@@ -190,7 +191,7 @@ exports.detail = async (req, res) => {
     }
 
     const cat = await Category.findOne({
-      where: applyGeoScope({ id }, req.user),
+      where: { id },
       include: [
         {
           model: Product,
@@ -228,14 +229,14 @@ exports.update = async (req, res) => {
     }
 
     const cat = await Category.findOne({
-      where: applyGeoScope({ id }, req.user),
+      where: { id },
     });
 
     if (!cat) {
       return res.status(404).json({ error: 'Catégorie introuvable' });
     }
 
-    const { name, slug, description, status } = req.body || {};
+    const { name, slug, description, status, isActive } = req.body || {};
 
     if (name !== undefined) {
       const cleanName = toTrimOrNull(name);
@@ -257,13 +258,10 @@ exports.update = async (req, res) => {
       }
 
       const exists = await Category.findOne({
-        where: applyGeoScope(
-          {
-            slug: newSlug,
-            id: { [Op.ne]: cat.id },
-          },
-          req.user
-        ),
+        where: {
+          slug: newSlug,
+          id: { [Op.ne]: cat.id },
+        },
       });
 
       if (exists) {
@@ -277,12 +275,16 @@ exports.update = async (req, res) => {
       cat.description = toTrimOrNull(description);
     }
 
-    if (status !== undefined) {
+    if (status !== undefined || isActive !== undefined) {
       const cleanStatus = toTrimOrNull(status);
-      if (!cleanStatus) {
+      if (cleanStatus && !['active', 'inactive'].includes(cleanStatus)) {
         return res.status(400).json({ error: 'Statut invalide' });
       }
-      cat.status = cleanStatus;
+      if (isActive !== undefined) {
+        cat.isActive = String(isActive) === 'true' || isActive === true;
+      } else if (cleanStatus) {
+        cat.isActive = cleanStatus === 'active';
+      }
     }
 
     await cat.save();
@@ -308,7 +310,7 @@ exports.remove = async (req, res) => {
     }
 
     const cat = await Category.findOne({
-      where: applyGeoScope({ id }, req.user),
+      where: { id },
       include: [{ model: Product, as: 'products' }],
     });
 

@@ -12,9 +12,9 @@ const upload = require('../middleware/uploadEvidence.middleware');
 /**
  * ROUTES TRANSACTIONS
  * =========================
- * - Client, agent, admin, master peuvent consulter/créer/mettre à jour/supprimer
+ * - Client, agent, admin peuvent consulter/créer/mettre à jour/supprimer
  *   leurs transactions (ACL dans le contrôleur)
- * - Admin/master : accès aux agrégats (summary/report) (scope appliqué côté ACL)
+ * - Admin : accès aux agrégats (summary/report) (scope appliqué côté ACL)
  *
  * Conventions (cohérence avec orderId) :
  * - GET  /api/transactions?orderId=...   -> liste filtrée par commande (ACL dans contrôleur)
@@ -56,10 +56,10 @@ function injectOrderIdQuery(req, _res, next) {
 }
 
 /* ===================================================================
-   🧮 ADMIN / MASTER : agrégats
+   🧮 ADMIN : agrégats
 =================================================================== */
-router.get('/summary', auth, requireRoles('admin', 'master'), ctrl.summary);
-router.get('/report', auth, requireRoles('admin', 'master'), ctrl.report);
+router.get('/summary', auth, requireRoles('admin'), ctrl.summary);
+router.get('/report', auth, requireRoles('admin'), ctrl.report);
 
 /* ===================================================================
    📖 LECTURE
@@ -67,7 +67,7 @@ router.get('/report', auth, requireRoles('admin', 'master'), ctrl.report);
 router.get(
   '/',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   ctrl.list
 );
 
@@ -75,7 +75,7 @@ router.get(
 router.get(
   '/:id',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   ctrl.detail
 );
 
@@ -85,7 +85,7 @@ router.get(
 router.post(
   '/',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   upload.any(), // ✅ tolérant aux différents noms de champ fichier
   ctrl.create
 );
@@ -93,7 +93,7 @@ router.post(
 router.put(
   '/:id',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   upload.any(), // ✅ idem pour la mise à jour
   ctrl.update
 );
@@ -101,7 +101,7 @@ router.put(
 router.delete(
   '/:id',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   ctrl.remove
 );
 
@@ -113,7 +113,7 @@ router.delete(
 router.get(
   '/order/:id',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   injectOrderIdQuery,
   ctrl.list
 );
@@ -122,7 +122,7 @@ router.get(
 router.post(
   '/order/:id',
   auth,
-  requireRoles('client', 'agent', 'admin', 'master'),
+  requireRoles('client', 'agent', 'admin'),
   upload.any(),
   injectOrderIdFromParam, // ⚠️ après multer si besoin (ici ok, multer remplit req.body mais on force orderId)
   ctrl.create

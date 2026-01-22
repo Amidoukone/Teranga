@@ -186,8 +186,8 @@ async function uploadProofToImageKit(file) {
 
 /* ============================================================================
  * 1️⃣ CREATE TRANSACTION
- * - admin global / master scoped / client safe
- * - GEO auto + override admin/master (scope géré via ACL service)
+ * - admin global / admin scoped / client safe
+ * - GEO auto + override admin (scope géré via ACL service)
  * ============================================================================
  */
 exports.create = async (req, res) => {
@@ -204,7 +204,7 @@ exports.create = async (req, res) => {
       description,
       status,
 
-      // 🌍 GEO (admin/master only)
+      // 🌍 GEO (admin only)
       countryId,
       regionId,
       country_id,
@@ -247,7 +247,7 @@ exports.create = async (req, res) => {
     // Owner userId : si transaction liée à une commande -> userId commande
     const ownerUserId = order?.userId ?? req.user.id;
 
-    // 🌍 GEO (priorité = liens -> override admin/master -> null)
+    // 🌍 GEO (priorité = liens -> override admin -> null)
     const inferredGeo = await resolveGeoFromLinks({
       serviceId: sid,
       taskId: tid,
@@ -255,7 +255,7 @@ exports.create = async (req, res) => {
       projectId: pid,
     });
 
-    const isAdminLike = ["admin", "master"].includes(req.user?.role);
+    const isAdminLike = req.user?.role === "admin";
     const bodyCountryId = toSafeInt(countryId ?? country_id);
     const bodyRegionId = toSafeInt(regionId ?? region_id);
 
@@ -492,7 +492,7 @@ exports.detail = async (req, res) => {
 
 /* ============================================================================
  * 4️⃣ UPDATE (preuve + champs + ACL)
- * ✅ GEO: countryId / regionId (admin/master only)
+ * ✅ GEO: countryId / regionId (admin only)
  * - Recalcule GEO quand les liens changent, sans casser l'existant
  * ============================================================================ */
 exports.update = async (req, res) => {
@@ -525,7 +525,7 @@ exports.update = async (req, res) => {
       type,
       amount,
 
-      // ✅ GEO (admin/master only) camelCase + snake_case
+      // ✅ GEO (admin only) camelCase + snake_case
       countryId,
       regionId,
       country_id,
@@ -552,7 +552,7 @@ exports.update = async (req, res) => {
     }
 
     const isAdmin = req.user?.role === "admin";
-    const isAdminLike = ["admin", "master"].includes(req.user?.role);
+    const isAdminLike = req.user?.role === "admin";
 
     // Track si liens changent => recalcul GEO non destructif
     let linkChanged = false;
@@ -596,7 +596,7 @@ exports.update = async (req, res) => {
       linkChanged = true;
     }
 
-    // Champs sensibles: admin/master only (mais status strict admin si tu veux)
+    // Champs sensibles: admin only (mais status strict admin si tu veux)
     if (status !== undefined) {
       const s = String(status).trim();
       if (!ALLOWED_STATUSES.has(s))
@@ -615,7 +615,7 @@ exports.update = async (req, res) => {
     if (currency !== undefined) {
       if (!isAdminLike)
         return res.status(403).json({
-          error: "Seul un admin/master peut modifier la devise",
+          error: "Seul un admin peut modifier la devise",
         });
       trx.currency = normalizeCurrency(currency, trx.currency || "XOF");
     }
@@ -623,7 +623,7 @@ exports.update = async (req, res) => {
     if (type !== undefined) {
       if (!isAdminLike)
         return res.status(403).json({
-          error: "Seul un admin/master peut modifier le type",
+          error: "Seul un admin peut modifier le type",
         });
 
       const t = String(type).trim();
@@ -635,7 +635,7 @@ exports.update = async (req, res) => {
     if (amount !== undefined) {
       if (!isAdminLike)
         return res.status(403).json({
-          error: "Seul un admin/master peut modifier le montant",
+          error: "Seul un admin peut modifier le montant",
         });
 
       const n = parseAmount(amount);
@@ -644,7 +644,7 @@ exports.update = async (req, res) => {
       trx.amount = n;
     }
 
-    // ✅ GEO (admin/master only)
+    // ✅ GEO (admin only)
     const geoCountrySent = countryId !== undefined || country_id !== undefined;
     const geoRegionSent = regionId !== undefined || region_id !== undefined;
 
@@ -663,7 +663,7 @@ exports.update = async (req, res) => {
       });
 
       // Non-destructif: complète seulement si null,
-      // sauf si admin/master a explicitement envoyé une valeur (déjà posée au-dessus).
+      // sauf si admin a explicitement envoyé une valeur (déjà posée au-dessus).
       if (trx.countryId == null && !geoCountrySent && inferredGeo.countryId != null) {
         trx.countryId = inferredGeo.countryId;
       }

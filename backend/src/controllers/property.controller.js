@@ -13,7 +13,7 @@ const {
 const imageKit = require('../helpers/teranga-imagekit');
 const path = require('path');
 
-// ✅ GeoScope (master = admin scoped)
+// ✅ GeoScope (admin scoped)
 const geo = require('../utils/geoScope');
 const applyGeoScope = geo.applyGeoScope;
 const getUserGeoScope = geo.getUserGeoScope;
@@ -189,7 +189,7 @@ async function deleteImageKitFiles(photoObjects = []) {
 }
 
 /* ============================================================
-   LIST all (client/admin/master/agent) + scope
+   LIST all (client/admin/agent) + scope
 ============================================================ */
 exports.list = async (req, res) => {
   try {
@@ -218,12 +218,12 @@ exports.list = async (req, res) => {
 
     // 🔐 ACL + GeoScope
     // - admin global: tout (optionnel filtre clientId)
-    // - master/admin scoped: tout dans scope (optionnel filtre clientId)
+    // - admin scoped: tout dans scope (optionnel filtre clientId)
     // - agent: lecture dans scope uniquement (pas de filtre clientId sauf si voulu)
     // - client: uniquement ses biens
     if (isGlobalAdmin(req.user)) {
       if (clientId) where.ownerId = toSafeInt(clientId);
-    } else if (req.user.role === 'admin' || req.user.role === 'master') {
+    } else if (req.user.role === 'admin') {
       if (clientId) where.ownerId = toSafeInt(clientId);
       // scope appliqué plus bas
     } else if (req.user.role === 'agent') {
@@ -237,8 +237,8 @@ exports.list = async (req, res) => {
       ? { ...where, [Op.and]: whereAnd }
       : where;
 
-    // 🌍 Appliquer scope pour master/admin scoped/agent
-    if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'master' || req.user.role === 'agent')) {
+    // 🌍 Appliquer scope pour admin scoped/agent
+    if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'agent')) {
       finalWhere = applyGeoScope ? applyGeoScope(finalWhere, req.user) : finalWhere;
     }
 
@@ -273,7 +273,7 @@ exports.list = async (req, res) => {
 ============================================================ */
 exports.listByClient = async (req, res) => {
   try {
-    if (!req.user || !['admin', 'master'].includes(req.user.role)) {
+    if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
@@ -281,7 +281,7 @@ exports.listByClient = async (req, res) => {
     const cid = toSafeInt(req.params.id);
     if (!cid) return res.status(400).json({ error: 'clientId requis' });
 
-    // master/admin scoped: on ne peut lister que dans son scope
+    // admin scoped: on ne peut lister que dans son scope
     let where = { ownerId: cid };
     if (!isGlobalAdmin(req.user)) {
       where = applyGeoScope ? applyGeoScope(where, req.user) : where;
@@ -351,8 +351,8 @@ exports.create = async (req, res) => {
     /* 🔐 Résolution propriétaire */
     let targetOwnerId = req.user.id;
 
-    // admin/master peuvent créer pour un client
-    if (req.user.role === 'admin' || req.user.role === 'master') {
+    // admin peut créer pour un client
+    if (req.user.role === 'admin') {
       const candidateId = toSafeInt(ownerId) || toSafeInt(clientId) || null;
 
       if (candidateId) {
@@ -378,7 +378,7 @@ exports.create = async (req, res) => {
 
     // 🌍 Multi-pays :
     // - admin global : peut définir librement
-    // - master/admin scoped : doit rester dans scope, et on force si nécessaire
+    // - admin scoped : doit rester dans scope, et on force si nécessaire
     // - client/agent : non bloquant => null
     const desiredCountryId = toSafeInt(countryId ?? country_id, null);
     const desiredRegionId = toSafeInt(regionId ?? region_id, null);
@@ -389,7 +389,7 @@ exports.create = async (req, res) => {
     if (isGlobalAdmin(req.user)) {
       finalCountryId = desiredCountryId;
       finalRegionId = desiredRegionId;
-    } else if (req.user.role === 'admin' || req.user.role === 'master') {
+    } else if (req.user.role === 'admin') {
       const scope = getUserGeoScope ? getUserGeoScope(req.user) : { countryId: null, regionId: null };
 
       // si scope region => on force region (et country optionnel)
@@ -451,8 +451,8 @@ exports.create = async (req, res) => {
       ],
     });
 
-    // ✅ sécurité : si master/admin scoped, vérifier qu'on renvoie bien une property dans scope
-    if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'master')) {
+    // ✅ sécurité : si admin scoped, vérifier qu'on renvoie bien une property dans scope
+    if (!isGlobalAdmin(req.user) && req.user.role === 'admin') {
       if (!canAccessByGeoScope(req.user, property)) {
         return res.status(403).json({ error: 'Bien créé hors scope (bloqué)' });
       }
@@ -481,13 +481,13 @@ exports.update = async (req, res) => {
 
     // 🔐 ACL de base
     const isOwner = String(p.ownerId) === String(req.user.id);
-    const isAdminOrMaster = ['admin', 'master'].includes(req.user.role);
+    const isAdminOrMaster = req.user.role === 'admin';
 
     if (!isAdminOrMaster && !isOwner) {
       return res.status(403).json({ error: 'Non autorisé' });
     }
 
-    // 🌍 ACL GeoScope (master/admin scoped)
+    // 🌍 ACL GeoScope (admin scoped)
     if (isAdminOrMaster && !isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, p)) {
         return res.status(403).json({ error: 'Bien hors scope géographique' });
@@ -526,7 +526,7 @@ exports.update = async (req, res) => {
     /* ========================================================
        🌍 Multi-pays UPDATE
        - admin global : libre
-       - master/admin scoped : uniquement dans son scope
+       - admin scoped : uniquement dans son scope
        - client : interdit
     ======================================================== */
     if (isAdminOrMaster) {
@@ -630,7 +630,7 @@ exports.remove = async (req, res) => {
     if (!p) return res.status(404).json({ error: 'Bien introuvable' });
 
     const isOwner = String(p.ownerId) === String(req.user.id);
-    const isAdminOrMaster = ['admin', 'master'].includes(req.user.role);
+    const isAdminOrMaster = req.user.role === 'admin';
 
     if (!isAdminOrMaster && !isOwner) {
       return res.status(403).json({ error: 'Non autorisé' });
