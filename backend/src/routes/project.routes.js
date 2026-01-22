@@ -5,6 +5,7 @@ const router = require('express').Router();
 const ctrl = require('../controllers/project.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
+const { canAccessGeoResource, isGlobalAdmin } = require('../utils/geoScope');
 
 /* =========================================================
    🔹 CRUD de base (cohérent avec tes règles métier)
@@ -51,6 +52,10 @@ router.post('/assign', auth, requireRoles('admin'), async (req, res) => {
       return res.status(404).json({ error: 'Projet introuvable.' });
     }
 
+    if (!isGlobalAdmin(req.user) && !canAccessGeoResource(project, req.user)) {
+      return res.status(403).json({ error: 'Projet hors scope géographique.' });
+    }
+
     // ✅ Vérifier l’agent si fourni (aid !== null)
     let agent = null;
     if (aid !== null) {
@@ -60,6 +65,10 @@ router.post('/assign', auth, requireRoles('admin'), async (req, res) => {
           error:
             "Utilisateur invalide : l'identifiant fourni doit correspondre à un utilisateur au rôle 'agent'.",
         });
+      }
+
+      if (!isGlobalAdmin(req.user) && !canAccessGeoResource(agent, req.user)) {
+        return res.status(403).json({ error: 'Agent hors scope géographique.' });
       }
     }
 
