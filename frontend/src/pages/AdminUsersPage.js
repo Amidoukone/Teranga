@@ -14,6 +14,7 @@ import {
 import { me } from "../services/auth";
 import { motion } from "framer-motion";
 import { normalizeRole, isMasterUser } from "../utils/role";
+import { useGeo } from "../contexts/GeoContext";
 
 export default function AdminUsersPage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -48,8 +49,20 @@ export default function AdminUsersPage() {
     sort: "-createdAt",
   });
 
+  const {
+    countryId: geoCountryId,
+    regionId: geoRegionId,
+    countries,
+    regions,
+    isScopedRole,
+    canSelect,
+  } = useGeo();
+
   // MASTER = admin + scope (frontend déduction)
   const isMaster = isMasterUser(currentUser);
+
+  const geoCountry = countries?.find((c) => String(c.id) === String(geoCountryId));
+  const geoRegion = regions?.find((r) => String(r.id) === String(geoRegionId));
 
   // ============================================================================
   // 🔐 CHECK ADMIN + LOAD ME
@@ -125,6 +138,12 @@ export default function AdminUsersPage() {
   useEffect(() => {
     let arr = [...users];
 
+    if (geoRegionId) {
+      arr = arr.filter((u) => String(u.regionId ?? "") === String(geoRegionId));
+    } else if (geoCountryId) {
+      arr = arr.filter((u) => String(u.countryId ?? "") === String(geoCountryId));
+    }
+
     if (filters.q.trim()) {
       const q = filters.q.toLowerCase();
       arr = arr.filter((u) =>
@@ -173,7 +192,7 @@ export default function AdminUsersPage() {
     });
 
     setFiltered(arr);
-  }, [users, filters]);
+  }, [users, filters, geoCountryId, geoRegionId]);
 
   // ============================================================================
   // SUBMIT FORM (MASTER SAFE)
@@ -268,7 +287,7 @@ export default function AdminUsersPage() {
               👥 Gestion des utilisateurs
             </h1>
 
-            {/* ✅ Info scope (UX seulement, aucun filtre frontend) */}
+            {/* ✅ Info scope */}
             {currentUser && (
               <div className="mt-2 text-xs text-gray-500">
                 <span className="inline-flex items-center gap-2 flex-wrap">
@@ -290,6 +309,17 @@ export default function AdminUsersPage() {
 
                   {!isMaster && (
                     <span className="text-gray-500">Accès global</span>
+                  )}
+
+                  {geoCountryId && !isScopedRole && (
+                    <span className="text-gray-500">
+                      Filtre:
+                      {` ${geoCountry?.name || `Pays #${geoCountryId}`}`}
+                      {geoRegionId
+                        ? ` · ${geoRegion?.name || `Région #${geoRegionId}`}`
+                        : ""}
+                      {canSelect ? " (sélection)" : ""}
+                    </span>
                   )}
                 </span>
               </div>

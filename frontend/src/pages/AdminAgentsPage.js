@@ -6,6 +6,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import api from "../services/api";
+import { mergeGeoPayload } from "../services/geo";
+import { useGeo } from "../contexts/GeoContext";
 
 /* ============================================================================
 // 🔐 CONSTANTES
@@ -56,6 +58,18 @@ export default function AdminAgentsPage() {
     onlyPhone: false,
     sort: "-createdAt",
   });
+
+  const {
+    countryId: geoCountryId,
+    regionId: geoRegionId,
+    countries,
+    regions,
+    isScopedRole,
+    canSelect,
+  } = useGeo();
+
+  const geoCountry = countries?.find((c) => String(c.id) === String(geoCountryId));
+  const geoRegion = regions?.find((r) => String(r.id) === String(geoRegionId));
 
   /* ========================================================================
    * VALIDATION
@@ -128,6 +142,12 @@ export default function AdminAgentsPage() {
   useEffect(() => {
     let arr = [...agents];
 
+    if (geoRegionId) {
+      arr = arr.filter((a) => String(a.regionId ?? "") === String(geoRegionId));
+    } else if (geoCountryId) {
+      arr = arr.filter((a) => String(a.countryId ?? "") === String(geoCountryId));
+    }
+
     // Recherche globale
     if (filters.q.trim()) {
       const q = filters.q.trim().toLowerCase();
@@ -180,7 +200,7 @@ export default function AdminAgentsPage() {
     });
 
     setFiltered(arr);
-  }, [agents, filters]);
+  }, [agents, filters, geoCountryId, geoRegionId]);
 
   /* ========================================================================
    * SUBMIT CREATE AGENT
@@ -192,14 +212,17 @@ export default function AdminAgentsPage() {
     setLoading(true);
 
     try {
-      await api.post("/users/agents", {
-        email: form.email.trim().toLowerCase(),
-        password: String(form.password),
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        phone: form.phone.trim() || undefined,
-        country: form.country.trim().toUpperCase(),
-      });
+      await api.post(
+        "/users/agents",
+        mergeGeoPayload({
+          email: form.email.trim().toLowerCase(),
+          password: String(form.password),
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          phone: form.phone.trim() || undefined,
+          country: form.country.trim().toUpperCase(),
+        })
+      );
 
       alert("✅ Agent créé avec succès");
 
@@ -234,9 +257,21 @@ export default function AdminAgentsPage() {
 
         {/* ================= HEADER ================= */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-          <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">
-            👤 Gestion des Agents
-          </h1>
+          <div>
+            <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">
+              👤 Gestion des Agents
+            </h1>
+            {geoCountryId && !isScopedRole && (
+              <p className="text-xs text-slate-500 mt-1">
+                Filtre:
+                {` ${geoCountry?.name || `Pays #${geoCountryId}`}`}
+                {geoRegionId
+                  ? ` · ${geoRegion?.name || `Région #${geoRegionId}`}`
+                  : ""}
+                {canSelect ? " (sélection)" : ""}
+              </p>
+            )}
+          </div>
 
           <div className="flex gap-2">
             <button
