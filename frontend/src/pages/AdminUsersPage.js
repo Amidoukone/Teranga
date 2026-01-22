@@ -38,6 +38,8 @@ export default function AdminUsersPage() {
     phone: "",
     country: "",
     role: "client",
+    scopeCountry: "",
+    scopeRegion: "",
   });
 
   const [editing, setEditing] = useState(null);
@@ -200,7 +202,11 @@ export default function AdminUsersPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     try {
-      const payload = { ...form };
+      const payload = {
+        ...form,
+        scopeCountry: form.scopeCountry?.trim() || undefined,
+        scopeRegion: form.scopeRegion?.trim() || undefined,
+      };
 
       // 🔒 MASTER: le scope country/region est imposé backend
       // => on n'essaie jamais de le forcer côté frontend
@@ -231,6 +237,8 @@ export default function AdminUsersPage() {
       phone: "",
       country: "",
       role,
+      scopeCountry: "",
+      scopeRegion: "",
     });
   }
 
@@ -245,6 +253,8 @@ export default function AdminUsersPage() {
       country: (u.country || "").toUpperCase().slice(0, 2),
       role: u.role,
       password: "",
+      scopeCountry: "",
+      scopeRegion: "",
     });
   }
 
@@ -500,6 +510,31 @@ export default function AdminUsersPage() {
               <option value="agent">Agent</option>
               <option value="admin">Admin</option>
             </select>
+
+            {form.role === "admin" && (
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  placeholder="Périmètre pays (nom ou ISO2)"
+                  value={form.scopeCountry}
+                  onChange={(e) =>
+                    setForm({ ...form, scopeCountry: e.target.value })
+                  }
+                  className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+                />
+                <input
+                  placeholder="Périmètre région (nom ou code)"
+                  value={form.scopeRegion}
+                  onChange={(e) =>
+                    setForm({ ...form, scopeRegion: e.target.value })
+                  }
+                  className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+                />
+                <p className="md:col-span-2 text-xs text-gray-500">
+                  ℹ️ Pour créer un <strong>MASTER</strong>, renseigne un pays ou
+                  une région (nom ou code). Laisser vide = admin global.
+                </p>
+              </div>
+            )}
 
             {/* ✅ Note UX: MASTER scope imposé backend */}
             {isMaster && (
