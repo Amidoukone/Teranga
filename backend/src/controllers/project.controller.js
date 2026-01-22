@@ -2,6 +2,12 @@
 
 const { Project, ProjectPhase, User } = require("../../models");
 const { getLabel } = require("../utils/labels");
+const {
+  applyGeoScope,
+  canAccessGeoResource,
+  getUserGeoScope,
+  isGlobalAdmin,
+} = require("../utils/geoScope");
 
 /* =========================================================
    🏷️ Labels (FR)
@@ -81,6 +87,23 @@ exports.create = async (req, res) => {
       if (cid) targetClientId = cid;
     }
 
+    const scope = getUserGeoScope(req.user);
+    const desiredCountryId = isAdminLike(req.user)
+      ? toSafeInt(countryId ?? country_id)
+      : null;
+    const desiredRegionId = isAdminLike(req.user)
+      ? toSafeInt(regionId ?? region_id)
+      : null;
+
+    if (isAdminLike(req.user) && !isGlobalAdmin(req.user)) {
+      if (scope.countryId && desiredCountryId && desiredCountryId !== scope.countryId) {
+        return res.status(403).json({ error: "Création hors scope géographique" });
+      }
+      if (scope.regionId && desiredRegionId && desiredRegionId !== scope.regionId) {
+        return res.status(403).json({ error: "Création hors scope géographique" });
+      }
+    }
+
     const project = await Project.create({
       title: String(title).trim(),
       type: String(type).trim(),
@@ -93,11 +116,11 @@ exports.create = async (req, res) => {
 
       // 🌍 Multi-pays (non destructif)
       countryId: isAdminLike(req.user)
-        ? toSafeInt(countryId ?? country_id)
+        ? (isGlobalAdmin(req.user) ? desiredCountryId : scope.countryId ?? desiredCountryId)
         : null,
 
       regionId: isAdminLike(req.user)
-        ? toSafeInt(regionId ?? region_id)
+        ? (isGlobalAdmin(req.user) ? desiredRegionId : scope.regionId ?? desiredRegionId)
         : null,
     });
 
@@ -152,8 +175,11 @@ exports.list = async (req, res) => {
     if (countryId) where.countryId = countryId;
     if (regionId) where.regionId = regionId;
 
+    const scopedWhere =
+      req.user.role === "admin" ? applyGeoScope(where, req.user) : where;
+
     const projects = await Project.findAll({
-      where,
+      where: scopedWhere,
       include: [
         {
           model: User,
@@ -217,6 +243,12 @@ exports.detail = async (req, res) => {
       return res.status(403).json({ error: "Accès non autorisé à ce projet" });
     }
 
+    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
+      if (!canAccessGeoResource(project, req.user)) {
+        return res.status(403).json({ error: "Accès hors scope géographique" });
+      }
+    }
+
     return res.json({
       project: {
         ...project.toJSON(),
@@ -256,7 +288,31 @@ exports.update = async (req, res) => {
       });
     }
 
+    if (adminOK && !isGlobalAdmin(req.user)) {
+      if (!canAccessGeoResource(project, req.user)) {
+        return res.status(403).json({ error: "Action hors scope géographique" });
+      }
+    }
+
     const body = req.body || {};
+    const scope = getUserGeoScope(req.user);
+    const nextCountryId =
+      adminOK && (body.countryId !== undefined || body.country_id !== undefined)
+        ? toSafeInt(body.countryId ?? body.country_id)
+        : project.countryId;
+    const nextRegionId =
+      adminOK && (body.regionId !== undefined || body.region_id !== undefined)
+        ? toSafeInt(body.regionId ?? body.region_id)
+        : project.regionId;
+
+    if (adminOK && !isGlobalAdmin(req.user)) {
+      if (scope.countryId && nextCountryId && nextCountryId !== scope.countryId) {
+        return res.status(403).json({ error: "Mise à jour hors scope géographique" });
+      }
+      if (scope.regionId && nextRegionId && nextRegionId !== scope.regionId) {
+        return res.status(403).json({ error: "Mise à jour hors scope géographique" });
+      }
+    }
 
     await project.update({
       title: body.title ?? project.title,
@@ -277,15 +333,17 @@ exports.update = async (req, res) => {
       status: adminOK ? body.status ?? project.status : project.status,
 
       // 🌍 GEO (non destructif)
-      countryId:
-        adminOK && (body.countryId !== undefined || body.country_id !== undefined)
-          ? toSafeInt(body.countryId ?? body.country_id)
-          : project.countryId,
+      countryId: adminOK
+        ? (isGlobalAdmin(req.user)
+            ? nextCountryId
+            : scope.countryId ?? nextCountryId)
+        : project.countryId,
 
-      regionId:
-        adminOK && (body.regionId !== undefined || body.region_id !== undefined)
-          ? toSafeInt(body.regionId ?? body.region_id)
-          : project.regionId,
+      regionId: adminOK
+        ? (isGlobalAdmin(req.user)
+            ? nextRegionId
+            : scope.regionId ?? nextRegionId)
+        : project.regionId,
     });
 
     const updated = await Project.findByPk(project.id, {
@@ -341,6 +399,12 @@ exports.remove = async (req, res) => {
         error:
           "Action non autorisée. Les clients ne peuvent supprimer leur projet que dans l'heure suivant sa création.",
       });
+    }
+
+    if (adminOK && !isGlobalAdmin(req.user)) {
+      if (!canAccessGeoResource(project, req.user)) {
+        return res.status(403).json({ error: "Suppression hors scope géographique" });
+      }
     }
 
     await project.destroy();

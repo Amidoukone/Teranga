@@ -15,6 +15,7 @@ import {
 } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { me, logout, getLocalUser } from "../services/auth";
+import { normalizeRole, prettyRoleLabel } from "../utils/roles";
 
 import {
   X,
@@ -31,24 +32,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import GeoSelector from "./GeoSelector";
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
-
-/* ============================================================================ */
-/* ROLE */
-/* ============================================================================ */
-function normalizeRole(raw) {
-  if (!raw) return "client";
-  const r = raw.toLowerCase();
-  if (r.includes("admin")) return "admin";
-  if (r.includes("agent")) return "agent";
-  return "client";
-}
-
-function prettyRoleLabel(role) {
-  const r = normalizeRole(role);
-  if (r === "admin") return "ADMINISTRATEUR";
-  if (r === "agent") return "AGENT";
-  return "CLIENT";
-}
 
 /* ============================================================================ */
 /* LINKS */
@@ -225,7 +208,7 @@ function NavBar() {
           </Link>
 
           <span className="hidden md:inline bg-slate-800 px-3 py-0.5 rounded-full text-xs uppercase text-gray-300">
-            {prettyRoleLabel(user?.role)}
+            {prettyRoleLabel(user)}
           </span>
 
           {/* ✅ GEO SELECTOR (DESKTOP ONLY) */}
@@ -352,7 +335,7 @@ function NavBar() {
                         {user?.firstName || user?.email}
                       </div>
                       <div className="text-gray-400 text-[0.7rem] uppercase tracking-wide">
-                        {prettyRoleLabel(user?.role)}
+                        {prettyRoleLabel(user)}
                       </div>
                     </div>
                   </div>
