@@ -1,20 +1,46 @@
 // ============================================================================
 // AdminUsersPage.jsx — Apple Light Premium B2 Minimal
 // Version 2025 — ADMIN GLOBAL & MASTER (admin + geo scope)
-// ZÉRO RÉGRESSION • BACKEND SOURCE OF TRUTH
+// BACKEND SOURCE OF TRUTH • ZERO REGRESSION
+//
+// 🔒 Sécurité ajoutée (2026):
+// - Un MASTER ne peut PAS créer ni promouvoir un admin
+// - Seul l'ADMIN GLOBAL peut créer admin / master
+// - Double verrou UI + payload (anti-DOM hack)
+// - Un MASTER ne peut pas éditer/supprimer un admin existant (UI + guard)
 // ============================================================================
 
-import { useEffect, useState, useCallback } from "react";
-import {
-  getUsers,
-  createUser,
-  updateUser,
-  deleteUser,
-} from "../services/users";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { getUsers, createUser, updateUser, deleteUser } from "../services/users";
 import { me } from "../services/auth";
 import { motion } from "framer-motion";
 import { normalizeRole, isMasterUser, prettyRoleLabel } from "../utils/role";
 import { useGeo } from "../contexts/GeoContext";
+
+/* ============================================================
+   Helpers locaux (safe, non cassants)
+============================================================ */
+function toSafeStr(v) {
+  if (v === null || v === undefined) return "";
+  return String(v);
+}
+function toSafeIntOrEmpty(v) {
+  const s = toSafeStr(v).trim();
+  if (!s) return "";
+  const n = parseInt(s, 10);
+  return Number.isNaN(n) ? "" : String(n);
+}
+function upper2(v) {
+  return toSafeStr(v).trim().toUpperCase().slice(0, 2);
+}
+function extractApiError(err) {
+  return (
+    err?.response?.data?.error ||
+    err?.response?.data?.message ||
+    err?.message ||
+    "Erreur lors de la soumission"
+  );
+}
 
 export default function AdminUsersPage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -38,8 +64,14 @@ export default function AdminUsersPage() {
     phone: "",
     country: "",
     role: "client",
+
+    // Legacy (présent, mais non utilisé par défaut)
     scopeCountry: "",
     scopeRegion: "",
+
+    // ✅ Sélection guidée (IDs) pour admins (GLOBAL uniquement)
+    scopeCountryId: "",
+    scopeRegionId: "",
   });
 
   const [editing, setEditing] = useState(null);
@@ -60,15 +92,15 @@ export default function AdminUsersPage() {
     canSelect,
   } = useGeo();
 
-  // MASTER = admin + scope (frontend déduction)
   const isMaster = isMasterUser(currentUser);
+  const isGlobalAdmin = Boolean(currentUser && normalizeRole(currentUser.role) === "admin" && !isMaster);
 
-  const geoCountry = countries?.find((c) => String(c.id) === String(geoCountryId));
-  const geoRegion = regions?.find((r) => String(r.id) === String(geoRegionId));
+  const geoCountry = (countries || []).find((c) => String(c.id) === String(geoCountryId));
+  const geoRegion = (regions || []).find((r) => String(r.id) === String(geoRegionId));
 
-  // ============================================================================
-  // 🔐 CHECK ADMIN + LOAD ME
-  // ============================================================================
+  // ============================================================
+  // 🔐 AUTH CHECK
+  // ============================================================
   useEffect(() => {
     let active = true;
 
@@ -78,13 +110,7 @@ export default function AdminUsersPage() {
         if (!active) return;
 
         const user = res?.user;
-        if (!user) {
-          window.location.href = "/login";
-          return;
-        }
-
-        const role = normalizeRole(user.role);
-        if (role !== "admin") {
+        if (!user || normalizeRole(user.role) !== "admin") {
           window.location.href = "/dashboard";
           return;
         }
@@ -92,7 +118,7 @@ export default function AdminUsersPage() {
         setCurrentUser(user);
         setIsAdmin(true);
       } catch (e) {
-        console.error("❌ Erreur /me (AdminUsersPage):", e);
+        console.error("❌ /me error:", e);
         window.location.href = "/login";
       }
     }
@@ -103,16 +129,16 @@ export default function AdminUsersPage() {
     };
   }, []);
 
-  // ============================================================================
-  // 🔄 LOAD USERS (backend applique le scope)
-  // ============================================================================
+  // ============================================================
+  // 🔄 LOAD USERS
+  // ============================================================
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getUsers(role);
-      setUsers(data || []);
+      setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("❌ Erreur chargement utilisateurs:", err);
+      console.error("❌ Load users error:", err);
       setUsers([]);
     } finally {
       setLoading(false);
@@ -120,26 +146,32 @@ export default function AdminUsersPage() {
   }, [role]);
 
   useEffect(() => {
-    if (!isAdmin) return;
-    load();
+    if (isAdmin) load();
   }, [isAdmin, load]);
 
-  // ============================================================================
-  // 💾 Save form visibility
-  // ============================================================================
+  // ============================================================
+  // 💾 Persist form visibility
+  // ============================================================
   useEffect(() => {
-    localStorage.setItem(
-      "teranga_admin_users_showForm",
-      showForm ? "1" : "0"
-    );
+    localStorage.setItem("teranga_admin_users_showForm", showForm ? "1" : "0");
   }, [showForm]);
 
-  // ============================================================================
-  // 🔎 FILTERING + SORTING (LOCAL UNIQUEMENT)
-  // ============================================================================
+  // ============================================================
+  // 🌍 Regions filtrées par le pays sélectionné (form)
+  // ============================================================
+  const formRegions = useMemo(() => {
+    const cid = toSafeIntOrEmpty(form.scopeCountryId);
+    if (!cid) return [];
+    return (regions || []).filter((r) => String(r.countryId) === String(cid));
+  }, [regions, form.scopeCountryId]);
+
+  // ============================================================
+  // 🔎 FILTERING (local) + tri
+  // ============================================================
   useEffect(() => {
     let arr = [...users];
 
+    // Filtre GeoContext (si présent)
     if (geoRegionId) {
       arr = arr.filter((u) => String(u.regionId ?? "") === String(geoRegionId));
     } else if (geoCountryId) {
@@ -149,14 +181,7 @@ export default function AdminUsersPage() {
     if (filters.q.trim()) {
       const q = filters.q.toLowerCase();
       arr = arr.filter((u) =>
-        [
-          u.firstName,
-          u.lastName,
-          u.email,
-          u.phone,
-          u.country,
-          u.role,
-        ]
+        [u.firstName, u.lastName, u.email, u.phone, u.country, u.role]
           .filter(Boolean)
           .join(" ")
           .toLowerCase()
@@ -165,7 +190,7 @@ export default function AdminUsersPage() {
     }
 
     if (filters.country.trim()) {
-      const c = filters.country.trim().toUpperCase();
+      const c = filters.country.trim().toUpperCase().slice(0, 2);
       arr = arr.filter((u) => (u.country || "").toUpperCase() === c);
     }
 
@@ -173,43 +198,84 @@ export default function AdminUsersPage() {
       arr = arr.filter((u) => !!u.phone);
     }
 
-    const by = filters.sort;
+    // Tri
+    const sign = filters.sort.startsWith("-") ? -1 : 1;
+    const key = filters.sort.replace("-", "");
     arr.sort((a, b) => {
-      const sign = by.startsWith("-") ? -1 : 1;
-      const key = by.replace(/^-/, "");
-
-      let va, vb;
-
-      if (key === "createdAt") {
-        va = new Date(a.createdAt || 0).getTime();
-        vb = new Date(b.createdAt || 0).getTime();
-      } else {
-        va = (a[key] || "").toString().toLowerCase();
-        vb = (b[key] || "").toString().toLowerCase();
-      }
-
-      if (va < vb) return -1 * sign;
-      if (va > vb) return 1 * sign;
-      return 0;
+      const va =
+        key === "createdAt"
+          ? new Date(a.createdAt || 0).getTime()
+          : (a[key] || "").toString().toLowerCase();
+      const vb =
+        key === "createdAt"
+          ? new Date(b.createdAt || 0).getTime()
+          : (b[key] || "").toString().toLowerCase();
+      return va < vb ? -sign : va > vb ? sign : 0;
     });
 
     setFiltered(arr);
   }, [users, filters, geoCountryId, geoRegionId]);
 
-  // ============================================================================
-  // SUBMIT FORM (MASTER SAFE)
-  // ============================================================================
+  // ============================================================
+  // 🧠 PAYLOAD BUILDER — DOUBLE VERROU (UI + anti-DOM hack)
+  // ============================================================
+  function buildPayload() {
+    const payload = {};
+
+    ["firstName", "lastName", "email", "phone", "country"].forEach((k) => {
+      const val = form[k];
+      if (k === "country") {
+        const iso2 = upper2(val);
+        if (iso2) payload.country = iso2;
+        return;
+      }
+      if (toSafeStr(val).trim()) payload[k] = toSafeStr(val).trim();
+    });
+
+    // 🔒 ROLE SECURITY (anti hack DOM)
+    const targetRole = normalizeRole(form.role);
+
+    // MASTER => interdit admin
+    if (isMaster && targetRole === "admin") {
+      const err = new Error("⛔ Un ADMIN MASTER ne peut pas créer ou promouvoir un compte admin.");
+      err.status = 403;
+      throw err;
+    }
+
+    payload.role = targetRole;
+
+    // Création : password requis
+    if (!editing && !toSafeStr(form.password).trim()) {
+      const err = new Error("Mot de passe requis à la création.");
+      err.status = 400;
+      throw err;
+    }
+
+    // Update : password optionnel
+    if (toSafeStr(form.password).trim()) {
+      payload.password = toSafeStr(form.password);
+    }
+
+    // Scope admin (IDs only) — seulement GLOBAL admin
+    if (targetRole === "admin" && !isMaster) {
+      const cid = toSafeIntOrEmpty(form.scopeCountryId);
+      const rid = toSafeIntOrEmpty(form.scopeRegionId);
+
+      if (rid) payload.regionId = Number(rid);
+      else if (cid) payload.countryId = Number(cid);
+      // vide = admin global
+    }
+
+    return payload;
+  }
+
+  // ============================================================
+  // 🚀 SUBMIT
+  // ============================================================
   async function handleSubmit(e) {
     e.preventDefault();
     try {
-      const payload = {
-        ...form,
-        scopeCountry: form.scopeCountry?.trim() || undefined,
-        scopeRegion: form.scopeRegion?.trim() || undefined,
-      };
-
-      // 🔒 MASTER: le scope country/region est imposé backend
-      // => on n'essaie jamais de le forcer côté frontend
+      const payload = buildPayload();
 
       if (editing) {
         await updateUser(editing, payload);
@@ -222,8 +288,8 @@ export default function AdminUsersPage() {
       resetForm();
       await load();
     } catch (err) {
-      console.error("❌ Erreur soumission:", err);
-      alert("Erreur lors de la soumission du formulaire.");
+      alert(extractApiError(err));
+      console.error("❌ Submit error:", err);
     }
   }
 
@@ -236,43 +302,62 @@ export default function AdminUsersPage() {
       password: "",
       phone: "",
       country: "",
-      role,
+      role: "client",
       scopeCountry: "",
       scopeRegion: "",
+      scopeCountryId: "",
+      scopeRegionId: "",
     });
   }
 
   function handleEdit(u) {
+    // 🔒 MASTER ne peut pas éditer un admin existant
+    if (isMaster && normalizeRole(u.role) === "admin") {
+      alert("⛔ Impossible de modifier un admin en tant que MASTER.");
+      return;
+    }
+
     setEditing(u.id);
     setShowForm(true);
+
     setForm({
       firstName: u.firstName || "",
       lastName: u.lastName || "",
       email: u.email || "",
       phone: u.phone || "",
-      country: (u.country || "").toUpperCase().slice(0, 2),
+      country: upper2(u.country || ""),
       role: u.role,
       password: "",
+
       scopeCountry: "",
       scopeRegion: "",
+
+      scopeCountryId: u.countryId != null ? String(u.countryId) : "",
+      scopeRegionId: u.regionId != null ? String(u.regionId) : "",
     });
   }
 
-  async function handleDelete(id) {
+  async function handleDelete(u) {
+    // 🔒 MASTER ne peut pas supprimer un admin
+    if (isMaster && normalizeRole(u.role) === "admin") {
+      alert("⛔ Impossible de supprimer un admin en tant que MASTER.");
+      return;
+    }
     if (!window.confirm("Supprimer cet utilisateur ?")) return;
+
     try {
-      await deleteUser(id);
+      await deleteUser(u.id);
       alert("✅ Utilisateur supprimé");
       await load();
     } catch (err) {
-      console.error("❌ Erreur suppression:", err);
-      alert("Erreur lors de la suppression.");
+      alert(extractApiError(err));
+      console.error("❌ Delete error:", err);
     }
   }
 
-  // ============================================================================
+  // ============================================================
   // ⏳ LOADING GUARD
-  // ============================================================================
+  // ============================================================
   if (isAdmin === null) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -280,9 +365,10 @@ export default function AdminUsersPage() {
       </div>
     );
   }
-  // ============================================================================
-  // UI — APPLE LIGHT PREMIUM
-  // ============================================================================
+
+  // ============================================================
+  // UI
+  // ============================================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5f5f7] via-white to-[#e5e5ea] px-4 py-10 font-[system-ui] text-[#1c1c1e]">
       <motion.div
@@ -297,37 +383,45 @@ export default function AdminUsersPage() {
               👥 Gestion des utilisateurs
             </h1>
 
-            {/* ✅ Info scope */}
+            {/* ✅ Info scope + badges */}
             {currentUser && (
               <div className="mt-2 text-xs text-gray-500">
                 <span className="inline-flex items-center gap-2 flex-wrap">
+                  {/* Badge rôle */}
                   <span className="px-2 py-0.5 rounded-full border border-gray-200 bg-gray-50 text-gray-700">
                     {prettyRoleLabel(currentUser)}
                   </span>
 
-                  {isMaster && (
-                    <span className="text-gray-500">
-                      Périmètre :
-                      {currentUser?.countryId != null
-                        ? ` Pays #${currentUser.countryId}`
-                        : ""}
-                      {currentUser?.regionId != null
-                        ? ` · Région #${currentUser.regionId}`
-                        : ""}
+                  {/* Badge MASTER / GLOBAL */}
+                  {normalizeRole(currentUser?.role) === "admin" && (
+                    <span
+                      className={`px-2 py-0.5 rounded-full border text-xs ${
+                        isMaster
+                          ? "border-blue-200 bg-blue-50 text-blue-700"
+                          : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      }`}
+                      title={isMaster ? "Admin MASTER (scopé)" : "Admin GLOBAL"}
+                    >
+                      {isMaster ? "MASTER" : "GLOBAL"}
                     </span>
                   )}
 
-                  {!isMaster && (
-                    <span className="text-gray-500">Accès global</span>
+                  {/* Périmètre */}
+                  {isMaster && (
+                    <span className="text-gray-500">
+                      Périmètre :
+                      {currentUser?.countryId != null ? ` Pays #${currentUser.countryId}` : ""}
+                      {currentUser?.regionId != null ? ` · Région #${currentUser.regionId}` : ""}
+                    </span>
                   )}
 
+                  {!isMaster && <span className="text-gray-500">Accès global</span>}
+
+                  {/* Filtre GeoContext */}
                   {geoCountryId && !isScopedRole && (
                     <span className="text-gray-500">
-                      Filtre:
-                      {` ${geoCountry?.name || `Pays #${geoCountryId}`}`}
-                      {geoRegionId
-                        ? ` · ${geoRegion?.name || `Région #${geoRegionId}`}`
-                        : ""}
+                      Filtre: {geoCountry?.name || `Pays #${geoCountryId}`}
+                      {geoRegionId ? ` · ${geoRegion?.name || `Région #${geoRegionId}`}` : ""}
                       {canSelect ? " (sélection)" : ""}
                     </span>
                   )}
@@ -363,9 +457,7 @@ export default function AdminUsersPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Rôle */}
             <div>
-              <label className="text-xs font-medium text-gray-600">
-                Catégorie
-              </label>
+              <label className="text-xs font-medium text-gray-600">Catégorie</label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
@@ -379,9 +471,7 @@ export default function AdminUsersPage() {
 
             {/* Recherche */}
             <div className="lg:col-span-2">
-              <label className="text-xs font-medium text-gray-600">
-                Recherche
-              </label>
+              <label className="text-xs font-medium text-gray-600">Recherche</label>
               <input
                 placeholder="Nom, email, téléphone…"
                 value={filters.q}
@@ -392,9 +482,7 @@ export default function AdminUsersPage() {
 
             {/* Pays */}
             <div>
-              <label className="text-xs font-medium text-gray-600">
-                Pays (ISO2)
-              </label>
+              <label className="text-xs font-medium text-gray-600">Pays (ISO2)</label>
               <input
                 placeholder="SN, ML, FR…"
                 value={filters.country}
@@ -414,9 +502,7 @@ export default function AdminUsersPage() {
                 <input
                   type="checkbox"
                   checked={filters.onlyPhone}
-                  onChange={(e) =>
-                    setFilters({ ...filters, onlyPhone: e.target.checked })
-                  }
+                  onChange={(e) => setFilters({ ...filters, onlyPhone: e.target.checked })}
                 />
                 Avec téléphone
               </label>
@@ -427,9 +513,7 @@ export default function AdminUsersPage() {
               <label className="text-xs font-medium text-gray-600">Tri</label>
               <select
                 value={filters.sort}
-                onChange={(e) =>
-                  setFilters({ ...filters, sort: e.target.value })
-                }
+                onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
                 className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
               >
                 <option value="-createdAt">Plus récents</option>
@@ -442,10 +526,8 @@ export default function AdminUsersPage() {
             </div>
           </div>
 
-          {/* Footer */}
           <div className="mt-3 flex justify-between text-xs text-gray-500">
             <span>{filtered.length} utilisateur(s)</span>
-
             <button
               onClick={() =>
                 setFilters({
@@ -501,47 +583,78 @@ export default function AdminUsersPage() {
               className="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
             />
 
+            {/* ✅ ROLE SELECT — MASTER: client/agent only */}
             <select
               value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  role: e.target.value,
+                  scopeCountryId: "",
+                  scopeRegionId: "",
+                  scopeCountry: "",
+                  scopeRegion: "",
+                })
+              }
               className="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
             >
               <option value="client">Client</option>
               <option value="agent">Agent</option>
-              <option value="admin">Admin</option>
+              {isGlobalAdmin && <option value="admin">Admin</option>}
             </select>
 
-            {form.role === "admin" && (
+            {/* ✅ ADMIN: Sélection guidée pays/région (IDs) — uniquement GLOBAL */}
+            {isGlobalAdmin && normalizeRole(form.role) === "admin" && (
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  placeholder="Périmètre pays (nom ou ISO2)"
-                  value={form.scopeCountry}
-                  onChange={(e) =>
-                    setForm({ ...form, scopeCountry: e.target.value })
-                  }
-                  className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
-                />
-                <input
-                  placeholder="Périmètre région (nom ou code)"
-                  value={form.scopeRegion}
-                  onChange={(e) =>
-                    setForm({ ...form, scopeRegion: e.target.value })
-                  }
-                  className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
-                />
-                <p className="md:col-span-2 text-xs text-gray-500">
-                  ℹ️ Pour créer un <strong>MASTER</strong>, renseigne un pays ou
-                  une région (nom ou code). Laisser vide = admin global.
-                </p>
-              </div>
-            )}
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Périmètre pays</label>
+                  <select
+                    value={form.scopeCountryId}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        scopeCountryId: e.target.value,
+                        scopeRegionId: "",
+                      })
+                    }
+                    className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+                  >
+                    <option value="">— Admin global (aucun périmètre) —</option>
+                    {(countries || []).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.isoCode})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* ✅ Note UX: MASTER scope imposé backend */}
-            {isMaster && (
-              <div className="md:col-span-2 text-xs text-gray-500">
-                ℹ️ Vous êtes <strong>MASTER</strong> : le périmètre géographique
-                (pays/région) des utilisateurs créés ou modifiés est imposé par
-                votre profil.
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Périmètre région (optionnel)</label>
+                  <select
+                    value={form.scopeRegionId}
+                    disabled={!form.scopeCountryId || formRegions.length === 0}
+                    onChange={(e) => setForm({ ...form, scopeRegionId: e.target.value })}
+                    className={`mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] ${
+                      !form.scopeCountryId || formRegions.length === 0 ? "bg-gray-100 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    <option value="">
+                      {form.scopeCountryId
+                        ? "— MASTER pays (toutes régions) —"
+                        : "— Choisir d'abord un pays —"}
+                    </option>
+                    {formRegions.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} {r.code ? `(${r.code})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <p className="md:col-span-2 text-xs text-gray-500">
+                  ℹ️ Pour créer un <strong>MASTER</strong>, sélectionne un pays (MASTER pays)
+                  ou un pays + une région (MASTER régional). Laisser vide = admin global.
+                </p>
               </div>
             )}
 
@@ -576,58 +689,81 @@ export default function AdminUsersPage() {
             <table className="w-full border-separate border-spacing-y-2 text-sm">
               <thead>
                 <tr className="bg-gray-100 text-gray-700">
-                  {["Nom", "Email", "Téléphone", "Pays", "Rôle", "Actions"].map(
-                    (h) => (
-                      <th key={h} className="text-left px-4 py-2 font-medium">
-                        {h}
-                      </th>
-                    )
-                  )}
+                  {["Nom", "Email", "Téléphone", "Pays", "Rôle", "Actions"].map((h) => (
+                    <th key={h} className="text-left px-4 py-2 font-medium">
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
 
               <tbody>
-                {filtered.map((u) => (
-                  <tr
-                    key={u.id}
-                    className="bg-white hover:bg-gray-50 transition border border-gray-200 rounded-xl"
-                  >
-                    <td className="px-4 py-2">
-                      {[u.firstName, u.lastName].filter(Boolean).join(" ") ||
-                        "—"}
-                    </td>
-                    <td className="px-4 py-2">{u.email}</td>
-                    <td className="px-4 py-2">{u.phone || "—"}</td>
-                    <td className="px-4 py-2">{u.country || "—"}</td>
-                    <td className="px-4 py-2 uppercase">
-                      {prettyRoleLabel(u)}
-                    </td>
+                {filtered.map((u) => {
+                  const uRole = normalizeRole(u.role);
+                  const isAdminRow = uRole === "admin";
+                  const actionsLocked = isMaster && isAdminRow;
 
-                    <td className="px-4 py-2 flex gap-3">
-                      <button
-                        onClick={() => handleEdit(u)}
-                        className="text-[#ca8a04] hover:text-[#b45309]"
-                        title="Modifier"
-                      >
-                        ✏️
-                      </button>
+                  return (
+                    <tr
+                      key={u.id}
+                      className="bg-white hover:bg-gray-50 transition border border-gray-200 rounded-xl"
+                    >
+                      <td className="px-4 py-2">
+                        {[u.firstName, u.lastName].filter(Boolean).join(" ") || "—"}
+                      </td>
+                      <td className="px-4 py-2">{u.email}</td>
+                      <td className="px-4 py-2">{u.phone || "—"}</td>
+                      <td className="px-4 py-2">{u.country || "—"}</td>
+                      <td className="px-4 py-2 uppercase">{prettyRoleLabel(u)}</td>
 
-                      <button
-                        onClick={() => handleDelete(u.id)}
-                        className="text-red-600 hover:text-red-800"
-                        title="Supprimer"
-                      >
-                        🗑️
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="px-4 py-2 flex gap-3 items-center">
+                        <button
+                          onClick={() => handleEdit(u)}
+                          className={`${
+                            actionsLocked
+                              ? "text-gray-300 cursor-not-allowed"
+                              : "text-[#ca8a04] hover:text-[#b45309]"
+                          }`}
+                          title={
+                            actionsLocked
+                              ? "Verrouillé pour MASTER"
+                              : "Modifier"
+                          }
+                          disabled={actionsLocked}
+                        >
+                          ✏️
+                        </button>
+
+                        <button
+                          onClick={() => handleDelete(u)}
+                          className={`${
+                            actionsLocked
+                              ? "text-gray-300 cursor-not-allowed"
+                              : "text-red-600 hover:text-red-800"
+                          }`}
+                          title={
+                            actionsLocked
+                              ? "Verrouillé pour MASTER"
+                              : "Supprimer"
+                          }
+                          disabled={actionsLocked}
+                        >
+                          🗑️
+                        </button>
+
+                        {actionsLocked && (
+                          <span className="text-[11px] text-gray-400">
+                            (admin protégé)
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
-            <p className="text-xs text-gray-500 mt-4">
-              {filtered.length} résultat(s)
-            </p>
+            <p className="text-xs text-gray-500 mt-4">{filtered.length} résultat(s)</p>
           </div>
         )}
       </motion.div>

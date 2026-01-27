@@ -11,17 +11,38 @@ const { applyGeoScope, getUserGeoScope, isGlobalAdmin } = require('../utils/geoS
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const COUNTRY_NAME_TO_ISO2 = {
-  'mali': 'ML', 'sénégal': 'SN', 'senegal': 'SN',
-  "côte d\'ivoire": 'CI', 'cote d’ivoire': 'CI', 'cote d ivoire': 'CI',
-  'ivory coast': 'CI', 'burkina faso': 'BF', 'niger': 'NE', 'guinée': 'GN',
-  'guinee': 'GN', 'ghana': 'GH', 'togo': 'TG', 'benin': 'BJ', 'gabon': 'GA',
-  'france': 'FR', 'royaume-uni': 'GB', 'uk': 'GB', 'united states': 'US', 'usa': 'US'
+  mali: 'ML',
+  'sénégal': 'SN',
+  senegal: 'SN',
+  "côte d\'ivoire": 'CI',
+  'cote d’ivoire': 'CI',
+  'cote d ivoire': 'CI',
+  'ivory coast': 'CI',
+  'burkina faso': 'BF',
+  niger: 'NE',
+  guinée: 'GN',
+  guinee: 'GN',
+  ghana: 'GH',
+  togo: 'TG',
+  benin: 'BJ',
+  gabon: 'GA',
+  france: 'FR',
+  'royaume-uni': 'GB',
+  uk: 'GB',
+  'united states': 'US',
+  usa: 'US',
 };
 
 function toSafeInt(v) {
   if (v === null || v === undefined || v === '') return null;
   const n = parseInt(String(v), 10);
   return Number.isNaN(n) ? null : n;
+}
+
+function toTrimOrNull(v) {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  return s.length ? s : null;
 }
 
 function toSafeUser(u) {
@@ -41,23 +62,109 @@ function toSafeUser(u) {
   };
 }
 
-function toTrimOrNull(v) {
-  if (v === null || v === undefined) return null;
-  const s = String(v).trim();
-  return s.length ? s : null;
-}
-
+/**
+ * Normalise country legacy (ISO2)
+ * - null/"" => null
+ * - "ML" => "ML"
+ * - "Mali" => "ML" (mapping)
+ * - sinon throw 400
+ */
 function normalizeCountry(input) {
   if (input == null) return null;
   const raw = String(input).trim();
   if (!raw) return null;
+
   if (raw.length === 2) return raw.toUpperCase();
+
   const mapped = COUNTRY_NAME_TO_ISO2[raw.toLowerCase()];
   if (mapped) return mapped;
-  const err = new Error("Pays invalide : utilisez un code ISO-2 (ex: ML, FR, SN).");
+
+  const err = new Error(
+    'Pays invalide : utilisez un code ISO-2 (ex: ML, FR, SN).'
+  );
   err.status = 400;
   throw err;
 }
+
+/**
+ * Petit helper pour distinguer :
+ * - erreurs attendues (err.status) => réponses 4xx
+ * - erreurs DB de contrainte => 409
+ * - sinon => 500
+ */
+function sendError(res, err, fallbackMessage = 'Erreur serveur') {
+  if (err?.status) {
+    return res.status(err.status).json({ error: err.message });
+  }
+
+  if (err?.name === 'SequelizeUniqueConstraintError') {
+    return res.status(409).json({ error: 'Conflit : valeur déjà existante' });
+  }
+
+  console.error('❌ Unexpected error:', err);
+  return res.status(500).json({ error: fallbackMessage });
+}
+
+/* =========================================================
+   🔒 SECURITY HELPERS (NEW — ZERO REGRESSION)
+========================================================= */
+
+/**
+ * Admin MASTER = admin + scope (countryId ou regionId)
+ * Admin GLOBAL = admin sans scope
+ */
+function isScopedAdmin(user) {
+  if (!user || user.role !== 'admin') return false;
+  return user.countryId != null || user.regionId != null;
+}
+
+function isAdminRole(role) {
+  return String(role || '').trim().toLowerCase() === 'admin';
+}
+
+/**
+ * Vérifie si un admin (global ou master) peut accéder à un user (lecture/modif/suppression).
+ * - Global admin: ok
+ * - Master: doit respecter son scope :
+ *   - si regionId => user.regionId doit matcher
+ *   - sinon si countryId => user.countryId doit matcher
+ */
+function canAccessUserByScope(actor, targetUser) {
+  if (!actor || actor.role !== 'admin') return false;
+  if (!targetUser) return false;
+
+  if (isGlobalAdmin(actor)) return true;
+
+  const actorScope = getUserGeoScope(actor);
+  if (actorScope.regionId != null) {
+    return String(targetUser.regionId ?? '') === String(actorScope.regionId);
+  }
+  if (actorScope.countryId != null) {
+    return String(targetUser.countryId ?? '') === String(actorScope.countryId);
+  }
+
+  // admin sans scope => global admin (déjà géré) ; mais par sécurité :
+  return false;
+}
+
+/**
+ * Bloque toute action admin/master si acteur n'est pas admin global.
+ * - création admin (dont master) => global seulement
+ * - update role vers admin => global seulement
+ * - modification d'un admin => global seulement
+ * - suppression d'un admin => global seulement
+ */
+function assertGlobalAdminOnly(reqUser, errMessage) {
+  if (!isGlobalAdmin(reqUser)) {
+    const err = new Error(errMessage || 'Action réservée à un administrateur global');
+    err.status = 403;
+    throw err;
+  }
+}
+
+/* =========================================================
+   🔎 GEO RESOLUTION (Country / Region)
+========================================================= */
 
 async function findCountryByInput(input) {
   const trimmed = toTrimOrNull(input);
@@ -83,7 +190,9 @@ async function findCountryByInput(input) {
   }
 
   if (matches.length > 1) {
-    const err = new Error(`Pays ambigu pour "${trimmed}" (précise le nom exact)`);
+    const err = new Error(
+      `Pays ambigu pour "${trimmed}" (précise le nom exact)`
+    );
     err.status = 400;
     throw err;
   }
@@ -97,7 +206,9 @@ async function findRegionByInput(input, codeInput, countryId) {
   if (!name && !code) return null;
 
   const whereParts = [];
-  if (name) whereParts.push(sqlWhere(fn('LOWER', col('name')), name.toLowerCase()));
+  if (name) {
+    whereParts.push(sqlWhere(fn('LOWER', col('name')), name.toLowerCase()));
+  }
   if (code) whereParts.push({ code: code.toUpperCase() });
 
   const whereClause = { [Op.or]: whereParts };
@@ -125,22 +236,37 @@ async function findRegionByInput(input, codeInput, countryId) {
   return matches[0];
 }
 
+/**
+ * Résout le scope (countryId/regionId) à partir de multiples entrées possibles.
+ * - supporte countryId/country_id + regionId/region_id
+ * - supporte scopeCountry/scopeRegion (+ alias)
+ * - vérifie cohérence région ↔ pays
+ * - renvoie aussi hasGeoInput pour savoir si l’utilisateur a tenté un scope
+ */
 async function resolveGeoScopeInput(body = {}) {
   const rawCountryId = toSafeInt(body?.countryId ?? body?.country_id);
   const rawRegionId = toSafeInt(body?.regionId ?? body?.region_id);
 
   const scopeCountryInput = toTrimOrNull(
-    body?.scopeCountry ?? body?.countryName ?? body?.scopeCountryName ?? body?.countryScope
+    body?.scopeCountry ??
+      body?.countryName ??
+      body?.scopeCountryName ??
+      body?.countryScope
   );
   const scopeCountryIso = toTrimOrNull(body?.scopeCountryIso ?? body?.countryIso);
+
   const scopeRegionInput = toTrimOrNull(
-    body?.scopeRegion ?? body?.regionName ?? body?.scopeRegionName ?? body?.regionScope
+    body?.scopeRegion ??
+      body?.regionName ??
+      body?.scopeRegionName ??
+      body?.regionScope
   );
   const scopeRegionCode = toTrimOrNull(body?.scopeRegionCode ?? body?.regionCode);
 
   let countryId = rawCountryId ?? null;
   let regionId = rawRegionId ?? null;
-  let hasGeoInput = Boolean(
+
+  const hasGeoInput = Boolean(
     rawCountryId != null ||
       rawRegionId != null ||
       scopeCountryInput ||
@@ -149,26 +275,35 @@ async function resolveGeoScopeInput(body = {}) {
       scopeRegionCode
   );
 
+  // 1) Résoudre pays si absent
   if (!countryId && (scopeCountryInput || scopeCountryIso)) {
     const country = await findCountryByInput(scopeCountryIso || scopeCountryInput);
     countryId = country?.id ?? null;
   }
 
+  // 2) Résoudre région si absente
   if (!regionId && (scopeRegionInput || scopeRegionCode)) {
     const region = await findRegionByInput(scopeRegionInput, scopeRegionCode, countryId);
     regionId = region?.id ?? null;
 
+    // Inférer pays depuis région si absent
     if (!countryId) {
       countryId = region?.countryId ?? null;
     }
 
-    if (countryId && region?.countryId && String(region.countryId) !== String(countryId)) {
+    // Cohérence région → pays
+    if (
+      countryId &&
+      region?.countryId &&
+      String(region.countryId) !== String(countryId)
+    ) {
       const err = new Error('La région ne correspond pas au pays fourni');
       err.status = 400;
       throw err;
     }
   }
 
+  // 3) Si regionId donné directement mais pays absent, inférer
   if (regionId && !countryId) {
     const region = await Region.findByPk(regionId);
     if (!region) {
@@ -182,11 +317,11 @@ async function resolveGeoScopeInput(body = {}) {
   return { countryId, regionId, hasGeoInput };
 }
 
-// ————————————————————————
-// CONTRÔLEURS EXISTANTS
-// ————————————————————————
+/* =========================================================
+   ✅ EXISTING CONTROLLERS
+========================================================= */
 
-/** 🔹 Créer un agent (admin only, admin scoped via scope) */
+/** 🔹 Créer un agent (admin only, scope imposé si admin scoped) */
 exports.createAgent = async (req, res) => {
   try {
     if (!req.user || req.user.role !== 'admin') {
@@ -201,16 +336,24 @@ exports.createAgent = async (req, res) => {
     phone = (phone || '').trim();
 
     if (!email || !EMAIL_RE.test(email)) {
-      return res.status(400).json({ error: "Email requis ou invalide" });
+      return res.status(400).json({ error: 'Email requis ou invalide' });
     }
     if (!password || String(password).length < 6) {
-      return res.status(400).json({ error: "Mot de passe requis (6 caractères min.)" });
+      return res
+        .status(400)
+        .json({ error: 'Mot de passe requis (6 caractères min.)' });
     }
 
-    const countryIso2 = normalizeCountry(country);
+    let countryIso2 = null;
+    try {
+      countryIso2 = normalizeCountry(country);
+    } catch (err) {
+      return sendError(res, err, 'Erreur normalisation pays');
+    }
+
     const exists = await User.findOne({ where: { email } });
     if (exists) {
-      return res.status(400).json({ error: 'Email déjà utilisé' });
+      return res.status(409).json({ error: 'Email déjà utilisé' });
     }
 
     const passwordHash = await bcrypt.hash(String(password), 10);
@@ -224,8 +367,13 @@ exports.createAgent = async (req, res) => {
       phone: phone || null,
       country: countryIso2,
       role: 'agent',
-      countryId: isGlobalAdmin(req.user) ? toSafeInt(req.body?.countryId) : scope.countryId,
-      regionId: isGlobalAdmin(req.user) ? toSafeInt(req.body?.regionId) : scope.regionId,
+      // Global admin peut fournir countryId/regionId, sinon scope imposé
+      countryId: isGlobalAdmin(req.user)
+        ? toSafeInt(req.body?.countryId ?? req.body?.country_id)
+        : scope.countryId,
+      regionId: isGlobalAdmin(req.user)
+        ? toSafeInt(req.body?.regionId ?? req.body?.region_id)
+        : scope.regionId,
     });
 
     return res.status(201).json({
@@ -234,7 +382,7 @@ exports.createAgent = async (req, res) => {
     });
   } catch (e) {
     console.error('❌ Erreur création agent:', e);
-    return res.status(500).json({ error: "Erreur lors de la création de l’agent" });
+    return res.status(500).json({ error: 'Erreur lors de la création de l’agent' });
   }
 };
 
@@ -283,7 +431,9 @@ exports.listByRole = async (req, res) => {
     return res.json({ users });
   } catch (e) {
     console.error('❌ Erreur listByRole:', e);
-    return res.status(500).json({ error: "Erreur lors de la récupération des utilisateurs" });
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la récupération des utilisateurs' });
   }
 };
 
@@ -295,76 +445,129 @@ exports.me = async (req, res) => {
     return res.json({ user: toSafeUser(me) });
   } catch (e) {
     console.error('❌ Erreur me:', e);
-    return res.status(500).json({ error: "Erreur lors de la récupération du profil" });
+    return res.status(500).json({ error: 'Erreur lors de la récupération du profil' });
   }
 };
 
-// ————————————————————————
-// NOUVEAUX ENDPOINTS ADMIN CRUD
-// ————————————————————————
+/* =========================================================
+   ✅ ADMIN CRUD (CREATE / READ / UPDATE / DELETE)
+   🔒 SECURITY HARDENED (GLOBAL vs MASTER)
+========================================================= */
 
-/** 🔹 Créer un utilisateur */
+/** 🔹 Créer un utilisateur (admin only) */
 exports.createUser = async (req, res) => {
   try {
     if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
-    const { email, password, firstName, lastName, phone, country, role } = req.body;
-    if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Email invalide' });
-    if (!['client', 'agent', 'admin'].includes(role))
+    const { email, password, firstName, lastName, phone, country, role } = req.body || {};
+
+    // Validation minimale solide
+    const cleanEmail = (email || '').toLowerCase().trim();
+    if (!cleanEmail || !EMAIL_RE.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Email invalide' });
+    }
+
+    const targetRole = String(role || '').trim().toLowerCase();
+    if (!['client', 'agent', 'admin'].includes(targetRole)) {
       return res.status(400).json({ error: 'Rôle invalide' });
+    }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const scope = getUserGeoScope(req.user);
+    // 🔒 MASTER cannot create admin/master (admin + scope)
+    if (isScopedAdmin(req.user) && targetRole === 'admin') {
+      return res.status(403).json({
+        error: "Action réservée à l'admin global : création d'un compte admin/master interdite pour un MASTER",
+      });
+    }
+
+    // Si quelqu’un veut créer un admin => admin global only
+    if (targetRole === 'admin') {
+      assertGlobalAdminOnly(req.user, "Seul l'administrateur global peut créer un admin/master");
+    }
+
+    // password requis à la création
+    if (!password || String(password).length < 6) {
+      return res.status(400).json({
+        error: 'Mot de passe requis (6 caractères min.)',
+      });
+    }
+
+    // Email unique
+    const exists = await User.findOne({ where: { email: cleanEmail } });
+    if (exists) {
+      return res.status(409).json({ error: 'Email déjà utilisé' });
+    }
+
+    // Pays legacy (ISO2)
     let normalizedCountry = null;
-
     try {
       normalizedCountry = normalizeCountry(country);
     } catch (err) {
-      if (err?.status) {
-        return res.status(err.status).json({ error: err.message });
-      }
-      throw err;
+      return sendError(res, err, 'Erreur normalisation pays');
     }
 
+    const passwordHash = await bcrypt.hash(String(password), 10);
+    const actorScope = getUserGeoScope(req.user);
+
+    // Résolution scope (uniquement global admin)
     let resolvedScope = { countryId: null, regionId: null, hasGeoInput: false };
     if (isGlobalAdmin(req.user)) {
-      resolvedScope = await resolveGeoScopeInput(req.body);
+      try {
+        resolvedScope = await resolveGeoScopeInput(req.body);
+      } catch (err) {
+        return sendError(res, err, 'Erreur résolution périmètre');
+      }
     }
 
     const u = await User.create({
-      email: email.toLowerCase().trim(),
+      email: cleanEmail,
       passwordHash,
       firstName: firstName?.trim() || null,
       lastName: lastName?.trim() || null,
       phone: phone?.trim() || null,
       country: normalizedCountry,
-      role,
-      countryId: isGlobalAdmin(req.user) ? resolvedScope.countryId : scope.countryId,
-      regionId: isGlobalAdmin(req.user) ? resolvedScope.regionId : scope.regionId,
+      role: targetRole,
+      // admin scoped => scope imposé; admin global => scope selon payload (ou null)
+      countryId: isGlobalAdmin(req.user) ? resolvedScope.countryId : actorScope.countryId,
+      regionId: isGlobalAdmin(req.user) ? resolvedScope.regionId : actorScope.regionId,
     });
 
-    res.status(201).json({ user: toSafeUser(u) });
+    return res.status(201).json({ user: toSafeUser(u) });
   } catch (e) {
-    console.error('❌ createUser:', e);
-    res.status(500).json({ error: 'Erreur création utilisateur' });
+    return sendError(res, e, 'Erreur création utilisateur');
   }
 };
 
-/** 🔹 Lire un utilisateur par ID */
+/** 🔹 Lire un utilisateur par ID (admin only + scope enforced) */
 exports.getById = async (req, res) => {
   try {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
     const u = await User.findByPk(req.params.id);
     if (!u) return res.status(404).json({ error: 'Utilisateur introuvable' });
-    res.json({ user: toSafeUser(u) });
+
+    // 🔒 Scope enforcement
+    if (!canAccessUserByScope(req.user, u)) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
+    // 🔒 MASTER cannot access admin users
+    if (isScopedAdmin(req.user) && isAdminRole(u.role)) {
+      return res.status(403).json({
+        error: "Action réservée à l'admin global : accès à un compte admin interdit pour un MASTER",
+      });
+    }
+
+    return res.json({ user: toSafeUser(u) });
   } catch (e) {
-    console.error('❌ getById:', e);
-    res.status(500).json({ error: 'Erreur lecture utilisateur' });
+    return sendError(res, e, 'Erreur lecture utilisateur');
   }
 };
 
-/** 🔹 Mettre à jour un utilisateur */
+/** 🔹 Mettre à jour un utilisateur (admin only + scope + role hardening) */
 exports.updateUser = async (req, res) => {
   try {
     if (!req.user || req.user.role !== 'admin') {
@@ -374,61 +577,102 @@ exports.updateUser = async (req, res) => {
     const u = await User.findByPk(req.params.id);
     if (!u) return res.status(404).json({ error: 'Utilisateur introuvable' });
 
-    const { firstName, lastName, phone, country, role, password } = req.body;
-    if (role && !['client', 'agent', 'admin'].includes(role))
+    // 🔒 Scope enforcement
+    if (!canAccessUserByScope(req.user, u)) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
+    // 🔒 MASTER cannot update admin users
+    if (isScopedAdmin(req.user) && isAdminRole(u.role)) {
+      return res.status(403).json({
+        error: "Action réservée à l'admin global : modification d'un admin interdite pour un MASTER",
+      });
+    }
+
+    const { firstName, lastName, phone, country, role, password } = req.body || {};
+
+    // Si role est fourni, valider
+    const nextRole = role !== undefined ? String(role || '').trim().toLowerCase() : null;
+    if (nextRole && !['client', 'agent', 'admin'].includes(nextRole)) {
       return res.status(400).json({ error: 'Rôle invalide' });
+    }
 
-    const scope = getUserGeoScope(req.user);
+    // 🔒 Promotion/définition vers admin => GLOBAL ONLY
+    // - couvre aussi le cas où un MASTER tente de changer role vers admin
+    if (nextRole === 'admin') {
+      // si l'acteur n'est pas global => interdit
+      assertGlobalAdminOnly(req.user, "Seul l'administrateur global peut promouvoir en admin/master");
+    }
+
+    // 🔒 Modifier un admin existant => GLOBAL ONLY (même si nextRole n'est pas fourni)
+    if (isAdminRole(u.role)) {
+      assertGlobalAdminOnly(req.user, "Seul l'administrateur global peut modifier un admin/master");
+    }
+
+    const actorScope = getUserGeoScope(req.user);
+
+    // Pays legacy (ISO2)
     let normalizedCountry = u.country;
-
     if (country !== undefined) {
       try {
         normalizedCountry = normalizeCountry(country);
       } catch (err) {
-        if (err?.status) {
-          return res.status(err.status).json({ error: err.message });
-        }
-        throw err;
+        return sendError(res, err, 'Erreur normalisation pays');
       }
     }
 
+    // Scope cible par défaut = actuel
     let nextCountryId = u.countryId ?? null;
     let nextRegionId = u.regionId ?? null;
 
     if (isGlobalAdmin(req.user)) {
-      const resolvedScope = await resolveGeoScopeInput(req.body);
-      if (resolvedScope.hasGeoInput) {
+      // admin global peut changer le scope si input fourni
+      let resolvedScope = null;
+      try {
+        resolvedScope = await resolveGeoScopeInput(req.body);
+      } catch (err) {
+        return sendError(res, err, 'Erreur résolution périmètre');
+      }
+
+      if (resolvedScope?.hasGeoInput) {
         nextCountryId = resolvedScope.countryId;
         nextRegionId = resolvedScope.regionId;
       }
     } else {
-      nextCountryId = scope.countryId;
-      nextRegionId = scope.regionId;
+      // admin scoped : impose son scope
+      nextCountryId = actorScope.countryId;
+      nextRegionId = actorScope.regionId;
     }
 
     const updateData = {
-      firstName: firstName?.trim() || null,
-      lastName: lastName?.trim() || null,
-      phone: phone?.trim() || null,
+      firstName: firstName !== undefined ? (firstName?.trim() || null) : u.firstName,
+      lastName: lastName !== undefined ? (lastName?.trim() || null) : u.lastName,
+      phone: phone !== undefined ? (phone?.trim() || null) : u.phone,
       country: normalizedCountry,
-      role: role || u.role,
+      role: nextRole || u.role,
       countryId: nextCountryId,
       regionId: nextRegionId,
     };
 
-    if (password && password.length >= 6) {
-      updateData.passwordHash = await bcrypt.hash(password, 10);
+    // Password optionnel en update
+    if (password !== undefined && password !== null && String(password).length > 0) {
+      if (String(password).length < 6) {
+        return res.status(400).json({
+          error: 'Mot de passe trop court (6 caractères min.)',
+        });
+      }
+      updateData.passwordHash = await bcrypt.hash(String(password), 10);
     }
 
     await u.update(updateData);
-    res.json({ user: toSafeUser(u) });
+
+    return res.json({ user: toSafeUser(u) });
   } catch (e) {
-    console.error('❌ updateUser:', e);
-    res.status(500).json({ error: 'Erreur mise à jour utilisateur' });
+    return sendError(res, e, 'Erreur mise à jour utilisateur');
   }
 };
 
-/** 🔹 Supprimer un utilisateur */
+/** 🔹 Supprimer un utilisateur (admin only + scope + global-only for admins) */
 exports.deleteUser = async (req, res) => {
   try {
     if (!req.user || req.user.role !== 'admin') {
@@ -437,10 +681,20 @@ exports.deleteUser = async (req, res) => {
 
     const u = await User.findByPk(req.params.id);
     if (!u) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+    // 🔒 Scope enforcement
+    if (!canAccessUserByScope(req.user, u)) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
+    // 🔒 Suppression d'admin => GLOBAL ONLY
+    if (isAdminRole(u.role)) {
+      assertGlobalAdminOnly(req.user, "Seul l'administrateur global peut supprimer un admin/master");
+    }
+
     await u.destroy();
-    res.json({ message: 'Utilisateur supprimé' });
+    return res.json({ message: 'Utilisateur supprimé' });
   } catch (e) {
-    console.error('❌ deleteUser:', e);
-    res.status(500).json({ error: 'Erreur suppression utilisateur' });
+    return sendError(res, e, 'Erreur suppression utilisateur');
   }
 };

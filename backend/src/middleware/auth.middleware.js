@@ -1,4 +1,3 @@
-// backend/src/middleware/auth.middleware.js
 'use strict';
 
 const jwt = require('jsonwebtoken');
@@ -13,20 +12,20 @@ module.exports = async function auth(req, res, next) {
   }
 
   try {
-    // 1️⃣ Vérification du token (authentification)
+    // 1️⃣ Vérification JWT
     const payload = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 2️⃣ Chargement de l'utilisateur depuis la DB (source de vérité)
+    // 2️⃣ Source de vérité : DB
     const user = await db.User.findByPk(payload.id);
 
     if (!user) {
       return res.status(401).json({ error: 'Utilisateur introuvable' });
     }
 
-    // 3️⃣ Injection dans req.user (rétro-compatible + enrichi)
+    // 3️⃣ Injection normalisée (toujours les mêmes clés)
     req.user = {
       id: user.id,
-      role: user.role,
+      role: user.role, // 'client' | 'agent' | 'admin'
       countryId: user.countryId ?? null,
       regionId: user.regionId ?? null,
     };

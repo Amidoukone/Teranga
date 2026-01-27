@@ -2,6 +2,7 @@
 // App.js — Teranga Platform (Version Premium PRO 2025)
 // Navigation • Routage protégé • SEO dynamique • GA4 tracking
 // ✅ MASTER support (admin + geo scope) sans régression
+// ✅ 2026: AdminOnboardingPage (Pays → Régions → MASTER)
 // ============================================================================
 
 import { useEffect } from 'react';
@@ -50,6 +51,9 @@ import AdminProjectsPage from './pages/AdminProjectsPage';
 import AdminCategoriesPage from './pages/AdminCategoriesPage';
 import AdminProductsPage from './pages/AdminProductsPage';
 
+// ✅ NEW: Onboarding Pays → Régions → MASTER
+import AdminOnboardingPage from './pages/AdminOnboardingPage';
+
 // 🧾 Commerce
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
@@ -81,7 +85,6 @@ function ScrollToTop() {
 // - IMPORTANT: "master" n'est pas un rôle backend.
 //   Un MASTER = admin + (countryId || regionId)
 // - Donc côté routes : on garde allow=['admin'] pour les écrans admin.
-//   Le scope est géré par backend + GeoContext / filtres.
 // ============================================================================
 function getSession() {
   const token = getToken();
@@ -425,10 +428,23 @@ export default function App() {
 
             {/* ============================= */}
             {/* 👑 ADMIN (inclut MASTER)     */}
-            {/* - MASTER = admin + scope geo
-                donc allow=['admin'] reste correct
-            */}
             {/* ============================= */}
+
+            {/* ✅ NEW: Onboarding Pays → Régions → MASTER */}
+            <Route
+              path="/admin/onboarding"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['admin']}>
+                    <>
+                      <SetSeo title="Onboarding Pays & MASTER" />
+                      <AdminOnboardingPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
             <Route
               path="/admin/projects"
               element={
