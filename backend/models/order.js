@@ -107,7 +107,19 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'Order',
       tableName: 'orders',
-      timestamps: true, // ✅ createdAt / updatedAt camelCase
+
+      /**
+       * ✅ IMPORTANT
+       * Si ta table orders est en snake_case (created_at / updated_at),
+       * Sequelize ne doit PAS chercher createdAt/updatedAt directement.
+       */
+      timestamps: true,
+      underscored: true, // ✅ createdAt -> created_at, updatedAt -> updated_at
+
+      // ✅ Double sécurité explicite (même si underscored est modifié un jour)
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+
       indexes: [
         { fields: ['user_id'] },
         { fields: ['code'], unique: true },
@@ -116,6 +128,7 @@ module.exports = (sequelize, DataTypes) => {
         { fields: ['country_id'] },
         { fields: ['region_id'] },
       ],
+
       hooks: {
         beforeValidate(order) {
           if (!order.code) {
@@ -130,6 +143,7 @@ module.exports = (sequelize, DataTypes) => {
               .padStart(4, '0')}`;
           }
         },
+
         beforeSave(order) {
           order.total =
             Number(order.subtotal || 0) +

@@ -1,7 +1,8 @@
 'use strict';
 
-const { Op } = require('sequelize');
+const { Op, col } = require('sequelize');
 const { Order, OrderItem, User, Product, Transaction } = require('../../models'); // ✅ Transaction + Product
+
 const {
   ORDER_STATUSES,
   ORDER_PAYMENT_STATUSES,
@@ -12,13 +13,13 @@ const {
   formatCurrency,
 } = require('../utils/labels');
 
-// ✅ Geo-scope (admin scoped)
-const geo = require('../utils/geoScope');
-const applyGeoScope = geo.applyGeoScope;
-const getUserGeoScope = geo.getUserGeoScope;
-const isGlobalAdmin =
-  geo.isGlobalAdmin ||
-  ((u) => u?.role === 'admin' && !(u?.countryId || u?.regionId));
+// ✅ Geo-scope (model-aware)
+const {
+  applyGeoScopeForModel,
+  filterGeoAssignmentsForModel,
+  getUserGeoScope,
+  isGlobalAdmin,
+} = require('../utils/geoScope');
 
 /* ============================================================
    🔧 Helpers
@@ -71,7 +72,9 @@ function readRegionIdFrom(obj) {
  * - Client : rétro-compatible (ne force pas), accepte si fourni
  */
 function getEffectiveScopeForCreate(req, norm) {
-  const userScope = getUserGeoScope ? getUserGeoScope(req.user) : { countryId: null, regionId: null };
+  const userScope = getUserGeoScope
+    ? getUserGeoScope(req.user)
+    : { countryId: null, regionId: null };
 
   if (isGlobalAdmin(req.user)) {
     return {
@@ -99,8 +102,8 @@ function getEffectiveScopeForCreate(req, norm) {
  * Applique un scope à un WHERE Order.
  * - Client: toujours userId = self, + scope optionnel si fourni en query
  * - Admin global: pas de filtre géographique
- * - Admin scoped: filtré via applyGeoScope
- * - Agent: filtré via applyGeoScope
+ * - Admin scoped: filtré via applyGeoScopeForModel
+ * - Agent: filtré via applyGeoScopeForModel
  */
 function applyOrderScopeWhere(where, req, { allowClientProvidedScope = true } = {}) {
   const role = req.user?.role;
@@ -120,20 +123,20 @@ function applyOrderScopeWhere(where, req, { allowClientProvidedScope = true } = 
 
   if (isGlobalAdmin(req.user)) return where;
 
-  // Master/admin scoped + agent
-  return applyGeoScope ? applyGeoScope(where, req.user) : where;
+  // Master/admin scoped + agent (model-aware)
+  return applyGeoScopeForModel ? applyGeoScopeForModel(where, req.user, Order) : where;
 }
 
 /**
  * Scope produit (création commande) :
  * - Admin global : pas de filtre
- * - Admin scoped / agent : filtre geo
+ * - Admin scoped / agent : filtre geo (model-aware)
  * - Client : pas de filtre geo (catalogue global), rétro-compatible
  */
 function applyProductScopeWhere(where, req) {
   if (isGlobalAdmin(req.user)) return where;
   if (req.user?.role === 'admin' || req.user?.role === 'agent') {
-    return applyGeoScope ? applyGeoScope(where, req.user) : where;
+    return applyGeoScopeForModel ? applyGeoScopeForModel(where, req.user, Product) : where;
   }
   return where;
 }
@@ -272,22 +275,25 @@ exports.create = async (req, res) => {
     const effectiveScope = getEffectiveScopeForCreate(req, norm);
 
     // 1) Création de la commande (sans items pour l’instant)
-    const order = await Order.create({
-      userId: ownerId,
-      status: norm.status,
-      paymentStatus: norm.paymentStatus,
-      paymentMethod: norm.paymentMethod,
-      currency: String(norm.currency || 'XOF').toUpperCase(),
-      subtotal: toNullableNumber(norm.subtotal) ?? 0,
-      tax: toNullableNumber(norm.tax) ?? 0,
-      shipping: toNullableNumber(norm.shipping) ?? 0,
-      total: 0,
-      notes: toTrimOrNull(norm.note),
+    // ✅ model-aware: on filtre les champs geo si le modèle ne les supporte pas
+    const order = await Order.create(
+      filterGeoAssignmentsForModel(Order, {
+        userId: ownerId,
+        status: norm.status,
+        paymentStatus: norm.paymentStatus,
+        paymentMethod: norm.paymentMethod,
+        currency: String(norm.currency || 'XOF').toUpperCase(),
+        subtotal: toNullableNumber(norm.subtotal) ?? 0,
+        tax: toNullableNumber(norm.tax) ?? 0,
+        shipping: toNullableNumber(norm.shipping) ?? 0,
+        total: 0,
+        notes: toTrimOrNull(norm.note),
 
-      // ✅ multi-pays
-      countryId: effectiveScope.countryId,
-      regionId: effectiveScope.regionId,
-    });
+        // ✅ multi-pays
+        countryId: effectiveScope.countryId,
+        regionId: effectiveScope.regionId,
+      })
+    );
 
     const items = Array.isArray(norm.items) ? norm.items : [];
 
@@ -317,12 +323,15 @@ exports.create = async (req, res) => {
       products.forEach((p) => productsById.set(p.id, p));
 
       // Si admin scoped, et qu’un produit n’est pas visible => bloquer
-      if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'agent')) {
+      if (
+        !isGlobalAdmin(req.user) &&
+        (req.user.role === 'admin' || req.user.role === 'agent')
+      ) {
         for (const pid of productIds) {
           if (!productsById.has(pid)) {
             await order.destroy();
             return res.status(403).json({
-              error: "Produit hors scope géographique (accès interdit).",
+              error: 'Produit hors scope géographique (accès interdit).',
             });
           }
         }
@@ -401,7 +410,11 @@ exports.create = async (req, res) => {
     await order.save();
 
     const created = await Order.findOne({
-      where: applyOrderScopeWhere({ id: order.id }, req, { allowClientProvidedScope: false }),
+      where: applyOrderScopeWhere(
+        { id: order.id },
+        req,
+        { allowClientProvidedScope: false }
+      ),
       include: [
         { model: User, as: 'user', attributes: ['id', 'email', 'firstName', 'lastName'] },
         { model: OrderItem, as: 'items' },
@@ -420,6 +433,7 @@ exports.create = async (req, res) => {
       .json({ error: 'Erreur lors de la création de la commande.' });
   }
 };
+
 /* ============================================================
    2️⃣ LIST — Liste paginée + filtres (+ multi-pays)
 ============================================================ */
@@ -451,7 +465,7 @@ exports.list = async (req, res) => {
       where.userId = userId;
     }
 
-    // ✅ application du scope multi-pays
+    // ✅ application du scope multi-pays (model-aware)
     where = applyOrderScopeWhere(where, req, { allowClientProvidedScope: true });
 
     const { rows, count } = await Order.findAndCountAll({
@@ -463,7 +477,10 @@ exports.list = async (req, res) => {
           attributes: ['id', 'email', 'firstName', 'lastName'],
         },
       ],
-      order: [['createdAt', 'DESC']],
+
+      // ✅ FIX MYSQL: utiliser la vraie colonne (created_at)
+      order: [[col('Order.created_at'), 'DESC']],
+
       limit,
       offset,
       distinct: true,
@@ -490,9 +507,11 @@ exports.detail = async (req, res) => {
     if (!id) return res.status(400).json({ error: 'ID invalide' });
 
     const order = await Order.findOne({
-      where: applyOrderScopeWhere({ id }, req, {
-        allowClientProvidedScope: false,
-      }),
+      where: applyOrderScopeWhere(
+        { id },
+        req,
+        { allowClientProvidedScope: false }
+      ),
       include: [
         {
           model: User,
@@ -529,9 +548,11 @@ exports.update = async (req, res) => {
     if (!id) return res.status(400).json({ error: 'ID invalide.' });
 
     const order = await Order.findOne({
-      where: applyOrderScopeWhere({ id }, req, {
-        allowClientProvidedScope: false,
-      }),
+      where: applyOrderScopeWhere(
+        { id },
+        req,
+        { allowClientProvidedScope: false }
+      ),
     });
 
     if (!order) {
@@ -547,22 +568,26 @@ exports.update = async (req, res) => {
     if (norm.status) order.status = norm.status;
     if (norm.paymentStatus) order.paymentStatus = norm.paymentStatus;
     if (norm.paymentMethod) order.paymentMethod = norm.paymentMethod;
-    if (norm.currency)
-      order.currency = String(norm.currency).toUpperCase();
+    if (norm.currency) order.currency = String(norm.currency).toUpperCase();
     if (norm.tax !== null) order.tax = toNullableNumber(norm.tax) ?? 0;
-    if (norm.shipping !== null)
-      order.shipping = toNullableNumber(norm.shipping) ?? 0;
-    if (norm.note !== undefined)
-      order.notes = toTrimOrNull(norm.note);
+    if (norm.shipping !== null) order.shipping = toNullableNumber(norm.shipping) ?? 0;
+    if (norm.note !== undefined) order.notes = toTrimOrNull(norm.note);
 
-    // ✅ multi-pays : admin global uniquement
+    // ✅ multi-pays : admin global uniquement (model-aware safe)
     if (isGlobalAdmin(req.user)) {
-      if (norm.countryId !== null && norm.countryId !== undefined) {
-        order.countryId = toSafeInt(norm.countryId);
-      }
-      if (norm.regionId !== null && norm.regionId !== undefined) {
-        order.regionId = toSafeInt(norm.regionId);
-      }
+      const geoAssignments = filterGeoAssignmentsForModel(Order, {
+        countryId:
+          norm.countryId !== null && norm.countryId !== undefined
+            ? toSafeInt(norm.countryId)
+            : undefined,
+        regionId:
+          norm.regionId !== null && norm.regionId !== undefined
+            ? toSafeInt(norm.regionId)
+            : undefined,
+      });
+
+      if (geoAssignments.countryId !== undefined) order.countryId = geoAssignments.countryId;
+      if (geoAssignments.regionId !== undefined) order.regionId = geoAssignments.regionId;
     }
 
     const { subtotal } = await recomputeTotals(order.id);
@@ -590,20 +615,20 @@ exports.update = async (req, res) => {
         });
 
         if (!existingTx) {
-          await Transaction.create({
-            userId: order.userId,
-            orderId: order.id,
-            type: 'expense',
-            amount: order.total || 0,
-            currency: order.currency || 'XOF',
-            paymentMethod: order.paymentMethod || 'inconnu',
-            description: `Paiement de la commande ${
-              order.code || `#${order.id}`
-            }`,
-            status: 'completed',
-            countryId: order.countryId ?? null,
-            regionId: order.regionId ?? null,
-          });
+          await Transaction.create(
+            filterGeoAssignmentsForModel(Transaction, {
+              userId: order.userId,
+              orderId: order.id,
+              type: 'expense',
+              amount: order.total || 0,
+              currency: order.currency || 'XOF',
+              paymentMethod: order.paymentMethod || 'inconnu',
+              description: `Paiement de la commande ${order.code || `#${order.id}`}`,
+              status: 'completed',
+              countryId: order.countryId ?? null,
+              regionId: order.regionId ?? null,
+            })
+          );
         } else if (existingTx.status !== 'completed') {
           existingTx.status = 'completed';
 
@@ -617,17 +642,16 @@ exports.update = async (req, res) => {
           await existingTx.save();
         }
       } catch (err) {
-        console.error(
-          '⚠️ Erreur transaction automatique commande:',
-          err
-        );
+        console.error('⚠️ Erreur transaction automatique commande:', err);
       }
     }
 
     const updated = await Order.findOne({
-      where: applyOrderScopeWhere({ id: order.id }, req, {
-        allowClientProvidedScope: false,
-      }),
+      where: applyOrderScopeWhere(
+        { id: order.id },
+        req,
+        { allowClientProvidedScope: false }
+      ),
       include: [
         {
           model: User,
@@ -656,9 +680,11 @@ exports.remove = async (req, res) => {
     if (!id) return res.status(400).json({ error: 'ID invalide.' });
 
     const order = await Order.findOne({
-      where: applyOrderScopeWhere({ id }, req, {
-        allowClientProvidedScope: false,
-      }),
+      where: applyOrderScopeWhere(
+        { id },
+        req,
+        { allowClientProvidedScope: false }
+      ),
       include: [{ model: OrderItem, as: 'items' }],
     });
 
@@ -671,14 +697,10 @@ exports.remove = async (req, res) => {
         order.userId !== req.user.id ||
         !['created', 'processing'].includes(order.status)
       ) {
-        return res
-          .status(403)
-          .json({ error: 'Suppression non autorisée.' });
+        return res.status(403).json({ error: 'Suppression non autorisée.' });
       }
     } else if (req.user.role !== 'admin') {
-      return res
-        .status(403)
-        .json({ error: 'Suppression non autorisée.' });
+      return res.status(403).json({ error: 'Suppression non autorisée.' });
     }
 
     const hasDelivered = (order.items || []).some((it) =>
@@ -686,8 +708,7 @@ exports.remove = async (req, res) => {
     );
     if (hasDelivered) {
       return res.status(400).json({
-        error:
-          'Impossible de supprimer une commande avec des articles livrés.',
+        error: 'Impossible de supprimer une commande avec des articles livrés.',
       });
     }
 

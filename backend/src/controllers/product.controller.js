@@ -1,10 +1,15 @@
 'use strict';
 
-const { Op } = require('sequelize');
+const { Op, col } = require('sequelize');
 const { Product, Category } = require('../../models');
 const { formatCurrency } = require('../utils/labels');
 const imageKit = require('../helpers/teranga-imagekit');
-const { applyGeoScope, getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
+const {
+  applyGeoScopeForModel,
+  filterGeoAssignmentsForModel,
+  getUserGeoScope,
+  isGlobalAdmin,
+} = require('../utils/geoScope');
 
 /* ============================================================
    🔧 Helpers génériques
@@ -62,10 +67,7 @@ function isImageKitEnabled() {
    🖼 Upload ImageKit (safe)
 ============================================================ */
 async function uploadToImageKit(file) {
-  if (!isImageKitEnabled()) {
-    console.warn('⚠️ ImageKit désactivé : upload ignoré');
-    return null;
-  }
+  if (!isImageKitEnabled()) return null;
 
   try {
     const uploaded = await imageKit.upload({
@@ -74,12 +76,9 @@ async function uploadToImageKit(file) {
       folder: '/teranga/products',
     });
 
-    return {
-      url: uploaded.url,
-      fileId: uploaded.fileId,
-    };
+    return { url: uploaded.url, fileId: uploaded.fileId };
   } catch (err) {
-    console.error(`❌ Erreur upload ImageKit (${file.originalname}):`, err);
+    console.error(`❌ Erreur upload ImageKit (${file?.originalname || 'file'}):`, err);
     return null;
   }
 }
@@ -117,7 +116,7 @@ async function extractImagesFromRequestImageKit(req) {
 }
 
 /* ============================================================
-   🏷️ withLabels — version complète et FIABLE
+   🏷️ withLabels — version FIABLE (compat frontend)
 ============================================================ */
 function withLabels(prod) {
   if (!prod) return null;
@@ -132,13 +131,9 @@ function withLabels(prod) {
 
   const coverUrl = cover?.url || null;
 
-  const galleryUrls = gallery
-    .map((g) => g?.url)
-    .filter((u) => typeof u === 'string' && u.length > 0);
-
   const rawUrls = [];
   if (coverUrl) rawUrls.push(coverUrl);
-  rawUrls.push(...galleryUrls);
+  rawUrls.push(...gallery.map((g) => g?.url).filter(Boolean));
 
   const seen = new Set();
   const allImageUrls = rawUrls.filter((u) => {
@@ -150,12 +145,12 @@ function withLabels(prod) {
   return {
     ...p,
     imageUrl: coverUrl,
-    allImageUrls,
     image: coverUrl,
     imagePath: coverUrl,
     coverImage: cover,
     gallery,
     images: gallery,
+    allImageUrls,
     currencyLabel: formatCurrency(p.currency || 'XOF'),
   };
 }
@@ -172,7 +167,7 @@ function canWriteProduct(user) {
 }
 
 /* ============================================================
-   🌍 Geo helpers (Commerce: snake_case en DB)
+   🌍 Geo helpers
 ============================================================ */
 function readBodyCountryId(req) {
   return toSafeInt(req.body?.countryId ?? req.body?.country_id);
@@ -182,15 +177,6 @@ function readBodyRegionId(req) {
   return toSafeInt(req.body?.regionId ?? req.body?.region_id);
 }
 
-/**
- * Retourne un objet d’assignation de scope pour Product.create / Product.update :
- * - Admin global: peut choisir country/region depuis body
- * - Admin scoped : scope imposé depuis req.user
- *
- * IMPORTANT :
- * - Commerce est en snake_case: country_id / region_id
- * - On garde aussi countryId/regionId pour rétro-compatibilité si le modèle ne mappe pas encore.
- */
 function buildProductScopeAssignments(req) {
   const scope = getUserGeoScope(req.user);
   const desiredCountryId = readBodyCountryId(req);
@@ -199,15 +185,18 @@ function buildProductScopeAssignments(req) {
   const finalCountryId = isGlobalAdmin(req.user) ? desiredCountryId : scope.countryId;
   const finalRegionId = isGlobalAdmin(req.user) ? desiredRegionId : scope.regionId;
 
-  return {
-    // snake_case (commerce)
+  const assignments = {
     country_id: finalCountryId ?? null,
     region_id: finalRegionId ?? null,
-
-    // camelCase (fallback si modèle pas encore field-mappé)
     countryId: finalCountryId ?? null,
     regionId: finalRegionId ?? null,
   };
+
+  return filterGeoAssignmentsForModel(Product, assignments);
+}
+
+function canWriteGeoField(fieldName) {
+  return Boolean(Product.rawAttributes?.[fieldName]);
 }
 
 /* ============================================================
@@ -215,8 +204,9 @@ function buildProductScopeAssignments(req) {
 ============================================================ */
 exports.create = async (req, res) => {
   try {
-    if (!canWriteProduct(req.user))
+    if (!canWriteProduct(req.user)) {
       return res.status(403).json({ error: 'Accès interdit' });
+    }
 
     const {
       categoryId,
@@ -230,36 +220,40 @@ exports.create = async (req, res) => {
       isActive,
     } = req.body || {};
 
-    if (!name)
+    if (!name) {
       return res.status(400).json({ error: 'Nom du produit requis' });
+    }
 
     const cid = toSafeInt(categoryId);
-    const cat = cid ? await Category.findByPk(cid) : null;
+    const category = cid ? await Category.findByPk(cid) : null;
 
     const priceNum = toNullableNumber(price);
-    if (price !== undefined && priceNum === null)
+    if (price !== undefined && priceNum === null) {
       return res.status(400).json({ error: 'Le prix doit être un nombre.' });
+    }
 
     const stockNum = toSafeInt(stock);
+    if (stock !== undefined && stockNum === null && stock !== '') {
+      return res.status(400).json({ error: 'Stock invalide' });
+    }
+
     const { coverImage, gallery } = await extractImagesFromRequestImageKit(req);
 
     const baseSlug = slugify(name);
     let finalSlug = baseSlug || `p-${Date.now()}`;
     let i = 1;
 
-    // ✅ Unique slug dans le même scope (important multi-pays)
+    // ✅ Unique slug dans le scope (multi-pays)
     while (
       await Product.findOne({
-        where: applyGeoScope({ slug: finalSlug }, req.user),
+        where: applyGeoScopeForModel({ slug: finalSlug }, req.user, Product),
       })
     ) {
       finalSlug = `${baseSlug}-${i++}`;
     }
 
-    const scopeAssignments = buildProductScopeAssignments(req);
-
     const prod = await Product.create({
-      categoryId: cat ? cat.id : null,
+      categoryId: category?.id ?? null,
       name: String(name).trim(),
       slug: finalSlug,
       sku: toTrimOrNull(sku),
@@ -274,13 +268,11 @@ exports.create = async (req, res) => {
         typeof isActive === 'undefined'
           ? true
           : String(isActive) === 'true' || isActive === true,
-
-      // 🌍 scope
-      ...scopeAssignments,
+      ...buildProductScopeAssignments(req),
     });
 
     const created = await Product.findOne({
-      where: applyGeoScope({ id: prod.id }, req.user),
+      where: applyGeoScopeForModel({ id: prod.id }, req.user, Product),
       include: [{ model: Category, as: 'category' }],
     });
 
@@ -299,8 +291,9 @@ exports.create = async (req, res) => {
 ============================================================ */
 exports.list = async (req, res) => {
   try {
-    if (!canReadProduct(req.user))
+    if (!canReadProduct(req.user)) {
       return res.status(403).json({ error: 'Accès interdit' });
+    }
 
     const q = toTrimOrNull(req.query?.q);
     const categoryId = toSafeInt(req.query?.categoryId);
@@ -318,16 +311,18 @@ exports.list = async (req, res) => {
     }
 
     if (categoryId) where.categoryId = categoryId;
-    if (typeof active !== 'undefined')
-      where.isActive = String(active) === 'true';
+    if (typeof active !== 'undefined') where.isActive = String(active) === 'true';
 
-    // 🌍 scope
-    where = applyGeoScope(where, req.user);
+    // 🌍 scope (safe selon modèle)
+    where = applyGeoScopeForModel(where, req.user, Product);
 
     const { rows, count } = await Product.findAndCountAll({
       where,
       include: [{ model: Category, as: 'category' }],
-      order: [['createdAt', 'DESC']],
+
+      // ✅ FIX DÉFINITIF : la colonne MySQL réelle (underscored)
+      order: [[col('Product.created_at'), 'DESC']],
+
       limit,
       offset,
       distinct: true,
@@ -348,14 +343,15 @@ exports.list = async (req, res) => {
 ============================================================ */
 exports.detail = async (req, res) => {
   try {
-    if (!canReadProduct(req.user))
+    if (!canReadProduct(req.user)) {
       return res.status(403).json({ error: 'Accès interdit' });
+    }
 
     const id = toSafeInt(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID invalide' });
 
     const prod = await Product.findOne({
-      where: applyGeoScope({ id }, req.user),
+      where: applyGeoScopeForModel({ id }, req.user, Product),
       include: [{ model: Category, as: 'category' }],
     });
 
@@ -373,14 +369,15 @@ exports.detail = async (req, res) => {
 ============================================================ */
 exports.update = async (req, res) => {
   try {
-    if (!canWriteProduct(req.user))
+    if (!canWriteProduct(req.user)) {
       return res.status(403).json({ error: 'Accès interdit' });
+    }
 
     const id = toSafeInt(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID invalide' });
 
     const prod = await Product.findOne({
-      where: applyGeoScope({ id }, req.user),
+      where: applyGeoScopeForModel({ id }, req.user, Product),
     });
 
     if (!prod) return res.status(404).json({ error: 'Produit introuvable' });
@@ -398,8 +395,7 @@ exports.update = async (req, res) => {
     } = req.body || {};
 
     if (categoryId !== undefined) {
-      const cid = toSafeInt(categoryId);
-      prod.categoryId = cid || null;
+      prod.categoryId = toSafeInt(categoryId) || null;
     }
 
     let regenerateSlug = false;
@@ -415,64 +411,65 @@ exports.update = async (req, res) => {
 
     if (price !== undefined) {
       const priceNum = toNullableNumber(price);
-      if (priceNum === null)
-        return res.status(400).json({ error: 'Prix invalide' });
+      if (priceNum === null) return res.status(400).json({ error: 'Prix invalide' });
       prod.price = priceNum;
     }
 
-    if (currency !== undefined)
+    if (currency !== undefined) {
       prod.currency = String(currency).toUpperCase().trim();
+    }
 
     if (stock !== undefined) {
       const stockNum = toSafeInt(stock);
-      if (stockNum === null && stock !== '')
+      if (stockNum === null && stock !== '') {
         return res.status(400).json({ error: 'Stock invalide' });
+      }
       prod.stock = stockNum ?? prod.stock;
     }
 
     if (description !== undefined) prod.description = toTrimOrNull(description);
-    if (shortDescription !== undefined)
-      prod.shortDescription = toTrimOrNull(shortDescription);
+    if (shortDescription !== undefined) prod.shortDescription = toTrimOrNull(shortDescription);
 
-    if (typeof isActive !== 'undefined')
+    if (typeof isActive !== 'undefined') {
       prod.isActive = String(isActive) === 'true' || isActive === true;
-
-    // 🌍 scope update:
-    // - admin global peut changer le scope
-    // - admin scoped ne peut pas sortir de son scope (on impose)
-    const scopeAssignments = buildProductScopeAssignments(req);
-
-    // Si admin global n’a PAS envoyé de scope, on ne force pas à null :
-    // on conserve les valeurs existantes (rétro-compatible).
-    if (isGlobalAdmin(req.user)) {
-      const desiredCountry = readBodyCountryId(req);
-      const desiredRegion = readBodyRegionId(req);
-
-      if (req.body?.countryId !== undefined || req.body?.country_id !== undefined) {
-        prod.country_id = desiredCountry;
-        prod.countryId = desiredCountry;
-      }
-
-      if (req.body?.regionId !== undefined || req.body?.region_id !== undefined) {
-        prod.region_id = desiredRegion;
-        prod.regionId = desiredRegion;
-      }
-    } else {
-      // Master/admin scoped => impose
-      if (scopeAssignments.country_id !== undefined) {
-        prod.country_id = scopeAssignments.country_id;
-        prod.countryId = scopeAssignments.countryId;
-      }
-      if (scopeAssignments.region_id !== undefined) {
-        prod.region_id = scopeAssignments.region_id;
-        prod.regionId = scopeAssignments.regionId;
-      }
     }
 
+    /* ---------------------------
+       🌍 scope update
+    --------------------------- */
+    const scopeAssignments = buildProductScopeAssignments(req);
+
+    if (isGlobalAdmin(req.user)) {
+      const wantsCountry =
+        req.body?.countryId !== undefined || req.body?.country_id !== undefined;
+      const wantsRegion =
+        req.body?.regionId !== undefined || req.body?.region_id !== undefined;
+
+      if (wantsCountry) {
+        if (canWriteGeoField('country_id')) prod.country_id = scopeAssignments.country_id;
+        if (canWriteGeoField('countryId')) prod.countryId = scopeAssignments.countryId;
+      }
+      if (wantsRegion) {
+        if (canWriteGeoField('region_id')) prod.region_id = scopeAssignments.region_id;
+        if (canWriteGeoField('regionId')) prod.regionId = scopeAssignments.regionId;
+      }
+    } else {
+      // admin scoped => impose
+      if (canWriteGeoField('country_id')) prod.country_id = scopeAssignments.country_id;
+      if (canWriteGeoField('countryId')) prod.countryId = scopeAssignments.countryId;
+      if (canWriteGeoField('region_id')) prod.region_id = scopeAssignments.region_id;
+      if (canWriteGeoField('regionId')) prod.regionId = scopeAssignments.regionId;
+    }
+
+    /* ---------------------------
+       🖼 Images update (ImageKit)
+       - si de nouvelles images arrivent : suppression anciennes + remplacement
+    --------------------------- */
     const { coverImage, gallery, hasNewImages } =
       await extractImagesFromRequestImageKit(req);
 
     if (hasNewImages) {
+      // delete previous files (best effort)
       if (Array.isArray(prod.gallery)) {
         for (const img of prod.gallery) {
           if (img?.fileId) {
@@ -487,29 +484,33 @@ exports.update = async (req, res) => {
       prod.gallery = gallery.map((g) => ({ url: g.url, fileId: g.fileId }));
     }
 
+    /* ---------------------------
+       🔁 Slug regeneration
+    --------------------------- */
     if (regenerateSlug && prod.name) {
       const baseSlug = slugify(prod.name);
       let finalSlug = baseSlug || `p-${Date.now()}`;
       let i = 1;
 
-      // ✅ Unique slug dans le même scope (important multi-pays)
       while (
         await Product.findOne({
-          where: applyGeoScope(
+          where: applyGeoScopeForModel(
             { slug: finalSlug, id: { [Op.ne]: prod.id } },
-            req.user
+            req.user,
+            Product
           ),
         })
       ) {
         finalSlug = `${baseSlug}-${i++}`;
       }
+
       prod.slug = finalSlug;
     }
 
     await prod.save();
 
     const updated = await Product.findOne({
-      where: applyGeoScope({ id: prod.id }, req.user),
+      where: applyGeoScopeForModel({ id: prod.id }, req.user, Product),
       include: [{ model: Category, as: 'category' }],
     });
 
@@ -528,8 +529,9 @@ exports.update = async (req, res) => {
 ============================================================ */
 exports.remove = async (req, res) => {
   try {
-    if (!canWriteProduct(req.user))
+    if (!canWriteProduct(req.user)) {
       return res.status(403).json({ error: 'Accès interdit' });
+    }
 
     const id = toSafeInt(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID invalide' });
@@ -537,7 +539,7 @@ exports.remove = async (req, res) => {
     const force = String(req.query?.force || '').toLowerCase() === 'true';
 
     const prod = await Product.findOne({
-      where: applyGeoScope({ id }, req.user),
+      where: applyGeoScopeForModel({ id }, req.user, Product),
     });
 
     if (!prod) return res.status(404).json({ error: 'Produit introuvable' });

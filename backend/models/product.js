@@ -71,7 +71,19 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'Product',
       tableName: 'products',
-      timestamps: true, // ✅ createdAt / updatedAt camelCase
+
+      /**
+       * ✅ IMPORTANT
+       * Ta DB utilise snake_case : created_at / updated_at
+       * Sans ça, Sequelize va chercher createdAt/updatedAt => ER_BAD_FIELD_ERROR
+       */
+      timestamps: true,
+      underscored: true, // ✅ mappe automatiquement createdAt -> created_at, updatedAt -> updated_at
+
+      // ✅ Double sécurité explicite (même si underscored est changé un jour)
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+
       indexes: [
         { fields: ['slug'], unique: true },
         { fields: ['sku'], unique: true },

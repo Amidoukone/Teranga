@@ -30,6 +30,15 @@ function isScopedAdmin(user) {
   return !isGlobalAdmin(user);
 }
 
+/**
+ * Applique un filtre geo (countryId/regionId) sur un WHERE Sequelize.
+ * - Uniquement pour admin/agent
+ * - Admin global => aucun filtre
+ * - Admin/agent scoped => filtre regionId si présent sinon countryId
+ *
+ * ⚠️ Comportement historique conservé :
+ * si admin/agent n'a aucun scope => renvoie un where "vide" (id:0)
+ */
 function applyGeoScope(where = {}, user) {
   if (!user) return where;
 
@@ -43,7 +52,76 @@ function applyGeoScope(where = {}, user) {
   if (regionId) return { ...where, regionId };
   if (countryId) return { ...where, countryId };
 
+  // ✅ On conserve exactement la logique existante (anti-régression)
   return { ...where, id: 0 };
+}
+
+/**
+ * Vérifie si un modèle Sequelize supporte le geo-scope
+ * via rawAttributes (countryId/regionId ou country_id/region_id).
+ */
+function modelSupportsGeoScope(model) {
+  if (!model || !model.rawAttributes) return false;
+
+  return Boolean(
+    model.rawAttributes.countryId ||
+      model.rawAttributes.regionId ||
+      model.rawAttributes.country_id ||
+      model.rawAttributes.region_id
+  );
+}
+
+/**
+ * Applique le scope uniquement si le modèle a bien les champs geo.
+ * ✅ Permet d'éviter des filtres sur des modèles non concernés (source d'erreurs).
+ */
+function applyGeoScopeForModel(where = {}, user, model) {
+  if (!modelSupportsGeoScope(model)) return where;
+  return applyGeoScope(where, user);
+}
+
+/**
+ * Nettoie un objet d’assignation (create/update) selon les champs du modèle.
+ * Exemple: si un modèle n'a pas regionId, on supprime regionId/region_id.
+ *
+ * ✅ Utile pour éviter d'envoyer à Sequelize des champs inconnus
+ * (ou d'introduire des incohérences snake/camel).
+ */
+function filterGeoAssignmentsForModel(model, assignments = {}) {
+  if (!assignments || typeof assignments !== "object") return assignments;
+
+  // Si le modèle ne supporte pas le geo-scope, on enlève tous les champs geo.
+  if (!modelSupportsGeoScope(model)) {
+    const {
+      countryId,
+      regionId,
+      country_id,
+      region_id,
+      ...rest
+    } = assignments;
+    return rest;
+  }
+
+  // Modèle supporte le geo-scope : on supprime seulement les champs inexistants.
+  const out = { ...assignments };
+  const attrs = model?.rawAttributes || {};
+
+  const hasCountry =
+    Boolean(attrs.countryId) || Boolean(attrs.country_id);
+  const hasRegion =
+    Boolean(attrs.regionId) || Boolean(attrs.region_id);
+
+  if (!hasCountry) {
+    delete out.countryId;
+    delete out.country_id;
+  }
+
+  if (!hasRegion) {
+    delete out.regionId;
+    delete out.region_id;
+  }
+
+  return out;
 }
 
 function canAccessGeoResource(resource, user) {
@@ -52,10 +130,8 @@ function canAccessGeoResource(resource, user) {
 
   const { countryId, regionId } = getUserGeoScope(user);
 
-  const resRegion =
-    resource?.regionId ?? resource?.region_id ?? null;
-  const resCountry =
-    resource?.countryId ?? resource?.country_id ?? null;
+  const resRegion = resource?.regionId ?? resource?.region_id ?? null;
+  const resCountry = resource?.countryId ?? resource?.country_id ?? null;
 
   if (regionId) return String(resRegion) === String(regionId);
   if (countryId) return String(resCountry) === String(countryId);
@@ -65,7 +141,9 @@ function canAccessGeoResource(resource, user) {
 
 module.exports = {
   applyGeoScope,
+  applyGeoScopeForModel,
   canAccessGeoResource,
+  filterGeoAssignmentsForModel,
   getUserGeoScope,
   toSafeInt,
   isGlobalAdmin,

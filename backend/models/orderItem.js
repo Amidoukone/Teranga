@@ -9,6 +9,7 @@ module.exports = (sequelize, DataTypes) => {
         as: 'order',
         onDelete: 'CASCADE',
       });
+
       OrderItem.belongsTo(models.Product, {
         foreignKey: 'productId',
         as: 'product',
@@ -19,21 +20,65 @@ module.exports = (sequelize, DataTypes) => {
 
   OrderItem.init(
     {
-      orderId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-      productId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+      orderId: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        field: 'order_id',
+      },
 
-      name: { type: DataTypes.STRING(180), allowNull: false }, // snapshot
-      sku: { type: DataTypes.STRING(80), allowNull: true },
-      price: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
-      quantity: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
-      total: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
-      meta: { type: DataTypes.JSON, allowNull: true }, // variantes, attrs…
+      productId: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: true,
+        field: 'product_id',
+      },
+
+      name: {
+        type: DataTypes.STRING(180),
+        allowNull: false, // snapshot produit
+      },
+
+      sku: {
+        type: DataTypes.STRING(80),
+        allowNull: true,
+      },
+
+      price: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: false,
+        defaultValue: 0,
+      },
+
+      quantity: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 1,
+      },
+
+      total: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: false,
+        defaultValue: 0,
+      },
+
+      meta: {
+        type: DataTypes.JSON,
+        allowNull: true, // variantes, attributs, options…
+      },
     },
     {
       sequelize,
       modelName: 'OrderItem',
       tableName: 'order_items',
+
+      /**
+       * ✅ IMPORTANT
+       * Table technique → PAS de timestamps
+       * évite toute recherche de createdAt / updatedAt
+       */
+      timestamps: false,
+
       underscored: true,
+
       indexes: [
         { fields: ['order_id'] },
         { fields: ['product_id'] },
