@@ -212,19 +212,22 @@ function NavBar() {
   /* ============================================================================ */
   if (!user && isPublic) {
     return (
-      <nav className="bg-slate-900/90 backdrop-blur-md text-white shadow-md px-5 py-4 sticky top-0 z-50">
+      <nav className="bg-[#0E1628]/95 backdrop-blur-xl text-white border-b border-[#1E2A45] shadow-[0_8px_30px_rgba(0,0,0,0.35)] px-5 py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-2 text-cyan-400 font-bold text-lg">
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-[#00C2FF] font-semibold tracking-wide text-[1.05rem]"
+          >
             {Logo} Teranga
           </Link>
 
           <div className="flex gap-3 text-sm">
-            <Link to="/login" className="hover:text-cyan-400">
+            <Link to="/login" className="transition-colors duration-200 hover:text-[#00C2FF]">
               Connexion
             </Link>
             <Link
               to="/register"
-              className="px-4 py-1.5 bg-cyan-500 rounded-md font-semibold hover:bg-cyan-600"
+              className="px-4 py-1.5 bg-[#00C2FF] rounded-md font-semibold transition-colors duration-200 hover:bg-[#00B0E6]"
             >
               Inscription
             </Link>
@@ -240,14 +243,17 @@ function NavBar() {
   return (
     <>
       {/* TOP BAR */}
-      <nav className="bg-slate-900/95 backdrop-blur-xl text-white border-b border-slate-800 shadow-lg sticky top-0 z-50">
+      <nav className="bg-[#0E1628]/95 backdrop-blur-xl text-white border-b border-[#1E2A45] shadow-[0_8px_30px_rgba(0,0,0,0.35)] sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-2">
           {/* LOGO */}
-          <Link to="/" className="flex items-center gap-2 text-cyan-400 font-bold text-lg">
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-[#00C2FF] font-semibold tracking-wide text-[1.05rem]"
+          >
             {Logo} Teranga
           </Link>
 
-          <span className="hidden md:inline bg-slate-800 px-3 py-0.5 rounded-full text-xs uppercase text-gray-300">
+          <span className="hidden md:inline bg-[#111A2E] border border-[#1E2A45] px-3 py-0.5 rounded-full text-xs uppercase tracking-wide text-[#B6C2E2]">
             {prettyRoleLabel(user)}
           </span>
 
@@ -259,7 +265,7 @@ function NavBar() {
           {/* DESKTOP LOGOUT */}
           <button
             onClick={handleLogout}
-            className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-semibold"
+            className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-red-600 text-white rounded-md text-sm font-semibold transition-colors duration-200 hover:bg-red-700"
             aria-label="Déconnexion"
           >
             <LogOut size={16} />
@@ -274,15 +280,19 @@ function NavBar() {
               <Link
                 key={l.path}
                 to={l.path}
-                className={`text-sm transition relative ${
-                  isActive(l.path) ? "text-cyan-400" : "text-gray-300 hover:text-white"
+                className={`text-sm relative transition-colors duration-200 ${
+                  isActive(l.path)
+                    ? "text-[#00C2FF]"
+                    : "text-[#B6C2E2] hover:text-white hover:after:scale-x-100"
                 }`}
                 aria-current={isActive(l.path) ? "page" : undefined}
               >
                 {l.label}
-                {isActive(l.path) && (
-                  <span className="absolute left-0 -bottom-1 w-full h-[2px] bg-cyan-400 rounded-full" />
-                )}
+                <span
+                  className={`absolute left-0 -bottom-1 w-full h-[1.5px] bg-[#00C2FF]/90 rounded-full origin-left transition-transform duration-200 ${
+                    isActive(l.path) ? "scale-x-100" : "scale-x-0"
+                  }`}
+                />
               </Link>
             ))}
           </ul>
@@ -295,7 +305,7 @@ function NavBar() {
       <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent" aria-label="Navigation basse">
         <div className="mx-auto w-full flex justify-center">
           <div className="w-full max-w-xs px-2 pb-2">
-            <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-xl flex px-1 py-1 gap-1">
+            <div className="bg-[#0E1628]/95 backdrop-blur-xl border border-[#1E2A45] rounded-xl shadow-[0_12px_30px_rgba(0,0,0,0.45)] flex px-1 py-1 gap-1">
               {bottomLinks.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
@@ -307,12 +317,12 @@ function NavBar() {
                     className={`flex-1 flex flex-col items-center py-1 rounded-lg text-[0.7rem]
                       ${
                         active
-                          ? "bg-slate-800 text-cyan-300 shadow-[0_0_10px_rgba(56,189,248,0.25)]"
-                          : "text-gray-300 hover:bg-slate-800/60"
+                          ? "bg-[#111A2E] text-[#00C2FF] shadow-[0_0_14px_rgba(0,194,255,0.28)]"
+                          : "text-[#B6C2E2] hover:bg-[#111A2E]/60"
                       }`}
-                    aria-current={active ? "page" : undefined}
+                      aria-current={active ? "page" : undefined}
                   >
-                    <Icon size={17} className={active ? "text-cyan-300" : "text-gray-300"} />
+                    <Icon size={17} className={active ? "text-[#00C2FF]" : "text-[#B6C2E2]"} />
                     {item.label}
                   </Link>
                 );
@@ -324,8 +334,8 @@ function NavBar() {
                 className={`flex-1 flex flex-col items-center py-1 rounded-lg text-[0.7rem]
                   ${
                     openMore
-                      ? "bg-slate-800 text-cyan-300 shadow-[0_0_10px_rgba(56,189,248,0.25)]"
-                      : "text-gray-300 hover:bg-slate-800/60"
+                      ? "bg-[#111A2E] text-[#00C2FF] shadow-[0_0_14px_rgba(0,194,255,0.28)]"
+                      : "text-[#B6C2E2] hover:bg-[#111A2E]/60"
                   }`}
                 aria-expanded={openMore}
                 aria-controls="navbar-more-panel"
@@ -367,19 +377,19 @@ function NavBar() {
               aria-modal="true"
               aria-label="Menu Plus"
             >
-              <div className="w-full max-w-sm bg-slate-900/95 backdrop-blur-2xl border border-slate-600/70 rounded-2xl shadow-2xl overflow-hidden">
+              <div className="w-full max-w-sm bg-[#0E1628]/95 backdrop-blur-2xl border border-[#1E2A45] rounded-2xl shadow-2xl overflow-hidden">
                 {/* HEADER */}
-                <div className="px-4 py-3 border-b border-slate-700/60 flex justify-between items-center bg-slate-800/60">
+                <div className="px-4 py-3 border-b border-[#1E2A45] flex justify-between items-center bg-[#111A2E]">
                   <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 bg-cyan-500 rounded-full flex items-center justify-center text-white font-bold">
+                    <div className="w-9 h-9 bg-gradient-to-br from-[#00C2FF] to-[#0099CC] rounded-full flex items-center justify-center text-white font-semibold">
                       {user?.firstName?.[0] || user?.email?.[0] || "?"}
                     </div>
 
                     <div>
-                      <div className="text-white text-sm font-semibold">
+                      <div className="text-white text-sm font-semibold tracking-wide">
                         {user?.firstName || user?.email}
                       </div>
-                      <div className="text-gray-400 text-[0.7rem] uppercase tracking-wide">
+                      <div className="text-[#B6C2E2] text-[0.7rem] uppercase tracking-wide">
                         {prettyRoleLabel(user)}
                       </div>
                     </div>
@@ -387,7 +397,7 @@ function NavBar() {
 
                   <button
                     onClick={() => setOpenMore(false)}
-                    className="p-1.5 rounded-full bg-slate-800/70 hover:bg-slate-700 text-gray-300"
+                    className="p-1.5 rounded-full bg-[#111A2E] text-[#B6C2E2] transition-colors duration-200 hover:bg-[#1E2A45]"
                     aria-label="Fermer le menu Plus"
                   >
                     <X size={18} />
@@ -395,8 +405,8 @@ function NavBar() {
                 </div>
 
                 {/* ✅ GEO SELECTOR (MOBILE INSIDE PLUS) */}
-                <div className="px-4 py-3 border-b border-slate-700/60">
-                  <div className="text-xs text-gray-400 mb-2">Périmètre</div>
+                <div className="px-4 py-3 border-b border-[#1E2A45]">
+                  <div className="text-xs text-[#B6C2E2] mb-2">Périmètre</div>
                   <GeoSelector />
                 </div>
 
@@ -409,8 +419,8 @@ function NavBar() {
                       onClick={() => setOpenMore(false)}
                       className={`block px-5 py-3 text-sm ${
                         isActive(l.path)
-                          ? "bg-slate-800 text-cyan-300 font-semibold"
-                          : "text-gray-400 hover:bg-slate-800/70"
+                          ? "bg-[#111A2E] text-[#00C2FF] font-semibold"
+                          : "text-[#B6C2E2] transition-colors duration-200 hover:bg-[#111A2E]/70 hover:text-white"
                       }`}
                       aria-current={isActive(l.path) ? "page" : undefined}
                     >
@@ -422,7 +432,7 @@ function NavBar() {
                 {/* LOGOUT */}
                 <button
                   onClick={handleLogout}
-                  className="w-full flex justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
+                  className="w-full flex justify-center gap-2 py-3 bg-red-600 text-white text-sm font-semibold transition-colors duration-200 hover:bg-red-700"
                   aria-label="Déconnexion"
                 >
                   <LogOut size={14} />
