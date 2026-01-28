@@ -3,8 +3,24 @@
 @tailwind utilities;
 
 /* 🎨 Thème global Teranga */
+:root {
+  --color-primary: 0 194 255;
+  --color-primary-dark: 0 153 204;
+  --color-bg-main: 11 18 32;
+  --color-bg-surface: 17 26 46;
+  --color-bg-sidebar: 14 22 40;
+  --color-border: 30 42 69;
+  --color-text-primary: 255 255 255;
+  --color-text-secondary: 182 194 226;
+  --color-text-muted: 138 148 184;
+  --color-success: 46 204 113;
+  --color-warning: 241 196 15;
+  --color-error: 231 76 60;
+  --color-info: 52 152 219;
+}
+
 body {
-  @apply bg-gray-50 text-gray-800;
+  @apply bg-gray-50 text-gray-800 antialiased;
 }
 
 h1, h2, h3 {
@@ -13,4 +29,8 @@ h1, h2, h3 {
 
 button {
   @apply transition rounded-lg;
+}
+
+a {
+  @apply text-blue-500 hover:text-blue-400;
 }

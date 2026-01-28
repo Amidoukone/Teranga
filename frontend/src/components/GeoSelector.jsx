@@ -32,11 +32,11 @@ export default function GeoSelector() {
 
   if (isScopedAdmin) {
     return (
-      <div className="flex items-center gap-2 text-xs text-gray-200">
+      <div className="flex items-center gap-2 text-xs text-gray-400">
         <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-cyan-300">
           Scope
         </span>
-        <span className="text-gray-200">
+        <span className="text-gray-400">
           {selectedCountry?.name || (countryId ? `Pays #${countryId}` : 'Pays')}
         </span>
         {regionId && (
@@ -53,7 +53,7 @@ export default function GeoSelector() {
       <label className="sr-only" htmlFor="geo-country">Pays</label>
       <select
         id="geo-country"
-        className="bg-slate-800 text-gray-200 rounded-md px-2 py-1 border border-slate-700"
+        className="bg-slate-800 text-gray-400 rounded-md px-2 py-1 border border-slate-700"
         value={countryId || ''}
         onChange={(e) => setCountry(e.target.value ? Number(e.target.value) : null)}
       >
@@ -68,7 +68,7 @@ export default function GeoSelector() {
       <label className="sr-only" htmlFor="geo-region">Région</label>
       <select
         id="geo-region"
-        className="bg-slate-800 text-gray-200 rounded-md px-2 py-1 border border-slate-700"
+        className="bg-slate-800 text-gray-400 rounded-md px-2 py-1 border border-slate-700"
         value={regionId || ''}
         onChange={(e) => setRegion(e.target.value ? Number(e.target.value) : null)}
         disabled={!countryId}

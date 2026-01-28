@@ -410,7 +410,7 @@ function NavBar() {
                       className={`block px-5 py-3 text-sm ${
                         isActive(l.path)
                           ? "bg-slate-800 text-cyan-300 font-semibold"
-                          : "text-gray-200 hover:bg-slate-800/70"
+                          : "text-gray-400 hover:bg-slate-800/70"
                       }`}
                       aria-current={isActive(l.path) ? "page" : undefined}
                     >
