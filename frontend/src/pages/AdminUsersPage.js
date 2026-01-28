@@ -81,6 +81,7 @@ export default function AdminUsersPage() {
     country: "",
     onlyPhone: false,
     sort: "-createdAt",
+    adminType: "all",
   });
 
   const {
@@ -135,7 +136,9 @@ export default function AdminUsersPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getUsers(role);
+      const data = await getUsers(role, {
+        adminType: role === "admin" && isGlobalAdmin ? filters.adminType : undefined,
+      });
       setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("❌ Load users error:", err);
@@ -143,7 +146,7 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [role]);
+  }, [filters.adminType, isGlobalAdmin, role]);
 
   useEffect(() => {
     if (isAdmin) load();
@@ -454,13 +457,19 @@ export default function AdminUsersPage() {
 
         {/* FILTER BAR */}
         <div className="mb-6 bg-[#f8f8fa] border border-gray-200 rounded-2xl p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
             {/* Rôle */}
             <div>
               <label className="text-xs font-medium text-gray-600">Catégorie</label>
               <select
                 value={role}
-                onChange={(e) => setRole(e.target.value)}
+                onChange={(e) => {
+                  const nextRole = e.target.value;
+                  setRole(nextRole);
+                  if (nextRole !== "admin") {
+                    setFilters((prev) => ({ ...prev, adminType: "all" }));
+                  }
+                }}
                 className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
               >
                 <option value="client">Clients</option>
@@ -468,6 +477,27 @@ export default function AdminUsersPage() {
                 <option value="admin">Admins</option>
               </select>
             </div>
+
+            {/* Type d'admin (GLOBAL uniquement) */}
+            {role === "admin" && isGlobalAdmin && (
+              <div>
+                <label className="text-xs font-medium text-gray-600">Type d’admin</label>
+                <select
+                  value={filters.adminType}
+                  onChange={(e) =>
+                    setFilters({
+                      ...filters,
+                      adminType: e.target.value,
+                    })
+                  }
+                  className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+                >
+                  <option value="all">Tous</option>
+                  <option value="master">Masters (scopés)</option>
+                  <option value="global">Admins globaux</option>
+                </select>
+              </div>
+            )}
 
             {/* Recherche */}
             <div className="lg:col-span-2">
@@ -535,6 +565,7 @@ export default function AdminUsersPage() {
                   country: "",
                   onlyPhone: false,
                   sort: "-createdAt",
+                  adminType: "all",
                 })
               }
               className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300"
