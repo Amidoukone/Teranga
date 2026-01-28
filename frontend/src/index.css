@@ -4,19 +4,19 @@
 
 /* 🎨 Thème global Teranga */
 :root {
-  --color-primary: 0 194 255;
-  --color-primary-dark: 0 153 204;
-  --color-bg-main: 11 18 32;
-  --color-bg-surface: 17 26 46;
-  --color-bg-sidebar: 14 22 40;
-  --color-border: 30 42 69;
-  --color-text-primary: 255 255 255;
-  --color-text-secondary: 182 194 226;
-  --color-text-muted: 138 148 184;
-  --color-success: 46 204 113;
-  --color-warning: 241 196 15;
-  --color-error: 231 76 60;
-  --color-info: 52 152 219;
+  --color-primary: 14 116 144;
+  --color-primary-dark: 8 78 146;
+  --color-bg-main: 245 247 251;
+  --color-bg-surface: 255 255 255;
+  --color-bg-sidebar: 238 242 249;
+  --color-border: 226 232 240;
+  --color-text-primary: 15 23 42;
+  --color-text-secondary: 51 65 85;
+  --color-text-muted: 100 116 139;
+  --color-success: 16 185 129;
+  --color-warning: 245 158 11;
+  --color-error: 239 68 68;
+  --color-info: 59 130 246;
 }
 
 body {
