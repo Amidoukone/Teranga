@@ -3,6 +3,10 @@
 ## Objectif
 Mettre en place Teranga comme une franchise panafricaine pilotée par un siège central (Teranga OS) et opérée localement par pays/région, afin d’assurer des standards communs tout en permettant l’adaptation locale et l’inclusion de toutes les diasporas africaines.
 
+## Documentation de référence
+- [Plan d’exécution des améliorations](docs/PLAN_EXECUTION.md)
+- [Règles multi-pays & franchise (backend)](backend/docs/multi-country-rules.md)
+
 ## Vision globale (franchise panafricaine)
 - **Plateforme centrale** : Teranga OS, développé et maintenu au siège.
 - **Réseau de franchisés** : franchisés master par pays, franchisés régionaux par ville/région.
