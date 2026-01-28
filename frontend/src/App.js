@@ -5,13 +5,15 @@
 // ✅ 2026: AdminOnboardingPage (Pays → Régions → MASTER)
 // ============================================================================
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import NavBar from './components/NavBar';
 import Analytics from './components/Analytics';
+import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import SetSeo from './components/SetSeo'; // ✅ Source unique SEO
 import { GeoProvider } from './contexts/GeoContext';
+import { getAnalyticsConsent, loadAnalytics } from './utils/analytics';
 
 // 🌐 Pages publiques
 import HomePage from './pages/HomePage';
@@ -156,6 +158,17 @@ function PublicOnly({ children }) {
 // 🧩 App (Final)
 // ============================================================================
 export default function App() {
+  const trackingId = 'G-5JVYGYHZ7Y';
+  const [analyticsConsent, setAnalyticsConsent] = useState(() =>
+    getAnalyticsConsent()
+  );
+
+  useEffect(() => {
+    if (analyticsConsent === 'granted') {
+      loadAnalytics(trackingId);
+    }
+  }, [analyticsConsent, trackingId]);
+
   return (
     <GeoProvider>
       <div className="min-h-screen flex flex-col bg-gray-50 text-gray-800">
@@ -163,7 +176,12 @@ export default function App() {
         <NavBar />
 
         {/* 📈 Google Analytics v4 — tracking automatique */}
-        <Analytics trackingId="G-5JVYGYHZ7Y" />
+        <Analytics trackingId={trackingId} enabled={analyticsConsent === 'granted'} />
+        <AnalyticsConsentBanner
+          trackingId={trackingId}
+          consent={analyticsConsent}
+          onConsentChange={setAnalyticsConsent}
+        />
 
         <main className="flex-1 container mx-auto px-4 py-6">
           <Routes>

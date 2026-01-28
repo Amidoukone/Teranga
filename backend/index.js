@@ -4,6 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
+const logger = require('./src/utils/logger');
+const requestContext = require('./src/middleware/requestContext.middleware');
 
 // Sequelize (models/index.js)
 const db = require('./models');
@@ -14,7 +16,7 @@ const bootstrapAdmin = require('./src/utils/bootstrapAdmin');
 
 // Activer les logs SQL si disponibles
 if (sequelize?.options) {
-  sequelize.options.logging = console.log;
+  sequelize.options.logging = (msg) => logger.debug({ sql: msg });
 }
 
 const app = express();
@@ -23,20 +25,35 @@ const app = express();
    🛡️ Garde-fou global contre les crashs silencieux
    ====================================================== */
 process.on('unhandledRejection', (reason) => {
-  console.error('💥 Unhandled Rejection:', reason);
+  logger.error({ err: reason }, '💥 Unhandled Rejection');
 });
 process.on('uncaughtException', (err) => {
-  console.error('💥 Uncaught Exception:', err);
+  logger.error({ err }, '💥 Uncaught Exception');
 });
 
 /* ======================================================
    🧱 Middleware généraux
    ====================================================== */
 app.set('trust proxy', 1);
+app.use(requestContext);
+
+const rawCorsOrigins = process.env.CORS_ORIGINS || '';
+const configuredOrigins = rawCorsOrigins
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+const allowAllOrigins =
+  configuredOrigins.includes('*') || (isDev && configuredOrigins.length === 0);
 
 app.use(
   cors({
-    origin: true,
+    origin: (origin, callback) => {
+      if (!origin || allowAllOrigins) return callback(null, true);
+      if (configuredOrigins.includes(origin)) return callback(null, true);
+      logger.warn({ origin }, '🚫 CORS origin refusée');
+      return callback(null, false);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -55,11 +72,11 @@ const uploadsRoot = path.join(__dirname, 'uploads');
 
 if (!fs.existsSync(uploadsRoot)) {
   fs.mkdirSync(uploadsRoot, { recursive: true });
-  console.log('📂 Dossier uploads créé automatiquement:', uploadsRoot);
+  logger.info({ uploadsRoot }, '📂 Dossier uploads créé automatiquement');
 }
 
 app.use('/uploads', express.static(uploadsRoot));
-console.log('✅ Fichiers statiques disponibles sur /uploads');
+logger.info('✅ Fichiers statiques disponibles sur /uploads');
 
 /* ======================================================
    🔧 Chargement des routeurs Express
@@ -83,18 +100,19 @@ function loadRouter(routeFsPath, mountPath) {
     if (!router) {
       const keys =
         mod && typeof mod === 'object' ? Object.keys(mod) : '(aucune clé)';
-      console.error(`❌ Routeur invalide pour ${mountPath}`);
-      console.error(`   Fichier: ${routeFsPath}`);
-      console.error(`   Clés exportées: ${keys}`);
+      logger.error(
+        { mountPath, routeFsPath, keys },
+        '❌ Routeur invalide'
+      );
       return;
     }
 
     app.use(mountPath, router);
-    console.log(`✅ Routeur chargé : ${mountPath}`);
+    logger.info({ mountPath }, '✅ Routeur chargé');
   } catch (err) {
-    console.error(
-      `❌ Échec du chargement du routeur "${routeFsPath}" pour ${mountPath}:`,
-      err.message
+    logger.error(
+      { err, routeFsPath, mountPath },
+      '❌ Échec du chargement du routeur'
     );
   }
 }
@@ -146,13 +164,13 @@ app.get('/', (_req, res) => {
    ====================================================== */
 app.use((req, res, next) => {
   if (res.headersSent) return next();
-  res.status(404).json({ error: 'Route introuvable' });
+  res.status(404).json({ error: 'Route introuvable', requestId: req.requestId });
 });
 
-app.use((err, _req, res, _next) => {
-  console.error('❌ Erreur backend:', err);
+app.use((err, req, res, _next) => {
+  logger.error({ err, requestId: req.requestId }, '❌ Erreur backend');
   if (res.headersSent) return;
-  res.status(500).json({ error: 'Erreur interne du serveur' });
+  res.status(500).json({ error: 'Erreur interne du serveur', requestId: req.requestId });
 });
 
 /* ======================================================
@@ -169,16 +187,16 @@ async function start() {
     }
 
     await sequelize.authenticate();
-    console.log('✅ Connexion MySQL OK');
+    logger.info('✅ Connexion MySQL OK');
 
     // 🔥 Création automatique du compte admin si absent
     await bootstrapAdmin();
 
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 API Teranga lancée sur http://localhost:${PORT}`);
+      logger.info({ port: PORT }, '🚀 API Teranga lancée');
     });
   } catch (err) {
-    console.error('❌ Erreur DB:', err.message);
+    logger.error({ err }, '❌ Erreur DB');
     process.exit(1);
   }
 }
