@@ -37,54 +37,54 @@ const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 /* ============================================================================ */
 
 const COMMON_COMMERCE = [
-  { path: "/shop", label: "🛍️ Produits" },
-  { path: "/orders", label: "🧾 Commandes" },
+  { path: "/shop", label: "Produits" },
+  { path: "/orders", label: "Commandes" },
 ];
 
 // ✅ Admin-only onboarding link (Pays → Régions → MASTER) — GLOBAL ADMIN ONLY
 const ADMIN_ONBOARDING_LINK = {
   path: "/admin/onboarding",
-  label: "🚀 Onboarding Pays + Master",
+  label: "Master",
 };
 
 const ROLE_LINKS = {
   client: [
-    { path: "/dashboard", label: "📊 Dashboard" },
-    { path: "/projects", label: "📁 Projets" },
-    { path: "/properties", label: "🏡 Biens" },
-    { path: "/services", label: "🧾 Services" },
-    { path: "/tasks", label: "📋 Tâches" },
-    { path: "/transactions", label: "💰 Transactions" },
-    { path: "/finance", label: "📈 Finances" },
+    { path: "/dashboard", label: "Dashboard" },
+    { path: "/projects", label: "Projets" },
+    { path: "/properties", label: "Biens" },
+    { path: "/services", label: "Services" },
+    { path: "/tasks", label: "Tâches" },
+    { path: "/transactions", label: "Transactions" },
+    { path: "/finance", label: "Finances" },
     ...COMMON_COMMERCE,
   ],
   agent: [
-    { path: "/dashboard", label: "📊 Dashboard" },
-    { path: "/projects", label: "📁 Projets assignés" },
+    { path: "/dashboard", label: "Dashboard" },
+    { path: "/projects", label: "Projets assignés" },
     { path: "/agent/services", label: "⚙️ Services assignés" },
-    { path: "/tasks", label: "📋 Tâches" },
-    { path: "/transactions", label: "💰 Transactions" },
-    { path: "/finance", label: "📈 Finances" },
+    { path: "/tasks", label: "Tâches" },
+    { path: "/transactions", label: "Transactions" },
+    { path: "/finance", label: "Finances" },
     ...COMMON_COMMERCE,
   ],
   admin: [
-    { path: "/dashboard", label: "📊 Dashboard" },
-    { path: "/projects", label: "📁 Projets" },
-    { path: "/admin/projects", label: "🧩 Gestion des projets" },
+    { path: "/dashboard", label: "Dashboard" },
+    { path: "/projects", label: "Projets" },
+    { path: "/admin/projects", label: "Gestion projets" },
 
     // ✅ Onboarding: injecté dynamiquement uniquement pour ADMIN GLOBAL (voir plus bas)
 
-    { path: "/services", label: "🧾 Services" },
-    { path: "/tasks", label: "📋 Tâches" },
-    { path: "/admin/services", label: "🧩 Gestion services" },
-    { path: "/admin/agents", label: "👥 Agents" },
-    { path: "/admin/users", label: "👤 Utilisateurs" },
-    { path: "/admin/properties", label: "🏡 Biens clients" },
-    { path: "/transactions", label: "💰 Transactions" },
-    { path: "/finance", label: "📈 Finances" },
+    { path: "/services", label: "Services" },
+    { path: "/tasks", label: "Tâches" },
+    { path: "/admin/services", label: "Gestion services" },
+    { path: "/admin/agents", label: "Agents" },
+    { path: "/admin/users", label: "Utilisateurs" },
+    { path: "/admin/properties", label: "Biens clients" },
+    { path: "/transactions", label: "Transactions" },
+    { path: "/finance", label: "Finances" },
     ...COMMON_COMMERCE,
-    { path: "/admin/catalog/categories", label: "🗂️ Catégories" },
-    { path: "/admin/catalog/products", label: "📦 Produits" },
+    { path: "/admin/catalog/categories", label: "Catégories" },
+    { path: "/admin/catalog/products", label: "Produits" },
   ],
 };
 
