@@ -5,8 +5,12 @@ import { mergeGeoPayload } from './geo';
 /**
  * 🔹 Récupère les utilisateurs par rôle (client, agent, admin)
  */
-export async function getUsers(role, q = '') {
-  const { data } = await api.get('/users', { params: { role, q } });
+export async function getUsers(role, options = {}) {
+  const params = { role };
+  const q = options?.q?.trim();
+  if (q) params.q = q;
+  if (options?.adminType) params.adminType = options.adminType;
+  const { data } = await api.get('/users', { params });
   return data.users || [];
 }
 

@@ -399,15 +399,43 @@ exports.listByRole = async (req, res) => {
     }
 
     const q = (req.query.q || '').trim();
+    const adminType = String(req.query.adminType || '').trim().toLowerCase();
+    if (adminType && !['all', 'master', 'global'].includes(adminType)) {
+      return res.status(400).json({ error: 'Type admin invalide' });
+    }
+
     let where = { role };
+    const andFilters = [];
 
     if (q) {
-      where[Op.or] = [
-        { firstName: { [Op.like]: `%${q}%` } },
-        { lastName: { [Op.like]: `%${q}%` } },
-        { email: { [Op.like]: `%${q}%` } },
-        { phone: { [Op.like]: `%${q}%` } },
-      ];
+      andFilters.push({
+        [Op.or]: [
+          { firstName: { [Op.like]: `%${q}%` } },
+          { lastName: { [Op.like]: `%${q}%` } },
+          { email: { [Op.like]: `%${q}%` } },
+          { phone: { [Op.like]: `%${q}%` } },
+        ],
+      });
+    }
+
+    if (role === 'admin' && adminType && adminType !== 'all') {
+      if (adminType === 'master') {
+        andFilters.push({
+          [Op.or]: [
+            { countryId: { [Op.not]: null } },
+            { regionId: { [Op.not]: null } },
+          ],
+        });
+      } else if (adminType === 'global') {
+        andFilters.push({ countryId: null, regionId: null });
+      }
+    }
+
+    if (andFilters.length > 0) {
+      where = {
+        ...where,
+        [Op.and]: andFilters,
+      };
     }
 
     const users = await User.findAll({
