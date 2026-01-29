@@ -1,6 +1,19 @@
 'use strict';
 
-const { Country, Region } = require('../../models');
+const {
+  Country,
+  Region,
+  User,
+  Franchise,
+  Property,
+  Service,
+  Transaction,
+  Product,
+  Task,
+  Project,
+  Evidence,
+  Order,
+} = require('../../models');
 const { getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
 
 /* ======================================================
@@ -28,6 +41,32 @@ function requireGlobalAdmin(req, res) {
     return false;
   }
   return true;
+}
+
+async function findCountryUsage(countryId) {
+  const checks = [
+    { model: Region, label: 'régions', field: 'countryId' },
+    { model: User, label: 'utilisateurs', field: 'countryId' },
+    { model: Franchise, label: 'franchises', field: 'countryId' },
+    { model: Property, label: 'biens', field: 'countryId' },
+    { model: Service, label: 'services', field: 'countryId' },
+    { model: Transaction, label: 'transactions', field: 'countryId' },
+    { model: Product, label: 'produits', field: 'countryId' },
+    { model: Task, label: 'tâches', field: 'countryId' },
+    { model: Project, label: 'projets', field: 'countryId' },
+    { model: Evidence, label: 'preuves', field: 'countryId' },
+    { model: Order, label: 'commandes', field: 'countryId' },
+  ];
+
+  const results = await Promise.all(
+    checks.map(async ({ model, label, field }) => {
+      if (!model?.count) return { label, count: 0 };
+      const count = await model.count({ where: { [field]: countryId } });
+      return { label, count };
+    })
+  );
+
+  return results.find((result) => result.count > 0) || null;
 }
 
 /* ======================================================
@@ -192,5 +231,36 @@ exports.update = async (req, res) => {
     return res
       .status(500)
       .json({ error: 'Erreur lors de la mise à jour du pays' });
+  }
+};
+
+/* ======================================================
+   🗑️ DELETE (admin)
+====================================================== */
+exports.remove = async (req, res) => {
+  try {
+    if (!requireGlobalAdmin(req, res)) return;
+
+    const id = toSafeInt(req.params.id);
+    if (!id) return res.status(400).json({ error: 'ID invalide' });
+
+    const country = await Country.findByPk(id);
+    if (!country) return res.status(404).json({ error: 'Pays introuvable' });
+
+    const usage = await findCountryUsage(id);
+    if (usage) {
+      return res.status(409).json({
+        error: `Suppression impossible : ce pays possède encore des ${usage.label}.`,
+      });
+    }
+
+    await country.destroy();
+
+    return res.json({ success: true });
+  } catch (e) {
+    console.error('❌ delete country:', e);
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la suppression du pays' });
   }
 };

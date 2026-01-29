@@ -16,10 +16,16 @@ export async function updateCountry(id, payload) {
   return data?.country || data;
 }
 
+export async function deleteCountry(id) {
+  const { data } = await api.delete(`/countries/${id}`);
+  return data;
+}
+
 const CountriesService = {
   getCountries,
   createCountry,
   updateCountry,
+  deleteCountry,
 };
 
 export default CountriesService;

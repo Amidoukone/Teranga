@@ -12,6 +12,12 @@ import { createUser } from "../services/users";
 import { me } from "../services/auth";
 import { normalizeRole } from "../utils/role";
 import { useGeo } from "../contexts/GeoContext";
+import {
+  getCountries,
+  updateCountry,
+  deleteCountry,
+} from "../services/countries";
+import { getRegions, updateRegion, deleteRegion } from "../services/regions";
 
 export default function AdminOnboardingPage() {
   const [step, setStep] = useState(1);
@@ -48,6 +54,24 @@ export default function AdminOnboardingPage() {
   const [loadingCountry, setLoadingCountry] = useState(false);
   const [loadingRegion, setLoadingRegion] = useState(false);
   const [loadingMaster, setLoadingMaster] = useState(false);
+  const [loadingCountries, setLoadingCountries] = useState(false);
+  const [loadingRegions, setLoadingRegions] = useState(false);
+
+  // Admin listing + edit/delete
+  const [countries, setCountries] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [editingCountryId, setEditingCountryId] = useState(null);
+  const [editingRegionId, setEditingRegionId] = useState(null);
+  const [countryDraft, setCountryDraft] = useState({
+    name: "",
+    isoCode: "",
+    isActive: true,
+  });
+  const [regionDraft, setRegionDraft] = useState({
+    name: "",
+    code: "",
+    isActive: true,
+  });
 
   // ========================================================================
   // 🔐 AUTH CHECK — ADMIN GLOBAL ONLY
@@ -88,6 +112,12 @@ export default function AdminOnboardingPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isAllowed) return;
+    loadCountries();
+    loadRegions();
+  }, [isAllowed]);
+
   // ========================================================================
   // Derived / Guards
   // ========================================================================
@@ -123,6 +153,137 @@ export default function AdminOnboardingPage() {
     return true;
   }, [masterForm, createdCountry]);
 
+  const countryLookup = useMemo(() => {
+    const map = new Map();
+    countries.forEach((c) => map.set(String(c.id), c));
+    return map;
+  }, [countries]);
+
+  async function loadCountries() {
+    setLoadingCountries(true);
+    try {
+      const list = await getCountries({ includeInactive: true });
+      setCountries(list);
+    } catch (e) {
+      console.error("❌ load countries:", e);
+    } finally {
+      setLoadingCountries(false);
+    }
+  }
+
+  async function loadRegions() {
+    setLoadingRegions(true);
+    try {
+      const list = await getRegions({
+        includeInactive: true,
+        includeCountry: true,
+      });
+      setRegions(list);
+    } catch (e) {
+      console.error("❌ load regions:", e);
+    } finally {
+      setLoadingRegions(false);
+    }
+  }
+
+  function startEditCountry(country) {
+    setEditingCountryId(country.id);
+    setCountryDraft({
+      name: country.name || "",
+      isoCode: country.isoCode || "",
+      isActive: Boolean(country.isActive),
+    });
+  }
+
+  async function saveCountryEdit() {
+    if (!editingCountryId) return;
+    const trimmedName = countryDraft.name.trim();
+    const trimmedIso = countryDraft.isoCode.trim().toUpperCase();
+
+    if (trimmedName.length < 2 || trimmedIso.length !== 2) {
+      alert("Nom et ISO2 (2 lettres) requis.");
+      return;
+    }
+
+    try {
+      await updateCountry(editingCountryId, {
+        name: trimmedName,
+        isoCode: trimmedIso,
+        isActive: countryDraft.isActive,
+      });
+      setEditingCountryId(null);
+      await loadCountries();
+    } catch (err) {
+      alert(err?.response?.data?.error || "Erreur mise à jour pays");
+    }
+  }
+
+  async function handleDeleteCountry(country) {
+    const confirmDelete = window.confirm(
+      `Supprimer le pays "${country.name}" ? Cette action est définitive.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await deleteCountry(country.id);
+      if (createdCountry?.id === country.id) {
+        setCreatedCountry(null);
+        setStep(1);
+      }
+      await loadCountries();
+      await loadRegions();
+    } catch (err) {
+      alert(err?.response?.data?.error || "Erreur suppression pays");
+    }
+  }
+
+  function startEditRegion(region) {
+    setEditingRegionId(region.id);
+    setRegionDraft({
+      name: region.name || "",
+      code: region.code || "",
+      isActive: Boolean(region.isActive),
+    });
+  }
+
+  async function saveRegionEdit() {
+    if (!editingRegionId) return;
+    const trimmedName = regionDraft.name.trim();
+    const trimmedCode = regionDraft.code.trim().toUpperCase();
+
+    if (trimmedName.length < 2) {
+      alert("Nom de région requis.");
+      return;
+    }
+
+    try {
+      await updateRegion(editingRegionId, {
+        name: trimmedName,
+        code: trimmedCode || null,
+        isActive: regionDraft.isActive,
+      });
+      setEditingRegionId(null);
+      await loadRegions();
+    } catch (err) {
+      alert(err?.response?.data?.error || "Erreur mise à jour région");
+    }
+  }
+
+  async function handleDeleteRegion(region) {
+    const confirmDelete = window.confirm(
+      `Supprimer la région "${region.name}" ? Cette action est définitive.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await deleteRegion(region.id);
+      setRegions((prev) => prev.filter((r) => r.id !== region.id));
+      setRegionsCreated((prev) => prev.filter((r) => r.id !== region.id));
+    } catch (err) {
+      alert(err?.response?.data?.error || "Erreur suppression région");
+    }
+  }
+
   // ========================================================================
   // Étape 1 — Créer pays
   // ========================================================================
@@ -144,6 +305,7 @@ export default function AdminOnboardingPage() {
 
       setCreatedCountry(data.country);
       setStep(2);
+      await loadCountries();
 
       // Reset régions/master quand on recrée un pays
       setRegionsCreated([]);
@@ -181,6 +343,7 @@ export default function AdminOnboardingPage() {
 
       setRegionsCreated((r) => [...r, data.region]);
       setRegionForm({ name: "", code: "" });
+      await loadRegions();
     } catch (err) {
       alert(err?.response?.data?.error || "Erreur création région");
     } finally {
@@ -254,6 +417,246 @@ export default function AdminOnboardingPage() {
           1) Crée un pays • 2) Ajoute des régions (optionnel) • 3) Crée le MASTER
           avec sélection guidée
         </p>
+
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-8">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-medium">Gestion des pays & régions</h2>
+              <p className="text-xs text-gray-500">
+                Modifier, désactiver ou supprimer les pays et régions existants.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                loadCountries();
+                loadRegions();
+              }}
+              className="px-3 py-1.5 rounded-full text-xs bg-white border border-gray-200 hover:border-gray-300"
+            >
+              {loadingCountries || loadingRegions ? "Actualisation…" : "Rafraîchir"}
+            </button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-5 mt-4">
+            <div className="bg-white border border-gray-200 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium">Pays</h3>
+                <span className="text-xs text-gray-400">
+                  {loadingCountries ? "Chargement…" : `${countries.length} éléments`}
+                </span>
+              </div>
+
+              <div className="space-y-2 max-h-72 overflow-auto pr-1">
+                {countries.map((country) => {
+                  const isEditing = editingCountryId === country.id;
+                  return (
+                    <div
+                      key={country.id}
+                      className="border border-gray-100 rounded-lg p-2"
+                    >
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <input
+                            value={countryDraft.name}
+                            onChange={(e) =>
+                              setCountryDraft((d) => ({
+                                ...d,
+                                name: e.target.value,
+                              }))
+                            }
+                            className="w-full border border-gray-200 rounded-lg p-2 text-xs"
+                          />
+                          <input
+                            value={countryDraft.isoCode}
+                            onChange={(e) =>
+                              setCountryDraft((d) => ({
+                                ...d,
+                                isoCode: e.target.value,
+                              }))
+                            }
+                            className="w-full border border-gray-200 rounded-lg p-2 text-xs"
+                          />
+                          <label className="flex items-center gap-2 text-xs text-gray-600">
+                            <input
+                              type="checkbox"
+                              checked={countryDraft.isActive}
+                              onChange={(e) =>
+                                setCountryDraft((d) => ({
+                                  ...d,
+                                  isActive: e.target.checked,
+                                }))
+                              }
+                            />
+                            Actif
+                          </label>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={saveCountryEdit}
+                              className="px-3 py-1.5 rounded-full text-xs bg-[#0a84ff] text-white"
+                            >
+                              Enregistrer
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingCountryId(null)}
+                              className="px-3 py-1.5 rounded-full text-xs bg-gray-100"
+                            >
+                              Annuler
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <div className="text-xs font-medium">
+                              {country.name} ({country.isoCode})
+                            </div>
+                            <div className="text-[11px] text-gray-400">
+                              {country.isActive ? "Actif" : "Inactif"}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => startEditCountry(country)}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              Modifier
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCountry(country)}
+                              className="text-xs text-rose-600 hover:text-rose-800"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {!countries.length && !loadingCountries && (
+                  <p className="text-xs text-gray-400">Aucun pays enregistré.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium">Régions</h3>
+                <span className="text-xs text-gray-400">
+                  {loadingRegions ? "Chargement…" : `${regions.length} éléments`}
+                </span>
+              </div>
+
+              <div className="space-y-2 max-h-72 overflow-auto pr-1">
+                {regions.map((region) => {
+                  const isEditing = editingRegionId === region.id;
+                  const country =
+                    region.country || countryLookup.get(String(region.countryId));
+                  return (
+                    <div
+                      key={region.id}
+                      className="border border-gray-100 rounded-lg p-2"
+                    >
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <input
+                            value={regionDraft.name}
+                            onChange={(e) =>
+                              setRegionDraft((d) => ({
+                                ...d,
+                                name: e.target.value,
+                              }))
+                            }
+                            className="w-full border border-gray-200 rounded-lg p-2 text-xs"
+                          />
+                          <input
+                            value={regionDraft.code}
+                            onChange={(e) =>
+                              setRegionDraft((d) => ({
+                                ...d,
+                                code: e.target.value,
+                              }))
+                            }
+                            className="w-full border border-gray-200 rounded-lg p-2 text-xs"
+                          />
+                          <label className="flex items-center gap-2 text-xs text-gray-600">
+                            <input
+                              type="checkbox"
+                              checked={regionDraft.isActive}
+                              onChange={(e) =>
+                                setRegionDraft((d) => ({
+                                  ...d,
+                                  isActive: e.target.checked,
+                                }))
+                              }
+                            />
+                            Actif
+                          </label>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={saveRegionEdit}
+                              className="px-3 py-1.5 rounded-full text-xs bg-[#0a84ff] text-white"
+                            >
+                              Enregistrer
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingRegionId(null)}
+                              className="px-3 py-1.5 rounded-full text-xs bg-gray-100"
+                            >
+                              Annuler
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <div className="text-xs font-medium">
+                              {region.name} {region.code ? `(${region.code})` : ""}
+                            </div>
+                            <div className="text-[11px] text-gray-400">
+                              {country?.name
+                                ? `${country.name} (${country.isoCode || "—"})`
+                                : `Pays #${region.countryId || "—"}`}{" "}
+                              • {region.isActive ? "Actif" : "Inactif"}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => startEditRegion(region)}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              Modifier
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRegion(region)}
+                              className="text-xs text-rose-600 hover:text-rose-800"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {!regions.length && !loadingRegions && (
+                  <p className="text-xs text-gray-400">Aucune région enregistrée.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* STEP INDICATOR */}
         <div className="flex gap-2 mb-8">
