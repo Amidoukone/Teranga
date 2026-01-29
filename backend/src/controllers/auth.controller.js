@@ -3,7 +3,7 @@
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { User } = require('../../models');
+const { User, Country, Region, Sequelize } = require('../../models');
 
 // Durée de vie du token d'accès (configurable via env)
 const ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '1h';
@@ -31,6 +31,81 @@ function signAccess(payload) {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: ACCESS_EXPIRES });
 }
 
+function toSafeInt(value) {
+  if (value === null || value === undefined) return null;
+  const parsed = Number.parseInt(String(value), 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function resolveGeoScope({ country, countryId, regionId }) {
+  const resolved = {
+    countryId: toSafeInt(countryId),
+    regionId: toSafeInt(regionId),
+    countryIso: null,
+  };
+
+  let resolvedRegion = null;
+  if (resolved.regionId) {
+    resolvedRegion = await Region.findByPk(resolved.regionId, {
+      attributes: ['id', 'countryId'],
+    });
+    if (!resolvedRegion) {
+      return { error: 'Région inconnue' };
+    }
+    if (resolved.countryId && resolvedRegion.countryId !== resolved.countryId) {
+      return { error: 'Région non rattachée au pays sélectionné' };
+    }
+    if (!resolved.countryId) {
+      resolved.countryId = resolvedRegion.countryId;
+    }
+  }
+
+  const trimmedCountry = String(country || '').trim();
+  if (!resolved.countryId && trimmedCountry) {
+    const isoCandidate = trimmedCountry.toUpperCase();
+    let countryRecord = null;
+    if (/^[A-Z]{2}$/.test(isoCandidate)) {
+      countryRecord = await Country.findOne({
+        where: { isoCode: isoCandidate, isActive: true },
+        attributes: ['id', 'isoCode'],
+      });
+    }
+
+    if (!countryRecord) {
+      const lowerName = trimmedCountry.toLowerCase();
+      countryRecord = await Country.findOne({
+        where: Sequelize.where(
+          Sequelize.fn('lower', Sequelize.col('name')),
+          lowerName
+        ),
+        attributes: ['id', 'isoCode', 'isActive'],
+      });
+      if (countryRecord && !countryRecord.isActive) {
+        countryRecord = null;
+      }
+    }
+
+    if (!countryRecord) {
+      return { error: 'Pays invalide ou non supporté' };
+    }
+
+    resolved.countryId = countryRecord.id;
+    resolved.countryIso = countryRecord.isoCode || isoCandidate;
+  }
+
+  if (resolved.countryId && !resolved.countryIso) {
+    const record = await Country.findByPk(resolved.countryId, {
+      attributes: ['id', 'isoCode', 'isActive'],
+    });
+    if (!record || record.isActive === false) {
+      return { error: 'Pays invalide ou non supporté' };
+    }
+    resolved.countryIso = record.isoCode;
+  }
+
+  return resolved;
+}
+
 /* ======================================================
    🧩 Register (inscription)
 ====================================================== */
@@ -42,7 +117,7 @@ exports.register = async (req, res) => {
     const email = normalizeEmail(rawEmail);
     const password = typeof rawPassword === 'string' ? rawPassword.trim() : '';
 
-    const { firstName, lastName, phone, country } = req.body || {};
+    const { firstName, lastName, phone, country, countryId, regionId } = req.body || {};
 
     // Champs requis
     if (!email || !password) {
@@ -62,13 +137,20 @@ exports.register = async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    const geoScope = await resolveGeoScope({ country, countryId, regionId });
+    if (geoScope?.error) {
+      return res.status(400).json({ error: geoScope.error });
+    }
+
     const user = await User.create({
       email,
       passwordHash,
       firstName: firstName || null,
       lastName: lastName || null,
       phone: phone || null,
-      country: country || null,
+      country: geoScope?.countryIso || (country ? String(country).trim().toUpperCase() : null),
+      countryId: geoScope?.countryId ?? null,
+      regionId: geoScope?.regionId ?? null,
       role: 'client', // rôle par défaut cohérent avec ta structure
       // countryId / regionId restent null pour rétro-compatibilité,
       // et peuvent être backfill Mali/Bamako via migrations/seed si tu le fais.
@@ -82,6 +164,8 @@ exports.register = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        countryId: user.countryId ?? null,
+        regionId: user.regionId ?? null,
       },
     });
   } catch (e) {
