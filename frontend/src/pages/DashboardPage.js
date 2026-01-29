@@ -19,7 +19,12 @@ import {
 import FinanceWidget from '../components/FinanceWidget';
 import api from '../services/api';
 import { getGeoParams } from '../services/geo';
-import { normalizeRole, prettyRoleLabel } from '../utils/role';
+import {
+  isGlobalAdminUser,
+  isMasterUser,
+  normalizeRole,
+  prettyRoleLabel,
+} from '../utils/role';
 
 /* ============================================================================
    🔧 UTILITAIRES
@@ -287,7 +292,19 @@ export default function DashboardPage() {
   }
 
   const roleKey = normalizeRole(user.role);
+  const isGlobalAdmin = isGlobalAdminUser(user);
+  const isMaster = isMasterUser(user);
   const isPositiveBalance = stats.balance >= 0;
+  const balanceLabel =
+    roleKey === 'admin'
+      ? isGlobalAdmin
+        ? 'Solde global'
+        : 'Solde de votre périmètre'
+      : 'Solde global';
+  const balanceDescription =
+    roleKey === 'admin' && isMaster
+      ? 'Synthèse de vos revenus et dépenses sur votre pays ou région.'
+      : 'Synthèse de vos revenus et dépenses sur l’ensemble de vos opérations.';
 
   const firstName = user.firstName || user.email || '';
 
@@ -335,7 +352,7 @@ export default function DashboardPage() {
             <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 shadow-sm min-w-[200px]">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs sm:text-sm text-gray-600 font-medium">
-                  Solde global
+                  {balanceLabel}
                 </div>
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-[0.7rem] sm:text-xs font-semibold ${
@@ -355,7 +372,7 @@ export default function DashboardPage() {
                 {formatAmount(stats.balance)} XOF
               </div>
               <p className="text-[0.75rem] sm:text-xs text-gray-500 mt-2 leading-snug">
-                Synthèse de vos revenus et dépenses sur l’ensemble de vos opérations.
+                {balanceDescription}
               </p>
             </div>
           </div>
