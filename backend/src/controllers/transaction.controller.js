@@ -17,6 +17,7 @@ const {
   Order,
   Project,
 } = require("../../models");
+const { applyGeoScopeForModel } = require("../utils/geoScope");
 
 // 🧱 Service interne Teranga : ACL / WHERE / Pagination
 const {
@@ -749,13 +750,14 @@ exports.remove = async (req, res) => {
 /* ============================================================================
  * 6️⃣ SUMMARY
  * ============================================================================ */
-exports.summary = async (_req, res) => {
+exports.summary = async (req, res) => {
   try {
+    const where = applyGeoScopeForModel({}, req.user, Transaction);
     const [revenues, expenses, commissions, adjustments] = await Promise.all([
-      Transaction.sum("amount", { where: { type: "revenue" } }),
-      Transaction.sum("amount", { where: { type: "expense" } }),
-      Transaction.sum("amount", { where: { type: "commission" } }),
-      Transaction.sum("amount", { where: { type: "adjustment" } }),
+      Transaction.sum("amount", { where: { ...where, type: "revenue" } }),
+      Transaction.sum("amount", { where: { ...where, type: "expense" } }),
+      Transaction.sum("amount", { where: { ...where, type: "commission" } }),
+      Transaction.sum("amount", { where: { ...where, type: "adjustment" } }),
     ]);
 
     const balance =
@@ -791,7 +793,11 @@ exports.report = async (req, res) => {
       : new Date(Date.now() - 30 * 864e5);
     const end = endDate ? new Date(endDate) : new Date();
 
-    const where = { createdAt: { [Op.between]: [start, end] } };
+    const where = applyGeoScopeForModel(
+      { createdAt: { [Op.between]: [start, end] } },
+      req.user,
+      Transaction
+    );
 
     const transactions = await Transaction.findAll({
       where,
