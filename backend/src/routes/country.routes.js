@@ -13,6 +13,7 @@ const { requireRoles } = require('../middleware/roles.middleware');
  *   • admin: peut ajouter ?includeInactive=true (géré dans le contrôleur)
  * - POST /countries : création (admin)
  * - PUT  /countries/:id : update (admin)
+ * - DELETE /countries/:id : suppression (admin)
  * ============================================================
  */
 
@@ -22,5 +23,6 @@ router.get('/', auth, ctrl.list);
 // Admin uniquement
 router.post('/', auth, requireRoles('admin'), ctrl.create);
 router.put('/:id', auth, requireRoles('admin'), ctrl.update);
+router.delete('/:id', auth, requireRoles('admin'), ctrl.remove);
 
 module.exports = router;

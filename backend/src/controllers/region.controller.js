@@ -1,6 +1,19 @@
 'use strict';
 
-const { Region, Country } = require('../../models');
+const {
+  Region,
+  Country,
+  User,
+  Franchise,
+  Property,
+  Service,
+  Transaction,
+  Product,
+  Task,
+  Project,
+  Evidence,
+  Order,
+} = require('../../models');
 const { getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
 
 /* ======================================================
@@ -28,6 +41,31 @@ function requireGlobalAdmin(req, res) {
     return false;
   }
   return true;
+}
+
+async function findRegionUsage(regionId) {
+  const checks = [
+    { model: User, label: 'utilisateurs', field: 'regionId' },
+    { model: Franchise, label: 'franchises', field: 'regionId' },
+    { model: Property, label: 'biens', field: 'regionId' },
+    { model: Service, label: 'services', field: 'regionId' },
+    { model: Transaction, label: 'transactions', field: 'regionId' },
+    { model: Product, label: 'produits', field: 'regionId' },
+    { model: Task, label: 'tâches', field: 'regionId' },
+    { model: Project, label: 'projets', field: 'regionId' },
+    { model: Evidence, label: 'preuves', field: 'regionId' },
+    { model: Order, label: 'commandes', field: 'regionId' },
+  ];
+
+  const results = await Promise.all(
+    checks.map(async ({ model, label, field }) => {
+      if (!model?.count) return { label, count: 0 };
+      const count = await model.count({ where: { [field]: regionId } });
+      return { label, count };
+    })
+  );
+
+  return results.find((result) => result.count > 0) || null;
 }
 
 /* ======================================================
@@ -170,5 +208,36 @@ exports.update = async (req, res) => {
     return res
       .status(500)
       .json({ error: 'Erreur lors de la mise à jour de la région' });
+  }
+};
+
+/* ======================================================
+   🗑️ DELETE (admin)
+====================================================== */
+exports.remove = async (req, res) => {
+  try {
+    if (!requireGlobalAdmin(req, res)) return;
+
+    const id = toSafeInt(req.params.id);
+    if (!id) return res.status(400).json({ error: 'ID invalide' });
+
+    const region = await Region.findByPk(id);
+    if (!region) return res.status(404).json({ error: 'Région introuvable' });
+
+    const usage = await findRegionUsage(id);
+    if (usage) {
+      return res.status(409).json({
+        error: `Suppression impossible : cette région possède encore des ${usage.label}.`,
+      });
+    }
+
+    await region.destroy();
+
+    return res.json({ success: true });
+  } catch (e) {
+    console.error('❌ delete region:', e);
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la suppression de la région' });
   }
 };

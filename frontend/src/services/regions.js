@@ -16,10 +16,16 @@ export async function updateRegion(id, payload) {
   return data?.region || data;
 }
 
+export async function deleteRegion(id) {
+  const { data } = await api.delete(`/regions/${id}`);
+  return data;
+}
+
 const RegionsService = {
   getRegions,
   createRegion,
   updateRegion,
+  deleteRegion,
 };
 
 export default RegionsService;
