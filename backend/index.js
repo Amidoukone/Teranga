@@ -37,20 +37,42 @@ process.on('uncaughtException', (err) => {
 app.set('trust proxy', 1);
 app.use(requestContext);
 
+function normalizeOrigin(value) {
+  if (!value) return '';
+  return value.trim().replace(/\/+$/, '');
+}
+
 const rawCorsOrigins = process.env.CORS_ORIGINS || '';
 const configuredOrigins = rawCorsOrigins
   .split(',')
-  .map((origin) => origin.trim())
+  .map((origin) => normalizeOrigin(origin))
   .filter(Boolean);
+const fallbackOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.CLIENT_URL,
+  process.env.CLIENT_ORIGIN,
+]
+  .map((origin) => normalizeOrigin(origin))
+  .filter(Boolean);
+const allowedOrigins = Array.from(
+  new Set([...configuredOrigins, ...fallbackOrigins])
+);
 const isDev = (process.env.NODE_ENV || 'development') !== 'production';
 const allowAllOrigins =
-  configuredOrigins.includes('*') || (isDev && configuredOrigins.length === 0);
+  allowedOrigins.includes('*') || (isDev && allowedOrigins.length === 0);
+
+if (!isDev && allowedOrigins.length === 0) {
+  logger.warn(
+    '⚠️ Aucune origine CORS configurée. Pense à définir CORS_ORIGINS ou FRONTEND_URL.'
+  );
+}
 
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin || allowAllOrigins) return callback(null, true);
-      if (configuredOrigins.includes(origin)) return callback(null, true);
+      const normalizedOrigin = normalizeOrigin(origin);
+      if (allowedOrigins.includes(normalizedOrigin)) return callback(null, true);
       logger.warn({ origin }, '🚫 CORS origin refusée');
       return callback(null, false);
     },
