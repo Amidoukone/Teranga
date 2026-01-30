@@ -21,7 +21,6 @@
 - `sed -n '240,480p' backend/src/controllers/auth.controller.js`
 - `sed -n '480,720p' backend/src/controllers/auth.controller.js`
 - `sed -n '1,200p' backend/src/middleware/auth.middleware.js`
-- `sed -n '1,200p' backend/src/middleware/securityHeaders.middleware.js`
 - `sed -n '1,200p' backend/src/middleware/requestContext.middleware.js`
 - `sed -n '1,200p' backend/src/middleware/rateLimit.middleware.js`
 - `sed -n '1,200p' backend/src/middleware/roles.middleware.js`
@@ -43,7 +42,7 @@
 
 ## 2) Résumé d’architecture (constaté)
 ### Backend (Express + Sequelize)
-- API Express avec CORS configurable, Request ID, logs structurés, gestion d’erreurs, healthcheck, et **headers de sécurité globaux**. Le serveur charge un grand nombre de routes métiers (auth, services, transactions, projets, commerce, etc.).
+- API Express avec CORS configurable, Request ID, logs structurés, gestion d’erreurs, et healthcheck. Le serveur charge un grand nombre de routes métiers (auth, services, transactions, projets, commerce, etc.).
 - Auth JWT avec cookies httpOnly, refresh tokens en base, rotation, blacklist, et vérification CSRF quand les cookies sont utilisés.
 - Rate limiting sur endpoints sensibles (auth/refresh/write) et validation d’entrées basée sur Joi sur certaines routes.
 - Uploads : limitation taille, types de fichiers autorisés, stockage mémoire (prêt ImageKit).
@@ -51,7 +50,7 @@
 ### Frontend (React + CRA)
 - App React (CRA) avec routage protégé, SEO, analytics conditionnels au consentement, et pages admin/agent/client.
 - Client API axios avec base URL adaptative, injection du token bearer, `withCredentials`, et en‑tête CSRF.
-- Auth côté front **supporte un mode cookie** (via `REACT_APP_AUTH_STORAGE=cookie`) pour éviter le stockage localStorage, tout en conservant un fallback “offline” via cache user.
+- Auth côté front stocke le JWT en localStorage (nouvelle + legacy key), avec fallback “offline”.
 
 ### Documentation métier
 - Plan d’exécution “améliorations pro sans régression”, priorisé P0‑P3.
@@ -64,14 +63,13 @@
 - Auth moderne avec refresh tokens + blacklist + CSRF si cookies, et rate limit dédié à l’authentification.
 - CORS en allowlist configurable et request tracing via `X‑Request‑Id`.
 - Consentement analytics explicite côté frontend.
-- **Headers de sécurité globaux** actifs (CSP, HSTS en prod, X‑Frame‑Options, etc.).
-- **Option cookie‑only auth** disponible pour éviter le stockage JWT en localStorage.
 
-### ⚠️ Bloquants/risques si lancement “grand public” **sans durcissement complémentaire**
+### ⚠️ Bloquants/risques si lancement “grand public” **sans durcissement**
+- **Surface sécurité** : absence de headers de sécurité (CSP, HSTS, etc.) et dépendance au stockage JWT en localStorage côté frontend.
 - **Validation incomplète** : validation Joi présente pour auth/commandes/produits, mais d’autres modules critiques n’ont pas de validation au niveau route.
 - **Fiabilité & Observabilité** : pas de monitoring applicatif systématique ni de stratégie de tests d’intégration automatisés.
 
-**Conclusion** : lancement grand public **possible après corrections P0 restantes (validation + observabilité + conformité)**, sinon risque élevé pour la confiance et la stabilité.
+**Conclusion** : lancement grand public **possible après corrections P0 (sécurité + validation + observabilité + conformité)**, sinon risque élevé pour la confiance et la stabilité.
 
 ---
 
@@ -79,8 +77,6 @@
 ### Sécurité & Auth
 - JWT avec rotation et blacklist + contrôle CSRF si cookie. Cookies `httpOnly`, `secure` en prod, `sameSite=lax`.
 - Rate limiting sur `/auth`, `/refresh` et endpoints d’écriture.
-- Headers HTTP globaux (CSP minimal, HSTS en production, COOP/CORP, etc.).
-- Mode auth cookie‑only disponible pour réduire l’exposition JWT côté client.
 
 ### Architecture & Gouvernance
 - Découpage multi‑pays documenté, conventions DB claires, backfill prévu pour éviter les régressions.
@@ -93,9 +89,10 @@
 
 ## 5) Axes d’amélioration pour être “pro & efficace”
 ### A. Sécurité (P0 — avant ouverture grand public)
-1) ✅ **Durcir les headers HTTP** : CSP, HSTS, X‑Frame‑Options, Referrer‑Policy (déployé globalement).
-2) ✅ **Réduire l’exposition du JWT côté front** : mode cookie‑only disponible (`REACT_APP_AUTH_STORAGE=cookie`).
-3) ⏳ **Réviser la gestion des erreurs** : uniformiser les messages d’erreur pour éviter de divulguer des infos sensibles.
+1) **Durcir les headers HTTP** : CSP, HSTS, X‑Frame‑Options, Referrer‑Policy.
+   - Actuellement, seuls les headers “nosniff”/CORP sont posés sur `/uploads`.
+2) **Réduire l’exposition du JWT côté front** : privilégier l’auth 100% cookie + CSRF, et supprimer le stockage localStorage.
+3) **Réviser la gestion des erreurs** : uniformiser les messages d’erreur pour éviter de divulguer des infos sensibles.
 
 ### B. Validation & cohérence API (P0/P1)
 1) **Étendre la validation Joi** aux routes sensibles (users, services, tasks, evidences, projects, etc.).
@@ -136,24 +133,6 @@
 
 ---
 
-## 8) Checklist “grand public” (sans régression)
-### Backend
-- ✅ Headers sécurité globaux actifs (CSP minimal, HSTS prod, COOP/CORP).
-- ✅ CORS configuré via allowlist.
-- ⏳ Validation Joi étendue aux routes sensibles (users, services, tasks, evidences, projects…).
-- ⏳ Monitoring applicatif (latence, 4xx/5xx) + alerting basique.
-
-### Frontend
-- ✅ Consentement analytics (GA4) conditionnel.
-- ✅ Mode cookie‑only auth disponible (`REACT_APP_AUTH_STORAGE=cookie`).
-- ⏳ Error boundary global pour éviter l’écran blanc.
-
-### Ops
-- ⏳ Tests d’intégration sur flux critiques.
-- ⏳ Rollout progressif (feature flags / toggles).
-
----
-
-## 9) Références internes
+## 8) Références internes
 - Plan d’exécution : `docs/PLAN_EXECUTION.md`.
 - Règles multi‑pays : `backend/docs/multi-country-rules.md`.
