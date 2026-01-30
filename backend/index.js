@@ -7,6 +7,7 @@ const path = require('path');
 require('dotenv').config();
 const logger = require('./src/utils/logger');
 const requestContext = require('./src/middleware/requestContext.middleware');
+const securityHeaders = require('./src/middleware/securityHeaders.middleware');
 
 // Sequelize (models/index.js)
 const db = require('./models');
@@ -37,6 +38,7 @@ process.on('uncaughtException', (err) => {
    ====================================================== */
 app.set('trust proxy', 1);
 app.use(requestContext);
+app.use(securityHeaders);
 app.use(cookieParser());
 
 function normalizeOrigin(value) {
