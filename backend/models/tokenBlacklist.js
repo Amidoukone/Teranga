@@ -2,7 +2,12 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class TokenBlacklist extends Model {}
+  class TokenBlacklist extends Model {
+    static associate(models) {
+      // Pas d’association obligatoire ici.
+      // Si un jour tu veux rattacher à User, tu pourras ajouter userId + association.
+    }
+  }
 
   TokenBlacklist.init(
     {
@@ -11,6 +16,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         unique: true,
       },
+
       expiresAt: {
         type: DataTypes.DATE,
         allowNull: false,
@@ -21,6 +27,18 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'TokenBlacklist',
       tableName: 'token_blacklist',
+
+      /**
+       * ✅ IMPORTANT
+       * Table créée avec created_at / updated_at
+       */
+      timestamps: true,
+      underscored: true,
+
+      indexes: [
+        { unique: true, fields: ['jti'] },
+        { fields: ['expires_at'] },
+      ],
     }
   );
 
