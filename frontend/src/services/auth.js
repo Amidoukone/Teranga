@@ -15,6 +15,13 @@ import api from './api';
 const TOKEN_KEY = 'teranga_token';
 const LEGACY_TOKEN_KEYS = ['token']; // compat héritée
 const USER_KEY = 'teranga_user';
+const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
+  .toLowerCase()
+  .trim();
+
+function shouldUseLocalStorage() {
+  return AUTH_STORAGE_MODE !== 'cookie';
+}
 
 /* ============================================================
    🔧 Utilitaires internes (robustes)
@@ -22,6 +29,7 @@ const USER_KEY = 'teranga_user';
 
 /** Retourne le token depuis le nouveau key OU les anciens (puis migre). */
 function readTokenAny() {
+  if (!shouldUseLocalStorage()) return null;
   // 1) Nouveau nom (préféré)
   const current = safeGet(TOKEN_KEY);
   if (current) return current;
@@ -41,6 +49,7 @@ function readTokenAny() {
 
 /** Écrit le token dans la nouvelle clé + (optionnel) legacy pour compat. */
 function writeTokenAll(token, { keepLegacy = true } = {}) {
+  if (!shouldUseLocalStorage()) return;
   safeSet(TOKEN_KEY, token);
   if (keepLegacy) {
     for (const k of LEGACY_TOKEN_KEYS) safeSet(k, token);
@@ -119,8 +128,13 @@ export async function login(payload) {
       throw new Error('Token manquant dans la réponse du serveur');
     }
 
-    // ✅ Sauvegarde cohérente du token (nouvelle + legacy pour compat)
-    writeTokenAll(data.token, { keepLegacy: true });
+    if (shouldUseLocalStorage()) {
+      // ✅ Sauvegarde cohérente du token (nouvelle + legacy pour compat)
+      writeTokenAll(data.token, { keepLegacy: true });
+    } else {
+      // Mode cookie: évite tout token persistant côté client
+      removeTokenAll();
+    }
 
     // ✅ Cache user pour UX immédiate
     if (data.user) writeCachedUser(data.user);
@@ -139,6 +153,42 @@ export async function login(payload) {
    - Si 401 → clear tokens + cache et {user:null}
 ============================================================ */
 export async function me() {
+  if (!shouldUseLocalStorage()) {
+    try {
+      const { data } = await api.get('/auth/me');
+      if (data?.user) writeCachedUser(data.user);
+      return data;
+    } catch (error) {
+      const status = error?.response?.status;
+      if (status === 401) {
+        writeCachedUser(null);
+        return { user: null };
+      }
+
+      const isNetworkError = !error?.response;
+      if (isNetworkError) {
+        const cached = readCachedUser();
+        if (cached) {
+          console.warn('⚠️ Backend indisponible — utilisation du user en cache (mode “offline”).');
+          return { user: cached, offline: true };
+        }
+        console.warn('⚠️ Erreur connexion backend /auth/me:', error?.message || error);
+        return { user: null };
+      }
+
+      console.warn('⚠️ Erreur /auth/me:', {
+        status,
+        data: error?.response?.data,
+        msg: error?.message,
+      });
+
+      const cached = readCachedUser();
+      if (cached) return { user: cached, offline: true };
+
+      return { user: null };
+    }
+  }
+
   const token = readTokenAny();
 
   // 🔸 Pas de token → on tente un fallback user (offline)

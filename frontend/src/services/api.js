@@ -59,6 +59,13 @@ const ORIGINS = resolveOrigins();
 
 export const API_BASE_URL = ORIGINS.API_BASE_URL;
 export let FILE_BASE_URL = ORIGINS.FILE_BASE_URL;
+const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
+  .toLowerCase()
+  .trim();
+
+function shouldUseLocalStorage() {
+  return AUTH_STORAGE_MODE !== 'cookie';
+}
 
 /* ---------- Création instance Axios ---------- */
 const api = axios.create({
@@ -83,8 +90,9 @@ export function getFileUrl(filePath) {
 
 /* ---------- Intercepteur: injecter token ---------- */
 api.interceptors.request.use((config) => {
-  const token =
-    localStorage.getItem('teranga_token') || localStorage.getItem('token');
+  const token = shouldUseLocalStorage()
+    ? localStorage.getItem('teranga_token') || localStorage.getItem('token')
+    : null;
 
   if (token && !config.headers?.Authorization) {
     config.headers = config.headers || {};
