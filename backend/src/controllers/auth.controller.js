@@ -34,7 +34,10 @@ function signAccess(payload) {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET manquant dans la configuration serveur');
   }
-  const jti = crypto.randomUUID();
+  const jti =
+    typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : crypto.randomBytes(16).toString('hex');
   return jwt.sign({ ...payload, jti }, process.env.JWT_SECRET, {
     expiresIn: ACCESS_EXPIRES,
   });
