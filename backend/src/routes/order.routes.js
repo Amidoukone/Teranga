@@ -9,6 +9,9 @@ const evidenceCtrl = require('../controllers/evidence.controller');
 
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
+const { validateBody } = require('../middleware/validate.middleware');
+const { writeLimiter } = require('../middleware/rateLimit.middleware');
+const { createOrderSchema, updateOrderSchema } = require('../validators/order.schemas');
 
 const { nested: orderItemsRouter } = require('./orderItem.routes');
 const uploadEvidence = require('../middleware/uploadEvidence.middleware');
@@ -16,11 +19,25 @@ const uploadEvidence = require('../middleware/uploadEvidence.middleware');
 /* =====================================================================
    ✅ Routes CRUD de base
 ===================================================================== */
-router.post('/', auth, requireRoles('admin', 'client'), ctrl.create);
+router.post(
+  '/',
+  auth,
+  requireRoles('admin', 'client'),
+  writeLimiter,
+  validateBody(createOrderSchema),
+  ctrl.create
+);
 router.get('/', auth, requireRoles('admin', 'agent', 'client'), ctrl.list);
 router.get('/:id', auth, requireRoles('admin', 'agent', 'client'), ctrl.detail);
-router.put('/:id', auth, requireRoles('admin', 'client'), ctrl.update);
-router.delete('/:id', auth, requireRoles('admin', 'client'), ctrl.remove);
+router.put(
+  '/:id',
+  auth,
+  requireRoles('admin', 'client'),
+  writeLimiter,
+  validateBody(updateOrderSchema),
+  ctrl.update
+);
+router.delete('/:id', auth, requireRoles('admin', 'client'), writeLimiter, ctrl.remove);
 
 /* =====================================================================
    🧩 Routes imbriquées — Items de commande
@@ -59,6 +76,7 @@ router.post(
   '/:orderId/evidences',
   auth,
   requireRoles('client', 'agent', 'admin'),
+  writeLimiter,
   uploadEvidence.anyCompat(),
   injectOrderIdFromParams,
   evidenceCtrl.create

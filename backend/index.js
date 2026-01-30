@@ -2,6 +2,7 @@
 
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 require('dotenv').config();
 const logger = require('./src/utils/logger');
@@ -36,6 +37,7 @@ process.on('uncaughtException', (err) => {
    ====================================================== */
 app.set('trust proxy', 1);
 app.use(requestContext);
+app.use(cookieParser());
 
 function normalizeOrigin(value) {
   if (!value) return '';
@@ -97,7 +99,17 @@ if (!fs.existsSync(uploadsRoot)) {
   logger.info({ uploadsRoot }, '📂 Dossier uploads créé automatiquement');
 }
 
-app.use('/uploads', express.static(uploadsRoot));
+app.use(
+  '/uploads',
+  express.static(uploadsRoot, {
+    dotfiles: 'deny',
+    fallthrough: true,
+    setHeaders: (res) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+    },
+  })
+);
 logger.info('✅ Fichiers statiques disponibles sur /uploads');
 
 /* ======================================================

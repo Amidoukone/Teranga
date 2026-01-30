@@ -4,6 +4,7 @@ const router = require('express').Router();
 const ctrl = require('../controllers/projectDocument.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
+const { writeLimiter } = require('../middleware/rateLimit.middleware');
 
 // 📂 Middleware d’upload spécifique aux documents de projets
 // ⚙️ Enregistre dans /uploads/projects/ (mais en memoryStorage si ImageKit)
@@ -41,6 +42,7 @@ router.post(
   '/',
   auth,
   requireRoles('client', 'agent', 'admin'),
+  writeLimiter,
   upload.array('files', 10),
   ctrl.upload
 );
@@ -78,6 +80,7 @@ router.delete(
   '/:id',
   auth,
   requireRoles('client', 'admin'),
+  writeLimiter,
   ctrl.remove
 );
 

@@ -6,6 +6,9 @@ const ctrl = require('../controllers/product.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
 const upload = require('../middleware/uploadProduct.middleware'); // ✅ multer configuré pour les produits
+const { validateBody } = require('../middleware/validate.middleware');
+const { writeLimiter } = require('../middleware/rateLimit.middleware');
+const { createProductSchema, updateProductSchema } = require('../validators/product.schemas');
 
 /**
  * ============================================================
@@ -26,7 +29,9 @@ router.post(
   '/',
   auth,
   requireRoles('admin'),
+  writeLimiter,
   upload.any(),
+  validateBody(createProductSchema),
   ctrl.create
 );
 
@@ -51,7 +56,9 @@ router.put(
   '/:id',
   auth,
   requireRoles('admin'),
+  writeLimiter,
   upload.any(),
+  validateBody(updateProductSchema),
   ctrl.update
 );
 

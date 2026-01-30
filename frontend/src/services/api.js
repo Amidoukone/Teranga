@@ -64,7 +64,7 @@ export let FILE_BASE_URL = ORIGINS.FILE_BASE_URL;
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
-  // withCredentials: false -> inutile car on utilise Authorization: Bearer
+  withCredentials: true,
 });
 
 /* ---------- Exposer FILE_BASE_URL au runtime (debug/interop) ---------- */
@@ -91,12 +91,27 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
+  const method = (config.method || 'get').toUpperCase();
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    const csrf = getCookieValue('teranga_csrf');
+    if (csrf) {
+      config.headers = config.headers || {};
+      config.headers['X-CSRF-Token'] = csrf;
+    }
+  }
+
   // Marqueurs internes pour retry
   if (config.__retryCount === undefined) config.__retryCount = 0;
   if (config.__flippedHost === undefined) config.__flippedHost = false;
 
   return config;
 });
+
+function getCookieValue(name) {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
 
 /* ---------- Helper: retry réseau léger + flip host dev ---------- */
 function shouldRetryNetwork(error) {

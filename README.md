@@ -10,6 +10,10 @@ Mettre en place Teranga comme une franchise panafricaine pilotée par un siège 
 ## Configuration rapide (env)
 - `CORS_ORIGINS` : liste d’origines autorisées (séparées par des virgules). Utiliser `*` en dev si besoin.
 - `LOG_LEVEL` : niveau de logs (`debug`, `info`, `warn`, `error`).
+- `JWT_ACCESS_EXPIRES` : durée du token d’accès (ex: `1h`).
+- `JWT_REFRESH_EXPIRES` : durée du refresh token (ex: `30d`).
+- `BOOTSTRAP_ADMIN_ENABLED` : activer le bootstrap admin en prod (`true/false`).
+- `BOOTSTRAP_ADMIN_EXPIRES_AT` : date d’expiration ISO pour le bootstrap admin.
 
 ## Vision globale (franchise panafricaine)
 - **Plateforme centrale** : Teranga OS, développé et maintenu au siège.

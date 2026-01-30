@@ -7,6 +7,7 @@ const router = express.Router();
 const ctrl = require('../controllers/evidence.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
+const { writeLimiter } = require('../middleware/rateLimit.middleware');
 
 const uploadEvidence = require('../middleware/uploadEvidence.middleware');
 
@@ -17,6 +18,7 @@ router.post(
   '/',
   auth,
   requireRoles('client', 'agent', 'admin'),
+  writeLimiter,
   uploadEvidence.anyCompat(),
   ctrl.create
 );
@@ -58,6 +60,7 @@ router.post(
   '/task/:id',
   auth,
   requireRoles('client', 'agent', 'admin'),
+  writeLimiter,
   uploadEvidence.anyCompat(),
   (req, _res, next) => {
     req.body = req.body || {};
@@ -74,6 +77,7 @@ router.post(
   '/order/:id',
   auth,
   requireRoles('client', 'agent', 'admin'),
+  writeLimiter,
   uploadEvidence.anyCompat(),
   (req, _res, next) => {
     req.body = req.body || {};
@@ -90,6 +94,7 @@ router.delete(
   '/:id',
   auth,
   requireRoles('admin'),
+  writeLimiter,
   ctrl.remove
 );
 
