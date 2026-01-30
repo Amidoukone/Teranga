@@ -2,11 +2,17 @@
 'use strict';
 
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const { User, Country, Region, Sequelize } = require('../../models');
+const { User, Country, Region, RefreshToken, TokenBlacklist, Sequelize } = require('../../models');
 
 // Durée de vie du token d'accès (configurable via env)
 const ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '1h';
+const REFRESH_EXPIRES = process.env.JWT_REFRESH_EXPIRES || '30d';
+
+const COOKIE_ACCESS = 'teranga_access';
+const COOKIE_REFRESH = 'teranga_refresh';
+const COOKIE_CSRF = 'teranga_csrf';
 
 /* ======================================================
    🔧 Helpers
@@ -28,13 +34,93 @@ function signAccess(payload) {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET manquant dans la configuration serveur');
   }
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: ACCESS_EXPIRES });
+  const jti = crypto.randomUUID();
+  return jwt.sign({ ...payload, jti }, process.env.JWT_SECRET, {
+    expiresIn: ACCESS_EXPIRES,
+  });
 }
 
 function toSafeInt(value) {
   if (value === null || value === undefined) return null;
   const parsed = Number.parseInt(String(value), 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseDurationToMs(value) {
+  if (typeof value === 'number') return value;
+  const raw = String(value || '').trim();
+  if (!raw) return 0;
+  const match = raw.match(/^(\d+)([smhd])$/);
+  if (!match) return 0;
+  const amount = Number.parseInt(match[1], 10);
+  const unit = match[2];
+  const multipliers = {
+    s: 1000,
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+    d: 24 * 60 * 60 * 1000,
+  };
+  return amount * (multipliers[unit] || 0);
+}
+
+function buildCookieOptions({ maxAge, httpOnly = true } = {}) {
+  const isProd = (process.env.NODE_ENV || 'development') === 'production';
+  return {
+    httpOnly,
+    secure: isProd,
+    sameSite: 'lax',
+    maxAge,
+  };
+}
+
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function issueRefreshToken(user, req) {
+  const rawToken = crypto.randomBytes(64).toString('hex');
+  const tokenHash = hashToken(rawToken);
+  const maxAge = parseDurationToMs(REFRESH_EXPIRES) || 30 * 24 * 60 * 60 * 1000;
+  const expiresAt = new Date(Date.now() + maxAge);
+
+  const refreshRecord = await RefreshToken.create({
+    userId: user.id,
+    tokenHash,
+    expiresAt,
+    createdByIp: req.ip,
+    userAgent: req.get('user-agent') || null,
+  });
+
+  return { rawToken, refreshRecord, maxAge, expiresAt };
+}
+
+function issueCsrfToken() {
+  return crypto.randomBytes(24).toString('hex');
+}
+
+function setAuthCookies(res, { accessToken, accessMaxAge, refreshToken, refreshMaxAge, csrfToken }) {
+  if (accessToken) {
+    res.cookie(COOKIE_ACCESS, accessToken, buildCookieOptions({ maxAge: accessMaxAge }));
+  }
+  if (refreshToken) {
+    res.cookie(
+      COOKIE_REFRESH,
+      refreshToken,
+      {
+        ...buildCookieOptions({ maxAge: refreshMaxAge }),
+        path: '/api/auth',
+      }
+    );
+  }
+  if (csrfToken) {
+    res.cookie(COOKIE_CSRF, csrfToken, buildCookieOptions({ maxAge: refreshMaxAge, httpOnly: false }));
+  }
+}
+
+function clearAuthCookies(res) {
+  res.clearCookie(COOKIE_ACCESS);
+  res.clearCookie(COOKIE_REFRESH, { path: '/api/auth' });
+  res.clearCookie(COOKIE_CSRF);
 }
 
 async function resolveGeoScope({ country, countryId, regionId }) {
@@ -227,9 +313,23 @@ exports.login = async (req, res) => {
       return res.status(500).json({ error: 'Configuration serveur invalide (JWT)' });
     }
 
+    const { rawToken, maxAge: refreshMaxAge } = await issueRefreshToken(user, req);
+    const accessMaxAge =
+      parseDurationToMs(ACCESS_EXPIRES) || 60 * 60 * 1000;
+    const csrfToken = issueCsrfToken();
+
+    setAuthCookies(res, {
+      accessToken: token,
+      accessMaxAge,
+      refreshToken: rawToken,
+      refreshMaxAge,
+      csrfToken,
+    });
+
     return res.json({
       message: 'Connexion réussie',
       token,
+      csrfToken,
       user: {
         id: user.id,
         email: user.email,
@@ -279,5 +379,126 @@ exports.me = async (req, res) => {
   } catch (e) {
     console.error('❌ Erreur /auth/me:', e);
     return res.status(500).json({ error: 'Erreur' });
+  }
+};
+
+/* ======================================================
+   🔄 Refresh token (rotation + blacklist safe)
+====================================================== */
+exports.refresh = async (req, res) => {
+  try {
+    const cookieRefresh = req.cookies?.[COOKIE_REFRESH];
+    const rawRefresh = cookieRefresh || req.body?.refreshToken || null;
+    if (!rawRefresh) {
+      return res.status(401).json({ error: 'Refresh token manquant' });
+    }
+
+    if (cookieRefresh) {
+      const csrfHeader = req.headers['x-csrf-token'];
+      const csrfCookie = req.cookies?.[COOKIE_CSRF];
+      if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie) {
+        return res.status(403).json({ error: 'CSRF token invalide' });
+      }
+    }
+
+    const tokenHash = hashToken(rawRefresh);
+    const stored = await RefreshToken.findOne({
+      where: { tokenHash },
+    });
+
+    if (!stored || stored.revokedAt) {
+      return res.status(401).json({ error: 'Refresh token invalide' });
+    }
+
+    if (stored.expiresAt && new Date(stored.expiresAt) < new Date()) {
+      return res.status(401).json({ error: 'Refresh token expiré' });
+    }
+
+    const user = await User.findByPk(stored.userId);
+    if (!user) {
+      return res.status(401).json({ error: 'Utilisateur introuvable' });
+    }
+
+    const newAccessToken = signAccess({
+      id: user.id,
+      role: user.role,
+      countryId: user.countryId ?? null,
+      regionId: user.regionId ?? null,
+    });
+
+    const { rawToken, refreshRecord, maxAge: refreshMaxAge } =
+      await issueRefreshToken(user, req);
+
+    await stored.update({
+      revokedAt: new Date(),
+      revokedByIp: req.ip,
+      replacedByTokenId: refreshRecord.id,
+    });
+
+    const accessMaxAge =
+      parseDurationToMs(ACCESS_EXPIRES) || 60 * 60 * 1000;
+    const csrfToken = issueCsrfToken();
+
+    setAuthCookies(res, {
+      accessToken: newAccessToken,
+      accessMaxAge,
+      refreshToken: rawToken,
+      refreshMaxAge,
+      csrfToken,
+    });
+
+    return res.json({
+      message: 'Token rafraîchi',
+      token: newAccessToken,
+      csrfToken,
+    });
+  } catch (e) {
+    console.error('❌ Erreur refresh:', e);
+    return res.status(500).json({ error: 'Erreur lors du refresh' });
+  }
+};
+
+/* ======================================================
+   🚪 Logout (révocation + blacklist)
+====================================================== */
+exports.logout = async (req, res) => {
+  try {
+    const rawRefresh = req.cookies?.[COOKIE_REFRESH] || null;
+    if (rawRefresh) {
+      const tokenHash = hashToken(rawRefresh);
+      const stored = await RefreshToken.findOne({ where: { tokenHash } });
+      if (stored && !stored.revokedAt) {
+        await stored.update({
+          revokedAt: new Date(),
+          revokedByIp: req.ip,
+        });
+      }
+    }
+
+    const accessToken =
+      req.headers.authorization?.startsWith('Bearer ')
+        ? req.headers.authorization.slice(7)
+        : req.cookies?.[COOKIE_ACCESS];
+
+    if (accessToken) {
+      try {
+        const payload = jwt.verify(accessToken, process.env.JWT_SECRET);
+        if (payload?.jti && payload?.exp) {
+          const expiresAt = new Date(payload.exp * 1000);
+          await TokenBlacklist.findOrCreate({
+            where: { jti: payload.jti },
+            defaults: { expiresAt },
+          });
+        }
+      } catch (err) {
+        // ignore invalid token
+      }
+    }
+
+    clearAuthCookies(res);
+    return res.json({ message: 'Déconnexion réussie' });
+  } catch (e) {
+    console.error('❌ Erreur logout:', e);
+    return res.status(500).json({ error: 'Erreur lors de la déconnexion' });
   }
 };
