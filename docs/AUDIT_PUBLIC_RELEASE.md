@@ -21,8 +21,6 @@
 - `sed -n '240,480p' backend/src/controllers/auth.controller.js`
 - `sed -n '480,720p' backend/src/controllers/auth.controller.js`
 - `sed -n '1,200p' backend/src/middleware/auth.middleware.js`
-- `sed -n '1,200p' backend/src/middleware/securityHeaders.middleware.js`
-- `sed -n '1,200p' backend/src/middleware/metrics.middleware.js`
 - `sed -n '1,200p' backend/src/middleware/requestContext.middleware.js`
 - `sed -n '1,200p' backend/src/middleware/rateLimit.middleware.js`
 - `sed -n '1,200p' backend/src/middleware/roles.middleware.js`
@@ -31,10 +29,6 @@
 - `sed -n '1,200p' backend/src/routes/auth.routes.js`
 - `sed -n '1,200p' backend/src/routes/order.routes.js`
 - `sed -n '1,200p' backend/src/routes/user.routes.js`
-- `sed -n '1,200p' backend/src/routes/service.routes.js`
-- `sed -n '1,200p' backend/src/routes/task.routes.js`
-- `sed -n '1,200p' backend/src/routes/evidence.routes.js`
-- `sed -n '1,200p' backend/src/routes/project.routes.js`
 - `rg -n "validateBody" backend/src/routes`
 - `sed -n '1,200p' frontend/src/App.js`
 - `sed -n '200,400p' frontend/src/App.js`
@@ -48,15 +42,15 @@
 
 ## 2) Résumé d’architecture (constaté)
 ### Backend (Express + Sequelize)
-- API Express avec CORS configurable, Request ID, logs structurés, gestion d’erreurs, healthcheck, **headers de sécurité globaux** et **métriques applicatives basiques** via `/api/metrics` (optionnellement protégé par token). Le serveur charge un grand nombre de routes métiers (auth, services, transactions, projets, commerce, etc.).
+- API Express avec CORS configurable, Request ID, logs structurés, gestion d’erreurs, et healthcheck. Le serveur charge un grand nombre de routes métiers (auth, services, transactions, projets, commerce, etc.).
 - Auth JWT avec cookies httpOnly, refresh tokens en base, rotation, blacklist, et vérification CSRF quand les cookies sont utilisés.
-- Rate limiting sur endpoints sensibles (auth/refresh/write) et validation d’entrées basée sur Joi désormais étendue aux routes sensibles (users, services, tasks, evidences, projects).
+- Rate limiting sur endpoints sensibles (auth/refresh/write) et validation d’entrées basée sur Joi sur certaines routes.
 - Uploads : limitation taille, types de fichiers autorisés, stockage mémoire (prêt ImageKit).
 
 ### Frontend (React + CRA)
 - App React (CRA) avec routage protégé, SEO, analytics conditionnels au consentement, et pages admin/agent/client.
 - Client API axios avec base URL adaptative, injection du token bearer, `withCredentials`, et en‑tête CSRF.
-- Auth côté front **supporte un mode cookie** (via `REACT_APP_AUTH_STORAGE=cookie`) pour éviter le stockage localStorage, tout en conservant un fallback “offline” via cache user.
+- Auth côté front stocke le JWT en localStorage (nouvelle + legacy key), avec fallback “offline”.
 
 ### Documentation métier
 - Plan d’exécution “améliorations pro sans régression”, priorisé P0‑P3.
@@ -69,13 +63,13 @@
 - Auth moderne avec refresh tokens + blacklist + CSRF si cookies, et rate limit dédié à l’authentification.
 - CORS en allowlist configurable et request tracing via `X‑Request‑Id`.
 - Consentement analytics explicite côté frontend.
-- **Headers de sécurité globaux** actifs (CSP, HSTS en prod, X‑Frame‑Options, etc.).
-- **Option cookie‑only auth** disponible pour éviter le stockage JWT en localStorage.
 
-### ⚠️ Bloquants/risques si lancement “grand public” **sans durcissement complémentaire**
-- **Fiabilité & Observabilité** : monitoring applicatif avancé (alerting, dashboards consolidés) et tests d’intégration automatisés restent nécessaires.
+### ⚠️ Bloquants/risques si lancement “grand public” **sans durcissement**
+- **Surface sécurité** : absence de headers de sécurité (CSP, HSTS, etc.) et dépendance au stockage JWT en localStorage côté frontend.
+- **Validation incomplète** : validation Joi présente pour auth/commandes/produits, mais d’autres modules critiques n’ont pas de validation au niveau route.
+- **Fiabilité & Observabilité** : pas de monitoring applicatif systématique ni de stratégie de tests d’intégration automatisés.
 
-**Conclusion** : lancement grand public **possible après corrections P0 restantes (validation + observabilité + conformité)**, sinon risque élevé pour la confiance et la stabilité.
+**Conclusion** : lancement grand public **possible après corrections P0 (sécurité + validation + observabilité + conformité)**, sinon risque élevé pour la confiance et la stabilité.
 
 ---
 
@@ -83,8 +77,6 @@
 ### Sécurité & Auth
 - JWT avec rotation et blacklist + contrôle CSRF si cookie. Cookies `httpOnly`, `secure` en prod, `sameSite=lax`.
 - Rate limiting sur `/auth`, `/refresh` et endpoints d’écriture.
-- Headers HTTP globaux (CSP minimal, HSTS en production, COOP/CORP, etc.).
-- Mode auth cookie‑only disponible pour réduire l’exposition JWT côté client.
 
 ### Architecture & Gouvernance
 - Découpage multi‑pays documenté, conventions DB claires, backfill prévu pour éviter les régressions.
@@ -97,18 +89,18 @@
 
 ## 5) Axes d’amélioration pour être “pro & efficace”
 ### A. Sécurité (P0 — avant ouverture grand public)
-1) ✅ **Durcir les headers HTTP** : CSP, HSTS, X‑Frame‑Options, Referrer‑Policy (déployé globalement).
-2) ✅ **Réduire l’exposition du JWT côté front** : mode cookie‑only disponible (`REACT_APP_AUTH_STORAGE=cookie`).
-3) ⏳ **Réviser la gestion des erreurs** : uniformiser les messages d’erreur pour éviter de divulguer des infos sensibles.
+1) **Durcir les headers HTTP** : CSP, HSTS, X‑Frame‑Options, Referrer‑Policy.
+   - Actuellement, seuls les headers “nosniff”/CORP sont posés sur `/uploads`.
+2) **Réduire l’exposition du JWT côté front** : privilégier l’auth 100% cookie + CSRF, et supprimer le stockage localStorage.
+3) **Réviser la gestion des erreurs** : uniformiser les messages d’erreur pour éviter de divulguer des infos sensibles.
 
 ### B. Validation & cohérence API (P0/P1)
-1) ✅ **Étendre la validation Joi** aux routes sensibles (users, services, tasks, evidences, projects).
+1) **Étendre la validation Joi** aux routes sensibles (users, services, tasks, evidences, projects, etc.).
 2) **Normaliser les réponses API** : mêmes formats d’erreur et de succès sur tous les modules.
 
 ### C. Observabilité & fiabilité (P0/P1)
-1) ✅ **Métriques basiques** (latence, 4xx/5xx, volumes) via `/api/metrics` + **token optionnel**.
-2) ⏳ **Alerting & dashboards** (Prometheus/Grafana ou équivalent) pour industrialiser.
-3) **Journalisation corrélée** (requestId déjà présent) + logs centralisés.
+1) **Métriques & monitoring** (latence, 4xx/5xx) + alerting basique.
+2) **Journalisation corrélée** (requestId déjà présent) + logs centralisés.
 
 ### D. Qualité & tests (P1/P2)
 1) **Tests d’intégration** pour auth, commandes, preuves, projets.
@@ -141,44 +133,6 @@
 
 ---
 
-## 8) Checklist “grand public” (sans régression)
-### Backend
-- ✅ Headers sécurité globaux actifs (CSP minimal, HSTS prod, COOP/CORP).
-- ✅ CORS configuré via allowlist.
-- ✅ Validation Joi étendue aux routes sensibles (users, services, tasks, evidences, projects).
-- ✅ Metrics basiques via `/api/metrics` (token optionnel).
-- ⏳ Monitoring/alerting avancé + dashboards.
-
-### Frontend
-- ✅ Consentement analytics (GA4) conditionnel.
-- ✅ Mode cookie‑only auth disponible (`REACT_APP_AUTH_STORAGE=cookie`).
-- ⏳ Error boundary global pour éviter l’écran blanc.
-
-### Ops
-- ⏳ Tests d’intégration sur flux critiques.
-- ⏳ Rollout progressif (feature flags / toggles).
-
----
-
-## 9) Plan de livraison par étapes (sans régression)
-**Étape 1 — P0 finalisation (1–2 semaines)**  
-- Déployer validation étendue (déjà en place) + ajuster messages d’erreur uniformes.  
-- Activer `/api/metrics` avec `METRICS_TOKEN` en prod.  
-
-**Étape 2 — Observabilité opérationnelle (2–4 semaines)**  
-- Brancher dashboards + alerting (Prometheus/Grafana ou équivalent).  
-- Définir seuils SLO (latence, taux d’erreurs).  
-
-**Étape 3 — Tests d’intégration ciblés (4–6 semaines)**  
-- Auth, commandes, preuves, projets.  
-- CI minimal : exécuter les tests critiques à chaque déploiement.  
-
-**Étape 4 — Lancement large**  
-- Rollout progressif + feature flags.  
-- Monitoring renforcé pendant les 2 premières semaines.
-
----
-
-## 10) Références internes
+## 8) Références internes
 - Plan d’exécution : `docs/PLAN_EXECUTION.md`.
 - Règles multi‑pays : `backend/docs/multi-country-rules.md`.
