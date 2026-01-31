@@ -7,9 +7,21 @@ const evCtrl = require('../controllers/evidence.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
 const uploadEvidence = require('../middleware/uploadEvidence.middleware');
+const { validateBody } = require('../middleware/validate.middleware');
+const {
+  createTaskSchema,
+  updateStatusSchema,
+  assignAgentSchema,
+} = require('../validators/task.schemas');
 
 // ➕ Créer une tâche (client ou admin)
-router.post('/', auth, requireRoles('client', 'admin'), ctrl.create);
+router.post(
+  '/',
+  auth,
+  requireRoles('client', 'admin'),
+  validateBody(createTaskSchema),
+  ctrl.create
+);
 
 // 📋 Lister les tâches
 router.get('/', auth, requireRoles('client', 'agent', 'admin'), ctrl.list);
@@ -27,6 +39,7 @@ router.put(
   '/:id/status',
   auth,
   requireRoles('agent', 'admin'),
+  validateBody(updateStatusSchema),
   ctrl.updateStatus
 );
 
@@ -35,6 +48,7 @@ router.put(
   '/:id/assign',
   auth,
   requireRoles('admin'),
+  validateBody(assignAgentSchema),
   ctrl.assignAgent
 );
 

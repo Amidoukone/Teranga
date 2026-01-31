@@ -5,11 +5,26 @@ const ImageKit = require("imagekit");
 // --------------------------------------------------
 // 🌍 Initialisation ImageKit avec les variables .env
 // --------------------------------------------------
-const imagekit = new ImageKit({
-  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
-  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
-  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT
-});
+const isConfigured = Boolean(
+  process.env.IMAGEKIT_PUBLIC_KEY &&
+    process.env.IMAGEKIT_PRIVATE_KEY &&
+    process.env.IMAGEKIT_URL_ENDPOINT
+);
+
+if (!isConfigured) {
+  console.warn(
+    '⚠️ ImageKit: variables manquantes. ' +
+      'Assurez-vous que IMAGEKIT_PUBLIC_KEY, IMAGEKIT_PRIVATE_KEY et IMAGEKIT_URL_ENDPOINT sont définies.'
+  );
+}
+
+const imagekit = isConfigured
+  ? new ImageKit({
+      publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+      privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+      urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT
+    })
+  : null;
 
 // --------------------------------------------------
 // 📤 1. UPLOAD IMAGE/FILE → ImageKit
@@ -19,6 +34,7 @@ const imagekit = new ImageKit({
 // folder     : string  (ex: "/properties", "/projects"...)
 async function uploadToImageKit(folder, fileBuffer, fileName) {
   if (!fileBuffer) return null;
+  if (!imagekit) return null;
 
   try {
     const response = await imagekit.upload({
@@ -45,6 +61,7 @@ async function uploadToImageKit(folder, fileBuffer, fileName) {
 // --------------------------------------------------
 async function deleteFromImageKit(fileId) {
   if (!fileId) return;
+  if (!imagekit) return false;
 
   try {
     await imagekit.deleteFile(fileId);

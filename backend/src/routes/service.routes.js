@@ -5,6 +5,12 @@ const router = require('express').Router();
 const ctrl = require('../controllers/service.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
+const { validateBody } = require('../middleware/validate.middleware');
+const {
+  createServiceSchema,
+  updateServiceSchema,
+  assignServiceSchema,
+} = require('../validators/service.schemas');
 
 /**
  * ROUTES SERVICES
@@ -36,10 +42,22 @@ function useHandler(name) {
 router.get('/', auth, requireRoles('admin'), useHandler('listAll'));
 
 // 🔹 Assigner un agent à un service
-router.post('/assign', auth, requireRoles('admin'), useHandler('assignAgent'));
+router.post(
+  '/assign',
+  auth,
+  requireRoles('admin'),
+  validateBody(assignServiceSchema),
+  useHandler('assignAgent')
+);
 
 // 🔹 Mettre à jour un service (admin + client propriétaire)
-router.put('/:id', auth, requireRoles('admin', 'client'), useHandler('updateService'));
+router.put(
+  '/:id',
+  auth,
+  requireRoles('admin', 'client'),
+  validateBody(updateServiceSchema),
+  useHandler('updateService')
+);
 
 // 🔹 Supprimer un service (admin + client propriétaire)
 router.delete('/:id', auth, requireRoles('admin', 'client'), useHandler('deleteService'));
@@ -49,7 +67,13 @@ router.delete('/:id', auth, requireRoles('admin', 'client'), useHandler('deleteS
 ====================================================== */
 
 // 🔹 Créer un service
-router.post('/', auth, requireRoles('client', 'admin'), useHandler('create'));
+router.post(
+  '/',
+  auth,
+  requireRoles('client', 'admin'),
+  validateBody(createServiceSchema),
+  useHandler('create')
+);
 
 // 🔹 Liste des services du client connecté
 router.get('/me', auth, requireRoles('client', 'admin'), useHandler('listClient'));
