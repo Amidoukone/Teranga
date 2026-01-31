@@ -53,6 +53,7 @@ import AdminPropertiesPage from './pages/AdminPropertiesPage';
 import AdminProjectsPage from './pages/AdminProjectsPage';
 import AdminCategoriesPage from './pages/AdminCategoriesPage';
 import AdminProductsPage from './pages/AdminProductsPage';
+import AdminMetricsPage from './pages/AdminMetricsPage';
 
 // ✅ NEW: Onboarding Pays → Régions → MASTER
 import AdminOnboardingPage from './pages/AdminOnboardingPage';
@@ -473,6 +474,20 @@ export default function App() {
                     <>
                       <SetSeo title="Gestion des projets" />
                       <AdminProjectsPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/admin/metrics"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['admin']}>
+                    <>
+                      <SetSeo title="Monitoring" />
+                      <AdminMetricsPage />
                     </>
                   </RequireRole>
                 </RequireAuth>
