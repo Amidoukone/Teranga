@@ -1,5 +1,10 @@
 'use strict';
 
+const logger = require('../utils/logger');
+
+const MAX_RECENT_ERRORS = 20;
+const MAX_SLOW_REQUESTS = 20;
+
 const metricsStore = {
   totals: {
     requests: 0,
@@ -7,11 +12,14 @@ const metricsStore = {
   },
   byStatus: {},
   byMethod: {},
+  byRoute: {},
   durationsMs: {
     count: 0,
     total: 0,
     max: 0,
   },
+  recentErrors: [],
+  slowRequests: [],
   startedAt: new Date().toISOString(),
 };
 
@@ -49,7 +57,51 @@ function metricsMiddleware(req, res, next) {
     const method = (req.method || 'UNKNOWN').toUpperCase();
     metricsStore.byMethod[method] = (metricsStore.byMethod[method] || 0) + 1;
 
+    const baseUrl = req.baseUrl || '';
+    const routePath = req.route?.path;
+    const resolvedPath = routePath ? `${baseUrl}${routePath}` : req.originalUrl;
+    metricsStore.byRoute[resolvedPath] =
+      (metricsStore.byRoute[resolvedPath] || 0) + 1;
+
     recordDuration(Number(durationMs.toFixed(2)));
+
+    if (statusCode >= 500) {
+      const errorEntry = {
+        requestId: req.requestId,
+        method,
+        path: resolvedPath,
+        statusCode,
+        durationMs: Number(durationMs.toFixed(2)),
+        timestamp: new Date().toISOString(),
+      };
+      metricsStore.recentErrors.unshift(errorEntry);
+      metricsStore.recentErrors = metricsStore.recentErrors.slice(
+        0,
+        MAX_RECENT_ERRORS
+      );
+    }
+
+    const slowThreshold = Number(process.env.SLOW_REQUEST_THRESHOLD_MS || 1500);
+    if (slowThreshold > 0 && durationMs >= slowThreshold) {
+      const slowEntry = {
+        requestId: req.requestId,
+        method,
+        path: resolvedPath,
+        statusCode,
+        durationMs: Number(durationMs.toFixed(2)),
+        thresholdMs: slowThreshold,
+        timestamp: new Date().toISOString(),
+      };
+      metricsStore.slowRequests.unshift(slowEntry);
+      metricsStore.slowRequests = metricsStore.slowRequests.slice(
+        0,
+        MAX_SLOW_REQUESTS
+      );
+      logger.warn(
+        slowEntry,
+        '🐢 Requête lente détectée'
+      );
+    }
   });
 
   next();
