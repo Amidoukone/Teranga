@@ -1,0 +1,90 @@
+import React from 'react';
+
+const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+    };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    this.setState({ errorInfo });
+    if (typeof this.props.onError === 'function') {
+      this.props.onError(error, errorInfo);
+    }
+    if (isDev) {
+      // eslint-disable-next-line no-console
+      console.error('ErrorBoundary caught an error:', error, errorInfo);
+    }
+  }
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null });
+    if (typeof this.props.onReset === 'function') {
+      this.props.onReset();
+    }
+  };
+
+  render() {
+    if (!this.state.hasError) {
+      return this.props.children;
+    }
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-xl w-full bg-white shadow-lg rounded-2xl border border-gray-200 p-6 sm:p-10 text-center">
+          <p className="text-sm font-semibold uppercase tracking-wide text-red-500">
+            Oups, une erreur est survenue
+          </p>
+          <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-gray-900">
+            Nous travaillons à la résoudre
+          </h1>
+          <p className="mt-4 text-gray-600">
+            Un incident technique a empêché l’affichage de cette page. Merci de
+            réessayer ou de recharger l’application.
+          </p>
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={this.handleReset}
+              className="w-full sm:w-auto rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+            >
+              Réessayer
+            </button>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="w-full sm:w-auto rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            >
+              Recharger l’application
+            </button>
+          </div>
+
+          {isDev && this.state.error && (
+            <details className="mt-6 text-left text-xs text-gray-500">
+              <summary className="cursor-pointer font-semibold text-gray-700">
+                Détails techniques
+              </summary>
+              <pre className="mt-2 whitespace-pre-wrap break-words">
+                {this.state.error?.toString()}
+                {'\n'}
+                {this.state.errorInfo?.componentStack}
+              </pre>
+            </details>
+          )}
+        </div>
+      </div>
+    );
+  }
+}
+
+export default ErrorBoundary;
