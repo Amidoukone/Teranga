@@ -14,6 +14,8 @@ Mettre en place Teranga comme une franchise panafricaine pilotée par un siège 
 - `JWT_REFRESH_EXPIRES` : durée du refresh token (ex: `30d`).
 - `BOOTSTRAP_ADMIN_ENABLED` : activer le bootstrap admin en prod (`true/false`).
 - `BOOTSTRAP_ADMIN_EXPIRES_AT` : date d’expiration ISO pour le bootstrap admin.
+- `METRICS_TOKEN` : token d’accès à `/api/metrics` (recommandé en prod).
+- `SLOW_REQUEST_THRESHOLD_MS` : seuil (ms) pour signaler les requêtes lentes (défaut 1500).
 
 ## Vision globale (franchise panafricaine)
 - **Plateforme centrale** : Teranga OS, développé et maintenu au siège.
