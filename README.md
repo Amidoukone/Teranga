@@ -16,7 +16,6 @@ Mettre en place Teranga comme une franchise panafricaine pilotée par un siège 
 - `BOOTSTRAP_ADMIN_EXPIRES_AT` : date d’expiration ISO pour le bootstrap admin.
 - `METRICS_TOKEN` : token d’accès à `/api/metrics` (recommandé en prod).
 - `SLOW_REQUEST_THRESHOLD_MS` : seuil (ms) pour signaler les requêtes lentes (défaut 1500).
-- `REACT_APP_METRICS_TOKEN` : token côté frontend pour afficher les métriques admin.
 
 ## Vision globale (franchise panafricaine)
 - **Plateforme centrale** : Teranga OS, développé et maintenu au siège.
