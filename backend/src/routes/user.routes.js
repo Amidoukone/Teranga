@@ -5,6 +5,12 @@ const router = require('express').Router();
 const ctrl = require('../controllers/user.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles, isGlobalAdmin } = require('../middleware/roles.middleware');
+const { validateBody } = require('../middleware/validate.middleware');
+const {
+  createUserSchema,
+  updateUserSchema,
+  createAgentSchema,
+} = require('../validators/user.schemas');
 
 /**
  * Routes liées aux utilisateurs
@@ -71,12 +77,19 @@ router.post(
   '/',
   auth,
   requireRoles('admin'),
+  validateBody(createUserSchema),
   requireGlobalAdminIfTargetRoleAdmin,
   ctrl.createUser
 );
 
 // Création agent (admin only) — inchangé
-router.post('/agents', auth, requireRoles('admin'), ctrl.createAgent);
+router.post(
+  '/agents',
+  auth,
+  requireRoles('admin'),
+  validateBody(createAgentSchema),
+  ctrl.createAgent
+);
 
 /* =========================================================
    🔒 ADMIN : READ / UPDATE / DELETE
@@ -95,6 +108,7 @@ router.put(
   '/:id',
   auth,
   requireRoles('admin'),
+  validateBody(updateUserSchema),
   requireGlobalAdminIfTargetRoleAdmin,
   ctrl.updateUser
 );
