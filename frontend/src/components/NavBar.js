@@ -90,6 +90,7 @@ const ROLE_LINKS = {
     { path: "/services", label: "Services" },
     { path: "/tasks", label: "Tâches" },
     { path: "/admin/services", label: "Gestion services" },
+    { path: "/admin/metrics", label: "Monitoring" },
     { path: "/admin/agents", label: "Agents" },
     { path: "/admin/users", label: "Utilisateurs" },
     { path: "/admin/properties", label: "Biens clients" },
@@ -140,6 +141,7 @@ const ICON_BY_PATH_PREFIX = [
   // Admin
   { prefix: "/admin/projects", icon: FolderKanban },
   { prefix: "/admin/services", icon: BarChart3 },
+  { prefix: "/admin/metrics", icon: BarChart3 },
   { prefix: "/admin/agents", icon: Users },
   { prefix: "/admin/users", icon: UserCog },
   { prefix: "/admin/properties", icon: Building2 },
@@ -192,6 +194,7 @@ function buildSections(role, links) {
       byPath("/admin/projects"),
       byPath("/admin/onboarding"),
       byPath("/admin/services"),
+      byPath("/admin/metrics"),
       byPath("/admin/agents"),
       byPath("/admin/users"),
       byPath("/admin/properties"),
