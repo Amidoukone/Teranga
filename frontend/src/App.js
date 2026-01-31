@@ -11,6 +11,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import NavBar from './components/NavBar';
 import Analytics from './components/Analytics';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
+import ErrorBoundary from './components/ErrorBoundary';
 import SetSeo from './components/SetSeo'; // ✅ Source unique SEO
 import { GeoProvider } from './contexts/GeoContext';
 import { getAnalyticsConsent, loadAnalytics } from './utils/analytics';
@@ -52,6 +53,7 @@ import AdminPropertiesPage from './pages/AdminPropertiesPage';
 import AdminProjectsPage from './pages/AdminProjectsPage';
 import AdminCategoriesPage from './pages/AdminCategoriesPage';
 import AdminProductsPage from './pages/AdminProductsPage';
+import AdminMetricsPage from './pages/AdminMetricsPage';
 
 // ✅ NEW: Onboarding Pays → Régions → MASTER
 import AdminOnboardingPage from './pages/AdminOnboardingPage';
@@ -170,21 +172,22 @@ export default function App() {
   }, [analyticsConsent, trackingId]);
 
   return (
-    <GeoProvider>
-      <div className="min-h-screen flex flex-col bg-gray-50 text-gray-800">
-        <ScrollToTop />
-        <NavBar />
+    <ErrorBoundary>
+      <GeoProvider>
+        <div className="min-h-screen flex flex-col bg-gray-50 text-gray-800">
+          <ScrollToTop />
+          <NavBar />
 
-        {/* 📈 Google Analytics v4 — tracking automatique */}
-        <Analytics trackingId={trackingId} enabled={analyticsConsent === 'granted'} />
-        <AnalyticsConsentBanner
-          trackingId={trackingId}
-          consent={analyticsConsent}
-          onConsentChange={setAnalyticsConsent}
-        />
+          {/* 📈 Google Analytics v4 — tracking automatique */}
+          <Analytics trackingId={trackingId} enabled={analyticsConsent === 'granted'} />
+          <AnalyticsConsentBanner
+            trackingId={trackingId}
+            consent={analyticsConsent}
+            onConsentChange={setAnalyticsConsent}
+          />
 
-        <main className="flex-1 container mx-auto px-4 py-6">
-          <Routes>
+          <main className="flex-1 container mx-auto px-4 py-6">
+            <Routes>
             {/* ============================= */}
             {/* 🌐 PAGES PUBLIQUES           */}
             {/* ============================= */}
@@ -478,6 +481,20 @@ export default function App() {
             />
 
             <Route
+              path="/admin/metrics"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['admin']}>
+                    <>
+                      <SetSeo title="Monitoring" />
+                      <AdminMetricsPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
               path="/admin/agents"
               element={
                 <RequireAuth>
@@ -573,16 +590,17 @@ export default function App() {
                 </>
               }
             />
-          </Routes>
-        </main>
+            </Routes>
+          </main>
 
-        {/* FOOTER */}
-        <footer className="bg-gray-100 border-t border-gray-200 py-4 text-center text-sm text-gray-600">
-          © {new Date().getFullYear()}{' '}
-          <span className="font-semibold text-blue-600">Teranga</span> — Tous
-          droits réservés.
-        </footer>
-      </div>
-    </GeoProvider>
+          {/* FOOTER */}
+          <footer className="bg-gray-100 border-t border-gray-200 py-4 text-center text-sm text-gray-600">
+            © {new Date().getFullYear()}{' '}
+            <span className="font-semibold text-blue-600">Teranga</span> — Tous
+            droits réservés.
+          </footer>
+        </div>
+      </GeoProvider>
+    </ErrorBoundary>
   );
 }
