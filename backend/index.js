@@ -185,6 +185,7 @@ loadRouter('./src/routes/orderItem.routes', '/api/order-items');
    🔍 Healthcheck + Racine
    ====================================================== */
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
+app.get('/api/metrics', metricsHandler);
 
 app.get('/', (_req, res) => {
   res.json({

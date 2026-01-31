@@ -8,6 +8,8 @@ const ctrl = require('../controllers/evidence.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
 const { writeLimiter } = require('../middleware/rateLimit.middleware');
+const { validateBody } = require('../middleware/validate.middleware');
+const { createEvidenceSchema } = require('../validators/evidence.schemas');
 
 const uploadEvidence = require('../middleware/uploadEvidence.middleware');
 
@@ -20,6 +22,7 @@ router.post(
   requireRoles('client', 'agent', 'admin'),
   writeLimiter,
   uploadEvidence.anyCompat(),
+  validateBody(createEvidenceSchema),
   ctrl.create
 );
 
@@ -67,6 +70,7 @@ router.post(
     req.body.taskId = req.params.id;
     next();
   },
+  validateBody(createEvidenceSchema),
   ctrl.create
 );
 
@@ -84,6 +88,7 @@ router.post(
     req.body.orderId = req.params.id;
     next();
   },
+  validateBody(createEvidenceSchema),
   ctrl.create
 );
 
