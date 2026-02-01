@@ -29,6 +29,13 @@
   --color-warning: 245 158 11;
   --color-error: 239 68 68;
   --color-info: 59 130 246;
+  --color-nav-bg: 15 23 42;
+  --color-nav-surface: 30 41 59;
+  --color-nav-border: 51 65 85;
+  --color-nav-text: 226 232 240;
+  --color-nav-muted: 148 163 184;
+  --color-nav-accent: 96 165 250;
+  --color-nav-accent-strong: 59 130 246;
 }
 
 @layer base {
