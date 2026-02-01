@@ -89,7 +89,7 @@ export default function LoginPage() {
             Connexion à Teranga
           </h1>
 
-          <p className="text-sm text-slate-600 mt-1">
+          <p className="page-lead mt-1">
             Accédez à votre espace sécurisé
           </p>
         </div>
@@ -206,7 +206,7 @@ export default function LoginPage() {
           </Link>
 
           <p className="mt-4 text-slate-500 text-xs">
-            Les comptes agents et administrateurs sont créés par l’équipe Teranga.
+            Besoin d’un accès spécifique ? Contactez le support Teranga.
           </p>
         </div>
       </div>

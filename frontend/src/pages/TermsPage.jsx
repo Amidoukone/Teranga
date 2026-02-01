@@ -22,8 +22,7 @@ export default function TermsPage() {
 
             <p>
               Les présentes Conditions Générales d’Utilisation (CGU) encadrent
-              l’accès et l’utilisation de l’application Teranga par ses membres,
-              agents et administrateurs.
+              l’accès et l’utilisation de l’application Teranga par ses membres.
             </p>
 
             <h2 className="text-xl font-semibold text-slate-900 mt-6">

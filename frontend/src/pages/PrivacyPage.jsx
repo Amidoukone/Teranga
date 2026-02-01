@@ -59,7 +59,7 @@ export default function PrivacyPage() {
             </h2>
             <p>
               Teranga ne revend pas vos données. Elles peuvent être transmises aux
-              agents certifiés uniquement pour exécuter les services.
+              prestataires habilités uniquement pour exécuter les services.
             </p>
 
             <h2 className="text-xl font-semibold text-slate-900 mt-6">
