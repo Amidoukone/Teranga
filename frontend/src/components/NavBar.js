@@ -439,7 +439,7 @@ function NavBar() {
               </div>
 
               {/* ✅ Lisibilité renforcée */}
-              <div className="text-[0.72rem] text-slate-200/90 truncate">
+              <div className="text-[0.72rem] text-white/80 truncate">
                 {prettyRoleLabel(user)}
               </div>
             </div>
