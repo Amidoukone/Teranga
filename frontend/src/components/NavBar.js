@@ -6,9 +6,9 @@
 // - Admin Onboarding visible uniquement ADMIN GLOBAL (pas Master)
 // ============================================================================
 //
-// ✅ Fix 2026-01:
-// - Lisibilité renforcée dans tous les états (avant hover / hover / actif / focus)
-// - Email utilisateur non affiché (nom uniquement)
+// ✅ Fix UI:
+// - Lisibilité renforcée dans tous les états (idle / hover / actif / focus)
+// - Suppression des couleurs hex hardcodées -> tokens (surface/text/border/primary)
 // - Aucune fonctionnalité supprimée
 // ============================================================================
 
@@ -217,6 +217,32 @@ function buildSections(role, links) {
 }
 
 /* ============================================================================ */
+/* SHARED CLASS HELPERS (Enterprise states) */
+/* ============================================================================ */
+
+const clsTabBase =
+  "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition " +
+  "focus:outline-none focus:ring-4 focus:ring-primary/10";
+
+const clsTabInactive =
+  "text-text-secondary hover:text-text-primary hover:bg-surface-main/70";
+
+const clsTabActive =
+  "bg-primary/10 text-primary border border-border shadow-sm";
+
+const clsMenuSurface =
+  "overflow-hidden rounded-2xl border border-border bg-surface-card/95 backdrop-blur-xl shadow-2xl";
+
+const clsMenuItemBase =
+  "mx-2 my-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition " +
+  "focus:outline-none focus:ring-4 focus:ring-primary/10";
+
+const clsMenuItemInactive =
+  "text-text-secondary hover:bg-surface-main/70 hover:text-text-primary";
+
+const clsMenuItemActive = "bg-primary/10 text-primary font-semibold";
+
+/* ============================================================================ */
 /* COMPONENT */
 /* ============================================================================ */
 
@@ -324,9 +350,7 @@ function NavBar() {
     (path) => {
       if (!path) return false;
       if (path === "/") return location.pathname === "/";
-      return (
-        location.pathname === path || location.pathname.startsWith(path + "/")
-      );
+      return location.pathname === path || location.pathname.startsWith(path + "/");
     },
     [location.pathname]
   );
@@ -387,11 +411,11 @@ function NavBar() {
   /* ============================================================================ */
   if (!user && isPublic) {
     return (
-      <nav className="bg-nav-bg/95 backdrop-blur-xl text-nav-text border-b border-nav-border/70 shadow-[0_10px_28px_rgba(15,23,42,0.35)] px-5 py-4 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+      <nav className="sticky top-0 z-50 border-b border-border bg-surface-card/90 backdrop-blur-xl shadow-sm">
+        <div className="max-w-7xl mx-auto px-5 py-4 flex justify-between items-center">
           <Link
             to="/"
-            className="flex items-center gap-2 text-nav-accent font-semibold tracking-wide text-[1.05rem]"
+            className="flex items-center gap-2 text-primary font-semibold tracking-wide text-[1.05rem]"
           >
             {Logo} Teranga
           </Link>
@@ -399,13 +423,13 @@ function NavBar() {
           <div className="flex gap-3 text-sm">
             <Link
               to="/login"
-              className="transition-colors duration-200 text-nav-muted hover:text-nav-text"
+              className="transition-colors duration-200 text-text-secondary hover:text-text-primary"
             >
               Connexion
             </Link>
             <Link
               to="/register"
-              className="px-4 py-1.5 bg-nav-accent rounded-md font-semibold transition-colors duration-200 hover:bg-nav-accent-strong text-nav-bg"
+              className="px-4 py-2 bg-primary text-white rounded-xl font-semibold transition-colors duration-200 hover:bg-primary/90"
             >
               Inscription
             </Link>
@@ -421,25 +445,23 @@ function NavBar() {
   return (
     <>
       {/* TOP BAR */}
-      <nav className="bg-nav-bg/95 backdrop-blur-xl text-nav-text border-b border-nav-border/70 shadow-[0_10px_28px_rgba(15,23,42,0.35)] sticky top-0 z-50">
+      <nav className="sticky top-0 z-50 border-b border-border bg-surface-card/90 backdrop-blur-xl shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
           {/* LEFT: Logo + Context */}
           <div className="flex items-center gap-3 min-w-0">
             <Link
               to="/"
-              className="flex items-center gap-2 text-nav-accent font-semibold tracking-wide text-[1.05rem] shrink-0"
+              className="flex items-center gap-2 text-primary font-semibold tracking-wide text-[1.05rem] shrink-0"
             >
               {Logo} Teranga
             </Link>
 
             {/* Page context (desktop) */}
             <div className="hidden md:flex flex-col min-w-0">
-              <div className="text-sm font-semibold text-nav-text truncate">
+              <div className="text-sm font-semibold text-text-primary truncate">
                 {activeLabel || "Tableau de bord"}
               </div>
-
-              {/* ✅ Lisibilité renforcée */}
-              <div className="text-[0.72rem] text-white/80 truncate">
+              <div className="text-[0.72rem] text-text-muted truncate">
                 {prettyRoleLabel(user)}
               </div>
             </div>
@@ -453,13 +475,7 @@ function NavBar() {
                 <Link
                   key={l.path}
                   to={l.path}
-                  className={[
-                    "px-3 py-1.5 rounded-lg text-sm font-medium transition",
-                    "focus:outline-none focus:ring-4 focus:ring-blue-100/20",
-                    active
-                      ? "bg-[#111A2E] text-[#00C2FF] shadow-[0_0_18px_rgba(0,194,255,0.14)]"
-                      : "text-slate-100 hover:text-white hover:bg-[#111A2E]/70",
-                  ].join(" ")}
+                  className={[clsTabBase, active ? clsTabActive : clsTabInactive].join(" ")}
                   aria-current={active ? "page" : undefined}
                 >
                   {l.label}
@@ -472,20 +488,14 @@ function NavBar() {
               <button
                 onClick={() => setOpenDesktopMore((v) => !v)}
                 className={[
-                  "px-3 py-1.5 rounded-lg text-sm font-medium transition inline-flex items-center gap-1.5",
-                  "focus:outline-none focus:ring-4 focus:ring-blue-100/20",
-                  openDesktopMore
-                    ? "bg-[#111A2E] text-[#00C2FF]"
-                    : "text-slate-100 hover:text-white hover:bg-[#111A2E]/70",
+                  clsTabBase,
+                  openDesktopMore ? clsTabActive : clsTabInactive,
+                  "inline-flex items-center gap-1.5",
                 ].join(" ")}
                 aria-expanded={openDesktopMore}
                 aria-controls="desktop-more-menu"
               >
-                Plus{" "}
-                <ChevronDown
-                  size={16}
-                  className={openDesktopMore ? "opacity-100" : "opacity-90"}
-                />
+                Plus <ChevronDown size={16} className="opacity-90" />
               </button>
 
               <AnimatePresence>
@@ -493,28 +503,33 @@ function NavBar() {
                   <>
                     <motion.div
                       initial={{ opacity: 0 }}
-                      animate={{ opacity: 0.55 }}
+                      animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-40"
+                      className="fixed inset-0 z-40 bg-black/30"
                       onClick={() => setOpenDesktopMore(false)}
                       aria-hidden="true"
                     />
                     <motion.div
                       id="desktop-more-menu"
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                      initial={{ opacity: 0, y: 8, scale: 0.985 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.985 }}
                       transition={{ duration: 0.16 }}
-                      className="absolute right-0 mt-2 z-50 w-[320px] overflow-hidden rounded-2xl border border-nav-border/70 bg-nav-bg/95 backdrop-blur-2xl shadow-2xl"
+                      className={[
+                        "absolute right-0 mt-2 z-50 w-[340px]",
+                        clsMenuSurface,
+                      ].join(" ")}
                       role="menu"
                       aria-label="Menu Plus"
                     >
                       {/* Quick Scope */}
-                      <div className="px-4 py-3 border-b border-[#1E2A45] bg-[#111A2E]">
-                        <div className="text-[0.72rem] text-slate-100/90 mb-1">
+                      <div className="px-4 py-3 border-b border-border bg-surface-main/50">
+                        <div className="text-[0.72rem] text-text-muted mb-2">
                           Périmètre
                         </div>
-                        <div className="rounded-xl border border-nav-border/70 bg-nav-bg/60 px-2 py-1">
+
+                        {/* Encapsulation “Enterprise control” */}
+                        <div className="rounded-xl border border-border bg-surface-card px-3 py-2">
                           <GeoSelector />
                         </div>
                       </div>
@@ -522,8 +537,7 @@ function NavBar() {
                       <div className="max-h-[420px] overflow-y-auto py-2">
                         {sections.map((sec) => (
                           <div key={sec.title} className="py-1">
-                            {/* ✅ Titre section lisible */}
-                            <div className="px-4 py-1.5 text-[0.65rem] uppercase tracking-widest text-slate-200/90">
+                            <div className="px-4 py-1.5 text-[0.65rem] uppercase tracking-widest text-text-muted">
                               {sec.title}
                             </div>
 
@@ -546,26 +560,17 @@ function NavBar() {
                                     to={l.path}
                                     onClick={() => setOpenDesktopMore(false)}
                                     className={[
-                                      "mx-2 my-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition",
-                                      "focus:outline-none focus:ring-4 focus:ring-blue-100/20",
-                                      active
-                                        ? "bg-[#111A2E] text-[#00C2FF] font-semibold"
-                                        : "text-slate-100 hover:bg-[#111A2E]/70 hover:text-white",
+                                      clsMenuItemBase,
+                                      active ? clsMenuItemActive : clsMenuItemInactive,
                                     ].join(" ")}
                                     aria-current={active ? "page" : undefined}
                                     role="menuitem"
                                   >
-                                    <span
-                                      className={
-                                        active ? "text-[#00C2FF]" : "text-slate-100"
-                                      }
-                                    >
+                                    <span className={active ? "text-primary" : "text-text-secondary"}>
                                       <Icon size={16} />
                                     </span>
                                     <span className="flex-1">{l.label}</span>
-                                    {active ? (
-                                      <Check size={16} className="text-nav-accent" />
-                                    ) : null}
+                                    {active ? <Check size={16} className="text-primary" /> : null}
                                   </Link>
                                 );
                               })}
@@ -581,15 +586,14 @@ function NavBar() {
 
           {/* RIGHT: Geo (desktop) + User menu */}
           <div className="hidden md:flex items-center gap-3">
-            {/* keep GeoSelector here for enterprise */}
             <div className="hidden lg:flex items-center">
-              <div className="rounded-xl border border-nav-border/70 bg-nav-surface/70 px-2 py-1">
+              <div className="rounded-xl border border-border bg-surface-main/50 px-3 py-2">
                 <GeoSelector />
               </div>
             </div>
 
-            {/* Role badge (more readable) */}
-            <span className="hidden lg:inline bg-[#111A2E] border border-[#1E2A45] px-3 py-1 rounded-full text-[0.7rem] uppercase tracking-wide text-slate-100">
+            {/* Role badge */}
+            <span className="hidden lg:inline rounded-full border border-border bg-surface-main/50 px-3 py-1 text-[0.7rem] uppercase tracking-wide text-text-secondary">
               {prettyRoleLabel(user)}
             </span>
 
@@ -597,29 +601,25 @@ function NavBar() {
             <div className="relative">
               <button
                 onClick={() => setOpenUserMenu((v) => !v)}
-                className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-nav-surface/70 transition focus:outline-none focus:ring-4 focus:ring-blue-100/20"
+                className="flex items-center gap-2 rounded-2xl px-2 py-1.5 hover:bg-surface-main/60 transition focus:outline-none focus:ring-4 focus:ring-primary/10"
                 aria-expanded={openUserMenu}
                 aria-controls="user-menu"
                 aria-label="Menu utilisateur"
               >
                 <div className="relative">
-                  <div className="w-9 h-9 bg-gradient-to-br from-nav-accent to-nav-accent-strong rounded-full flex items-center justify-center text-white font-semibold">
+                  <div className="w-9 h-9 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
                     {userInitial}
                   </div>
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-nav-bg" />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-surface-card" />
                 </div>
 
-                {/* ✅ Email supprimé: nom uniquement */}
                 <div className="hidden lg:flex items-center">
-                  <div className="text-sm font-semibold text-slate-100 max-w-[180px] truncate">
+                  <div className="text-sm font-semibold text-text-primary max-w-[180px] truncate">
                     {userDisplay}
                   </div>
                 </div>
 
-                <ChevronDown
-                  size={16}
-                  className={openUserMenu ? "text-[#00C2FF]" : "text-slate-100"}
-                />
+                <ChevronDown size={16} className={openUserMenu ? "text-primary" : "text-text-secondary"} />
               </button>
 
               <AnimatePresence>
@@ -627,27 +627,27 @@ function NavBar() {
                   <>
                     <motion.div
                       initial={{ opacity: 0 }}
-                      animate={{ opacity: 0.55 }}
+                      animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-40"
+                      className="fixed inset-0 z-40 bg-black/30"
                       onClick={() => setOpenUserMenu(false)}
                       aria-hidden="true"
                     />
                     <motion.div
                       id="user-menu"
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                      initial={{ opacity: 0, y: 8, scale: 0.985 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.985 }}
                       transition={{ duration: 0.16 }}
-                      className="absolute right-0 mt-2 z-50 w-[280px] overflow-hidden rounded-2xl border border-nav-border/70 bg-nav-bg/95 backdrop-blur-2xl shadow-2xl"
+                      className={["absolute right-0 mt-2 z-50 w-[280px]", clsMenuSurface].join(" ")}
                       role="menu"
                       aria-label="Menu utilisateur"
                     >
-                      <div className="px-4 py-3 border-b border-nav-border/70 bg-nav-surface/80">
-                        <div className="text-nav-text text-sm font-semibold tracking-wide truncate">
+                      <div className="px-4 py-3 border-b border-border bg-surface-main/50">
+                        <div className="text-text-primary text-sm font-semibold tracking-wide truncate">
                           {userDisplay}
                         </div>
-                        <div className="text-slate-100/90 text-[0.75rem] truncate">
+                        <div className="text-text-muted text-[0.75rem] truncate">
                           {prettyRoleLabel(user)}
                         </div>
                       </div>
@@ -655,7 +655,7 @@ function NavBar() {
                       <div className="py-2">
                         <button
                           type="button"
-                          className="w-full text-left px-4 py-2 text-sm text-slate-100 hover:bg-[#111A2E]/70 hover:text-white transition"
+                          className="w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
                           disabled
                           aria-disabled="true"
                           title="Bientôt disponible"
@@ -664,7 +664,7 @@ function NavBar() {
                         </button>
                         <button
                           type="button"
-                          className="w-full text-left px-4 py-2 text-sm text-slate-100 hover:bg-[#111A2E]/70 hover:text-white transition"
+                          className="w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
                           disabled
                           aria-disabled="true"
                           title="Bientôt disponible"
@@ -673,7 +673,7 @@ function NavBar() {
                         </button>
                       </div>
 
-                      <div className="border-t border-nav-border/70" />
+                      <div className="border-t border-border" />
 
                       <button
                         onClick={handleLogout}
@@ -690,7 +690,7 @@ function NavBar() {
             </div>
           </div>
 
-          {/* MOBILE: top button */}
+          {/* MOBILE: spacer */}
           <span className="md:hidden" aria-hidden="true" />
         </div>
       </nav>
@@ -698,13 +698,10 @@ function NavBar() {
       {/* ======================================================================== */}
       {/* BOTTOM NAV — MOBILE ONLY (COMPACT) */}
       {/* ======================================================================== */}
-      <nav
-        className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent"
-        aria-label="Navigation basse"
-      >
+      <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent" aria-label="Navigation basse">
         <div className="mx-auto w-full flex justify-center">
           <div className="w-full max-w-xs px-2 pb-2">
-            <div className="bg-nav-bg/95 backdrop-blur-xl border border-nav-border/70 rounded-xl shadow-[0_12px_30px_rgba(15,23,42,0.45)] flex px-1 py-1 gap-1">
+            <div className="bg-surface-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg flex px-1 py-1 gap-1">
               {bottomLinks.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
@@ -714,18 +711,15 @@ function NavBar() {
                     key={item.key}
                     to={item.path}
                     className={[
-                      "flex-1 flex flex-col items-center py-1 rounded-lg text-[0.7rem] transition",
-                      "focus:outline-none focus:ring-4 focus:ring-blue-100/20",
+                      "flex-1 flex flex-col items-center py-1 rounded-xl text-[0.7rem] transition",
+                      "focus:outline-none focus:ring-4 focus:ring-primary/10",
                       active
-                        ? "bg-[#111A2E] text-[#00C2FF] shadow-[0_0_14px_rgba(0,194,255,0.22)] scale-[1.02]"
-                        : "text-slate-100 hover:bg-[#111A2E]/60 hover:text-white",
+                        ? "bg-primary/10 text-primary border border-border shadow-sm"
+                        : "text-text-secondary hover:bg-surface-main/70 hover:text-text-primary",
                     ].join(" ")}
                     aria-current={active ? "page" : undefined}
                   >
-                    <Icon
-                      size={17}
-                      className={active ? "text-[#00C2FF]" : "text-slate-100"}
-                    />
+                    <Icon size={17} className={active ? "text-primary" : "text-text-secondary"} />
                     {item.label}
                   </Link>
                 );
@@ -735,11 +729,11 @@ function NavBar() {
               <button
                 onClick={() => setOpenMore((v) => !v)}
                 className={[
-                  "flex-1 flex flex-col items-center py-1 rounded-lg text-[0.7rem] transition",
-                  "focus:outline-none focus:ring-4 focus:ring-blue-100/20",
+                  "flex-1 flex flex-col items-center py-1 rounded-xl text-[0.7rem] transition",
+                  "focus:outline-none focus:ring-4 focus:ring-primary/10",
                   openMore
-                    ? "bg-[#111A2E] text-[#00C2FF] shadow-[0_0_14px_rgba(0,194,255,0.22)]"
-                    : "text-slate-100 hover:bg-[#111A2E]/60 hover:text-white",
+                    ? "bg-primary/10 text-primary border border-border shadow-sm"
+                    : "text-text-secondary hover:bg-surface-main/70 hover:text-text-primary",
                 ].join(" ")}
                 aria-expanded={openMore}
                 aria-controls="navbar-more-panel"
@@ -761,9 +755,9 @@ function NavBar() {
           <>
             <motion.div
               initial={{ opacity: 0 }}
-              animate={{ opacity: 0.65 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/80 z-40"
+              className="fixed inset-0 bg-black/40 z-40"
               onClick={() => setOpenMore(false)}
               aria-hidden="true"
             />
@@ -779,22 +773,22 @@ function NavBar() {
               aria-modal="true"
               aria-label="Menu"
             >
-              <div className="w-full max-w-sm bg-nav-bg/95 backdrop-blur-2xl border border-nav-border/70 rounded-2xl shadow-2xl overflow-hidden">
+              <div className="w-full max-w-sm bg-surface-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden">
                 {/* HEADER */}
-                <div className="px-4 py-3 border-b border-nav-border/70 flex justify-between items-center bg-nav-surface/80">
+                <div className="px-4 py-3 border-b border-border flex justify-between items-center bg-surface-main/50">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="relative">
-                      <div className="w-9 h-9 bg-gradient-to-br from-nav-accent to-nav-accent-strong rounded-full flex items-center justify-center text-white font-semibold">
+                      <div className="w-9 h-9 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
                         {userInitial}
                       </div>
-                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-nav-bg" />
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-surface-card" />
                     </div>
 
                     <div className="min-w-0">
-                      <div className="text-nav-text text-sm font-semibold tracking-wide truncate">
+                      <div className="text-text-primary text-sm font-semibold tracking-wide truncate">
                         {userDisplay}
                       </div>
-                      <div className="text-slate-100/90 text-[0.7rem] uppercase tracking-wide truncate">
+                      <div className="text-text-muted text-[0.7rem] uppercase tracking-wide truncate">
                         {prettyRoleLabel(user)}
                       </div>
                     </div>
@@ -802,7 +796,7 @@ function NavBar() {
 
                   <button
                     onClick={() => setOpenMore(false)}
-                    className="p-1.5 rounded-full bg-[#111A2E] text-slate-100 transition-colors duration-200 hover:bg-[#1E2A45] focus:outline-none focus:ring-4 focus:ring-blue-100/20"
+                    className="p-2 rounded-full bg-surface-card text-text-secondary transition-colors duration-200 hover:bg-surface-main/70 focus:outline-none focus:ring-4 focus:ring-primary/10"
                     aria-label="Fermer le menu"
                   >
                     <X size={18} />
@@ -810,16 +804,18 @@ function NavBar() {
                 </div>
 
                 {/* GEO SELECTOR */}
-                <div className="px-4 py-3 border-b border-[#1E2A45]">
-                  <div className="text-xs text-slate-100/90 mb-2">Périmètre</div>
-                  <GeoSelector />
+                <div className="px-4 py-3 border-b border-border">
+                  <div className="text-xs text-text-muted mb-2">Périmètre</div>
+                  <div className="rounded-xl border border-border bg-surface-main/50 px-3 py-2">
+                    <GeoSelector />
+                  </div>
                 </div>
 
                 {/* LINKS (grouped) */}
                 <div className="max-h-72 overflow-y-auto py-2">
                   {sections.map((sec) => (
                     <div key={sec.title} className="py-1">
-                      <div className="px-4 py-2 text-[0.65rem] uppercase tracking-widest text-slate-200/90">
+                      <div className="px-4 py-2 text-[0.65rem] uppercase tracking-widest text-text-muted">
                         {sec.title}
                       </div>
 
@@ -833,19 +829,16 @@ function NavBar() {
                             to={l.path}
                             onClick={() => setOpenMore(false)}
                             className={[
-                              "mx-2 my-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition",
-                              "focus:outline-none focus:ring-4 focus:ring-blue-100/20",
-                              active
-                                ? "bg-[#111A2E] text-[#00C2FF] font-semibold"
-                                : "text-slate-100 hover:bg-[#111A2E]/70 hover:text-white",
+                              clsMenuItemBase,
+                              active ? clsMenuItemActive : clsMenuItemInactive,
                             ].join(" ")}
                             aria-current={active ? "page" : undefined}
                           >
-                            <span className={active ? "text-[#00C2FF]" : "text-slate-100"}>
+                            <span className={active ? "text-primary" : "text-text-secondary"}>
                               <Icon size={16} />
                             </span>
                             <span className="flex-1">{l.label}</span>
-                            {active ? <Check size={16} className="text-nav-accent" /> : null}
+                            {active ? <Check size={16} className="text-primary" /> : null}
                           </Link>
                         );
                       })}
