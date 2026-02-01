@@ -108,7 +108,7 @@ function pickExpressRouter(mod) {
   return null;
 }
 
-function loadRouter(routeFsPath, mountPath) {
+function loadRouter(routeFsPath, mountPath, target = app) {
   try {
     const mod = require(routeFsPath);
     const router = pickExpressRouter(mod);
@@ -123,7 +123,7 @@ function loadRouter(routeFsPath, mountPath) {
       return;
     }
 
-    app.use(mountPath, router);
+    target.use(mountPath, router);
     logger.info({ mountPath }, '✅ Routeur chargé');
   } catch (err) {
     logger.error(
@@ -136,35 +136,40 @@ function loadRouter(routeFsPath, mountPath) {
 /* ======================================================
    🚀 Chargement des routes API
    ====================================================== */
-loadRouter('./routes/auth.routes', '/api/auth');
-loadRouter('./routes/property.routes', '/api/properties');
-loadRouter('./routes/user.routes', '/api/users');
-loadRouter('./routes/service.routes', '/api/services');
-loadRouter('./routes/task.routes', '/api/tasks');
-loadRouter('./routes/evidence.routes', '/api/evidences');
-loadRouter('./routes/transaction.routes', '/api/transactions');
+const apiRouter = express.Router();
+
+loadRouter('./routes/auth.routes', '/auth', apiRouter);
+loadRouter('./routes/property.routes', '/properties', apiRouter);
+loadRouter('./routes/user.routes', '/users', apiRouter);
+loadRouter('./routes/service.routes', '/services', apiRouter);
+loadRouter('./routes/task.routes', '/tasks', apiRouter);
+loadRouter('./routes/evidence.routes', '/evidences', apiRouter);
+loadRouter('./routes/transaction.routes', '/transactions', apiRouter);
 
 // ✅ Multi-pays / franchise
-loadRouter('./routes/country.routes', '/api/countries');
-loadRouter('./routes/region.routes', '/api/regions');
-loadRouter('./routes/franchise.routes', '/api/franchises');
+loadRouter('./routes/country.routes', '/countries', apiRouter);
+loadRouter('./routes/region.routes', '/regions', apiRouter);
+loadRouter('./routes/franchise.routes', '/franchises', apiRouter);
 
 // Module Projets
-loadRouter('./routes/project.routes', '/api/projects');
-loadRouter('./routes/projectPhase.routes', '/api/project-phases');
-loadRouter('./routes/projectDocument.routes', '/api/project-documents');
+loadRouter('./routes/project.routes', '/projects', apiRouter);
+loadRouter('./routes/projectPhase.routes', '/project-phases', apiRouter);
+loadRouter('./routes/projectDocument.routes', '/project-documents', apiRouter);
 
 // Module Commerce
-loadRouter('./routes/category.routes', '/api/categories');
-loadRouter('./routes/product.routes', '/api/products');
-loadRouter('./routes/order.routes', '/api/orders');
-loadRouter('./routes/orderItem.routes', '/api/order-items');
+loadRouter('./routes/category.routes', '/categories', apiRouter);
+loadRouter('./routes/product.routes', '/products', apiRouter);
+loadRouter('./routes/order.routes', '/orders', apiRouter);
+loadRouter('./routes/orderItem.routes', '/order-items', apiRouter);
+
+app.use('/api', apiRouter);
+app.use('/api/v1', apiRouter);
 
 /* ======================================================
    🔍 Healthcheck + Racine
    ====================================================== */
-app.get('/api/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
-app.get('/api/metrics', metricsHandler);
+apiRouter.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
+apiRouter.get('/metrics', metricsHandler);
 
 app.get('/', (_req, res) => {
   res.json({
