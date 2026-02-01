@@ -43,7 +43,7 @@ export default function TermsPage() {
             </ul>
 
             <h2 className="text-xl font-semibold text-slate-900 mt-6">
-              3. Intervenants & responsabilités
+              3. Agents & responsabilités
             </h2>
             <p>
               Les agents effectuent les services sur la base des demandes des clients
