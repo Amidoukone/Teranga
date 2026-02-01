@@ -111,7 +111,7 @@ function setAuthCookies(res, { accessToken, accessMaxAge, refreshToken, refreshM
       refreshToken,
       {
         ...buildCookieOptions({ maxAge: refreshMaxAge }),
-        path: '/api/auth',
+        path: '/api',
       }
     );
   }
@@ -122,7 +122,7 @@ function setAuthCookies(res, { accessToken, accessMaxAge, refreshToken, refreshM
 
 function clearAuthCookies(res) {
   res.clearCookie(COOKIE_ACCESS);
-  res.clearCookie(COOKIE_REFRESH, { path: '/api/auth' });
+  res.clearCookie(COOKIE_REFRESH, { path: '/api' });
   res.clearCookie(COOKIE_CSRF);
 }
 
