@@ -221,10 +221,11 @@ export default function RegisterPage() {
      🖼️ UI — Apple Light Premium A1
   ========================================================== */
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50/40 to-white px-4 py-10">
-      <div className="w-full max-w-md bg-white shadow-lg shadow-slate-200/50 rounded-3xl p-8 border border-slate-200">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
+      <div className="page-shell w-full max-w-md p-8">
         {/* HEADER */}
         <div className="text-center mb-8">
+          <p className="page-kicker mb-3">Rejoignez Teranga</p>
           <img
             src="/logo_180x180.png"
             alt="Logo Teranga"
@@ -233,11 +234,11 @@ export default function RegisterPage() {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             Créer un compte
           </h1>
-          <p className="text-sm text-slate-600">
+          <p className="page-lead">
             Inscription pour les <strong>clients</strong>
           </p>
           <p className="text-xs text-slate-500 mt-1">
-            Les agents et administrateurs sont ajoutés par Teranga.
+            Créez votre accès client en quelques minutes.
           </p>
         </div>
 

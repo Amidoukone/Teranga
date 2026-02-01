@@ -73,11 +73,12 @@ export default function LoginPage() {
      🖥️ UI — Apple Light Premium A1
   ========================================================== */
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50/40 to-white px-4 py-10">
-      <div className="w-full max-w-md bg-white shadow-lg shadow-slate-200/50 rounded-3xl p-8 border border-slate-200 relative">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
+      <div className="page-shell w-full max-w-md p-8 relative">
 
         {/* ---------- LOGO + TITRE ---------- */}
         <div className="text-center mb-8">
+          <p className="page-kicker mb-3">Espace sécurisé</p>
           <img
             src="/logo_180x180.png"
             alt="Logo Teranga"
@@ -88,7 +89,7 @@ export default function LoginPage() {
             Connexion à Teranga
           </h1>
 
-          <p className="text-sm text-slate-600 mt-1">
+          <p className="page-lead mt-1">
             Accédez à votre espace sécurisé
           </p>
         </div>
@@ -205,7 +206,7 @@ export default function LoginPage() {
           </Link>
 
           <p className="mt-4 text-slate-500 text-xs">
-            Les comptes agents et administrateurs sont créés par l’équipe Teranga.
+            Besoin d’un accès spécifique ? Contactez le support Teranga.
           </p>
         </div>
       </div>

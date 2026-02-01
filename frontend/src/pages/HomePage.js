@@ -23,7 +23,7 @@ export default function HomePage() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#f5f5f7] via-white to-[#e5e5ea] text-[#1c1c1e] scroll-smooth font-[system-ui]">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900 scroll-smooth">
       <main className="flex-1">
         {/* ========================================================================= */}
         {/* 🏆 HERO — Apple Light (grands espaces / typographie premium)             */}
@@ -35,8 +35,8 @@ export default function HomePage() {
             pt-20 sm:pt-24 pb-16 sm:pb-24 px-6 relative overflow-hidden
           "
         >
-          {/* Halo Apple */}
-          <div className="absolute -top-56 left-1/2 w-[900px] h-[900px] bg-blue-300/10 rounded-full blur-[120px] -translate-x-1/2 pointer-events-none" />
+          {/* Halo premium */}
+          <div className="absolute -top-40 left-1/2 w-[860px] h-[860px] bg-blue-200/30 rounded-full blur-[140px] -translate-x-1/2 pointer-events-none" />
 
           {/* Badge au-dessus du titre */}
           <motion.div
@@ -48,11 +48,11 @@ export default function HomePage() {
             <span
               className="
                 inline-flex items-center gap-2 px-4 py-1.5 rounded-full
-                bg-white/80 shadow-sm border border-gray-200 text-xs sm:text-sm
-                text-gray-700
+                bg-white/80 shadow-sm border border-slate-200 text-xs sm:text-sm
+                text-slate-700
               "
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0a84ff]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
               Plateforme de confiance pour la diaspora africaine
             </span>
           </motion.div>
@@ -65,7 +65,7 @@ export default function HomePage() {
           >
             <h1
               className="
-                text-3xl sm:text-5xl md:text-6xl font-semibold text-[#111827]
+                text-3xl sm:text-5xl md:text-6xl font-semibold text-slate-900
                 mb-6 leading-tight sm:leading-[1.15] tracking-tight
               "
             >
@@ -79,7 +79,7 @@ export default function HomePage() {
 
             <p
               className="
-                text-gray-700 text-base sm:text-lg md:text-xl leading-relaxed
+                text-slate-600 text-base sm:text-lg md:text-xl leading-relaxed
                 max-w-2xl mx-auto mb-10 sm:mb-12
               "
             >
@@ -93,22 +93,14 @@ export default function HomePage() {
             <div className="flex flex-wrap justify-center gap-4 mt-2">
               <Link
                 to="/login"
-                className="
-                  px-7 py-3 bg-[#0a84ff] text-white rounded-full font-medium
-                  shadow-sm hover:bg-[#0066cc] transition flex items-center gap-2
-                  active:bg-[#004fa3] text-sm sm:text-base
-                "
+                className="btn-primary rounded-full px-7 py-3 text-sm sm:text-base flex items-center gap-2"
               >
                 Se connecter <ArrowRight size={18} />
               </Link>
 
               <Link
                 to="/register"
-                className="
-                  px-7 py-3 bg-[#e5e5ea] text-gray-800 rounded-full font-medium
-                  shadow-sm hover:bg-[#d0d0d5] active:bg-[#bcbcc0] transition
-                  text-sm sm:text-base
-                "
+                className="btn-secondary rounded-full px-7 py-3 text-sm sm:text-base"
               >
                 Créer un compte
               </Link>
@@ -122,7 +114,7 @@ export default function HomePage() {
             transition={{ duration: 0.7, delay: 0.35 }}
             className="
               mt-10 sm:mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6
-              max-w-3xl mx-auto text-gray-700 text-sm
+              max-w-3xl mx-auto text-slate-600 text-sm
             "
           >
             {[
@@ -142,16 +134,16 @@ export default function HomePage() {
               <div
                 key={item.label}
                 className="
-                  bg-white/80 border border-gray-200 rounded-2xl px-4 py-3
-                  flex items-start gap-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)]
+                  bg-white/80 border border-slate-200 rounded-2xl px-4 py-3
+                  flex items-start gap-3 shadow-[0_4px_16px_rgba(15,23,42,0.06)]
                 "
               >
-                <CheckCircle2 className="mt-0.5 text-[#0a84ff]" size={18} />
+                <CheckCircle2 className="mt-0.5 text-blue-600" size={18} />
                 <div className="text-left">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                     {item.label}
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">{item.text}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{item.text}</p>
                 </div>
               </div>
             ))}
@@ -159,7 +151,7 @@ export default function HomePage() {
 
           <p
             className="
-              mt-8 sm:mt-10 text-gray-500 text-xs sm:text-sm max-w-xl mx-auto
+              mt-8 sm:mt-10 text-slate-500 text-xs sm:text-sm max-w-xl mx-auto
               leading-relaxed tracking-wide
             "
           >
@@ -173,13 +165,13 @@ export default function HomePage() {
         {/* ========================================================================= */}
         <section
           id="services"
-          className="py-16 sm:py-20 px-6 bg-white border-t border-gray-200"
+          className="py-16 sm:py-20 px-6 bg-white border-t border-slate-200/70"
         >
           <div className="max-w-5xl mx-auto text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
               Nos services, votre tranquillité
             </h2>
-            <p className="text-gray-600 text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
+            <p className="text-slate-600 text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
               Des solutions conçues pour simplifier la vie de la diaspora tout
               en garantissant transparence et présence humaine sur place.
             </p>
@@ -208,24 +200,24 @@ export default function HomePage() {
                 whileHover={{ y: -4, scale: 1.015 }}
                 transition={{ type: "spring", stiffness: 180, damping: 20 }}
                 className="
-                  bg-gray-50 border border-[#e5e7eb] rounded-3xl p-8 sm:p-10
-                  shadow-[0_4px_20px_rgba(0,0,0,0.05)]
+                  bg-slate-50 border border-slate-200/70 rounded-3xl p-8 sm:p-10
+                  shadow-[0_10px_30px_rgba(15,23,42,0.08)]
                   hover:shadow-[0_10px_35px_rgba(15,23,42,0.08)]
                   transition-all flex flex-col items-center text-center
                 "
               >
                 <div
                   className="
-                    w-14 h-14 rounded-2xl bg-[#0a84ff]/10 flex items-center justify-center
+                    w-14 h-14 rounded-2xl bg-blue-100/70 flex items-center justify-center
                     mb-5
                   "
                 >
-                  <Icon size={32} className="text-[#0a84ff]" />
+                  <Icon size={32} className="text-blue-600" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-3">
+                <h3 className="text-lg sm:text-xl font-medium text-slate-900 mb-3">
                   {title}
                 </h3>
-                <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
+                <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
                   {desc}
                 </p>
               </motion.div>
@@ -238,13 +230,13 @@ export default function HomePage() {
         {/* ========================================================================= */}
         <section
           id="pourquoi"
-          className="py-16 sm:py-20 px-6 bg-gradient-to-br from-[#f5f5f7] via-white to-[#e5e5ea]"
+          className="py-16 sm:py-20 px-6 bg-gradient-to-br from-slate-50 via-white to-slate-100"
         >
           <div className="max-w-5xl mx-auto text-center mb-10 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
               Pourquoi choisir Teranga ?
             </h2>
-            <p className="text-gray-600 text-base sm:text-lg max-w-3xl mx-auto leading-relaxed">
+            <p className="text-slate-600 text-base sm:text-lg max-w-3xl mx-auto leading-relaxed">
               Parce qu’il ne s’agit pas seulement d’une application, mais d’un
               lien de confiance entre vous, vos proches et vos projets au pays.
             </p>
@@ -268,14 +260,14 @@ export default function HomePage() {
               <div
                 key={item.title}
                 className="
-                  bg-white/80 border border-gray-200 rounded-2xl px-5 py-4
-                  shadow-[0_4px_16px_rgba(15,23,42,0.04)]
+                  bg-white/80 border border-slate-200 rounded-2xl px-5 py-4
+                  shadow-[0_4px_16px_rgba(15,23,42,0.06)]
                 "
               >
-                <h3 className="text-gray-900 font-semibold mb-2">
+                <h3 className="text-slate-900 font-semibold mb-2">
                   {item.title}
                 </h3>
-                <p className="text-gray-600 leading-relaxed">{item.text}</p>
+                <p className="text-slate-600 leading-relaxed">{item.text}</p>
               </div>
             ))}
           </div>
@@ -286,13 +278,13 @@ export default function HomePage() {
         {/* ========================================================================= */}
         <section
           id="apropos"
-          className="py-16 sm:py-20 px-6 bg-white border-t border-gray-200"
+          className="py-16 sm:py-20 px-6 bg-white border-t border-slate-200/70"
         >
           <div className="max-w-5xl mx-auto text-center mb-10 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
               Teranga : bien plus qu’un service
             </h2>
-            <p className="text-gray-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+            <p className="text-slate-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
               Une plateforme inspirée de la confiance et de l&apos;hospitalité,
               offrant un lien direct entre diaspora et projets au pays.
             </p>
@@ -304,7 +296,7 @@ export default function HomePage() {
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.6 }}
             className="
-              max-w-3xl mx-auto text-gray-700 leading-relaxed
+              max-w-3xl mx-auto text-slate-700 leading-relaxed
               text-[15px] sm:text-base space-y-5 sm:space-y-6
             "
           >
@@ -328,11 +320,7 @@ export default function HomePage() {
           <div className="text-center mt-10 sm:mt-12">
             <Link
               to="/register"
-              className="
-                px-7 py-3 bg-[#0a84ff] text-white rounded-full font-medium
-                shadow-sm hover:bg-[#0066cc] transition inline-flex items-center gap-2
-                active:bg-[#004fa3] text-sm sm:text-base
-              "
+              className="btn-primary rounded-full px-7 py-3 text-sm sm:text-base inline-flex items-center gap-2"
             >
               Rejoindre Teranga <HeartHandshake size={18} />
             </Link>
@@ -344,13 +332,13 @@ export default function HomePage() {
         {/* ========================================================================= */}
         <section
           id="contact"
-          className="py-16 sm:py-20 px-6 bg-white border-t border-gray-200"
+          className="py-16 sm:py-20 px-6 bg-white border-t border-slate-200/70"
         >
           <div className="max-w-6xl mx-auto text-center mb-10 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
               Contactez-nous
             </h2>
-            <p className="text-gray-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+            <p className="text-slate-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
               Notre équipe vous répond avec attention sous 24h.
             </p>
           </div>
@@ -364,7 +352,7 @@ export default function HomePage() {
                 alert("Merci ! Votre message a bien été envoyé.");
               }}
               className="
-                bg-gray-50 border border-[#e5e7eb] rounded-3xl p-7 sm:p-8
+                bg-slate-50 border border-slate-200/70 rounded-3xl p-7 sm:p-8
                 shadow-sm flex flex-col gap-5
               "
             >
@@ -381,7 +369,7 @@ export default function HomePage() {
                 },
               ].map((input) => (
                 <div key={input.label} className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-slate-700">
                     {input.label}
                   </label>
                   <input
@@ -389,8 +377,8 @@ export default function HomePage() {
                     required
                     placeholder={input.placeholder}
                     className="
-                      w-full border border-gray-300 rounded-xl px-3 py-2 text-sm
-                      focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] outline-none
+                      w-full border border-slate-300 rounded-xl px-3 py-2 text-sm
+                      focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none
                       bg-white
                     "
                   />
@@ -398,7 +386,7 @@ export default function HomePage() {
               ))}
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-slate-700">
                   Message
                 </label>
                 <textarea
@@ -406,8 +394,8 @@ export default function HomePage() {
                   rows={4}
                   placeholder="Votre message..."
                   className="
-                    w-full border border-gray-300 rounded-xl px-3 py-2 text-sm
-                    focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] outline-none resize-none
+                    w-full border border-slate-300 rounded-xl px-3 py-2 text-sm
+                    focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none
                     bg-white
                   "
                 />
@@ -415,18 +403,14 @@ export default function HomePage() {
 
               <button
                 type="submit"
-                className="
-                  self-start px-6 py-2.5 bg-[#0a84ff] text-white text-sm
-                  font-medium rounded-full hover:bg-[#0066cc] transition shadow-sm
-                  active:bg-[#004fa3]
-                "
+                className="btn-primary rounded-full self-start px-6 py-2.5 text-sm shadow-sm"
               >
                 Envoyer le message
               </button>
             </form>
 
             {/* Infos de contact */}
-            <div className="flex flex-col justify-center space-y-5 sm:space-y-6 text-gray-700">
+            <div className="flex flex-col justify-center space-y-5 sm:space-y-6 text-slate-700">
               {[
                 { icon: Mail, text: "contact@teranga-platform.com" },
                 {
@@ -439,14 +423,14 @@ export default function HomePage() {
                 },
               ].map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#0a84ff]/10 flex items-center justify-center">
-                    <Icon className="text-[#0a84ff]" size={18} />
+                  <div className="w-9 h-9 rounded-full bg-blue-100/70 flex items-center justify-center">
+                    <Icon className="text-blue-600" size={18} />
                   </div>
                   <p className="text-sm sm:text-base">{text}</p>
                 </div>
               ))}
 
-              <p className="text-sm text-gray-500 leading-relaxed pt-2">
+              <p className="text-sm text-slate-500 leading-relaxed pt-2">
                 Nous vous accompagnons avec écoute, respect et
                 professionnalisme, pour que chaque échange soit simple et
                 rassurant.
@@ -459,7 +443,7 @@ export default function HomePage() {
       {/* ========================================================================= */}
       {/* ⚓ FOOTER — Apple Minimal                                                 */}
       {/* ========================================================================= */}
-      <footer className="bg-[#1c1c1e] text-gray-300 text-xs sm:text-sm py-6 px-6 mt-4">
+      <footer className="bg-slate-900 text-slate-300 text-xs sm:text-sm py-6 px-6 mt-4">
         <div
           className="
             max-w-6xl mx-auto flex flex-col sm:flex-row justify-between
@@ -468,32 +452,32 @@ export default function HomePage() {
         >
           <p>
             © {currentYear}{" "}
-            <span className="text-[#0a84ff] font-medium">Teranga</span> — Tous
+            <span className="text-blue-400 font-medium">Teranga</span> — Tous
             droits réservés.
           </p>
 
           <div className="flex gap-5 sm:gap-6">
             <a
               href="#accueil"
-              className="hover:text-[#0a84ff] transition-colors"
+              className="hover:text-blue-300 transition-colors"
             >
               Accueil
             </a>
             <a
               href="#services"
-              className="hover:text-[#0a84ff] transition-colors"
+              className="hover:text-blue-300 transition-colors"
             >
               Services
             </a>
             <a
               href="#apropos"
-              className="hover:text-[#0a84ff] transition-colors"
+              className="hover:text-blue-300 transition-colors"
             >
               À propos
             </a>
             <a
               href="#contact"
-              className="hover:text-[#0a84ff] transition-colors"
+              className="hover:text-blue-300 transition-colors"
             >
               Contact
             </a>

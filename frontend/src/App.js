@@ -174,7 +174,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <GeoProvider>
-        <div className="min-h-screen flex flex-col bg-gray-50 text-gray-800">
+        <div className="min-h-screen flex flex-col bg-surface-main text-text-primary">
           <ScrollToTop />
           <NavBar />
 
@@ -186,8 +186,9 @@ export default function App() {
             onConsentChange={setAnalyticsConsent}
           />
 
-          <main className="flex-1 container mx-auto px-4 py-6">
-            <Routes>
+          <main className="flex-1 w-full">
+            <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+              <Routes>
             {/* ============================= */}
             {/* 🌐 PAGES PUBLIQUES           */}
             {/* ============================= */}
@@ -590,7 +591,8 @@ export default function App() {
                 </>
               }
             />
-            </Routes>
+              </Routes>
+            </div>
           </main>
 
           {/* FOOTER */}

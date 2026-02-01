@@ -11,21 +11,21 @@ export default function PrivacyPage() {
         description="Politique de confidentialité Teranga conforme au RGPD : données collectées, finalités, droits des utilisateurs, sécurité et durée de conservation."
       />
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 px-4 py-10">
-        <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-2xl p-6 sm:p-10 border border-gray-200">
-
-          <h1 className="text-3xl font-extrabold text-gray-900 mb-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
+        <div className="page-shell max-w-4xl mx-auto p-6 sm:p-10">
+          <p className="page-kicker mb-3">Protection des données</p>
+          <h1 className="page-title mb-6">
             Politique de confidentialité (RGPD)
           </h1>
 
-          <section className="space-y-4 text-gray-700 leading-relaxed">
+          <section className="space-y-4 text-slate-700 leading-relaxed">
 
             <p>
               La présente politique explique comment Teranga collecte, utilise,
               stocke et protège vos données personnelles conformément au RGPD.
             </p>
 
-            <h2 className="text-xl font-semibold text-gray-900 mt-6">
+            <h2 className="text-xl font-semibold text-slate-900 mt-6">
               1. Données collectées
             </h2>
             <ul className="list-disc pl-6">
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
               <li>Preuves envoyées : photos, vidéos, documents</li>
             </ul>
 
-            <h2 className="text-xl font-semibold text-gray-900 mt-6">
+            <h2 className="text-xl font-semibold text-slate-900 mt-6">
               2. Finalités du traitement
             </h2>
             <p>Les données sont utilisées pour :</p>
@@ -46,7 +46,7 @@ export default function PrivacyPage() {
               <li>Suivre les projets, biens et transactions</li>
             </ul>
 
-            <h2 className="text-xl font-semibold text-gray-900 mt-6">
+            <h2 className="text-xl font-semibold text-slate-900 mt-6">
               3. Conservation des données
             </h2>
             <p>
@@ -54,15 +54,15 @@ export default function PrivacyPage() {
               les obligations légales.
             </p>
 
-            <h2 className="text-xl font-semibold text-gray-900 mt-6">
+            <h2 className="text-xl font-semibold text-slate-900 mt-6">
               4. Partage des données
             </h2>
             <p>
               Teranga ne revend pas vos données. Elles peuvent être transmises aux
-              agents certifiés uniquement pour exécuter les services.
+              prestataires habilités uniquement pour exécuter les services.
             </p>
 
-            <h2 className="text-xl font-semibold text-gray-900 mt-6">
+            <h2 className="text-xl font-semibold text-slate-900 mt-6">
               5. Vos droits (RGPD)
             </h2>
             <ul className="list-disc pl-6">
