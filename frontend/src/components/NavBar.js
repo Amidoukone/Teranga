@@ -439,7 +439,7 @@ function NavBar() {
               </div>
 
               {/* ✅ Lisibilité renforcée */}
-              <div className="text-[0.72rem] text-nav-muted truncate">
+              <div className="text-[0.72rem] text-white/80 truncate">
                 {prettyRoleLabel(user)}
               </div>
             </div>
@@ -457,8 +457,8 @@ function NavBar() {
                     "px-3 py-1.5 rounded-lg text-sm font-medium transition",
                     "focus:outline-none focus:ring-4 focus:ring-blue-100/20",
                     active
-                      ? "bg-nav-surface/90 text-nav-accent ring-1 ring-nav-border/70"
-                      : "text-nav-muted hover:text-nav-text hover:bg-nav-surface/70",
+                      ? "bg-[#111A2E] text-[#00C2FF] shadow-[0_0_18px_rgba(0,194,255,0.14)]"
+                      : "text-slate-100 hover:text-white hover:bg-[#111A2E]/70",
                   ].join(" ")}
                   aria-current={active ? "page" : undefined}
                 >
@@ -475,8 +475,8 @@ function NavBar() {
                   "px-3 py-1.5 rounded-lg text-sm font-medium transition inline-flex items-center gap-1.5",
                   "focus:outline-none focus:ring-4 focus:ring-blue-100/20",
                   openDesktopMore
-                    ? "bg-nav-surface/90 text-nav-accent ring-1 ring-nav-border/70"
-                    : "text-nav-muted hover:text-nav-text hover:bg-nav-surface/70",
+                    ? "bg-[#111A2E] text-[#00C2FF]"
+                    : "text-slate-100 hover:text-white hover:bg-[#111A2E]/70",
                 ].join(" ")}
                 aria-expanded={openDesktopMore}
                 aria-controls="desktop-more-menu"
@@ -510,8 +510,8 @@ function NavBar() {
                       aria-label="Menu Plus"
                     >
                       {/* Quick Scope */}
-                      <div className="px-4 py-3 border-b border-nav-border/70 bg-nav-surface/80">
-                        <div className="text-[0.72rem] text-nav-muted mb-1">
+                      <div className="px-4 py-3 border-b border-[#1E2A45] bg-[#111A2E]">
+                        <div className="text-[0.72rem] text-slate-100/90 mb-1">
                           Périmètre
                         </div>
                         <div className="rounded-xl border border-nav-border/70 bg-nav-bg/60 px-2 py-1">
@@ -523,7 +523,7 @@ function NavBar() {
                         {sections.map((sec) => (
                           <div key={sec.title} className="py-1">
                             {/* ✅ Titre section lisible */}
-                            <div className="px-4 py-1.5 text-[0.65rem] uppercase tracking-widest text-nav-muted">
+                            <div className="px-4 py-1.5 text-[0.65rem] uppercase tracking-widest text-slate-200/90">
                               {sec.title}
                             </div>
 
@@ -549,15 +549,15 @@ function NavBar() {
                                       "mx-2 my-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition",
                                       "focus:outline-none focus:ring-4 focus:ring-blue-100/20",
                                       active
-                                        ? "bg-nav-surface/90 text-nav-accent font-semibold"
-                                        : "text-nav-text hover:bg-nav-surface/70 hover:text-white",
+                                        ? "bg-[#111A2E] text-[#00C2FF] font-semibold"
+                                        : "text-slate-100 hover:bg-[#111A2E]/70 hover:text-white",
                                     ].join(" ")}
                                     aria-current={active ? "page" : undefined}
                                     role="menuitem"
                                   >
                                     <span
                                       className={
-                                        active ? "text-nav-accent" : "text-nav-muted"
+                                        active ? "text-[#00C2FF]" : "text-slate-100"
                                       }
                                     >
                                       <Icon size={16} />
@@ -589,7 +589,7 @@ function NavBar() {
             </div>
 
             {/* Role badge (more readable) */}
-            <span className="hidden lg:inline bg-nav-surface/80 border border-nav-border/70 px-3 py-1 rounded-full text-[0.7rem] uppercase tracking-wide text-nav-muted">
+            <span className="hidden lg:inline bg-[#111A2E] border border-[#1E2A45] px-3 py-1 rounded-full text-[0.7rem] uppercase tracking-wide text-slate-100">
               {prettyRoleLabel(user)}
             </span>
 
@@ -611,14 +611,14 @@ function NavBar() {
 
                 {/* ✅ Email supprimé: nom uniquement */}
                 <div className="hidden lg:flex items-center">
-                  <div className="text-sm font-semibold text-nav-text max-w-[180px] truncate">
+                  <div className="text-sm font-semibold text-slate-100 max-w-[180px] truncate">
                     {userDisplay}
                   </div>
                 </div>
 
                 <ChevronDown
                   size={16}
-                  className={openUserMenu ? "text-nav-accent" : "text-nav-muted"}
+                  className={openUserMenu ? "text-[#00C2FF]" : "text-slate-100"}
                 />
               </button>
 
@@ -647,7 +647,7 @@ function NavBar() {
                         <div className="text-nav-text text-sm font-semibold tracking-wide truncate">
                           {userDisplay}
                         </div>
-                        <div className="text-nav-muted text-[0.75rem] truncate">
+                        <div className="text-slate-100/90 text-[0.75rem] truncate">
                           {prettyRoleLabel(user)}
                         </div>
                       </div>
@@ -655,7 +655,7 @@ function NavBar() {
                       <div className="py-2">
                         <button
                           type="button"
-                          className="w-full text-left px-4 py-2 text-sm text-nav-text hover:bg-nav-surface/70 hover:text-white transition"
+                          className="w-full text-left px-4 py-2 text-sm text-slate-100 hover:bg-[#111A2E]/70 hover:text-white transition"
                           disabled
                           aria-disabled="true"
                           title="Bientôt disponible"
@@ -664,7 +664,7 @@ function NavBar() {
                         </button>
                         <button
                           type="button"
-                          className="w-full text-left px-4 py-2 text-sm text-nav-text hover:bg-nav-surface/70 hover:text-white transition"
+                          className="w-full text-left px-4 py-2 text-sm text-slate-100 hover:bg-[#111A2E]/70 hover:text-white transition"
                           disabled
                           aria-disabled="true"
                           title="Bientôt disponible"
@@ -717,14 +717,14 @@ function NavBar() {
                       "flex-1 flex flex-col items-center py-1 rounded-lg text-[0.7rem] transition",
                       "focus:outline-none focus:ring-4 focus:ring-blue-100/20",
                       active
-                        ? "bg-nav-surface/90 text-nav-accent ring-1 ring-nav-border/70 scale-[1.01]"
-                        : "text-nav-muted hover:bg-nav-surface/60 hover:text-nav-text",
+                        ? "bg-[#111A2E] text-[#00C2FF] shadow-[0_0_14px_rgba(0,194,255,0.22)] scale-[1.02]"
+                        : "text-slate-100 hover:bg-[#111A2E]/60 hover:text-white",
                     ].join(" ")}
                     aria-current={active ? "page" : undefined}
                   >
                     <Icon
                       size={17}
-                      className={active ? "text-nav-accent" : "text-nav-muted"}
+                      className={active ? "text-[#00C2FF]" : "text-slate-100"}
                     />
                     {item.label}
                   </Link>
@@ -738,8 +738,8 @@ function NavBar() {
                   "flex-1 flex flex-col items-center py-1 rounded-lg text-[0.7rem] transition",
                   "focus:outline-none focus:ring-4 focus:ring-blue-100/20",
                   openMore
-                    ? "bg-nav-surface/90 text-nav-accent ring-1 ring-nav-border/70"
-                    : "text-nav-muted hover:bg-nav-surface/60 hover:text-nav-text",
+                    ? "bg-[#111A2E] text-[#00C2FF] shadow-[0_0_14px_rgba(0,194,255,0.22)]"
+                    : "text-slate-100 hover:bg-[#111A2E]/60 hover:text-white",
                 ].join(" ")}
                 aria-expanded={openMore}
                 aria-controls="navbar-more-panel"
@@ -794,7 +794,7 @@ function NavBar() {
                       <div className="text-nav-text text-sm font-semibold tracking-wide truncate">
                         {userDisplay}
                       </div>
-                      <div className="text-nav-muted text-[0.7rem] uppercase tracking-wide truncate">
+                      <div className="text-slate-100/90 text-[0.7rem] uppercase tracking-wide truncate">
                         {prettyRoleLabel(user)}
                       </div>
                     </div>
@@ -802,7 +802,7 @@ function NavBar() {
 
                   <button
                     onClick={() => setOpenMore(false)}
-                    className="p-1.5 rounded-full bg-nav-surface/80 text-nav-text transition-colors duration-200 hover:bg-nav-surface focus:outline-none focus:ring-4 focus:ring-blue-100/20"
+                    className="p-1.5 rounded-full bg-[#111A2E] text-slate-100 transition-colors duration-200 hover:bg-[#1E2A45] focus:outline-none focus:ring-4 focus:ring-blue-100/20"
                     aria-label="Fermer le menu"
                   >
                     <X size={18} />
@@ -810,18 +810,16 @@ function NavBar() {
                 </div>
 
                 {/* GEO SELECTOR */}
-                <div className="px-4 py-3 border-b border-nav-border/70">
-                  <div className="text-xs text-nav-muted mb-2">Périmètre</div>
-                  <div className="rounded-xl border border-nav-border/70 bg-nav-surface/70 px-2 py-1">
-                    <GeoSelector />
-                  </div>
+                <div className="px-4 py-3 border-b border-[#1E2A45]">
+                  <div className="text-xs text-slate-100/90 mb-2">Périmètre</div>
+                  <GeoSelector />
                 </div>
 
                 {/* LINKS (grouped) */}
                 <div className="max-h-72 overflow-y-auto py-2">
                   {sections.map((sec) => (
                     <div key={sec.title} className="py-1">
-                      <div className="px-4 py-2 text-[0.65rem] uppercase tracking-widest text-nav-muted">
+                      <div className="px-4 py-2 text-[0.65rem] uppercase tracking-widest text-slate-200/90">
                         {sec.title}
                       </div>
 
@@ -838,12 +836,12 @@ function NavBar() {
                               "mx-2 my-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition",
                               "focus:outline-none focus:ring-4 focus:ring-blue-100/20",
                               active
-                                ? "bg-nav-surface/90 text-nav-accent font-semibold"
-                                : "text-nav-text hover:bg-nav-surface/70 hover:text-white",
+                                ? "bg-[#111A2E] text-[#00C2FF] font-semibold"
+                                : "text-slate-100 hover:bg-[#111A2E]/70 hover:text-white",
                             ].join(" ")}
                             aria-current={active ? "page" : undefined}
                           >
-                            <span className={active ? "text-nav-accent" : "text-nav-muted"}>
+                            <span className={active ? "text-[#00C2FF]" : "text-slate-100"}>
                               <Icon size={16} />
                             </span>
                             <span className="flex-1">{l.label}</span>
