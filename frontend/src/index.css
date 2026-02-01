@@ -46,6 +46,10 @@
   body {
     @apply bg-slate-50 text-slate-800 antialiased;
     font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    background-image:
+      radial-gradient(circle at top, rgba(59, 130, 246, 0.08), transparent 45%),
+      radial-gradient(circle at 20% 20%, rgba(14, 116, 144, 0.06), transparent 40%);
+    background-attachment: fixed;
   }
 
   h1 {
@@ -92,6 +96,22 @@
   a {
     @apply text-blue-600 hover:text-blue-500 transition;
   }
+
+  table {
+    @apply w-full border-separate border-spacing-0 text-sm text-slate-700;
+  }
+
+  thead th {
+    @apply text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500;
+  }
+
+  tbody tr {
+    @apply border-b border-slate-200/70;
+  }
+
+  tbody tr:hover {
+    @apply bg-slate-50/80;
+  }
 }
 
 @layer components {
@@ -119,5 +139,39 @@
   .btn-secondary {
     @apply rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-slate-700 shadow-sm
       hover:border-slate-300 hover:text-slate-900;
+  }
+
+  .page-shell {
+    @apply relative overflow-hidden rounded-[32px] border border-slate-200 bg-white/80 shadow-[0_25px_60px_-25px_rgba(15,23,42,0.25)];
+  }
+
+  .page-shell::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    top: -6rem;
+    left: 50%;
+    height: 14rem;
+    width: 40rem;
+    transform: translateX(-50%);
+    border-radius: 9999px;
+    background: rgba(219, 234, 254, 0.6);
+    filter: blur(90px);
+  }
+
+  .page-kicker {
+    @apply text-xs font-semibold uppercase tracking-[0.35em] text-blue-600;
+  }
+
+  .page-title {
+    @apply text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight;
+  }
+
+  .page-lead {
+    @apply text-sm sm:text-base text-slate-600 leading-relaxed;
+  }
+
+  .glass-panel {
+    @apply rounded-3xl border border-white/60 bg-white/70 shadow-lg shadow-slate-200/40 backdrop-blur;
   }
 }
