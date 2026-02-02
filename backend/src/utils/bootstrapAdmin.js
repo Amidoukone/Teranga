@@ -6,11 +6,22 @@ const { User } = db;
 
 module.exports = async function bootstrapAdmin() {
   try {
-    const email = process.env.BOOTSTRAP_ADMIN_EMAIL;
-    const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+    const isProd = (process.env.NODE_ENV || 'development') === 'production';
+    const allowDefaults = process.env.BOOTSTRAP_ADMIN_ALLOW_DEFAULTS !== 'false';
+    const defaultEmail = process.env.BOOTSTRAP_ADMIN_DEFAULT_EMAIL || 'admin@teranga.com';
+    const defaultPassword = process.env.BOOTSTRAP_ADMIN_DEFAULT_PASSWORD || 'Admin123!';
+    let email = process.env.BOOTSTRAP_ADMIN_EMAIL;
+    let password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
     const enabled = process.env.BOOTSTRAP_ADMIN_ENABLED === 'true';
     const expiresAt = process.env.BOOTSTRAP_ADMIN_EXPIRES_AT;
-    const isProd = (process.env.NODE_ENV || 'development') === 'production';
+
+    if ((!email || !password) && !isProd && allowDefaults) {
+      email = email || defaultEmail;
+      password = password || defaultPassword;
+      console.log(
+        `⚠️ Bootstrap admin: variables manquantes, utilisation des valeurs par défaut en dev (${email}).`
+      );
+    }
 
     if (!email || !password) {
       console.log("⚠️ Variables BOOTSTRAP_ADMIN_EMAIL ou PASSWORD manquantes. Bootstrap ignoré.");
