@@ -1,6 +1,6 @@
 'use strict';
 
-const { Property, User } = require('../../models');
+const { Property, User, Country, Sequelize } = require('../../models');
 const { Op } = require('sequelize');
 
 const {
@@ -38,6 +38,63 @@ const toSafeInt = (v, fallback = null) => {
   const n = parseInt(String(v), 10);
   return Number.isNaN(n) ? fallback : n;
 };
+
+async function resolveCountryIdFromLegacy(countryValue) {
+  const trimmed = toTrimOrNull(countryValue);
+  if (!trimmed) return null;
+
+  const isoCandidate = trimmed.length === 2 ? trimmed.toUpperCase() : null;
+  const normalizedName = trimmed.toLowerCase();
+
+  const record = await Country.findOne({
+    where: {
+      isActive: true,
+      [Op.or]: [
+        isoCandidate ? { isoCode: isoCandidate } : null,
+        Sequelize.where(Sequelize.fn('lower', Sequelize.col('name')), normalizedName),
+      ].filter(Boolean),
+    },
+    attributes: ['id'],
+  });
+
+  return record ? record.id : null;
+}
+
+async function getCountryIsoById(countryId) {
+  if (!countryId) return null;
+  const record = await Country.findByPk(countryId, {
+    attributes: ['isoCode', 'isActive'],
+  });
+  if (!record || record.isActive === false) return null;
+  return record.isoCode || null;
+}
+
+async function applyGeoScopeWithLegacy(where = {}, user) {
+  if (!user) return where;
+  if (isGlobalAdmin(user)) return where;
+
+  const scope = getUserGeoScope ? getUserGeoScope(user) : { countryId: null, regionId: null };
+  if (scope.regionId) {
+    return { ...where, regionId: scope.regionId };
+  }
+
+  if (scope.countryId) {
+    const iso = await getCountryIsoById(scope.countryId);
+    const scopeOr = [{ countryId: scope.countryId }];
+
+    if (iso) {
+      scopeOr.push({
+        [Op.and]: [{ countryId: null }, { regionId: null }, { '$owner.country$': iso }],
+      });
+    }
+
+    const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
+    andFilters.push({ [Op.or]: scopeOr });
+    return { ...where, [Op.and]: andFilters };
+  }
+
+  return { ...where, id: 0 };
+}
 
 function getPagination(req, defaultLimit = 50, maxLimit = 200) {
   const limit = Math.min(
@@ -237,9 +294,13 @@ exports.list = async (req, res) => {
       ? { ...where, [Op.and]: whereAnd }
       : where;
 
-    // 🌍 Appliquer scope pour master/admin scoped/agent
+    // 🌍 Appliquer scope pour master/admin scoped/agent (avec fallback legacy country)
     if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'agent')) {
-      finalWhere = applyGeoScope ? applyGeoScope(finalWhere, req.user) : finalWhere;
+      if (typeof applyGeoScopeWithLegacy === 'function') {
+        finalWhere = await applyGeoScopeWithLegacy(finalWhere, req.user);
+      } else if (applyGeoScope) {
+        finalWhere = applyGeoScope(finalWhere, req.user);
+      }
     }
 
     const { rows, count } = await Property.findAndCountAll({
@@ -248,7 +309,7 @@ exports.list = async (req, res) => {
         {
           model: User,
           as: 'owner',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'country'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -284,7 +345,11 @@ exports.listByClient = async (req, res) => {
     // admin scoped: on ne peut lister que dans son scope
     let where = { ownerId: cid };
     if (!isGlobalAdmin(req.user)) {
-      where = applyGeoScope ? applyGeoScope(where, req.user) : where;
+      if (typeof applyGeoScopeWithLegacy === 'function') {
+        where = await applyGeoScopeWithLegacy(where, req.user);
+      } else if (applyGeoScope) {
+        where = applyGeoScope(where, req.user);
+      }
     }
 
     const { rows, count } = await Property.findAndCountAll({
@@ -293,7 +358,7 @@ exports.listByClient = async (req, res) => {
         {
           model: User,
           as: 'owner',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'country'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -386,10 +451,14 @@ exports.create = async (req, res) => {
     const desiredCountryId = toSafeInt(countryId ?? country_id, null);
     const desiredRegionId = toSafeInt(regionId ?? region_id, null);
     const ownerScope = toScopeFromObj(targetOwner);
-    const fallbackCountryId =
+    let fallbackCountryId =
       desiredCountryId !== null ? desiredCountryId : ownerScope.countryId;
     const fallbackRegionId =
       desiredRegionId !== null ? desiredRegionId : ownerScope.regionId;
+
+    if (fallbackCountryId === null && targetOwner?.country) {
+      fallbackCountryId = await resolveCountryIdFromLegacy(targetOwner.country);
+    }
 
     let finalCountryId = null;
     let finalRegionId = null;

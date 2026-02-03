@@ -1,6 +1,6 @@
 "use strict";
 
-const { Task, Service, User, Property } = require("../../models");
+const { Task, Service, User, Property, Country } = require("../../models");
 const { Op } = require("sequelize");
 
 // 🌍 Geo scope utils (admin scoped)
@@ -91,6 +91,56 @@ function canAccessByGeoScope(user, resource) {
   return false;
 }
 
+async function getCountryIsoById(countryId) {
+  if (!countryId) return null;
+  const record = await Country.findByPk(countryId, {
+    attributes: ["isoCode", "isActive"],
+  });
+  if (!record || record.isActive === false) return null;
+  return record.isoCode || null;
+}
+
+async function applyGeoScopeWithLegacy(where = {}, user) {
+  if (!user) return where;
+  if (isGlobalAdmin(user)) return where;
+
+  const scope = getUserGeoScope
+    ? getUserGeoScope(user)
+    : { countryId: toSafeInt(user.countryId), regionId: toSafeInt(user.regionId) };
+
+  if (scope.regionId) {
+    return { ...where, regionId: scope.regionId };
+  }
+
+  if (scope.countryId) {
+    const iso = await getCountryIsoById(scope.countryId);
+    const scopeOr = [{ countryId: scope.countryId }];
+
+    if (iso) {
+      scopeOr.push({
+        [Op.and]: [
+          { countryId: null },
+          { regionId: null },
+          { "$service.client.country$": iso },
+        ],
+      });
+      scopeOr.push({
+        [Op.and]: [
+          { countryId: null },
+          { regionId: null },
+          { "$property.owner.country$": iso },
+        ],
+      });
+    }
+
+    const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
+    andFilters.push({ [Op.or]: scopeOr });
+    return { ...where, [Op.and]: andFilters };
+  }
+
+  return { ...where, id: 0 };
+}
+
 /* ============================================================
    🧩 Includes réutilisables
 ============================================================ */
@@ -126,7 +176,7 @@ const BASE_INCLUDES = [
       {
         model: User,
         as: "client",
-        attributes: ["id", "firstName", "lastName", "email"],
+        attributes: ["id", "firstName", "lastName", "email", "country"],
       },
       {
         model: User,
@@ -137,6 +187,13 @@ const BASE_INCLUDES = [
         model: Property,
         as: "property",
         attributes: ["id", "title", "city", "address", "ownerId", "countryId", "regionId"],
+        include: [
+          {
+            model: User,
+            as: "owner",
+            attributes: ["id", "country"],
+          },
+        ],
       },
     ],
   },
@@ -145,6 +202,13 @@ const BASE_INCLUDES = [
     as: "property",
     required: false,
     attributes: ["id", "title", "city", "address", "ownerId", "photos", "countryId", "regionId"],
+    include: [
+      {
+        model: User,
+        as: "owner",
+        attributes: ["id", "country"],
+      },
+    ],
   },
 ];
 
@@ -283,15 +347,12 @@ exports.list = async (req, res) => {
     }
 
     // 🌍 GeoScope (admin scoped)
-    if (applyGeoScope) {
-      where = applyGeoScope(where, req.user);
-    } else if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-      // fallback minimal si geoScope util absent
-      const c = toSafeInt(req.user.countryId);
-      const r = toSafeInt(req.user.regionId);
-      if (r) where.regionId = r;
-      else if (c) where.countryId = c;
-      else where.id = 0; // aucun scope défini -> rien
+    if (req.user.role === "admin" || req.user.role === "agent") {
+      if (typeof applyGeoScopeWithLegacy === "function") {
+        where = await applyGeoScopeWithLegacy(where, req.user);
+      } else if (applyGeoScope) {
+        where = applyGeoScope(where, req.user);
+      }
     }
 
     const tasks = await Task.findAll({
@@ -342,14 +403,12 @@ exports.listByService = async (req, res) => {
     }
 
     // 🌍 GeoScope (admin scoped)
-    if (applyGeoScope) {
-      where = applyGeoScope(where, req.user);
-    } else if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-      const c = toSafeInt(req.user.countryId);
-      const r = toSafeInt(req.user.regionId);
-      if (r) where.regionId = r;
-      else if (c) where.countryId = c;
-      else where.id = 0;
+    if (req.user.role === "admin" || req.user.role === "agent") {
+      if (typeof applyGeoScopeWithLegacy === "function") {
+        where = await applyGeoScopeWithLegacy(where, req.user);
+      } else if (applyGeoScope) {
+        where = applyGeoScope(where, req.user);
+      }
     }
 
     const tasks = await Task.findAll({

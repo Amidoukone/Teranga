@@ -1,6 +1,6 @@
 "use strict";
 
-const { Service, User, Property, sequelize } = require("../../models");
+const { Service, User, Property, Country, Sequelize, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const {
   SERVICE_STATUSES,
@@ -55,6 +55,66 @@ function isGlobalAdmin(user) {
   if (!user) return false;
   if (user.role !== "admin") return false;
   return user.countryId == null && user.regionId == null;
+}
+
+async function resolveCountryIdFromLegacy(countryValue) {
+  const trimmed = toTrimOrNull(countryValue);
+  if (!trimmed) return null;
+
+  const isoCandidate = trimmed.length === 2 ? trimmed.toUpperCase() : null;
+  const normalizedName = trimmed.toLowerCase();
+
+  const record = await Country.findOne({
+    where: {
+      isActive: true,
+      [Op.or]: [
+        isoCandidate ? { isoCode: isoCandidate } : null,
+        Sequelize.where(Sequelize.fn("lower", Sequelize.col("name")), normalizedName),
+      ].filter(Boolean),
+    },
+    attributes: ["id"],
+  });
+
+  return record ? record.id : null;
+}
+
+async function getCountryIsoById(countryId) {
+  if (!countryId) return null;
+  const record = await Country.findByPk(countryId, {
+    attributes: ["isoCode", "isActive"],
+  });
+  if (!record || record.isActive === false) return null;
+  return record.isoCode || null;
+}
+
+async function applyGeoScopeWithLegacy(where = {}, user) {
+  if (!user) return where;
+  if (isGlobalAdmin(user)) return where;
+
+  const scope = getUserGeoScope
+    ? getUserGeoScope(user)
+    : { countryId: toSafeInt(user.countryId), regionId: toSafeInt(user.regionId) };
+
+  if (scope.regionId) {
+    return { ...where, regionId: scope.regionId };
+  }
+
+  if (scope.countryId) {
+    const iso = await getCountryIsoById(scope.countryId);
+    const scopeOr = [{ countryId: scope.countryId }];
+
+    if (iso) {
+      scopeOr.push({
+        [Op.and]: [{ countryId: null }, { regionId: null }, { "$client.country$": iso }],
+      });
+    }
+
+    const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
+    andFilters.push({ [Op.or]: scopeOr });
+    return { ...where, [Op.and]: andFilters };
+  }
+
+  return { ...where, id: 0 };
 }
 
 function canAccessByGeoScope(user, resource) {
@@ -167,7 +227,7 @@ exports.create = async (req, res) => {
     const desiredCountryId = toSafeInt(countryId);
     const desiredRegionId = toSafeInt(regionId);
 
-    const resolvedCountryId =
+    let resolvedCountryId =
       property?.countryId ??
       (req.user.role === "admin"
         ? desiredCountryId ?? clientScope.countryId ?? null
@@ -178,6 +238,10 @@ exports.create = async (req, res) => {
       (req.user.role === "admin"
         ? desiredRegionId ?? clientScope.regionId ?? null
         : clientScope.regionId ?? null);
+
+    if (resolvedCountryId === null && targetClient?.country) {
+      resolvedCountryId = await resolveCountryIdFromLegacy(targetClient.country);
+    }
 
     if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
       if (
@@ -244,14 +308,22 @@ exports.listClient = async (req, res) => {
       where.clientId = req.user.id;
     }
 
-    if (applyGeoScope) {
-      where = applyGeoScope(where, req.user);
+    if (req.user.role === "admin" || req.user.role === "agent") {
+      if (typeof applyGeoScopeWithLegacy === "function") {
+        where = await applyGeoScopeWithLegacy(where, req.user);
+      } else if (applyGeoScope) {
+        where = applyGeoScope(where, req.user);
+      }
     }
 
     const rows = await Service.findAll({
       where,
       include: [
-        { model: User, as: "client", attributes: ["id", "firstName", "lastName", "email"] },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email", "country"],
+        },
         { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
         { model: Property, as: "property", attributes: ["id", "title", "city", "address", "photos"] },
       ],
@@ -314,14 +386,20 @@ exports.listAll = async (req, res) => {
       where = { ...where, [Op.and]: andWhere };
     }
 
-    if (applyGeoScope) {
+    if (typeof applyGeoScopeWithLegacy === "function") {
+      where = await applyGeoScopeWithLegacy(where, req.user);
+    } else if (applyGeoScope) {
       where = applyGeoScope(where, req.user);
     }
 
     const { rows, count } = await Service.findAndCountAll({
       where,
       include: [
-        { model: User, as: "client", attributes: ["id", "firstName", "lastName", "email"] },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email", "country"],
+        },
         { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
         { model: Property, as: "property", attributes: ["id", "title", "city", "address"] },
       ],
@@ -572,7 +650,9 @@ exports.listAgent = async (req, res) => {
 
     let where = { agentId: req.user.id };
 
-    if (applyGeoScope) {
+    if (typeof applyGeoScopeWithLegacy === "function") {
+      where = await applyGeoScopeWithLegacy(where, req.user);
+    } else if (applyGeoScope) {
       where = applyGeoScope(where, req.user);
     }
 
@@ -582,7 +662,7 @@ exports.listAgent = async (req, res) => {
         {
           model: User,
           as: "client",
-          attributes: ["id", "firstName", "lastName", "email"],
+          attributes: ["id", "firstName", "lastName", "email", "country"],
         },
         {
           model: Property,
