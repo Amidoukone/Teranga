@@ -350,6 +350,7 @@ exports.create = async (req, res) => {
 
     /* 🔐 Résolution propriétaire */
     let targetOwnerId = req.user.id;
+    let targetOwner = req.user;
 
     // admin/master peuvent créer pour un client
     if (req.user.role === 'admin') {
@@ -364,12 +365,14 @@ exports.create = async (req, res) => {
           return res.status(400).json({ error: 'Le propriétaire doit être un client' });
         }
         targetOwnerId = user.id;
+        targetOwner = user;
       } else if (ownerEmail) {
         const user = await User.findOne({ where: { email: ownerEmail } });
         if (!user || user.role !== 'client') {
           return res.status(400).json({ error: 'ownerEmail invalide ou non client' });
         }
         targetOwnerId = user.id;
+        targetOwner = user;
       }
     }
 
@@ -382,42 +385,47 @@ exports.create = async (req, res) => {
     // - client/agent : non bloquant => null
     const desiredCountryId = toSafeInt(countryId ?? country_id, null);
     const desiredRegionId = toSafeInt(regionId ?? region_id, null);
+    const ownerScope = toScopeFromObj(targetOwner);
+    const fallbackCountryId =
+      desiredCountryId !== null ? desiredCountryId : ownerScope.countryId;
+    const fallbackRegionId =
+      desiredRegionId !== null ? desiredRegionId : ownerScope.regionId;
 
     let finalCountryId = null;
     let finalRegionId = null;
 
     if (isGlobalAdmin(req.user)) {
-      finalCountryId = desiredCountryId;
-      finalRegionId = desiredRegionId;
+      finalCountryId = fallbackCountryId;
+      finalRegionId = fallbackRegionId;
     } else if (req.user.role === 'admin') {
       const scope = getUserGeoScope ? getUserGeoScope(req.user) : { countryId: null, regionId: null };
 
       // si scope region => on force region (et country optionnel)
       if (scope.regionId) {
         finalRegionId = scope.regionId;
-        finalCountryId = scope.countryId ?? desiredCountryId ?? null;
+        finalCountryId = scope.countryId ?? fallbackCountryId ?? null;
 
-        if (desiredRegionId && String(desiredRegionId) !== String(scope.regionId)) {
+        if (fallbackRegionId && String(fallbackRegionId) !== String(scope.regionId)) {
           return res.status(403).json({ error: 'regionId hors scope' });
         }
-        if (scope.countryId && desiredCountryId && String(desiredCountryId) !== String(scope.countryId)) {
+        if (scope.countryId && fallbackCountryId && String(fallbackCountryId) !== String(scope.countryId)) {
           return res.status(403).json({ error: 'countryId hors scope' });
         }
       } else if (scope.countryId) {
         finalCountryId = scope.countryId;
-        finalRegionId = desiredRegionId ?? null;
+        finalRegionId = fallbackRegionId ?? null;
 
-        if (desiredCountryId && String(desiredCountryId) !== String(scope.countryId)) {
+        if (fallbackCountryId && String(fallbackCountryId) !== String(scope.countryId)) {
           return res.status(403).json({ error: 'countryId hors scope' });
         }
       } else {
         // admin scoped sans scope réel => fallback permissif
-        finalCountryId = desiredCountryId;
-        finalRegionId = desiredRegionId;
+        finalCountryId = fallbackCountryId;
+        finalRegionId = fallbackRegionId;
       }
     } else {
-      finalCountryId = null;
-      finalRegionId = null;
+      finalCountryId = fallbackCountryId;
+      finalRegionId = fallbackRegionId;
     }
 
     const created = await Property.create({

@@ -134,6 +134,7 @@ exports.create = async (req, res) => {
     }
 
     let targetClientId = req.user.id;
+    let targetClient = req.user;
 
     if (req.user.role === "admin") {
       if (!clientId)
@@ -148,6 +149,7 @@ exports.create = async (req, res) => {
           .json({ error: "clientId invalide (doit être un client)" });
 
       targetClientId = user.id;
+      targetClient = user;
     } else {
       if (property && String(property.ownerId) !== String(req.user.id))
         return res.status(403).json({
@@ -155,11 +157,27 @@ exports.create = async (req, res) => {
         });
     }
 
+    const clientScope = getUserGeoScope
+      ? getUserGeoScope(targetClient)
+      : {
+          countryId: toSafeInt(targetClient?.countryId),
+          regionId: toSafeInt(targetClient?.regionId),
+        };
+
+    const desiredCountryId = toSafeInt(countryId);
+    const desiredRegionId = toSafeInt(regionId);
+
     const resolvedCountryId =
-      property?.countryId ?? (req.user.role === "admin" ? toSafeInt(countryId) : null);
+      property?.countryId ??
+      (req.user.role === "admin"
+        ? desiredCountryId ?? clientScope.countryId ?? null
+        : clientScope.countryId ?? null);
 
     const resolvedRegionId =
-      property?.regionId ?? (req.user.role === "admin" ? toSafeInt(regionId) : null);
+      property?.regionId ??
+      (req.user.role === "admin"
+        ? desiredRegionId ?? clientScope.regionId ?? null
+        : clientScope.regionId ?? null);
 
     if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
       if (

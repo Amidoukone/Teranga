@@ -14,6 +14,9 @@ Mettre en place Teranga comme une franchise panafricaine pilotée par un siège 
 - `JWT_REFRESH_EXPIRES` : durée du refresh token (ex: `30d`).
 - `BOOTSTRAP_ADMIN_ENABLED` : activer le bootstrap admin en prod (`true/false`).
 - `BOOTSTRAP_ADMIN_EXPIRES_AT` : date d’expiration ISO pour le bootstrap admin.
+- `BOOTSTRAP_ADMIN_ALLOW_DEFAULTS` : en dev, autorise des valeurs par défaut si email/mot de passe manquants (`true/false`, défaut `true`).
+- `BOOTSTRAP_ADMIN_DEFAULT_EMAIL` : email par défaut utilisé en dev si absent.
+- `BOOTSTRAP_ADMIN_DEFAULT_PASSWORD` : mot de passe par défaut utilisé en dev si absent.
 - `METRICS_TOKEN` : token d’accès à `/api/metrics` (recommandé en prod).
 - `SLOW_REQUEST_THRESHOLD_MS` : seuil (ms) pour signaler les requêtes lentes (défaut 1500).
 
