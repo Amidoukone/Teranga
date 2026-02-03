@@ -1,6 +1,6 @@
 "use strict";
 
-const { Service, User, Property, sequelize } = require("../../models");
+const { Service, User, Property, Country, Sequelize, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const {
   SERVICE_STATUSES,
@@ -55,6 +55,27 @@ function isGlobalAdmin(user) {
   if (!user) return false;
   if (user.role !== "admin") return false;
   return user.countryId == null && user.regionId == null;
+}
+
+async function resolveCountryIdFromLegacy(countryValue) {
+  const trimmed = toTrimOrNull(countryValue);
+  if (!trimmed) return null;
+
+  const isoCandidate = trimmed.length === 2 ? trimmed.toUpperCase() : null;
+  const normalizedName = trimmed.toLowerCase();
+
+  const record = await Country.findOne({
+    where: {
+      isActive: true,
+      [Op.or]: [
+        isoCandidate ? { isoCode: isoCandidate } : null,
+        Sequelize.where(Sequelize.fn("lower", Sequelize.col("name")), normalizedName),
+      ].filter(Boolean),
+    },
+    attributes: ["id"],
+  });
+
+  return record ? record.id : null;
 }
 
 function canAccessByGeoScope(user, resource) {
@@ -167,7 +188,7 @@ exports.create = async (req, res) => {
     const desiredCountryId = toSafeInt(countryId);
     const desiredRegionId = toSafeInt(regionId);
 
-    const resolvedCountryId =
+    let resolvedCountryId =
       property?.countryId ??
       (req.user.role === "admin"
         ? desiredCountryId ?? clientScope.countryId ?? null
@@ -178,6 +199,10 @@ exports.create = async (req, res) => {
       (req.user.role === "admin"
         ? desiredRegionId ?? clientScope.regionId ?? null
         : clientScope.regionId ?? null);
+
+    if (resolvedCountryId === null && targetClient?.country) {
+      resolvedCountryId = await resolveCountryIdFromLegacy(targetClient.country);
+    }
 
     if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
       if (

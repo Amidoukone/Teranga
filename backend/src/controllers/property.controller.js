@@ -1,6 +1,6 @@
 'use strict';
 
-const { Property, User } = require('../../models');
+const { Property, User, Country, Sequelize } = require('../../models');
 const { Op } = require('sequelize');
 
 const {
@@ -38,6 +38,27 @@ const toSafeInt = (v, fallback = null) => {
   const n = parseInt(String(v), 10);
   return Number.isNaN(n) ? fallback : n;
 };
+
+async function resolveCountryIdFromLegacy(countryValue) {
+  const trimmed = toTrimOrNull(countryValue);
+  if (!trimmed) return null;
+
+  const isoCandidate = trimmed.length === 2 ? trimmed.toUpperCase() : null;
+  const normalizedName = trimmed.toLowerCase();
+
+  const record = await Country.findOne({
+    where: {
+      isActive: true,
+      [Op.or]: [
+        isoCandidate ? { isoCode: isoCandidate } : null,
+        Sequelize.where(Sequelize.fn('lower', Sequelize.col('name')), normalizedName),
+      ].filter(Boolean),
+    },
+    attributes: ['id'],
+  });
+
+  return record ? record.id : null;
+}
 
 function getPagination(req, defaultLimit = 50, maxLimit = 200) {
   const limit = Math.min(
@@ -386,10 +407,14 @@ exports.create = async (req, res) => {
     const desiredCountryId = toSafeInt(countryId ?? country_id, null);
     const desiredRegionId = toSafeInt(regionId ?? region_id, null);
     const ownerScope = toScopeFromObj(targetOwner);
-    const fallbackCountryId =
+    let fallbackCountryId =
       desiredCountryId !== null ? desiredCountryId : ownerScope.countryId;
     const fallbackRegionId =
       desiredRegionId !== null ? desiredRegionId : ownerScope.regionId;
+
+    if (fallbackCountryId === null && targetOwner?.country) {
+      fallbackCountryId = await resolveCountryIdFromLegacy(targetOwner.country);
+    }
 
     let finalCountryId = null;
     let finalRegionId = null;
