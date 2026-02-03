@@ -1,5 +1,8 @@
 "use strict";
 
+const { Op } = require("sequelize");
+const { Country } = require("../../models");
+
 function toSafeInt(value) {
   if (value === null || value === undefined || value === "") return null;
   const parsed = parseInt(String(value), 10);
@@ -28,6 +31,70 @@ function isAdminRole(user) {
 function isScopedAdmin(user) {
   if (!isAdminRole(user)) return false;
   return !isGlobalAdmin(user);
+}
+
+async function getCountryIsoById(countryId) {
+  if (!countryId) return null;
+  const record = await Country.findByPk(countryId, {
+    attributes: ["isoCode", "isActive"],
+  });
+  if (!record || record.isActive === false) return null;
+  return record.isoCode || null;
+}
+
+/**
+ * 🌍 GeoScope LEGACY (SAFE)
+ * - admin global : aucun filtre
+ * - admin scoped région : regionId
+ * - admin scoped pays :
+ *    - countryId direct
+ *    - fallback legacy via User.country (ISO)
+ */
+async function applyGeoScopeWithLegacy(where = {}, user) {
+  if (!user) return where;
+
+  if (user.role === "admin" && user.countryId == null && user.regionId == null) {
+    return where;
+  }
+
+  const countryId = user.countryId ?? null;
+  const regionId = user.regionId ?? null;
+
+  if (regionId) {
+    return { ...where, regionId };
+  }
+
+  if (countryId) {
+    const iso = await getCountryIsoById(countryId);
+    const scopeOr = [{ countryId }];
+
+    if (iso) {
+      scopeOr.push({
+        [Op.and]: [
+          { countryId: null },
+          { regionId: null },
+          { "$owner.country$": iso },
+        ],
+      });
+      scopeOr.push({
+        [Op.and]: [
+          { countryId: null },
+          { regionId: null },
+          { "$client.country$": iso },
+        ],
+      });
+    }
+
+    return {
+      ...where,
+      [Op.and]: [
+        ...(Array.isArray(where[Op.and]) ? where[Op.and] : []),
+        { [Op.or]: scopeOr },
+      ],
+    };
+  }
+
+  return { ...where, id: 0 };
 }
 
 /**
@@ -141,6 +208,7 @@ function canAccessGeoResource(resource, user) {
 
 module.exports = {
   applyGeoScope,
+  applyGeoScopeWithLegacy,
   applyGeoScopeForModel,
   canAccessGeoResource,
   filterGeoAssignmentsForModel,

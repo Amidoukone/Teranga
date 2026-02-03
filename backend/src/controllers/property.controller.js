@@ -14,12 +14,11 @@ const imageKit = require('../helpers/teranga-imagekit');
 const path = require('path');
 
 // ✅ GeoScope (admin scoped)
-const geo = require('../utils/geoScope');
-const applyGeoScope = geo.applyGeoScope;
-const getUserGeoScope = geo.getUserGeoScope;
-const isGlobalAdmin =
-  geo.isGlobalAdmin ||
-  ((u) => u?.role === 'admin' && !(u?.countryId || u?.regionId));
+const {
+  applyGeoScopeWithLegacy,
+  getUserGeoScope,
+  isGlobalAdmin,
+} = require('../utils/geoScope');
 
 /* ============================================================
    Helpers utilitaires
@@ -250,7 +249,7 @@ exports.list = async (req, res) => {
     } else if (req.user.role === 'agent') {
       // lecture seulement + scope (pas de filtre ownerId)
       // si tu veux limiter l'agent à ses propres clients/assignations, on le fera après.
-    } else {
+    } else if (req.user.role === 'client') {
       where.ownerId = req.user.id;
     }
 

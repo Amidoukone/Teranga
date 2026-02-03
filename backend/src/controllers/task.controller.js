@@ -4,17 +4,7 @@ const { Task, Service, User, Property, Country } = require("../../models");
 const { Op } = require("sequelize");
 
 // 🌍 Geo scope utils (admin scoped)
-let applyGeoScope = null;
-let getUserGeoScope = null;
-try {
-  // si le fichier existe déjà dans ton projet
-  // (même signature que ce qu'on a utilisé dans user.controller)
-  ({ applyGeoScope, getUserGeoScope } = require("../utils/geoScope"));
-} catch (_) {
-  // fallback : pas bloquant, mais le scope ne sera pas appliqué
-  applyGeoScope = null;
-  getUserGeoScope = null;
-}
+const { applyGeoScopeWithLegacy, getUserGeoScope } = require("../utils/geoScope");
 
 // 🌍 Labels FR
 const {

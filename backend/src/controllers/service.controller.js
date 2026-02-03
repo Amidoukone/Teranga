@@ -9,14 +9,7 @@ const {
 } = require("../utils/labels");
 
 // 🌍 GeoScope utils (admin global / admin scoped)
-let applyGeoScope = null;
-let getUserGeoScope = null;
-try {
-  ({ applyGeoScope, getUserGeoScope } = require("../utils/geoScope"));
-} catch (_) {
-  applyGeoScope = null;
-  getUserGeoScope = null;
-}
+const { applyGeoScopeWithLegacy, getUserGeoScope } = require("../utils/geoScope");
 
 /* ============================================================
    🔧 Helpers généraux
