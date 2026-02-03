@@ -78,45 +78,6 @@ async function resolveCountryIdFromLegacy(countryValue) {
   return record ? record.id : null;
 }
 
-async function getCountryIsoById(countryId) {
-  if (!countryId) return null;
-  const record = await Country.findByPk(countryId, {
-    attributes: ["isoCode", "isActive"],
-  });
-  if (!record || record.isActive === false) return null;
-  return record.isoCode || null;
-}
-
-async function applyGeoScopeWithLegacy(where = {}, user) {
-  if (!user) return where;
-  if (isGlobalAdmin(user)) return where;
-
-  const scope = getUserGeoScope
-    ? getUserGeoScope(user)
-    : { countryId: toSafeInt(user.countryId), regionId: toSafeInt(user.regionId) };
-
-  if (scope.regionId) {
-    return { ...where, regionId: scope.regionId };
-  }
-
-  if (scope.countryId) {
-    const iso = await getCountryIsoById(scope.countryId);
-    const scopeOr = [{ countryId: scope.countryId }];
-
-    if (iso) {
-      scopeOr.push({
-        [Op.and]: [{ countryId: null }, { regionId: null }, { "$client.country$": iso }],
-      });
-    }
-
-    const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
-    andFilters.push({ [Op.or]: scopeOr });
-    return { ...where, [Op.and]: andFilters };
-  }
-
-  return { ...where, id: 0 };
-}
-
 function canAccessByGeoScope(user, resource) {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
