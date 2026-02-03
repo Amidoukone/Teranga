@@ -348,11 +348,7 @@ exports.list = async (req, res) => {
 
     // 🌍 GeoScope (admin scoped)
     if (req.user.role === "admin" || req.user.role === "agent") {
-      if (typeof applyGeoScopeWithLegacy === "function") {
-        where = await applyGeoScopeWithLegacy(where, req.user);
-      } else if (applyGeoScope) {
-        where = applyGeoScope(where, req.user);
-      }
+      where = await applyGeoScopeWithLegacy(where, req.user);
     }
 
     const tasks = await Task.findAll({
@@ -404,11 +400,7 @@ exports.listByService = async (req, res) => {
 
     // 🌍 GeoScope (admin scoped)
     if (req.user.role === "admin" || req.user.role === "agent") {
-      if (typeof applyGeoScopeWithLegacy === "function") {
-        where = await applyGeoScopeWithLegacy(where, req.user);
-      } else if (applyGeoScope) {
-        where = applyGeoScope(where, req.user);
-      }
+      where = await applyGeoScopeWithLegacy(where, req.user);
     }
 
     const tasks = await Task.findAll({
