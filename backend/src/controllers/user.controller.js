@@ -129,7 +129,18 @@ function isAdminRole(role) {
  *   - si regionId => user.regionId doit matcher
  *   - sinon si countryId => user.countryId doit matcher
  */
-function canAccessUserByScope(actor, targetUser) {
+async function getCountryIsoById(countryId) {
+  if (!countryId) return null;
+
+  const record = await Country.findByPk(countryId, {
+    attributes: ['isoCode', 'isActive'],
+  });
+
+  if (!record || record.isActive === false) return null;
+  return record.isoCode || null;
+}
+
+async function canAccessUserByScope(actor, targetUser) {
   if (!actor || actor.role !== 'admin') return false;
   if (!targetUser) return false;
 
@@ -140,7 +151,13 @@ function canAccessUserByScope(actor, targetUser) {
     return String(targetUser.regionId ?? '') === String(actorScope.regionId);
   }
   if (actorScope.countryId != null) {
-    return String(targetUser.countryId ?? '') === String(actorScope.countryId);
+    if (String(targetUser.countryId ?? '') === String(actorScope.countryId)) {
+      return true;
+    }
+
+    const actorIso = await getCountryIsoById(actorScope.countryId);
+    const targetIso = toTrimOrNull(targetUser.country)?.toUpperCase() || null;
+    return Boolean(actorIso && targetIso && actorIso === targetIso);
   }
 
   // admin sans scope => global admin (déjà géré) ; mais par sécurité :
@@ -438,8 +455,35 @@ exports.listByRole = async (req, res) => {
       };
     }
 
+    let finalWhere = where;
+
+    if (!isGlobalAdmin(req.user)) {
+      const scope = getUserGeoScope(req.user);
+
+      if (scope.regionId != null) {
+        finalWhere = { ...finalWhere, regionId: scope.regionId };
+      } else if (scope.countryId != null) {
+        const scopeOr = [{ countryId: scope.countryId }];
+        const actorIso = await getCountryIsoById(scope.countryId);
+
+        if (actorIso) {
+          scopeOr.push({
+            [Op.and]: [{ countryId: null }, { regionId: null }, { country: actorIso }],
+          });
+        }
+
+        const andFilters = Array.isArray(finalWhere[Op.and])
+          ? [...finalWhere[Op.and]]
+          : [];
+        andFilters.push({ [Op.or]: scopeOr });
+        finalWhere = { ...finalWhere, [Op.and]: andFilters };
+      } else {
+        finalWhere = { ...finalWhere, id: 0 };
+      }
+    }
+
     const users = await User.findAll({
-      where: applyGeoScope(where, req.user),
+      where: finalWhere,
       attributes: [
         'id',
         'email',
@@ -578,7 +622,7 @@ exports.getById = async (req, res) => {
     if (!u) return res.status(404).json({ error: 'Utilisateur introuvable' });
 
     // 🔒 Scope enforcement
-    if (!canAccessUserByScope(req.user, u)) {
+    if (!(await canAccessUserByScope(req.user, u))) {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
@@ -606,7 +650,7 @@ exports.updateUser = async (req, res) => {
     if (!u) return res.status(404).json({ error: 'Utilisateur introuvable' });
 
     // 🔒 Scope enforcement
-    if (!canAccessUserByScope(req.user, u)) {
+    if (!(await canAccessUserByScope(req.user, u))) {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
@@ -711,7 +755,7 @@ exports.deleteUser = async (req, res) => {
     if (!u) return res.status(404).json({ error: 'Utilisateur introuvable' });
 
     // 🔒 Scope enforcement
-    if (!canAccessUserByScope(req.user, u)) {
+    if (!(await canAccessUserByScope(req.user, u))) {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
