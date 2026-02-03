@@ -258,9 +258,9 @@ exports.list = async (req, res) => {
       ? { ...where, [Op.and]: whereAnd }
       : where;
 
-    // 🌍 Appliquer scope pour master/admin scoped/agent
+    // 🌍 Appliquer scope pour master/admin scoped/agent (avec fallback legacy country)
     if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'agent')) {
-      finalWhere = applyGeoScope ? applyGeoScope(finalWhere, req.user) : finalWhere;
+      finalWhere = await applyGeoScopeWithLegacy(finalWhere, req.user);
     }
 
     const { rows, count } = await Property.findAndCountAll({
@@ -269,7 +269,7 @@ exports.list = async (req, res) => {
         {
           model: User,
           as: 'owner',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'country'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -305,7 +305,7 @@ exports.listByClient = async (req, res) => {
     // admin scoped: on ne peut lister que dans son scope
     let where = { ownerId: cid };
     if (!isGlobalAdmin(req.user)) {
-      where = applyGeoScope ? applyGeoScope(where, req.user) : where;
+      where = await applyGeoScopeWithLegacy(where, req.user);
     }
 
     const { rows, count } = await Property.findAndCountAll({
@@ -314,7 +314,7 @@ exports.listByClient = async (req, res) => {
         {
           model: User,
           as: 'owner',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'country'],
         },
       ],
       order: [['createdAt', 'DESC']],

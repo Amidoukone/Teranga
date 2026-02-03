@@ -269,14 +269,18 @@ exports.listClient = async (req, res) => {
       where.clientId = req.user.id;
     }
 
-    if (applyGeoScope) {
-      where = applyGeoScope(where, req.user);
+    if (req.user.role === "admin" || req.user.role === "agent") {
+      where = await applyGeoScopeWithLegacy(where, req.user);
     }
 
     const rows = await Service.findAll({
       where,
       include: [
-        { model: User, as: "client", attributes: ["id", "firstName", "lastName", "email"] },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email", "country"],
+        },
         { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
         { model: Property, as: "property", attributes: ["id", "title", "city", "address", "photos"] },
       ],
@@ -339,14 +343,16 @@ exports.listAll = async (req, res) => {
       where = { ...where, [Op.and]: andWhere };
     }
 
-    if (applyGeoScope) {
-      where = applyGeoScope(where, req.user);
-    }
+    where = await applyGeoScopeWithLegacy(where, req.user);
 
     const { rows, count } = await Service.findAndCountAll({
       where,
       include: [
-        { model: User, as: "client", attributes: ["id", "firstName", "lastName", "email"] },
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName", "email", "country"],
+        },
         { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
         { model: Property, as: "property", attributes: ["id", "title", "city", "address"] },
       ],
@@ -597,9 +603,7 @@ exports.listAgent = async (req, res) => {
 
     let where = { agentId: req.user.id };
 
-    if (applyGeoScope) {
-      where = applyGeoScope(where, req.user);
-    }
+    where = await applyGeoScopeWithLegacy(where, req.user);
 
     const rows = await Service.findAll({
       where,
@@ -607,7 +611,7 @@ exports.listAgent = async (req, res) => {
         {
           model: User,
           as: "client",
-          attributes: ["id", "firstName", "lastName", "email"],
+          attributes: ["id", "firstName", "lastName", "email", "country"],
         },
         {
           model: Property,
