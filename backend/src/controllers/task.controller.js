@@ -100,9 +100,7 @@ async function getCountryIsoById(countryId) {
   return record.isoCode || null;
 }
 
-let applyGeoScopeWithLegacy = null;
-
-applyGeoScopeWithLegacy = async (where = {}, user) => {
+async function applyGeoScopeWithLegacy(where = {}, user) {
   if (!user) return where;
   if (isGlobalAdmin(user)) return where;
 
@@ -141,7 +139,7 @@ applyGeoScopeWithLegacy = async (where = {}, user) => {
   }
 
   return { ...where, id: 0 };
-};
+}
 
 /* ============================================================
    🧩 Includes réutilisables
@@ -350,11 +348,7 @@ exports.list = async (req, res) => {
 
     // 🌍 GeoScope (admin scoped)
     if (req.user.role === "admin" || req.user.role === "agent") {
-      if (typeof applyGeoScopeWithLegacy === "function") {
-        where = await applyGeoScopeWithLegacy(where, req.user);
-      } else if (applyGeoScope) {
-        where = applyGeoScope(where, req.user);
-      }
+      where = await applyGeoScopeWithLegacy(where, req.user);
     }
 
     const tasks = await Task.findAll({
@@ -406,11 +400,7 @@ exports.listByService = async (req, res) => {
 
     // 🌍 GeoScope (admin scoped)
     if (req.user.role === "admin" || req.user.role === "agent") {
-      if (typeof applyGeoScopeWithLegacy === "function") {
-        where = await applyGeoScopeWithLegacy(where, req.user);
-      } else if (applyGeoScope) {
-        where = applyGeoScope(where, req.user);
-      }
+      where = await applyGeoScopeWithLegacy(where, req.user);
     }
 
     const tasks = await Task.findAll({

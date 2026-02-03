@@ -60,44 +60,6 @@ async function resolveCountryIdFromLegacy(countryValue) {
   return record ? record.id : null;
 }
 
-async function getCountryIsoById(countryId) {
-  if (!countryId) return null;
-  const record = await Country.findByPk(countryId, {
-    attributes: ['isoCode', 'isActive'],
-  });
-  if (!record || record.isActive === false) return null;
-  return record.isoCode || null;
-}
-
-let applyGeoScopeWithLegacy = null;
-
-applyGeoScopeWithLegacy = async (where = {}, user) => {
-  if (!user) return where;
-  if (isGlobalAdmin(user)) return where;
-
-  const scope = getUserGeoScope ? getUserGeoScope(user) : { countryId: null, regionId: null };
-  if (scope.regionId) {
-    return { ...where, regionId: scope.regionId };
-  }
-
-  if (scope.countryId) {
-    const iso = await getCountryIsoById(scope.countryId);
-    const scopeOr = [{ countryId: scope.countryId }];
-
-    if (iso) {
-      scopeOr.push({
-        [Op.and]: [{ countryId: null }, { regionId: null }, { '$owner.country$': iso }],
-      });
-    }
-
-    const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
-    andFilters.push({ [Op.or]: scopeOr });
-    return { ...where, [Op.and]: andFilters };
-  }
-
-  return { ...where, id: 0 };
-};
-
 function getPagination(req, defaultLimit = 50, maxLimit = 200) {
   const limit = Math.min(
     Math.max(toSafeInt(req.query.limit, defaultLimit), 1),
@@ -298,11 +260,7 @@ exports.list = async (req, res) => {
 
     // 🌍 Appliquer scope pour master/admin scoped/agent (avec fallback legacy country)
     if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'agent')) {
-      if (typeof applyGeoScopeWithLegacy === 'function') {
-        finalWhere = await applyGeoScopeWithLegacy(finalWhere, req.user);
-      } else if (applyGeoScope) {
-        finalWhere = applyGeoScope(finalWhere, req.user);
-      }
+      finalWhere = await applyGeoScopeWithLegacy(finalWhere, req.user);
     }
 
     const { rows, count } = await Property.findAndCountAll({
@@ -347,11 +305,7 @@ exports.listByClient = async (req, res) => {
     // admin scoped: on ne peut lister que dans son scope
     let where = { ownerId: cid };
     if (!isGlobalAdmin(req.user)) {
-      if (typeof applyGeoScopeWithLegacy === 'function') {
-        where = await applyGeoScopeWithLegacy(where, req.user);
-      } else if (applyGeoScope) {
-        where = applyGeoScope(where, req.user);
-      }
+      where = await applyGeoScopeWithLegacy(where, req.user);
     }
 
     const { rows, count } = await Property.findAndCountAll({
