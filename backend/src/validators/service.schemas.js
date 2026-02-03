@@ -4,7 +4,8 @@ const Joi = require('joi');
 
 const idSchema = Joi.alternatives().try(
   Joi.number().integer().positive(),
-  Joi.string().pattern(/^\d+$/)
+  Joi.string().pattern(/^\d+$/),
+  Joi.string().allow('')
 );
 
 const createServiceSchema = Joi.object({
