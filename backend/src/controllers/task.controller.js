@@ -4,17 +4,7 @@ const { Task, Service, User, Property } = require("../../models");
 const { Op } = require("sequelize");
 
 // 🌍 Geo scope utils (admin scoped)
-let applyGeoScope = null;
-let getUserGeoScope = null;
-try {
-  // si le fichier existe déjà dans ton projet
-  // (même signature que ce qu'on a utilisé dans user.controller)
-  ({ applyGeoScope, getUserGeoScope } = require("../utils/geoScope"));
-} catch (_) {
-  // fallback : pas bloquant, mais le scope ne sera pas appliqué
-  applyGeoScope = null;
-  getUserGeoScope = null;
-}
+const { applyGeoScopeWithLegacy, getUserGeoScope } = require("../utils/geoScope");
 
 // 🌍 Labels FR
 const {
@@ -91,6 +81,7 @@ function canAccessByGeoScope(user, resource) {
   return false;
 }
 
+
 /* ============================================================
    🧩 Includes réutilisables
 ============================================================ */
@@ -126,7 +117,7 @@ const BASE_INCLUDES = [
       {
         model: User,
         as: "client",
-        attributes: ["id", "firstName", "lastName", "email"],
+        attributes: ["id", "firstName", "lastName", "email", "country"],
       },
       {
         model: User,
@@ -137,6 +128,13 @@ const BASE_INCLUDES = [
         model: Property,
         as: "property",
         attributes: ["id", "title", "city", "address", "ownerId", "countryId", "regionId"],
+        include: [
+          {
+            model: User,
+            as: "owner",
+            attributes: ["id", "country"],
+          },
+        ],
       },
     ],
   },
@@ -145,6 +143,13 @@ const BASE_INCLUDES = [
     as: "property",
     required: false,
     attributes: ["id", "title", "city", "address", "ownerId", "photos", "countryId", "regionId"],
+    include: [
+      {
+        model: User,
+        as: "owner",
+        attributes: ["id", "country"],
+      },
+    ],
   },
 ];
 
@@ -283,15 +288,10 @@ exports.list = async (req, res) => {
     }
 
     // 🌍 GeoScope (admin scoped)
-    if (applyGeoScope) {
-      where = applyGeoScope(where, req.user);
-    } else if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-      // fallback minimal si geoScope util absent
-      const c = toSafeInt(req.user.countryId);
-      const r = toSafeInt(req.user.regionId);
-      if (r) where.regionId = r;
-      else if (c) where.countryId = c;
-      else where.id = 0; // aucun scope défini -> rien
+    if (req.user.role === "admin" || req.user.role === "agent") {
+      where = await applyGeoScopeWithLegacy(where, req.user, {
+        aliases: ["service.client", "property.owner"],
+      });
     }
 
     const tasks = await Task.findAll({
@@ -342,14 +342,10 @@ exports.listByService = async (req, res) => {
     }
 
     // 🌍 GeoScope (admin scoped)
-    if (applyGeoScope) {
-      where = applyGeoScope(where, req.user);
-    } else if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-      const c = toSafeInt(req.user.countryId);
-      const r = toSafeInt(req.user.regionId);
-      if (r) where.regionId = r;
-      else if (c) where.countryId = c;
-      else where.id = 0;
+    if (req.user.role === "admin" || req.user.role === "agent") {
+      where = await applyGeoScopeWithLegacy(where, req.user, {
+        aliases: ["service.client", "property.owner"],
+      });
     }
 
     const tasks = await Task.findAll({
