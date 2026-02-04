@@ -59,7 +59,6 @@ async function resolveCountryIdFromLegacy(countryValue) {
   return record ? record.id : null;
 }
 
-
 function getPagination(req, defaultLimit = 50, maxLimit = 200) {
   const limit = Math.min(
     Math.max(toSafeInt(req.query.limit, defaultLimit), 1),
@@ -260,9 +259,7 @@ exports.list = async (req, res) => {
 
     // 🌍 Appliquer scope pour master/admin scoped/agent (avec fallback legacy country)
     if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'agent')) {
-      finalWhere = await applyGeoScopeWithLegacy(finalWhere, req.user, {
-        aliases: ['owner'],
-      });
+      finalWhere = await applyGeoScopeWithLegacy(finalWhere, req.user);
     }
 
     const { rows, count } = await Property.findAndCountAll({
@@ -307,9 +304,7 @@ exports.listByClient = async (req, res) => {
     // admin scoped: on ne peut lister que dans son scope
     let where = { ownerId: cid };
     if (!isGlobalAdmin(req.user)) {
-      where = await applyGeoScopeWithLegacy(where, req.user, {
-        aliases: ['owner'],
-      });
+      where = await applyGeoScopeWithLegacy(where, req.user);
     }
 
     const { rows, count } = await Property.findAndCountAll({

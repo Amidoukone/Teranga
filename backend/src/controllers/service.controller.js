@@ -71,7 +71,6 @@ async function resolveCountryIdFromLegacy(countryValue) {
   return record ? record.id : null;
 }
 
-
 function canAccessByGeoScope(user, resource) {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
@@ -264,9 +263,7 @@ exports.listClient = async (req, res) => {
     }
 
     if (req.user.role === "admin" || req.user.role === "agent") {
-      where = await applyGeoScopeWithLegacy(where, req.user, {
-        aliases: ["client"],
-      });
+      where = await applyGeoScopeWithLegacy(where, req.user);
     }
 
     const rows = await Service.findAll({
@@ -339,9 +336,7 @@ exports.listAll = async (req, res) => {
       where = { ...where, [Op.and]: andWhere };
     }
 
-    where = await applyGeoScopeWithLegacy(where, req.user, {
-      aliases: ["client"],
-    });
+    where = await applyGeoScopeWithLegacy(where, req.user);
 
     const { rows, count } = await Service.findAndCountAll({
       where,
@@ -601,9 +596,7 @@ exports.listAgent = async (req, res) => {
 
     let where = { agentId: req.user.id };
 
-    where = await applyGeoScopeWithLegacy(where, req.user, {
-      aliases: ["client"],
-    });
+    where = await applyGeoScopeWithLegacy(where, req.user);
 
     const rows = await Service.findAll({
       where,

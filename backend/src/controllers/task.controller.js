@@ -1,6 +1,6 @@
 "use strict";
 
-const { Task, Service, User, Property } = require("../../models");
+const { Task, Service, User, Property, Country } = require("../../models");
 const { Op } = require("sequelize");
 
 // 🌍 Geo scope utils (admin scoped)
@@ -81,6 +81,55 @@ function canAccessByGeoScope(user, resource) {
   return false;
 }
 
+async function getCountryIsoById(countryId) {
+  if (!countryId) return null;
+  const record = await Country.findByPk(countryId, {
+    attributes: ["isoCode", "isActive"],
+  });
+  if (!record || record.isActive === false) return null;
+  return record.isoCode || null;
+}
+
+async function applyGeoScopeWithLegacy(where = {}, user) {
+  if (!user) return where;
+  if (isGlobalAdmin(user)) return where;
+
+  const scope = getUserGeoScope
+    ? getUserGeoScope(user)
+    : { countryId: toSafeInt(user.countryId), regionId: toSafeInt(user.regionId) };
+
+  if (scope.regionId) {
+    return { ...where, regionId: scope.regionId };
+  }
+
+  if (scope.countryId) {
+    const iso = await getCountryIsoById(scope.countryId);
+    const scopeOr = [{ countryId: scope.countryId }];
+
+    if (iso) {
+      scopeOr.push({
+        [Op.and]: [
+          { countryId: null },
+          { regionId: null },
+          { "$service.client.country$": iso },
+        ],
+      });
+      scopeOr.push({
+        [Op.and]: [
+          { countryId: null },
+          { regionId: null },
+          { "$property.owner.country$": iso },
+        ],
+      });
+    }
+
+    const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
+    andFilters.push({ [Op.or]: scopeOr });
+    return { ...where, [Op.and]: andFilters };
+  }
+
+  return { ...where, id: 0 };
+}
 
 /* ============================================================
    🧩 Includes réutilisables
@@ -289,9 +338,7 @@ exports.list = async (req, res) => {
 
     // 🌍 GeoScope (admin scoped)
     if (req.user.role === "admin" || req.user.role === "agent") {
-      where = await applyGeoScopeWithLegacy(where, req.user, {
-        aliases: ["service.client", "property.owner"],
-      });
+      where = await applyGeoScopeWithLegacy(where, req.user);
     }
 
     const tasks = await Task.findAll({
@@ -343,9 +390,7 @@ exports.listByService = async (req, res) => {
 
     // 🌍 GeoScope (admin scoped)
     if (req.user.role === "admin" || req.user.role === "agent") {
-      where = await applyGeoScopeWithLegacy(where, req.user, {
-        aliases: ["service.client", "property.owner"],
-      });
+      where = await applyGeoScopeWithLegacy(where, req.user);
     }
 
     const tasks = await Task.findAll({

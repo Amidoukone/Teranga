@@ -50,7 +50,7 @@ async function getCountryIsoById(countryId) {
  *    - countryId direct
  *    - fallback legacy via User.country (ISO)
  */
-async function applyGeoScopeWithLegacy(where = {}, user, options = {}) {
+async function applyGeoScopeWithLegacy(where = {}, user) {
   if (!user) return where;
 
   if (user.role === "admin" && user.countryId == null && user.regionId == null) {
@@ -67,19 +67,22 @@ async function applyGeoScopeWithLegacy(where = {}, user, options = {}) {
   if (countryId) {
     const iso = await getCountryIsoById(countryId);
     const scopeOr = [{ countryId }];
-    const aliases = Array.isArray(options.aliases) ? options.aliases : [];
 
-    if (iso && aliases.length > 0) {
-      for (const alias of aliases) {
-        if (!alias) continue;
-        scopeOr.push({
-          [Op.and]: [
-            { countryId: null },
-            { regionId: null },
-            { [`$${alias}.country$`]: iso },
-          ],
-        });
-      }
+    if (iso) {
+      scopeOr.push({
+        [Op.and]: [
+          { countryId: null },
+          { regionId: null },
+          { "$owner.country$": iso },
+        ],
+      });
+      scopeOr.push({
+        [Op.and]: [
+          { countryId: null },
+          { regionId: null },
+          { "$client.country$": iso },
+        ],
+      });
     }
 
     return {
