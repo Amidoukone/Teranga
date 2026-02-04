@@ -35,9 +35,11 @@ function isScopedAdmin(user) {
 
 async function getCountryIsoById(countryId) {
   if (!countryId) return null;
+
   const record = await Country.findByPk(countryId, {
     attributes: ["isoCode", "isActive"],
   });
+
   if (!record || record.isActive === false) return null;
   return record.isoCode || null;
 }
@@ -49,33 +51,36 @@ async function getCountryIsoById(countryId) {
  * - admin scoped pays :
  *    - countryId direct
  *    - fallback legacy via User.country (ISO)
+ *
+ * ⚠️ IMPORTANT :
+ * Cette fonction ne doit PAS référencer des alias SQL non présents dans la requête.
+ * Donc PAS de "$owner.country$" ici, car les listes Service n'ont pas d'include owner.
+ *
+ * ✅ On garde uniquement "$client.country$" (utilisé dans ServiceController, TaskController)
  */
 async function applyGeoScopeWithLegacy(where = {}, user) {
   if (!user) return where;
 
-  if (user.role === "admin" && user.countryId == null && user.regionId == null) {
-    return where;
-  }
+  // ✅ Admin global : pas de filtre
+  if (isGlobalAdmin(user)) return where;
 
-  const countryId = user.countryId ?? null;
-  const regionId = user.regionId ?? null;
+  const { countryId, regionId } = getUserGeoScope(user);
 
+  // ✅ Scope région prioritaire
   if (regionId) {
     return { ...where, regionId };
   }
 
+  // ✅ Scope pays (avec fallback legacy ISO)
   if (countryId) {
     const iso = await getCountryIsoById(countryId);
+
+    // Base : filtrer sur countryId natif (données modernes)
     const scopeOr = [{ countryId }];
 
+    // Fallback legacy : pour anciens enregistrements sans countryId/regionId
+    // ⚠️ On utilise uniquement "$client.country$" car c'est l'alias garanti côté Services/Tasks.
     if (iso) {
-      scopeOr.push({
-        [Op.and]: [
-          { countryId: null },
-          { regionId: null },
-          { "$owner.country$": iso },
-        ],
-      });
       scopeOr.push({
         [Op.and]: [
           { countryId: null },
@@ -85,15 +90,14 @@ async function applyGeoScopeWithLegacy(where = {}, user) {
       });
     }
 
-    return {
-      ...where,
-      [Op.and]: [
-        ...(Array.isArray(where[Op.and]) ? where[Op.and] : []),
-        { [Op.or]: scopeOr },
-      ],
-    };
+    // On combine proprement avec les filtres existants
+    const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
+    andFilters.push({ [Op.or]: scopeOr });
+
+    return { ...where, [Op.and]: andFilters };
   }
 
+  // ✅ Anti-régression historique : admin/agent sans scope => aucune donnée
   return { ...where, id: 0 };
 }
 
@@ -140,7 +144,7 @@ function modelSupportsGeoScope(model) {
 
 /**
  * Applique le scope uniquement si le modèle a bien les champs geo.
- * ✅ Permet d'éviter des filtres sur des modèles non concernés (source d'erreurs).
+ * ✅ Permet d'éviter des filtres sur des modèles non concernés.
  */
 function applyGeoScopeForModel(where = {}, user, model) {
   if (!modelSupportsGeoScope(model)) return where;
@@ -150,22 +154,13 @@ function applyGeoScopeForModel(where = {}, user, model) {
 /**
  * Nettoie un objet d’assignation (create/update) selon les champs du modèle.
  * Exemple: si un modèle n'a pas regionId, on supprime regionId/region_id.
- *
- * ✅ Utile pour éviter d'envoyer à Sequelize des champs inconnus
- * (ou d'introduire des incohérences snake/camel).
  */
 function filterGeoAssignmentsForModel(model, assignments = {}) {
   if (!assignments || typeof assignments !== "object") return assignments;
 
   // Si le modèle ne supporte pas le geo-scope, on enlève tous les champs geo.
   if (!modelSupportsGeoScope(model)) {
-    const {
-      countryId,
-      regionId,
-      country_id,
-      region_id,
-      ...rest
-    } = assignments;
+    const { countryId, regionId, country_id, region_id, ...rest } = assignments;
     return rest;
   }
 
@@ -173,10 +168,8 @@ function filterGeoAssignmentsForModel(model, assignments = {}) {
   const out = { ...assignments };
   const attrs = model?.rawAttributes || {};
 
-  const hasCountry =
-    Boolean(attrs.countryId) || Boolean(attrs.country_id);
-  const hasRegion =
-    Boolean(attrs.regionId) || Boolean(attrs.region_id);
+  const hasCountry = Boolean(attrs.countryId) || Boolean(attrs.country_id);
+  const hasRegion = Boolean(attrs.regionId) || Boolean(attrs.region_id);
 
   if (!hasCountry) {
     delete out.countryId;
