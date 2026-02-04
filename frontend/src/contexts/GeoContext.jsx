@@ -14,9 +14,10 @@ export function GeoProvider({ children }) {
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const user = getLocalUser();
+  const [user, setUser] = useState(getLocalUser());
+  const [token, setToken] = useState(getToken());
   const role = normalizeRole(user?.role);
-  const isAuthenticated = Boolean(getToken() || user);
+  const isAuthenticated = Boolean(token || user);
   const isAdmin = role === 'admin';
   const scopedCountryId = user?.countryId ?? null;
   const scopedRegionId = user?.regionId ?? null;
@@ -45,6 +46,23 @@ export function GeoProvider({ children }) {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    function syncAuthState() {
+      setUser(getLocalUser());
+      setToken(getToken());
+    }
+
+    if (typeof window === 'undefined') return () => {};
+
+    window.addEventListener('storage', syncAuthState);
+    window.addEventListener('teranga_auth_changed', syncAuthState);
+
+    return () => {
+      window.removeEventListener('storage', syncAuthState);
+      window.removeEventListener('teranga_auth_changed', syncAuthState);
+    };
+  }, []);
+
+  useEffect(() => {
     let active = true;
     async function load() {
       if (!isAuthenticated) {
@@ -56,6 +74,7 @@ export function GeoProvider({ children }) {
         }
         return;
       }
+      if (active) setLoading(true);
       try {
         const list = await getCountries();
         if (active) setCountries(list || []);
