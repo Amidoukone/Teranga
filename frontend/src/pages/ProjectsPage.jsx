@@ -782,8 +782,94 @@ export default function ProjectsPage() {
               </FieldRow>
             )}
 
-            {/* Les autres champs restent STRICTEMENT inchangés */}
-            {/* (Titre, Type, Budget, Statut, Description) */}
+            <FieldRow>
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                  Titre *
+                </label>
+                <input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  required
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  placeholder="Ex: Construction villa"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                  Type
+                </label>
+                <select
+                  value={form.type}
+                  onChange={(e) => setForm({ ...form, type: e.target.value })}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  {PROJECT_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </FieldRow>
+
+            <FieldRow>
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                  Budget
+                </label>
+                <input
+                  type="number"
+                  value={form.budget}
+                  onChange={(e) => setForm({ ...form, budget: e.target.value })}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  placeholder="0"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                  Statut
+                </label>
+                <select
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value })}
+                  disabled={!isAdmin}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm disabled:bg-slate-100"
+                >
+                  {PROJECT_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </FieldRow>
+
+            <div>
+              <label className="text-xs font-medium text-slate-600 mb-1 block">
+                Description
+              </label>
+              <textarea
+                value={form.description}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
+                rows={4}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-y"
+                placeholder="Décrivez le projet…"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2 justify-end">
+              <Btn variant="secondary" size="sm" type="button" onClick={resetForm}>
+                Annuler
+              </Btn>
+              <Btn variant="primary" size="sm" type="submit">
+                {editId ? '💾 Mettre à jour' : '💾 Créer'}
+              </Btn>
+            </div>
           </form>
         )}
 {/* ================= LISTE DES PROJETS ================= */}
@@ -982,4 +1068,3 @@ export default function ProjectsPage() {
     </div>
   );
 }
-
