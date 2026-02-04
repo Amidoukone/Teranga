@@ -15,7 +15,7 @@ const path = require('path');
 
 // ✅ GeoScope (admin scoped)
 const {
-  applyGeoScopeWithLegacy,
+  applyGeoScope,       // ✅ on utilise le scope simple pour Property
   getUserGeoScope,
   isGlobalAdmin,
 } = require('../utils/geoScope');
@@ -101,6 +101,55 @@ function canAccessByGeoScope(user, resource) {
   if (scope.regionId) return String(r.regionId) === String(scope.regionId);
   if (scope.countryId) return String(r.countryId) === String(scope.countryId);
   return true;
+}
+
+/**
+ * ✅ Fallback legacy spécifique à Property (Biens)
+ * Objectif: si un bien ancien n'a pas countryId/regionId,
+ * on le rattache au pays via owner.country (ISO).
+ *
+ * ⚠️ Important:
+ * - On utilise "$owner.country$" uniquement, car Property inclut "owner".
+ * - On NE DOIT PAS utiliser "$client.country$" ici (alias absent).
+ */
+async function applyLegacyOwnerCountryScopeForProperties(where = {}, user) {
+  if (!user) return where;
+  if (isGlobalAdmin(user)) return where;
+
+  // uniquement admin/agent
+  if (!['admin', 'agent'].includes(user.role)) return where;
+
+  const scope = getUserGeoScope ? getUserGeoScope(user) : { countryId: null, regionId: null };
+
+  // Si scope région => pas de fallback legacy ISO (on filtre par regionId déjà)
+  if (scope.regionId) return where;
+
+  // Si pas de scope pays => rien à faire
+  if (!scope.countryId) return where;
+
+  // ISO du pays scope
+  const record = await Country.findByPk(scope.countryId, { attributes: ['isoCode', 'isActive'] });
+  if (!record || record.isActive === false || !record.isoCode) return where;
+
+  const iso = record.isoCode;
+
+  // On ajoute: (countryId = scope.countryId) OR (countryId IS NULL AND regionId IS NULL AND owner.country = ISO)
+  // Mais attention: si le where contient déjà un Op.and, on l'étend proprement.
+  const orScope = [
+    { countryId: scope.countryId },
+    {
+      [Op.and]: [
+        { countryId: null },
+        { regionId: null },
+        { '$owner.country$': iso },
+      ],
+    },
+  ];
+
+  const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
+  andFilters.push({ [Op.or]: orScope });
+
+  return { ...where, [Op.and]: andFilters };
 }
 
 /* ============================================================
@@ -248,7 +297,6 @@ exports.list = async (req, res) => {
       // scope appliqué plus bas
     } else if (req.user.role === 'agent') {
       // lecture seulement + scope (pas de filtre ownerId)
-      // si tu veux limiter l'agent à ses propres clients/assignations, on le fera après.
     } else if (req.user.role === 'client') {
       where.ownerId = req.user.id;
     }
@@ -257,9 +305,12 @@ exports.list = async (req, res) => {
       ? { ...where, [Op.and]: whereAnd }
       : where;
 
-    // 🌍 Appliquer scope pour master/admin scoped/agent (avec fallback legacy country)
+    // 🌍 Scope pour admin scoped/agent : ✅ applyGeoScope (PAS legacy générique)
     if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'agent')) {
-      finalWhere = await applyGeoScopeWithLegacy(finalWhere, req.user);
+      finalWhere = applyGeoScope(finalWhere, req.user);
+
+      // ✅ Fallback legacy spécifique aux BIENS via owner.country (ISO)
+      finalWhere = await applyLegacyOwnerCountryScopeForProperties(finalWhere, req.user);
     }
 
     const { rows, count } = await Property.findAndCountAll({
@@ -301,10 +352,12 @@ exports.listByClient = async (req, res) => {
     const cid = toSafeInt(req.params.id);
     if (!cid) return res.status(400).json({ error: 'clientId requis' });
 
-    // admin scoped: on ne peut lister que dans son scope
     let where = { ownerId: cid };
+
+    // admin scoped: on ne peut lister que dans son scope
     if (!isGlobalAdmin(req.user)) {
-      where = await applyGeoScopeWithLegacy(where, req.user);
+      where = applyGeoScope(where, req.user);
+      where = await applyLegacyOwnerCountryScopeForProperties(where, req.user);
     }
 
     const { rows, count } = await Property.findAndCountAll({
