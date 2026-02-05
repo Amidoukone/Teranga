@@ -1,10 +1,14 @@
 "use strict";
 
-const { Project, ProjectPhase, User } = require("../../models");
+const { Project, ProjectPhase, Region, User } = require("../../models");
 const { getLabel } = require("../utils/labels");
+const { Op } = require("sequelize");
 const {
   applyGeoScope,
   canAccessGeoResource,
+  getCountryIdByIso,
+  getCountryIdByRegionId,
+  getCountryIsoById,
   getUserGeoScope,
   isGlobalAdmin,
 } = require("../utils/geoScope");
@@ -50,6 +54,31 @@ function canClientEditOrDelete(project, user) {
   return isClientOwner(project, user) && isWithinOneHour(project.createdAt);
 }
 
+async function canAdminAccessProject(project, user) {
+  if (!project || !user) return false;
+  if (isGlobalAdmin(user)) return true;
+  if (canAccessGeoResource(project, user)) return true;
+
+  const scope = getUserGeoScope(user);
+  if (scope.regionId) return false;
+
+  if (scope.countryId && project.regionId && project.countryId == null) {
+    const regionCountryId = await getCountryIdByRegionId(project.regionId);
+    if (regionCountryId && String(regionCountryId) === String(scope.countryId)) {
+      return true;
+    }
+  }
+
+  if (scope.countryId && project.countryId == null && project.regionId == null) {
+    const scopeIso = await getCountryIsoById(scope.countryId);
+    const clientIso = project?.client?.country;
+    if (!scopeIso || !clientIso) return false;
+    return String(scopeIso).toUpperCase() === String(clientIso).toUpperCase();
+  }
+
+  return false;
+}
+
 /* =========================================================
    🟢 CREATE PROJECT
 ========================================================= */
@@ -88,6 +117,14 @@ exports.create = async (req, res) => {
     }
 
     const scope = getUserGeoScope(req.user);
+    const legacyCountryId =
+      !scope.countryId && req.user?.country
+        ? await getCountryIdByIso(req.user.country)
+        : null;
+    const regionCountryId =
+      !scope.countryId && scope.regionId
+        ? await getCountryIdByRegionId(scope.regionId)
+        : null;
     const desiredCountryId = isAdminLike(req.user)
       ? toSafeInt(countryId ?? country_id)
       : null;
@@ -117,7 +154,7 @@ exports.create = async (req, res) => {
       // 🌍 Multi-pays (non destructif)
       countryId: isAdminLike(req.user)
         ? (isGlobalAdmin(req.user) ? desiredCountryId : scope.countryId ?? desiredCountryId)
-        : scope.countryId ?? null,
+        : scope.countryId ?? regionCountryId ?? legacyCountryId ?? null,
 
       regionId: isAdminLike(req.user)
         ? (isGlobalAdmin(req.user) ? desiredRegionId : scope.regionId ?? desiredRegionId)
@@ -162,7 +199,7 @@ exports.list = async (req, res) => {
     if (!req.user?.id)
       return res.status(401).json({ error: "Non authentifié" });
 
-    const where = {};
+    let where = {};
 
     // 🔐 ACL
     if (req.user.role === "client") where.clientId = req.user.id;
@@ -175,16 +212,55 @@ exports.list = async (req, res) => {
     if (countryId) where.countryId = countryId;
     if (regionId) where.regionId = regionId;
 
-    const scopedWhere =
-      req.user.role === "admin" ? applyGeoScope(where, req.user) : where;
+    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
+      const scope = getUserGeoScope(req.user);
+      if (scope.regionId) {
+        where = { ...where, regionId: scope.regionId };
+      } else if (scope.countryId) {
+        const scopeIso = await getCountryIsoById(scope.countryId);
+        const scopeOr = [{ countryId: scope.countryId }];
+
+        scopeOr.push({
+          [Op.and]: [
+            { countryId: null },
+            { regionId: { [Op.ne]: null } },
+            { "$region.countryId$": scope.countryId },
+          ],
+        });
+
+        if (scopeIso) {
+          scopeOr.push({
+            [Op.and]: [
+              { countryId: null },
+              { regionId: null },
+              { "$client.country$": scopeIso },
+            ],
+          });
+        }
+
+        const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
+        andFilters.push({ [Op.or]: scopeOr });
+        where = { ...where, [Op.and]: andFilters };
+      } else {
+        where = { ...where, id: 0 };
+      }
+    } else {
+      where = applyGeoScope(where, req.user);
+    }
 
     const projects = await Project.findAll({
-      where: scopedWhere,
+      where,
       include: [
         {
           model: User,
           as: "client",
-          attributes: ["id", "firstName", "lastName", "email", "role"],
+          attributes: ["id", "firstName", "lastName", "email", "role", "country"],
+        },
+        {
+          model: Region,
+          as: "region",
+          attributes: ["id", "countryId"],
+          required: false,
         },
         {
           model: User,
@@ -226,7 +302,7 @@ exports.detail = async (req, res) => {
         {
           model: User,
           as: "client",
-          attributes: ["id", "firstName", "lastName", "email", "role"],
+          attributes: ["id", "firstName", "lastName", "email", "role", "country"],
         },
         {
           model: User,
@@ -244,7 +320,8 @@ exports.detail = async (req, res) => {
     }
 
     if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-      if (!canAccessGeoResource(project, req.user)) {
+      const canAccess = await canAdminAccessProject(project, req.user);
+      if (!canAccess) {
         return res.status(403).json({ error: "Accès hors scope géographique" });
       }
     }
@@ -274,7 +351,15 @@ exports.update = async (req, res) => {
     const id = toSafeInt(req.params.id);
     if (!id) return res.status(400).json({ error: "ID invalide" });
 
-    const project = await Project.findByPk(id);
+    const project = await Project.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "country"],
+        },
+      ],
+    });
     if (!project)
       return res.status(404).json({ error: "Projet introuvable" });
 
@@ -289,7 +374,8 @@ exports.update = async (req, res) => {
     }
 
     if (adminOK && !isGlobalAdmin(req.user)) {
-      if (!canAccessGeoResource(project, req.user)) {
+      const canAccess = await canAdminAccessProject(project, req.user);
+      if (!canAccess) {
         return res.status(403).json({ error: "Action hors scope géographique" });
       }
     }
@@ -387,7 +473,15 @@ exports.remove = async (req, res) => {
     const id = toSafeInt(req.params.id);
     if (!id) return res.status(400).json({ error: "ID invalide" });
 
-    const project = await Project.findByPk(id);
+    const project = await Project.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "country"],
+        },
+      ],
+    });
     if (!project)
       return res.status(404).json({ error: "Projet introuvable" });
 
@@ -402,7 +496,8 @@ exports.remove = async (req, res) => {
     }
 
     if (adminOK && !isGlobalAdmin(req.user)) {
-      if (!canAccessGeoResource(project, req.user)) {
+      const canAccess = await canAdminAccessProject(project, req.user);
+      if (!canAccess) {
         return res.status(403).json({ error: "Suppression hors scope géographique" });
       }
     }

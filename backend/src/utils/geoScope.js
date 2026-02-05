@@ -1,7 +1,7 @@
 "use strict";
 
 const { Op } = require("sequelize");
-const { Country } = require("../../models");
+const { Country, Region } = require("../../models");
 
 function toSafeInt(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -42,6 +42,29 @@ async function getCountryIsoById(countryId) {
 
   if (!record || record.isActive === false) return null;
   return record.isoCode || null;
+}
+
+async function getCountryIdByIso(isoCode) {
+  if (!isoCode) return null;
+
+  const record = await Country.findOne({
+    where: { isoCode: String(isoCode).toUpperCase() },
+    attributes: ["id", "isActive"],
+  });
+
+  if (!record || record.isActive === false) return null;
+  return record.id || null;
+}
+
+async function getCountryIdByRegionId(regionId) {
+  if (!regionId) return null;
+
+  const record = await Region.findByPk(regionId, {
+    attributes: ["countryId", "isActive"],
+  });
+
+  if (!record || record.isActive === false) return null;
+  return record.countryId || null;
 }
 
 /**
@@ -206,6 +229,9 @@ module.exports = {
   canAccessGeoResource,
   filterGeoAssignmentsForModel,
   getUserGeoScope,
+  getCountryIdByIso,
+  getCountryIdByRegionId,
+  getCountryIsoById,
   toSafeInt,
   isGlobalAdmin,
   isAdminRole,
