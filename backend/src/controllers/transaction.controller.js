@@ -17,11 +17,7 @@ const {
   Order,
   Project,
 } = require("../../models");
-const {
-  applyGeoScopeForModel,
-  getCountryIdByIso,
-  getCountryIdByRegionId,
-} = require("../utils/geoScope");
+const { applyGeoScopeForModel, getCountryIdByIso } = require("../utils/geoScope");
 
 // 🧱 Service interne Teranga : ACL / WHERE / Pagination
 const {
@@ -140,10 +136,6 @@ async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
       : null,
   ]);
 
-  const regionCountryId =
-    project?.countryId == null && project?.regionId
-      ? await getCountryIdByRegionId(project.regionId)
-      : null;
   const legacyProjectCountryId =
     project?.countryId == null && project?.client?.country
       ? await getCountryIdByIso(project.client.country)
@@ -154,7 +146,6 @@ async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
       service?.countryId ??
       task?.countryId ??
       project?.countryId ??
-      regionCountryId ??
       legacyProjectCountryId ??
       order?.countryId ??
       null,

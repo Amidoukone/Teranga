@@ -5,9 +5,9 @@ const { getLabel } = require("../utils/labels");
 const { Op } = require("sequelize");
 const {
   applyGeoScope,
+  applyGeoScopeWithLegacy,
   canAccessGeoResource,
   getCountryIdByIso,
-  getCountryIdByRegionId,
   getCountryIsoById,
   getUserGeoScope,
   isGlobalAdmin,
@@ -62,13 +62,6 @@ async function canAdminAccessProject(project, user) {
   const scope = getUserGeoScope(user);
   if (scope.regionId) return false;
 
-  if (scope.countryId && project.regionId && project.countryId == null) {
-    const regionCountryId = await getCountryIdByRegionId(project.regionId);
-    if (regionCountryId && String(regionCountryId) === String(scope.countryId)) {
-      return true;
-    }
-  }
-
   if (scope.countryId && project.countryId == null && project.regionId == null) {
     const scopeIso = await getCountryIsoById(scope.countryId);
     const clientIso = project?.client?.country;
@@ -121,10 +114,6 @@ exports.create = async (req, res) => {
       !scope.countryId && req.user?.country
         ? await getCountryIdByIso(req.user.country)
         : null;
-    const regionCountryId =
-      !scope.countryId && scope.regionId
-        ? await getCountryIdByRegionId(scope.regionId)
-        : null;
     const desiredCountryId = isAdminLike(req.user)
       ? toSafeInt(countryId ?? country_id)
       : null;
@@ -154,7 +143,7 @@ exports.create = async (req, res) => {
       // 🌍 Multi-pays (non destructif)
       countryId: isAdminLike(req.user)
         ? (isGlobalAdmin(req.user) ? desiredCountryId : scope.countryId ?? desiredCountryId)
-        : scope.countryId ?? regionCountryId ?? legacyCountryId ?? null,
+        : scope.countryId ?? legacyCountryId ?? null,
 
       regionId: isAdminLike(req.user)
         ? (isGlobalAdmin(req.user) ? desiredRegionId : scope.regionId ?? desiredRegionId)
@@ -212,38 +201,8 @@ exports.list = async (req, res) => {
     if (countryId) where.countryId = countryId;
     if (regionId) where.regionId = regionId;
 
-    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-      const scope = getUserGeoScope(req.user);
-      if (scope.regionId) {
-        where = { ...where, regionId: scope.regionId };
-      } else if (scope.countryId) {
-        const scopeIso = await getCountryIsoById(scope.countryId);
-        const scopeOr = [{ countryId: scope.countryId }];
-
-        scopeOr.push({
-          [Op.and]: [
-            { countryId: null },
-            { regionId: { [Op.ne]: null } },
-            { "$region.countryId$": scope.countryId },
-          ],
-        });
-
-        if (scopeIso) {
-          scopeOr.push({
-            [Op.and]: [
-              { countryId: null },
-              { regionId: null },
-              { "$client.country$": scopeIso },
-            ],
-          });
-        }
-
-        const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
-        andFilters.push({ [Op.or]: scopeOr });
-        where = { ...where, [Op.and]: andFilters };
-      } else {
-        where = { ...where, id: 0 };
-      }
+    if (req.user.role === "admin") {
+      where = await applyGeoScopeWithLegacy(where, req.user);
     } else {
       where = applyGeoScope(where, req.user);
     }

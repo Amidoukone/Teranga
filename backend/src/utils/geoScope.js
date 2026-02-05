@@ -56,17 +56,6 @@ async function getCountryIdByIso(isoCode) {
   return record.id || null;
 }
 
-async function getCountryIdByRegionId(regionId) {
-  if (!regionId) return null;
-
-  const record = await Region.findByPk(regionId, {
-    attributes: ["countryId", "isActive"],
-  });
-
-  if (!record || record.isActive === false) return null;
-  return record.countryId || null;
-}
-
 /**
  * 🌍 GeoScope LEGACY (SAFE)
  * - admin global : aucun filtre
@@ -230,7 +219,6 @@ module.exports = {
   filterGeoAssignmentsForModel,
   getUserGeoScope,
   getCountryIdByIso,
-  getCountryIdByRegionId,
   getCountryIsoById,
   toSafeInt,
   isGlobalAdmin,
