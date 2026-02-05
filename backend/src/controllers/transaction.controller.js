@@ -17,7 +17,7 @@ const {
   Order,
   Project,
 } = require("../../models");
-const { applyGeoScopeForModel } = require("../utils/geoScope");
+const { applyGeoScopeForModel, getCountryIdByIso } = require("../utils/geoScope");
 
 // 🧱 Service interne Teranga : ACL / WHERE / Pagination
 const {
@@ -123,15 +123,30 @@ async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
         })
       : null,
     pid
-      ? Project.findByPk(pid, { attributes: ["id", "countryId", "regionId"] })
+      ? Project.findByPk(pid, {
+          attributes: ["id", "countryId", "regionId"],
+          include: [
+            {
+              model: User,
+              as: "client",
+              attributes: ["id", "country"],
+            },
+          ],
+        })
       : null,
   ]);
+
+  const legacyProjectCountryId =
+    project?.countryId == null && project?.client?.country
+      ? await getCountryIdByIso(project.client.country)
+      : null;
 
   return {
     countryId:
       service?.countryId ??
       task?.countryId ??
       project?.countryId ??
+      legacyProjectCountryId ??
       order?.countryId ??
       null,
 
