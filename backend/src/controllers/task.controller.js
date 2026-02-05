@@ -4,7 +4,7 @@ const { Task, Service, User, Property, Country } = require("../../models");
 const { Op } = require("sequelize");
 
 // 🌍 Geo scope utils (admin scoped)
-const { applyGeoScopeWithLegacy, getUserGeoScope } = require("../utils/geoScope");
+const { getUserGeoScope } = require("../utils/geoScope");
 
 // 🌍 Labels FR
 const {

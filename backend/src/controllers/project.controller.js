@@ -117,11 +117,11 @@ exports.create = async (req, res) => {
       // 🌍 Multi-pays (non destructif)
       countryId: isAdminLike(req.user)
         ? (isGlobalAdmin(req.user) ? desiredCountryId : scope.countryId ?? desiredCountryId)
-        : null,
+        : scope.countryId ?? null,
 
       regionId: isAdminLike(req.user)
         ? (isGlobalAdmin(req.user) ? desiredRegionId : scope.regionId ?? desiredRegionId)
-        : null,
+        : scope.regionId ?? null,
     });
 
     const full = await Project.findByPk(project.id, {
