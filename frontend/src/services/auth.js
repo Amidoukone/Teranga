@@ -200,6 +200,26 @@ export async function me() {
 
   // 🔸 Pas de token → on tente un fallback user (offline)
   if (!token) {
+    try {
+      const { data } = await api.get('/auth/me');
+      if (data?.user) writeCachedUser(data.user);
+      return data;
+    } catch (error) {
+      const status = error?.response?.status;
+      if (status === 401) {
+        writeCachedUser(null);
+        return { user: null };
+      }
+
+      const isNetworkError = !error?.response;
+      if (isNetworkError) {
+        const cached = readCachedUser();
+        if (cached) {
+          console.warn('⚠️ Backend indisponible — utilisation du user en cache (mode “offline”).');
+          return { user: cached, offline: true };
+        }
+      }
+    }
     const cached = readCachedUser();
     if (cached) {
       console.warn('⚠️ Aucun token, mode “offline” — utilisation du user en cache.');

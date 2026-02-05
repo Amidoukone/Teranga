@@ -1,7 +1,7 @@
 "use strict";
 
 const { Op } = require("sequelize");
-const { Country } = require("../../models");
+const { Country, Region } = require("../../models");
 
 function toSafeInt(value) {
   if (value === null || value === undefined || value === "") return null;

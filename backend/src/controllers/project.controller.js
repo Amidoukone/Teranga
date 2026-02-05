@@ -1,7 +1,8 @@
 "use strict";
 
-const { Project, ProjectPhase, User } = require("../../models");
+const { Project, ProjectPhase, Region, User } = require("../../models");
 const { getLabel } = require("../utils/labels");
+const { Op } = require("sequelize");
 const {
   applyGeoScope,
   applyGeoScopeWithLegacy,
@@ -212,7 +213,13 @@ exports.list = async (req, res) => {
         {
           model: User,
           as: "client",
-          attributes: ["id", "firstName", "lastName", "email", "role"],
+          attributes: ["id", "firstName", "lastName", "email", "role", "country"],
+        },
+        {
+          model: Region,
+          as: "region",
+          attributes: ["id", "countryId"],
+          required: false,
         },
         {
           model: User,
@@ -254,7 +261,7 @@ exports.detail = async (req, res) => {
         {
           model: User,
           as: "client",
-          attributes: ["id", "firstName", "lastName", "email", "role"],
+          attributes: ["id", "firstName", "lastName", "email", "role", "country"],
         },
         {
           model: User,
