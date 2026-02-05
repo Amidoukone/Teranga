@@ -44,6 +44,18 @@ async function getCountryIsoById(countryId) {
   return record.isoCode || null;
 }
 
+async function getCountryIdByIso(isoCode) {
+  if (!isoCode) return null;
+
+  const record = await Country.findOne({
+    where: { isoCode: String(isoCode).toUpperCase() },
+    attributes: ["id", "isActive"],
+  });
+
+  if (!record || record.isActive === false) return null;
+  return record.id || null;
+}
+
 /**
  * 🌍 GeoScope LEGACY (SAFE)
  * - admin global : aucun filtre
@@ -206,6 +218,8 @@ module.exports = {
   canAccessGeoResource,
   filterGeoAssignmentsForModel,
   getUserGeoScope,
+  getCountryIdByIso,
+  getCountryIsoById,
   toSafeInt,
   isGlobalAdmin,
   isAdminRole,
