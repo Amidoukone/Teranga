@@ -360,6 +360,9 @@ exports.me = async (req, res) => {
       return res.status(401).json({ error: 'Non authentifié' });
     }
 
+    // Evite les 304 (ETag) qui masquent les erreurs d'auth pendant le debug
+    res.set('Cache-Control', 'no-store');
+
     const user = await User.findByPk(userId, {
       attributes: [
         'id',

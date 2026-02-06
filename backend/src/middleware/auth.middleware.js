@@ -15,6 +15,12 @@ module.exports = async function auth(req, res, next) {
   const token = headerToken || cookieToken;
 
   if (!token) {
+    console.warn('🔒 Auth: token manquant', {
+      hasAuthHeader: Boolean(req.headers?.authorization),
+      hasCookie: Boolean(cookieToken),
+      path: req.originalUrl,
+      method: req.method,
+    });
     return res.status(401).json({ error: 'Token manquant' });
   }
 
@@ -40,9 +46,22 @@ module.exports = async function auth(req, res, next) {
     req.user = {
       id: user.id,
       role: user.role, // 'client' | 'agent' | 'admin'
+      // Legacy ISO (utile pour les fallbacks geo)
+      country: user.country ?? null,
       countryId: user.countryId ?? null,
       regionId: user.regionId ?? null,
     };
+
+    if ((process.env.NODE_ENV || 'development') !== 'production') {
+      console.info('🔓 Auth OK', {
+        userId: user.id,
+        role: user.role,
+        countryId: user.countryId ?? null,
+        regionId: user.regionId ?? null,
+        path: req.originalUrl,
+        method: req.method,
+      });
+    }
 
     const usingCookie = Boolean(cookieToken && !headerToken);
     if (usingCookie && !SAFE_METHODS.has(req.method)) {
@@ -55,7 +74,14 @@ module.exports = async function auth(req, res, next) {
 
     next();
   } catch (err) {
-    console.warn('🔒 JWT invalide ou expiré:', err.message);
+    console.warn('🔒 JWT invalide ou expiré:', {
+      message: err.message,
+      name: err.name,
+      path: req.originalUrl,
+      method: req.method,
+      hasSecret: Boolean(process.env.JWT_SECRET),
+      tokenPrefix: typeof token === 'string' ? token.slice(0, 12) : null,
+    });
     return res.status(401).json({ error: 'Token invalide ou expiré' });
   }
 };

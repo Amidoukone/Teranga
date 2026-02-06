@@ -133,10 +133,13 @@ export function GeoProvider({ children }) {
 
   const value = useMemo(
     () => ({
+      user,
       countryId,
       regionId,
       countries,
       regions,
+      scopedCountryId,
+      scopedRegionId,
       setCountry,
       setRegion,
       loading,
@@ -144,10 +147,13 @@ export function GeoProvider({ children }) {
       isScopedAdmin,
     }),
     [
+      user,
       countryId,
       regionId,
       countries,
       regions,
+      scopedCountryId,
+      scopedRegionId,
       setCountry,
       setRegion,
       loading,

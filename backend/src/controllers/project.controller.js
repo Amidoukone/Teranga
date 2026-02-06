@@ -78,7 +78,7 @@ async function canAdminAccessProject(project, user) {
 exports.create = async (req, res) => {
   try {
     if (!req.user?.id)
-      return res.status(401).json({ error: "Non authentifié" });
+      return res.status(401).json({ error: "Non authentifie" });
 
     const {
       title,
@@ -89,7 +89,7 @@ exports.create = async (req, res) => {
       clientId,
       agentId,
 
-      // 🌍 GEO (optionnel, admin)
+      // GEO (optionnel, admin)
       countryId,
       regionId,
       country_id,
@@ -100,7 +100,7 @@ exports.create = async (req, res) => {
       return res.status(400).json({ error: "Titre et type requis" });
 
     /* -----------------------------
-       🎯 Détermination du client
+       Determination du client
     ----------------------------- */
     let targetClientId = req.user.id;
 
@@ -109,11 +109,6 @@ exports.create = async (req, res) => {
       if (cid) targetClientId = cid;
     }
 
-    const scope = getUserGeoScope(req.user);
-    const legacyCountryId =
-      !scope.countryId && req.user?.country
-        ? await getCountryIdByIso(req.user.country)
-        : null;
     const desiredCountryId = isAdminLike(req.user)
       ? toSafeInt(countryId ?? country_id)
       : null;
@@ -121,13 +116,55 @@ exports.create = async (req, res) => {
       ? toSafeInt(regionId ?? region_id)
       : null;
 
-    if (isAdminLike(req.user) && !isGlobalAdmin(req.user)) {
-      if (scope.countryId && desiredCountryId && desiredCountryId !== scope.countryId) {
-        return res.status(403).json({ error: "Création hors scope géographique" });
-      }
-      if (scope.regionId && desiredRegionId && desiredRegionId !== scope.regionId) {
-        return res.status(403).json({ error: "Création hors scope géographique" });
-      }
+    const scope = getUserGeoScope(req.user);
+    const targetClient = await User.findByPk(targetClientId, {
+      attributes: ["id", "role", "countryId", "regionId", "country"],
+    });
+
+    if (!targetClient) {
+      return res.status(400).json({ error: "Client introuvable" });
+    }
+
+    if (isAdminLike(req.user) && clientId && targetClient.role !== "client") {
+      return res.status(400).json({ error: "clientId doit cibler un client" });
+    }
+
+    const clientScope = getUserGeoScope(targetClient);
+    const legacyCountryId =
+      !clientScope.countryId && targetClient?.country
+        ? await getCountryIdByIso(targetClient.country)
+        : null;
+
+    let finalCountryId = isAdminLike(req.user)
+      ? isGlobalAdmin(req.user)
+        ? desiredCountryId ?? clientScope.countryId ?? legacyCountryId ?? null
+        : scope.countryId ??
+          desiredCountryId ??
+          clientScope.countryId ??
+          legacyCountryId ??
+          null
+      : clientScope.countryId ?? legacyCountryId ?? null;
+
+    let finalRegionId = isAdminLike(req.user)
+      ? isGlobalAdmin(req.user)
+        ? desiredRegionId ?? clientScope.regionId ?? null
+        : scope.regionId ?? desiredRegionId ?? clientScope.regionId ?? null
+      : clientScope.regionId ?? null;
+
+    if (!finalRegionId && finalCountryId) {
+      const fallbackRegion = await Region.findOne({
+        where: { countryId: finalCountryId },
+        order: [["id", "ASC"]],
+      });
+      finalRegionId = fallbackRegion?.id ?? null;
+    }
+
+    if (
+      isAdminLike(req.user) &&
+      !isGlobalAdmin(req.user) &&
+      !canAccessGeoResource({ countryId: finalCountryId, regionId: finalRegionId }, req.user)
+    ) {
+      return res.status(403).json({ error: "Creation hors scope geographique" });
     }
 
     const project = await Project.create({
@@ -140,14 +177,9 @@ exports.create = async (req, res) => {
       agentId: isAdminLike(req.user) ? toSafeInt(agentId) : null,
       status: "created",
 
-      // 🌍 Multi-pays (non destructif)
-      countryId: isAdminLike(req.user)
-        ? (isGlobalAdmin(req.user) ? desiredCountryId : scope.countryId ?? desiredCountryId)
-        : scope.countryId ?? legacyCountryId ?? null,
-
-      regionId: isAdminLike(req.user)
-        ? (isGlobalAdmin(req.user) ? desiredRegionId : scope.regionId ?? desiredRegionId)
-        : scope.regionId ?? null,
+      // Multi-pays (non destructif)
+      countryId: finalCountryId,
+      regionId: finalRegionId,
     });
 
     const full = await Project.findByPk(project.id, {
@@ -166,27 +198,27 @@ exports.create = async (req, res) => {
     });
 
     return res.status(201).json({
-      message: "Projet créé avec succès",
+      message: "Projet cree avec succes",
       project: {
         ...full.toJSON(),
         statusLabel: getLabel(full.status, PROJECT_STATUSES),
       },
     });
   } catch (e) {
-    console.error("❌ Erreur création projet:", e);
+    console.error("Erreur creation projet:", e);
     return res
       .status(500)
-      .json({ error: "Erreur lors de la création du projet" });
+      .json({ error: "Erreur lors de la cr??ation du projet" });
   }
 };
 
-/* =========================================================
-   🟡 LIST PROJECTS
-========================================================= */
 exports.list = async (req, res) => {
   try {
     if (!req.user?.id)
       return res.status(401).json({ error: "Non authentifié" });
+
+    // Evite les 304 (ETag) qui masquent les changements pendant le debug
+    res.set('Cache-Control', 'no-store');
 
     let where = {};
 

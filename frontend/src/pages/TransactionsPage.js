@@ -696,7 +696,7 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
 
             {t.project && (
               <Link to={`/projects/${t.project.id}`} className="text-blue-600 text-sm">
-                🏗️ Projet {t.project.title}
+                🏗️ Projet {t.project.title || `#${t.project.id}`}
               </Link>
             )}
 

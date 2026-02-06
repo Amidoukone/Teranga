@@ -136,8 +136,33 @@ function buildWhereWithACL(req) {
   // ======================================================
   if (role === 'admin') {
     // ✅ Admin global: accès complet
-    // ✅ Admin scoped: applique countryId/regionId automatiquement
-    applyGeoScope(where, req.user);
+    if (!isGlobalAdmin(req.user)) {
+      const scope = getUserGeoScope(req.user);
+      const scopeOr = [];
+
+      if (scope.regionId != null) {
+        scopeOr.push(
+          { regionId: scope.regionId },
+          { '$service.regionId$': scope.regionId },
+          { '$task.regionId$': scope.regionId },
+          { '$order.region_id$': scope.regionId },
+          { '$project.regionId$': scope.regionId }
+        );
+      } else if (scope.countryId != null) {
+        scopeOr.push(
+          { countryId: scope.countryId },
+          { '$service.countryId$': scope.countryId },
+          { '$task.countryId$': scope.countryId },
+          { '$order.country_id$': scope.countryId },
+          { '$project.countryId$': scope.countryId }
+        );
+      }
+
+      if (scopeOr.length > 0) {
+        where[Op.and] = where[Op.and] || [];
+        where[Op.and].push({ [Op.or]: scopeOr });
+      }
+    }
   } else if (role === 'agent') {
     // Agent :
     //  - transactions créées par lui

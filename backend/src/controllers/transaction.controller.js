@@ -382,6 +382,9 @@ exports.create = async (req, res) => {
  * ============================================================================ */
 exports.list = async (req, res) => {
   try {
+    // Evite les 304 (ETag) qui masquent les changements pendant le debug
+    res.set('Cache-Control', 'no-store');
+
     const where = buildWhereWithACL(req);
 
     const {

@@ -12,14 +12,12 @@ export default function GeoSelector() {
     loading,
     canSelect,
     isScopedAdmin,
+    scopedCountryId,
+    scopedRegionId,
   } = useGeo();
 
   const countryOptions = useMemo(() => countries || [], [countries]);
   const regionOptions = useMemo(() => regions || [], [regions]);
-
-  if (!canSelect && !isScopedAdmin) {
-    return null;
-  }
 
   if (loading) {
     return (
@@ -27,21 +25,32 @@ export default function GeoSelector() {
     );
   }
 
-  const selectedCountry = countryOptions.find((c) => String(c.id) === String(countryId));
-  const selectedRegion = regionOptions.find((r) => String(r.id) === String(regionId));
+  const displayCountryId = canSelect
+    ? countryId
+    : scopedCountryId ?? countryId;
+  const displayRegionId = canSelect
+    ? regionId
+    : scopedRegionId ?? regionId;
 
-  if (isScopedAdmin) {
+  const selectedCountry = countryOptions.find(
+    (c) => String(c.id) === String(displayCountryId)
+  );
+  const selectedRegion = regionOptions.find(
+    (r) => String(r.id) === String(displayRegionId)
+  );
+
+  if (!canSelect) {
     return (
       <div className="flex items-center gap-2 text-xs text-gray-400">
         <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-cyan-300">
           Scope
         </span>
         <span className="text-gray-400">
-          {selectedCountry?.name || (countryId ? `Pays #${countryId}` : 'Pays')}
+          {selectedCountry?.name || (displayCountryId ? `Pays #${displayCountryId}` : 'Pays non défini')}
         </span>
-        {regionId && (
+        {displayRegionId && (
           <span className="text-gray-400">
-            • {selectedRegion?.name || `Région #${regionId}`}
+            • {selectedRegion?.name || `Région #${displayRegionId}`}
           </span>
         )}
       </div>
@@ -57,7 +66,7 @@ export default function GeoSelector() {
         value={countryId || ''}
         onChange={(e) => setCountry(e.target.value ? Number(e.target.value) : null)}
       >
-        <option value="">Pays</option>
+        <option value="">Tous les pays</option>
         {countryOptions.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
@@ -73,7 +82,7 @@ export default function GeoSelector() {
         onChange={(e) => setRegion(e.target.value ? Number(e.target.value) : null)}
         disabled={!countryId}
       >
-        <option value="">Région</option>
+        <option value="">Toutes les régions</option>
         {regionOptions.map((r) => (
           <option key={r.id} value={r.id}>
             {r.name}

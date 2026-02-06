@@ -90,9 +90,11 @@ export function getFileUrl(filePath) {
 
 /* ---------- Intercepteur: injecter token ---------- */
 api.interceptors.request.use((config) => {
-  const token = shouldUseLocalStorage()
-    ? localStorage.getItem('teranga_token') || localStorage.getItem('token')
-    : null;
+  const storedToken =
+    localStorage.getItem('teranga_token') || localStorage.getItem('token');
+  // Fallback: si un token existe, on l'envoie même en mode cookie
+  // (évite les 401 quand la config env est incohérente avec l'état client)
+  const token = shouldUseLocalStorage() ? storedToken : storedToken;
 
   if (token && !config.headers?.Authorization) {
     config.headers = config.headers || {};
