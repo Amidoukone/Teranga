@@ -37,6 +37,7 @@ import TasksPage from './pages/TasksPage';
 import TaskEvidencesPage from './pages/TaskEvidencesPage';
 import TransactionsPage from './pages/TransactionsPage';
 import FinanceDashboardPage from './pages/FinanceDashboardPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 
 // 🧱 Projets
 import ProjectsPage from './pages/ProjectsPage';
@@ -64,7 +65,7 @@ import OrderDetailPage from './pages/OrderDetailPage';
 import OrderTransactionsPage from './pages/OrderTransactionsPage';
 
 // 🔐 Auth
-import { getToken, getLocalUser } from './services/auth';
+import { getToken, getLocalUser, me } from './services/auth';
 import { normalizeRole } from './utils/role'; // ✅ ensure roles are canonical (admin/agent/client)
 
 // ============================================================================
@@ -149,10 +150,42 @@ function RequireRole({ allow = [], children }) {
 }
 
 function PublicOnly({ children }) {
-  const { hasSession } = getSession();
-  if (hasSession) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  const { token, user } = getSession();
+  const [checked, setChecked] = useState(() => !token && !user);
+  const [allow, setAllow] = useState(() => !token && !user);
+
+  useEffect(() => {
+    let active = true;
+
+    async function check() {
+      if (!token && !user) {
+        if (active) {
+          setAllow(true);
+          setChecked(true);
+        }
+        return;
+      }
+
+      try {
+        const res = await me();
+        if (!active) return;
+        const isAuthed = Boolean(res?.user) && !res?.offline;
+        setAllow(!isAuthed);
+      } catch {
+        if (active) setAllow(true);
+      } finally {
+        if (active) setChecked(true);
+      }
+    }
+
+    check();
+    return () => {
+      active = false;
+    };
+  }, [token, user]);
+
+  if (!checked) return null;
+  if (!allow) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -269,6 +302,30 @@ export default function App() {
               }
             />
 
+            <Route
+              path="/forgot-password"
+              element={
+                <PublicOnly>
+                  <>
+                    <SetSeo title="Mot de passe oublié" />
+                    <Navigate to="/login" replace />
+                  </>
+                </PublicOnly>
+              }
+            />
+
+            <Route
+              path="/reset-password"
+              element={
+                <PublicOnly>
+                  <>
+                    <SetSeo title="Réinitialiser le mot de passe" />
+                    <Navigate to="/login" replace />
+                  </>
+                </PublicOnly>
+              }
+            />
+
             {/* ============================= */}
             {/* 👥 UTILISATEURS CONNECTÉS    */}
             {/* ============================= */}
@@ -375,6 +432,18 @@ export default function App() {
                   <>
                     <SetSeo title="Transactions" />
                     <TransactionsPage />
+                  </>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/account/security"
+              element={
+                <RequireAuth>
+                  <>
+                    <SetSeo title="Sécurité du compte" />
+                    <ChangePasswordPage />
                   </>
                 </RequireAuth>
               }

@@ -19,6 +19,7 @@ const getUserGeoScope = geo.getUserGeoScope;
 const isGlobalAdmin =
   geo.isGlobalAdmin ||
   ((u) => u?.role === 'admin' && !(u?.countryId || u?.regionId));
+const { getPagination } = require('../utils/pagination');
 
 /* ============================================================
    🔧 Helpers utilitaires
@@ -38,16 +39,6 @@ function toNullableNumber(v) {
   if (v === null || v === undefined || v === '') return null;
   const n = parseFloat(v);
   return Number.isNaN(n) ? null : n;
-}
-
-function getPagination(req, defLimit = 100, maxLimit = 500) {
-  const limit = Math.min(
-    Math.max(parseInt(req.query?.limit, 10) || defLimit, 1),
-    maxLimit
-  );
-  const page = Math.max(parseInt(req.query?.page, 10) || 1, 1);
-  const offset = (page - 1) * limit;
-  return { limit, offset, page };
 }
 
 /**
@@ -351,7 +342,7 @@ exports.list = async (req, res) => {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
-    const { limit, offset, page } = getPagination(req);
+    const { limit, offset, page } = getPagination(req, 100, 500);
 
     const { rows, count } = await OrderItem.findAndCountAll({
       where: { orderId: order.id },
@@ -363,7 +354,7 @@ exports.list = async (req, res) => {
 
     return res.json({
       items: rows.map(withItemLabels),
-      pagination: { page, limit, count },
+      pagination: { page, limit, offset, count },
     });
   } catch (e) {
     console.error('❌ list orderItems:', e);

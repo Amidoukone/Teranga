@@ -277,6 +277,20 @@ export async function me() {
 }
 
 /* ============================================================
+   🔐 Mot de passe oublié (demande de reset)
+============================================================ */
+/* ============================================================
+   🔁 Reset mot de passe (token)
+============================================================ */
+/* ============================================================
+   🔐 Changer mot de passe (auth)
+============================================================ */
+export async function changePassword(payload) {
+  const { data } = await api.post('/auth/change-password', payload);
+  return data;
+}
+
+/* ============================================================
    🔹 Déconnexion (logout)
    - Nettoie toutes les données locales (nouvelle + legacy key)
 ============================================================ */
@@ -309,6 +323,7 @@ export function getToken() {
 const AuthService = {
   register,
   login,
+  changePassword,
   me,
   logout,
   getLocalUser,

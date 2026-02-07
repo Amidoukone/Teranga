@@ -196,14 +196,24 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // 2) 401 → Token invalide/expiré ⇒ nettoyage + redirection unique vers /login
+    // 2) 401 ? Token invalide/expire ? nettoyage + redirection unique vers /login
     if (status === 401) {
       localStorage.removeItem('teranga_token');
       localStorage.removeItem('token');
 
       const path = typeof window !== 'undefined' ? window.location.pathname : '';
-      // Évite de boucler si on est déjà sur /login
-      if (path !== '/login' && typeof window !== 'undefined' && !window.__TERANGA_REDIRECT_LOCK) {
+      const skipRedirect =
+        cfg?.skipAuthRedirect ||
+        path === '/login' ||
+        path === '/register' ||
+        path === '/forgot-password' ||
+        path === '/reset-password';
+
+      if (
+        !skipRedirect &&
+        typeof window !== 'undefined' &&
+        !window.__TERANGA_REDIRECT_LOCK
+      ) {
         window.__TERANGA_REDIRECT_LOCK = true;
         window.location.href = '/login';
       }

@@ -4,11 +4,29 @@
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const { User, Country, Region, RefreshToken, TokenBlacklist, Sequelize } = require('../../models');
+let nodemailer = null;
+try {
+  nodemailer = require('nodemailer');
+} catch (_err) {
+  nodemailer = null;
+}
+const {
+  User,
+  Country,
+  Region,
+  RefreshToken,
+  TokenBlacklist,
+  PasswordResetToken,
+  Sequelize,
+} = require('../../models');
 
 // Durée de vie du token d'accès (configurable via env)
 const ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '1h';
 const REFRESH_EXPIRES = process.env.JWT_REFRESH_EXPIRES || '30d';
+const PASSWORD_RESET_EXPIRES =
+  process.env.PASSWORD_RESET_EXPIRES || '30m';
+const PASSWORD_RESET_DEBUG =
+  String(process.env.PASSWORD_RESET_DEBUG || '').toLowerCase() === 'true';
 
 const COOKIE_ACCESS = 'teranga_access';
 const COOKIE_REFRESH = 'teranga_refresh';
@@ -126,6 +144,104 @@ function clearAuthCookies(res) {
   res.clearCookie(COOKIE_CSRF);
 }
 
+function resolveFrontendBaseUrl(req) {
+  const envBase =
+    process.env.FRONTEND_URL ||
+    process.env.CLIENT_URL ||
+    process.env.CLIENT_ORIGIN ||
+    '';
+  const fromEnv = String(envBase || '').trim().replace(/\/+$/, '');
+  if (fromEnv) return fromEnv;
+
+  const originHeader = String(req?.headers?.origin || '').trim().replace(/\/+$/, '');
+  if (originHeader) return originHeader;
+
+  return '';
+}
+
+function buildResetUrl(req, token) {
+  const base = resolveFrontendBaseUrl(req);
+  if (!base || !token) return '';
+  return `${base}/reset-password?token=${encodeURIComponent(token)}`;
+}
+
+async function issuePasswordResetToken(user, req) {
+  const rawToken = crypto.randomBytes(48).toString('hex');
+  const tokenHash = hashToken(rawToken);
+  const maxAge =
+    parseDurationToMs(PASSWORD_RESET_EXPIRES) || 30 * 60 * 1000;
+  const expiresAt = new Date(Date.now() + maxAge);
+
+  await PasswordResetToken.update(
+    { usedAt: new Date(), usedByIp: req.ip },
+    { where: { userId: user.id, usedAt: null } }
+  );
+
+  const record = await PasswordResetToken.create({
+    userId: user.id,
+    tokenHash,
+    expiresAt,
+    createdByIp: req.ip,
+    userAgent: req.get('user-agent') || null,
+  });
+
+  return { rawToken, record, expiresAt };
+}
+
+async function revokeUserRefreshTokens(userId, req) {
+  if (!userId) return;
+  await RefreshToken.update(
+    { revokedAt: new Date(), revokedByIp: req?.ip || null },
+    { where: { userId, revokedAt: null } }
+  );
+}
+
+function shouldExposeResetDebug(req) {
+  if (PASSWORD_RESET_DEBUG) return true;
+  const isProd = (process.env.NODE_ENV || 'development') === 'production';
+  return !isProd && String(req?.query?.debug || '') === 'true';
+}
+
+function isSmtpConfigured() {
+  return Boolean(
+    process.env.SMTP_HOST &&
+      process.env.SMTP_USER &&
+      process.env.SMTP_PASS
+  );
+}
+
+async function sendPasswordResetEmail({ to, resetUrl }) {
+  if (!isSmtpConfigured() || !nodemailer) return false;
+
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT, 10) || 587;
+  const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true';
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  const from =
+    process.env.SMTP_FROM ||
+    process.env.SMTP_USER ||
+    'no-reply@teranga.local';
+
+  await transporter.sendMail({
+    from,
+    to,
+    subject: 'Reinitialisation du mot de passe Teranga',
+    text: `Bonjour,\n\nUtilisez ce lien pour reinitialiser votre mot de passe:\n${resetUrl}\n\nSi vous n'etes pas a l'origine de cette demande, ignorez cet email.\n`,
+  });
+
+  return true;
+}
+
 async function resolveGeoScope({ country, countryId, regionId }) {
   const resolved = {
     countryId: toSafeInt(countryId),
@@ -206,7 +322,7 @@ exports.register = async (req, res) => {
     const email = normalizeEmail(rawEmail);
     const password = typeof rawPassword === 'string' ? rawPassword.trim() : '';
 
-    const { firstName, lastName, phone, country, countryId, regionId } = req.body || {};
+    const { firstName, lastName, phone, country, countryId } = req.body || {};
 
     // Champs requis
     if (!email || !password) {
@@ -226,7 +342,19 @@ exports.register = async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const geoScope = await resolveGeoScope({ country, countryId, regionId });
+    const trimmedCountry = String(country || '').trim();
+    const safeCountryId = toSafeInt(countryId);
+
+    if (!safeCountryId && !trimmedCountry) {
+      return res.status(400).json({ error: 'Pays requis' });
+    }
+
+    // Option A (stricte): inscription client = pays uniquement
+    const geoScope = await resolveGeoScope({
+      country: trimmedCountry,
+      countryId: safeCountryId,
+      regionId: null,
+    });
     if (geoScope?.error) {
       return res.status(400).json({ error: geoScope.error });
     }
@@ -237,9 +365,9 @@ exports.register = async (req, res) => {
       firstName: firstName || null,
       lastName: lastName || null,
       phone: phone || null,
-      country: geoScope?.countryIso || (country ? String(country).trim().toUpperCase() : null),
+      country: geoScope?.countryIso || (trimmedCountry ? trimmedCountry.toUpperCase() : null),
       countryId: geoScope?.countryId ?? null,
-      regionId: geoScope?.regionId ?? null,
+      regionId: null,
       role: 'client', // rôle par défaut cohérent avec ta structure
       // countryId / regionId restent null pour rétro-compatibilité,
       // et peuvent être backfill Mali/Bamako via migrations/seed si tu le fais.
@@ -508,3 +636,193 @@ exports.logout = async (req, res) => {
     return res.status(500).json({ error: 'Erreur lors de la déconnexion' });
   }
 };
+
+/* ======================================================
+   Mot de passe oublie (demande de reset)
+====================================================== */
+exports.forgotPassword = async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    if (!email) {
+      return res.status(400).json({ error: 'Email requis' });
+    }
+
+    const user = await User.findOne({ where: { email } });
+    let debug = null;
+
+    if (user) {
+      const { rawToken, expiresAt } = await issuePasswordResetToken(user, req);
+      const resetUrl = buildResetUrl(req, rawToken);
+
+      let sent = false;
+      if (resetUrl) {
+        try {
+          sent = await sendPasswordResetEmail({ to: email, resetUrl });
+        } catch (err) {
+          console.warn('Email reset non envoye:', err?.message || err);
+        }
+      }
+
+      if (!sent) {
+        console.warn('Reset email non envoye (SMTP non configure).');
+      }
+
+      if (shouldExposeResetDebug(req)) {
+        debug = { resetToken: rawToken, resetUrl, expiresAt };
+      }
+    }
+
+    const response = {
+      message:
+        'Si un compte existe, un lien de reinitialisation a ete envoye.',
+    };
+
+    if (debug) response.debug = debug;
+
+    return res.json(response);
+  } catch (e) {
+    console.error('Erreur forgotPassword:', e);
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la demande de reinitialisation' });
+  }
+};
+
+/* ======================================================
+   Reset mot de passe (token)
+====================================================== */
+exports.resetPassword = async (req, res) => {
+  try {
+    const token = String(req.body?.token || '').trim();
+    const password = String(req.body?.password || '');
+
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Token et mot de passe requis' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        error: 'Mot de passe trop court (minimum 8 caracteres)',
+      });
+    }
+
+    const tokenHash = hashToken(token);
+    const record = await PasswordResetToken.findOne({
+      where: { tokenHash },
+    });
+
+    if (
+      !record ||
+      record.usedAt ||
+      (record.expiresAt && new Date(record.expiresAt) < new Date())
+    ) {
+      return res.status(400).json({ error: 'Token invalide ou expire' });
+    }
+
+    const user = await User.findByPk(record.userId);
+    if (!user) {
+      return res.status(400).json({ error: 'Utilisateur introuvable' });
+    }
+
+    user.passwordHash = await bcrypt.hash(password, 10);
+    await user.save();
+
+    await record.update({
+      usedAt: new Date(),
+      usedByIp: req.ip,
+    });
+
+    await PasswordResetToken.update(
+      { usedAt: new Date(), usedByIp: req.ip },
+      {
+        where: {
+          userId: user.id,
+          usedAt: null,
+          id: { [Sequelize.Op.ne]: record.id },
+        },
+      }
+    );
+
+    await revokeUserRefreshTokens(user.id, req);
+
+    return res.json({ message: 'Mot de passe reinitialise avec succes' });
+  } catch (e) {
+    console.error('Erreur resetPassword:', e);
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la reinitialisation du mot de passe' });
+  }
+};
+
+/* ======================================================
+   Changer mot de passe (auth)
+====================================================== */
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Non authentifie' });
+    }
+
+    const currentPassword = String(req.body?.currentPassword || '');
+    const newPassword = String(req.body?.newPassword || '');
+
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ error: 'Mot de passe actuel et nouveau requis' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        error: 'Mot de passe trop court (minimum 8 caracteres)',
+      });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        error: 'Le nouveau mot de passe doit etre different',
+      });
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur introuvable' });
+    }
+
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) {
+      return res.status(400).json({ error: 'Mot de passe actuel invalide' });
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    await revokeUserRefreshTokens(user.id, req);
+
+    const payload = req.authTokenPayload;
+    if (payload?.jti && payload?.exp) {
+      const expiresAt = new Date(payload.exp * 1000);
+      await TokenBlacklist.findOrCreate({
+        where: { jti: payload.jti },
+        defaults: { expiresAt },
+      });
+    }
+
+    clearAuthCookies(res);
+
+    return res.json({
+      message: 'Mot de passe modifie. Veuillez vous reconnecter.',
+    });
+  } catch (e) {
+    console.error('Erreur changePassword:', e);
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors du changement de mot de passe' });
+  }
+};
+
+
+
+
+

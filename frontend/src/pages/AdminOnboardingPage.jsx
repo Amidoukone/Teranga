@@ -375,7 +375,17 @@ export default function AdminOnboardingPage() {
 
       // ✅ Backend existant: supporte countryId / regionId
       if (masterForm.scope === "region") {
-        payload.regionId = Number(masterForm.regionId);
+        const rid = Number(masterForm.regionId);
+        payload.regionId = rid;
+
+        const region =
+          availableRegions.find((r) => String(r.id) === String(rid)) ||
+          regions.find((r) => String(r.id) === String(rid));
+        const regionCountryId = region?.countryId ?? createdCountry?.id ?? null;
+
+        if (regionCountryId) {
+          payload.countryId = Number(regionCountryId);
+        }
       } else {
         payload.countryId = createdCountry.id;
       }

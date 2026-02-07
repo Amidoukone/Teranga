@@ -10,6 +10,7 @@ const {
 
 // 🌍 GeoScope utils (admin global / admin scoped)
 const { applyGeoScopeWithLegacy, getUserGeoScope } = require("../utils/geoScope");
+const { getPagination } = require("../utils/pagination");
 
 /* ============================================================
    🔧 Helpers généraux
@@ -29,14 +30,6 @@ function toTrimOrNull(v) {
 function toSafeInt(v, fallback = null) {
   const n = parseInt(v, 10);
   return Number.isNaN(n) ? fallback : n;
-}
-
-function getPagination(req, defaultLimit = 25, maxLimit = 100) {
-  const l = toSafeInt(req.query.limit, defaultLimit);
-  const o = toSafeInt(req.query.offset, 0);
-  const limit = Math.min(Math.max(l, 1), maxLimit);
-  const offset = Math.max(o, 0);
-  return { limit, offset };
 }
 
 function isTrue(x) {
@@ -251,7 +244,7 @@ exports.create = async (req, res) => {
 ============================================================ */
 exports.listClient = async (req, res) => {
   try {
-    const { limit, offset } = getPagination(req);
+    const { limit, offset, page } = getPagination(req, 25, 100);
     const { clientId } = req.query;
 
     let where = {};
@@ -284,7 +277,7 @@ exports.listClient = async (req, res) => {
 
     return res.json({
       services: rows.map(addLabels),
-      pagination: { limit, offset, count: rows.length },
+      pagination: { page, limit, offset, count: rows.length },
     });
   } catch (e) {
     console.error("❌ erreur listClient:", e);
@@ -302,7 +295,7 @@ exports.listAll = async (req, res) => {
     if (req.user.role !== "admin")
       return res.status(403).json({ error: "Accès interdit" });
 
-    const { limit, offset } = getPagination(req);
+    const { limit, offset, page } = getPagination(req, 25, 100);
     const status = (req.query.status || "").trim();
     const unassigned = isTrue(req.query.unassigned);
     const q = (req.query.q || "").trim();
@@ -356,7 +349,7 @@ exports.listAll = async (req, res) => {
 
     return res.json({
       services: rows.map(addLabels),
-      pagination: { limit, offset, total: count },
+      pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
     console.error("❌ erreur listAll:", e);
@@ -592,7 +585,7 @@ exports.deleteService = async (req, res) => {
 ============================================================ */
 exports.listAgent = async (req, res) => {
   try {
-    const { limit, offset } = getPagination(req);
+    const { limit, offset, page } = getPagination(req, 25, 100);
 
     let where = { agentId: req.user.id };
 
@@ -619,7 +612,7 @@ exports.listAgent = async (req, res) => {
 
     return res.json({
       services: rows.map(addLabels),
-      pagination: { limit, offset, count: rows.length },
+      pagination: { page, limit, offset, count: rows.length },
     });
   } catch (e) {
     console.error("❌ erreur listAgent:", e);

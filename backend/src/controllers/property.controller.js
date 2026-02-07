@@ -19,6 +19,7 @@ const {
   getUserGeoScope,
   isGlobalAdmin,
 } = require('../utils/geoScope');
+const { getPagination } = require('../utils/pagination');
 
 /* ============================================================
    Helpers utilitaires
@@ -57,15 +58,6 @@ async function resolveCountryIdFromLegacy(countryValue) {
   });
 
   return record ? record.id : null;
-}
-
-function getPagination(req, defaultLimit = 50, maxLimit = 200) {
-  const limit = Math.min(
-    Math.max(toSafeInt(req.query.limit, defaultLimit), 1),
-    maxLimit
-  );
-  const offset = Math.max(toSafeInt(req.query.offset, 0), 0);
-  return { limit, offset };
 }
 
 /** Indique si ImageKit est configuré (évite les blocages inutiles) */
@@ -262,7 +254,7 @@ async function deleteImageKitFiles(photoObjects = []) {
 ============================================================ */
 exports.list = async (req, res) => {
   try {
-    const { limit, offset } = getPagination(req);
+    const { limit, offset, page } = getPagination(req);
     const { clientId, q } = req.query || {};
 
     const where = {};
@@ -329,7 +321,7 @@ exports.list = async (req, res) => {
 
     return res.json({
       properties: rows.map(addLabels),
-      pagination: { limit, offset, total: count },
+      pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
     console.error('❌ list properties:', e);
@@ -348,7 +340,7 @@ exports.listByClient = async (req, res) => {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
-    const { limit, offset } = getPagination(req);
+    const { limit, offset, page } = getPagination(req);
     const cid = toSafeInt(req.params.id);
     if (!cid) return res.status(400).json({ error: 'clientId requis' });
 
@@ -376,7 +368,7 @@ exports.listByClient = async (req, res) => {
 
     return res.json({
       properties: rows.map(addLabels),
-      pagination: { limit, offset, total: count },
+      pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
     console.error('❌ listByClient:', e);

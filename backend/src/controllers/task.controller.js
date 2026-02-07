@@ -15,6 +15,7 @@ const {
   SERVICE_STATUSES,
   getLabel,
 } = require("../utils/labels");
+const { getPagination } = require("../utils/pagination");
 
 /* ============================================================
    🧩 Helpers généraux
@@ -35,16 +36,6 @@ function toNullableNumber(v) {
   if (v === "" || v === null || v === undefined) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
-}
-
-function getPagination(req, defaultLimit = 50, maxLimit = 200) {
-  const rawL = parseInt(req.query?.limit, 10);
-  const rawO = parseInt(req.query?.offset, 10);
-  const limit = Number.isFinite(rawL)
-    ? Math.min(Math.max(rawL, 1), maxLimit)
-    : defaultLimit;
-  const offset = Number.isFinite(rawO) ? Math.max(rawO, 0) : 0;
-  return { limit, offset };
 }
 
 /**
@@ -312,7 +303,7 @@ exports.create = async (req, res) => {
 ============================================================ */
 exports.list = async (req, res) => {
   try {
-    const { limit, offset } = getPagination(req);
+    const { limit, offset, page } = getPagination(req);
 
     let where = {};
 
@@ -352,7 +343,7 @@ exports.list = async (req, res) => {
 
     return res.json({
       tasks: tasks.map(addLabels),
-      pagination: { limit, offset, count: tasks.length },
+      pagination: { page, limit, offset, count: tasks.length },
     });
   } catch (e) {
     console.error("❌ Erreur list tasks:", e);

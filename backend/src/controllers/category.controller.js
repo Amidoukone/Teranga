@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const { Category, Product } = require('../../models');
 const { isGlobalAdmin } = require('../utils/geoScope');
 const { CATEGORY_STATUSES, getLabel } = require('../utils/labels');
+const { getPagination } = require('../utils/pagination');
 
 /* ============================================================
    🔧 Helpers génériques
@@ -16,17 +17,6 @@ function toSafeInt(v) {
 function toTrimOrNull(v) {
   const s = (v ?? '').toString().trim();
   return s.length ? s : null;
-}
-
-function getPagination(req, defLimit = 50, maxLimit = 200) {
-  const rawLimit = parseInt(req.query?.limit, 10);
-  const rawPage = parseInt(req.query?.page, 10);
-
-  const limit = Math.min(Math.max(rawLimit || defLimit, 1), maxLimit);
-  const page = Math.max(rawPage || 1, 1);
-  const offset = (page - 1) * limit;
-
-  return { limit, offset, page };
 }
 
 function slugify(input) {
@@ -169,7 +159,7 @@ exports.list = async (req, res) => {
 
     res.json({
       categories: rows.map(withLabels),
-      pagination: { page, limit, total: count },
+      pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
     console.error('❌ [Category] list:', e);

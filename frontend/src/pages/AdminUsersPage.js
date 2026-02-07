@@ -12,6 +12,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { getUsers, createUser, updateUser, deleteUser } from "../services/users";
+import { getRegions } from "../services/regions";
 import { me } from "../services/auth";
 import { motion } from "framer-motion";
 import { normalizeRole, isMasterUser, prettyRoleLabel } from "../utils/role";
@@ -55,6 +56,9 @@ export default function AdminUsersPage() {
     const saved = localStorage.getItem("teranga_admin_users_showForm");
     return saved === null ? true : saved === "1";
   });
+
+  const [formRegions, setFormRegions] = useState([]);
+  const [loadingFormRegions, setLoadingFormRegions] = useState(false);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -162,11 +166,38 @@ export default function AdminUsersPage() {
   // ============================================================
   // 🌍 Regions filtrées par le pays sélectionné (form)
   // ============================================================
-  const formRegions = useMemo(() => {
-    const cid = toSafeIntOrEmpty(form.scopeCountryId);
-    if (!cid) return [];
-    return (regions || []).filter((r) => String(r.countryId) === String(cid));
-  }, [regions, form.scopeCountryId]);
+  useEffect(() => {
+    let active = true;
+
+    async function loadFormRegions() {
+      const cid = toSafeIntOrEmpty(form.scopeCountryId);
+      const isAdminTarget = normalizeRole(form.role) === "admin";
+
+      if (!cid || !isGlobalAdmin || !isAdminTarget) {
+        if (active) setFormRegions([]);
+        return;
+      }
+
+      setLoadingFormRegions(true);
+      try {
+        const list = await getRegions({
+          countryId: Number(cid),
+          includeInactive: true,
+        });
+        if (active) setFormRegions(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error("❌ load form regions:", err);
+        if (active) setFormRegions([]);
+      } finally {
+        if (active) setLoadingFormRegions(false);
+      }
+    }
+
+    loadFormRegions();
+    return () => {
+      active = false;
+    };
+  }, [form.scopeCountryId, form.role, isGlobalAdmin]);
 
   // ============================================================
   // 🔎 FILTERING (local) + tri
@@ -264,8 +295,12 @@ export default function AdminUsersPage() {
       const cid = toSafeIntOrEmpty(form.scopeCountryId);
       const rid = toSafeIntOrEmpty(form.scopeRegionId);
 
-      if (rid) payload.regionId = Number(rid);
-      else if (cid) payload.countryId = Number(cid);
+      if (rid) {
+        payload.regionId = Number(rid);
+        if (cid) payload.countryId = Number(cid);
+      } else if (cid) {
+        payload.countryId = Number(cid);
+      }
       // vide = admin global
     }
 
@@ -634,6 +669,14 @@ export default function AdminUsersPage() {
               {isGlobalAdmin && <option value="admin">Admin</option>}
             </select>
 
+            {normalizeRole(form.role) === "client" && (
+              <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                Info: les clients inscrits publiquement sont crees au niveau pays (region
+                vide). Un admin/master peut ensuite affecter la region en modifiant le
+                compte.
+              </div>
+            )}
+
             {/* ✅ ADMIN: Sélection guidée pays/région (IDs) — uniquement GLOBAL */}
             {isGlobalAdmin && normalizeRole(form.role) === "admin" && (
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -663,16 +706,22 @@ export default function AdminUsersPage() {
                   <label className="text-xs font-medium text-gray-600">Périmètre région (optionnel)</label>
                   <select
                     value={form.scopeRegionId}
-                    disabled={!form.scopeCountryId || formRegions.length === 0}
+                    disabled={
+                      !form.scopeCountryId || loadingFormRegions || formRegions.length === 0
+                    }
                     onChange={(e) => setForm({ ...form, scopeRegionId: e.target.value })}
                     className={`mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] ${
-                      !form.scopeCountryId || formRegions.length === 0 ? "bg-gray-100 cursor-not-allowed" : ""
+                      !form.scopeCountryId || loadingFormRegions || formRegions.length === 0
+                        ? "bg-gray-100 cursor-not-allowed"
+                        : ""
                     }`}
                   >
                     <option value="">
-                      {form.scopeCountryId
-                        ? "— MASTER pays (toutes régions) —"
-                        : "— Choisir d'abord un pays —"}
+                      {!form.scopeCountryId
+                        ? "— Choisir d'abord un pays —"
+                        : loadingFormRegions
+                          ? "Chargement des régions..."
+                          : "— MASTER pays (toutes régions) —"}
                     </option>
                     {formRegions.map((r) => (
                       <option key={r.id} value={r.id}>

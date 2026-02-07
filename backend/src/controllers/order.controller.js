@@ -12,12 +12,14 @@ const {
   getLabel,
   formatCurrency,
 } = require('../utils/labels');
+const { getPagination } = require('../utils/pagination');
 
 // ✅ Geo-scope (model-aware)
 const {
   applyGeoScopeForModel,
   filterGeoAssignmentsForModel,
   getUserGeoScope,
+  getCountryIdByIso,
   isGlobalAdmin,
 } = require('../utils/geoScope');
 
@@ -41,14 +43,23 @@ function toNullableNumber(v) {
   return Number.isNaN(n) ? null : n;
 }
 
-function getPagination(req, defLimit = 50, maxLimit = 200) {
-  const limit = Math.min(
-    Math.max(parseInt(req.query?.limit, 10) || defLimit, 1),
-    maxLimit
-  );
-  const page = Math.max(parseInt(req.query?.page, 10) || 1, 1);
-  const offset = (page - 1) * limit;
-  return { limit, offset, page };
+async function inferGeoFromUserId(userId) {
+  if (!userId) return { countryId: null, regionId: null };
+
+  const user = await User.findByPk(userId, {
+    attributes: ['id', 'countryId', 'regionId', 'country'],
+  });
+
+  if (!user) return { countryId: null, regionId: null };
+
+  let countryId = toSafeInt(user.countryId ?? user.country_id);
+  let regionId = toSafeInt(user.regionId ?? user.region_id);
+
+  if (!countryId && user.country) {
+    countryId = await getCountryIdByIso(user.country);
+  }
+
+  return { countryId, regionId };
 }
 
 /* ============================================================
@@ -105,7 +116,11 @@ function getEffectiveScopeForCreate(req, norm) {
  * - Admin scoped: filtré via applyGeoScopeForModel
  * - Agent: filtré via applyGeoScopeForModel
  */
-function applyOrderScopeWhere(where, req, { allowClientProvidedScope = true } = {}) {
+function applyOrderScopeWhere(
+  where,
+  req,
+  { allowClientProvidedScope = true, allowLegacyUserScope = false } = {}
+) {
   const role = req.user?.role;
 
   if (role === 'client') {
@@ -124,7 +139,42 @@ function applyOrderScopeWhere(where, req, { allowClientProvidedScope = true } = 
   if (isGlobalAdmin(req.user)) return where;
 
   // Master/admin scoped + agent (model-aware)
-  return applyGeoScopeForModel ? applyGeoScopeForModel(where, req.user, Order) : where;
+  if (!allowLegacyUserScope) {
+    return applyGeoScopeForModel ? applyGeoScopeForModel(where, req.user, Order) : where;
+  }
+
+  const scope = getUserGeoScope ? getUserGeoScope(req.user) : {};
+  const scopeCountryId = toSafeInt(scope.countryId);
+  const scopeRegionId = toSafeInt(scope.regionId);
+
+  if (!scopeCountryId && !scopeRegionId) return { ...where, id: 0 };
+
+  const or = [];
+
+  if (scopeRegionId) {
+    or.push({ regionId: scopeRegionId });
+    or.push({
+      [Op.and]: [
+        { regionId: null },
+        { countryId: null },
+        { '$user.region_id$': scopeRegionId },
+      ],
+    });
+  } else if (scopeCountryId) {
+    or.push({ countryId: scopeCountryId });
+    or.push({
+      [Op.and]: [
+        { regionId: null },
+        { countryId: null },
+        { '$user.country_id$': scopeCountryId },
+      ],
+    });
+  }
+
+  const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
+  andFilters.push({ [Op.or]: or });
+
+  return { ...where, [Op.and]: andFilters };
 }
 
 /**
@@ -274,6 +324,15 @@ exports.create = async (req, res) => {
     // ✅ scope multi-pays (safe)
     const effectiveScope = getEffectiveScopeForCreate(req, norm);
 
+    // ✅ fallback geo depuis le propriétaire (client)
+    const fallbackGeo = await inferGeoFromUserId(ownerId);
+    const finalScope = {
+      countryId:
+        effectiveScope.countryId ?? fallbackGeo.countryId ?? null,
+      regionId:
+        effectiveScope.regionId ?? fallbackGeo.regionId ?? null,
+    };
+
     // 1) Création de la commande (sans items pour l’instant)
     // ✅ model-aware: on filtre les champs geo si le modèle ne les supporte pas
     const order = await Order.create(
@@ -290,8 +349,8 @@ exports.create = async (req, res) => {
         notes: toTrimOrNull(norm.note),
 
         // ✅ multi-pays
-        countryId: effectiveScope.countryId,
-        regionId: effectiveScope.regionId,
+        countryId: finalScope.countryId,
+        regionId: finalScope.regionId,
       })
     );
 
@@ -413,7 +472,7 @@ exports.create = async (req, res) => {
       where: applyOrderScopeWhere(
         { id: order.id },
         req,
-        { allowClientProvidedScope: false }
+        { allowClientProvidedScope: false, allowLegacyUserScope: true }
       ),
       include: [
         { model: User, as: 'user', attributes: ['id', 'email', 'firstName', 'lastName'] },
@@ -466,7 +525,10 @@ exports.list = async (req, res) => {
     }
 
     // ✅ application du scope multi-pays (model-aware)
-    where = applyOrderScopeWhere(where, req, { allowClientProvidedScope: true });
+    where = applyOrderScopeWhere(where, req, {
+      allowClientProvidedScope: true,
+      allowLegacyUserScope: true,
+    });
 
     const { rows, count } = await Order.findAndCountAll({
       where,
@@ -488,7 +550,7 @@ exports.list = async (req, res) => {
 
     return res.json({
       orders: rows.map(withLabels),
-      pagination: { page, limit, count },
+      pagination: { page, limit, offset, count },
     });
   } catch (e) {
     console.error('❌ list orders:', e);
@@ -510,7 +572,7 @@ exports.detail = async (req, res) => {
       where: applyOrderScopeWhere(
         { id },
         req,
-        { allowClientProvidedScope: false }
+        { allowClientProvidedScope: false, allowLegacyUserScope: true }
       ),
       include: [
         {
@@ -551,8 +613,15 @@ exports.update = async (req, res) => {
       where: applyOrderScopeWhere(
         { id },
         req,
-        { allowClientProvidedScope: false }
+        { allowClientProvidedScope: false, allowLegacyUserScope: true }
       ),
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'email', 'firstName', 'lastName', 'countryId', 'regionId'],
+        },
+      ],
     });
 
     if (!order) {
@@ -561,6 +630,16 @@ exports.update = async (req, res) => {
 
     if (!canWriteOrder(req.user, order)) {
       return res.status(403).json({ error: 'Accès interdit.' });
+    }
+
+    if (order.countryId == null || order.regionId == null) {
+      const fallbackGeo = await inferGeoFromUserId(order.userId);
+      if (order.countryId == null && fallbackGeo.countryId != null) {
+        order.countryId = fallbackGeo.countryId;
+      }
+      if (order.regionId == null && fallbackGeo.regionId != null) {
+        order.regionId = fallbackGeo.regionId;
+      }
     }
 
     const norm = normalizeOrderPayload(req.body);
@@ -650,7 +729,7 @@ exports.update = async (req, res) => {
       where: applyOrderScopeWhere(
         { id: order.id },
         req,
-        { allowClientProvidedScope: false }
+        { allowClientProvidedScope: false, allowLegacyUserScope: true }
       ),
       include: [
         {
@@ -683,9 +762,16 @@ exports.remove = async (req, res) => {
       where: applyOrderScopeWhere(
         { id },
         req,
-        { allowClientProvidedScope: false }
+        { allowClientProvidedScope: false, allowLegacyUserScope: true }
       ),
-      include: [{ model: OrderItem, as: 'items' }],
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'email', 'firstName', 'lastName', 'countryId', 'regionId'],
+        },
+        { model: OrderItem, as: 'items' },
+      ],
     });
 
     if (!order) {

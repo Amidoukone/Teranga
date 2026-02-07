@@ -27,6 +27,8 @@ module.exports = async function auth(req, res, next) {
   try {
     // 1️⃣ Vérification JWT
     const payload = jwt.verify(token, process.env.JWT_SECRET);
+    req.authTokenPayload = payload;
+    req.authToken = token;
 
     if (payload?.jti) {
       const blocked = await db.TokenBlacklist.findOne({ where: { jti: payload.jti } });

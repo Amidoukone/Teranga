@@ -60,6 +60,11 @@ const ADMIN_ONBOARDING_LINK = {
   label: "Master",
 };
 
+const ACCOUNT_SECURITY_LINK = {
+  path: "/account/security",
+  label: "Securite",
+};
+
 const ROLE_LINKS = {
   client: [
     { path: "/dashboard", label: "Dashboard" },
@@ -70,6 +75,7 @@ const ROLE_LINKS = {
     { path: "/transactions", label: "Transactions" },
     { path: "/finance", label: "Finances" },
     ...COMMON_COMMERCE,
+    ACCOUNT_SECURITY_LINK,
   ],
   agent: [
     { path: "/dashboard", label: "Dashboard" },
@@ -79,6 +85,7 @@ const ROLE_LINKS = {
     { path: "/transactions", label: "Transactions" },
     { path: "/finance", label: "Finances" },
     ...COMMON_COMMERCE,
+    ACCOUNT_SECURITY_LINK,
   ],
   admin: [
     { path: "/dashboard", label: "Dashboard" },
@@ -97,6 +104,7 @@ const ROLE_LINKS = {
     { path: "/transactions", label: "Transactions" },
     { path: "/finance", label: "Finances" },
     ...COMMON_COMMERCE,
+    ACCOUNT_SECURITY_LINK,
     { path: "/admin/catalog/categories", label: "Catégories" },
     { path: "/admin/catalog/products", label: "Produits" },
   ],
@@ -137,6 +145,7 @@ const ICON_BY_PATH_PREFIX = [
   { prefix: "/tasks", icon: ClipboardList },
   { prefix: "/transactions", icon: ReceiptEuro },
   { prefix: "/finance", icon: CreditCard },
+  { prefix: "/account/security", icon: ShieldCheck },
 
   // Admin
   { prefix: "/admin/projects", icon: FolderKanban },
@@ -188,6 +197,8 @@ function buildSections(role, links) {
   pushSection("Finance", [...byPrefix("/transactions"), ...byPrefix("/finance")]);
 
   pushSection("Boutique", [...byPrefix("/shop"), ...byPrefix("/orders")]);
+
+  pushSection("Compte", [byPath("/account/security")]);
 
   if (role === "admin") {
     pushSection("Administration", [
@@ -310,7 +321,13 @@ function NavBar() {
     navigate("/login");
   }, [navigate]);
 
-  const PUBLIC = ["/", "/login", "/register", "/shop", "/products"];
+  const PUBLIC = [
+    "/",
+    "/login",
+    "/register",
+    "/shop",
+    "/products",
+  ];
   const isPublic = PUBLIC.some((p) => location.pathname.startsWith(p));
 
   const role = normalizeRole(user?.role);
@@ -653,23 +670,21 @@ function NavBar() {
                       </div>
 
                       <div className="py-2">
+                        <Link
+                          to="/account/security"
+                          onClick={() => setOpenUserMenu(false)}
+                          className="block w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
+                        >
+                          Securite du compte
+                        </Link>
                         <button
                           type="button"
                           className="w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
                           disabled
                           aria-disabled="true"
-                          title="Bientôt disponible"
+                          title="Bientot disponible"
                         >
-                          Paramètres (bientôt)
-                        </button>
-                        <button
-                          type="button"
-                          className="w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
-                          disabled
-                          aria-disabled="true"
-                          title="Bientôt disponible"
-                        >
-                          Aide & Support (bientôt)
+                          Aide & Support (bientot)
                         </button>
                       </div>
 
@@ -865,3 +880,6 @@ function NavBar() {
 }
 
 export default memo(NavBar);
+
+
+

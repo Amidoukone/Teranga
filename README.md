@@ -19,6 +19,11 @@ Mettre en place Teranga comme une franchise panafricaine pilotée par un siège 
 - `BOOTSTRAP_ADMIN_DEFAULT_PASSWORD` : mot de passe par défaut utilisé en dev si absent.
 - `METRICS_TOKEN` : token d’accès à `/api/metrics` (recommandé en prod).
 - `SLOW_REQUEST_THRESHOLD_MS` : seuil (ms) pour signaler les requêtes lentes (défaut 1500).
+- `PASSWORD_RESET_EXPIRES` : durée du token de réinitialisation (ex: `30m`).
+- `PASSWORD_RESET_DEBUG` : `true` pour exposer le lien en réponse (dev uniquement).
+- `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` : configuration SMTP pour envoi des emails.
+- `SMTP_SECURE` : `true/false` (TLS), selon ton serveur SMTP.
+- `SMTP_FROM` : expéditeur par défaut (ex: `no-reply@teranga.app`).
 
 ## Vision globale (franchise panafricaine)
 - **Plateforme centrale** : Teranga OS, développé et maintenu au siège.

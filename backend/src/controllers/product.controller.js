@@ -10,6 +10,7 @@ const {
   getUserGeoScope,
   isGlobalAdmin,
 } = require('../utils/geoScope');
+const { getPagination } = require('../utils/pagination');
 
 /* ============================================================
    🔧 Helpers génériques
@@ -28,16 +29,6 @@ function toNullableNumber(v) {
   if (v === '' || v === null || typeof v === 'undefined') return null;
   const n = parseFloat(v);
   return Number.isNaN(n) ? null : n;
-}
-
-function getPagination(req, defLimit = 50, maxLimit = 200) {
-  const limit = Math.min(
-    Math.max(parseInt(req.query?.limit, 10) || defLimit, 1),
-    maxLimit
-  );
-  const page = Math.max(parseInt(req.query?.page, 10) || 1, 1);
-  const offset = (page - 1) * limit;
-  return { limit, offset, page };
 }
 
 function slugify(str = '') {
@@ -330,7 +321,7 @@ exports.list = async (req, res) => {
 
     return res.json({
       products: rows.map(withLabels),
-      pagination: { page, limit, total: count },
+      pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
     console.error('❌ list products:', e);

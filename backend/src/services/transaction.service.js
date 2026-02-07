@@ -9,6 +9,7 @@ const {
   Order,
   Project,
 } = require('../../models');
+const { getPagination: baseGetPagination } = require('../utils/pagination');
 
 /* =========================================================
    🔧 Helpers génériques
@@ -30,35 +31,15 @@ function toTrimOrNull(v) {
   return s.length ? s : null;
 }
 
+function getPagination(req, defaultLimit = 25, maxLimit = 200) {
+  return baseGetPagination(req, defaultLimit, maxLimit);
+}
+
 /**
  * Pagination robuste et rétro-compatible :
  * - supporte limit/offset
  * - expose aussi page (si fourni) sinon calculé depuis offset/limit
  */
-function getPagination(req, defaultLimit = 25, maxLimit = 200) {
-  const q = req?.query || {};
-
-  const rawLimit = parseInt(q.limit ?? defaultLimit, 10);
-  const limit = Math.min(
-    Math.max(Number.isFinite(rawLimit) ? rawLimit : defaultLimit, 1),
-    maxLimit
-  );
-
-  const hasPage = q.page !== undefined && q.page !== null && q.page !== '';
-  const rawPage = parseInt(q.page ?? 1, 10);
-  const page =
-    hasPage && Number.isFinite(rawPage) && rawPage > 0 ? rawPage : null;
-
-  const rawOffset = parseInt(q.offset ?? 0, 10);
-  const offset = page
-    ? (page - 1) * limit
-    : Number.isFinite(rawOffset) && rawOffset >= 0
-    ? rawOffset
-    : 0;
-
-  return { limit, offset, page: page || Math.floor(offset / limit) + 1 };
-}
-
 /* =========================================================
    🔐 Helpers GEO (admin scoped)
    - Admin global : role=admin ET (countryId==null && regionId==null)
@@ -148,6 +129,15 @@ function buildWhereWithACL(req) {
           { '$order.region_id$': scope.regionId },
           { '$project.regionId$': scope.regionId }
         );
+
+        // fallback legacy: trx sans geo -> scope via user
+        scopeOr.push({
+          [Op.and]: [
+            { regionId: null },
+            { countryId: null },
+            { '$user.region_id$': scope.regionId },
+          ],
+        });
       } else if (scope.countryId != null) {
         scopeOr.push(
           { countryId: scope.countryId },
@@ -156,6 +146,15 @@ function buildWhereWithACL(req) {
           { '$order.country_id$': scope.countryId },
           { '$project.countryId$': scope.countryId }
         );
+
+        // fallback legacy: trx sans geo -> scope via user
+        scopeOr.push({
+          [Op.and]: [
+            { regionId: null },
+            { countryId: null },
+            { '$user.country_id$': scope.countryId },
+          ],
+        });
       }
 
       if (scopeOr.length > 0) {

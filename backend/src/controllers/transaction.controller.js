@@ -120,6 +120,13 @@ async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
     oid
       ? Order.findByPk(oid, {
           attributes: ["id", "countryId", "regionId", "userId", "status"],
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "countryId", "regionId", "country"],
+            },
+          ],
         })
       : null,
     pid
@@ -141,6 +148,11 @@ async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
       ? await getCountryIdByIso(project.client.country)
       : null;
 
+  const legacyOrderUserCountryId =
+    order?.countryId == null && order?.user?.country
+      ? await getCountryIdByIso(order.user.country)
+      : null;
+
   return {
     countryId:
       service?.countryId ??
@@ -148,6 +160,8 @@ async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
       project?.countryId ??
       legacyProjectCountryId ??
       order?.countryId ??
+      order?.user?.countryId ??
+      legacyOrderUserCountryId ??
       null,
 
     regionId:
@@ -155,6 +169,7 @@ async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
       task?.regionId ??
       project?.regionId ??
       order?.regionId ??
+      order?.user?.regionId ??
       null,
   };
 }
@@ -469,7 +484,7 @@ exports.list = async (req, res) => {
 
     return res.json({
       transactions: rows.map(withLabels),
-      pagination: { page, limit, total: count },
+      pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
     console.error("❌ Erreur list transactions:", e);
@@ -883,7 +898,7 @@ exports.listByOrder = async (req, res) => {
 
     return res.json({
       transactions: rows.map(withLabels),
-      pagination: { page, limit, total: count },
+      pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
     console.error("❌ Erreur listByOrder transactions:", e);

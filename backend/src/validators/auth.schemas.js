@@ -21,7 +21,24 @@ const loginSchema = Joi.object({
   password: Joi.string().required(),
 });
 
+const forgotPasswordSchema = Joi.object({
+  email: email.required(),
+});
+
+const resetPasswordSchema = Joi.object({
+  token: Joi.string().trim().required(),
+  password: password.required(),
+});
+
+const changePasswordSchema = Joi.object({
+  currentPassword: Joi.string().required(),
+  newPassword: password.required(),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  changePasswordSchema,
 };

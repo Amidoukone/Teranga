@@ -42,7 +42,7 @@ export default function LoginPage() {
     async function check() {
       try {
         const u = await me();
-        if (u?.user) navigate("/dashboard");
+        if (u?.user && !u?.offline) navigate("/dashboard");
       } catch {}
     }
     check();
@@ -169,6 +169,19 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            Mot de passe oublie ? Contactez l'admin ou le master de votre pays/region
+            pour reinitialiser. Ensuite, vous pourrez le modifier dans votre compte.
+          </div>
+
+          {/*
+            <Link
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Mot de passe oubliÃ© ?
+            </Link>
+          */}
 
           {/* BOUTON CONNEXION */}
           <button
