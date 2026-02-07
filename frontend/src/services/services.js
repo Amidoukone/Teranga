@@ -6,9 +6,16 @@ import { mergeGeoParams, mergeGeoPayload } from './geo';
  * 👤 Liste des services du client connecté
  * GET /api/services/me
  */
-export async function getMyServices() {
-  const { data } = await api.get('/services/me', { params: mergeGeoParams() });
-  return data.services || [];
+export async function getMyServices(params = {}, options = {}) {
+  const { data } = await api.get('/services/me', {
+    params: mergeGeoParams(params),
+  });
+  const items = data.services || [];
+  const pagination = data?.pagination || null;
+  if (options.withPagination) {
+    return { items, pagination };
+  }
+  return items;
 }
 
 /**

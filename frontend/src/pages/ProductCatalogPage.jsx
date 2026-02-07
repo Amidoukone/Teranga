@@ -8,9 +8,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProducts } from '../services/products';
+import { getCategories } from '../services/categories';
 import { createOrder } from '../services/orders';
 import { me } from '../services/auth';
 import { formatCurrency } from '../utils/labels';
+import PaginationBar from '../components/PaginationBar';
 
 /* ============================================================
    🌍 PRODUCTION CONFIG — FILE_BASE / toAbsUrl()
@@ -105,6 +107,8 @@ function formatProductPrice(amount, currency = 'XOF') {
 export default function ProductCatalogPage() {
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -123,44 +127,106 @@ export default function ProductCatalogPage() {
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
   const [sort, setSort] = useState('default');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
 
   const navigate = useNavigate();
 
   /* ============================================================
-     🔹 1) Init user + produits
-     ✅ compat: getProducts() retourne soit Array, soit { products, pagination }
-     ✅ master/multi-pays: backend scoper via token + geoScope
+     ?? Init user
   ============================================================ */
   useEffect(() => {
     let mounted = true;
 
-    async function init() {
+    async function loadUser() {
       try {
         const ud = await me();
         if (!mounted) return;
         setUser(ud?.user || null);
+      } catch {
+        if (mounted) setUser(null);
+      }
+    }
 
-        const res = await getProducts({ limit: 200 });
+    loadUser();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-        // compat: array direct OU {products}
-        const prods = Array.isArray(res) ? res : res?.products;
-        setProducts(Array.isArray(prods) ? prods : []);
+  /* ============================================================
+     ?? Cat?gories (filtre stable)
+  ============================================================ */
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadCategories() {
+      try {
+        const list = await getCategories({ limit: 200 });
+        if (!mounted) return;
+        setCategories(Array.isArray(list) ? list : []);
+      } catch {
+        if (mounted) setCategories([]);
+      }
+    }
+
+    loadCategories();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  /* ============================================================
+     ?? Produits (server-side: filtres + tri + pagination)
+  ============================================================ */
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadProducts() {
+      setLoading(true);
+      try {
+        const params = {
+          page,
+          limit: pageSize,
+          q: search.trim() || undefined,
+          categoryId: categoryFilter || undefined,
+          priceMin: priceMin !== '' ? priceMin : undefined,
+          priceMax: priceMax !== '' ? priceMax : undefined,
+          sort: sort !== 'default' ? sort : undefined,
+        };
+
+        const res = await getProducts(params, { withPagination: true });
+        const items = Array.isArray(res?.items) ? res.items : [];
+        const pg = res?.pagination || null;
+
+        if (!mounted) return;
+        setProducts(items);
+        setPagination(
+          pg
+            ? {
+                page: pg.page ?? page,
+                limit: pg.limit ?? pageSize,
+                total: pg.total ?? pg.count ?? items.length,
+              }
+            : { page, limit: pageSize, total: items.length }
+        );
         setError('');
       } catch (e) {
-        console.error('❌ Erreur chargement catalogue:', e);
-        setError(
-          e?.response?.data?.error || "Impossible de charger les produits."
-        );
+        console.error('? Erreur chargement catalogue:', e);
+        if (!mounted) return;
+        setError(e?.response?.data?.error || "Impossible de charger les produits.");
+        setProducts([]);
+        setPagination({ page, limit: pageSize, total: 0 });
       } finally {
         if (mounted) setLoading(false);
       }
     }
 
-    init();
+    loadProducts();
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [search, categoryFilter, priceMin, priceMax, sort, page, pageSize]);
 
   /* ============================================================
      🖼️ Lightbox controls (utilisés => pas de warnings)
@@ -282,13 +348,22 @@ export default function ProductCatalogPage() {
      🧮 Catégories disponibles (dérivées)
   ============================================================ */
   const availableCategories = useMemo(() => {
+    if (Array.isArray(categories) && categories.length > 0) {
+      return [...categories]
+        .map((c) => ({
+          id: c.id,
+          name: c.name || `Cat?gorie #${c.id}`,
+        }))
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }
+
     const map = new Map();
     products.forEach((p) => {
       const cat = p.category;
       if (cat?.id && !map.has(cat.id)) {
         map.set(cat.id, {
           id: cat.id,
-          name: cat.name || `Catégorie #${cat.id}`,
+          name: cat.name || `Cat?gorie #${cat.id}`,
         });
       }
     });
@@ -296,64 +371,25 @@ export default function ProductCatalogPage() {
     return [...map.values()].sort((a, b) =>
       (a.name || '').localeCompare(b.name || '')
     );
-  }, [products]);
+  }, [categories, products]);
+
+  const totalProducts = useMemo(
+    () => pagination?.total ?? pagination?.count ?? products.length,
+    [pagination, products.length]
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, categoryFilter, priceMin, priceMax, sort, pageSize]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(totalProducts / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [totalProducts, pageSize, page]);
+
 
   /* ============================================================
-     🧮 Produits filtrés + triés
-  ============================================================ */
-  const filteredProducts = useMemo(() => {
-    let arr = [...products];
-
-    const q = search.trim().toLowerCase();
-    if (q) {
-      arr = arr.filter((p) => {
-        const name = (p.name || '').toLowerCase();
-        const desc = (p.description || '').toLowerCase();
-        const cat = (p.category?.name || '').toLowerCase();
-        const idStr = String(p.id || '').toLowerCase();
-        return (
-          name.includes(q) ||
-          desc.includes(q) ||
-          cat.includes(q) ||
-          idStr.includes(q)
-        );
-      });
-    }
-
-    if (categoryFilter) {
-      const catId = Number(categoryFilter);
-      arr = arr.filter(
-        (p) => Number(p.category?.id || p.categoryId || 0) === catId
-      );
-    }
-
-    const min = priceMin !== '' ? Number(priceMin) : null;
-    const max = priceMax !== '' ? Number(priceMax) : null;
-
-    if (min !== null && !Number.isNaN(min)) {
-      arr = arr.filter((p) => Number(p.price || 0) >= min);
-    }
-    if (max !== null && !Number.isNaN(max)) {
-      arr = arr.filter((p) => Number(p.price || 0) <= max);
-    }
-
-    if (sort === 'price_asc') {
-      arr.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
-    } else if (sort === 'price_desc') {
-      arr.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
-    } else if (sort === 'name_asc') {
-      arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    } else if (sort === 'name_desc') {
-      arr.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
-    } else if (sort === 'stock_desc') {
-      arr.sort((a, b) => Number(b.stock || 0) - Number(a.stock || 0));
-    }
-
-    return arr;
-  }, [products, search, categoryFilter, priceMin, priceMax, sort]);
-
-  /* ============================================================
-     🌀 États de chargement / erreur / vide
+     ?? ?tats de chargement / erreur / vide
   ============================================================ */
   if (loading) {
     return (
@@ -384,21 +420,21 @@ export default function ProductCatalogPage() {
     );
   }
 
-  if (products.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
-        <div className="max-w-md w-full bg-white border border-slate-100 shadow-xl rounded-3xl px-6 py-6 text-center">
-          <p className="text-gray-500 text-sm sm:text-base italic">
-            Aucun produit disponible pour le moment.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   /* ============================================================
-     🧱 UI PRINCIPALE — Filtres + Tri + Grille Produits (Style A)
+     UI PRINCIPALE - Filtres + Tri + Grille Produits (Style A)
   ============================================================ */
+  const hasActiveFilters = Boolean(
+    search.trim() ||
+      categoryFilter ||
+      priceMin !== '' ||
+      priceMax !== '' ||
+      (sort && sort !== 'default')
+  );
+
+  const emptyMessage =
+    !hasActiveFilters && totalProducts === 0
+      ? 'Aucun produit disponible pour le moment.'
+      : 'Aucun produit ne correspond à ces critères.';
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-3xl border border-slate-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
@@ -421,8 +457,8 @@ export default function ProductCatalogPage() {
           <div className="flex items-end sm:items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
             <div className="flex flex-col items-end text-right">
               <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-[11px] text-slate-600 shadow-sm">
-                {filteredProducts.length} résultat
-                {filteredProducts.length > 1 ? 's' : ''} sur {products.length}
+                {products.length} résultat
+                {products.length > 1 ? 's' : ''} sur {totalProducts}
               </span>
               <span className="mt-1 text-[11px] text-slate-400">
                 Filtrez par catégorie, prix ou nom de produit.
@@ -543,15 +579,24 @@ export default function ProductCatalogPage() {
             </div>
           </div>
         </div>
-        {filteredProducts.length === 0 ? (
+
+        <PaginationBar
+          page={page}
+          pageSize={pageSize}
+          totalItems={totalProducts}
+          pageSizeOptions={[12, 24, 48]}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          className="mt-2"
+        />
+
+        {products.length === 0 ? (
           <div className="bg-slate-50 border border-slate-200 rounded-2xl shadow-sm py-10 flex items-center justify-center">
-            <p className="text-slate-500 text-sm">
-              Aucun produit ne correspond à ces critères.
-            </p>
+            <p className="text-slate-500 text-sm">{emptyMessage}</p>
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProducts.map((p) => {
+            {products.map((p) => {
               const images = getImagesForProduct(p);
               const mainImg = images[0] || null;
 

@@ -37,6 +37,23 @@ function isTrue(x) {
   return !!x;
 }
 
+function buildServiceOrder(sort) {
+  if (!sort) return [["createdAt", "DESC"]];
+  const raw = String(sort);
+  const desc = raw.startsWith("-");
+  const key = desc ? raw.slice(1) : raw;
+  const dir = desc ? "DESC" : "ASC";
+
+  switch (key) {
+    case "createdAt":
+      return [["createdAt", dir]];
+    case "title":
+      return [["title", dir]];
+    default:
+      return [["createdAt", "DESC"]];
+  }
+}
+
 function isGlobalAdmin(user) {
   if (!user) return false;
   if (user.role !== "admin") return false;
@@ -246,8 +263,14 @@ exports.listClient = async (req, res) => {
   try {
     const { limit, offset, page } = getPagination(req, 25, 100);
     const { clientId } = req.query;
+    const q = toTrimOrNull(req.query?.q);
+    const status = toTrimOrNull(req.query?.status);
+    const type = toTrimOrNull(req.query?.type);
+    const propertyId = toSafeInt(req.query?.propertyId);
+    const sort = toTrimOrNull(req.query?.sort);
 
     let where = {};
+    const andWhere = [];
 
     if (req.user.role === "admin") {
       if (clientId) where.clientId = toSafeInt(clientId);
@@ -255,11 +278,38 @@ exports.listClient = async (req, res) => {
       where.clientId = req.user.id;
     }
 
+    if (status && ALLOWED_STATUSES.has(status)) where.status = status;
+    if (type && ALLOWED_TYPES.has(type)) where.type = type;
+    if (propertyId) where.propertyId = propertyId;
+
+    if (q) {
+      const like = { [Op.like]: `%${q}%` };
+      andWhere.push({
+        [Op.or]: [
+          { title: like },
+          { description: like },
+          { address: like },
+          { contactPerson: like },
+          { contactPhone: like },
+          { "$client.firstName$": like },
+          { "$client.lastName$": like },
+          { "$client.email$": like },
+          { "$property.title$": like },
+          { "$property.address$": like },
+          { "$property.city$": like },
+        ],
+      });
+    }
+
+    if (andWhere.length > 0) {
+      where = { ...where, [Op.and]: andWhere };
+    }
+
     if (req.user.role === "admin" || req.user.role === "agent") {
       where = await applyGeoScopeWithLegacy(where, req.user);
     }
 
-    const rows = await Service.findAll({
+    const { rows, count } = await Service.findAndCountAll({
       where,
       include: [
         {
@@ -270,14 +320,15 @@ exports.listClient = async (req, res) => {
         { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
         { model: Property, as: "property", attributes: ["id", "title", "city", "address", "photos"] },
       ],
-      order: [["createdAt", "DESC"]],
+      order: buildServiceOrder(sort),
       limit,
       offset,
+      distinct: true,
     });
 
     return res.json({
       services: rows.map(addLabels),
-      pagination: { page, limit, offset, count: rows.length },
+      pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
     console.error("❌ erreur listClient:", e);
@@ -299,12 +350,17 @@ exports.listAll = async (req, res) => {
     const status = (req.query.status || "").trim();
     const unassigned = isTrue(req.query.unassigned);
     const q = (req.query.q || "").trim();
+    const type = toTrimOrNull(req.query?.type);
+    const propertyId = toSafeInt(req.query?.propertyId);
+    const sort = toTrimOrNull(req.query?.sort);
 
     let where = {};
     const andWhere = [];
 
     if (status && ALLOWED_STATUSES.has(status)) where.status = status;
     if (unassigned) where.agentId = null;
+    if (type && ALLOWED_TYPES.has(type)) where.type = type;
+    if (propertyId) where.propertyId = propertyId;
 
     if (q) {
       const like = { [Op.like]: `%${q}%` };
@@ -342,14 +398,15 @@ exports.listAll = async (req, res) => {
         { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
         { model: Property, as: "property", attributes: ["id", "title", "city", "address"] },
       ],
-      order: [["createdAt", "DESC"]],
+      order: buildServiceOrder(sort),
       limit,
       offset,
+      distinct: true,
     });
 
     return res.json({
       services: rows.map(addLabels),
-      pagination: { page, limit, offset, total: count },
+      pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
     console.error("❌ erreur listAll:", e);
@@ -586,12 +643,45 @@ exports.deleteService = async (req, res) => {
 exports.listAgent = async (req, res) => {
   try {
     const { limit, offset, page } = getPagination(req, 25, 100);
+    const q = toTrimOrNull(req.query?.q);
+    const status = toTrimOrNull(req.query?.status);
+    const type = toTrimOrNull(req.query?.type);
+    const propertyId = toSafeInt(req.query?.propertyId);
+    const sort = toTrimOrNull(req.query?.sort);
 
     let where = { agentId: req.user.id };
+    const andWhere = [];
+
+    if (status && ALLOWED_STATUSES.has(status)) where.status = status;
+    if (type && ALLOWED_TYPES.has(type)) where.type = type;
+    if (propertyId) where.propertyId = propertyId;
+
+    if (q) {
+      const like = { [Op.like]: `%${q}%` };
+      andWhere.push({
+        [Op.or]: [
+          { title: like },
+          { description: like },
+          { address: like },
+          { contactPerson: like },
+          { contactPhone: like },
+          { "$client.firstName$": like },
+          { "$client.lastName$": like },
+          { "$client.email$": like },
+          { "$property.title$": like },
+          { "$property.address$": like },
+          { "$property.city$": like },
+        ],
+      });
+    }
+
+    if (andWhere.length > 0) {
+      where = { ...where, [Op.and]: andWhere };
+    }
 
     where = await applyGeoScopeWithLegacy(where, req.user);
 
-    const rows = await Service.findAll({
+    const { rows, count } = await Service.findAndCountAll({
       where,
       include: [
         {
@@ -605,14 +695,15 @@ exports.listAgent = async (req, res) => {
           attributes: ["id", "title", "city", "address", "photos"],
         },
       ],
-      order: [["createdAt", "DESC"]],
+      order: buildServiceOrder(sort),
       limit,
       offset,
+      distinct: true,
     });
 
     return res.json({
       services: rows.map(addLabels),
-      pagination: { page, limit, offset, count: rows.length },
+      pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
     console.error("❌ erreur listAgent:", e);

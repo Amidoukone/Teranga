@@ -43,6 +43,24 @@ function toNullableNumber(v) {
   return Number.isNaN(n) ? null : n;
 }
 
+function buildOrderOrder(sort) {
+  if (!sort) return [[col('Order.created_at'), 'DESC']];
+
+  const raw = String(sort);
+  const desc = raw.startsWith('-');
+  const key = desc ? raw.slice(1) : raw;
+  const dir = desc ? 'DESC' : 'ASC';
+
+  switch (key) {
+    case 'createdAt':
+      return [[col('Order.created_at'), dir]];
+    case 'totalAmount':
+      return [[col('Order.total'), dir]];
+    default:
+      return [[col('Order.created_at'), 'DESC']];
+  }
+}
+
 async function inferGeoFromUserId(userId) {
   if (!userId) return { countryId: null, regionId: null };
 
@@ -504,6 +522,7 @@ exports.list = async (req, res) => {
     const status = toTrimOrNull(req.query?.status);
     const paymentStatus = toTrimOrNull(req.query?.paymentStatus);
     const userId = toSafeInt(req.query?.userId);
+    const sort = toTrimOrNull(req.query?.sort);
 
     let where = {};
 
@@ -541,7 +560,7 @@ exports.list = async (req, res) => {
       ],
 
       // ✅ FIX MYSQL: utiliser la vraie colonne (created_at)
-      order: [[col('Order.created_at'), 'DESC']],
+      order: buildOrderOrder(sort),
 
       limit,
       offset,
@@ -550,7 +569,7 @@ exports.list = async (req, res) => {
 
     return res.json({
       orders: rows.map(withLabels),
-      pagination: { page, limit, offset, count },
+      pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
     console.error('❌ list orders:', e);

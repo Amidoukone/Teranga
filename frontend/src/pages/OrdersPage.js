@@ -9,6 +9,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getOrders, createOrder } from '../services/orders';
 import { getProducts } from '../services/products';
 import { me } from '../services/auth';
+import PaginationBar from '../components/PaginationBar';
 import {
   formatCurrency,
   formatStatus,
@@ -86,6 +87,9 @@ export default function OrdersPage() {
     payment: '',
     sort: '-createdAt',
   });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0 });
 
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_orders_showForm');
@@ -108,16 +112,42 @@ export default function OrdersPage() {
   const loadOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getOrders();
-      setOrders(normalizeListResponse(data, 'orders'));
+      const params = {
+        page,
+        limit: pageSize,
+        q: filters.q?.trim() || undefined,
+        status: filters.status || undefined,
+        paymentStatus: filters.payment || undefined,
+        sort: filters.sort || undefined,
+      };
+
+      const res = await getOrders(params, { withPagination: true });
+      const items = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.items)
+        ? res.items
+        : res?.orders || [];
+
+      setOrders(items);
+      const pg = res?.pagination || null;
+      setPagination(
+        pg
+          ? {
+              page: pg.page ?? page,
+              limit: pg.limit ?? pageSize,
+              total: pg.total ?? pg.count ?? items.length,
+            }
+          : { page, limit: pageSize, total: items.length }
+      );
     } catch (e) {
-      console.error('❌ Erreur chargement commandes:', e);
+      console.error('? Erreur chargement commandes:', e);
       alert('Erreur lors du chargement des commandes.');
       setOrders([]);
+      setPagination({ page, limit: pageSize, total: 0 });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters, page, pageSize]);
 
   const loadProducts = useCallback(async () => {
     setLoadingProducts(true);
@@ -133,7 +163,7 @@ export default function OrdersPage() {
   }, []);
 
   /* ============================================================
-     🔄 Initialisation
+     ?? Initialisation
   ============================================================ */
   useEffect(() => {
     let mounted = true;
@@ -143,9 +173,9 @@ export default function OrdersPage() {
         const ud = await me();
         if (!mounted) return;
         setUser(ud.user);
-        await Promise.all([loadOrders(), loadProducts()]);
+        await loadProducts();
       } catch (e) {
-        console.error('❌ Erreur init OrdersPage:', e);
+        console.error('? Erreur init OrdersPage:', e);
         if (e?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
@@ -158,7 +188,12 @@ export default function OrdersPage() {
     return () => {
       mounted = false;
     };
-  }, [loadOrders, loadProducts]);
+  }, [loadProducts]);
+
+  useEffect(() => {
+    if (!user) return;
+    loadOrders();
+  }, [user, loadOrders]);
 
   // Persistance de l’affichage du formulaire
   useEffect(() => {
@@ -227,64 +262,22 @@ export default function OrdersPage() {
   /* ============================================================
      🎛️ Filtres + tri (mémoïsés) — canon robustes
   ============================================================ */
-  const filtered = useMemo(() => {
-    return (orders || [])
-      .filter((o) => {
-        const term = (filters.q || '').trim().toLowerCase();
-        if (!term) return true;
+  const totalOrders = useMemo(
+    () => pagination?.total ?? pagination?.count ?? orders.length,
+    [pagination, orders.length]
+  );
 
-        const blob = [
-          o.code,
-          o.customer?.email,
-          o.customerNote,
-          o.orderStatus,
-          o.paymentStatus,
-          o.currency,
-          String(o.totalAmount ?? ''),
-          String(o.id ?? ''),
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
+  useEffect(() => {
+    setPage(1);
+  }, [filters.q, filters.status, filters.payment, filters.sort, pageSize]);
 
-        return blob.includes(term);
-      })
-      .filter((o) => {
-        if (!filters.status) return true;
-        const want = canonicalizeOrderStatus(filters.status);
-        const got = canonicalizeOrderStatus(o.orderStatus);
-        return got === want;
-      })
-      .filter((o) => {
-        if (!filters.payment) return true;
-        const want = canonicalizePaymentStatus(filters.payment);
-        const got = canonicalizePaymentStatus(o.paymentStatus);
-        return got === want;
-      })
-      .sort((a, b) => {
-        const by = filters.sort || '-createdAt';
-        const sign = by.startsWith('-') ? -1 : 1;
-        const key = by.replace(/^-/, '');
-
-        let va = a?.[key];
-        let vb = b?.[key];
-
-        if (key === 'createdAt') {
-          va = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          vb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        } else if (key === 'totalAmount') {
-          va = Number(a.totalAmount ?? 0);
-          vb = Number(b.totalAmount ?? 0);
-        }
-
-        if (va < vb) return -1 * sign;
-        if (va > vb) return 1 * sign;
-        return 0;
-      });
-  }, [orders, filters]);
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(totalOrders / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [totalOrders, pageSize, page]);
 
   /* ============================================================
-     🧱 UI principale — wrapper + skeleton
+     UI principale - wrapper + skeleton
   ============================================================ */
   if (!user) {
     return (
@@ -368,8 +361,8 @@ export default function OrdersPage() {
             <div className="w-full lg:w-1/3 flex items-end justify-end">
               <div className="text-xs text-slate-500 flex flex-col items-start lg:items-end gap-1 w-full">
                 <span className="inline-flex items-center px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm">
-                  {filtered.length} commande{filtered.length > 1 ? 's' : ''} affichée
-                  {filtered.length > 1 ? 's' : ''} / {orders.length}
+                  {orders.length} commande{orders.length > 1 ? 's' : ''} affichée
+                  {orders.length > 1 ? 's' : ''} / {totalOrders}
                 </span>
               </div>
             </div>
@@ -587,19 +580,29 @@ export default function OrdersPage() {
         )}
 
         {/* ===================================================== */}
+        <PaginationBar
+          page={page}
+          pageSize={pageSize}
+          totalItems={totalOrders}
+          pageSizeOptions={[10, 20, 50]}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          className="mb-4"
+        />
+
         {/* 📄 LISTE Commandes — Cards marketplace style B */}
         {/* ===================================================== */}
         {loading ? (
           <p className="text-gray-500 italic text-center py-6">
             Chargement…
           </p>
-        ) : filtered.length === 0 ? (
+        ) : orders.length === 0 ? (
           <p className="text-gray-500 italic text-center py-6">
             Aucune commande trouvée.
           </p>
         ) : (
           <div className="grid gap-5">
-            {filtered.map((o) => {
+            {orders.map((o) => {
               const currency = o.currency || 'XOF';
               const total = Number(o.totalAmount || 0);
 

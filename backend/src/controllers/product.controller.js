@@ -31,6 +31,28 @@ function toNullableNumber(v) {
   return Number.isNaN(n) ? null : n;
 }
 
+function buildProductOrder(sort) {
+  switch (String(sort || '').toLowerCase()) {
+    case 'price_asc':
+      return [['price', 'ASC']];
+    case 'price_desc':
+      return [['price', 'DESC']];
+    case 'name_asc':
+      return [['name', 'ASC']];
+    case 'name_desc':
+      return [['name', 'DESC']];
+    case 'stock_desc':
+      return [['stock', 'DESC']];
+    case 'stock_asc':
+      return [['stock', 'ASC']];
+    case 'created_asc':
+      return [[col('Product.created_at'), 'ASC']];
+    case 'created_desc':
+    default:
+      return [[col('Product.created_at'), 'DESC']];
+  }
+}
+
 function slugify(str = '') {
   return str
     .toString()
@@ -289,6 +311,9 @@ exports.list = async (req, res) => {
     const q = toTrimOrNull(req.query?.q);
     const categoryId = toSafeInt(req.query?.categoryId);
     const active = req.query?.isActive;
+    const priceMin = toNullableNumber(req.query?.priceMin);
+    const priceMax = toNullableNumber(req.query?.priceMax);
+    const sort = toTrimOrNull(req.query?.sort);
     const { limit, offset, page } = getPagination(req);
 
     let where = {};
@@ -303,6 +328,11 @@ exports.list = async (req, res) => {
 
     if (categoryId) where.categoryId = categoryId;
     if (typeof active !== 'undefined') where.isActive = String(active) === 'true';
+    if (priceMin !== null || priceMax !== null) {
+      where.price = {};
+      if (priceMin !== null) where.price[Op.gte] = priceMin;
+      if (priceMax !== null) where.price[Op.lte] = priceMax;
+    }
 
     // 🌍 scope (safe selon modèle)
     where = applyGeoScopeForModel(where, req.user, Product);
@@ -312,7 +342,7 @@ exports.list = async (req, res) => {
       include: [{ model: Category, as: 'category' }],
 
       // ✅ FIX DÉFINITIF : la colonne MySQL réelle (underscored)
-      order: [[col('Product.created_at'), 'DESC']],
+      order: buildProductOrder(sort),
 
       limit,
       offset,
@@ -321,7 +351,7 @@ exports.list = async (req, res) => {
 
     return res.json({
       products: rows.map(withLabels),
-      pagination: { page, limit, offset, total: count },
+      pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
     console.error('❌ list products:', e);

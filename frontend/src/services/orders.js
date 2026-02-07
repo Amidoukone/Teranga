@@ -126,7 +126,7 @@ function normalizeOrder(raw = {}) {
 /* -----------------------------------------------------------
  * GET /orders
  * --------------------------------------------------------- */
-export async function getOrders(params = {}) {
+export async function getOrders(params = {}, options = {}) {
   const query = { ...params };
 
   if (query.status)
@@ -147,7 +147,13 @@ export async function getOrders(params = {}) {
   });
 
   const items = data?.items || data?.orders || [];
-  return items.map(normalizeOrder);
+  const normalized = items.map(normalizeOrder);
+  const pagination = data?.pagination || null;
+
+  if (options.withPagination) {
+    return { items: normalized, pagination };
+  }
+  return normalized;
 }
 
 /* -----------------------------------------------------------

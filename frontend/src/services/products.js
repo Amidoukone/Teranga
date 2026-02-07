@@ -127,10 +127,15 @@ function toFormData(payload = {}) {
  * Accepte params (q, categoryId, page, limit, etc.)
  * Retourne un tableau de produits normalisés
  * --------------------------------------------------------- */
-export async function getProducts(params = {}) {
+export async function getProducts(params = {}, options = {}) {
   const { data } = await api.get('/products', { params: mergeGeoParams(params) });
   const items = data?.items || data?.products || [];
-  return items.map(normalizeProduct);
+  const normalized = items.map(normalizeProduct);
+  const pagination = data?.pagination || null;
+  if (options.withPagination) {
+    return { items: normalized, pagination };
+  }
+  return normalized;
 }
 
 /* -----------------------------------------------------------

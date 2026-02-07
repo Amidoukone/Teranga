@@ -6,6 +6,7 @@ import { me } from '../services/auth';
 import { getMyServices, createService } from '../services/services';
 import { getProperties } from '../services/properties';
 import { applyLabels, SERVICE_TYPES, SERVICE_STATUSES } from '../utils/labels';
+import PaginationBar from '../components/PaginationBar';
 
 /* ============================================================
    🧠 Page Services — Premium Pro 2025 (responsive & production-ready)
@@ -36,6 +37,9 @@ export default function ServicesPage() {
     property: '',
     sort: '-createdAt',
   });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
+  const [pagination, setPagination] = useState({ page: 1, limit: 8, total: 0 });
 
   const navigate = useNavigate();
 
@@ -84,23 +88,52 @@ const roleLabel = useMemo(() => {
   ========================================== */
   const loadServices = useCallback(async () => {
     try {
-      const servs = await getMyServices();
+      const params = {
+        page,
+        limit: pageSize,
+        q: filters.q?.trim() || undefined,
+        type: filters.type || undefined,
+        status: filters.status || undefined,
+        propertyId: filters.property || undefined,
+        sort: filters.sort || undefined,
+      };
 
-      // 🏷️ Ajouter les labels français si backend ne les fournit pas déjà
-      const list = Array.isArray(servs) ? servs : servs?.services || [];
+      const res = await getMyServices(params, { withPagination: true });
+      const list = Array.isArray(res?.items)
+        ? res.items
+        : Array.isArray(res)
+        ? res
+        : res?.services || [];
+
+      // ??? Ajouter les labels fran?ais si backend ne les fournit pas d?j?
       const enriched = list.map((s) => ({
         ...s,
         ...(s.statusLabel && s.typeLabel ? {} : applyLabels(s)),
       }));
 
       setServices(enriched);
+      setFiltered(enriched);
+
+      const pg = res?.pagination || null;
+      setPagination(
+        pg
+          ? {
+              page: pg.page ?? page,
+              limit: pg.limit ?? pageSize,
+              total: pg.total ?? pg.count ?? enriched.length,
+            }
+          : { page, limit: pageSize, total: enriched.length }
+      );
     } catch (e) {
-      console.error('❌ Load services:', e);
+      console.error('? Load services:', e);
       alert(
         e?.response?.data?.error || 'Erreur lors du chargement des services.'
       );
+      setServices([]);
+      setFiltered([]);
+      setPagination({ page, limit: pageSize, total: 0 });
     }
-  }, []);
+  }, [filters, page, pageSize]);
 
   const loadClientProperties = useCallback(
     async (clientId) => {
@@ -144,7 +177,7 @@ const roleLabel = useMemo(() => {
   }, [authHeaders]);
 
   /* ==========================================
-     🔹 Initialisation
+     ?? Initialisation
   ========================================== */
   useEffect(() => {
     async function init() {
@@ -162,21 +195,25 @@ const roleLabel = useMemo(() => {
         }
 
         setUser(u);
-        await loadServices();
 
-        // ✅ admin global OU master (toujours role=admin, scope géré côté backend)
+        // ? admin global OU master (toujours role=admin, scope g?r? c?t? backend)
         if (u.role === 'admin') {
           await loadClients();
         } else {
           await loadMyProperties();
         }
       } catch (err) {
-        console.error('❌ Erreur init ServicesPage:', err);
+        console.error('? Erreur init ServicesPage:', err);
         navigate('/login');
       }
     }
     init();
-  }, [loadClients, loadMyProperties, loadServices, navigate]);
+  }, [loadClients, loadMyProperties, navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+    loadServices();
+  }, [user, loadServices]);
 
   // Lorsqu’un admin/master choisit un client, charger ses biens
   useEffect(() => {
@@ -321,66 +358,24 @@ const roleLabel = useMemo(() => {
     setEditingId(null);
   }
   /* ==========================================
-     🔹 Filtrage + Tri (local)
+     Pagination (server-side)
   ========================================== */
+  const totalServices = useMemo(
+    () => pagination?.total ?? pagination?.count ?? services.length,
+    [pagination, services.length]
+  );
+
   useEffect(() => {
-    let arr = [...services];
+    setPage(1);
+  }, [filters.q, filters.type, filters.status, filters.property, filters.sort, pageSize]);
 
-    if (filters.q.trim()) {
-      const q = filters.q.trim().toLowerCase();
-      arr = arr.filter((s) =>
-        [
-          s.title,
-          s.description,
-          s.contactPerson,
-          s.contactPhone,
-          s.address,
-          s.typeLabel,
-          s.statusLabel,
-          s.property?.title,
-          s.property?.city,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-          .includes(q)
-      );
-    }
-
-    if (filters.type) arr = arr.filter((s) => s.type === filters.type);
-    if (filters.status) arr = arr.filter((s) => s.status === filters.status);
-
-    if (filters.property) {
-      const pid = parseInt(filters.property, 10);
-      arr = arr.filter((s) => s.property?.id === pid);
-    }
-
-    const by = filters.sort || '-createdAt';
-    const sign = by.startsWith('-') ? -1 : 1;
-    const key = by.replace(/^-/, '');
-
-    arr.sort((a, b) => {
-      let va = a[key];
-      let vb = b[key];
-
-      if (key === 'createdAt') {
-        va = new Date(a.createdAt).getTime();
-        vb = new Date(b.createdAt).getTime();
-      } else if (key === 'title') {
-        va = (a.title || '').toLowerCase();
-        vb = (b.title || '').toLowerCase();
-      }
-
-      if (va < vb) return -1 * sign;
-      if (va > vb) return 1 * sign;
-      return 0;
-    });
-
-    setFiltered(arr);
-  }, [filters, services]);
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(totalServices / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [totalServices, pageSize, page]);
 
   /* ==========================================
-     🔹 UI principale
+     UI principale
   ========================================== */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 lg:py-10">
@@ -391,7 +386,7 @@ const roleLabel = useMemo(() => {
           setShowForm={setShowForm}
           loading={loading}
           loadServices={loadServices}
-          totalCount={services.length}
+          totalCount={totalServices}
           roleLabel={roleLabel}
           user={user}
         />
@@ -401,7 +396,7 @@ const roleLabel = useMemo(() => {
           filters={filters}
           setFilters={setFilters}
           properties={properties}
-          filteredCount={filtered.length}
+          filteredCount={totalServices}
         />
 
         {/* FORMULAIRE */}
@@ -429,6 +424,16 @@ const roleLabel = useMemo(() => {
             {filtered.length} service(s) affiché(s)
           </span>
         </div>
+
+        <PaginationBar
+          page={page}
+          pageSize={pageSize}
+          totalItems={totalServices}
+          pageSizeOptions={[6, 12, 24]}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          className="mb-4"
+        />
 
         {filtered.length === 0 ? (
           <p className="text-gray-500 italic text-center py-6">
