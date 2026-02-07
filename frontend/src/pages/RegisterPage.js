@@ -13,30 +13,30 @@ import {
 } from "lucide-react";
 
 /* ==========================================================
-   ?? Suggestions de pays ISO2
+   Suggestions de pays ISO2
 ========================================================== */
 const COUNTRY_SUGGESTIONS = [
-  { code: "ML", name: "Mali ????" },
-  { code: "SN", name: "S?n?gal ????" },
-  { code: "CI", name: "C?te d?Ivoire ????" },
-  { code: "NE", name: "Niger ????" },
-  { code: "BF", name: "Burkina Faso ????" },
-  { code: "FR", name: "France ????" },
-  { code: "BE", name: "Belgique ????" },
-  { code: "CA", name: "Canada ????" },
-  { code: "US", name: "?tats-Unis ????" },
+  { code: "ML", name: "Mali 🇲🇱" },
+  { code: "SN", name: "Sénégal 🇸🇳" },
+  { code: "CI", name: "Côte d’Ivoire 🇨🇮" },
+  { code: "NE", name: "Niger 🇳🇪" },
+  { code: "BF", name: "Burkina Faso 🇧🇫" },
+  { code: "FR", name: "France 🇫🇷" },
+  { code: "BE", name: "Belgique 🇧🇪" },
+  { code: "CA", name: "Canada 🇨🇦" },
+  { code: "US", name: "États-Unis 🇺🇸" },
 ];
 
-// map ?nom saisi? -> ISO2 (simple mais efficace, extensible)
+// map "nom saisi" -> ISO2 (simple mais efficace, extensible)
 function normalizeCountryInputToISO2(inputRaw = "", suggestions = []) {
   const raw = String(inputRaw || "").trim();
   if (!raw) return "";
 
-  // Si d?j? ISO2
+  // Si deja ISO2
   const maybeIso2 = raw.toUpperCase().slice(0, 2);
   if (/^[A-Z]{2}$/.test(maybeIso2) && raw.length <= 2) return maybeIso2;
 
-  // Normalisation ?nom?
+  // Normalisation "nom"
   const normalized = raw
     .toLowerCase()
     .normalize("NFD")
@@ -55,13 +55,13 @@ function normalizeCountryInputToISO2(inputRaw = "", suggestions = []) {
       .replace(/\s+/g, " ")
       .trim();
 
-    // match exact ou ?contient?
+    // match exact ou "contient"
     if (normalized === labelNorm || labelNorm.includes(normalized)) {
       return String(s.code || "").toUpperCase().slice(0, 2);
     }
   }
 
-  // fallback: si l?utilisateur tape ?Mali?, ?Senegal?, etc (sans emoji)
+  // fallback: si l'utilisateur tape "Mali", "Senegal", etc (sans emoji)
   // -> on essaye aussi sur le premier mot des labels
   for (const s of suggestions) {
     const firstWord = String(s.name || "")
@@ -78,7 +78,7 @@ function normalizeCountryInputToISO2(inputRaw = "", suggestions = []) {
     }
   }
 
-  // Si l?utilisateur tape un truc du style ?ML - Mali?
+  // Si l'utilisateur tape un truc du style "ML - Mali"
   if (/^[A-Za-z]{2}\b/.test(raw)) return raw.toUpperCase().slice(0, 2);
 
   return "";
@@ -106,7 +106,7 @@ export default function RegisterPage() {
   const navigate = useNavigate();
 
   /* ==========================================================
-     Pays ISO2 ?canonique? calcul? (pour multi-pays master)
+     Pays ISO2 "canonique" calcule (pour multi-pays master)
   ========================================================== */
   const countryISO2 = useMemo(() => {
     return (
@@ -122,7 +122,7 @@ export default function RegisterPage() {
   }, [countryISO2]);
 
   /* ==========================================================
-     Mise ? jour champs
+     Mise a jour champs
   ========================================================== */
   function updateField(field, value) {
     // Email en minuscules
@@ -131,7 +131,7 @@ export default function RegisterPage() {
   }
 
   /* ==========================================================
-     Validation (front) ? coh?rente et non bloquante
+     Validation (front) - coherente et non bloquante
   ========================================================== */
   function validate() {
     const firstName = String(form.firstName || "").trim();
@@ -140,11 +140,11 @@ export default function RegisterPage() {
     const password = String(form.password || "");
     const iso2 = String(countryISO2 || "").trim();
 
-    if (!firstName) return "Veuillez renseigner votre pr?nom.";
+    if (!firstName) return "Veuillez renseigner votre prénom.";
     if (!lastName) return "Veuillez renseigner votre nom.";
     if (!email || !EMAIL_RE.test(email)) return "Adresse email invalide.";
     if (!password || password.length < 8)
-      return "Le mot de passe doit contenir au moins 8 caract?res.";
+      return "Le mot de passe doit contenir au moins 8 caractères.";
     if (!iso2 || !/^[A-Z]{2}$/.test(iso2))
       return "Veuillez renseigner un pays valide (format ISO2 : ML, SN, FR...).";
 
@@ -152,7 +152,7 @@ export default function RegisterPage() {
   }
 
   /* ==========================================================
-     ?? Inscription
+     Inscription
   ========================================================== */
   async function handleRegister(e) {
     e.preventDefault();
@@ -173,7 +173,7 @@ export default function RegisterPage() {
         firstName: String(form.firstName || "").trim(),
         lastName: String(form.lastName || "").trim(),
         phone: String(form.phone || "").trim() || undefined,
-        country: countryISO2, // ? multi-pays safe : ISO2 canonique
+        country: countryISO2, // multi-pays safe : ISO2 canonique
         role: "client",
       };
 
@@ -182,13 +182,13 @@ export default function RegisterPage() {
       navigate("/login", {
         state: {
           successMsg:
-            "? Votre compte a ?t? cr?? avec succ?s ! Vous pouvez vous connecter.",
+            "✔ Votre compte a été créé avec succès ! Vous pouvez vous connecter.",
         },
       });
     } catch (err) {
       const backendMsg = err?.response?.data?.error;
       setErrorMsg(
-        backendMsg || "Une erreur est survenue. V?rifiez vos informations."
+        backendMsg || "Une erreur est survenue. Vérifiez vos informations."
       );
     } finally {
       setLoading(false);
@@ -196,7 +196,7 @@ export default function RegisterPage() {
   }
 
   /* ==========================================================
-     ??? UI ? Apple Light Premium A1
+     UI - Apple Light Premium A1
   ========================================================== */
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
@@ -210,13 +210,13 @@ export default function RegisterPage() {
             className="w-16 h-16 mx-auto mb-3 drop-shadow-sm"
           />
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Cr?er un compte
+            Créer un compte
           </h1>
           <p className="page-lead">
             Inscription pour les <strong>clients</strong>
           </p>
           <p className="text-xs text-slate-500 mt-1">
-            Cr?ez votre acc?s client en quelques minutes.
+            Créez votre accès client en quelques minutes.
           </p>
         </div>
 
@@ -233,9 +233,9 @@ export default function RegisterPage() {
           {[
             {
               field: "firstName",
-              label: "Pr?nom",
+              label: "Prénom",
               icon: User,
-              placeholder: "Votre pr?nom",
+              placeholder: "Votre prénom",
               required: true,
             },
             {
@@ -255,7 +255,7 @@ export default function RegisterPage() {
             },
             {
               field: "phone",
-              label: "T?l?phone (optionnel)",
+              label: "Téléphone (optionnel)",
               icon: Phone,
               type: "tel",
               placeholder: "+223 70 00 00 00",
@@ -289,7 +289,7 @@ export default function RegisterPage() {
             )
           )}
 
-          {/* ?? PAYS */}
+          {/* PAYS */}
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">
               Pays (ISO2 ou nom)
@@ -300,7 +300,7 @@ export default function RegisterPage() {
               <input
                 type="text"
                 value={form.country}
-                placeholder="ML, SN, FR? ou nom du pays"
+                placeholder="ML, SN, FR… ou nom du pays"
                 onChange={(e) => updateField("country", e.target.value)}
                 className="w-full border border-slate-300 rounded-xl pl-10 pr-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
               />
@@ -308,10 +308,10 @@ export default function RegisterPage() {
 
             <p className="text-xs text-slate-500 mt-1">
               Exemple : <strong>ML</strong> pour Mali, <strong>SN</strong> pour
-              S?n?gal.{" "}
+              Sénégal.{" "}
               {countryISO2 && /^[A-Z]{2}$/.test(countryISO2) ? (
                 <>
-                  (D?tect? : <strong>{countryISO2}</strong>)
+                  (Détecté : <strong>{countryISO2}</strong>)
                 </>
               ) : null}
             </p>
@@ -335,12 +335,12 @@ export default function RegisterPage() {
             </div>
 
             <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-              Compte regional ? Contactez l'admin ou le master de votre pays.
-              L'inscription publique est reservee au pays uniquement.
+              Compte régional ? Contactez l'admin ou le master de votre pays.
+              L'inscription publique est réservée au pays uniquement.
             </div>
           </div>
 
-          {/* ?? MOT DE PASSE */}
+          {/* MOT DE PASSE */}
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">
               Mot de passe
@@ -352,7 +352,7 @@ export default function RegisterPage() {
                 required
                 minLength={8}
                 value={form.password}
-                placeholder="????????"
+                placeholder="••••••••"
                 onChange={(e) => updateField("password", e.target.value)}
                 className="w-full border border-slate-300 rounded-xl pl-10 pr-10 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
               />
@@ -370,7 +370,7 @@ export default function RegisterPage() {
               </button>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Minimum <strong>8 caract?res</strong>.
+              Minimum <strong>8 caractères</strong>.
             </p>
           </div>
 
@@ -387,17 +387,17 @@ export default function RegisterPage() {
           >
             {loading ? (
               <>
-                <Loader2 className="animate-spin w-5 h-5 mr-2" /> Cr?ation?
+                <Loader2 className="animate-spin w-5 h-5 mr-2" /> Création…
               </>
             ) : (
-              "Cr?er mon compte"
+              "Créer mon compte"
             )}
           </button>
         </form>
 
         {/* FOOTER */}
         <div className="mt-8 text-center text-sm text-slate-600">
-          D?j? un compte ?{" "}
+          Déjà un compte ?{" "}
           <Link
             to="/login"
             className="text-blue-600 font-medium hover:underline"
