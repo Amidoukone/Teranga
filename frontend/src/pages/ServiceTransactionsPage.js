@@ -71,6 +71,37 @@ function getProofHrefFromTransaction(t) {
   return "";
 }
 
+function stripUrlParams(url = "") {
+  return String(url || "").split("?")[0].split("#")[0];
+}
+
+function inferProofKind(pf, proofHref = "") {
+  const mime = (pf?.mimeType || "").toLowerCase();
+  const name = pf?.originalName || pf?.fileName || pf?.name || "";
+  const cleanUrl = stripUrlParams(proofHref);
+
+  if (mime.startsWith("image/")) return "image";
+  if (mime === "application/pdf") return "pdf";
+
+  if (/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name) || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(cleanUrl)) {
+    return "image";
+  }
+  if (/\.pdf$/i.test(name) || /\.pdf$/i.test(cleanUrl)) return "pdf";
+  return "other";
+}
+
+function getProofExtLabel(pf, proofHref = "", fallback = "FILE") {
+  const name = pf?.originalName || pf?.fileName || pf?.name || "";
+  const cleanUrl = stripUrlParams(proofHref);
+  const candidate = name || (cleanUrl.split("/").pop() || "");
+  if (!candidate) return fallback;
+  const parts = candidate.split(".");
+  if (parts.length < 2) return fallback;
+  const ext = parts[parts.length - 1].slice(0, 6).toUpperCase();
+  return ext || fallback;
+}
+
+
 /* ============================================================================
    🧾 Payload builder (FormData si fichier)
    - évite régressions: createTransaction(payload) support JSON sans fichier
@@ -503,6 +534,18 @@ function TransactionHistory({ transactions, getProofHref }) {
             const currency = t.currencyLabel || t.currency || "";
 
             const proofHref = getProofHref ? getProofHref(t) : "";
+            const proofKind = inferProofKind(t?.proofFile, proofHref);
+            const proofLabel =
+              t?.proofFile?.originalName ||
+              t?.proofFile?.fileName ||
+              t?.proofFile?.name ||
+              "";
+            const proofExt = getProofExtLabel(
+              t?.proofFile,
+              proofHref,
+              proofKind === "pdf" ? "PDF" : "FILE"
+            );
+
 
             const createdAtDisplay = t.createdAt
               ? new Date(t.createdAt).toLocaleString("fr-FR")
@@ -541,18 +584,59 @@ function TransactionHistory({ transactions, getProofHref }) {
                   )}
 
                   {proofHref && (
-                    <p className="break-words">
-                      📎{" "}
+                    <div className="mt-2 flex flex-col sm:flex-row gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3">
                       <a
                         href={proofHref}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-blue-600 hover:underline break-all"
+                        className="relative w-full sm:w-36 aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-white flex items-center justify-center"
                       >
-                        Voir la pièce jointe
+                        {proofKind === "image" ? (
+                          <img
+                            src={proofHref}
+                            alt="Preuve"
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="text-center">
+                            <div className="text-[0.65rem] font-semibold text-slate-700 bg-white/80 border border-slate-200 px-2 py-0.5 rounded-full inline-flex">
+                              {proofExt}
+                            </div>
+                          </div>
+                        )}
+
+                        <span
+                          className={`absolute top-2 left-2 text-[0.65rem] font-semibold px-2 py-0.5 rounded-full border ${
+                            proofKind === "image"
+                              ? "bg-blue-50 text-blue-700 border-blue-100"
+                              : proofKind === "pdf"
+                              ? "bg-red-50 text-red-700 border-red-100"
+                              : "bg-gray-50 text-gray-700 border-gray-200"
+                          }`}
+                        >
+                          {proofKind === "image" ? "IMAGE" : proofKind === "pdf" ? "PDF" : "FICHIER"}
+                        </span>
                       </a>
-                    </p>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-slate-500">Preuve</div>
+                        <a
+                          href={proofHref}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm font-semibold text-blue-600 hover:underline break-all"
+                        >
+                          {proofLabel || "Pi\u00e8ce jointe"}
+                        </a>
+                        <div className="text-[0.7rem] text-slate-500 mt-1">
+                          {proofKind === "image" ? "Aper\u00e7u disponible" : `Format: ${proofExt}`}
+                        </div>
+                      </div>
+                    </div>
                   )}
+
 
                   <p className="text-xs text-gray-500 break-words">
                     Enregistré par <strong>{createdBy}</strong>

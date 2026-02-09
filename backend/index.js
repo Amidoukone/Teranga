@@ -21,39 +21,106 @@ if (sequelize?.options) {
 }
 
 /* ======================================================
-   🛡️ Garde-fou global contre les crashs silencieux
+   Garde-fou global contre les crashs silencieux
    ====================================================== */
 process.on('unhandledRejection', (reason) => {
-  logger.error({ err: reason }, '💥 Unhandled Rejection');
+  logger.error({ err: reason }, 'Unhandled Rejection');
 });
 process.on('uncaughtException', (err) => {
-  logger.error({ err }, '💥 Uncaught Exception');
+  logger.error({ err }, 'Uncaught Exception');
 });
 
 /* ======================================================
-   ⚙️ Démarrage du serveur
+   Demarrage du serveur
    ====================================================== */
 const PORT = process.env.PORT || 5000;
+const isProd = (process.env.NODE_ENV || 'development') === 'production';
+
+const getIntEnv = (key, fallback) => {
+  const raw = process.env[key];
+  if (raw === undefined || raw === null || raw === '') return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const retryBaseMs = getIntEnv('DB_RETRY_BASE_MS', 2000);
+const retryMaxMs = getIntEnv('DB_RETRY_MAX_MS', 30000);
+const retryMaxAttempts = getIntEnv('DB_RETRY_MAX_ATTEMPTS', isProd ? 0 : 5);
+const retryTimeoutMs = getIntEnv('DB_RETRY_TIMEOUT_MS', isProd ? 0 : 60000);
+
+let serverStarted = false;
+
+const startServer = () => {
+  if (serverStarted) return;
+  serverStarted = true;
+  app.listen(PORT, '0.0.0.0', () => {
+    logger.info({ port: PORT }, 'API Teranga lancee');
+  });
+};
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function connectAndBootstrap({ exitOnFail }) {
+  if (!sequelize) {
+    throw new Error(
+      "Sequelize n'est pas initialise. Verifie ./models/index.js et la config DB."
+    );
+  }
+
+  const startedAt = Date.now();
+  let attempt = 0;
+
+  // Boucle de retry avec backoff pour eviter les crashs en production
+  while (true) {
+    attempt += 1;
+    try {
+      await sequelize.authenticate();
+      logger.info('Connexion MySQL OK');
+      await bootstrapAdmin();
+      return;
+    } catch (err) {
+      logger.warn({ err, attempt }, 'Connexion DB echouee, retry en cours');
+
+      const elapsed = Date.now() - startedAt;
+      const hitMaxAttempts =
+        retryMaxAttempts > 0 && attempt >= retryMaxAttempts;
+      const hitTimeout = retryTimeoutMs > 0 && elapsed >= retryTimeoutMs;
+
+      if (hitMaxAttempts || hitTimeout) {
+        if (exitOnFail) {
+          throw err;
+        }
+        logger.error(
+          { err, attempt, elapsedMs: elapsed },
+          'DB toujours indisponible, le service reste en ligne'
+        );
+        return;
+      }
+
+      const expBackoff = retryBaseMs * Math.pow(2, Math.min(attempt - 1, 8));
+      const backoff = Math.min(retryMaxMs, expBackoff);
+      const jitter = Math.floor(Math.random() * Math.min(1000, backoff * 0.2));
+      await sleep(backoff + jitter);
+    }
+  }
+}
 
 async function start() {
   try {
-    if (!sequelize) {
-      throw new Error(
-        "Sequelize n'est pas initialisé. Vérifie ./models/index.js et la config DB."
-      );
+    if (isProd) {
+      // En production (ex: Render), demarrer le serveur sans bloquer sur la DB.
+      // La DB peut etre en sleep (PlanetScale); on tente en boucle en background.
+      startServer();
+      connectAndBootstrap({ exitOnFail: false }).catch((err) => {
+        logger.error({ err }, 'Erreur DB');
+      });
+      return;
     }
 
-    await sequelize.authenticate();
-    logger.info('✅ Connexion MySQL OK');
-
-    // 🔥 Création automatique du compte admin si absent
-    await bootstrapAdmin();
-
-    app.listen(PORT, '0.0.0.0', () => {
-      logger.info({ port: PORT }, '🚀 API Teranga lancée');
-    });
+    await connectAndBootstrap({ exitOnFail: true });
+    startServer();
   } catch (err) {
-    logger.error({ err }, '❌ Erreur DB');
+    logger.error({ err }, 'Erreur DB');
     process.exit(1);
   }
 }

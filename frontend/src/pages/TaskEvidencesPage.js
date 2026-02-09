@@ -28,6 +28,10 @@ function toAbsUrl(path = '') {
   return `${FILE_BASE}${clean}`.replace(/([^:]\/)\/+/g, '$1');
 }
 
+const MIN_IMAGES = 5;
+const MAX_IMAGES = 15;
+const MAX_FILES = 20;
+
 // ============================================================================
 // HELPERS (inchangés)
 // ============================================================================
@@ -38,6 +42,29 @@ function inferKind(name = '', mime = '') {
   }
   if (mime === 'application/pdf' || /\.pdf$/i.test(lower)) return 'pdf';
   return 'other';
+}
+
+function isImageFile(file) {
+  if (!file) return false;
+  if (file.type && file.type.startsWith('image/')) return true;
+  return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(file.name || '');
+}
+
+function isImageEvidence(ev) {
+  if (!ev) return false;
+  if (ev.kind === 'photo') return true;
+  if (ev.kind && ev.kind !== 'image') return false;
+  const k = inferKind(ev.originalName || '', ev.mimeType || '');
+  return k === 'image';
+}
+
+function getFileExtLabel(name = '', fallback = 'FILE') {
+  const base = String(name || '').trim();
+  if (!base) return fallback;
+  const parts = base.split('.');
+  if (parts.length < 2) return fallback;
+  const ext = parts[parts.length - 1].slice(0, 6).toUpperCase();
+  return ext || fallback;
 }
 
 // ============================================================================
@@ -75,6 +102,33 @@ export default function TaskEvidencesPage() {
   const isAdmin = user?.role === 'admin';
   const isMaster = user?.role === 'admin' && (user?.countryId || user?.regionId);
   const canDeleteEvidence = isAdmin || isMaster;
+
+  const existingImageCount = useMemo(() => {
+    return (evidences || []).filter((ev) => isImageEvidence(ev)).length;
+  }, [evidences]);
+
+  const selectedImageCount = useMemo(
+    () => (files || []).filter((f) => isImageFile(f)).length,
+    [files]
+  );
+
+  const totalImageCount = existingImageCount + selectedImageCount;
+
+  const uploadValidationError = useMemo(() => {
+    if (!files || files.length === 0) return '';
+    if (files.length > MAX_FILES) {
+      return `Maximum ${MAX_FILES} fichiers par upload.`;
+    }
+    if (existingImageCount < MIN_IMAGES && totalImageCount < MIN_IMAGES) {
+      return `Au moins ${MIN_IMAGES} images sont requises pour cette tâche.`;
+    }
+    if (selectedImageCount > 0 && totalImageCount > MAX_IMAGES) {
+      return `Maximum ${MAX_IMAGES} images autorisées pour cette tâche.`;
+    }
+    return '';
+  }, [files, existingImageCount, selectedImageCount, totalImageCount]);
+
+  const disableUpload = uploading || !files.length || Boolean(uploadValidationError);
 
   // ========================================================================
   // FETCH EVIDENCES
@@ -137,6 +191,10 @@ export default function TaskEvidencesPage() {
       alert('Ajoutez au moins un fichier.');
       return;
     }
+    if (uploadValidationError) {
+      alert(uploadValidationError);
+      return;
+    }
 
     setUploading(true);
     try {
@@ -150,7 +208,10 @@ export default function TaskEvidencesPage() {
       await fetchEvidences();
     } catch (err) {
       console.error('❌ upload:', err);
-      alert("Erreur lors de l'upload");
+      const msg =
+        err?.response?.data?.error ||
+        "Erreur lors de l'upload";
+      alert(msg);
     } finally {
       setUploading(false);
     }
@@ -232,6 +293,14 @@ export default function TaskEvidencesPage() {
 
     return arr;
   }, [evidences, filters]);
+
+  const imageFiltered = useMemo(() => {
+    return (filtered || []).filter((ev) => isImageEvidence(ev));
+  }, [filtered]);
+
+  const docFiltered = useMemo(() => {
+    return (filtered || []).filter((ev) => !isImageEvidence(ev));
+  }, [filtered]);
   // ========================================================================
   // LIGHTBOX
   // ========================================================================
@@ -421,7 +490,7 @@ export default function TaskEvidencesPage() {
                   type="file"
                   multiple
                   onChange={handleFileChange}
-                  accept="image/*,.pdf,.txt,.doc,.docx,.xls,.xlsx"
+                  accept="image/jpeg,image/png,.jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
                   className="
                     w-full border border-gray-300 rounded-lg px-3 py-2
                     text-sm sm:text-base focus:ring-2 focus:ring-blue-500
@@ -431,6 +500,16 @@ export default function TaskEvidencesPage() {
                 {files.length > 0 && (
                   <p className="mt-2 text-xs sm:text-sm text-gray-500">
                     {files.length} fichier(s) sélectionné(s).
+                  </p>
+                )}
+
+                <p className="mt-2 text-xs sm:text-sm text-gray-500">
+                  Images existantes: {existingImageCount}/{MAX_IMAGES} — sélectionnées: {selectedImageCount} — total après upload: {totalImageCount}
+                </p>
+
+                {uploadValidationError && (
+                  <p className="mt-2 text-xs sm:text-sm text-red-600">
+                    {uploadValidationError}
                   </p>
                 )}
 
@@ -484,11 +563,11 @@ export default function TaskEvidencesPage() {
 
             <div className="text-right mt-5">
               <button
-                disabled={uploading}
+                disabled={disableUpload}
                 className={`
                   px-5 py-2.5 rounded-lg text-sm sm:text-base font-semibold text-white
                   ${
-                    uploading
+                    disableUpload
                       ? "bg-blue-300 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700"
                   }
@@ -510,150 +589,236 @@ export default function TaskEvidencesPage() {
           </p>
         )}
 
+        {imageFiltered.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                Galerie des images
+              </h3>
+              <span className="text-xs text-gray-500">
+                {imageFiltered.length} image(s)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {imageFiltered.map((ev) => {
+                const fileUrl = toAbsUrl(ev.filePath);
+                return (
+                  <button
+                    key={`gallery-${ev.id}`}
+                    type="button"
+                    onClick={() => openLightbox(fileUrl)}
+                    className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
+                    title={'Aper\u00e7u'}
+                  >
+                    <img
+                      src={fileUrl}
+                      alt={ev.originalName || 'Preuve'}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
+                    <div className="absolute bottom-2 left-2 right-2 text-[0.7rem] text-white font-semibold truncate drop-shadow">
+                      {ev.originalName || 'Preuve'}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {docFiltered.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                Galerie des documents
+              </h3>
+              <span className="text-xs text-gray-500">
+                {docFiltered.length} fichier(s)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {docFiltered.map((ev) => {
+                const fileUrl = toAbsUrl(ev.filePath);
+                const kind = ev.kind || inferKind(ev.originalName, ev.mimeType);
+                const extLabel = getFileExtLabel(
+                  ev.originalName || ev.filePath,
+                  kind === 'pdf' ? 'PDF' : 'FILE'
+                );
+                const typeLabel = kind === 'pdf' ? 'PDF' : 'FICHIER';
+
+                return (
+                  <a
+                    key={`doc-${ev.id}`}
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-gray-200 bg-white hover:shadow-md transition"
+                  >
+                    <div
+                      className={`absolute top-2 left-2 text-[0.65rem] font-semibold px-2 py-0.5 rounded-full border ${
+                        kind === 'pdf'
+                          ? 'bg-red-50 text-red-700 border-red-100'
+                          : 'bg-gray-50 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      {typeLabel}
+                    </div>
+
+                    <div className="h-full w-full flex flex-col items-center justify-center px-2 text-center">
+                      <div className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 px-2 py-1 rounded-full inline-flex">
+                        {extLabel}
+                      </div>
+                      <div className="mt-2 text-[0.7rem] text-gray-600 truncate w-full">
+                        {ev.originalName || 'Document'}
+                      </div>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ==========================================================
            LISTE DES PREUVES
         ========================================================== */}
         {filtered.length === 0 ? (
           <p className="text-gray-500 italic text-center py-8 text-sm sm:text-base">
-            Aucune preuve trouvée pour cette tâche.
+            Aucune preuve trouv&eacute;e pour cette t&acirc;che.
           </p>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {filtered.map((ev) => {
               const kind = ev.kind || inferKind(ev.originalName, ev.mimeType);
               const fileUrl = toAbsUrl(ev.filePath);
               const isImage = kind === "image";
+              const extLabel = getFileExtLabel(
+                ev.originalName || ev.filePath,
+                kind === 'pdf' ? 'PDF' : 'FILE'
+              );
 
               return (
                 <div
                   key={ev.id}
-                  className="
-                    bg-white border border-gray-200 rounded-2xl p-4 sm:p-5
-                    shadow-sm hover:shadow-md transition
-                  "
+                  className="group bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-lg transition overflow-hidden"
                 >
-                  <div className="flex flex-col md:flex-row md:justify-between gap-3 w-full">
-                    {/* THUMB + INFO */}
-                    <div className="flex items-start gap-3 w-full min-w-0">
-                      <div
-                        className="
-                          w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 border
-                          border-gray-200 rounded-lg overflow-hidden bg-gray-50
-                          flex items-center justify-center
-                          cursor-pointer
-                        "
-                        onClick={() => isImage && openLightbox(fileUrl)}
-                        title={isImage ? "Agrandir" : undefined}
+                  {/* PREVIEW */}
+                  <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-50 via-white to-slate-100 border-b border-gray-200">
+                    {isImage ? (
+                      <button
+                        type="button"
+                        onClick={() => openLightbox(fileUrl)}
+                        className="w-full h-full"
+                        title={'Aper\u00e7u'}
                       >
-                        {isImage ? (
-                          <img
-                            src={fileUrl}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        ) : kind === "pdf" ? (
-                          <span className="text-2xl">📕</span>
-                        ) : (
-                          <span className="text-2xl">📄</span>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col min-w-0 w-full">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <a
-                            href={fileUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="
-                              text-blue-600 hover:underline text-sm sm:text-base
-                              font-semibold break-words break-all whitespace-normal
-                              block w-full max-w-full
-                            "
-                          >
-                            {ev.originalName || ev.filePath}
-                          </a>
-
-                          <span
-                            className={`
-                              inline-flex items-center px-2 py-0.5 rounded-full
-                              text-[0.7rem] font-semibold
-                              ${
-                                kind === "image"
-                                  ? "bg-blue-50 text-blue-700 border border-blue-100"
-                                  : kind === "pdf"
-                                  ? "bg-red-50 text-red-700 border border-red-100"
-                                  : "bg-gray-50 text-gray-700 border border-gray-200"
-                              }
-                            `}
-                          >
-                            {kind === "image"
-                              ? "IMAGE"
-                              : kind === "pdf"
-                              ? "PDF"
-                              : "FICHIER"}
-                          </span>
-                        </div>
-
-                        <div
-                          className="
-                            text-xs sm:text-sm text-gray-500
-                            break-words whitespace-normal
-                            w-full max-w-full
-                          "
-                        >
-                          Ajouté le {new Date(ev.createdAt).toLocaleString()} par{" "}
-                          {ev.uploader
-                            ? (
-                                `${ev.uploader.firstName || ""} ${
-                                  ev.uploader.lastName || ""
-                                }`.trim() || ev.uploader.email
-                              )
-                            : "—"}
-                        </div>
-
-                        {ev.notes && (
-                          <div
-                            className="
-                              mt-2 text-xs sm:text-sm text-gray-800
-                              bg-gray-50 border border-gray-200
-                              rounded-lg px-3 py-2
-                              break-words whitespace-normal
-                              w-full max-w-full
-                            "
-                          >
-                            <strong className="text-gray-700">Notes :</strong>{" "}
-                            {ev.notes}
+                        <img
+                          src={fileUrl}
+                          alt=""
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                        />
+                      </button>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="text-xs font-semibold text-slate-700 bg-white/80 border border-slate-200 px-2 py-1 rounded-full inline-flex">
+                            {extLabel}
                           </div>
-                        )}
+                        </div>
                       </div>
+                    )}
+
+                    <div className="absolute top-3 left-3">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-semibold border ${
+                          kind === "image"
+                            ? "bg-blue-50 text-blue-700 border-blue-100"
+                            : kind === "pdf"
+                            ? "bg-red-50 text-red-700 border-red-100"
+                            : "bg-gray-50 text-gray-700 border-gray-200"
+                        }`}
+                      >
+                        {kind === "image" ? "IMAGE" : kind === "pdf" ? "PDF" : "FICHIER"}
+                      </span>
                     </div>
 
-                    {/* ACTIONS */}
-                    <div className="flex flex-col items-end gap-2 mt-1 md:mt-0">
+                    <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                      {isImage && (
+                        <button
+                          type="button"
+                          onClick={() => openLightbox(fileUrl)}
+                          className="px-2.5 py-1.5 text-[0.7rem] font-semibold bg-white/90 border border-slate-200 rounded-lg hover:bg-white"
+                        >
+                          {'Aper\u00e7u'}
+                        </button>
+                      )}
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1.5 text-[0.7rem] font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800"
+                      >
+                        Ouvrir
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* META */}
+                  <div className="p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-3">
                       <a
                         href={fileUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="
-                          px-4 py-2 bg-slate-900 text-white text-xs sm:text-sm
-                          rounded-lg font-medium hover:bg-slate-800 transition
+                          text-blue-600 hover:underline text-sm sm:text-base
+                          font-semibold break-words break-all whitespace-normal
+                          block w-full max-w-full
                         "
                       >
-                        Ouvrir le fichier ↗
+                        {ev.originalName || ev.filePath}
                       </a>
+                    </div>
 
-                      {canDeleteEvidence && (
+                    <div className="mt-2 text-xs sm:text-sm text-gray-500 break-words whitespace-normal w-full max-w-full">
+                      Ajout&eacute; le {new Date(ev.createdAt).toLocaleString()} par{' '}
+                      {ev.uploader
+                        ? (
+                            `${ev.uploader.firstName || ''} ${
+                              ev.uploader.lastName || ''
+                            }`.trim() || ev.uploader.email
+                          )
+                        : '-'}
+                    </div>
+
+                    {ev.notes && (
+                      <div
+                        className="
+                          mt-3 text-xs sm:text-sm text-gray-800
+                          bg-gray-50 border border-gray-200
+                          rounded-lg px-3 py-2
+                          break-words whitespace-normal
+                          w-full max-w-full
+                        "
+                      >
+                        <strong className="text-gray-700">Notes :</strong>{' '}
+                        {ev.notes}
+                      </div>
+                    )}
+
+                    {canDeleteEvidence && (
+                      <div className="mt-4 flex justify-end">
                         <button
                           onClick={() => handleDelete(ev.id)}
-                          className="
-                            px-4 py-2 bg-red-600 text-white text-xs sm:text-sm
-                            rounded-lg font-medium hover:bg-red-700 transition
-                          "
+                          className="px-3.5 py-2 bg-red-600 text-white text-xs sm:text-sm rounded-lg font-medium hover:bg-red-700 transition"
                         >
-                          ❌ Supprimer
+                          Supprimer
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

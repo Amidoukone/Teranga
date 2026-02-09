@@ -1,5 +1,6 @@
 "use strict";
 
+const path = require("path");
 const { Evidence, Task, Service, Property, User, Order } = require("../../models");
 const { Op } = require("sequelize");
 const imagekit = require("../helpers/teranga-imagekit");
@@ -15,6 +16,14 @@ const isGlobalAdmin =
   geo.isGlobalAdmin ||
   ((u) => u?.role === "admin" && !(u?.countryId || u?.regionId));
 
+function toIntOr(value, fallback) {
+  const parsed = Number.parseInt(String(value), 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+const EVIDENCE_MIN_IMAGES = toIntOr(process.env.EVIDENCE_MIN_IMAGES, 5);
+const EVIDENCE_MAX_IMAGES = toIntOr(process.env.EVIDENCE_MAX_IMAGES, 15);
+
 /* ======================================================
    🧩 Helpers utilitaires
 ====================================================== */
@@ -29,6 +38,13 @@ function guessKind(mime) {
   if (mime.startsWith("image/")) return "photo";
   if (mime === "application/pdf") return "document";
   return "other";
+}
+
+function isImageFile(file) {
+  if (!file) return false;
+  if (file.mimetype && file.mimetype.startsWith("image/")) return true;
+  const ext = (path.extname(file.originalname || "") || "").toLowerCase();
+  return [".jpg", ".jpeg", ".png"].includes(ext);
 }
 
 function addLabels(evidence) {
@@ -239,6 +255,45 @@ exports.create = async (req, res) => {
     const files = normalizeUploadedFiles(req);
     if (!files.length) {
       return res.status(400).json({ error: "Aucun fichier fourni" });
+    }
+
+    const newImageCount = files.filter(isImageFile).length;
+    let existingImageCount = 0;
+
+    // Règle métier: min/max images uniquement pour les preuves de tâche
+    if (taskId) {
+      existingImageCount = await Evidence.count({
+        where: { taskId, kind: "photo" },
+      });
+
+      const totalImageCount = existingImageCount + newImageCount;
+
+      const belowMin =
+        existingImageCount < EVIDENCE_MIN_IMAGES &&
+        totalImageCount < EVIDENCE_MIN_IMAGES;
+      if (belowMin) {
+        return res.status(400).json({
+          error: `Au moins ${EVIDENCE_MIN_IMAGES} images sont requises pour cette tâche.`,
+          details: {
+            minImages: EVIDENCE_MIN_IMAGES,
+            currentImages: existingImageCount,
+            newImages: newImageCount,
+            totalImages: totalImageCount,
+          },
+        });
+      }
+
+      if (newImageCount > 0 && totalImageCount > EVIDENCE_MAX_IMAGES) {
+        return res.status(400).json({
+          error: `Maximum ${EVIDENCE_MAX_IMAGES} images autorisées pour cette tâche.`,
+          details: {
+            maxImages: EVIDENCE_MAX_IMAGES,
+            currentImages: existingImageCount,
+            newImages: newImageCount,
+            totalImages: totalImageCount,
+          },
+        });
+      }
     }
 
     // 🌍 Héritage strict depuis la ressource liée (Task/Order)

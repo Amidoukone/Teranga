@@ -156,7 +156,7 @@ export default function DashboardPage() {
             return { data: {} };
           }),
         api
-          .get('/projects', { params: geoParams })
+          .get('/orders', { params: geoParams })
           .catch((err) => {
             console.error('⚠️ Erreur chargement commandes Dashboard:', err);
             return { data: {} };
@@ -166,7 +166,7 @@ export default function DashboardPage() {
       const properties = propsRes.data?.properties || [];
       const tasks = tasksRes.data?.tasks || [];
       const projects = projectsRes.data?.projects || [];
-      const orders = ordersRes.data?.orders || [];
+      const orders = ordersRes.data?.orders || ordersRes.data?.items || [];
 
       // ========= 🧮 Calculs existants =========
       const activeServices = (services || []).filter(

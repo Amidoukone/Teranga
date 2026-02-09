@@ -198,6 +198,26 @@ app.use((req, res, next) => {
 app.use((err, req, res, _next) => {
   logger.error({ err, requestId: req.requestId }, '❌ Erreur backend');
   if (res.headersSent) return;
+  if (err?.name === 'MulterError') {
+    let message = 'Erreur upload fichier';
+    let status = 400;
+
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      status = 413;
+      message = 'Fichier trop volumineux';
+    } else if (err.code === 'LIMIT_FILE_COUNT') {
+      message = 'Trop de fichiers envoyés';
+    } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      message = 'Champ de fichier inattendu';
+    }
+
+    return res.status(status).json({ error: message, requestId: req.requestId });
+  }
+
+  if (typeof err?.message === 'string' && err.message.includes('Type de fichier non support')) {
+    return res.status(400).json({ error: err.message, requestId: req.requestId });
+  }
+
   res.status(500).json({ error: 'Erreur interne du serveur', requestId: req.requestId });
 });
 

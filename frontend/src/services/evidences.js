@@ -69,6 +69,7 @@ export async function uploadEvidences(taskId, files = [], notes = '') {
       ...authHeader(),
     },
     withCredentials: true,
+    timeout: 60000,
   });
 
   return asEvidenceArray(data);
@@ -145,6 +146,7 @@ export async function uploadOrderEvidences(orderId, files = [], notes = '') {
       ...authHeader(),
     },
     withCredentials: true,
+    timeout: 60000,
   });
 
   return asEvidenceArray(data);

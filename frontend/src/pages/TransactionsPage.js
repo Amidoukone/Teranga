@@ -38,7 +38,36 @@ function toAbsUrl(path = '') {
   return `${FILE_BASE}${clean}`.replace(/([^:]\/)\/+/g, '$1');
 }
 
-// ============================================================================
+function stripUrlParams(url = '') {
+  return String(url || '').split('?')[0].split('#')[0];
+}
+
+function inferProofKind(pf, proofHref = '') {
+  const mime = (pf?.mimeType || '').toLowerCase();
+  const name = pf?.originalName || pf?.fileName || pf?.name || '';
+  const cleanUrl = stripUrlParams(proofHref);
+
+  if (mime.startsWith('image/')) return 'image';
+  if (mime === 'application/pdf') return 'pdf';
+
+  if (/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name) || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(cleanUrl)) {
+    return 'image';
+  }
+  if (/\.pdf$/i.test(name) || /\.pdf$/i.test(cleanUrl)) return 'pdf';
+  return 'other';
+}
+
+function getProofExtLabel(pf, proofHref = '', fallback = 'FILE') {
+  const name = pf?.originalName || pf?.fileName || pf?.name || '';
+  const cleanUrl = stripUrlParams(proofHref);
+  const candidate = name || (cleanUrl.split('/').pop() || '');
+  if (!candidate) return fallback;
+  const parts = candidate.split('.');
+  if (parts.length < 2) return fallback;
+  const ext = parts[parts.length - 1].slice(0, 6).toUpperCase();
+  return ext || fallback;
+}
+
 // 📂 PAGE PRINCIPALE
 // ============================================================================
 export default function TransactionsPage() {
@@ -659,7 +688,7 @@ function TransactionForm({
 // ============================================================================
 function TransactionList({ transactions, loading, getUserDisplayName }) {
   if (loading) {
-    return <p className="text-center text-gray-500">Chargement…</p>;
+    return <p className="text-center text-gray-500">Chargement...</p>;
   }
 
   if (!transactions.length) {
@@ -672,48 +701,100 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
         const proof =
           t?.proofFile?.url ||
           (t?.proofFile?.path ? toAbsUrl(t.proofFile.path) : '');
+        const proofKind = inferProofKind(t?.proofFile, proof);
+        const proofLabel =
+          t?.proofFile?.originalName ||
+          t?.proofFile?.fileName ||
+          t?.proofFile?.name ||
+          '';
+        const proofExt = getProofExtLabel(
+          t?.proofFile,
+          proof,
+          proofKind === 'pdf' ? 'PDF' : 'FILE'
+        );
 
         return (
           <div
             key={t.id}
-            className="border rounded-2xl p-4 bg-white shadow-sm"
+            className="border rounded-2xl bg-white shadow-sm overflow-hidden"
           >
-            <div className="font-bold">
-              {Number(t.amount).toLocaleString('fr-FR')} {t.currencyLabel || t.currency}
-            </div>
-
-            <div className="text-xs text-gray-500 mt-1">
-              {t.typeLabel} — {t.statusLabel}
-            </div>
-
-            <p className="text-sm mt-2">{t.description || '—'}</p>
-
-            {t.order && (
-              <Link to={`/orders/${t.order.id}`} className="text-blue-600 text-sm">
-                🧾 Commande {t.order.code || `#${t.order.id}`}
-              </Link>
-            )}
-
-            {t.project && (
-              <Link to={`/projects/${t.project.id}`} className="text-blue-600 text-sm">
-                🏗️ Projet {t.project.title || `#${t.project.id}`}
-              </Link>
-            )}
-
             {proof && (
               <a
                 href={proof}
                 target="_blank"
                 rel="noreferrer"
-                className="block text-blue-600 text-sm mt-2"
+                className="relative block aspect-[4/3] bg-gradient-to-br from-slate-50 via-white to-slate-100 border-b border-slate-200"
               >
-                📎 Pièce jointe
+                {proofKind === 'image' ? (
+                  <img
+                    src={proof}
+                    alt="Preuve"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-xs font-semibold text-slate-700 bg-white/80 border border-slate-200 px-2 py-1 rounded-full inline-flex">
+                        {proofExt}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <span
+                  className={`absolute top-3 left-3 text-[0.7rem] font-semibold px-2.5 py-1 rounded-full border ${
+                    proofKind === 'image'
+                      ? 'bg-blue-50 text-blue-700 border-blue-100'
+                      : proofKind === 'pdf'
+                      ? 'bg-red-50 text-red-700 border-red-100'
+                      : 'bg-gray-50 text-gray-700 border-gray-200'
+                  }`}
+                >
+                  {proofKind === 'image' ? 'IMAGE' : proofKind === 'pdf' ? 'PDF' : 'FICHIER'}
+                </span>
               </a>
             )}
 
-            <div className="text-xs text-gray-400 mt-3">
-              Par {getUserDisplayName(t.user)} —{' '}
-              {new Date(t.createdAt).toLocaleDateString('fr-FR')}
+            <div className="p-4">
+              <div className="font-bold">
+                {Number(t.amount).toLocaleString('fr-FR')} {t.currencyLabel || t.currency}
+              </div>
+
+              <div className="text-xs text-gray-500 mt-1">
+                {t.typeLabel} ? {t.statusLabel}
+              </div>
+
+              <p className="text-sm mt-2">{t.description || '?'}</p>
+
+              {t.order && (
+                <Link to={`/orders/${t.order.id}`} className="text-blue-600 text-sm">
+                  Commande {t.order.code || `#${t.order.id}`}
+                </Link>
+              )}
+
+              {t.project && (
+                <Link to={`/projects/${t.project.id}`} className="text-blue-600 text-sm">
+                  Projet {t.project.title || `#${t.project.id}`}
+                </Link>
+              )}
+
+              {proof && (
+                <a
+                  href={proof}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center text-sm font-semibold text-blue-600 hover:underline mt-2 break-all"
+                >
+                  {proofLabel || 'Pi\u00e8ce jointe'}
+                </a>
+              )}
+
+              <div className="text-xs text-gray-400 mt-3">
+                Par {getUserDisplayName(t.user)} ?{' '}
+                {new Date(t.createdAt).toLocaleDateString('fr-FR')}
+              </div>
             </div>
           </div>
         );

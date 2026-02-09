@@ -144,8 +144,29 @@ export default function OrderDetailPage() {
     return (ev?.mimeType || '').toLowerCase().startsWith('image/');
   }
 
+  function inferEvidenceKind(ev) {
+    const name = ev?.originalName || ev?.filePath || '';
+    const mime = (ev?.mimeType || '').toLowerCase();
+    if (mime.startsWith('image/')) return 'image';
+    if (mime === 'application/pdf' || /\.pdf$/i.test(name)) return 'pdf';
+    return 'other';
+  }
+
+  function getFileExtLabel(name = '', fallback = 'FILE') {
+    const base = String(name || '').trim();
+    if (!base) return fallback;
+    const parts = base.split('.');
+    if (parts.length < 2) return fallback;
+    const ext = parts[parts.length - 1].slice(0, 6).toUpperCase();
+    return ext || fallback;
+  }
+
   const imageEvidences = useMemo(() => {
     return (evidences || []).filter((ev) => isEvidenceImage(ev));
+  }, [evidences]);
+
+  const nonImageEvidences = useMemo(() => {
+    return (evidences || []).filter((ev) => inferEvidenceKind(ev) !== 'image');
   }, [evidences]);
 
   // ✅ UTILISÉ dans la liste des preuves (vignettes)
@@ -707,83 +728,218 @@ export default function OrderDetailPage() {
               </div>
             </form>
 
+            {imageEvidences.length > 0 && (
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm sm:text-base font-semibold text-slate-900">
+                    Galerie des images
+                  </h3>
+                  <span className="text-xs text-slate-500">
+                    {imageEvidences.length} image(s)
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {imageEvidences.map((ev) => {
+                    const fileUrl = toAbsUrl(ev.filePath);
+                    return (
+                      <button
+                        key={`gallery-${ev.id}`}
+                        type="button"
+                        onClick={() => openEvidenceLightbox(ev.id)}
+                        className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-slate-200 bg-slate-50"
+                        title={'Aper\u00e7u'}
+                      >
+                        <img
+                          src={fileUrl}
+                          alt={ev.originalName || 'Preuve'}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
+                        <div className="absolute bottom-2 left-2 right-2 text-[0.7rem] text-white font-semibold truncate drop-shadow">
+                          {ev.originalName || 'Preuve'}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {nonImageEvidences.length > 0 && (
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm sm:text-base font-semibold text-slate-900">
+                    Galerie des documents
+                  </h3>
+                  <span className="text-xs text-slate-500">
+                    {nonImageEvidences.length} fichier(s)
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {nonImageEvidences.map((ev) => {
+                    const fileUrl = toAbsUrl(ev.filePath);
+                    const kind = inferEvidenceKind(ev);
+                    const extLabel = getFileExtLabel(
+                      ev.originalName || ev.filePath,
+                      kind === 'pdf' ? 'PDF' : 'FILE'
+                    );
+                    const typeLabel = kind === 'pdf' ? 'PDF' : 'FICHIER';
+
+                    return (
+                      <a
+                        key={`doc-${ev.id}`}
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-slate-200 bg-white hover:shadow-md transition"
+                      >
+                        <div
+                          className={`absolute top-2 left-2 text-[0.65rem] font-semibold px-2 py-0.5 rounded-full border ${
+                            kind === 'pdf'
+                              ? 'bg-red-50 text-red-700 border-red-100'
+                              : 'bg-gray-50 text-gray-700 border-gray-200'
+                          }`}
+                        >
+                          {typeLabel}
+                        </div>
+
+                        <div className="h-full w-full flex flex-col items-center justify-center px-2 text-center">
+                          <div className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 px-2 py-1 rounded-full inline-flex">
+                            {extLabel}
+                          </div>
+                          <div className="mt-2 text-[0.7rem] text-slate-600 truncate w-full">
+                            {ev.originalName || 'Document'}
+                          </div>
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Liste des preuves */}
             {evidences.length === 0 ? (
               <p className="text-sm text-slate-500 italic">
-                Aucune preuve enregistrée pour cette commande.
+                Aucune preuve enregistr&eacute;e pour cette commande.
               </p>
             ) : (
-              <div className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 {evidences.map((ev) => {
-                  const isImg = isEvidenceImage(ev);
+                  const kind = inferEvidenceKind(ev);
+                  const isImg = kind === 'image';
                   const fileUrl = toAbsUrl(ev.filePath);
+                  const extLabel = getFileExtLabel(
+                    ev.originalName || ev.filePath,
+                    kind === 'pdf' ? 'PDF' : 'FILE'
+                  );
 
                   return (
                     <div
                       key={ev.id}
-                      className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between gap-3"
+                      className="group bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg transition overflow-hidden"
                     >
-                      <div className="flex gap-3 w-full">
-                        {/* ✅ THUMBNAIL + openEvidenceLightbox() => plus d'erreur unused */}
-                        <div className="w-16 h-16 border border-slate-200 bg-slate-50 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
-                          {isImg ? (
+                      {/* PREVIEW */}
+                      <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-50 via-white to-slate-100 border-b border-slate-200">
+                        {isImg ? (
+                          <button
+                            type="button"
+                            onClick={() => openEvidenceLightbox(ev.id)}
+                            className="w-full h-full"
+                            title={'Aper\u00e7u'}
+                          >
+                            <img
+                              src={fileUrl}
+                              alt={ev.originalName || 'Preuve'}
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                            />
+                          </button>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <div className="text-center">
+                              <div className="text-xs font-semibold text-slate-700 bg-white/80 border border-slate-200 px-2 py-1 rounded-full inline-flex">
+                                {extLabel}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="absolute top-3 left-3">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-semibold border ${
+                              kind === 'image'
+                                ? 'bg-blue-50 text-blue-700 border-blue-100'
+                                : kind === 'pdf'
+                                ? 'bg-red-50 text-red-700 border-red-100'
+                                : 'bg-gray-50 text-gray-700 border-gray-200'
+                            }`}
+                          >
+                            {kind === 'image' ? 'IMAGE' : kind === 'pdf' ? 'PDF' : 'FICHIER'}
+                          </span>
+                        </div>
+
+                        <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                          {isImg && (
                             <button
                               type="button"
                               onClick={() => openEvidenceLightbox(ev.id)}
-                              className="w-full h-full"
-                              title="Cliquer pour agrandir"
+                              className="px-2.5 py-1.5 text-[0.7rem] font-semibold bg-white/90 border border-slate-200 rounded-lg hover:bg-white"
                             >
-                              <img
-                                src={fileUrl}
-                                alt={ev.originalName || 'Preuve'}
-                                className="w-full h-full object-cover hover:scale-105 transition-transform"
-                              />
+                              {'Aper\u00e7u'}
                             </button>
-                          ) : (
-                            <span className="text-2xl" aria-hidden="true">
-                              📄
-                            </span>
                           )}
-                        </div>
-
-                        {/* Infos fichier */}
-                        <div className="flex-1 space-y-1 min-w-0">
                           <a
                             href={fileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 font-semibold hover:underline break-all text-sm"
+                            className="px-2.5 py-1.5 text-[0.7rem] font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800"
                           >
-                            {ev.originalName || ev.filePath}
+                            Ouvrir
                           </a>
-
-                          <p className="text-xs text-slate-500">
-                            Ajouté le{' '}
-                            {ev.createdAt
-                              ? new Date(ev.createdAt).toLocaleString('fr-FR')
-                              : '—'}{' '}
-                            par <strong>{formatUploader(ev.uploader)}</strong>
-                          </p>
-
-                          {ev.notes && (
-                            <p className="text-sm text-slate-700 break-words">
-                              <span className="font-semibold">Notes :</span> {ev.notes}
-                            </p>
-                          )}
                         </div>
                       </div>
 
-                      {canAdmin && (
-                        <div className="flex justify-end items-start">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteEvidence(ev.id)}
-                            className="px-3 py-1 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700"
-                          >
-                            Supprimer
-                          </button>
-                        </div>
-                      )}
+                      {/* META */}
+                      <div className="p-4 sm:p-5">
+                        <a
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 font-semibold hover:underline break-words break-all text-sm block"
+                        >
+                          {ev.originalName || ev.filePath}
+                        </a>
+
+                        <p className="mt-2 text-xs text-slate-500">
+                          Ajout&eacute; le{' '}
+                          {ev.createdAt
+                            ? new Date(ev.createdAt).toLocaleString('fr-FR')
+                            : '-'}{' '}
+                          par <strong>{formatUploader(ev.uploader)}</strong>
+                        </p>
+
+                        {ev.notes && (
+                          <p className="mt-2 text-sm text-slate-700 break-words">
+                            <span className="font-semibold">Notes :</span> {ev.notes}
+                          </p>
+                        )}
+
+                        {canAdmin && (
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteEvidence(ev.id)}
+                              className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

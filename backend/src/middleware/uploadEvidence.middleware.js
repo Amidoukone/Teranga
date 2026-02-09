@@ -4,6 +4,14 @@
 const multer = require("multer");
 const path = require("path");
 
+function toInt(value, fallback) {
+  const parsed = Number.parseInt(String(value), 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+const MAX_FILES = toInt(process.env.EVIDENCE_MAX_FILES, 20);
+const MAX_FILE_SIZE_MB = toInt(process.env.EVIDENCE_MAX_FILE_MB, 10);
+
 /* ============================================================
    📌 NOUVEAU — MEMORY STORAGE (ImageKit Ready)
    → Les fichiers arrivent dans file.buffer au lieu du disque
@@ -57,7 +65,10 @@ const fileFilter = (_req, file, cb) => {
 const baseMulter = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo
+  limits: {
+    fileSize: MAX_FILE_SIZE_MB * 1024 * 1024, // Mo -> bytes
+    files: MAX_FILES,
+  },
 });
 
 /* ============================================================
@@ -65,9 +76,9 @@ const baseMulter = multer({
    → On garde EXACTEMENT la même logique que ton fichier original
 ============================================================ */
 const MULTI_FIELDS = [
-  { name: "files", maxCount: 10 },     // nouveau front
-  { name: "proofFile", maxCount: 10 }, // legacy
-  { name: "proof", maxCount: 10 },     // legacy
+  { name: "files", maxCount: MAX_FILES }, // nouveau front
+  { name: "proofFile", maxCount: MAX_FILES }, // legacy
+  { name: "proof", maxCount: MAX_FILES }, // legacy
 ];
 
 /* Middleware smart : accepte n’importe laquelle des variantes */
@@ -76,13 +87,13 @@ function smartFieldsMiddleware() {
 }
 
 /* ============================================================
-   🔄 API compatible Multer : single / array / fields / any
+   🔁 API compatible Multer : single / array / fields / any
 ============================================================ */
 function singleCompat() {
   return smartFieldsMiddleware();
 }
 
-function arrayFiles(max = 10) {
+function arrayFiles(max = MAX_FILES) {
   return baseMulter.array("files", max);
 }
 
