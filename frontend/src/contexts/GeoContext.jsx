@@ -23,6 +23,11 @@ export function GeoProvider({ children }) {
   const scopedRegionId = user?.regionId ?? null;
   const isScopedAdmin = isAdmin && (scopedCountryId != null || scopedRegionId != null);
   const canSelect = isAdmin && !isScopedAdmin;
+  const regionSourceCountryId = useMemo(() => {
+    if (canSelect) return countryId;
+    if (isScopedAdmin) return scopedCountryId ?? countryId;
+    return user?.countryId ?? countryId;
+  }, [canSelect, countryId, isScopedAdmin, scopedCountryId, user?.countryId]);
 
   const clearSelection = useCallback(() => {
     setCountryId(null);
@@ -113,8 +118,8 @@ export function GeoProvider({ children }) {
   ]);
 
   useEffect(() => {
-    refreshRegions(countryId);
-  }, [countryId, refreshRegions]);
+    refreshRegions(regionSourceCountryId);
+  }, [regionSourceCountryId, refreshRegions]);
 
   useEffect(() => {
     setGeoSelection({ countryId, regionId });

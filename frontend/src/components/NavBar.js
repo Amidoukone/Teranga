@@ -233,16 +233,16 @@ function buildSections(role, links) {
 
 const clsTabBase =
   "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition " +
-  "focus:outline-none focus:ring-4 focus:ring-primary/10";
+  "border border-transparent focus:outline-none focus:ring-4 focus:ring-primary/10";
 
 const clsTabInactive =
-  "text-text-secondary hover:text-text-primary hover:bg-surface-main/70";
+  "text-text-secondary hover:text-text-primary hover:bg-surface-main/70 hover:border-border/60 hover:shadow-[0_6px_20px_-16px_rgba(15,23,42,0.35)]";
 
 const clsTabActive =
   "bg-primary/10 text-primary border border-border shadow-sm";
 
 const clsMenuSurface =
-  "overflow-hidden rounded-2xl border border-border bg-surface-card/95 backdrop-blur-xl shadow-2xl";
+  "overflow-hidden rounded-2xl border border-border/70 bg-surface-card/95 backdrop-blur-2xl shadow-2xl";
 
 const clsMenuItemBase =
   "mx-2 my-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition " +
@@ -418,8 +418,20 @@ function NavBar() {
     />
   );
 
-  const userInitial = (user?.firstName?.[0] || user?.email?.[0] || "?").toUpperCase();
-  const userDisplay = user?.firstName || user?.email || "Utilisateur";
+  const userDisplay = useMemo(() => {
+    const first = (user?.firstName || "").trim();
+    const last = (user?.lastName || "").trim();
+    const full = [first, last].filter(Boolean).join(" ").trim();
+    return full || user?.email || "Utilisateur";
+  }, [user?.email, user?.firstName, user?.lastName]);
+
+  const userInitial = useMemo(() => {
+    const first = (user?.firstName || "").trim();
+    const last = (user?.lastName || "").trim();
+    const base = first || last || user?.email || "?";
+    const initial = String(base).trim().charAt(0);
+    return (initial || "?").toUpperCase();
+  }, [user?.email, user?.firstName, user?.lastName]);
 
   if (!user && loading) return null;
 
@@ -428,7 +440,7 @@ function NavBar() {
   /* ============================================================================ */
   if (!user && isPublic) {
     return (
-      <nav className="sticky top-0 z-50 border-b border-border bg-surface-card/90 backdrop-blur-xl shadow-sm">
+      <nav className="sticky top-0 z-50 border-b border-border/70 bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl shadow-[0_10px_30px_-20px_rgba(15,23,42,0.45)]">
         <div className="max-w-7xl mx-auto px-5 py-4 flex justify-between items-center">
           <Link
             to="/"
@@ -462,8 +474,8 @@ function NavBar() {
   return (
     <>
       {/* TOP BAR */}
-      <nav className="sticky top-0 z-50 border-b border-border bg-surface-card/90 backdrop-blur-xl shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+      <nav className="sticky top-0 z-50 border-b border-border/70 bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl shadow-[0_10px_30px_-20px_rgba(15,23,42,0.45)]">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           {/* LEFT: Logo + Context */}
           <div className="flex items-center gap-3 min-w-0">
             <Link
@@ -472,6 +484,13 @@ function NavBar() {
             >
               {Logo} Teranga
             </Link>
+
+            {/* Page context (mobile) */}
+            <div className="md:hidden flex items-center min-w-0">
+              <span className="px-2.5 py-1 rounded-full text-[0.65rem] font-semibold bg-surface-main/60 text-text-secondary border border-border/60 truncate">
+                {activeLabel || "Dashboard"}
+              </span>
+            </div>
 
             {/* Page context (desktop) */}
             <div className="hidden md:flex flex-col min-w-0">
@@ -618,7 +637,7 @@ function NavBar() {
             <div className="relative">
               <button
                 onClick={() => setOpenUserMenu((v) => !v)}
-                className="flex items-center gap-2 rounded-2xl px-2 py-1.5 hover:bg-surface-main/60 transition focus:outline-none focus:ring-4 focus:ring-primary/10"
+                className="flex items-center gap-2 rounded-2xl px-2 py-1.5 border border-border/60 bg-surface-main/40 hover:bg-surface-main/70 transition focus:outline-none focus:ring-4 focus:ring-primary/10"
                 aria-expanded={openUserMenu}
                 aria-controls="user-menu"
                 aria-label="Menu utilisateur"
@@ -716,7 +735,7 @@ function NavBar() {
       <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent" aria-label="Navigation basse">
         <div className="mx-auto w-full flex justify-center">
           <div className="w-full max-w-xs px-2 pb-2">
-            <div className="bg-surface-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg flex px-1 py-1 gap-1">
+            <div className="bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl border border-border/70 rounded-2xl shadow-[0_12px_35px_-25px_rgba(15,23,42,0.6)] flex px-1 py-1 gap-1">
               {bottomLinks.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
@@ -788,7 +807,7 @@ function NavBar() {
               aria-modal="true"
               aria-label="Menu"
             >
-              <div className="w-full max-w-sm bg-surface-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden">
+              <div className="w-full max-w-sm bg-surface-card/95 backdrop-blur-2xl border border-border/70 rounded-2xl shadow-2xl overflow-hidden">
                 {/* HEADER */}
                 <div className="px-4 py-3 border-b border-border flex justify-between items-center bg-surface-main/50">
                   <div className="flex items-center gap-2 min-w-0">
