@@ -57,12 +57,19 @@ export default function GeoSelector() {
     );
   }
 
+  const selectBase =
+    "bg-surface-card/90 text-text-primary rounded-lg px-2.5 py-1.5 border border-border/60 " +
+    "shadow-sm focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40";
+
+  const selectDisabled =
+    "bg-surface-main/40 text-text-muted border-border/40 cursor-not-allowed";
+
   return (
     <div className="flex items-center gap-2 text-xs">
       <label className="sr-only" htmlFor="geo-country">Pays</label>
       <select
         id="geo-country"
-        className="bg-slate-800 text-gray-400 rounded-md px-2 py-1 border border-slate-700"
+        className={selectBase}
         value={countryId || ''}
         onChange={(e) => setCountry(e.target.value ? Number(e.target.value) : null)}
       >
@@ -77,7 +84,7 @@ export default function GeoSelector() {
       <label className="sr-only" htmlFor="geo-region">Région</label>
       <select
         id="geo-region"
-        className="bg-slate-800 text-gray-400 rounded-md px-2 py-1 border border-slate-700"
+        className={[selectBase, !countryId ? selectDisabled : ""].join(" ").trim()}
         value={regionId || ''}
         onChange={(e) => setRegion(e.target.value ? Number(e.target.value) : null)}
         disabled={!countryId}
