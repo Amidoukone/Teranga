@@ -1,6 +1,7 @@
 "use strict";
 
 const path = require("path");
+const fs = require("fs");
 const { Evidence, Task, Service, Property, User, Order } = require("../../models");
 const { Op } = require("sequelize");
 const imagekit = require("../helpers/teranga-imagekit");
@@ -15,6 +16,7 @@ const getUserGeoScope = geo.getUserGeoScope;
 const isGlobalAdmin =
   geo.isGlobalAdmin ||
   ((u) => u?.role === "admin" && !(u?.countryId || u?.regionId));
+const DELETE_WINDOW_MS = 60 * 60 * 1000;
 
 function toIntOr(value, fallback) {
   const parsed = Number.parseInt(String(value), 10);
@@ -26,6 +28,14 @@ const EVIDENCE_MAX_IMAGES = toIntOr(process.env.EVIDENCE_MAX_IMAGES, 15);
 const EVIDENCE_UPLOAD_CONCURRENCY = toIntOr(
   process.env.EVIDENCE_UPLOAD_CONCURRENCY,
   3
+);
+const EVIDENCE_UPLOAD_RETRIES = toIntOr(
+  process.env.EVIDENCE_UPLOAD_RETRIES,
+  2
+);
+const EVIDENCE_UPLOAD_RETRY_BASE_MS = toIntOr(
+  process.env.EVIDENCE_UPLOAD_RETRY_BASE_MS,
+  600
 );
 
 /* ======================================================
@@ -42,13 +52,6 @@ function guessKind(mime) {
   if (mime.startsWith("image/")) return "photo";
   if (mime === "application/pdf") return "document";
   return "other";
-}
-
-function isImageFile(file) {
-  if (!file) return false;
-  if (file.mimetype && file.mimetype.startsWith("image/")) return true;
-  const ext = (path.extname(file.originalname || "") || "").toLowerCase();
-  return [".jpg", ".jpeg", ".png"].includes(ext);
 }
 
 function addLabels(evidence) {
@@ -85,6 +88,130 @@ async function mapWithConcurrency(items, limit, fn) {
 
   await Promise.all(workers);
   return results;
+}
+
+/* ======================================================
+   Upload helpers (ImageKit + fallback local)
+====================================================== */
+function isImageKitEnabled() {
+  return Boolean(
+    process.env.IMAGEKIT_PUBLIC_KEY &&
+      process.env.IMAGEKIT_PRIVATE_KEY &&
+      process.env.IMAGEKIT_URL_ENDPOINT
+  );
+}
+
+function sanitizeBasename(value) {
+  return String(value || "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function buildEvidenceFileName(originalName, idx) {
+  const base = path.basename(originalName || "file");
+  const ext = path.extname(base || "").toLowerCase();
+  const nameOnly = base.slice(0, base.length - ext.length);
+  const safeBase = sanitizeBasename(nameOnly) || "file";
+  const safeExt = ext && ext.length <= 10 ? ext : "";
+  const salt = Math.random().toString(36).slice(2, 8);
+  const timestamp = Date.now();
+  return `evidence_${timestamp}_${salt}_${idx}_${safeBase}${safeExt}`;
+}
+
+function isRetryableError(err) {
+  const code = err?.code || err?.cause?.code;
+  const msg = String(err?.message || "").toLowerCase();
+  return (
+    code === "ECONNRESET" ||
+    code === "ETIMEDOUT" ||
+    code === "ECONNABORTED" ||
+    code === "EAI_AGAIN" ||
+    msg.includes("socket hang up") ||
+    msg.includes("econnreset")
+  );
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function uploadToImageKitWithRetry(payload) {
+  const attempts = Math.max(1, EVIDENCE_UPLOAD_RETRIES + 1);
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await imagekit.upload(payload);
+    } catch (err) {
+      lastError = err;
+      if (attempt >= attempts || !isRetryableError(err)) break;
+      const waitMs = EVIDENCE_UPLOAD_RETRY_BASE_MS * attempt;
+      await sleep(waitMs);
+    }
+  }
+
+  throw lastError;
+}
+
+async function ensureDir(dir) {
+  await fs.promises.mkdir(dir, { recursive: true });
+}
+
+async function saveEvidenceLocally(file, fileName) {
+  const uploadsRoot = path.join(__dirname, "..", "..", "uploads");
+  const evidenceDir = path.join(uploadsRoot, "evidences");
+  await ensureDir(evidenceDir);
+
+  const safeName = sanitizeBasename(fileName || file?.originalname || "file");
+  const localName = safeName || buildEvidenceFileName(file?.originalname, 0);
+  const absolutePath = path.join(evidenceDir, localName);
+
+  await fs.promises.writeFile(absolutePath, file.buffer);
+
+  return {
+    url: `/uploads/evidences/${localName}`,
+    fileId: null,
+  };
+}
+
+function getEvidenceLevel(totalImages, maxImages) {
+  const count = Math.max(0, Number(totalImages) || 0);
+  const max = Math.max(0, Number(maxImages) || 0);
+
+  if (max && count > max) {
+    return {
+      level: "overflow",
+      label: "Trop élevé",
+      message: `Maximum ${max} preuves autorisées.`,
+    };
+  }
+
+  if (count <= 3) {
+    return {
+      level: "low",
+      label: "Faible",
+      message: "Niveau faible — ajoutez plus de preuves.",
+    };
+  }
+  if (count <= 5) {
+    return {
+      level: "acceptable",
+      label: "Acceptable",
+      message: "Niveau acceptable — ajoutez encore quelques preuves.",
+    };
+  }
+  if (count <= 10) {
+    return {
+      level: "good",
+      label: "Bon",
+      message: "Niveau bon — ajoutez plus de preuves si possible.",
+    };
+  }
+  return {
+    level: "excellent",
+    label: "Excellent",
+    message: "Niveau excellent — preuves suffisantes.",
+  };
 }
 
 /* ======================================================
@@ -278,40 +405,25 @@ exports.create = async (req, res) => {
       return res.status(400).json({ error: "Aucun fichier fourni" });
     }
 
-    const newImageCount = files.filter(isImageFile).length;
-    let existingImageCount = 0;
+    const newEvidenceCount = files.length;
+    let existingEvidenceCount = 0;
 
-    // Règle métier: min/max images uniquement pour les preuves de tâche
+    // Règle métier: max preuves uniquement pour les preuves de tâche
     if (taskId) {
-      existingImageCount = await Evidence.count({
-        where: { taskId, kind: "photo" },
+      existingEvidenceCount = await Evidence.count({
+        where: { taskId },
       });
 
-      const totalImageCount = existingImageCount + newImageCount;
+      const totalEvidenceCount = existingEvidenceCount + newEvidenceCount;
 
-      const belowMin =
-        existingImageCount < EVIDENCE_MIN_IMAGES &&
-        totalImageCount < EVIDENCE_MIN_IMAGES;
-      if (belowMin) {
+      if (newEvidenceCount > 0 && totalEvidenceCount > EVIDENCE_MAX_IMAGES) {
         return res.status(400).json({
-          error: `Au moins ${EVIDENCE_MIN_IMAGES} images sont requises pour cette tâche.`,
+          error: `Maximum ${EVIDENCE_MAX_IMAGES} preuves autorisées pour cette tâche.`,
           details: {
-            minImages: EVIDENCE_MIN_IMAGES,
-            currentImages: existingImageCount,
-            newImages: newImageCount,
-            totalImages: totalImageCount,
-          },
-        });
-      }
-
-      if (newImageCount > 0 && totalImageCount > EVIDENCE_MAX_IMAGES) {
-        return res.status(400).json({
-          error: `Maximum ${EVIDENCE_MAX_IMAGES} images autorisées pour cette tâche.`,
-          details: {
-            maxImages: EVIDENCE_MAX_IMAGES,
-            currentImages: existingImageCount,
-            newImages: newImageCount,
-            totalImages: totalImageCount,
+            maxEvidences: EVIDENCE_MAX_IMAGES,
+            currentEvidences: existingEvidenceCount,
+            newEvidences: newEvidenceCount,
+            totalEvidences: totalEvidenceCount,
           },
         });
       }
@@ -329,55 +441,113 @@ exports.create = async (req, res) => {
       }
     }
 
-    const created = await mapWithConcurrency(
+    const results = await mapWithConcurrency(
       files,
       EVIDENCE_UPLOAD_CONCURRENCY,
       async (f, idx) => {
-        const salt = Math.random().toString(36).slice(2, 8);
-        const timestamp = Date.now();
-        const fileName = `evidence_${timestamp}_${salt}_${idx}_${f.originalname}`;
-        const uploaded = await imagekit.upload({
-          file: f.buffer,
-          fileName,
-          folder: "/teranga/evidences/",
-        });
+        try {
+          const fileName = buildEvidenceFileName(f.originalname, idx);
+          let uploaded = null;
 
-        return Evidence.create({
-          taskId: task ? task.id || task.taskId || taskId : null,
-          orderId: order ? order.id || order.orderId || orderId : null,
-          uploaderId: req.user.id,
-          kind: guessKind(f.mimetype),
-          mimeType: f.mimetype || null,
-          originalName: f.originalname || null,
-          filePath: uploaded.url,
-          fileId: uploaded.fileId,
-          fileSize: f.size || null,
-          thumbnailPath: null,
-          notes,
+          if (isImageKitEnabled()) {
+            try {
+              uploaded = await uploadToImageKitWithRetry({
+                file: f.buffer,
+                fileName,
+                folder: "/teranga/evidences/",
+              });
+            } catch (err) {
+              console.warn("⚠️ ImageKit upload failed:", {
+                code: err?.code || err?.cause?.code,
+                message: err?.message,
+              });
+            }
+          }
 
-          // 🌍 multi-pays (héritage strict)
-          countryId: geoCountryId,
-          regionId: geoRegionId,
-        });
+          if (!uploaded || !uploaded.url) {
+            uploaded = await saveEvidenceLocally(f, fileName);
+          }
+
+          const created = await Evidence.create({
+            taskId: task ? task.id || task.taskId || taskId : null,
+            orderId: order ? order.id || order.orderId || orderId : null,
+            uploaderId: req.user.id,
+            kind: guessKind(f.mimetype),
+            mimeType: f.mimetype || null,
+            originalName: f.originalname || null,
+            filePath: uploaded.url,
+            fileId: uploaded.fileId || null,
+            fileSize: f.size || null,
+            thumbnailPath: null,
+            notes,
+
+            // 🌍 multi-pays (héritage strict)
+            countryId: geoCountryId,
+            regionId: geoRegionId,
+          });
+
+          return { ok: true, id: created.id };
+        } catch (err) {
+          return {
+            ok: false,
+            originalName: f?.originalname || null,
+            error: err?.message || "Upload failed",
+          };
+        }
       }
     );
 
-    const withIncludes = await Evidence.findAll({
-      where: { id: { [Op.in]: created.map((c) => c.id) } },
-      include: [
-        {
-          model: User,
-          as: "uploader",
-          attributes: ["id", "firstName", "lastName", "email"],
-        },
-      ],
-      order: [["createdAt", "DESC"]],
-    });
+    const createdIds = results
+      .filter((r) => r && r.ok && r.id)
+      .map((r) => r.id);
 
-    return res.status(201).json({
-      message: "Preuve(s) ajoutée(s) avec succès",
+    const failed = results
+      .filter((r) => r && !r.ok)
+      .map((r) => ({ name: r.originalName, error: r.error }));
+
+    const withIncludes = createdIds.length
+      ? await Evidence.findAll({
+          where: { id: { [Op.in]: createdIds } },
+          include: [
+            {
+              model: User,
+              as: "uploader",
+              attributes: ["id", "firstName", "lastName", "email"],
+            },
+          ],
+          order: [["createdAt", "DESC"]],
+        })
+      : [];
+
+    const uploadedEvidenceCount = results.filter((r) => r && r.ok).length;
+    const evidenceLevel = taskId
+      ? getEvidenceLevel(existingEvidenceCount + uploadedEvidenceCount, EVIDENCE_MAX_IMAGES)
+      : null;
+
+    const response = {
+      message: createdIds.length
+        ? "Preuve(s) ajoutée(s) avec succès"
+        : "Aucune preuve n'a pu être ajoutée",
       evidences: withIncludes.map(addLabels),
-    });
+    };
+
+    if (taskId) {
+      response.evidenceStats = {
+        existingEvidences: existingEvidenceCount,
+        requestedEvidences: newEvidenceCount,
+        uploadedEvidences: uploadedEvidenceCount,
+        totalEvidences: existingEvidenceCount + uploadedEvidenceCount,
+        level: evidenceLevel,
+      };
+    }
+
+    if (failed.length > 0) {
+      response.warnings = {
+        failedFiles: failed,
+      };
+    }
+
+    return res.status(createdIds.length ? 201 : 500).json(response);
   } catch (e) {
     console.error("❌ Erreur create evidence:", e);
     return res.status(500).json({ error: "Erreur lors de l'ajout des preuves" });
@@ -566,9 +736,38 @@ exports.remove = async (req, res) => {
       if (linked && !canAccessGeoScope(req.user, linked)) {
         return res.status(403).json({ error: "Suppression hors scope interdite" });
       }
+    } else if (req.user.role === "client" || req.user.role === "agent") {
+      if (!ev.uploaderId || String(ev.uploaderId) !== String(req.user.id)) {
+        return res.status(403).json({
+          error: "Seul l'auteur de la preuve peut la supprimer.",
+        });
+      }
+
+      if (ev.task && !canAccessTask(req.user, ev.task)) {
+        return res.status(403).json({ error: "Accès interdit" });
+      }
+      if (ev.order && !canAccessOrder(req.user, ev.order)) {
+        return res.status(403).json({ error: "Accès interdit" });
+      }
+
+      const createdAt = ev.createdAt ? new Date(ev.createdAt) : null;
+      const createdAtMs = createdAt ? createdAt.getTime() : NaN;
+      const ageMs = Number.isFinite(createdAtMs)
+        ? Date.now() - createdAtMs
+        : DELETE_WINDOW_MS + 1;
+
+      if (ageMs > DELETE_WINDOW_MS) {
+        const deleteUntil = Number.isFinite(createdAtMs)
+          ? new Date(createdAtMs + DELETE_WINDOW_MS).toISOString()
+          : null;
+        return res.status(403).json({
+          error: "Suppression possible uniquement dans l'heure suivant l'ajout.",
+          details: { deleteUntil },
+        });
+      }
     } else {
       return res.status(403).json({
-        error: "Suppression réservée à un administrateur.",
+        error: "Suppression non autorisée pour ce rôle.",
       });
     }
 
@@ -581,6 +780,16 @@ exports.remove = async (req, res) => {
           "⚠️ Impossible de supprimer le fichier ImageKit:",
           e.message
         );
+      }
+    }
+
+    if (ev.filePath && /^\/?uploads\//.test(ev.filePath)) {
+      const relPath = ev.filePath.replace(/^\/+/, "");
+      const absolutePath = path.join(__dirname, "..", "..", relPath);
+      try {
+        await fs.promises.unlink(absolutePath);
+      } catch (e) {
+        console.warn("⚠️ Impossible de supprimer le fichier local:", e.message);
       }
     }
 

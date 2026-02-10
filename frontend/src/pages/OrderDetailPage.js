@@ -68,6 +68,8 @@ const ORDER_STEP_DEFS = [
   { key: 'closed', label: 'Clôturée', icon: '✅' },
 ];
 
+const DELETE_WINDOW_MS = 60 * 60 * 1000;
+
 function mapStatusToStepKey(status = '') {
   const s = String(status || '').toLowerCase();
   if (!s) return 'created';
@@ -159,6 +161,38 @@ export default function OrderDetailPage() {
     if (parts.length < 2) return fallback;
     const ext = parts[parts.length - 1].slice(0, 6).toUpperCase();
     return ext || fallback;
+  }
+
+  function getDeleteEligibility(currentUser, ev) {
+    if (!currentUser || !ev) return { allowed: false, reason: 'no-user' };
+    if (currentUser.role === 'admin' || currentUser.role === 'master') {
+      return { allowed: true, reason: 'admin' };
+    }
+
+    if (!ev.uploaderId || String(ev.uploaderId) !== String(currentUser.id)) {
+      return { allowed: false, reason: 'not-owner' };
+    }
+
+    const createdAtMs = ev.createdAt ? new Date(ev.createdAt).getTime() : NaN;
+    if (!Number.isFinite(createdAtMs)) {
+      return { allowed: false, reason: 'invalid-date' };
+    }
+
+    const remainingMs = DELETE_WINDOW_MS - (Date.now() - createdAtMs);
+    if (remainingMs <= 0) {
+      return { allowed: false, reason: 'expired', remainingMs: 0 };
+    }
+
+    return { allowed: true, reason: 'within-window', remainingMs };
+  }
+
+  function formatRemainingMs(ms) {
+    const safeMs = Math.max(0, Number(ms) || 0);
+    const totalSeconds = Math.ceil(safeMs / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    if (mins <= 0) return `${secs}s`;
+    return `${mins}m ${secs}s`;
   }
 
   const imageEvidences = useMemo(() => {
@@ -364,7 +398,9 @@ export default function OrderDetailPage() {
       await refreshEvidences();
     } catch (e) {
       console.error('❌ delete evidence:', e);
-      alert('Erreur suppression preuve.');
+      const msg =
+        e?.response?.data?.error || 'Erreur suppression preuve.';
+      alert(msg);
     }
   }
   /* ============================================================
@@ -673,6 +709,12 @@ export default function OrderDetailPage() {
                 </span>
               )}
             </h2>
+            {!canAdmin && (
+              <p className="text-xs text-slate-500 italic mb-3">
+                🕒 Vous pouvez supprimer vos propres preuves pendant 1&nbsp;heure après
+                l&rsquo;ajout.
+              </p>
+            )}
 
             {/* Upload */}
             <form
@@ -698,6 +740,9 @@ export default function OrderDetailPage() {
                       {files.length} fichier(s) sélectionné(s)
                     </p>
                   )}
+                  <p className="text-[0.7rem] text-slate-400 mt-1">
+                    Vous pouvez ajouter un seul fichier puis en ajouter d’autres plus tard.
+                  </p>
                 </div>
 
                 <div>
@@ -837,6 +882,7 @@ export default function OrderDetailPage() {
                     ev.originalName || ev.filePath,
                     kind === 'pdf' ? 'PDF' : 'FILE'
                   );
+                  const deleteInfo = getDeleteEligibility(user, ev);
 
                   return (
                     <div
@@ -928,7 +974,7 @@ export default function OrderDetailPage() {
                           </p>
                         )}
 
-                        {canAdmin && (
+                        {deleteInfo.allowed && (
                           <div className="mt-3 flex justify-end">
                             <button
                               type="button"
@@ -938,6 +984,16 @@ export default function OrderDetailPage() {
                               Supprimer
                             </button>
                           </div>
+                        )}
+                        {!canAdmin && deleteInfo.allowed && deleteInfo.reason === 'within-window' && (
+                          <p className="mt-2 text-[0.7rem] text-slate-400">
+                            Suppression possible encore {formatRemainingMs(deleteInfo.remainingMs)}.
+                          </p>
+                        )}
+                        {!canAdmin && !deleteInfo.allowed && deleteInfo.reason === 'expired' && (
+                          <p className="mt-2 text-[0.7rem] text-slate-400">
+                            Suppression expirée (1&nbsp;heure).
+                          </p>
                         )}
                       </div>
                     </div>

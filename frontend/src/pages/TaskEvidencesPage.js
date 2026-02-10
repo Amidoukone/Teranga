@@ -28,9 +28,9 @@ function toAbsUrl(path = '') {
   return `${FILE_BASE}${clean}`.replace(/([^:]\/)\/+/g, '$1');
 }
 
-const MIN_IMAGES = 5;
-const MAX_IMAGES = 15;
+const MAX_EVIDENCES = 15;
 const MAX_FILES = 20;
+const DELETE_WINDOW_MS = 60 * 60 * 1000;
 const UPLOAD_BATCH_SIZE =
   Number(process.env.REACT_APP_UPLOAD_BATCH_SIZE) || 3;
 
@@ -44,12 +44,6 @@ function inferKind(name = '', mime = '') {
   }
   if (mime === 'application/pdf' || /\.pdf$/i.test(lower)) return 'pdf';
   return 'other';
-}
-
-function isImageFile(file) {
-  if (!file) return false;
-  if (file.type && file.type.startsWith('image/')) return true;
-  return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(file.name || '');
 }
 
 function isImageEvidence(ev) {
@@ -110,6 +104,81 @@ function getFileExtLabel(name = '', fallback = 'FILE') {
   return ext || fallback;
 }
 
+function getEvidenceLevelInfo(totalImages, maxImages) {
+  const count = Math.max(0, Number(totalImages) || 0);
+  const max = Math.max(0, Number(maxImages) || 0);
+
+  if (max && count > max) {
+    return {
+      level: 'overflow',
+      label: 'Trop élevé',
+      message: `Maximum ${max} preuves autorisées.`,
+      toneClass: 'text-red-600',
+    };
+  }
+
+  if (count <= 3) {
+    return {
+      level: 'low',
+      label: 'Faible',
+      message: 'Niveau faible — ajoutez plus de preuves.',
+      toneClass: 'text-red-600',
+    };
+  }
+  if (count <= 5) {
+    return {
+      level: 'acceptable',
+      label: 'Acceptable',
+      message: 'Niveau acceptable — ajoutez encore quelques preuves.',
+      toneClass: 'text-amber-600',
+    };
+  }
+  if (count <= 10) {
+    return {
+      level: 'good',
+      label: 'Bon',
+      message: 'Niveau bon — ajoutez plus de preuves si possible.',
+      toneClass: 'text-blue-600',
+    };
+  }
+  return {
+    level: 'excellent',
+    label: 'Excellent',
+    message: 'Niveau excellent — preuves suffisantes.',
+    toneClass: 'text-emerald-600',
+  };
+}
+
+function getDeleteEligibility(user, ev) {
+  if (!user || !ev) return { allowed: false, reason: 'no-user' };
+  if (user.role === 'admin') return { allowed: true, reason: 'admin' };
+
+  if (!ev.uploaderId || String(ev.uploaderId) !== String(user.id)) {
+    return { allowed: false, reason: 'not-owner' };
+  }
+
+  const createdAtMs = ev.createdAt ? new Date(ev.createdAt).getTime() : NaN;
+  if (!Number.isFinite(createdAtMs)) {
+    return { allowed: false, reason: 'invalid-date' };
+  }
+
+  const remainingMs = DELETE_WINDOW_MS - (Date.now() - createdAtMs);
+  if (remainingMs <= 0) {
+    return { allowed: false, reason: 'expired', remainingMs: 0 };
+  }
+
+  return { allowed: true, reason: 'within-window', remainingMs };
+}
+
+function formatRemainingMs(ms) {
+  const safeMs = Math.max(0, Number(ms) || 0);
+  const totalSeconds = Math.ceil(safeMs / 1000);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  if (mins <= 0) return `${secs}s`;
+  return `${mins}m ${secs}s`;
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -144,33 +213,33 @@ export default function TaskEvidencesPage() {
   // 🔐 Permissions FRONTEND (MASTER SAFE)
   // ========================================================================
   const isAdmin = user?.role === 'admin';
-  const isMaster = user?.role === 'admin' && (user?.countryId || user?.regionId);
-  const canDeleteEvidence = isAdmin || isMaster;
 
-  const existingImageCount = useMemo(() => {
-    return (evidences || []).filter((ev) => isImageEvidence(ev)).length;
+  const existingEvidenceCount = useMemo(() => {
+    return (evidences || []).length;
   }, [evidences]);
 
-  const selectedImageCount = useMemo(
-    () => (files || []).filter((f) => isImageFile(f)).length,
+  const selectedEvidenceCount = useMemo(
+    () => (files || []).length,
     [files]
   );
 
-  const totalImageCount = existingImageCount + selectedImageCount;
+  const totalEvidenceCount = existingEvidenceCount + selectedEvidenceCount;
+
+  const evidenceLevel = useMemo(
+    () => getEvidenceLevelInfo(totalEvidenceCount, MAX_EVIDENCES),
+    [totalEvidenceCount]
+  );
 
   const uploadValidationError = useMemo(() => {
     if (!files || files.length === 0) return '';
     if (files.length > MAX_FILES) {
       return `Maximum ${MAX_FILES} fichiers par upload.`;
     }
-    if (existingImageCount < MIN_IMAGES && totalImageCount < MIN_IMAGES) {
-      return `Au moins ${MIN_IMAGES} images sont requises pour cette tâche.`;
-    }
-    if (selectedImageCount > 0 && totalImageCount > MAX_IMAGES) {
-      return `Maximum ${MAX_IMAGES} images autorisées pour cette tâche.`;
+    if (selectedEvidenceCount > 0 && totalEvidenceCount > MAX_EVIDENCES) {
+      return `Maximum ${MAX_EVIDENCES} preuves autorisées pour cette tâche.`;
     }
     return '';
-  }, [files, existingImageCount, selectedImageCount, totalImageCount]);
+  }, [files, existingEvidenceCount, selectedEvidenceCount, totalEvidenceCount]);
 
   const disableUpload = uploading || !files.length || Boolean(uploadValidationError);
 
@@ -231,28 +300,9 @@ export default function TaskEvidencesPage() {
 
   function buildUploadBatches(selected, batchSize) {
     const safeBatch = Math.max(1, Number(batchSize) || 1);
-    const images = selected.filter((f) => isImageFile(f));
-    const others = selected.filter((f) => !isImageFile(f));
-
-    const requiredImages = Math.max(0, MIN_IMAGES - existingImageCount);
-    if (requiredImages > 0 && images.length < requiredImages) {
-      throw new Error(`Au moins ${MIN_IMAGES} images sont requises pour cette tâche.`);
-    }
-
-    const firstBatchSize = Math.max(safeBatch, requiredImages);
-    const firstBatchImages = requiredImages > 0 ? images.splice(0, requiredImages) : [];
-    const remaining = images.concat(others);
-
     const batches = [];
-    if (firstBatchImages.length > 0 || remaining.length > 0) {
-      const firstBatch = firstBatchImages.concat(
-        remaining.splice(0, Math.max(0, firstBatchSize - firstBatchImages.length))
-      );
-      if (firstBatch.length > 0) batches.push(firstBatch);
-    }
-
-    for (let i = 0; i < remaining.length; i += safeBatch) {
-      batches.push(remaining.slice(i, i + safeBatch));
+    for (let i = 0; i < selected.length; i += safeBatch) {
+      batches.push(selected.slice(i, i + safeBatch));
     }
     return batches;
   }
@@ -322,7 +372,9 @@ export default function TaskEvidencesPage() {
       await fetchEvidences();
     } catch (err) {
       console.error('❌ delete evidence:', err);
-      alert('Erreur lors de la suppression');
+      const msg =
+        err?.response?.data?.error || 'Erreur lors de la suppression';
+      alert(msg);
     }
   }
 
@@ -568,7 +620,8 @@ export default function TaskEvidencesPage() {
             </h2>
             <p className="text-xs sm:text-sm text-gray-500 mb-4">
               Sélectionnez vos fichiers (photos, PDF, documents…) et ajoutez une
-              note si nécessaire.
+              note si nécessaire. Vous pouvez ajouter un seul fichier puis en
+              ajouter d’autres plus tard.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -594,7 +647,12 @@ export default function TaskEvidencesPage() {
                 )}
 
                 <p className="mt-2 text-xs sm:text-sm text-gray-500">
-                  Images existantes: {existingImageCount}/{MAX_IMAGES} — sélectionnées: {selectedImageCount} — total après upload: {totalImageCount}
+                  Preuves existantes: {existingEvidenceCount}/{MAX_EVIDENCES} — sélectionnées: {selectedEvidenceCount} — total après upload: {totalEvidenceCount}
+                </p>
+                <p className={`mt-1 text-xs sm:text-sm ${evidenceLevel.toneClass}`}>
+                  Niveau d&apos;appréciation :{' '}
+                  <span className="font-semibold">{evidenceLevel.label}</span> —{' '}
+                  {evidenceLevel.message}
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
                   Envoi par lots de {UPLOAD_BATCH_SIZE} fichier(s) pour plus de stabilité.
@@ -684,9 +742,10 @@ export default function TaskEvidencesPage() {
            AVERTISSEMENT (client/agent uniquement)
            - Admin + MASTER: pas d'avertissement
         ========================================================== */}
-        {!canDeleteEvidence && (
+        {!isAdmin && (
           <p className="text-xs sm:text-sm text-gray-500 italic mb-4">
-            🔒 Seul un administrateur peut supprimer une preuve.
+            🕒 Vous pouvez supprimer vos propres preuves pendant 1&nbsp;heure après
+            l&rsquo;ajout.
           </p>
         )}
 
@@ -705,6 +764,7 @@ export default function TaskEvidencesPage() {
               const isImage = kindRaw === "image";
               const kind = kindRaw;
               const displayName = getEvidenceDisplayName(ev);
+              const deleteInfo = getDeleteEligibility(user, ev);
               const extLabel = getFileExtLabel(
                 displayName,
                 kind === 'pdf' ? 'PDF' : 'FILE'
@@ -827,7 +887,7 @@ export default function TaskEvidencesPage() {
                       </a>
                     </div>
 
-                    {canDeleteEvidence && (
+                    {deleteInfo.allowed && (
                       <div className="mt-4 flex justify-end">
                         <button
                           onClick={() => handleDelete(ev.id)}
@@ -836,6 +896,16 @@ export default function TaskEvidencesPage() {
                           Supprimer
                         </button>
                       </div>
+                    )}
+                    {!isAdmin && deleteInfo.allowed && deleteInfo.reason === 'within-window' && (
+                      <p className="mt-2 text-[0.7rem] text-gray-400">
+                        Suppression possible encore {formatRemainingMs(deleteInfo.remainingMs)}.
+                      </p>
+                    )}
+                    {!isAdmin && !deleteInfo.allowed && deleteInfo.reason === 'expired' && (
+                      <p className="mt-2 text-[0.7rem] text-gray-400">
+                        Suppression expirée (1&nbsp;heure).
+                      </p>
                     )}
                   </div>
                 </div>

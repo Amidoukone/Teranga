@@ -98,7 +98,7 @@ router.post(
 router.delete(
   '/:id',
   auth,
-  requireRoles('admin'),
+  requireRoles('client', 'agent', 'admin'),
   writeLimiter,
   ctrl.remove
 );

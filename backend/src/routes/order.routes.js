@@ -85,7 +85,7 @@ router.post(
 router.delete(
   '/:orderId/evidences/:id',
   auth,
-  requireRoles('admin'),
+  requireRoles('client', 'agent', 'admin'),
   evidenceCtrl.remove
 );
 
