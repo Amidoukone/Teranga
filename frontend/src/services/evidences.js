@@ -1,6 +1,9 @@
 // frontend/src/services/evidences.js
 import api from './api';
 
+const UPLOAD_TIMEOUT_MS =
+  Number(process.env.REACT_APP_UPLOAD_TIMEOUT_MS) || 120000;
+
 /* ============================================================
    🛡️ Auth helper — récupère le token actif (token ou teranga_token)
    ============================================================ */
@@ -69,7 +72,7 @@ export async function uploadEvidences(taskId, files = [], notes = '') {
       ...authHeader(),
     },
     withCredentials: true,
-    timeout: 60000,
+    timeout: UPLOAD_TIMEOUT_MS,
   });
 
   return asEvidenceArray(data);
@@ -146,7 +149,7 @@ export async function uploadOrderEvidences(orderId, files = [], notes = '') {
       ...authHeader(),
     },
     withCredentials: true,
-    timeout: 60000,
+    timeout: UPLOAD_TIMEOUT_MS,
   });
 
   return asEvidenceArray(data);

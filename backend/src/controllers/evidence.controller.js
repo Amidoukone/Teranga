@@ -23,6 +23,10 @@ function toIntOr(value, fallback) {
 
 const EVIDENCE_MIN_IMAGES = toIntOr(process.env.EVIDENCE_MIN_IMAGES, 5);
 const EVIDENCE_MAX_IMAGES = toIntOr(process.env.EVIDENCE_MAX_IMAGES, 15);
+const EVIDENCE_UPLOAD_CONCURRENCY = toIntOr(
+  process.env.EVIDENCE_UPLOAD_CONCURRENCY,
+  3
+);
 
 /* ======================================================
    🧩 Helpers utilitaires
@@ -64,6 +68,23 @@ function addLabels(evidence) {
     kindLabel: getLabel(e.kind, EVIDENCE_KINDS),
     uploaderName,
   };
+}
+
+async function mapWithConcurrency(items, limit, fn) {
+  if (!Array.isArray(items) || items.length === 0) return [];
+  const safeLimit = Math.max(1, Math.min(limit || 1, items.length));
+  const results = new Array(items.length);
+  let index = 0;
+
+  const workers = Array.from({ length: safeLimit }, async () => {
+    while (index < items.length) {
+      const current = index++;
+      results[current] = await fn(items[current], current);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
 }
 
 /* ======================================================
@@ -308,35 +329,38 @@ exports.create = async (req, res) => {
       }
     }
 
-    const created = [];
+    const created = await mapWithConcurrency(
+      files,
+      EVIDENCE_UPLOAD_CONCURRENCY,
+      async (f, idx) => {
+        const salt = Math.random().toString(36).slice(2, 8);
+        const timestamp = Date.now();
+        const fileName = `evidence_${timestamp}_${salt}_${idx}_${f.originalname}`;
+        const uploaded = await imagekit.upload({
+          file: f.buffer,
+          fileName,
+          folder: "/teranga/evidences/",
+        });
 
-    for (const f of files) {
-      const uploaded = await imagekit.upload({
-        file: f.buffer,
-        fileName: `evidence_${Date.now()}_${f.originalname}`,
-        folder: "/teranga/evidences/",
-      });
+        return Evidence.create({
+          taskId: task ? task.id || task.taskId || taskId : null,
+          orderId: order ? order.id || order.orderId || orderId : null,
+          uploaderId: req.user.id,
+          kind: guessKind(f.mimetype),
+          mimeType: f.mimetype || null,
+          originalName: f.originalname || null,
+          filePath: uploaded.url,
+          fileId: uploaded.fileId,
+          fileSize: f.size || null,
+          thumbnailPath: null,
+          notes,
 
-      const record = await Evidence.create({
-        taskId: task ? task.id || task.taskId || taskId : null,
-        orderId: order ? order.id || order.orderId || orderId : null,
-        uploaderId: req.user.id,
-        kind: guessKind(f.mimetype),
-        mimeType: f.mimetype || null,
-        originalName: f.originalname || null,
-        filePath: uploaded.url,
-        fileId: uploaded.fileId,
-        fileSize: f.size || null,
-        thumbnailPath: null,
-        notes,
-
-        // 🌍 multi-pays (héritage strict)
-        countryId: geoCountryId,
-        regionId: geoRegionId,
-      });
-
-      created.push(record);
-    }
+          // 🌍 multi-pays (héritage strict)
+          countryId: geoCountryId,
+          regionId: geoRegionId,
+        });
+      }
+    );
 
     const withIncludes = await Evidence.findAll({
       where: { id: { [Op.in]: created.map((c) => c.id) } },
