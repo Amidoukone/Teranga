@@ -11,7 +11,6 @@ export default function GeoSelector() {
     setRegion,
     loading,
     canSelect,
-    isScopedAdmin,
     scopedCountryId,
     scopedRegionId,
   } = useGeo();
