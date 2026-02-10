@@ -31,6 +31,8 @@ function toAbsUrl(path = '') {
 const MIN_IMAGES = 5;
 const MAX_IMAGES = 15;
 const MAX_FILES = 20;
+const UPLOAD_BATCH_SIZE =
+  Number(process.env.REACT_APP_UPLOAD_BATCH_SIZE) || 3;
 
 // ============================================================================
 // HELPERS (inchangés)
@@ -58,6 +60,47 @@ function isImageEvidence(ev) {
   return k === 'image';
 }
 
+function fixMojibake(value) {
+  if (!value || typeof value !== 'string') return value;
+  if (!/[ÃÂ]/.test(value)) return value;
+  try {
+    return decodeURIComponent(escape(value));
+  } catch {
+    return value;
+  }
+}
+
+function extractFileName(path = '') {
+  if (!path) return '';
+  try {
+    const url = new URL(path);
+    const last = url.pathname.split('/').pop() || '';
+    return decodeURIComponent(last);
+  } catch {
+    const last = String(path).split('/').pop() || '';
+    try {
+      return decodeURIComponent(last);
+    } catch {
+      return last;
+    }
+  }
+}
+
+function getEvidenceDisplayName(ev) {
+  const original = fixMojibake(ev?.originalName || '');
+  if (original) return original;
+  const fallback = extractFileName(ev?.filePath || '');
+  return fixMojibake(fallback) || 'Fichier';
+}
+
+function getEvidenceKindForUI(ev) {
+  if (!ev) return 'other';
+  if (isImageEvidence(ev)) return 'image';
+  const inferred = inferKind(ev.originalName || '', ev.mimeType || '');
+  if (ev.kind === 'document') return inferred === 'pdf' ? 'pdf' : 'other';
+  return inferred;
+}
+
 function getFileExtLabel(name = '', fallback = 'FILE') {
   const base = String(name || '').trim();
   if (!base) return fallback;
@@ -79,6 +122,7 @@ export default function TaskEvidencesPage() {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [user, setUser] = useState(null);
   const [lightbox, setLightbox] = useState(null);
 
@@ -185,6 +229,34 @@ export default function TaskEvidencesPage() {
     setPreviewUrls(fl.map((f) => URL.createObjectURL(f)));
   }
 
+  function buildUploadBatches(selected, batchSize) {
+    const safeBatch = Math.max(1, Number(batchSize) || 1);
+    const images = selected.filter((f) => isImageFile(f));
+    const others = selected.filter((f) => !isImageFile(f));
+
+    const requiredImages = Math.max(0, MIN_IMAGES - existingImageCount);
+    if (requiredImages > 0 && images.length < requiredImages) {
+      throw new Error(`Au moins ${MIN_IMAGES} images sont requises pour cette tâche.`);
+    }
+
+    const firstBatchSize = Math.max(safeBatch, requiredImages);
+    const firstBatchImages = requiredImages > 0 ? images.splice(0, requiredImages) : [];
+    const remaining = images.concat(others);
+
+    const batches = [];
+    if (firstBatchImages.length > 0 || remaining.length > 0) {
+      const firstBatch = firstBatchImages.concat(
+        remaining.splice(0, Math.max(0, firstBatchSize - firstBatchImages.length))
+      );
+      if (firstBatch.length > 0) batches.push(firstBatch);
+    }
+
+    for (let i = 0; i < remaining.length; i += safeBatch) {
+      batches.push(remaining.slice(i, i + safeBatch));
+    }
+    return batches;
+  }
+
   async function handleUpload(e) {
     e.preventDefault();
     if (!files.length) {
@@ -197,8 +269,33 @@ export default function TaskEvidencesPage() {
     }
 
     setUploading(true);
+    setUploadProgress({ current: 0, total: files.length, batch: 0, batches: 0 });
     try {
-      await uploadEvidences(id, files, notes);
+      const batches = buildUploadBatches(files, UPLOAD_BATCH_SIZE);
+      let uploadedCount = 0;
+      for (let i = 0; i < batches.length; i += 1) {
+        const batch = batches[i];
+        setUploadProgress({
+          current: uploadedCount,
+          total: files.length,
+          batch: i + 1,
+          batches: batches.length,
+        });
+        await uploadEvidences(id, batch, notes);
+        uploadedCount += batch.length;
+        setUploadProgress({
+          current: uploadedCount,
+          total: files.length,
+          batch: i + 1,
+          batches: batches.length,
+        });
+      }
+      setUploadProgress({
+        current: uploadedCount,
+        total: files.length,
+        batch: batches.length,
+        batches: batches.length,
+      });
 
       setFiles([]);
       setNotes('');
@@ -214,6 +311,7 @@ export default function TaskEvidencesPage() {
       alert(msg);
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   }
 
@@ -238,7 +336,7 @@ export default function TaskEvidencesPage() {
       const q = filters.q.trim().toLowerCase();
       arr = arr.filter((ev) =>
         [
-          ev.originalName,
+          getEvidenceDisplayName(ev),
           ev.filePath,
           ev.notes,
           ev.kind,
@@ -255,7 +353,7 @@ export default function TaskEvidencesPage() {
 
     if (filters.kind) {
       arr = arr.filter((ev) => {
-        const k = ev.kind || inferKind(ev.originalName, ev.mimeType);
+        const k = getEvidenceKindForUI(ev);
         return k === filters.kind;
       });
     }
@@ -293,14 +391,6 @@ export default function TaskEvidencesPage() {
 
     return arr;
   }, [evidences, filters]);
-
-  const imageFiltered = useMemo(() => {
-    return (filtered || []).filter((ev) => isImageEvidence(ev));
-  }, [filtered]);
-
-  const docFiltered = useMemo(() => {
-    return (filtered || []).filter((ev) => !isImageEvidence(ev));
-  }, [filtered]);
   // ========================================================================
   // LIGHTBOX
   // ========================================================================
@@ -506,6 +596,9 @@ export default function TaskEvidencesPage() {
                 <p className="mt-2 text-xs sm:text-sm text-gray-500">
                   Images existantes: {existingImageCount}/{MAX_IMAGES} — sélectionnées: {selectedImageCount} — total après upload: {totalImageCount}
                 </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Envoi par lots de {UPLOAD_BATCH_SIZE} fichier(s) pour plus de stabilité.
+                </p>
 
                 {uploadValidationError && (
                   <p className="mt-2 text-xs sm:text-sm text-red-600">
@@ -575,6 +668,14 @@ export default function TaskEvidencesPage() {
               >
                 {uploading ? "⏳ Upload en cours…" : "Uploader les fichiers"}
               </button>
+              {uploadProgress && (
+                <p className="mt-2 text-xs text-gray-500">
+                  Upload {uploadProgress.current}/{uploadProgress.total}
+                  {uploadProgress.batches > 0
+                    ? ` — lot ${uploadProgress.batch}/${uploadProgress.batches}`
+                    : ''}
+                </p>
+              )}
             </div>
           </form>
         )}
@@ -589,100 +690,6 @@ export default function TaskEvidencesPage() {
           </p>
         )}
 
-        {imageFiltered.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm sm:text-base font-semibold text-gray-900">
-                Galerie des images
-              </h3>
-              <span className="text-xs text-gray-500">
-                {imageFiltered.length} image(s)
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {imageFiltered.map((ev) => {
-                const fileUrl = toAbsUrl(ev.filePath);
-                return (
-                  <button
-                    key={`gallery-${ev.id}`}
-                    type="button"
-                    onClick={() => openLightbox(fileUrl)}
-                    className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
-                    title={'Aper\u00e7u'}
-                  >
-                    <img
-                      src={fileUrl}
-                      alt={ev.originalName || 'Preuve'}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
-                    <div className="absolute bottom-2 left-2 right-2 text-[0.7rem] text-white font-semibold truncate drop-shadow">
-                      {ev.originalName || 'Preuve'}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {docFiltered.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm sm:text-base font-semibold text-gray-900">
-                Galerie des documents
-              </h3>
-              <span className="text-xs text-gray-500">
-                {docFiltered.length} fichier(s)
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {docFiltered.map((ev) => {
-                const fileUrl = toAbsUrl(ev.filePath);
-                const kind = ev.kind || inferKind(ev.originalName, ev.mimeType);
-                const extLabel = getFileExtLabel(
-                  ev.originalName || ev.filePath,
-                  kind === 'pdf' ? 'PDF' : 'FILE'
-                );
-                const typeLabel = kind === 'pdf' ? 'PDF' : 'FICHIER';
-
-                return (
-                  <a
-                    key={`doc-${ev.id}`}
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-gray-200 bg-white hover:shadow-md transition"
-                  >
-                    <div
-                      className={`absolute top-2 left-2 text-[0.65rem] font-semibold px-2 py-0.5 rounded-full border ${
-                        kind === 'pdf'
-                          ? 'bg-red-50 text-red-700 border-red-100'
-                          : 'bg-gray-50 text-gray-700 border-gray-200'
-                      }`}
-                    >
-                      {typeLabel}
-                    </div>
-
-                    <div className="h-full w-full flex flex-col items-center justify-center px-2 text-center">
-                      <div className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 px-2 py-1 rounded-full inline-flex">
-                        {extLabel}
-                      </div>
-                      <div className="mt-2 text-[0.7rem] text-gray-600 truncate w-full">
-                        {ev.originalName || 'Document'}
-                      </div>
-                    </div>
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* ==========================================================
            LISTE DES PREUVES
         ========================================================== */}
@@ -693,11 +700,13 @@ export default function TaskEvidencesPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {filtered.map((ev) => {
-              const kind = ev.kind || inferKind(ev.originalName, ev.mimeType);
+              const kindRaw = getEvidenceKindForUI(ev);
               const fileUrl = toAbsUrl(ev.filePath);
-              const isImage = kind === "image";
+              const isImage = kindRaw === "image";
+              const kind = kindRaw;
+              const displayName = getEvidenceDisplayName(ev);
               const extLabel = getFileExtLabel(
-                ev.originalName || ev.filePath,
+                displayName,
                 kind === 'pdf' ? 'PDF' : 'FILE'
               );
 
@@ -717,7 +726,7 @@ export default function TaskEvidencesPage() {
                       >
                         <img
                           src={fileUrl}
-                          alt=""
+                          alt={displayName || 'Preuve'}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                         />
                       </button>
@@ -745,25 +754,6 @@ export default function TaskEvidencesPage() {
                       </span>
                     </div>
 
-                    <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                      {isImage && (
-                        <button
-                          type="button"
-                          onClick={() => openLightbox(fileUrl)}
-                          className="px-2.5 py-1.5 text-[0.7rem] font-semibold bg-white/90 border border-slate-200 rounded-lg hover:bg-white"
-                        >
-                          {'Aper\u00e7u'}
-                        </button>
-                      )}
-                      <a
-                        href={fileUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2.5 py-1.5 text-[0.7rem] font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800"
-                      >
-                        Ouvrir
-                      </a>
-                    </div>
                   </div>
 
                   {/* META */}
@@ -773,13 +763,14 @@ export default function TaskEvidencesPage() {
                         href={fileUrl}
                         target="_blank"
                         rel="noreferrer"
+                        title={displayName}
                         className="
                           text-blue-600 hover:underline text-sm sm:text-base
-                          font-semibold break-words break-all whitespace-normal
+                          font-semibold break-words whitespace-normal
                           block w-full max-w-full
                         "
                       >
-                        {ev.originalName || ev.filePath}
+                        {displayName}
                       </a>
                     </div>
 
@@ -808,6 +799,33 @@ export default function TaskEvidencesPage() {
                         {ev.notes}
                       </div>
                     )}
+
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      {isImage && (
+                        <button
+                          type="button"
+                          onClick={() => openLightbox(fileUrl)}
+                          className="px-3 py-1.5 text-[0.7rem] sm:text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+                        >
+                          Aper\u00e7u
+                        </button>
+                      )}
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-1.5 text-[0.7rem] sm:text-xs font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800"
+                      >
+                        Ouvrir
+                      </a>
+                      <a
+                        href={fileUrl}
+                        download={displayName}
+                        className="px-3 py-1.5 text-[0.7rem] sm:text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+                      >
+                        T\u00e9l\u00e9charger
+                      </a>
+                    </div>
 
                     {canDeleteEvidence && (
                       <div className="mt-4 flex justify-end">
