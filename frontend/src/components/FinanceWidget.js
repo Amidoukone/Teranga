@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Landmark } from 'lucide-react';
 import { getTransactions } from '../services/transactions';
 import { PieChart, Pie, Tooltip, Cell, ResponsiveContainer } from 'recharts';
 
@@ -25,7 +26,7 @@ export default function FinanceWidget({ role }) {
 
   if (!summary) return <p>{t('financeWidget.loading')}</p>;
 
-  const COLORS = ['#22c55e', '#ef4444', '#3b82f6', '#a855f7'];
+  const COLORS = ['#10b981', '#ef4444', '#0ea5e9', '#6366f1'];
   const data = [
     { name: t('transactions.type.revenue'), value: summary.revenue },
     { name: t('transactions.type.expense'), value: summary.expense },
@@ -38,9 +39,10 @@ export default function FinanceWidget({ role }) {
     : t('financeWidget.title');
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl shadow-md p-6 mb-8">
-      <h2 className="text-lg font-semibold mb-4 text-gray-800">
-        💰 {title}
+    <div className="bg-white/90 border border-slate-200/80 rounded-2xl shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] p-5 mb-8">
+      <h2 className="text-lg sm:text-xl font-semibold mb-4 text-slate-900 tracking-tight flex items-center gap-2">
+        <Landmark size={18} className="text-slate-500" />
+        {title}
       </h2>
       <div style={{ width: '100%', height: 280 }}>
         <ResponsiveContainer>

@@ -372,10 +372,26 @@ function NavBar() {
     }
 
     return out.map((item) => ({ ...item, label: t(item.labelKey) }));
-  }, [role, isGlobalAdmin, t]);
+  }, [role, t]);
 
   const bottomLinks = useMemo(() => {
-    return (BOTTOM_LINKS[role] || []).map((item) => ({
+    let base = BOTTOM_LINKS[role] || [];
+
+    if (role === "admin") {
+      base = base.map((item) =>
+        item.path === "/admin/services"
+          ? {
+              ...item,
+              key: "services",
+              path: "/services",
+              labelKey: "nav.services",
+              icon: Wrench,
+            }
+          : item
+      );
+    }
+
+    return base.map((item) => ({
       ...item,
       label: t(item.labelKey),
     }));
@@ -397,18 +413,18 @@ function NavBar() {
 
   const sections = useMemo(() => buildSections(role, links, t), [role, links, t]);
 
+  const servicePrimaryPath = useMemo(() => {
+    if (role === "agent") return "/agent/services";
+    if (role === "admin") return "/services";
+    return "/services";
+  }, [role]);
+
   // Desktop: tabs primaires (calme). Le reste -> Plus.
   const desktopPrimaryTabs = useMemo(() => {
-    const candidates = [
-      "/dashboard",
-      "/projects",
-      role === "admin"
-        ? "/admin/services"
-        : role === "agent"
-        ? "/agent/services"
-        : "/services",
-      "/tasks",
-    ];
+    const candidates =
+      role === "admin" && isGlobalAdmin
+        ? ["/dashboard", "/services", "/tasks"]
+        : ["/dashboard", "/projects", servicePrimaryPath, "/tasks"];
 
     const tabs = [];
     for (const p of candidates) {
@@ -421,7 +437,7 @@ function NavBar() {
 
     if (!tabs.length) return links.slice(0, 4);
     return tabs.slice(0, 4);
-  }, [links, role]);
+  }, [links, role, isGlobalAdmin, servicePrimaryPath]);
 
   const desktopMoreItems = useMemo(() => {
     const primaryPaths = new Set(desktopPrimaryTabs.map((x) => x.path));
@@ -523,7 +539,7 @@ function NavBar() {
           </div>
 
           {/* CENTER: Desktop nav tabs */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex flex-1 items-center justify-center gap-1">
             {desktopPrimaryTabs.map((l) => {
               const active = isActive(l.path);
               return (
@@ -640,7 +656,7 @@ function NavBar() {
           </div>
 
           {/* RIGHT: Geo (desktop) + User menu */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3 shrink-0">
             <LanguageSwitcher compact />
             <div className="hidden lg:flex items-center">
                 <div className="rounded-xl border border-border bg-surface-main/50 px-3 py-2">

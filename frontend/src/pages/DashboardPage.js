@@ -5,6 +5,27 @@
 // ============================================================================
 
 import { useEffect, useState } from 'react';
+import {
+  BarChart3,
+  Building2,
+  ClipboardList,
+  FolderKanban,
+  HandCoins,
+  Landmark,
+  Layers,
+  ShieldCheck,
+  ShieldPlus,
+  Users,
+  UserCog,
+  Briefcase,
+  Receipt,
+  Rocket,
+  ShoppingBag,
+  TrendingDown,
+  TrendingUp,
+  Wrench,
+  Zap,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { me } from '../services/auth';
 import {
@@ -28,7 +49,7 @@ import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 
 /* ============================================================================
-   🔧 UTILITAIRES
+   UTILITAIRES
 =========================================================================== */
 
 function getInitials(user) {
@@ -57,7 +78,7 @@ export default function DashboardPage() {
     balance: 0,
   });
 
-  // 🔎 Stats détaillées modules
+  // Stats détaillées modules
   const [detailStats, setDetailStats] = useState({
     properties: {
       total: 0,
@@ -87,7 +108,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   /* ---------------------------------------------------------------------- */
-  /* 🔄 INITIALISATION                                                     */
+  /* INITIALISATION                                                       */
   /* ---------------------------------------------------------------------- */
   useEffect(() => {
     async function init() {
@@ -106,7 +127,7 @@ export default function DashboardPage() {
   }, []);
 
   /* ---------------------------------------------------------------------- */
-  /* 📊 CHARGEMENT DES STATISTIQUES                                        */
+  /* CHARGEMENT DES STATISTIQUES                                          */
   /* ---------------------------------------------------------------------- */
   async function loadStats(u) {
     try {
@@ -133,7 +154,7 @@ export default function DashboardPage() {
         financialSummary = await getFinancialSummary();
       }
 
-      // ========= 📦 NOUVELLES DONNÉES : BIENS / TÂCHES / PROJETS / COMMANDES =========
+      // ========= NOUVELLES DONNÉES : BIENS / TÂCHES / PROJETS / COMMANDES =========
       const geoParams = getGeoParams();
       const [propsRes, tasksRes, projectsRes, ordersRes] = await Promise.all([
         api
@@ -167,7 +188,7 @@ export default function DashboardPage() {
       const projects = projectsRes.data?.projects || [];
       const orders = ordersRes.data?.orders || ordersRes.data?.items || [];
 
-      // ========= 🧮 Calculs existants =========
+      // ========= Calculs existants =========
       const activeServices = (services || []).filter(
         (s) => s.status !== 'completed' && s.status !== 'validated'
       ).length;
@@ -198,15 +219,15 @@ export default function DashboardPage() {
         balance,
       });
 
-      // ========= 🧮 NOUVEAUX CALCULS DÉTAILLÉS =========
+      // ========= NOUVEAUX CALCULS DÉTAILLÉS =========
 
-      // 🏡 Biens
+      // Biens
       const propertiesTotal = properties.length;
       const propertiesActive = properties.filter(
         (p) => p.status === 'active'
       ).length;
 
-      // ✅ Tâches
+      // Tâches
       const tasksTotal = tasks.length;
       const tasksCreated = tasks.filter((t) => t.status === 'created').length;
       const tasksInProgress = tasks.filter(
@@ -219,7 +240,7 @@ export default function DashboardPage() {
         (t) => t.status === 'validated'
       ).length;
 
-      // 📂 Projets
+      // Projets
       const projectsTotal = projects.length;
       const projectsCreated = projects.filter(
         (p) => p.status === 'created'
@@ -234,7 +255,7 @@ export default function DashboardPage() {
         (p) => p.status === 'validated'
       ).length;
 
-      // 🛒 Commandes
+      // Commandes
       const ordersTotal = orders.length;
       const ordersPaid = orders.filter(
         (o) => o.paymentStatus === 'paid'
@@ -278,7 +299,7 @@ export default function DashboardPage() {
   }
 
   /* ---------------------------------------------------------------------- */
-  /* 🌀 ÉTAT CHARGEMENT                                                     */
+  /* ÉTAT CHARGEMENT                                                       */
   /* ---------------------------------------------------------------------- */
   if (loading || !user) {
     return (
@@ -308,26 +329,17 @@ export default function DashboardPage() {
   const firstName = user.firstName || user.email || '';
   const shortName =
     (firstName.split(' ')[0] || '').trim() || t("dashboard.careFallbackName");
-  const roleLabel =
-    isMaster
-      ? t("roles.master")
-      : roleKey === 'admin'
-      ? t("roles.admin")
-      : roleKey === 'agent'
-      ? t("roles.agent")
-      : t("roles.client");
-
   /* ============================================================================
-     🎨 UI PRINCIPALE — VERSION RÉORGANISÉE & PLUS LISIBLE / ÉLÉGANTE
+     UI PRINCIPALE — VERSION RÉORGANISÉE & PLUS LISIBLE / ÉLÉGANTE
   =========================================================================== */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 lg:py-10">
-      <div className="max-w-6xl mx-auto bg-white/95 shadow-2xl rounded-3xl border border-gray-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-10">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50 to-slate-100 px-3 sm:px-4 lg:px-6 py-8 lg:py-10">
+      <div className="max-w-7xl mx-auto bg-white/90 shadow-2xl rounded-3xl border border-slate-200/80 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
 
         {/* ------------------------------------------------------------------ */}
-        {/* 🧭 HEADER PREMIUM                                                  */}
+        {/* HEADER PREMIUM                                                    */}
         {/* ------------------------------------------------------------------ */}
-        <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 md:gap-6 pb-5 border-b border-gray-100">
+        <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 pb-6 border-b border-slate-100">
           <div className="flex items-center gap-4">
             <div className="relative flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white font-semibold text-xl shadow-md">
               {getInitials(user)}
@@ -335,16 +347,10 @@ export default function DashboardPage() {
             </div>
             <div className="min-w-0">
               <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-snug truncate">
-                {t("dashboard.greeting", { name: user.firstName || user.email })} 👋
+                {t("dashboard.greeting", { name: user.firstName || user.email })}
               </h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-1">
-                {t("dashboard.roleLabel")}{' '}
-                <span className="font-semibold text-blue-700 uppercase ml-1">
-                  {roleLabel}
-                </span>
-              </p>
               {/* ✅ Message EXACT, personnalisé par le prénom */}
-              <p className="text-sm sm:text-base text-gray-800 mt-2">
+              <p className="text-sm sm:text-base text-slate-800 mt-2">
                 <span className="font-semibold text-blue-700">
                   {t("dashboard.careLine", { firstName: shortName })}
                 </span>
@@ -352,15 +358,11 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Badge rôle + solde global */}
+          {/* Solde global */}
           <div className="flex flex-col items-start md:items-end gap-3">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-              {roleLabel}
-            </span>
-
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 shadow-sm min-w-[200px]">
+            <div className="bg-white/80 border border-slate-200/80 rounded-2xl px-4 py-3 shadow-sm min-w-[200px]">
               <div className="flex items-center justify-between gap-2">
-                <div className="text-xs sm:text-sm text-gray-600 font-medium">
+                <div className="text-xs sm:text-sm text-slate-600 font-medium">
                   {balanceLabel}
                 </div>
                 <span
@@ -382,7 +384,7 @@ export default function DashboardPage() {
               >
                 {formatNumber(stats.balance)} XOF
               </div>
-              <p className="text-[0.75rem] sm:text-xs text-gray-500 mt-2 leading-snug">
+              <p className="text-[0.75rem] sm:text-xs text-slate-500 mt-2 leading-snug">
                 {balanceDescription}
               </p>
             </div>
@@ -390,47 +392,48 @@ export default function DashboardPage() {
         </header>
 
         {/* ------------------------------------------------------------------ */}
-        {/* 📊 VUE RAPIDE — STATISTIQUES GÉNÉRALES                             */}
+        {/* VUE RAPIDE — STATISTIQUES GÉNÉRALES                               */}
         {/* ------------------------------------------------------------------ */}
-        <section className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+        <section className="space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight">
                 {t("dashboard.quickView.title")}
               </h2>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-slate-600">
                 {t("dashboard.quickView.subtitle")}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label={t("dashboard.stats.totalServices")} value={stats.servicesCount} icon="📦" />
-            <StatCard label={t("dashboard.stats.activeServices")} value={stats.activeServices} icon="⚡" />
-            <StatCard label={t("dashboard.stats.transactions")} value={stats.transactionsCount} icon="💳" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            <StatCard label={t("dashboard.stats.totalServices")} value={stats.servicesCount} icon={Wrench} />
+            <StatCard label={t("dashboard.stats.activeServices")} value={stats.activeServices} icon={Zap} />
+            <StatCard label={t("dashboard.stats.transactions")} value={stats.transactionsCount} icon={Receipt} />
             <StatCard
               label={t("dashboard.stats.currentBalance")}
               value={`${formatNumber(stats.balance)} XOF`}
               highlight={isPositiveBalance}
-              icon={isPositiveBalance ? '📈' : '📉'}
+              icon={isPositiveBalance ? TrendingUp : TrendingDown}
             />
           </div>
         </section>
 
         {/* ------------------------------------------------------------------ */}
-        {/* 🧮 BLOC CENTRAL — FINANCES & VUE GLOBALE DES MODULES               */}
+        {/* BLOC CENTRAL — FINANCES & VUE GLOBALE DES MODULES                 */}
         {/* ------------------------------------------------------------------ */}
         <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 xl:items-start">
           {/* Colonne gauche : finances détaillées + modules */}
           <div className="xl:col-span-2 space-y-6">
-            {/* 💰 Finances détaillées */}
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
+            {/* Finances détaillées */}
+            <div className="bg-white/90 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                    💰 {t("dashboard.finance.title")}
+                  <h2 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
+                    <Landmark size={18} className="text-slate-500" />
+                    {t("dashboard.finance.title")}
                   </h2>
-                  <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                  <p className="text-xs sm:text-sm text-slate-600 mt-1">
                     {t("dashboard.finance.subtitle")}
                   </p>
                 </div>
@@ -438,14 +441,15 @@ export default function DashboardPage() {
               <FinanceWidget role={roleKey} />
             </div>
 
-            {/* 📦 Vue globale des modules */}
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
+            {/* Vue globale des modules */}
+            <div className="bg-white/90 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                    📦 {t("dashboard.modules.title")}
+                  <h2 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
+                    <Layers size={18} className="text-slate-500" />
+                    {t("dashboard.modules.title")}
                   </h2>
-                  <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                  <p className="text-xs sm:text-sm text-slate-600 mt-1">
                     {t("dashboard.modules.subtitle")}
                   </p>
                 </div>
@@ -455,7 +459,7 @@ export default function DashboardPage() {
                 {/* BIENS */}
                 <ModuleCard
                   title={t("dashboard.modules.properties")}
-                  icon="🏡"
+                  icon={Building2}
                   main={t("dashboard.modules.counts.property", {
                     count: detailStats.properties.total,
                   })}
@@ -475,7 +479,7 @@ export default function DashboardPage() {
                 {/* TÂCHES */}
                 <ModuleCard
                   title={t("dashboard.modules.tasks")}
-                  icon="📝"
+                  icon={ClipboardList}
                   main={t("dashboard.modules.counts.task", {
                     count: detailStats.tasks.total,
                   })}
@@ -503,7 +507,7 @@ export default function DashboardPage() {
                 {/* PROJETS */}
                 <ModuleCard
                   title={t("dashboard.modules.projects")}
-                  icon="📂"
+                  icon={FolderKanban}
                   main={t("dashboard.modules.counts.project", {
                     count: detailStats.projects.total,
                   })}
@@ -531,7 +535,7 @@ export default function DashboardPage() {
                 {/* COMMANDES */}
                 <ModuleCard
                   title={t("dashboard.modules.orders")}
-                  icon="🛒"
+                  icon={ShoppingBag}
                   main={t("dashboard.modules.counts.order", {
                     count: detailStats.orders.total,
                   })}
@@ -554,12 +558,12 @@ export default function DashboardPage() {
           {/* Colonne droite : synthèse et accès rapides */}
           <div className="space-y-6">
             {/* Synthèse rapide finances */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+            <div className="bg-white/90 border border-slate-200/80 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
               <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
+                <h3 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight mb-4">
                   {t("dashboard.summary.title")}
                 </h3>
-                <ul className="space-y-2 text-sm sm:text-base text-gray-800">
+                <ul className="space-y-2 text-sm sm:text-base text-slate-800">
                   <li className="flex justify-between">
                     <span>{t("dashboard.summary.revenue")}</span>
                     <span className="font-semibold text-emerald-600">
@@ -572,7 +576,7 @@ export default function DashboardPage() {
                       {formatNumber(stats.totalExpense)} XOF
                     </span>
                   </li>
-                  <li className="flex justify-between border-t border-dashed border-gray-200 pt-3 mt-2">
+                  <li className="flex justify-between border-t border-dashed border-slate-200 pt-3 mt-2">
                     <span>{t("dashboard.summary.net")}</span>
                     <span
                       className={`font-bold ${
@@ -584,17 +588,18 @@ export default function DashboardPage() {
                   </li>
                 </ul>
               </div>
-              <p className="text-xs sm:text-sm text-gray-500 border-t border-gray-100 mt-4 pt-3 leading-snug">
+              <p className="text-xs sm:text-sm text-slate-500 border-t border-slate-100 mt-4 pt-4 leading-snug">
                 {t("dashboard.summary.note")}
               </p>
             </div>
 
             {/* Accès rapides */}
-            <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-md">
-              <h3 className="text-base sm:text-lg font-semibold mb-2 flex items-center gap-2">
-                🚀 {t("dashboard.quickAccess.title")}
+            <div className="bg-white/90 border border-slate-200/80 text-slate-900 rounded-2xl p-5 shadow-sm">
+              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight mb-3 flex items-center gap-2">
+                <Rocket size={18} className="text-slate-500" />
+                {t("dashboard.quickAccess.title")}
               </h3>
-              <p className="text-xs sm:text-sm text-slate-300 mb-4 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 mb-4 leading-relaxed">
                 {t("dashboard.quickAccess.subtitle")}
               </p>
 
@@ -606,47 +611,47 @@ export default function DashboardPage() {
                     <QuickLink
                       to="/services"
                       label={t("dashboard.quickAccess.admin.services")}
-                      icon="🧾"
+                      icon={Wrench}
                     />
                     <QuickLink
                       to="/admin/services"
                       label={t("dashboard.quickAccess.admin.adminServices")}
-                      icon="🧩"
+                      icon={ShieldPlus}
                     />
                     <QuickLink
                       to="/admin/users"
                       label={t("dashboard.quickAccess.admin.users")}
-                      icon="👥"
+                      icon={Users}
                     />
                     <QuickLink
                       to="/admin/agents"
                       label={t("dashboard.quickAccess.admin.agents")}
-                      icon="🧑‍🔧"
+                      icon={UserCog}
                     />
                     <QuickLink
                       to="/properties"
                       label={t("dashboard.quickAccess.admin.properties")}
-                      icon="🏡"
+                      icon={Building2}
                     />
                     <QuickLink
                       to="/projects"
                       label={t("dashboard.quickAccess.admin.projects")}
-                      icon="📂"
+                      icon={FolderKanban}
                     />
                     <QuickLink
                       to="/orders"
                       label={t("dashboard.quickAccess.admin.orders")}
-                      icon="🛒"
+                      icon={ShoppingBag}
                     />
                     <QuickLink
                       to="/transactions"
                       label={t("dashboard.quickAccess.admin.transactions")}
-                      icon="💰"
+                      icon={HandCoins}
                     />
                     <QuickLink
                       to="/finance"
                       label={t("dashboard.quickAccess.admin.finance")}
-                      icon="📊"
+                      icon={BarChart3}
                     />
                   </>
                 )}
@@ -657,32 +662,32 @@ export default function DashboardPage() {
                     <QuickLink
                       to="/services"
                       label={t("dashboard.quickAccess.client.services")}
-                      icon="🧾"
+                      icon={Wrench}
                     />
                     <QuickLink
                       to="/properties"
                       label={t("dashboard.quickAccess.client.properties")}
-                      icon="🏡"
+                      icon={Building2}
                     />
                     <QuickLink
                       to="/projects"
                       label={t("dashboard.quickAccess.client.projects")}
-                      icon="📂"
+                      icon={FolderKanban}
                     />
                     <QuickLink
                       to="/orders"
                       label={t("dashboard.quickAccess.client.orders")}
-                      icon="🛒"
+                      icon={ShoppingBag}
                     />
                     <QuickLink
                       to="/transactions"
                       label={t("dashboard.quickAccess.client.transactions")}
-                      icon="💰"
+                      icon={HandCoins}
                     />
                     <QuickLink
                       to="/finance"
                       label={t("dashboard.quickAccess.client.finance")}
-                      icon="📊"
+                      icon={BarChart3}
                     />
                   </>
                 )}
@@ -693,22 +698,22 @@ export default function DashboardPage() {
                     <QuickLink
                       to="/agent/services"
                       label={t("dashboard.quickAccess.agent.assignedServices")}
-                      icon="⚙️"
+                      icon={Briefcase}
                     />
                     <QuickLink
                       to="/tasks"
                       label={t("dashboard.quickAccess.agent.tasks")}
-                      icon="📝"
+                      icon={ClipboardList}
                     />
                     <QuickLink
                       to="/transactions"
                       label={t("dashboard.quickAccess.agent.transactions")}
-                      icon="💰"
+                      icon={HandCoins}
                     />
                     <QuickLink
                       to="/finance"
                       label={t("dashboard.quickAccess.agent.finance")}
-                      icon="📊"
+                      icon={BarChart3}
                     />
                   </>
                 )}
@@ -725,28 +730,30 @@ export default function DashboardPage() {
    COMPOSANTS RÉUTILISABLES PREMIUM
 =========================================================================== */
 
-function StatCard({ label, value, highlight = false, icon }) {
+function StatCard({ label, value, highlight = false, icon: Icon }) {
   return (
     <div
       className="
-        relative overflow-hidden
-        bg-gradient-to-br from-blue-50 via-white to-blue-50
-        border border-blue-100 rounded-2xl
+        group relative overflow-hidden
+        rounded-2xl border border-slate-200/80
+        bg-white/90 backdrop-blur
         px-4 py-4 sm:px-5 sm:py-5
-        shadow-sm hover:shadow-md transition
+        shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)]
+        transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-24px_rgba(15,23,42,0.6)]
       "
     >
-      {icon && (
-        <div className="absolute -top-1 -right-1 text-3xl opacity-20">
-          {icon}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/70 via-white/30 to-cyan-50/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+      {Icon ? (
+        <div className="absolute top-2 right-2 text-2xl opacity-20 pointer-events-none">
+          <Icon size={20} className="text-slate-500" />
         </div>
-      )}
-      <div className="text-xs sm:text-sm font-medium text-gray-500 mb-1">
+      ) : null}
+      <div className="relative text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
         {label}
       </div>
       <div
-        className={`text-lg sm:text-xl font-bold tracking-tight ${
-          highlight ? 'text-emerald-700' : 'text-blue-800'
+        className={`relative text-lg sm:text-xl font-bold tracking-tight ${
+          highlight ? 'text-emerald-700' : 'text-slate-800'
         }`}
       >
         {value}
@@ -755,74 +762,79 @@ function StatCard({ label, value, highlight = false, icon }) {
   );
 }
 
-function QuickLink({ to, label, icon }) {
+function QuickLink({ to, label, icon: Icon }) {
   return (
     <Link
       to={to}
       className="
         group flex items-center justify-between
         px-3 py-2.5 rounded-xl
-        bg-slate-800/80 text-white shadow-sm
-        hover:bg-slate-700 hover:shadow-md transition
+        border border-slate-200/80
+        bg-white/85 text-slate-900
+        shadow-[0_10px_25px_-22px_rgba(15,23,42,0.35)]
+        hover:bg-slate-50 hover:border-slate-300
+        transition-all duration-200 hover:-translate-y-0.5
       "
     >
       <div className="flex items-center gap-3">
         <div
           className="
             flex items-center justify-center h-9 w-9 rounded-full
-            bg-slate-900/80 group-hover:bg-slate-900
-            text-lg transition
+            bg-slate-900/5 group-hover:bg-slate-900/10
+            text-slate-700 text-lg transition
           "
         >
-          {icon}
+          {Icon ? <Icon size={18} className="text-slate-700" /> : null}
         </div>
         <span className="text-sm font-semibold">{label}</span>
       </div>
-      <span className="text-xs opacity-70 group-hover:translate-x-0.5 transition-transform">
+      <span className="text-xs text-slate-500 group-hover:translate-x-0.5 transition-transform">
         ↗
       </span>
     </Link>
   );
 }
 
-function ModuleCard({ title, icon, main, items = [], link }) {
+function ModuleCard({ title, icon: Icon, main, items = [], link }) {
   const { t } = useTranslation();
   const cardContent = (
     <div
       className="
         h-full
-        bg-white border border-gray-200 rounded-2xl
+        bg-white/90 border border-slate-200/80 rounded-2xl
         px-4 py-4 sm:px-5 sm:py-5
-        shadow-sm hover:shadow-md transition
+        shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)]
+        hover:shadow-[0_20px_40px_-24px_rgba(15,23,42,0.6)]
+        transition-all duration-200 hover:-translate-y-0.5
         flex flex-col justify-between
       "
     >
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-50 text-lg">
-              {icon}
+            <span className="flex items-center justify-center h-9 w-9 rounded-full bg-slate-900/5 text-lg">
+              {Icon ? <Icon size={18} className="text-slate-700" /> : null}
             </span>
-            <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+            <h3 className="text-sm sm:text-base font-semibold text-slate-900 tracking-tight">
               {title}
             </h3>
           </div>
         </div>
-        <div className="text-lg sm:text-xl font-bold text-blue-700 mb-2">
+        <div className="text-lg sm:text-xl font-bold text-slate-900 mb-2">
           {main}
         </div>
-        <ul className="space-y-1 text-xs sm:text-sm text-gray-700">
+        <ul className="space-y-1 text-xs sm:text-sm text-slate-700">
           {items.map((it, idx) => (
             <li key={idx} className="flex justify-between">
               <span>{it.label}</span>
-              <span className="font-semibold text-gray-900">{it.value}</span>
+              <span className="font-semibold text-slate-900">{it.value}</span>
             </li>
           ))}
         </ul>
       </div>
       {link && (
-        <div className="mt-4 pt-2 border-t border-gray-100 text-right">
-          <span className="inline-flex items-center text-xs text-blue-600 font-medium">
+        <div className="mt-4 pt-2 border-t border-slate-100 text-right">
+          <span className="inline-flex items-center text-xs text-slate-600 font-medium">
             {t("common.viewDetails")}
             <span className="ml-1">↗</span>
           </span>
