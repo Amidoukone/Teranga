@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { login, me } from "../services/auth";
+import { useTranslation } from "react-i18next";
 import {
   Eye,
   EyeOff,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   // Champs
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -61,9 +63,7 @@ export default function LoginPage() {
       navigate("/dashboard");
     } catch (err) {
       const backendMsg = err?.response?.data?.error;
-      setErrorMsg(
-        backendMsg || "Échec de connexion : identifiants incorrects."
-      );
+      setErrorMsg(backendMsg || t("auth.login.errorDefault"));
     } finally {
       setLoading(false);
     }
@@ -78,7 +78,7 @@ export default function LoginPage() {
 
         {/* ---------- LOGO + TITRE ---------- */}
         <div className="text-center mb-8">
-          <p className="page-kicker mb-3">Espace sécurisé</p>
+          <p className="page-kicker mb-3">{t("auth.login.kicker")}</p>
           <img
             src="/logo_180x180.png"
             alt="Logo Teranga"
@@ -86,12 +86,10 @@ export default function LoginPage() {
           />
 
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Connexion à Teranga
+            {t("auth.login.title")}
           </h1>
 
-          <p className="page-lead mt-1">
-            Accédez à votre espace sécurisé
-          </p>
+          <p className="page-lead mt-1">{t("auth.login.subtitle")}</p>
         </div>
 
         {/* ---------- MESSAGE DE SUCCÈS ---------- */}
@@ -115,7 +113,7 @@ export default function LoginPage() {
           {/* EMAIL */}
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">
-              Adresse email
+              {t("auth.login.emailLabel")}
             </label>
 
             <div className="relative">
@@ -125,7 +123,7 @@ export default function LoginPage() {
                 type="email"
                 className="w-full border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-sm bg-white 
                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="exemple@email.com"
+                placeholder={t("auth.login.emailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoFocus
@@ -137,7 +135,7 @@ export default function LoginPage() {
           {/* PASSWORD */}
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">
-              Mot de passe
+              {t("auth.login.passwordLabel")}
             </label>
 
             <div className="relative">
@@ -147,7 +145,7 @@ export default function LoginPage() {
                 type={showPassword ? "text" : "password"}
                 className="w-full border border-slate-300 rounded-xl pl-10 pr-10 py-2 text-sm bg-white
                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="••••••••"
+                placeholder={t("auth.login.passwordPlaceholder")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -156,7 +154,9 @@ export default function LoginPage() {
               <button
                 type="button"
                 aria-label={
-                  showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"
+                  showPassword
+                    ? t("auth.login.passwordHide")
+                    : t("auth.login.passwordShow")
                 }
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute inset-y-0 right-3 flex items-center text-slate-500 hover:text-blue-600"
@@ -171,8 +171,7 @@ export default function LoginPage() {
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            Mot de passe oublie ? Contactez l'admin ou le master de votre pays/region
-            pour reinitialiser. Ensuite, vous pourrez le modifier dans votre compte.
+            {t("auth.login.forgotInfo")}
           </div>
 
           {/*
@@ -197,32 +196,31 @@ export default function LoginPage() {
             {loading ? (
               <>
                 <Loader2 className="animate-spin w-5 h-5 mr-2" />
-                Connexion…
+                {t("auth.login.submitting")}
               </>
             ) : (
-              "Se connecter"
+              t("auth.login.submit")
             )}
           </button>
         </form>
 
         {/* ---------- LIENS SUPPLÉMENTAIRES ---------- */}
         <div className="mt-8 text-center text-sm text-slate-600">
-          <p className="mb-2">
-            <strong>Client :</strong> vous n’avez pas encore de compte ?
-          </p>
+          <p className="mb-2">{t("auth.login.clientNoAccount")}</p>
 
           <Link
             to="/register"
             className="text-blue-600 font-medium hover:underline"
           >
-            ➕ Créer un compte client
+            {t("auth.login.createAccount")}
           </Link>
 
           <p className="mt-4 text-slate-500 text-xs">
-            Besoin d’un accès spécifique ? Contactez le support Teranga.
+            {t("auth.login.supportInfo")}
           </p>
         </div>
       </div>
     </div>
   );
 }
+

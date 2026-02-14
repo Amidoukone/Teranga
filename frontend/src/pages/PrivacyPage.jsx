@@ -2,80 +2,97 @@
 // PrivacyPage.jsx — Politique de confidentialité RGPD • Teranga 2025
 // ============================================================================
 import SetSeo from "../components/SetSeo";
+import { useTranslation, Trans } from "react-i18next";
 
 export default function PrivacyPage() {
+  const { t } = useTranslation();
+  const collectedItems = [
+    t("privacyPage.sections.collected.items.identification"),
+    t("privacyPage.sections.collected.items.connection"),
+    t("privacyPage.sections.collected.items.services"),
+    t("privacyPage.sections.collected.items.evidence"),
+  ];
+  const purposes = [
+    t("privacyPage.sections.purposes.items.account"),
+    t("privacyPage.sections.purposes.items.execute"),
+    t("privacyPage.sections.purposes.items.security"),
+    t("privacyPage.sections.purposes.items.tracking"),
+  ];
+  const rights = [
+    t("privacyPage.sections.rights.items.access"),
+    t("privacyPage.sections.rights.items.rectification"),
+    t("privacyPage.sections.rights.items.deletion"),
+    t("privacyPage.sections.rights.items.objection"),
+    t("privacyPage.sections.rights.items.portability"),
+  ];
+
   return (
     <>
       <SetSeo
-        title="Politique de confidentialité"
-        description="Politique de confidentialité Teranga conforme au RGPD : données collectées, finalités, droits des utilisateurs, sécurité et durée de conservation."
+        title={t("privacyPage.seo.title")}
+        description={t("privacyPage.seo.description")}
       />
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
         <div className="page-shell max-w-4xl mx-auto p-6 sm:p-10">
-          <p className="page-kicker mb-3">Protection des données</p>
+          <p className="page-kicker mb-3">{t("privacyPage.kicker")}</p>
           <h1 className="page-title mb-6">
-            Politique de confidentialité (RGPD)
+            {t("privacyPage.title")}
           </h1>
 
           <section className="space-y-4 text-slate-700 leading-relaxed">
 
             <p>
-              La présente politique explique comment Teranga collecte, utilise,
-              stocke et protège vos données personnelles conformément au RGPD.
+              {t("privacyPage.intro")}
             </p>
 
             <h2 className="text-xl font-semibold text-slate-900 mt-6">
-              1. Données collectées
+              {t("privacyPage.sections.collected.title")}
             </h2>
             <ul className="list-disc pl-6">
-              <li>Données d’identification : nom, prénom, email</li>
-              <li>Données de connexion : token, adresse IP, appareil</li>
-              <li>Données liées aux services : biens, projets, transactions</li>
-              <li>Preuves envoyées : photos, vidéos, documents</li>
+              {collectedItems.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
             </ul>
 
             <h2 className="text-xl font-semibold text-slate-900 mt-6">
-              2. Finalités du traitement
+              {t("privacyPage.sections.purposes.title")}
             </h2>
-            <p>Les données sont utilisées pour :</p>
+            <p>{t("privacyPage.sections.purposes.lead")}</p>
             <ul className="list-disc pl-6">
-              <li>Gérer votre compte</li>
-              <li>Exécuter les services demandés</li>
-              <li>Assurer la sécurité de l’application</li>
-              <li>Suivre les projets, biens et transactions</li>
+              {purposes.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
             </ul>
 
             <h2 className="text-xl font-semibold text-slate-900 mt-6">
-              3. Conservation des données
+              {t("privacyPage.sections.retention.title")}
             </h2>
             <p>
-              Les données sont conservées aussi longtemps que nécessaire ou selon
-              les obligations légales.
+              {t("privacyPage.sections.retention.details")}
             </p>
 
             <h2 className="text-xl font-semibold text-slate-900 mt-6">
-              4. Partage des données
+              {t("privacyPage.sections.sharing.title")}
             </h2>
             <p>
-              Teranga ne revend pas vos données. Elles peuvent être transmises aux
-              prestataires habilités uniquement pour exécuter les services.
+              {t("privacyPage.sections.sharing.details")}
             </p>
 
             <h2 className="text-xl font-semibold text-slate-900 mt-6">
-              5. Vos droits (RGPD)
+              {t("privacyPage.sections.rights.title")}
             </h2>
             <ul className="list-disc pl-6">
-              <li>Droit d’accès</li>
-              <li>Droit de rectification</li>
-              <li>Droit à la suppression</li>
-              <li>Droit d’opposition</li>
-              <li>Droit à la portabilité</li>
+              {rights.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
             </ul>
 
             <p>
-              Pour exercer vos droits : <br />
-              <strong>contact@teranga-platform.com</strong>
+              <Trans
+                i18nKey="privacyPage.sections.rights.contact"
+                components={{ strong: <strong />, br: <br /> }}
+              />
             </p>
           </section>
         </div>

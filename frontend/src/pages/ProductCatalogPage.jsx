@@ -13,6 +13,8 @@ import { createOrder } from '../services/orders';
 import { me } from '../services/auth';
 import { formatCurrency } from '../utils/labels';
 import PaginationBar from '../components/PaginationBar';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 
 /* ============================================================
    🌍 PRODUCTION CONFIG — FILE_BASE / toAbsUrl()
@@ -87,10 +89,10 @@ function getImagesForProduct(p) {
    💰 Helper : affichage PRO du prix (montant + devise)
    Exemple : "12 500 Franc CFA (XOF)"
 ============================================================ */
-function formatProductPrice(amount, currency = 'XOF') {
+function formatProductPrice(amount, currency = 'XOF', locale = 'fr-FR') {
   const numeric = Number(amount || 0);
 
-  const formattedNumber = new Intl.NumberFormat('fr-FR', {
+  const formattedNumber = new Intl.NumberFormat(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(numeric);
@@ -105,6 +107,8 @@ function formatProductPrice(amount, currency = 'XOF') {
    ⭐ PAGE CATALOGUE PRODUITS (CLEAN SHOP PREMIUM — STYLE A)
 ============================================================ */
 export default function ProductCatalogPage() {
+  const { locale } = useLocale();
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -214,7 +218,9 @@ export default function ProductCatalogPage() {
       } catch (e) {
         console.error('? Erreur chargement catalogue:', e);
         if (!mounted) return;
-        setError(e?.response?.data?.error || "Impossible de charger les produits.");
+        setError(
+          e?.response?.data?.error || t('productCatalogPage.errors.load')
+        );
         setProducts([]);
         setPagination({ page, limit: pageSize, total: 0 });
       } finally {
@@ -270,12 +276,12 @@ export default function ProductCatalogPage() {
   ============================================================ */
   function handleOrder(product) {
     if (!user) {
-      alert('Vous devez être connecté pour commander.');
+      alert(t('productCatalogPage.alerts.loginRequired'));
       return;
     }
 
     if (user.role === 'admin') {
-      alert("ℹ️ Les administrateurs ne passent pas de commandes ici.");
+      alert(t('productCatalogPage.alerts.adminBlocked'));
       return;
     }
 
@@ -291,23 +297,23 @@ export default function ProductCatalogPage() {
     const requestedQty = Number(quantity);
 
     if (!Number.isFinite(requestedQty) || requestedQty <= 0) {
-      alert('Veuillez saisir une quantité valide (au moins 1).');
+      alert(t('productCatalogPage.alerts.invalidQuantity'));
       return;
     }
 
     // Si stock connu et la demande dépasse le stock → message personnalisé
     if (typeof selectedProduct.stock === 'number') {
       if (selectedProduct.stock <= 0) {
-        alert(
-          "Ce produit est actuellement en rupture de stock. Merci de contacter le service client pour plus d'informations."
-        );
+        alert(t('productCatalogPage.alerts.outOfStock'));
         return;
       }
 
       if (requestedQty > selectedProduct.stock) {
         alert(
-          `La quantité demandée (${requestedQty}) dépasse le stock disponible (${selectedProduct.stock}).\n\n` +
-            'Merci de contacter le service client pour ajuster votre commande ou organiser une commande spéciale.'
+          t('productCatalogPage.alerts.overStock', {
+            requested: requestedQty,
+            available: selectedProduct.stock,
+          })
         );
         return;
       }
@@ -317,7 +323,10 @@ export default function ProductCatalogPage() {
       setCreating(false);
 
       const payload = {
-        customerNote: `Commande de ${requestedQty} x ${selectedProduct.name}`,
+        customerNote: t('productCatalogPage.order.customerNote', {
+          quantity: requestedQty,
+          name: selectedProduct.name,
+        }),
         items: [
           {
             productId: selectedProduct.id,
@@ -329,7 +338,12 @@ export default function ProductCatalogPage() {
 
       const newOrder = await createOrder(payload);
 
-      alert(`✅ Commande créée pour ${requestedQty} × ${selectedProduct.name}`);
+      alert(
+        t('productCatalogPage.alerts.orderSuccess', {
+          quantity: requestedQty,
+          name: selectedProduct.name,
+        })
+      );
 
       setSelectedProduct(null);
       setQuantity(1);
@@ -340,7 +354,7 @@ export default function ProductCatalogPage() {
       else navigate('/orders');
     } catch (err) {
       console.error('❌ Erreur création commande:', err);
-      alert("Erreur lors de la création de la commande.");
+      alert(t('productCatalogPage.alerts.orderError'));
     }
   }
 
@@ -352,7 +366,7 @@ export default function ProductCatalogPage() {
       return [...categories]
         .map((c) => ({
           id: c.id,
-          name: c.name || `Cat?gorie #${c.id}`,
+          name: c.name || t('productCatalogPage.categoryFallback', { id: c.id }),
         }))
         .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     }
@@ -363,7 +377,7 @@ export default function ProductCatalogPage() {
       if (cat?.id && !map.has(cat.id)) {
         map.set(cat.id, {
           id: cat.id,
-          name: cat.name || `Cat?gorie #${cat.id}`,
+          name: cat.name || t('productCatalogPage.categoryFallback', { id: cat.id }),
         });
       }
     });
@@ -371,7 +385,7 @@ export default function ProductCatalogPage() {
     return [...map.values()].sort((a, b) =>
       (a.name || '').localeCompare(b.name || '')
     );
-  }, [categories, products]);
+  }, [categories, products, t]);
 
   const totalProducts = useMemo(
     () => pagination?.total ?? pagination?.count ?? products.length,
@@ -396,7 +410,7 @@ export default function ProductCatalogPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
         <div className="bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl px-6 py-5 shadow-xl">
           <p className="text-gray-600 text-sm sm:text-lg animate-pulse text-center">
-            Chargement du catalogue…
+            {t('productCatalogPage.loading')}
           </p>
         </div>
       </div>
@@ -408,12 +422,11 @@ export default function ProductCatalogPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-red-50 to-red-100 px-4">
         <div className="max-w-md w-full bg-white border border-red-100 shadow-xl rounded-3xl px-6 py-6">
           <h1 className="text-lg font-bold text-red-700 mb-2">
-            Une erreur est survenue
+            {t('productCatalogPage.error.title')}
           </h1>
           <p className="text-sm text-red-600 mb-4 break-words">{error}</p>
           <p className="text-xs text-gray-500">
-            Veuillez réessayer plus tard ou contacter le support si le problème
-            persiste.
+            {t('productCatalogPage.error.subtitle')}
           </p>
         </div>
       </div>
@@ -433,8 +446,8 @@ export default function ProductCatalogPage() {
 
   const emptyMessage =
     !hasActiveFilters && totalProducts === 0
-      ? 'Aucun produit disponible pour le moment.'
-      : 'Aucun produit ne correspond à ces critères.';
+      ? t('productCatalogPage.empty.noProducts')
+      : t('productCatalogPage.empty.noResults');
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-3xl border border-slate-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
@@ -443,25 +456,26 @@ export default function ProductCatalogPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[0.7rem] uppercase tracking-[0.18em] font-semibold text-blue-600 mb-1">
-              Boutique Teranga
+              {t('productCatalogPage.header.kicker')}
             </p>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              🛍️ <span>Catalogue des produits</span>
+              🛍️ <span>{t('productCatalogPage.header.title')}</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-xl">
-              Explorez et commandez rapidement des produits disponibles depuis
-              votre espace Teranga.
+              {t('productCatalogPage.header.subtitle')}
             </p>
           </div>
 
           <div className="flex items-end sm:items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
             <div className="flex flex-col items-end text-right">
               <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-[11px] text-slate-600 shadow-sm">
-                {products.length} résultat
-                {products.length > 1 ? 's' : ''} sur {totalProducts}
+                {t('productCatalogPage.header.count', {
+                  count: products.length,
+                  total: totalProducts,
+                })}
               </span>
               <span className="mt-1 text-[11px] text-slate-400">
-                Filtrez par catégorie, prix ou nom de produit.
+                {t('productCatalogPage.header.filtersHint')}
               </span>
             </div>
           </div>
@@ -474,7 +488,7 @@ export default function ProductCatalogPage() {
             {/* Recherche */}
             <div className="md:col-span-2">
               <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
-                Rechercher
+                {t('productCatalogPage.filters.searchLabel')}
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
@@ -484,7 +498,7 @@ export default function ProductCatalogPage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Nom, description, catégorie, #id…"
+                  placeholder={t('productCatalogPage.filters.searchPlaceholder')}
                   className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                 />
               </div>
@@ -493,14 +507,14 @@ export default function ProductCatalogPage() {
             {/* Catégorie */}
             <div>
               <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
-                Catégorie
+                {t('productCatalogPage.filters.categoryLabel')}
               </label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Toutes les catégories</option>
+                <option value="">{t('productCatalogPage.filters.categoryAll')}</option>
                 {availableCategories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -516,7 +530,7 @@ export default function ProductCatalogPage() {
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
-                  Prix min
+                  {t('productCatalogPage.filters.priceMinLabel')}
                 </label>
                 <input
                   type="number"
@@ -524,13 +538,13 @@ export default function ProductCatalogPage() {
                   value={priceMin}
                   onChange={(e) => setPriceMin(e.target.value)}
                   className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Min"
+                  placeholder={t('productCatalogPage.filters.priceMinPlaceholder')}
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
-                  Prix max
+                  {t('productCatalogPage.filters.priceMaxLabel')}
                 </label>
                 <input
                   type="number"
@@ -538,7 +552,7 @@ export default function ProductCatalogPage() {
                   value={priceMax}
                   onChange={(e) => setPriceMax(e.target.value)}
                   className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Max"
+                  placeholder={t('productCatalogPage.filters.priceMaxPlaceholder')}
                 />
               </div>
 
@@ -554,7 +568,7 @@ export default function ProductCatalogPage() {
                   }}
                   className="w-full text-xs font-semibold rounded-xl border border-slate-200 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700"
                 >
-                  Réinitialiser
+                  {t('productCatalogPage.filters.reset')}
                 </button>
               </div>
             </div>
@@ -562,19 +576,31 @@ export default function ProductCatalogPage() {
             {/* Tri */}
             <div>
               <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
-                Trier par
+                {t('productCatalogPage.filters.sortLabel')}
               </label>
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
                 className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="default">Recommandé</option>
-                <option value="price_asc">Prix croissant</option>
-                <option value="price_desc">Prix décroissant</option>
-                <option value="name_asc">Nom A → Z</option>
-                <option value="name_desc">Nom Z → A</option>
-                <option value="stock_desc">Stock le plus élevé</option>
+                <option value="default">
+                  {t('productCatalogPage.filters.sortDefault')}
+                </option>
+                <option value="price_asc">
+                  {t('productCatalogPage.filters.sortPriceAsc')}
+                </option>
+                <option value="price_desc">
+                  {t('productCatalogPage.filters.sortPriceDesc')}
+                </option>
+                <option value="name_asc">
+                  {t('productCatalogPage.filters.sortNameAsc')}
+                </option>
+                <option value="name_desc">
+                  {t('productCatalogPage.filters.sortNameDesc')}
+                </option>
+                <option value="stock_desc">
+                  {t('productCatalogPage.filters.sortStockDesc')}
+                </option>
               </select>
             </div>
           </div>
@@ -611,7 +637,9 @@ export default function ProductCatalogPage() {
                       type="button"
                       onClick={() => openPreview(p, 0)}
                       className="relative group"
-                      aria-label={`Voir images de ${p.name}`}
+                      aria-label={t('productCatalogPage.card.viewImagesAria', {
+                        name: p.name,
+                      })}
                     >
                       <img
                         src={mainImg}
@@ -622,19 +650,20 @@ export default function ProductCatalogPage() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition" />
 
                       <div className="absolute left-3 bottom-3 text-white text-[11px] bg-black/50 px-2 py-1 rounded">
-                        Cliquer pour agrandir
+                        {t('productCatalogPage.card.zoomHint')}
                       </div>
 
                       {images.length > 1 && (
                         <span className="absolute right-3 bottom-3 text-[11px] bg-black/60 text-white px-2 py-0.5 rounded">
-                          {images.length} photo
-                          {images.length > 1 ? 's' : ''}
+                          {t('productCatalogPage.card.photoCount', {
+                            count: images.length,
+                          })}
                         </span>
                       )}
                     </button>
                   ) : (
                     <div className="w-full h-44 flex items-center justify-center bg-slate-100 text-slate-400 text-xs">
-                      Aucun visuel
+                      {t('productCatalogPage.card.noImage')}
                     </div>
                   )}
 
@@ -653,28 +682,29 @@ export default function ProductCatalogPage() {
                     </div>
 
                     <p className="text-xs text-slate-500 mb-2">
-                      Réf. <span className="font-mono">#{p.id}</span>
+                      {t('productCatalogPage.card.refLabel')}{' '}
+                      <span className="font-mono">#{p.id}</span>
                     </p>
 
                     <p className="text-sm text-slate-600 flex-1 line-clamp-3">
-                      {p.description || 'Aucune description.'}
+                      {p.description || t('productCatalogPage.card.noDescription')}
                     </p>
 
                     {/* Prix + Stock */}
                     <div className="mt-3 flex items-center justify-between">
                       <div>
                         <p className="text-[11px] uppercase text-slate-400">
-                          Prix
+                          {t('productCatalogPage.card.priceLabel')}
                         </p>
                         <p className="text-lg font-bold text-blue-600">
-                          {formatProductPrice(p.price, p.currency)}
+                          {formatProductPrice(p.price, p.currency, locale)}
                         </p>
                       </div>
 
                       {typeof p.stock === 'number' && (
                         <div className="text-right">
                           <p className="text-[11px] uppercase text-slate-400">
-                            Stock
+                            {t('productCatalogPage.card.stockLabel')}
                           </p>
                           <p
                             className={`text-xs font-semibold ${
@@ -684,8 +714,10 @@ export default function ProductCatalogPage() {
                             }`}
                           >
                             {p.stock > 0
-                              ? `${p.stock} dispo`
-                              : 'Rupture'}
+                              ? t('productCatalogPage.card.stockAvailable', {
+                                  count: p.stock,
+                                })
+                              : t('productCatalogPage.card.stockOut')}
                           </p>
                         </div>
                       )}
@@ -697,7 +729,7 @@ export default function ProductCatalogPage() {
                         onClick={() => handleOrder(p)}
                         className="mt-4 w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-xl shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
                       >
-                        🛒 Commander
+                        🛒 {t('productCatalogPage.card.order')}
                       </button>
                     )}
                   </div>
@@ -716,26 +748,29 @@ export default function ProductCatalogPage() {
               <button
                 onClick={() => setCreating(false)}
                 className="absolute top-3 right-3 text-slate-500 hover:text-slate-800"
-                aria-label="Fermer"
+                aria-label={t('productCatalogPage.order.close')}
               >
                 ✕
               </button>
 
               <div className="p-6">
                 <h2 className="text-xl font-bold text-slate-900 mb-1">
-                  Commander {selectedProduct.name}
+                  {t('productCatalogPage.order.title', {
+                    name: selectedProduct.name,
+                  })}
                 </h2>
                 <p className="text-xs text-slate-600 mb-4">
                   {formatProductPrice(
                     selectedProduct.price,
-                    selectedProduct.currency || 'XOF'
+                    selectedProduct.currency || 'XOF',
+                    locale
                   )}{' '}
-                  / unité
+                  {t('productCatalogPage.order.unit')}
                 </p>
 
                 <form onSubmit={handleConfirmOrder}>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Quantité
+                    {t('productCatalogPage.order.quantityLabel')}
                   </label>
                   <input
                     type="number"
@@ -751,13 +786,13 @@ export default function ProductCatalogPage() {
                       onClick={() => setCreating(false)}
                       className="px-4 py-2 text-sm bg-gray-100 text-slate-700 rounded-lg hover:bg-gray-200"
                     >
-                      Annuler
+                      {t('productCatalogPage.order.cancel')}
                     </button>
                     <button
                       type="submit"
                       className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800"
                     >
-                      Confirmer
+                      {t('productCatalogPage.order.confirm')}
                     </button>
                   </div>
                 </form>
@@ -779,6 +814,9 @@ export default function ProductCatalogPage() {
               onClick={closePreview}
               role="dialog"
               aria-modal="true"
+              aria-label={t('productCatalogPage.lightbox.ariaLabel', {
+                name: previewProduct?.name || '',
+              })}
             >
               {/* Fermer */}
               <button
@@ -788,6 +826,7 @@ export default function ProductCatalogPage() {
                   closePreview();
                 }}
                 className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80"
+                aria-label={t('productCatalogPage.lightbox.close')}
               >
                 ✕
               </button>
@@ -799,6 +838,7 @@ export default function ProductCatalogPage() {
                     type="button"
                     onClick={goPrev}
                     className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70"
+                    aria-label={t('productCatalogPage.lightbox.prev')}
                   >
                     ‹
                   </button>
@@ -807,6 +847,7 @@ export default function ProductCatalogPage() {
                     type="button"
                     onClick={goNext}
                     className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70"
+                    aria-label={t('productCatalogPage.lightbox.next')}
                   >
                     ›
                   </button>
@@ -820,7 +861,9 @@ export default function ProductCatalogPage() {
                 <div className="flex-1 flex items-center justify-center">
                   <img
                     src={images[previewIndex]}
-                    alt={`Image ${previewIndex + 1}`}
+                    alt={t('productCatalogPage.lightbox.imageAlt', {
+                      index: previewIndex + 1,
+                    })}
                     className="max-h-[90vh] max-w-full object-contain"
                   />
                 </div>
@@ -840,7 +883,9 @@ export default function ProductCatalogPage() {
                       >
                         <img
                           src={img}
-                          alt={`Miniature ${idx + 1}`}
+                          alt={t('productCatalogPage.lightbox.thumbAlt', {
+                            index: idx + 1,
+                          })}
                           className="w-full h-full object-cover"
                         />
                       </button>
@@ -855,3 +900,5 @@ export default function ProductCatalogPage() {
     </div>
   );
 }
+
+

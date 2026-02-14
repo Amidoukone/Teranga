@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getTransactions } from '../services/transactions';
 import { me } from '../services/auth';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 import {
   PieChart,
   Pie,
@@ -11,6 +13,8 @@ import {
 } from 'recharts';
 
 export default function FinanceDashboardPage() {
+  const { locale } = useLocale();
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -170,7 +174,7 @@ export default function FinanceDashboardPage() {
 
   // Format monétaire local (XOF, etc.)
   const formatCurrency = (v) =>
-    new Intl.NumberFormat('fr-FR', {
+    new Intl.NumberFormat(locale, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(Number(v || 0));
@@ -251,7 +255,9 @@ export default function FinanceDashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
-        <p className="text-gray-600 text-lg animate-pulse">Chargement…</p>
+        <p className="text-gray-600 text-lg animate-pulse">
+          {t('financeDashboardPage.loading.page')}
+        </p>
       </div>
     );
   }
@@ -259,7 +265,9 @@ export default function FinanceDashboardPage() {
   if (!user || !summary) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
-        <p className="text-gray-600">Aucune donnée disponible.</p>
+        <p className="text-gray-600">
+          {t('financeDashboardPage.empty.noData')}
+        </p>
       </div>
     );
   }
@@ -267,10 +275,16 @@ export default function FinanceDashboardPage() {
   // 🎨 Données pour le graphique (vue filtrée)
   const COLORS = ['#34C759', '#FF3B30', '#0A84FF', '#AF52DE']; // Apple-like palette
   const chartData = [
-    { name: 'Revenus', value: summary.revenues },
-    { name: 'Dépenses', value: summary.expenses },
-    { name: 'Commissions', value: summary.commissions },
-    { name: 'Ajustements', value: summary.adjustments },
+    { name: t('financeDashboardPage.chart.revenues'), value: summary.revenues },
+    { name: t('financeDashboardPage.chart.expenses'), value: summary.expenses },
+    {
+      name: t('financeDashboardPage.chart.commissions'),
+      value: summary.commissions,
+    },
+    {
+      name: t('financeDashboardPage.chart.adjustments'),
+      value: summary.adjustments,
+    },
   ];
 
   // ============================================================
@@ -284,14 +298,14 @@ export default function FinanceDashboardPage() {
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-semibold text-[#111827] tracking-tight break-words flex items-center gap-2">
               <span className="text-xl">📊</span>
-              <span>Tableau de bord financier</span>
+              <span>{t('financeDashboardPage.title')}</span>
             </h1>
             <p className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
               {user.role === 'admin'
-                ? 'Vue globale sur les flux financiers (tous rôles confondus).'
+                ? t('financeDashboardPage.descriptions.admin')
                 : user.role === 'agent'
-                ? 'Vue de vos transactions liées à vos services et tâches.'
-                : 'Vue de vos transactions personnelles.'}
+                ? t('financeDashboardPage.descriptions.agent')
+                : t('financeDashboardPage.descriptions.client')}
             </p>
           </div>
 
@@ -300,13 +314,15 @@ export default function FinanceDashboardPage() {
               onClick={() => setShowChart((s) => !s)}
               className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium rounded-full shadow-sm bg-[#111827] text-white hover:bg-black transition-transform transform hover:-translate-y-0.5 active:translate-y-0"
             >
-              {showChart ? 'Masquer le graphique' : 'Afficher le graphique 📈'}
+              {showChart
+                ? t('financeDashboardPage.buttons.hideChart')
+                : t('financeDashboardPage.buttons.showChart')}
             </button>
             <button
               onClick={exportCSV}
               className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium rounded-full shadow-sm border border-[#d1d5db] bg-white text-gray-800 hover:bg-[#f5f5f7] transition-transform transform hover:-translate-y-0.5 active:translate-y-0"
             >
-              ⬇️ Export CSV
+              {t('financeDashboardPage.buttons.exportCsv')}
             </button>
           </div>
         </div>
@@ -317,14 +333,14 @@ export default function FinanceDashboardPage() {
             {/* Recherche texte */}
             <div className="lg:col-span-2">
               <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                Recherche
+                {t('financeDashboardPage.filters.searchLabel')}
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
                   🔍
                 </span>
                 <input
-                  placeholder="Description, paiement, service/tâche, email…"
+                  placeholder={t('financeDashboardPage.filters.searchPlaceholder')}
                   value={filters.q}
                   onChange={(e) => setFilters({ ...filters, q: e.target.value })}
                   className="w-full border border-[#e5e7eb] rounded-2xl pl-8 pr-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
@@ -335,42 +351,42 @@ export default function FinanceDashboardPage() {
             {/* Type */}
             <div>
               <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                Type
+                {t('financeDashboardPage.filters.typeLabel')}
               </label>
               <select
                 value={filters.type}
                 onChange={(e) => setFilters({ ...filters, type: e.target.value })}
                 className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
               >
-                <option value="">— Tous —</option>
-                <option value="revenue">Revenu</option>
-                <option value="expense">Dépense</option>
-                <option value="commission">Commission</option>
-                <option value="adjustment">Ajustement</option>
+                <option value="">{t('financeDashboardPage.filters.allOption')}</option>
+                <option value="revenue">{t('transactions.type.revenue')}</option>
+                <option value="expense">{t('transactions.type.expense')}</option>
+                <option value="commission">{t('transactions.type.commission')}</option>
+                <option value="adjustment">{t('transactions.type.adjustment')}</option>
               </select>
             </div>
 
             {/* Rôle (surtout admin) */}
             <div>
               <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                Rôle
+                {t('financeDashboardPage.filters.roleLabel')}
               </label>
               <select
                 value={filters.role}
                 onChange={(e) => setFilters({ ...filters, role: e.target.value })}
                 className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
               >
-                <option value="">— Tous —</option>
-                <option value="client">Client</option>
-                <option value="agent">Agent</option>
-                <option value="admin">Admin</option>
+                <option value="">{t('financeDashboardPage.filters.allOption')}</option>
+                <option value="client">{t('roles.client')}</option>
+                <option value="agent">{t('roles.agent')}</option>
+                <option value="admin">{t('roles.admin')}</option>
               </select>
             </div>
 
             {/* Date du */}
             <div>
               <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                Du
+                {t('financeDashboardPage.filters.fromLabel')}
               </label>
               <input
                 type="date"
@@ -385,7 +401,7 @@ export default function FinanceDashboardPage() {
             {/* Date au */}
             <div>
               <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                Au
+                {t('financeDashboardPage.filters.toLabel')}
               </label>
               <input
                 type="date"
@@ -398,17 +414,25 @@ export default function FinanceDashboardPage() {
             {/* Tri */}
             <div>
               <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                Tri
+                {t('financeDashboardPage.filters.sortLabel')}
               </label>
               <select
                 value={filters.sort}
                 onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
                 className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
               >
-                <option value="-createdAt">Plus récents</option>
-                <option value="createdAt">Plus anciens</option>
-                <option value="-amount">Montant ↓</option>
-                <option value="amount">Montant ↑</option>
+                <option value="-createdAt">
+                  {t('financeDashboardPage.filters.sortOptions.newest')}
+                </option>
+                <option value="createdAt">
+                  {t('financeDashboardPage.filters.sortOptions.oldest')}
+                </option>
+                <option value="-amount">
+                  {t('financeDashboardPage.filters.sortOptions.amountDesc')}
+                </option>
+                <option value="amount">
+                  {t('financeDashboardPage.filters.sortOptions.amountAsc')}
+                </option>
               </select>
             </div>
           </div>
@@ -425,7 +449,7 @@ export default function FinanceDashboardPage() {
                   }
                   className="h-4 w-4 rounded border-gray-300 text-[#0a84ff] focus:ring-[#0a84ff]"
                 />
-                <span>Seulement liées à un service / tâche</span>
+                <span>{t('financeDashboardPage.filters.onlyLinked')}</span>
               </label>
 
               {/* Raccourcis de période */}
@@ -435,35 +459,37 @@ export default function FinanceDashboardPage() {
                   onClick={() => quickRange(7)}
                   className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-[#e5e7eb] hover:bg-[#f3f4f6] font-medium transition"
                 >
-                  7 jours
+                  {t('financeDashboardPage.filters.quickRanges.last7')}
                 </button>
                 <button
                   type="button"
                   onClick={() => quickRange(30)}
                   className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-[#e5e7eb] hover:bg-[#f3f4f6] font-medium transition"
                 >
-                  30 jours
+                  {t('financeDashboardPage.filters.quickRanges.last30')}
                 </button>
                 <button
                   type="button"
                   onClick={() => quickRange(90)}
                   className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-[#e5e7eb] hover:bg-[#f3f4f6] font-medium transition"
                 >
-                  90 jours
+                  {t('financeDashboardPage.filters.quickRanges.last90')}
                 </button>
               </div>
             </div>
 
             <div className="flex items-center justify-between sm:justify-end gap-2">
               <div className="text-[11px] text-gray-500">
-                {filtered.length} transaction(s)
+                {t('financeDashboardPage.counts.transactions', {
+                  count: filtered.length,
+                })}
               </div>
               <button
                 type="button"
                 onClick={resetFilters}
                 className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-[#e5e7eb] hover:bg-[#f3f4f6] font-medium transition"
               >
-                Réinitialiser
+                {t('financeDashboardPage.filters.reset')}
               </button>
             </div>
           </div>
@@ -476,7 +502,10 @@ export default function FinanceDashboardPage() {
               summary.balance >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'
             }`}
           >
-            Solde actuel : {formatCurrency(summary.balance)} XOF
+            {t('financeDashboardPage.balance', {
+              amount: formatCurrency(summary.balance),
+              currency: 'XOF',
+            })}
           </h2>
         </div>
 
@@ -507,29 +536,41 @@ export default function FinanceDashboardPage() {
         {user.role === 'admin' && (
           <div className="mt-4 mb-4">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
-              👥 Détails par rôle
+              {t('financeDashboardPage.sections.roleDetails')}
             </h3>
-            <RoleBreakdown transactions={filtered} />
+            <RoleBreakdown transactions={filtered} formatCurrency={formatCurrency} />
           </div>
         )}
 
         {/* 📘 Détails globaux (vue filtrée) */}
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
-            label="💰 Revenus"
-            value={`${formatCurrency(summary.revenues)} XOF`}
+            label={t('financeDashboardPage.stats.revenues')}
+            value={t('financeDashboardPage.currencyValue', {
+              amount: formatCurrency(summary.revenues),
+              currency: 'XOF',
+            })}
           />
           <StatCard
-            label="💸 Dépenses"
-            value={`${formatCurrency(summary.expenses)} XOF`}
+            label={t('financeDashboardPage.stats.expenses')}
+            value={t('financeDashboardPage.currencyValue', {
+              amount: formatCurrency(summary.expenses),
+              currency: 'XOF',
+            })}
           />
           <StatCard
-            label="🏢 Commissions"
-            value={`${formatCurrency(summary.commissions)} XOF`}
+            label={t('financeDashboardPage.stats.commissions')}
+            value={t('financeDashboardPage.currencyValue', {
+              amount: formatCurrency(summary.commissions),
+              currency: 'XOF',
+            })}
           />
           <StatCard
-            label="⚙️ Ajustements"
-            value={`${formatCurrency(summary.adjustments)} XOF`}
+            label={t('financeDashboardPage.stats.adjustments')}
+            value={t('financeDashboardPage.currencyValue', {
+              amount: formatCurrency(summary.adjustments),
+              currency: 'XOF',
+            })}
           />
         </div>
       </div>
@@ -553,7 +594,8 @@ function StatCard({ label, value }) {
  * 👑 Composant pour l’admin — affiche les sous-totaux séparés par rôle
  * (reçoit déjà la liste filtrée)
  */
-function RoleBreakdown({ transactions }) {
+function RoleBreakdown({ transactions, formatCurrency }) {
+  const { t } = useTranslation();
   const grouped = {
     client: [],
     agent: [],
@@ -580,12 +622,30 @@ function RoleBreakdown({ transactions }) {
         {title}
       </h4>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs sm:text-sm text-gray-700">
-        <div>Revenus : {sum(list, 'revenue').toFixed(2)} XOF</div>
-        <div>Dépenses : {sum(list, 'expense').toFixed(2)} XOF</div>
-        <div>Commissions : {sum(list, 'commission').toFixed(2)} XOF</div>
+        <div>
+          {t('financeDashboardPage.roleBreakdown.revenues', {
+            amount: formatCurrency(sum(list, 'revenue')),
+            currency: 'XOF',
+          })}
+        </div>
+        <div>
+          {t('financeDashboardPage.roleBreakdown.expenses', {
+            amount: formatCurrency(sum(list, 'expense')),
+            currency: 'XOF',
+          })}
+        </div>
+        <div>
+          {t('financeDashboardPage.roleBreakdown.commissions', {
+            amount: formatCurrency(sum(list, 'commission')),
+            currency: 'XOF',
+          })}
+        </div>
         {showAdjustments && (
           <div className="sm:col-span-3">
-            Ajustements : {sum(list, 'adjustment').toFixed(2)} XOF
+            {t('financeDashboardPage.roleBreakdown.adjustments', {
+              amount: formatCurrency(sum(list, 'adjustment')),
+              currency: 'XOF',
+            })}
           </div>
         )}
       </div>
@@ -594,12 +654,12 @@ function RoleBreakdown({ transactions }) {
 
   return (
     <div className="space-y-3">
-      <Block title="👤 Clients" list={grouped.client} />
-      <Block title="🧑‍🔧 Agents" list={grouped.agent} />
-      <Block title="👑 Admins" list={grouped.admin} />
+      <Block title={t('financeDashboardPage.roleBreakdown.clients')} list={grouped.client} />
+      <Block title={t('financeDashboardPage.roleBreakdown.agents')} list={grouped.agent} />
+      <Block title={t('financeDashboardPage.roleBreakdown.admins')} list={grouped.admin} />
       {grouped.autres.length > 0 && (
         <Block
-          title="⚙️ Autres / Ajustements internes"
+          title={t('financeDashboardPage.roleBreakdown.others')}
           list={grouped.autres}
           showAdjustments
         />
@@ -607,3 +667,4 @@ function RoleBreakdown({ transactions }) {
     </div>
   );
 }
+

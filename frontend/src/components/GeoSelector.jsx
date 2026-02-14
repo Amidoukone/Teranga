@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useGeo } from '../contexts/GeoContext';
 
 export default function GeoSelector() {
+  const { t } = useTranslation();
   const {
     countryId,
     regionId,
@@ -20,7 +22,7 @@ export default function GeoSelector() {
 
   if (loading) {
     return (
-      <div className="text-xs text-gray-400">Chargement zones…</div>
+      <div className="text-xs text-gray-400">{t('geo.loading')}</div>
     );
   }
 
@@ -39,17 +41,26 @@ export default function GeoSelector() {
   );
 
   if (!canSelect) {
+    const countryLabel = selectedCountry?.name
+      ? selectedCountry.name
+      : displayCountryId
+      ? t('geo.countryId', { id: displayCountryId })
+      : t('geo.countryUnknown');
+    const regionLabel = selectedRegion?.name
+      ? selectedRegion.name
+      : t('geo.regionId', { id: displayRegionId });
+
     return (
       <div className="flex items-center gap-2 text-xs text-gray-400">
         <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-cyan-300">
-          Scope
+          {t('geo.scope')}
         </span>
         <span className="text-gray-400">
-          {selectedCountry?.name || (displayCountryId ? `Pays #${displayCountryId}` : 'Pays non défini')}
+          {countryLabel}
         </span>
         {displayRegionId && (
           <span className="text-gray-400">
-            • {selectedRegion?.name || `Région #${displayRegionId}`}
+            • {regionLabel}
           </span>
         )}
       </div>
@@ -65,14 +76,16 @@ export default function GeoSelector() {
 
   return (
     <div className="flex items-center gap-2 text-xs">
-      <label className="sr-only" htmlFor="geo-country">Pays</label>
+      <label className="sr-only" htmlFor="geo-country">
+        {t('geo.countryLabel')}
+      </label>
       <select
         id="geo-country"
         className={selectBase}
         value={countryId || ''}
         onChange={(e) => setCountry(e.target.value ? Number(e.target.value) : null)}
       >
-        <option value="">Tous les pays</option>
+        <option value="">{t('geo.allCountries')}</option>
         {countryOptions.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
@@ -80,7 +93,9 @@ export default function GeoSelector() {
         ))}
       </select>
 
-      <label className="sr-only" htmlFor="geo-region">Région</label>
+      <label className="sr-only" htmlFor="geo-region">
+        {t('geo.regionLabel')}
+      </label>
       <select
         id="geo-region"
         className={[selectBase, !countryId ? selectDisabled : ""].join(" ").trim()}
@@ -88,7 +103,7 @@ export default function GeoSelector() {
         onChange={(e) => setRegion(e.target.value ? Number(e.target.value) : null)}
         disabled={!countryId}
       >
-        <option value="">Toutes les régions</option>
+        <option value="">{t('geo.allRegions')}</option>
         {regionOptions.map((r) => (
           <option key={r.id} value={r.id}>
             {r.name}

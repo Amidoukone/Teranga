@@ -15,7 +15,8 @@
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { me, logout, getLocalUser } from "../services/auth";
-import { normalizeRole, prettyRoleLabel } from "../utils/roles";
+import { normalizeRole } from "../utils/roles";
+import { useTranslation } from "react-i18next";
 
 import {
   X,
@@ -42,6 +43,7 @@ import {
 
 import { motion, AnimatePresence } from "framer-motion";
 import GeoSelector from "./GeoSelector";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
@@ -50,63 +52,63 @@ const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 /* ============================================================================ */
 
 const COMMON_COMMERCE = [
-  { path: "/shop", label: "Produits" },
-  { path: "/orders", label: "Commandes" },
+  { path: "/shop", labelKey: "nav.products" },
+  { path: "/orders", labelKey: "nav.orders" },
 ];
 
 // ✅ Admin-only onboarding link (GLOBAL ADMIN ONLY)
 const ADMIN_ONBOARDING_LINK = {
   path: "/admin/onboarding",
-  label: "Master",
+  labelKey: "nav.master",
 };
 
 const ACCOUNT_SECURITY_LINK = {
   path: "/account/security",
-  label: "Securite",
+  labelKey: "nav.security",
 };
 
 const ROLE_LINKS = {
   client: [
-    { path: "/dashboard", label: "Dashboard" },
-    { path: "/projects", label: "Projets" },
-    { path: "/properties", label: "Biens" },
-    { path: "/services", label: "Services" },
-    { path: "/tasks", label: "Tâches" },
-    { path: "/transactions", label: "Transactions" },
-    { path: "/finance", label: "Finances" },
+    { path: "/dashboard", labelKey: "nav.dashboard" },
+    { path: "/projects", labelKey: "nav.projects" },
+    { path: "/properties", labelKey: "nav.properties" },
+    { path: "/services", labelKey: "nav.services" },
+    { path: "/tasks", labelKey: "nav.tasks" },
+    { path: "/transactions", labelKey: "nav.transactions" },
+    { path: "/finance", labelKey: "nav.finance" },
     ...COMMON_COMMERCE,
     ACCOUNT_SECURITY_LINK,
   ],
   agent: [
-    { path: "/dashboard", label: "Dashboard" },
-    { path: "/projects", label: "Projets assignés" },
-    { path: "/agent/services", label: "Services assignés" },
-    { path: "/tasks", label: "Tâches" },
-    { path: "/transactions", label: "Transactions" },
-    { path: "/finance", label: "Finances" },
+    { path: "/dashboard", labelKey: "nav.dashboard" },
+    { path: "/projects", labelKey: "nav.projects" },
+    { path: "/agent/services", labelKey: "nav.services" },
+    { path: "/tasks", labelKey: "nav.tasks" },
+    { path: "/transactions", labelKey: "nav.transactions" },
+    { path: "/finance", labelKey: "nav.finance" },
     ...COMMON_COMMERCE,
     ACCOUNT_SECURITY_LINK,
   ],
   admin: [
-    { path: "/dashboard", label: "Dashboard" },
-    { path: "/projects", label: "Projets" },
-    { path: "/admin/projects", label: "Gestion projets" },
+    { path: "/dashboard", labelKey: "nav.dashboard" },
+    { path: "/projects", labelKey: "nav.projects" },
+    { path: "/admin/projects", labelKey: "nav.adminProjects" },
 
     // Onboarding injecté dynamiquement uniquement admin global
 
-    { path: "/services", label: "Services" },
-    { path: "/tasks", label: "Tâches" },
-    { path: "/admin/services", label: "Gestion services" },
-    { path: "/admin/metrics", label: "Monitoring" },
-    { path: "/admin/agents", label: "Agents" },
-    { path: "/admin/users", label: "Utilisateurs" },
-    { path: "/admin/properties", label: "Biens clients" },
-    { path: "/transactions", label: "Transactions" },
-    { path: "/finance", label: "Finances" },
+    { path: "/services", labelKey: "nav.services" },
+    { path: "/tasks", labelKey: "nav.tasks" },
+    { path: "/admin/services", labelKey: "nav.adminServices" },
+    { path: "/admin/metrics", labelKey: "nav.metrics" },
+    { path: "/admin/agents", labelKey: "nav.agents" },
+    { path: "/admin/users", labelKey: "nav.users" },
+    { path: "/admin/properties", labelKey: "nav.clientProperties" },
+    { path: "/transactions", labelKey: "nav.transactions" },
+    { path: "/finance", labelKey: "nav.finance" },
     ...COMMON_COMMERCE,
     ACCOUNT_SECURITY_LINK,
-    { path: "/admin/catalog/categories", label: "Catégories" },
-    { path: "/admin/catalog/products", label: "Produits" },
+    { path: "/admin/catalog/categories", labelKey: "nav.categories" },
+    { path: "/admin/catalog/products", labelKey: "nav.products" },
   ],
 };
 
@@ -116,19 +118,19 @@ const ROLE_LINKS = {
 
 const BOTTOM_LINKS = {
   client: [
-    { key: "dashboard", path: "/dashboard", label: "Accueil", icon: Home },
-    { key: "services", path: "/services", label: "Services", icon: Wrench },
-    { key: "transactions", path: "/transactions", label: "Flux", icon: ReceiptEuro },
+    { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
+    { key: "services", path: "/services", labelKey: "nav.services", icon: Wrench },
+    { key: "transactions", path: "/transactions", labelKey: "nav.flow", icon: ReceiptEuro },
   ],
   agent: [
-    { key: "dashboard", path: "/dashboard", label: "Accueil", icon: Home },
-    { key: "agentServices", path: "/agent/services", label: "Services", icon: Wrench },
-    { key: "transactions", path: "/transactions", label: "Flux", icon: ReceiptEuro },
+    { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
+    { key: "agentServices", path: "/agent/services", labelKey: "nav.services", icon: Wrench },
+    { key: "transactions", path: "/transactions", labelKey: "nav.flow", icon: ReceiptEuro },
   ],
   admin: [
-    { key: "dashboard", path: "/dashboard", label: "Accueil", icon: Home },
-    { key: "adminServices", path: "/admin/services", label: "Services", icon: BarChart3 },
-    { key: "finance", path: "/finance", label: "Finances", icon: CreditCard },
+    { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
+    { key: "adminServices", path: "/admin/services", labelKey: "nav.services", icon: BarChart3 },
+    { key: "finance", path: "/finance", labelKey: "nav.finance", icon: CreditCard },
   ],
 };
 
@@ -174,7 +176,7 @@ function iconForPath(path) {
 /* GROUPING — Enterprise information architecture (UI only) */
 /* ============================================================================ */
 
-function buildSections(role, links) {
+function buildSections(role, links, t) {
   const sections = [];
 
   const pushSection = (title, items) => {
@@ -186,7 +188,7 @@ function buildSections(role, links) {
   const byPrefix = (prefix) =>
     links.filter((x) => x.path === prefix || x.path.startsWith(prefix + "/"));
 
-  pushSection("Essentiel", [
+  pushSection(t("nav.sections.essential"), [
     byPath("/dashboard"),
     ...byPrefix("/projects"),
     ...byPrefix("/properties"),
@@ -194,14 +196,17 @@ function buildSections(role, links) {
     ...byPrefix("/tasks"),
   ]);
 
-  pushSection("Finance", [...byPrefix("/transactions"), ...byPrefix("/finance")]);
+  pushSection(t("nav.sections.finance"), [
+    ...byPrefix("/transactions"),
+    ...byPrefix("/finance"),
+  ]);
 
-  pushSection("Boutique", [...byPrefix("/shop"), ...byPrefix("/orders")]);
+  pushSection(t("nav.sections.shop"), [...byPrefix("/shop"), ...byPrefix("/orders")]);
 
-  pushSection("Compte", [byPath("/account/security")]);
+  pushSection(t("nav.sections.account"), [byPath("/account/security")]);
 
   if (role === "admin") {
-    pushSection("Administration", [
+    pushSection(t("nav.sections.admin"), [
       byPath("/admin/projects"),
       byPath("/admin/onboarding"),
       byPath("/admin/services"),
@@ -258,6 +263,7 @@ const clsMenuItemActive = "bg-primary/10 text-primary font-semibold";
 /* ============================================================================ */
 
 function NavBar() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -341,27 +347,39 @@ function NavBar() {
     return !hasCountryScope && !hasRegionScope;
   }, [isAdmin, user?.countryId, user?.regionId]);
 
+  const roleLabel = useMemo(() => {
+    if (!user) return "";
+    if (isAdmin && !isGlobalAdmin) return t("roles.master");
+    if (role === "admin") return t("roles.admin");
+    if (role === "agent") return t("roles.agent");
+    return t("roles.client");
+  }, [user, isAdmin, isGlobalAdmin, role, t]);
+
   // ✅ Links de rôle (inject onboarding uniquement pour admin global)
   const links = useMemo(() => {
     const base = ROLE_LINKS[role] || [];
+    let out = base;
 
-    if (role !== "admin") return base;
-    if (!isGlobalAdmin) return base;
+    if (role === "admin" && isGlobalAdmin) {
+      const already = base.some((x) => x.path === ADMIN_ONBOARDING_LINK.path);
+      if (!already) {
+        out = [...base];
+        const insertAfterPath = "/admin/projects";
+        const idx = out.findIndex((x) => x.path === insertAfterPath);
+        if (idx >= 0) out.splice(idx + 1, 0, ADMIN_ONBOARDING_LINK);
+        else out.unshift(ADMIN_ONBOARDING_LINK);
+      }
+    }
 
-    const already = base.some((x) => x.path === ADMIN_ONBOARDING_LINK.path);
-    if (already) return base;
+    return out.map((item) => ({ ...item, label: t(item.labelKey) }));
+  }, [role, isGlobalAdmin, t]);
 
-    const out = [...base];
-    const insertAfterPath = "/admin/projects";
-    const idx = out.findIndex((x) => x.path === insertAfterPath);
-
-    if (idx >= 0) out.splice(idx + 1, 0, ADMIN_ONBOARDING_LINK);
-    else out.unshift(ADMIN_ONBOARDING_LINK);
-
-    return out;
-  }, [role, isGlobalAdmin]);
-
-  const bottomLinks = useMemo(() => BOTTOM_LINKS[role] || [], [role]);
+  const bottomLinks = useMemo(() => {
+    return (BOTTOM_LINKS[role] || []).map((item) => ({
+      ...item,
+      label: t(item.labelKey),
+    }));
+  }, [role, t]);
 
   const isActive = useCallback(
     (path) => {
@@ -377,7 +395,7 @@ function NavBar() {
     return current?.label || "";
   }, [links, isActive]);
 
-  const sections = useMemo(() => buildSections(role, links), [role, links]);
+  const sections = useMemo(() => buildSections(role, links, t), [role, links, t]);
 
   // Desktop: tabs primaires (calme). Le reste -> Plus.
   const desktopPrimaryTabs = useMemo(() => {
@@ -422,8 +440,8 @@ function NavBar() {
     const first = (user?.firstName || "").trim();
     const last = (user?.lastName || "").trim();
     const full = [first, last].filter(Boolean).join(" ").trim();
-    return full || user?.email || "Utilisateur";
-  }, [user?.email, user?.firstName, user?.lastName]);
+    return full || user?.email || t("nav.userFallback");
+  }, [user?.email, user?.firstName, user?.lastName, t]);
 
   const userInitial = useMemo(() => {
     const first = (user?.firstName || "").trim();
@@ -449,18 +467,19 @@ function NavBar() {
             {Logo} Teranga
           </Link>
 
-          <div className="flex gap-3 text-sm">
+          <div className="flex items-center gap-3 text-sm">
+            <LanguageSwitcher compact />
             <Link
               to="/login"
               className="transition-colors duration-200 text-text-secondary hover:text-text-primary"
             >
-              Connexion
+              {t("nav.login")}
             </Link>
             <Link
               to="/register"
               className="px-4 py-2 bg-primary text-white rounded-xl font-semibold transition-colors duration-200 hover:bg-primary/90"
             >
-              Inscription
+              {t("nav.register")}
             </Link>
           </div>
         </div>
@@ -488,17 +507,17 @@ function NavBar() {
             {/* Page context (mobile) */}
             <div className="md:hidden flex items-center min-w-0">
               <span className="px-2.5 py-1 rounded-full text-[0.65rem] font-semibold bg-surface-main/60 text-text-secondary border border-border/60 truncate">
-                {activeLabel || "Dashboard"}
+                {activeLabel || t("nav.dashboard")}
               </span>
             </div>
 
             {/* Page context (desktop) */}
             <div className="hidden md:flex flex-col min-w-0">
               <div className="text-sm font-semibold text-text-primary truncate">
-                {activeLabel || "Tableau de bord"}
+                {activeLabel || t("nav.dashboardTitle")}
               </div>
               <div className="text-[0.72rem] text-text-muted truncate">
-                {prettyRoleLabel(user)}
+                {roleLabel}
               </div>
             </div>
           </div>
@@ -531,7 +550,7 @@ function NavBar() {
                 aria-expanded={openDesktopMore}
                 aria-controls="desktop-more-menu"
               >
-                Plus <ChevronDown size={16} className="opacity-90" />
+                {t("nav.more")} <ChevronDown size={16} className="opacity-90" />
               </button>
 
               <AnimatePresence>
@@ -556,12 +575,12 @@ function NavBar() {
                         clsMenuSurface,
                       ].join(" ")}
                       role="menu"
-                      aria-label="Menu Plus"
+                      aria-label={t("nav.menuPlus")}
                     >
                       {/* Quick Scope */}
                       <div className="px-4 py-3 border-b border-border bg-surface-main/50">
                         <div className="text-[0.72rem] text-text-muted mb-2">
-                          Périmètre
+                          {t("nav.perimeter")}
                         </div>
 
                         {/* Encapsulation “Enterprise control” */}
@@ -622,15 +641,16 @@ function NavBar() {
 
           {/* RIGHT: Geo (desktop) + User menu */}
           <div className="hidden md:flex items-center gap-3">
+            <LanguageSwitcher compact />
             <div className="hidden lg:flex items-center">
-              <div className="rounded-xl border border-border bg-surface-main/50 px-3 py-2">
-                <GeoSelector />
+                <div className="rounded-xl border border-border bg-surface-main/50 px-3 py-2">
+                  <GeoSelector />
+                </div>
               </div>
-            </div>
 
             {/* Role badge */}
             <span className="hidden lg:inline rounded-full border border-border bg-surface-main/50 px-3 py-1 text-[0.7rem] uppercase tracking-wide text-text-secondary">
-              {prettyRoleLabel(user)}
+              {roleLabel}
             </span>
 
             {/* User menu */}
@@ -640,7 +660,7 @@ function NavBar() {
                 className="flex items-center gap-2 rounded-2xl px-2 py-1.5 border border-border/60 bg-surface-main/40 hover:bg-surface-main/70 transition focus:outline-none focus:ring-4 focus:ring-primary/10"
                 aria-expanded={openUserMenu}
                 aria-controls="user-menu"
-                aria-label="Menu utilisateur"
+                aria-label={t("nav.userMenu")}
               >
                 <div className="relative">
                   <div className="w-9 h-9 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
@@ -677,14 +697,14 @@ function NavBar() {
                       transition={{ duration: 0.16 }}
                       className={["absolute right-0 mt-2 z-50 w-[280px]", clsMenuSurface].join(" ")}
                       role="menu"
-                      aria-label="Menu utilisateur"
+                      aria-label={t("nav.userMenu")}
                     >
                       <div className="px-4 py-3 border-b border-border bg-surface-main/50">
                         <div className="text-text-primary text-sm font-semibold tracking-wide truncate">
                           {userDisplay}
                         </div>
                         <div className="text-text-muted text-[0.75rem] truncate">
-                          {prettyRoleLabel(user)}
+                          {roleLabel}
                         </div>
                       </div>
 
@@ -694,16 +714,16 @@ function NavBar() {
                           onClick={() => setOpenUserMenu(false)}
                           className="block w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
                         >
-                          Securite du compte
+                          {t("nav.accountSecurity")}
                         </Link>
                         <button
                           type="button"
                           className="w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
                           disabled
                           aria-disabled="true"
-                          title="Bientot disponible"
+                          title={t("nav.comingSoon")}
                         >
-                          Aide & Support (bientot)
+                          {t("nav.helpSupportSoon")}
                         </button>
                       </div>
 
@@ -712,10 +732,10 @@ function NavBar() {
                       <button
                         onClick={handleLogout}
                         className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 text-white text-sm font-semibold transition-colors duration-200 hover:bg-red-700"
-                        aria-label="Déconnexion"
+                        aria-label={t("nav.logout")}
                       >
                         <LogOut size={16} />
-                        Déconnexion
+                        {t("nav.logout")}
                       </button>
                     </motion.div>
                   </>
@@ -771,10 +791,10 @@ function NavBar() {
                 ].join(" ")}
                 aria-expanded={openMore}
                 aria-controls="navbar-more-panel"
-                aria-label="Ouvrir le menu Plus"
+                aria-label={t("nav.openMoreMenu")}
               >
                 <MoreHorizontal size={17} />
-                Plus
+                {t("nav.more")}
               </button>
             </div>
           </div>
@@ -805,7 +825,7 @@ function NavBar() {
               className="fixed bottom-24 inset-x-0 z-50 flex justify-center px-4"
               role="dialog"
               aria-modal="true"
-              aria-label="Menu"
+              aria-label={t("nav.menu")}
             >
               <div className="w-full max-w-sm bg-surface-card/95 backdrop-blur-2xl border border-border/70 rounded-2xl shadow-2xl overflow-hidden">
                 {/* HEADER */}
@@ -823,7 +843,7 @@ function NavBar() {
                         {userDisplay}
                       </div>
                       <div className="text-text-muted text-[0.7rem] uppercase tracking-wide truncate">
-                        {prettyRoleLabel(user)}
+                        {roleLabel}
                       </div>
                     </div>
                   </div>
@@ -831,7 +851,7 @@ function NavBar() {
                   <button
                     onClick={() => setOpenMore(false)}
                     className="p-2 rounded-full bg-surface-card text-text-secondary transition-colors duration-200 hover:bg-surface-main/70 focus:outline-none focus:ring-4 focus:ring-primary/10"
-                    aria-label="Fermer le menu"
+                    aria-label={t("nav.closeMenu")}
                   >
                     <X size={18} />
                   </button>
@@ -839,7 +859,9 @@ function NavBar() {
 
                 {/* GEO SELECTOR */}
                 <div className="px-4 py-3 border-b border-border">
-                  <div className="text-xs text-text-muted mb-2">Périmètre</div>
+                  <div className="text-xs text-text-muted mb-2">
+                    {t("nav.perimeter")}
+                  </div>
                   <div className="rounded-xl border border-border bg-surface-main/50 px-3 py-2">
                     <GeoSelector />
                   </div>
@@ -884,10 +906,10 @@ function NavBar() {
                 <button
                   onClick={handleLogout}
                   className="w-full flex justify-center gap-2 py-3 bg-red-600 text-white text-sm font-semibold transition-colors duration-200 hover:bg-red-700"
-                  aria-label="Déconnexion"
+                  aria-label={t("nav.logout")}
                 >
                   <LogOut size={14} />
-                  Déconnexion
+                  {t("nav.logout")}
                 </button>
               </div>
             </motion.div>

@@ -1,3 +1,25 @@
+import i18n from '../i18n';
+
+const ROLE_FALLBACKS = {
+  admin: 'ADMINISTRATEUR',
+  agent: 'AGENT',
+  client: 'CLIENT',
+  master: 'MASTER',
+};
+
+function translateRole(key) {
+  const fallback = ROLE_FALLBACKS[key] || key;
+  try {
+    if (i18n?.t) {
+      const translated = i18n.t(`roles.${key}`, { defaultValue: fallback });
+      return translated ?? fallback;
+    }
+  } catch {
+    // noop
+  }
+  return fallback;
+}
+
 export function normalizeRole(rawRole) {
   if (!rawRole) return 'client';
   const r = String(rawRole).toLowerCase();
@@ -27,16 +49,18 @@ export function isGlobalAdminUser(user) {
 
 export function prettyRoleLabel(userOrRole) {
   if (typeof userOrRole === 'string') {
+    const raw = String(userOrRole).toLowerCase();
+    if (raw.includes('master')) return translateRole('master');
     const r = normalizeRole(userOrRole);
-    if (r === 'admin') return 'ADMINISTRATEUR';
-    if (r === 'agent') return 'AGENT';
-    return 'CLIENT';
+    if (r === 'admin') return translateRole('admin');
+    if (r === 'agent') return translateRole('agent');
+    return translateRole('client');
   }
 
   const user = userOrRole;
 
-  if (isMasterUser(user)) return 'MASTER';
-  if (isAdminRole(user?.role)) return 'ADMINISTRATEUR';
-  if (normalizeRole(user?.role) === 'agent') return 'AGENT';
-  return 'CLIENT';
+  if (isMasterUser(user)) return translateRole('master');
+  if (isAdminRole(user?.role)) return translateRole('admin');
+  if (normalizeRole(user?.role) === 'agent') return translateRole('agent');
+  return translateRole('client');
 }

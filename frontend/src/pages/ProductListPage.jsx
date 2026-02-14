@@ -15,6 +15,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getProducts } from "../services/products";
 import { formatCurrency } from "../utils/labels";
+import { useLocale } from "../i18n/useLocale";
+import { useTranslation } from "react-i18next";
 
 /* =========================================================
    🌍 FILE_BASE + normalizePath + toAbsUrl
@@ -92,6 +94,8 @@ function getProductImages(product) {
    🛍️ Page Liste des produits
 ========================================================= */
 export default function ProductListPage() {
+  const { formatNumber } = useLocale();
+  const { t } = useTranslation();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -113,7 +117,7 @@ export default function ProductListPage() {
         console.error("❌ Erreur chargement produits:", e);
         const msg =
           e?.response?.data?.error ||
-          "Impossible de charger les produits pour le moment.";
+          t("productListPage.errors.load");
         setError(msg);
       } finally {
         setLoading(false);
@@ -129,7 +133,7 @@ export default function ProductListPage() {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
         <p className="text-gray-600 text-lg animate-pulse">
-          Chargement des produits…
+          {t("productListPage.loading")}
         </p>
       </div>
     );
@@ -146,7 +150,7 @@ export default function ProductListPage() {
             to="/"
             className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
           >
-            ← Retour à l’accueil
+            {t("productListPage.actions.backHome")}
           </Link>
         </div>
       </div>
@@ -158,13 +162,13 @@ export default function ProductListPage() {
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
         <div className="max-w-md w-full bg-white border border-gray-100 rounded-2xl shadow-lg p-6 text-center">
           <p className="text-gray-500 text-base sm:text-lg italic mb-4">
-            Aucun produit disponible pour le moment.
+            {t("productListPage.empty")}
           </p>
           <Link
             to="/"
             className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
           >
-            ← Retour à l’accueil
+            {t("productListPage.actions.backHome")}
           </Link>
         </div>
       </div>
@@ -181,16 +185,16 @@ export default function ProductListPage() {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              🛍️ <span>Catalogue des produits</span>
+              🛍️ <span>{t("productListPage.header.title")}</span>
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Liste simple et rapide de tous les produits disponibles.
+              {t("productListPage.header.subtitle")}
             </p>
           </div>
 
           <div className="text-right text-xs text-slate-500">
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/80 border border-slate-200 shadow-sm">
-              {products.length} produit{products.length > 1 ? "s" : ""}
+              {t("productListPage.header.count", { count: products.length })}
             </span>
           </div>
         </div>
@@ -203,9 +207,9 @@ export default function ProductListPage() {
               const mainImg = images[0] || null;
               const hasMulti = images.length > 1;
 
-              const currencyLabel =
-                p.currencyLabel ||
-                formatCurrency((p.currency || "XOF").toUpperCase());
+              const currencyLabel = formatCurrency(
+                (p.currency || "XOF").toUpperCase()
+              );
 
               const priceNumber = Number(p.price || 0);
 
@@ -241,13 +245,15 @@ export default function ProductListPage() {
 
                       {hasMulti && (
                         <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-full">
-                          {images.length} image{images.length > 1 ? "s" : ""}
+                          {t("productListPage.card.imageCount", {
+                            count: images.length,
+                          })}
                         </span>
                       )}
                     </div>
                   ) : (
                     <div className="w-full h-44 flex items-center justify-center bg-slate-100 text-slate-400 text-sm mb-0">
-                      Aucun visuel
+                      {t("productListPage.card.noImage")}
                     </div>
                   )}
 
@@ -256,7 +262,7 @@ export default function ProductListPage() {
                     {/* Titre + réf */}
                     <div className="flex items-start justify-between gap-2">
                       <h2 className="text-base font-semibold text-slate-900 line-clamp-2">
-                        {p.name || "—"}
+                        {p.name || t("common.dash")}
                       </h2>
                       {p.id != null && (
                         <span className="text-[10px] text-slate-400 font-mono bg-slate-50 border border-slate-200 rounded-full px-2 py-0.5">
@@ -267,17 +273,17 @@ export default function ProductListPage() {
 
                     {/* Description courte */}
                     <p className="text-slate-600 flex-1 mt-1 text-sm line-clamp-3">
-                      {excerpt ? excerpt : "Pas de description."}
+                      {excerpt ? excerpt : t("productListPage.card.noDescription")}
                     </p>
 
                     {/* Prix */}
                     <div className="mt-3 flex items-end justify-between">
                       <div>
                         <p className="text-[11px] uppercase text-slate-400">
-                          Prix
+                          {t("productListPage.card.priceLabel")}
                         </p>
                         <p className="text-lg font-bold text-blue-600">
-                          {priceNumber.toLocaleString("fr-FR")} {currencyLabel}
+                          {formatNumber(priceNumber)} {currencyLabel}
                         </p>
                       </div>
                     </div>
@@ -285,7 +291,7 @@ export default function ProductListPage() {
                     {/* Call-to-action subtil */}
                     <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
                       <span className="inline-flex items-center gap-1">
-                        <span>Voir le détail</span>
+                        <span>{t("productListPage.card.viewDetails")}</span>
                         <span aria-hidden="true">↗</span>
                       </span>
                     </div>
@@ -299,3 +305,4 @@ export default function ProductListPage() {
     </div>
   );
 }
+

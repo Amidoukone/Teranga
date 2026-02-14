@@ -8,6 +8,8 @@ import { useEffect, useState, useCallback } from "react";
 import api from "../services/api";
 import { mergeGeoPayload } from "../services/geo";
 import { useGeo } from "../contexts/GeoContext";
+import { useLocale } from "../i18n/useLocale";
+import { useTranslation } from "react-i18next";
 
 /* ============================================================================
 // 🔐 CONSTANTES
@@ -18,6 +20,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // 🧩 PAGE PRINCIPALE
 ============================================================================ */
 export default function AdminAgentsPage() {
+  const { t } = useTranslation();
+  const { formatDate } = useLocale();
   /* --------------------------------------------------------------------------
    * STATE FORM
    * ------------------------------------------------------------------------ */
@@ -77,19 +81,19 @@ export default function AdminAgentsPage() {
   function validate() {
     const e = {};
 
-    if (!form.firstName.trim()) e.firstName = "Prénom requis";
-    if (!form.lastName.trim()) e.lastName = "Nom requis";
+    if (!form.firstName.trim()) e.firstName = t("adminAgentsPage.validation.firstNameRequired");
+    if (!form.lastName.trim()) e.lastName = t("adminAgentsPage.validation.lastNameRequired");
 
     const email = form.email.trim().toLowerCase();
-    if (!email || !EMAIL_RE.test(email)) e.email = "Email invalide";
+    if (!email || !EMAIL_RE.test(email)) e.email = t("adminAgentsPage.validation.emailInvalid");
 
     if (!form.password || String(form.password).length < 6) {
-      e.password = "Mot de passe requis (6 caractères min.)";
+      e.password = t("adminAgentsPage.validation.passwordRequired");
     }
 
     const country = (form.country || "").trim().toUpperCase();
     if (!country || country.length !== 2) {
-      e.country = "Code pays ISO2 requis (ex: ML, FR)";
+      e.country = t("adminAgentsPage.validation.countryInvalid");
     }
 
     setErrors(e);
@@ -224,7 +228,7 @@ export default function AdminAgentsPage() {
         })
       );
 
-      alert("✅ Agent créé avec succès");
+      alert(t("adminAgentsPage.alerts.createSuccess"));
 
       setForm({
         email: "",
@@ -241,7 +245,7 @@ export default function AdminAgentsPage() {
       console.error("❌ Erreur création agent:", err);
       const msg =
         err?.response?.data?.error ||
-        "Erreur lors de la création";
+        t("adminAgentsPage.alerts.createError");
       alert(`❌ ${msg}`);
     } finally {
       setLoading(false);
@@ -259,16 +263,20 @@ export default function AdminAgentsPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">
-              👤 Gestion des Agents
+              {t("adminAgentsPage.title")}
             </h1>
             {geoCountryId && !isScopedRole && (
               <p className="text-xs text-slate-500 mt-1">
-                Filtre:
-                {` ${geoCountry?.name || `Pays #${geoCountryId}`}`}
+                {t("adminAgentsPage.labels.filter")}{" "}
+                {geoCountry?.name ||
+                  t("adminAgentsPage.labels.countryId", { id: geoCountryId })}
                 {geoRegionId
-                  ? ` · ${geoRegion?.name || `Région #${geoRegionId}`}`
+                  ? ` · ${
+                      geoRegion?.name ||
+                      t("adminAgentsPage.labels.regionId", { id: geoRegionId })
+                    }`
                   : ""}
-                {canSelect ? " (sélection)" : ""}
+                {canSelect ? ` ${t("adminAgentsPage.labels.selection")}` : ""}
               </p>
             )}
           </div>
@@ -278,7 +286,9 @@ export default function AdminAgentsPage() {
               onClick={() => setShowForm((v) => !v)}
               className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition"
             >
-              {showForm ? "➖ Masquer" : "➕ Ajouter"}
+              {showForm
+                ? t("adminAgentsPage.buttons.hideForm")
+                : t("adminAgentsPage.buttons.showForm")}
             </button>
 
             <button
@@ -290,7 +300,9 @@ export default function AdminAgentsPage() {
                   : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
-              {loadingAgents ? "Chargement…" : "🔄 Rafraîchir"}
+              {loadingAgents
+                ? t("adminAgentsPage.loading")
+                : t("adminAgentsPage.buttons.refresh")}
             </button>
           </div>
         </div>
@@ -302,14 +314,14 @@ export default function AdminAgentsPage() {
             {/* Recherche */}
             <div className="lg:col-span-2">
               <label className="text-xs font-medium text-slate-600 mb-1">
-                Recherche
+                {t("adminAgentsPage.filters.search")}
               </label>
               <input
                 value={filters.q}
                 onChange={(e) =>
                   setFilters({ ...filters, q: e.target.value })
                 }
-                placeholder="Nom, email, téléphone…"
+                placeholder={t("adminAgentsPage.placeholders.search")}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -317,7 +329,7 @@ export default function AdminAgentsPage() {
             {/* Pays */}
             <div>
               <label className="text-xs font-medium text-slate-600 mb-1">
-                Pays (ISO2)
+                {t("adminAgentsPage.filters.country")}
               </label>
               <input
                 value={filters.country}
@@ -327,7 +339,7 @@ export default function AdminAgentsPage() {
                     country: e.target.value.toUpperCase().slice(0, 2),
                   })
                 }
-                placeholder="ML, FR…"
+                placeholder={t("adminAgentsPage.placeholders.country")}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -346,14 +358,14 @@ export default function AdminAgentsPage() {
                   }
                   className="h-4 w-4"
                 />
-                Avec téléphone
+                {t("adminAgentsPage.filters.withPhone")}
               </label>
             </div>
 
             {/* Tri */}
             <div>
               <label className="text-xs font-medium text-slate-600 mb-1">
-                Tri
+                {t("adminAgentsPage.filters.sort")}
               </label>
               <select
                 value={filters.sort}
@@ -362,19 +374,19 @@ export default function AdminAgentsPage() {
                 }
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="-createdAt">Plus récents</option>
-                <option value="createdAt">Plus anciens</option>
-                <option value="firstName">Nom A→Z</option>
-                <option value="-firstName">Nom Z→A</option>
-                <option value="email">Email A→Z</option>
-                <option value="-email">Email Z→A</option>
+                <option value="-createdAt">{t("adminAgentsPage.filters.sortOptions.newest")}</option>
+                <option value="createdAt">{t("adminAgentsPage.filters.sortOptions.oldest")}</option>
+                <option value="firstName">{t("adminAgentsPage.filters.sortOptions.firstNameAsc")}</option>
+                <option value="-firstName">{t("adminAgentsPage.filters.sortOptions.firstNameDesc")}</option>
+                <option value="email">{t("adminAgentsPage.filters.sortOptions.emailAsc")}</option>
+                <option value="-email">{t("adminAgentsPage.filters.sortOptions.emailDesc")}</option>
               </select>
             </div>
           </div>
 
           <div className="mt-4 flex items-center justify-between text-xs">
             <span className="text-slate-500">
-              {filtered.length} agent(s)
+              {t("adminAgentsPage.count", { count: filtered.length })}
             </span>
             <button
               onClick={() =>
@@ -387,7 +399,7 @@ export default function AdminAgentsPage() {
               }
               className="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 transition"
             >
-              Réinitialiser
+              {t("adminAgentsPage.buttons.reset")}
             </button>
           </div>
         </div>
@@ -399,12 +411,12 @@ export default function AdminAgentsPage() {
             className="mb-10 bg-slate-50 border border-slate-200 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-5 shadow-sm"
           >
             {[
-              { field: "firstName", label: "Prénom *", type: "text" },
-              { field: "lastName", label: "Nom *", type: "text" },
-              { field: "email", label: "Email *", type: "email" },
+              { field: "firstName", label: t("adminAgentsPage.form.firstNameLabel"), type: "text" },
+              { field: "lastName", label: t("adminAgentsPage.form.lastNameLabel"), type: "text" },
+              { field: "email", label: t("adminAgentsPage.form.emailLabel"), type: "email" },
               {
                 field: "password",
-                label: "Mot de passe (≥ 6) *",
+                label: t("adminAgentsPage.form.passwordLabel"),
                 type: "password",
               },
             ].map(({ field, label, type }) => (
@@ -431,7 +443,7 @@ export default function AdminAgentsPage() {
             {/* Téléphone */}
             <div>
               <label className="text-xs font-medium text-slate-700">
-                Téléphone
+                {t("adminAgentsPage.form.phoneLabel")}
               </label>
               <input
                 value={form.phone}
@@ -445,7 +457,7 @@ export default function AdminAgentsPage() {
             {/* Pays */}
             <div>
               <label className="text-xs font-medium text-slate-700">
-                Pays (ISO2) *
+                {t("adminAgentsPage.form.countryLabel")}
               </label>
               <input
                 value={form.country}
@@ -472,7 +484,9 @@ export default function AdminAgentsPage() {
                     : "bg-blue-600 hover:bg-blue-700"
                 }`}
               >
-                {loading ? "Création…" : "Créer Agent"}
+                {loading
+                  ? t("adminAgentsPage.buttons.creating")
+                  : t("adminAgentsPage.buttons.createAgent")}
               </button>
             </div>
           </form>
@@ -480,27 +494,37 @@ export default function AdminAgentsPage() {
 
         {/* ================= TABLEAU ================= */}
         <h2 className="text-xl font-semibold text-slate-900 mb-4">
-          📋 Liste des agents
+          {t("adminAgentsPage.table.title")}
         </h2>
 
         {loadingAgents ? (
           <p className="text-center text-slate-500 italic py-6">
-            Chargement des agents…
+            {t("adminAgentsPage.loadingAgents")}
           </p>
         ) : filtered.length === 0 ? (
           <p className="text-center text-slate-500 italic py-6">
-            Aucun agent trouvé.
+            {t("adminAgentsPage.table.empty")}
           </p>
         ) : (
           <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-100/60 text-slate-700 border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Nom</th>
-                  <th className="px-4 py-3 text-left font-medium">Email</th>
-                  <th className="px-4 py-3 text-left font-medium">Téléphone</th>
-                  <th className="px-4 py-3 text-left font-medium">Pays</th>
-                  <th className="px-4 py-3 text-left font-medium">Créé le</th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    {t("adminAgentsPage.table.headers.name")}
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    {t("adminAgentsPage.table.headers.email")}
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    {t("adminAgentsPage.table.headers.phone")}
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    {t("adminAgentsPage.table.headers.country")}
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    {t("adminAgentsPage.table.headers.createdAt")}
+                  </th>
                 </tr>
               </thead>
 
@@ -513,13 +537,17 @@ export default function AdminAgentsPage() {
                     <td className="px-4 py-3">
                       {[a.firstName, a.lastName]
                         .filter(Boolean)
-                        .join(" ") || "—"}
+                        .join(" ") || t("adminAgentsPage.table.emptyValue")}
                     </td>
                     <td className="px-4 py-3">{a.email}</td>
-                    <td className="px-4 py-3">{a.phone || "—"}</td>
-                    <td className="px-4 py-3">{a.country || "—"}</td>
                     <td className="px-4 py-3">
-                      {new Date(a.createdAt).toLocaleDateString()}
+                      {a.phone || t("adminAgentsPage.table.emptyValue")}
+                    </td>
+                    <td className="px-4 py-3">
+                      {a.country || t("adminAgentsPage.table.emptyValue")}
+                    </td>
+                    <td className="px-4 py-3">
+                      {formatDate(a.createdAt)}
                     </td>
                   </tr>
                 ))}
@@ -527,7 +555,7 @@ export default function AdminAgentsPage() {
             </table>
 
             <div className="px-4 py-2 text-xs text-slate-500">
-              {filtered.length} résultat(s)
+              {t("adminAgentsPage.table.results", { count: filtered.length })}
             </div>
           </div>
         )}
@@ -536,3 +564,4 @@ export default function AdminAgentsPage() {
   );
 }
   
+

@@ -17,7 +17,10 @@ import {
   applyLabels,
   TRANSACTION_TYPES,
   CURRENCY_LABELS,
+  TRANSACTION_STATUSES,
 } from '../utils/labels';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 
 /* ============================================================
    🌍 PRODUCTION CONFIG — FILE_BASE / normalizePath / toAbsUrl()
@@ -124,6 +127,8 @@ function getProofExtLabel(pf, proofHref = '', fallback = 'FILE') {
    ⭐ PAGE PRINCIPALE
 ============================================================ */
 export default function OrderTransactionsPage() {
+  const { formatNumber, formatDate, formatTime } = useLocale();
+  const { t } = useTranslation();
   const { id } = useParams(); // orderId
   const navigate = useNavigate();
 
@@ -171,11 +176,11 @@ export default function OrderTransactionsPage() {
       // ✅ backend peut renvoyer [] OU { transactions: [], pagination: {} }
       const arr = Array.isArray(data) ? data : data?.transactions || [];
 
-      const labeled = (arr || []).map((t) => (t?.statusLabel ? t : applyLabels(t)));
+      const labeled = (arr || []).map((t) => applyLabels(t, 'transaction'));
       setTransactions(labeled);
     } catch (err) {
       console.error('❌ Erreur chargement transactions commande:', err);
-      alert('Erreur lors du chargement des transactions.');
+      alert(t("orderTransactions.alerts.loadError"));
       setTransactions([]);
     } finally {
       setLoading(false);
@@ -222,7 +227,7 @@ export default function OrderTransactionsPage() {
     if (creating) return;
 
     if (!form.amount || isNaN(parseFloat(form.amount))) {
-      return alert('Montant invalide.');
+      return alert(t("orderTransactions.alerts.invalidAmount"));
     }
 
     try {
@@ -236,12 +241,12 @@ export default function OrderTransactionsPage() {
 
       await createOrderTransaction(id, payload);
 
-      alert('✅ Transaction ajoutée');
+      alert(t("orderTransactions.alerts.createSuccess"));
       resetForm();
       await loadTransactions();
     } catch (err) {
       console.error('❌ Erreur ajout transaction:', err);
-      alert("Erreur lors de l'ajout.");
+      alert(t("orderTransactions.alerts.createError"));
     } finally {
       setCreating(false); // 🔓 Déverrouille l’envoi, même en cas d’erreur
     }
@@ -325,7 +330,9 @@ export default function OrderTransactionsPage() {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-600 text-lg animate-pulse">Chargement…</p>
+        <p className="text-gray-600 text-lg animate-pulse">
+          {t("common.loading")}
+        </p>
       </div>
     );
   }
@@ -345,10 +352,10 @@ export default function OrderTransactionsPage() {
           {/* Bloc titre */}
           <div className="max-w-full break-words">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              💰 <span>Transactions de la commande #{id}</span>
+              💰 <span>{t("orderTransactions.title", { id })}</span>
             </h1>
             <p className="text-sm text-slate-600 mt-1 break-words">
-              Suivi des paiements et mouvements financiers associés à cette commande.
+              {t("orderTransactions.subtitle")}
             </p>
           </div>
 
@@ -359,7 +366,9 @@ export default function OrderTransactionsPage() {
                 onClick={() => setShowForm((v) => !v)}
                 className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition-all duration-150 text-center"
               >
-                {showForm ? '➖ Masquer' : '➕ Nouvelle transaction'}
+                {showForm
+                  ? `➖ ${t("orderTransactions.buttons.hideForm")}`
+                  : `➕ ${t("orderTransactions.buttons.newTransaction")}`}
               </button>
             )}
 
@@ -372,14 +381,23 @@ export default function OrderTransactionsPage() {
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
-              {loading ? 'Chargement…' : '🔄 Rafraîchir'}
+              {loading
+                ? t("orderTransactions.buttons.refreshLoading")
+                : `🔄 ${t("orderTransactions.buttons.refresh")}`}
             </button>
 
             <button
               onClick={() => navigate(`/orders/${id}`)}
               className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300 text-center transition-all duration-150"
             >
-              ← Retour commande
+              {t("orderTransactions.buttons.back")}
+            </button>
+
+            <button
+              onClick={() => navigate('/orders')}
+              className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-200 hover:bg-slate-300 text-center transition-all duration-150"
+            >
+              {t("common.backToOrders")}
             </button>
           </div>
         </div>
@@ -407,6 +425,9 @@ export default function OrderTransactionsPage() {
           transactions={filteredTransactions}
           loading={loading}
           getProofHref={getProofHref}
+          formatNumber={formatNumber}
+          formatDate={formatDate}
+          formatTime={formatTime}
         />
       </div>
     </div>
@@ -418,12 +439,13 @@ export default function OrderTransactionsPage() {
 ============================================================ */
 
 function TransactionFilters({ filters, setFilters, count }) {
+  const { t } = useTranslation();
   return (
     <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm">
       {/* Ligne recherche seule — pleine largeur, plus respirable */}
       <div className="flex flex-col lg:flex-row gap-3 mb-4">
         <input
-          placeholder="🔎 Rechercher (type, statut, description, méthode, utilisateur...)"
+          placeholder={`🔎 ${t("orderTransactions.filters.searchPlaceholder")}`}
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
           className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm break-words transition-all duration-150"
@@ -438,17 +460,17 @@ function TransactionFilters({ filters, setFilters, count }) {
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
         >
-          <option value="">Type (tous)</option>
-          {Object.entries(TRANSACTION_TYPES).map(([key, label]) => (
+          <option value="">{t("orderTransactions.filters.typeAll")}</option>
+          {Object.keys(TRANSACTION_TYPES).map((key) => (
             <option key={key} value={key}>
-              {label}
+              {t(`transactions.type.${key}`)}
             </option>
           ))}
         </select>
 
         {/* Méthode paiement */}
         <input
-          placeholder="Méthode paiement"
+          placeholder={t("orderTransactions.filters.paymentPlaceholder")}
           value={filters.payment}
           onChange={(e) => setFilters({ ...filters, payment: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
@@ -460,10 +482,18 @@ function TransactionFilters({ filters, setFilters, count }) {
           onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full sm:col-span-2 lg:col-span-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
         >
-          <option value="-createdAt">Plus récentes</option>
-          <option value="createdAt">Plus anciennes</option>
-          <option value="amount">Montant croissant</option>
-          <option value="-amount">Montant décroissant</option>
+          <option value="-createdAt">
+            {t("orderTransactions.filters.sortNewest")}
+          </option>
+          <option value="createdAt">
+            {t("orderTransactions.filters.sortOldest")}
+          </option>
+          <option value="amount">
+            {t("orderTransactions.filters.sortAmountAsc")}
+          </option>
+          <option value="-amount">
+            {t("orderTransactions.filters.sortAmountDesc")}
+          </option>
         </select>
       </div>
 
@@ -471,14 +501,14 @@ function TransactionFilters({ filters, setFilters, count }) {
       <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-500">
         <div className="inline-flex items-center gap-1">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-400/80" />
-          <span>{count} transaction(s) trouvée(s)</span>
+          <span>{t("orderTransactions.filters.foundCount", { count })}</span>
         </div>
 
         <button
           onClick={() => setFilters({ q: '', type: '', payment: '', sort: '-createdAt' })}
           className="w-full sm:w-auto px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium text-center transition-all duration-150"
         >
-          Réinitialiser les filtres
+          {t("orderTransactions.filters.reset")}
         </button>
       </div>
     </div>
@@ -490,11 +520,12 @@ function TransactionFilters({ filters, setFilters, count }) {
 ============================================================ */
 function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
   const isSubmitting = loading || creating;
+  const { t } = useTranslation();
 
   return (
     <div className="mb-10">
       <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        ➕ <span>Nouvelle transaction</span>
+        ➕ <span>{t("orderTransactions.form.title")}</span>
       </h2>
 
       <form
@@ -504,16 +535,16 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
         {/* Type */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Type
+            {t("orderTransactions.form.typeLabel")}
           </label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
             className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           >
-            {Object.entries(TRANSACTION_TYPES).map(([key, label]) => (
+            {Object.keys(TRANSACTION_TYPES).map((key) => (
               <option key={key} value={key}>
-                {label}
+                {t(`transactions.type.${key}`)}
               </option>
             ))}
           </select>
@@ -522,12 +553,12 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
         {/* Montant */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Montant
+            {t("orderTransactions.form.amountLabel")}
           </label>
           <input
             type="number"
             step="0.01"
-            placeholder="Ex : 25 000"
+            placeholder={t("orderTransactions.form.amountPlaceholder")}
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
@@ -538,16 +569,16 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
         {/* Devise */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Devise
+            {t("orderTransactions.form.currencyLabel")}
           </label>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
             className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           >
-            {Object.entries(CURRENCY_LABELS).map(([key, label]) => (
+            {Object.keys(CURRENCY_LABELS).map((key) => (
               <option key={key} value={key}>
-                {label}
+                {t(`currency.${key}`)}
               </option>
             ))}
           </select>
@@ -556,10 +587,10 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
         {/* Payment Method */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Méthode de paiement (optionnel)
+            {t("orderTransactions.form.paymentMethodLabel")}
           </label>
           <input
-            placeholder="Ex : MoMo, Virement..."
+            placeholder={t("orderTransactions.form.paymentMethodPlaceholder")}
             value={form.paymentMethod}
             onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
             className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
@@ -569,11 +600,11 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
         {/* Description */}
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Description
+            {t("orderTransactions.form.descriptionLabel")}
           </label>
           <textarea
             rows={3}
-            placeholder="Description (optionnelle)"
+            placeholder={t("orderTransactions.form.descriptionPlaceholder")}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
@@ -583,7 +614,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
         {/* File */}
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Pièce jointe (optionnel)
+            {t("orderTransactions.form.attachmentLabel")}
           </label>
           <input
             type="file"
@@ -604,7 +635,9 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
                 : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >
-            {isSubmitting ? 'Enregistrement…' : '💾 Enregistrer'}
+            {isSubmitting
+              ? t("orderTransactions.form.submitting")
+              : `💾 ${t("orderTransactions.form.submit")}`}
           </button>
         </div>
       </form>
@@ -620,11 +653,19 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
    ✅ UI premium + responsive
 ============================================================ */
 
-function TransactionList({ transactions, loading, getProofHref }) {
+function TransactionList({
+  transactions,
+  loading,
+  getProofHref,
+  formatNumber,
+  formatDate,
+  formatTime,
+}) {
+  const { t } = useTranslation();
   if (loading) {
     return (
       <p className="text-gray-500 italic text-center py-6">
-        Chargement des transactions…
+        {t("orderTransactions.list.loading")}
       </p>
     );
   }
@@ -632,53 +673,65 @@ function TransactionList({ transactions, loading, getProofHref }) {
   if (!transactions || transactions.length === 0) {
     return (
       <p className="text-gray-500 italic text-center py-6">
-        Aucune transaction trouvée.
+        {t("orderTransactions.list.empty")}
       </p>
     );
   }
 
   return (
     <div className="grid gap-6">
-      {transactions.map((t) => {
-        const userDisplay = t.user ? getUserDisplay(t.user) : 'Système';
-        const currencyLabel = t.currencyLabel || t.currency || 'XOF';
+      {transactions.map((tx) => {
+        const userDisplay = tx.user
+          ? getUserDisplay(tx.user)
+          : t("orderTransactions.systemUser");
+        const currencyCode = tx.currency || 'XOF';
+        const currencyLabel =
+          CURRENCY_LABELS[currencyCode] || currencyCode;
+        const typeLabel =
+          TRANSACTION_TYPES[tx.type] || tx.type;
+        const statusLabel = tx.status
+          ? TRANSACTION_STATUSES[tx.status] ||
+            tx.status
+          : undefined;
 
         // 🎨 Accent visuel par type
         let accentClass = 'border-l-4 border-l-slate-200';
-        if (t.type === 'revenue') accentClass = 'border-l-4 border-l-emerald-400/80';
-        else if (t.type === 'expense') accentClass = 'border-l-4 border-l-rose-400/80';
-        else if (t.type === 'commission') accentClass = 'border-l-4 border-l-amber-400/80';
-        else if (t.type === 'adjustment') accentClass = 'border-l-4 border-l-blue-400/80';
+        if (tx.type === 'revenue') accentClass = 'border-l-4 border-l-emerald-400/80';
+        else if (tx.type === 'expense') accentClass = 'border-l-4 border-l-rose-400/80';
+        else if (tx.type === 'commission') accentClass = 'border-l-4 border-l-amber-400/80';
+        else if (tx.type === 'adjustment') accentClass = 'border-l-4 border-l-blue-400/80';
 
         // 🏷 Badge type
         let typeBadge =
           'bg-slate-100 text-slate-700 border border-slate-200';
-        if (t.type === 'revenue')
+        if (tx.type === 'revenue')
           typeBadge = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-        else if (t.type === 'expense')
+        else if (tx.type === 'expense')
           typeBadge = 'bg-rose-50 text-rose-700 border border-rose-200';
-        else if (t.type === 'commission')
+        else if (tx.type === 'commission')
           typeBadge = 'bg-amber-50 text-amber-700 border border-amber-200';
-        else if (t.type === 'adjustment')
+        else if (tx.type === 'adjustment')
           typeBadge = 'bg-blue-50 text-blue-700 border border-blue-200';
 
-        const proofHref = getProofHref ? getProofHref(t) : '';
-        const proofKind = inferProofKind(t?.proofFile, proofHref);
+        const proofHref = getProofHref ? getProofHref(tx) : '';
+        const proofKind = inferProofKind(tx?.proofFile, proofHref);
         const proofLabel =
-          t?.proofFile?.originalName ||
-          t?.proofFile?.fileName ||
-          t?.proofFile?.name ||
+          tx?.proofFile?.originalName ||
+          tx?.proofFile?.fileName ||
+          tx?.proofFile?.name ||
           '';
         const proofExt = getProofExtLabel(
-          t?.proofFile,
+          tx?.proofFile,
           proofHref,
-          proofKind === 'pdf' ? 'PDF' : 'FILE'
+          proofKind === 'pdf'
+            ? t("orderDetail.labels.pdf")
+            : t("orderDetail.labels.file")
         );
 
 
         return (
           <div
-            key={t.id}
+            key={tx.id}
             className={`bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md hover:-translate-y-[1px] transition-all duration-150 ease-out ${accentClass}`}
           >
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
@@ -688,28 +741,28 @@ function TransactionList({ transactions, loading, getProofHref }) {
                   <span
                     className={`inline-flex px-2 py-0.5 text-xs rounded-full ${typeBadge}`}
                   >
-                    {t.typeLabel || t.type}
+                    {typeLabel}
                   </span>
 
-                  {t.statusLabel && (
+                  {statusLabel && (
                     <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      {t.statusLabel}
+                      {statusLabel}
                     </span>
                   )}
                 </div>
 
                 <h3 className="text-lg font-semibold text-gray-900 mt-2 break-words">
-                  {Number(t.amount || 0).toLocaleString('fr-FR')} {currencyLabel}
+                  {formatNumber(tx.amount || 0)} {currencyLabel}
                 </h3>
 
                 <p className="text-sm text-gray-600 mt-1 break-words">
-                  {t.description || 'Aucune description fournie.'}
+                  {tx.description || t("orderTransactions.list.descriptionFallback")}
                 </p>
 
-                {t.paymentMethod && (
+                {tx.paymentMethod && (
                   <p className="text-xs text-gray-500 mt-1 break-words">
-                    Méthode :{' '}
-                    <span className="font-medium">{t.paymentMethod}</span>
+                    {t("orderTransactions.list.methodLabel")}{' '}
+                    <span className="font-medium">{tx.paymentMethod}</span>
                   </p>
                 )}
               </div>
@@ -717,19 +770,19 @@ function TransactionList({ transactions, loading, getProofHref }) {
               {/* Bloc droit */}
               <div className="text-xs text-gray-500 text-right mt-1 sm:mt-0 whitespace-nowrap">
                 <div>
-                  Créée le{' '}
+                  {t("orderTransactions.list.createdAt")}{' '}
                   <strong>
-                    {t.createdAt
-                      ? new Date(t.createdAt).toLocaleDateString('fr-FR')
-                      : '—'}
+                    {tx.createdAt
+                      ? formatDate(tx.createdAt)
+                      : t("orderTransactions.list.createdAtDash")}
                   </strong>
                 </div>
                 <div>
-                  à{' '}
+                  {t("orderTransactions.list.createdTime")}{' '}
                   <strong>
-                    {t.createdAt
-                      ? new Date(t.createdAt).toLocaleTimeString('fr-FR')
-                      : '—'}
+                    {tx.createdAt
+                      ? formatTime(tx.createdAt)
+                      : t("orderTransactions.list.createdAtDash")}
                   </strong>
                 </div>
               </div>
@@ -768,22 +821,32 @@ function TransactionList({ transactions, loading, getProofHref }) {
                         : 'bg-gray-50 text-gray-700 border-gray-200'
                     }`}
                   >
-                    {proofKind === 'image' ? 'IMAGE' : proofKind === 'pdf' ? 'PDF' : 'FICHIER'}
+                    {proofKind === 'image'
+                      ? t("orderDetail.labels.image")
+                      : proofKind === 'pdf'
+                      ? t("orderDetail.labels.pdf")
+                      : t("orderDetail.labels.file")}
                   </span>
                 </a>
 
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-slate-500">Preuve</div>
+                  <div className="text-xs text-slate-500">
+                    {t("orderTransactions.list.proofLabel")}
+                  </div>
                   <a
                     href={proofHref}
                     target="_blank"
                     rel="noreferrer"
                     className="text-sm font-semibold text-blue-600 hover:underline break-all"
                   >
-                    {proofLabel || 'Pi\u00e8ce jointe'}
+                    {proofLabel || t("orderTransactions.list.proofAttachment")}
                   </a>
                   <div className="text-[0.7rem] text-slate-500 mt-1">
-                    {proofKind === 'image' ? 'Aper\u00e7u disponible' : `Format: ${proofExt}`}
+                    {proofKind === 'image'
+                      ? t("orderTransactions.list.proofPreview")
+                      : t("orderTransactions.list.proofFormat", {
+                          ext: proofExt,
+                        })}
                   </div>
                 </div>
               </div>
@@ -793,7 +856,8 @@ function TransactionList({ transactions, loading, getProofHref }) {
 
             <div className="mt-3 flex flex-col sm:flex-row justify-between text-sm gap-1 sm:gap-0">
               <div className="text-xs text-gray-500">
-                Saisie par <strong>{userDisplay}</strong>
+                {t("orderTransactions.list.enteredBy")}{' '}
+                <strong>{userDisplay}</strong>
               </div>
 
               {proofHref && (
@@ -803,7 +867,7 @@ function TransactionList({ transactions, loading, getProofHref }) {
                   rel="noreferrer"
                   className="inline-flex items-center text-xs font-medium text-blue-600 hover:underline"
                 >
-                  📎 Voir la pièce jointe
+                  📎 {t("orderTransactions.list.viewAttachment")}
                 </a>
               )}
             </div>
@@ -813,4 +877,5 @@ function TransactionList({ transactions, loading, getProofHref }) {
     </div>
   );
 }
+
 

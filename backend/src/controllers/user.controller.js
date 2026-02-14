@@ -53,6 +53,7 @@ function toSafeUser(u) {
     firstName: u.firstName,
     lastName: u.lastName,
     phone: u.phone,
+    language: u.language || 'fr',
     country: u.country,
     countryId: u.countryId ?? null,
     regionId: u.regionId ?? null,
@@ -84,6 +85,15 @@ function normalizeCountry(input) {
   );
   err.status = 400;
   throw err;
+}
+
+function normalizeLanguage(input) {
+  if (input === null || input === undefined) return null;
+  const raw = String(input).trim().toLowerCase();
+  if (!raw) return null;
+  if (raw.startsWith('fr')) return 'fr';
+  if (raw.startsWith('en')) return 'en';
+  return null;
 }
 
 /**
@@ -533,7 +543,16 @@ exports.createUser = async (req, res) => {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
-    const { email, password, firstName, lastName, phone, country, role } = req.body || {};
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      phone,
+      country,
+      role,
+      language: rawLanguage,
+    } = req.body || {};
 
     // Validation minimale solide
     const cleanEmail = (email || '').toLowerCase().trim();
@@ -571,6 +590,12 @@ exports.createUser = async (req, res) => {
       return res.status(409).json({ error: 'Email déjà utilisé' });
     }
 
+    // Langue
+    const normalizedLanguage = normalizeLanguage(rawLanguage);
+    if (rawLanguage !== undefined && rawLanguage !== null && !normalizedLanguage) {
+      return res.status(400).json({ error: 'Langue invalide (fr/en uniquement)' });
+    }
+
     // Pays legacy (ISO2)
     let normalizedCountry = null;
     try {
@@ -598,6 +623,7 @@ exports.createUser = async (req, res) => {
       firstName: firstName?.trim() || null,
       lastName: lastName?.trim() || null,
       phone: phone?.trim() || null,
+      language: normalizedLanguage || 'fr',
       country: normalizedCountry,
       role: targetRole,
       // admin scoped => scope imposé; admin global => scope selon payload (ou null)
@@ -661,7 +687,15 @@ exports.updateUser = async (req, res) => {
       });
     }
 
-    const { firstName, lastName, phone, country, role, password } = req.body || {};
+    const {
+      firstName,
+      lastName,
+      phone,
+      country,
+      role,
+      password,
+      language: rawLanguage,
+    } = req.body || {};
 
     // Si role est fourni, valider
     const nextRole = role !== undefined ? String(role || '').trim().toLowerCase() : null;
@@ -682,6 +716,12 @@ exports.updateUser = async (req, res) => {
     }
 
     const actorScope = getUserGeoScope(req.user);
+
+    // Langue
+    const normalizedLanguage = normalizeLanguage(rawLanguage);
+    if (rawLanguage !== undefined && rawLanguage !== null && !normalizedLanguage) {
+      return res.status(400).json({ error: 'Langue invalide (fr/en uniquement)' });
+    }
 
     // Pays legacy (ISO2)
     let normalizedCountry = u.country;
@@ -720,6 +760,7 @@ exports.updateUser = async (req, res) => {
       firstName: firstName !== undefined ? (firstName?.trim() || null) : u.firstName,
       lastName: lastName !== undefined ? (lastName?.trim() || null) : u.lastName,
       phone: phone !== undefined ? (phone?.trim() || null) : u.phone,
+      language: normalizedLanguage || u.language || 'fr',
       country: normalizedCountry,
       role: nextRole || u.role,
       countryId: nextCountryId,

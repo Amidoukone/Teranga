@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 import { getTransactions, createTransaction } from '../services/transactions';
 import { me } from '../services/auth';
@@ -14,12 +15,17 @@ import {
   getAllServicesAdmin,
 } from '../services/services';
 import api from '../services/api';
+import { useLocale } from '../i18n/useLocale';
 
 import {
   applyLabels,
-  TRANSACTION_TYPES,
   CURRENCY_LABELS,
+  TRANSACTION_TYPES,
+  TRANSACTION_STATUSES,
 } from '../utils/labels';
+
+const TRANSACTION_TYPE_VALUES = ['expense', 'revenue', 'commission', 'adjustment'];
+const CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 
 // ============================================================================
 // 🌍 FILE_BASE — Standard Teranga (Render / Netlify / CDN safe)
@@ -71,6 +77,8 @@ function getProofExtLabel(pf, proofHref = '', fallback = 'FILE') {
 // 📂 PAGE PRINCIPALE
 // ============================================================================
 export default function TransactionsPage() {
+  const { formatNumber, formatDate } = useLocale();
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
 
   const [transactions, setTransactions] = useState([]);
@@ -184,13 +192,11 @@ export default function TransactionsPage() {
     setLoading(true);
     try {
       const data = await getTransactions();
-      const labeled = (data || []).map((t) =>
-        t.statusLabel ? t : applyLabels(t)
-      );
+      const labeled = (data || []).map((t) => applyLabels(t, 'transaction'));
       setTransactions(labeled);
     } catch (e) {
       console.error('❌ loadTransactions:', e);
-      alert('Erreur lors du chargement des transactions.');
+      alert(t('transactionsPage.alerts.loadError'));
     } finally {
       setLoading(false);
     }
@@ -248,15 +254,15 @@ export default function TransactionsPage() {
       }
 
       const created = await createTransaction(payload);
-      const labeled = applyLabels(created);
+      const labeled = applyLabels(created, 'transaction');
 
       setTransactions((prev) => [labeled, ...prev]);
 
-      alert('✅ Transaction ajoutée');
+      alert(t('transactionsPage.alerts.createSuccess'));
       resetForm();
     } catch (e) {
       console.error('❌ createTransaction:', e);
-      alert("Erreur lors de l'ajout de la transaction.");
+      alert(t('transactionsPage.alerts.createError'));
     } finally {
       setCreating(false);
     }
@@ -283,11 +289,11 @@ export default function TransactionsPage() {
   // 🔹 USER DISPLAY
   // ========================================================================
   function getUserDisplayName(u) {
-    if (!u) return '—';
+    if (!u) return t('common.dash');
     const full = `${u.firstName || u.firstname || ''} ${
       u.lastName || u.lastname || ''
     }`.trim();
-    return full || u.name || u.email || '—';
+    return full || u.name || u.email || t('common.dash');
   }
 
   // ========================================================================
@@ -360,7 +366,7 @@ export default function TransactionsPage() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
         <p className="text-gray-600 text-lg animate-pulse">
-          Chargement des transactions…
+          {t('transactionsPage.loading')}
         </p>
       </div>
     );
@@ -377,14 +383,14 @@ export default function TransactionsPage() {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-4 border-b border-gray-100">
           <div className="space-y-1">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              💰 Gestion des transactions
+              💰 {t('transactionsPage.header.title')}
             </h1>
             <p className="text-sm sm:text-base text-slate-600">
-              Centralisation complète des opérations financières (services, commandes, projets).
+              {t('transactionsPage.header.subtitle')}
             </p>
             <span className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 mt-2">
               <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-              {transactions.length} transaction(s)
+              {t('transactionsPage.header.count', { count: transactions.length })}
             </span>
           </div>
 
@@ -393,7 +399,9 @@ export default function TransactionsPage() {
               onClick={() => setShowForm((v) => !v)}
               className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
             >
-              {showForm ? '➖ Masquer le formulaire' : '➕ Nouvelle transaction'}
+              {showForm
+                ? `➖ ${t('transactionsPage.buttons.hideForm')}`
+                : `➕ ${t('transactionsPage.buttons.newTransaction')}`}
             </button>
 
             <button
@@ -405,7 +413,9 @@ export default function TransactionsPage() {
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
-              {loading ? 'Chargement…' : '🔄 Rafraîchir'}
+              {loading
+                ? t('transactionsPage.buttons.refreshLoading')
+                : `🔄 ${t('transactionsPage.buttons.refresh')}`}
             </button>
           </div>
         </div>
@@ -439,6 +449,8 @@ export default function TransactionsPage() {
           transactions={filtered}
           loading={loading}
           getUserDisplayName={getUserDisplayName}
+          formatNumber={formatNumber}
+          formatDate={formatDate}
         />
       </div>
     </div>
@@ -449,58 +461,63 @@ export default function TransactionsPage() {
 // 🔍 FILTRES
 // ============================================================================
 function TransactionFilters({ filters, setFilters, services, filteredCount }) {
+  const { t } = useTranslation();
+
   return (
     <div className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         <div className="lg:col-span-2">
           <label className="text-xs font-medium text-gray-600 mb-1 block">
-            Recherche
+            {t('transactionsPage.filters.searchLabel')}
           </label>
           <input
             value={filters.q}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-            placeholder="Type, service, commande, projet…"
+            placeholder={t('transactionsPage.filters.searchPlaceholder')}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full"
           />
         </div>
 
         <div>
           <label className="text-xs font-medium text-gray-600 mb-1 block">
-            Type
+            {t('transactionsPage.filters.typeLabel')}
           </label>
           <select
             value={filters.type}
             onChange={(e) => setFilters({ ...filters, type: e.target.value })}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full"
           >
-            <option value="">Tous</option>
-            {Object.entries(TRANSACTION_TYPES).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
+            <option value="">{t('transactionsPage.filters.typeAll')}</option>
+            {TRANSACTION_TYPE_VALUES.map((value) => (
+              <option key={value} value={value}>
+                {t(`transactions.type.${value}`, { defaultValue: value })}
+              </option>
             ))}
           </select>
         </div>
 
         <div>
           <label className="text-xs font-medium text-gray-600 mb-1 block">
-            Paiement
+            {t('transactionsPage.filters.paymentLabel')}
           </label>
           <input
             value={filters.payment}
             onChange={(e) => setFilters({ ...filters, payment: e.target.value })}
+            placeholder={t('transactionsPage.filters.paymentPlaceholder')}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full"
           />
         </div>
 
         <div>
           <label className="text-xs font-medium text-gray-600 mb-1 block">
-            Service
+            {t('transactionsPage.filters.serviceLabel')}
           </label>
           <select
             value={filters.service}
             onChange={(e) => setFilters({ ...filters, service: e.target.value })}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full"
           >
-            <option value="">Tous</option>
+            <option value="">{t('transactionsPage.filters.serviceAll')}</option>
             {services.map((s) => (
               <option key={s.id} value={s.id}>{s.title}</option>
             ))}
@@ -509,23 +526,33 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
 
         <div className="lg:col-span-2">
           <label className="text-xs font-medium text-gray-600 mb-1 block">
-            Tri
+            {t('transactionsPage.filters.sortLabel')}
           </label>
           <select
             value={filters.sort}
             onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full"
           >
-            <option value="-createdAt">Plus récentes</option>
-            <option value="createdAt">Plus anciennes</option>
-            <option value="-amount">Montant ↓</option>
-            <option value="amount">Montant ↑</option>
+            <option value="-createdAt">
+              {t('transactionsPage.filters.sortNewest')}
+            </option>
+            <option value="createdAt">
+              {t('transactionsPage.filters.sortOldest')}
+            </option>
+            <option value="-amount">
+              {t('transactionsPage.filters.sortAmountDesc')}
+            </option>
+            <option value="amount">
+              {t('transactionsPage.filters.sortAmountAsc')}
+            </option>
           </select>
         </div>
       </div>
 
       <div className="mt-4 flex justify-between text-xs text-gray-500">
-        <span>{filteredCount} résultat(s)</span>
+        <span>
+          {t('transactionsPage.filters.results', { count: filteredCount })}
+        </span>
         <button
           onClick={() =>
             setFilters({
@@ -540,7 +567,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
           }
           className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
         >
-          Réinitialiser
+          {t('transactionsPage.filters.reset')}
         </button>
       </div>
     </div>
@@ -561,6 +588,8 @@ function TransactionForm({
   creating,
   user,
 }) {
+  const { t } = useTranslation();
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -572,8 +601,10 @@ function TransactionForm({
         onChange={(e) => setForm({ ...form, type: e.target.value })}
         className="border rounded px-3 py-2"
       >
-        {Object.entries(TRANSACTION_TYPES).map(([k, v]) => (
-          <option key={k} value={k}>{v}</option>
+        {TRANSACTION_TYPE_VALUES.map((value) => (
+          <option key={value} value={value}>
+            {t(`transactions.type.${value}`, { defaultValue: value })}
+          </option>
         ))}
       </select>
 
@@ -582,7 +613,7 @@ function TransactionForm({
         type="number"
         value={form.amount}
         onChange={(e) => setForm({ ...form, amount: e.target.value })}
-        placeholder="Montant"
+        placeholder={t('transactionsPage.form.amountPlaceholder')}
         required
         className="border rounded px-3 py-2"
       />
@@ -593,8 +624,10 @@ function TransactionForm({
         onChange={(e) => setForm({ ...form, currency: e.target.value })}
         className="border rounded px-3 py-2"
       >
-        {Object.entries(CURRENCY_LABELS).map(([k, v]) => (
-          <option key={k} value={k}>{v}</option>
+        {CURRENCY_CODES.map((code) => (
+          <option key={code} value={code}>
+            {t(`currency.${code}`, { defaultValue: code })}
+          </option>
         ))}
       </select>
 
@@ -602,7 +635,7 @@ function TransactionForm({
       <input
         value={form.paymentMethod}
         onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-        placeholder="Méthode de paiement"
+        placeholder={t('transactionsPage.form.paymentPlaceholder')}
         className="border rounded px-3 py-2"
       />
 
@@ -612,7 +645,7 @@ function TransactionForm({
         onChange={handleServiceChange}
         className="border rounded px-3 py-2 sm:col-span-2"
       >
-        <option value="">— Aucun service —</option>
+        <option value="">{t('transactionsPage.form.servicePlaceholder')}</option>
         {services.map((s) => (
           <option key={s.id} value={s.id}>{s.title}</option>
         ))}
@@ -625,9 +658,12 @@ function TransactionForm({
           onChange={(e) => setForm({ ...form, taskId: e.target.value })}
           className="border rounded px-3 py-2 sm:col-span-2"
         >
-          <option value="">— Aucune tâche —</option>
-          {tasks.map((t) => (
-            <option key={t.id} value={t.id}>{t.title}</option>
+          <option value="">{t('transactionsPage.form.taskPlaceholder')}</option>
+          {tasks.map((task) => (
+            <option key={task.id} value={task.id}>
+              {task.title ||
+                t('transactionsPage.form.taskFallback', { id: task.id })}
+            </option>
           ))}
         </select>
       )}
@@ -637,14 +673,14 @@ function TransactionForm({
         <>
           <input
             type="number"
-            placeholder="ID Projet"
+            placeholder={t('transactionsPage.form.projectIdPlaceholder')}
             value={form.projectId}
             onChange={(e) => setForm({ ...form, projectId: e.target.value })}
             className="border rounded px-3 py-2"
           />
           <input
             type="number"
-            placeholder="ID Commande"
+            placeholder={t('transactionsPage.form.orderIdPlaceholder')}
             value={form.orderId}
             onChange={(e) => setForm({ ...form, orderId: e.target.value })}
             className="border rounded px-3 py-2"
@@ -656,7 +692,7 @@ function TransactionForm({
       <textarea
         value={form.description}
         onChange={(e) => setForm({ ...form, description: e.target.value })}
-        placeholder="Description"
+        placeholder={t('transactionsPage.form.descriptionPlaceholder')}
         className="border rounded px-3 py-2 sm:col-span-2"
       />
 
@@ -676,7 +712,9 @@ function TransactionForm({
             creating ? 'bg-blue-300' : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
-          {creating ? 'Enregistrement…' : '💾 Enregistrer'}
+          {creating
+            ? t('transactionsPage.form.saving')
+            : `💾 ${t('transactionsPage.form.save')}`}
         </button>
       </div>
     </form>
@@ -686,36 +724,69 @@ function TransactionForm({
 // ============================================================================
 // 📋 LISTE
 // ============================================================================
-function TransactionList({ transactions, loading, getUserDisplayName }) {
+function TransactionList({
+  transactions,
+  loading,
+  getUserDisplayName,
+  formatNumber,
+  formatDate,
+}) {
+  const { t } = useTranslation();
+
   if (loading) {
-    return <p className="text-center text-gray-500">Chargement...</p>;
+    return (
+      <p className="text-center text-gray-500">
+        {t('transactionsPage.list.loading')}
+      </p>
+    );
   }
 
   if (!transactions.length) {
-    return <p className="text-center text-gray-500">Aucune transaction.</p>;
+    return (
+      <p className="text-center text-gray-500">
+        {t('transactionsPage.list.empty')}
+      </p>
+    );
   }
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {transactions.map((t) => {
+      {transactions.map((trx) => {
         const proof =
-          t?.proofFile?.url ||
-          (t?.proofFile?.path ? toAbsUrl(t.proofFile.path) : '');
-        const proofKind = inferProofKind(t?.proofFile, proof);
+          trx?.proofFile?.url ||
+          (trx?.proofFile?.path ? toAbsUrl(trx.proofFile.path) : '');
+        const proofKind = inferProofKind(trx?.proofFile, proof);
         const proofLabel =
-          t?.proofFile?.originalName ||
-          t?.proofFile?.fileName ||
-          t?.proofFile?.name ||
+          trx?.proofFile?.originalName ||
+          trx?.proofFile?.fileName ||
+          trx?.proofFile?.name ||
           '';
         const proofExt = getProofExtLabel(
-          t?.proofFile,
+          trx?.proofFile,
           proof,
-          proofKind === 'pdf' ? 'PDF' : 'FILE'
+          proofKind === 'pdf'
+            ? t('transactionsPage.list.pdfLabel')
+            : t('transactionsPage.list.fileLabel')
         );
+
+        const typeLabel = trx.type
+          ? TRANSACTION_TYPES[trx.type] || trx.type
+          : t('common.dash');
+        const statusLabel = trx.status
+          ? TRANSACTION_STATUSES[trx.status] || trx.status
+          : t('common.dash');
+        const currencyLabel = trx.currency
+          ? CURRENCY_LABELS[trx.currency] || trx.currency
+          : t('common.dash');
+        const descriptionLabel =
+          trx.description || t('transactionsPage.list.descriptionFallback');
+        const createdAtLabel = trx.createdAt
+          ? formatDate(trx.createdAt)
+          : t('common.dash');
 
         return (
           <div
-            key={t.id}
+            key={trx.id}
             className="border rounded-2xl bg-white shadow-sm overflow-hidden"
           >
             {proof && (
@@ -728,7 +799,7 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
                 {proofKind === 'image' ? (
                   <img
                     src={proof}
-                    alt="Preuve"
+                    alt={t('transactionsPage.list.proofAlt')}
                     loading="lazy"
                     decoding="async"
                     className="w-full h-full object-cover"
@@ -752,31 +823,53 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
                       : 'bg-gray-50 text-gray-700 border-gray-200'
                   }`}
                 >
-                  {proofKind === 'image' ? 'IMAGE' : proofKind === 'pdf' ? 'PDF' : 'FICHIER'}
+                  {proofKind === 'image'
+                    ? t('transactionsPage.list.proofImage')
+                    : proofKind === 'pdf'
+                    ? t('transactionsPage.list.proofPdf')
+                    : t('transactionsPage.list.proofFile')}
                 </span>
               </a>
             )}
 
             <div className="p-4">
               <div className="font-bold">
-                {Number(t.amount).toLocaleString('fr-FR')} {t.currencyLabel || t.currency}
+                {formatNumber(trx.amount || 0)} {currencyLabel}
               </div>
 
               <div className="text-xs text-gray-500 mt-1">
-                {t.typeLabel} ? {t.statusLabel}
+                {typeLabel} • {statusLabel}
               </div>
 
-              <p className="text-sm mt-2">{t.description || '?'}</p>
+              <p className="text-sm mt-2">{descriptionLabel}</p>
 
-              {t.order && (
-                <Link to={`/orders/${t.order.id}`} className="text-blue-600 text-sm">
-                  Commande {t.order.code || `#${t.order.id}`}
+              {trx.order && (
+                <Link
+                  to={`/orders/${trx.order.id}`}
+                  className="text-blue-600 text-sm"
+                >
+                  {t('transactionsPage.list.orderLabel', {
+                    code:
+                      trx.order.code ||
+                      t('transactionsPage.list.orderFallbackId', {
+                        id: trx.order.id,
+                      }),
+                  })}
                 </Link>
               )}
 
-              {t.project && (
-                <Link to={`/projects/${t.project.id}`} className="text-blue-600 text-sm">
-                  Projet {t.project.title || `#${t.project.id}`}
+              {trx.project && (
+                <Link
+                  to={`/projects/${trx.project.id}`}
+                  className="text-blue-600 text-sm"
+                >
+                  {t('transactionsPage.list.projectLabel', {
+                    title:
+                      trx.project.title ||
+                      t('transactionsPage.list.projectFallbackId', {
+                        id: trx.project.id,
+                      }),
+                  })}
                 </Link>
               )}
 
@@ -787,13 +880,15 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
                   rel="noreferrer"
                   className="inline-flex items-center text-sm font-semibold text-blue-600 hover:underline mt-2 break-all"
                 >
-                  {proofLabel || 'Pi\u00e8ce jointe'}
+                  {proofLabel || t('transactionsPage.list.attachmentFallback')}
                 </a>
               )}
 
               <div className="text-xs text-gray-400 mt-3">
-                Par {getUserDisplayName(t.user)} ?{' '}
-                {new Date(t.createdAt).toLocaleDateString('fr-FR')}
+                {t('transactionsPage.list.byLine', {
+                  name: getUserDisplayName(trx.user),
+                  date: createdAtLabel,
+                })}
               </div>
             </div>
           </div>
@@ -802,3 +897,4 @@ function TransactionList({ transactions, loading, getUserDisplayName }) {
     </div>
   );
 }
+

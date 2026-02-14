@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, Loader2, Lock, CheckCircle2 } from "lucide-react";
 import { changePassword, logout, me } from "../services/auth";
+import { useTranslation } from "react-i18next";
 
 export default function ChangePasswordPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -33,17 +35,17 @@ export default function ChangePasswordPage() {
     setSuccessMsg("");
 
     if (!currentPassword || !newPassword) {
-      setErrorMsg("Tous les champs sont requis.");
+      setErrorMsg(t("changePasswordPage.errors.required"));
       return;
     }
 
     if (newPassword.length < 8) {
-      setErrorMsg("Mot de passe trop court (minimum 8 caracteres).");
+      setErrorMsg(t("changePasswordPage.errors.tooShort"));
       return;
     }
 
     if (newPassword !== confirm) {
-      setErrorMsg("Les mots de passe ne correspondent pas.");
+      setErrorMsg(t("changePasswordPage.errors.mismatch"));
       return;
     }
 
@@ -53,13 +55,16 @@ export default function ChangePasswordPage() {
         currentPassword,
         newPassword,
       });
-      setSuccessMsg(res?.message || "Mot de passe modifie.");
+      setSuccessMsg(res?.message || t("changePasswordPage.success.changed"));
       logout();
       navigate("/login", {
-        state: { successMsg: "Mot de passe modifie. Reconnectez-vous." },
+        state: {
+          successMsg: t("changePasswordPage.success.changedLogin"),
+        },
       });
     } catch (err) {
-      const msg = err?.response?.data?.error || "Erreur de modification.";
+      const msg =
+        err?.response?.data?.error || t("changePasswordPage.errors.update");
       setErrorMsg(msg);
     } finally {
       setLoading(false);
@@ -70,16 +75,16 @@ export default function ChangePasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
       <div className="page-shell w-full max-w-md p-8 relative">
         <div className="text-center mb-8">
-          <p className="page-kicker mb-3">Securite</p>
+          <p className="page-kicker mb-3">{t("changePasswordPage.kicker")}</p>
           <img
             src="/logo_180x180.png"
-            alt="Logo Teranga"
+            alt={t("changePasswordPage.logoAlt")}
             className="w-16 h-16 mx-auto mb-3 drop-shadow-sm"
           />
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Modifier le mot de passe
+            {t("changePasswordPage.title")}
           </h1>
-          <p className="page-lead mt-1">Protegez votre compte.</p>
+          <p className="page-lead mt-1">{t("changePasswordPage.subtitle")}</p>
         </div>
 
         {successMsg && (
@@ -98,7 +103,7 @@ export default function ChangePasswordPage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">
-              Mot de passe actuel
+              {t("changePasswordPage.labels.currentPassword")}
             </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -113,7 +118,11 @@ export default function ChangePasswordPage() {
               />
               <button
                 type="button"
-                aria-label={showPassword ? "Masquer" : "Afficher"}
+                aria-label={
+                  showPassword
+                    ? t("changePasswordPage.actions.hidePassword")
+                    : t("changePasswordPage.actions.showPassword")
+                }
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute inset-y-0 right-3 flex items-center text-slate-500 hover:text-blue-600"
               >
@@ -128,7 +137,7 @@ export default function ChangePasswordPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">
-              Nouveau mot de passe
+              {t("changePasswordPage.labels.newPassword")}
             </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -146,7 +155,7 @@ export default function ChangePasswordPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">
-              Confirmer le mot de passe
+              {t("changePasswordPage.labels.confirmPassword")}
             </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -175,17 +184,17 @@ export default function ChangePasswordPage() {
             {loading ? (
               <>
                 <Loader2 className="animate-spin w-5 h-5 mr-2" />
-                Mise a jour...
+                {t("changePasswordPage.buttons.updating")}
               </>
             ) : (
-              "Mettre a jour"
+              t("changePasswordPage.buttons.update")
             )}
           </button>
         </form>
 
         <div className="mt-6 text-center text-sm text-slate-600">
           <Link to="/dashboard" className="text-blue-600 font-medium hover:underline">
-            Retour au dashboard
+            {t("changePasswordPage.links.backToDashboard")}
           </Link>
         </div>
       </div>

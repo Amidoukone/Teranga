@@ -4,7 +4,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { me } from "../services/auth";
 import { getTransactions, createTransaction } from "../services/transactions";
 import api from "../services/api";
-import { applyLabels } from "../utils/labels";
+import { applyLabels, CURRENCY_LABELS, TRANSACTION_TYPES } from "../utils/labels";
+import { useLocale } from "../i18n/useLocale";
+import { useTranslation } from "react-i18next";
 
 /* ============================================================================
    🌍 FILE_BASE + normalizePath + toAbsUrl — PRODUCTION READY (SSR safe)
@@ -46,6 +48,9 @@ function toAbsUrl(path = "") {
 const FORM_INPUT =
   "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white " +
   "focus:outline-none focus:ring-2 focus:ring-blue-600 transition";
+
+const TRANSACTION_TYPE_VALUES = ["revenue", "expense", "commission", "adjustment"];
+const SERVICE_CURRENCY_CODES = ["XOF", "XAF", "EUR", "USD", "GBP"];
 
 /* ============================================================================
    🔗 Proof resolver (ImageKit + legacy)
@@ -139,6 +144,7 @@ function buildCreateTransactionPayload(payload) {
    📄 PAGE : ServiceTransactionsPage — VERSION PREMIUM STYLE A 2025
 ============================================================================ */
 export default function ServiceTransactionsPage() {
+  const { t } = useTranslation();
   const { id } = useParams(); // serviceId
   const navigate = useNavigate();
 
@@ -185,9 +191,7 @@ export default function ServiceTransactionsPage() {
         ? data.transactions
         : [];
 
-      const enriched = (list || []).map((t) =>
-        t?.statusLabel || t?.typeLabel || t?.currencyLabel ? t : applyLabels(t)
-      );
+      const enriched = (list || []).map((t) => applyLabels(t, "transaction"));
 
       setTransactions(enriched);
     } catch (err) {
@@ -253,11 +257,11 @@ export default function ServiceTransactionsPage() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!id) return alert("Service introuvable.");
+    if (!id) return alert(t("serviceTransactions.alerts.serviceNotFound"));
 
     const amountNum = parseFloat(form.amount);
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
-      return alert("Montant invalide.");
+      return alert(t("serviceTransactions.alerts.invalidAmount"));
     }
 
     if (submitting) return; // anti double clic
@@ -278,7 +282,7 @@ export default function ServiceTransactionsPage() {
 
       await createTransaction(finalPayload);
 
-      alert("✅ Transaction ajoutée avec succès");
+      alert(t("serviceTransactions.alerts.createSuccess"));
 
       setForm({
         type: "expense",
@@ -292,7 +296,7 @@ export default function ServiceTransactionsPage() {
       await fetchTransactions();
     } catch (err) {
       console.error("❌ Erreur ajout transaction:", err);
-      alert("Erreur lors de l’ajout de la transaction");
+      alert(t("serviceTransactions.alerts.createError"));
     } finally {
       setSubmitting(false);
     }
@@ -305,7 +309,7 @@ export default function ServiceTransactionsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
         <p className="text-gray-600 text-lg animate-pulse text-center">
-          Chargement des transactions du service…
+          {t("serviceTransactions.loading")}
         </p>
       </div>
     );
@@ -315,7 +319,7 @@ export default function ServiceTransactionsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <p className="text-red-600 text-lg font-semibold">
-          Utilisateur non authentifié.
+          {t("serviceTransactions.unauthenticated")}
         </p>
       </div>
     );
@@ -335,23 +339,23 @@ export default function ServiceTransactionsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[0.7rem] uppercase tracking-wide font-semibold text-blue-600 mb-1">
-              Opérations liées au service #{id}
+              {t("serviceTransactions.header.kicker", { id })}
             </p>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 break-words">
-              💼 Transactions du service
+              💼 {t("serviceTransactions.header.title")}
             </h1>
 
             <p className="text-xs sm:text-sm text-gray-600 mt-1">
-              Suivez et ajoutez des transactions rattachées aux tâches du service.
+              {t("serviceTransactions.header.subtitle")}
             </p>
           </div>
 
           <button
             onClick={() => navigate(`/services/${id}/tasks`)}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
           >
-            📋 Voir tâches
+            📋 {t("serviceTransactions.header.viewTasks")}
           </button>
         </div>
 
@@ -379,10 +383,20 @@ export default function ServiceTransactionsPage() {
    🧩 FORMULAIRE — PREMIUM STYLE A
 ============================================================================ */
 function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
+  const { t } = useTranslation();
+  const currencyOptions = useMemo(
+    () =>
+      SERVICE_CURRENCY_CODES.map((code) => ({
+        value: code,
+        label: t(`currency.${code}`, { defaultValue: code }),
+      })),
+    [t]
+  );
+
   return (
     <div className="">
       <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
-        ➕ Ajouter une transaction
+        ➕ {t("serviceTransactions.form.title")}
       </h2>
 
       <form
@@ -390,25 +404,26 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
         className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-2xl border border-gray-200 shadow-sm"
       >
         {/* Type */}
-        <FormGroup label="Type de transaction">
+        <FormGroup label={t("serviceTransactions.form.typeLabel")}>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
             className={FORM_INPUT}
           >
-            <option value="revenue">Revenu</option>
-            <option value="expense">Dépense</option>
-            <option value="commission">Commission</option>
-            <option value="adjustment">Ajustement</option>
+            {TRANSACTION_TYPE_VALUES.map((value) => (
+              <option key={value} value={value}>
+                {t(`transactions.type.${value}`, { defaultValue: value })}
+              </option>
+            ))}
           </select>
         </FormGroup>
 
         {/* Montant */}
-        <FormGroup label="Montant">
+        <FormGroup label={t("serviceTransactions.form.amountLabel")}>
           <input
             type="number"
             step="0.01"
-            placeholder="15000"
+            placeholder={t("serviceTransactions.form.amountPlaceholder")}
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
@@ -417,50 +432,50 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
         </FormGroup>
 
         {/* Devise (multi-pays) */}
-        <FormGroup label="Devise">
+        <FormGroup label={t("serviceTransactions.form.currencyLabel")}>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
             className={FORM_INPUT}
           >
-            {/* ✅ fallback simple (tu peux enrichir via utils/labels si tu veux) */}
-            <option value="XOF">FCFA (XOF)</option>
-            <option value="XAF">FCFA (XAF)</option>
-            <option value="EUR">Euro (EUR)</option>
-            <option value="USD">Dollar (USD)</option>
-            <option value="GBP">Livre (GBP)</option>
+            {currencyOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </FormGroup>
 
         {/* Tâche liée */}
-        <FormGroup label="Lier à une tâche (optionnel)" full>
+        <FormGroup label={t("serviceTransactions.form.taskLabel")} full>
           <select
             value={form.taskId}
             onChange={(e) => setForm({ ...form, taskId: e.target.value })}
             className={FORM_INPUT}
           >
-            <option value="">— Aucune tâche —</option>
-            {tasks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.title || `Tâche #${t.id}`}
+            <option value="">{t("serviceTransactions.form.taskPlaceholder")}</option>
+            {tasks.map((task) => (
+              <option key={task.id} value={task.id}>
+                {task.title ||
+                  t("serviceTransactions.form.taskFallback", { id: task.id })}
               </option>
             ))}
           </select>
         </FormGroup>
 
         {/* Description */}
-        <FormGroup label="Description" full>
+        <FormGroup label={t("serviceTransactions.form.descriptionLabel")} full>
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
             className={FORM_INPUT}
-            placeholder="Description ou détails…"
+            placeholder={t("serviceTransactions.form.descriptionPlaceholder")}
           />
         </FormGroup>
 
         {/* Fichier */}
-        <FormGroup label="Pièce justificative (PDF, JPG, PNG)" full>
+        <FormGroup label={t("serviceTransactions.form.proofLabel")} full>
           <input
             type="file"
             accept=".pdf,.jpg,.jpeg,.png"
@@ -474,7 +489,8 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
           />
           {form.proofFile && (
             <p className="text-xs text-slate-500 mt-1 break-all">
-              Fichier sélectionné : <strong>{form.proofFile.name}</strong>
+              {t("serviceTransactions.form.proofSelectedLabel")}{" "}
+              <strong>{form.proofFile.name}</strong>
             </p>
           )}
         </FormGroup>
@@ -490,7 +506,9 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
                 : "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800"
             }`}
           >
-            {submitting ? "Ajout…" : "Ajouter la transaction"}
+            {submitting
+              ? t("serviceTransactions.form.submitting")
+              : t("serviceTransactions.form.submit")}
           </button>
         </div>
       </form>
@@ -516,59 +534,101 @@ function FormGroup({ label, children, full }) {
    🧩 HISTORIQUE — Premium Style A (proofs ImageKit + legacy)
 ============================================================================ */
 function TransactionHistory({ transactions, getProofHref }) {
+  const { t } = useTranslation();
+  const { formatNumber, formatDateTime } = useLocale();
+
   return (
     <div>
       <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
-        📜 Historique des transactions
+        📜 {t("serviceTransactions.history.title")}
       </h2>
 
       {transactions.length === 0 ? (
         <p className="text-gray-500 italic text-center py-6">
-          Aucune transaction enregistrée.
+          {t("serviceTransactions.history.empty")}
         </p>
       ) : (
         <div className="grid gap-6">
-          {transactions.map((t) => {
-            const title = (t.typeLabel || t.type || "").toString();
-            const amount = Number(t.amount || 0).toLocaleString("fr-FR");
-            const currency = t.currencyLabel || t.currency || "";
+          {transactions.map((trx) => {
+            const typeLabel = trx.type
+              ? TRANSACTION_TYPES[trx.type] || trx.type
+              : t("common.dash");
+            const amount = formatNumber(trx.amount || 0);
+            const currencyLabel = trx.currency
+              ? CURRENCY_LABELS[trx.currency] || trx.currency
+              : t("common.dash");
+            const typeMeta =
+              trx.type === "revenue"
+                ? {
+                    icon: "⬆️",
+                    badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                  }
+                : trx.type === "expense"
+                ? {
+                    icon: "⬇️",
+                    badge: "bg-rose-50 text-rose-700 border-rose-200",
+                  }
+                : trx.type === "commission"
+                ? {
+                    icon: "💼",
+                    badge: "bg-amber-50 text-amber-700 border-amber-200",
+                  }
+                : trx.type === "adjustment"
+                ? {
+                    icon: "🧾",
+                    badge: "bg-blue-50 text-blue-700 border-blue-200",
+                  }
+                : {
+                    icon: "💳",
+                    badge: "bg-slate-100 text-slate-700 border-slate-200",
+                  };
 
-            const proofHref = getProofHref ? getProofHref(t) : "";
-            const proofKind = inferProofKind(t?.proofFile, proofHref);
+            const proofHref = getProofHref ? getProofHref(trx) : "";
+            const proofKind = inferProofKind(trx?.proofFile, proofHref);
             const proofLabel =
-              t?.proofFile?.originalName ||
-              t?.proofFile?.fileName ||
-              t?.proofFile?.name ||
+              trx?.proofFile?.originalName ||
+              trx?.proofFile?.fileName ||
+              trx?.proofFile?.name ||
               "";
             const proofExt = getProofExtLabel(
-              t?.proofFile,
+              trx?.proofFile,
               proofHref,
-              proofKind === "pdf" ? "PDF" : "FILE"
+              proofKind === "pdf"
+                ? t("serviceTransactions.history.proofPdf")
+                : t("serviceTransactions.history.proofFile")
             );
 
-
-            const createdAtDisplay = t.createdAt
-              ? new Date(t.createdAt).toLocaleString("fr-FR")
-              : "Date inconnue";
+            const createdAtDisplay = trx.createdAt
+              ? formatDateTime(trx.createdAt)
+              : t("serviceTransactions.history.dateUnknown");
 
             const createdBy =
-              t.user?.email ||
-              `${t.user?.firstName || ""} ${t.user?.lastName || ""}`.trim() ||
-              "—";
+              trx.user?.email ||
+              `${trx.user?.firstName || ""} ${trx.user?.lastName || ""}`.trim() ||
+              t("common.dash");
 
             return (
               <div
-                key={t.id}
+                key={trx.id}
                 className="bg-gradient-to-br from-white via-slate-50 to-white border border-gray-200 rounded-2xl shadow-sm p-5 hover:shadow-md transition"
               >
                 {/* HEADER */}
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 break-words">
-                      {title} — {amount} {currency}
-                    </h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-semibold border ${typeMeta.badge}`}
+                      >
+                        <span>{typeMeta.icon}</span>
+                        {typeLabel}
+                      </span>
+                      <h3 className="text-lg font-semibold text-gray-900 break-words">
+                        {amount} {currencyLabel}
+                      </h3>
+                    </div>
                     <p className="text-sm text-gray-600 break-words mt-1">
-                      {t.description || "Aucune description"}
+                      {trx.description ||
+                        t("serviceTransactions.history.descriptionFallback")}
                     </p>
                   </div>
 
@@ -577,9 +637,11 @@ function TransactionHistory({ transactions, getProofHref }) {
 
                 {/* DETAILS */}
                 <div className="mt-4 text-sm text-gray-700 space-y-2">
-                  {t.task && (
+                  {trx.task && (
                     <p className="break-words">
-                      🔧 <strong>Tâche :</strong> {t.task.title} (ID {t.task.id})
+                      🔧 <strong>{t("serviceTransactions.history.taskLabel")}:</strong>{" "}
+                      {trx.task.title} ({t("serviceTransactions.history.taskIdLabel")}{" "}
+                      {trx.task.id})
                     </p>
                   )}
 
@@ -594,7 +656,7 @@ function TransactionHistory({ transactions, getProofHref }) {
                         {proofKind === "image" ? (
                           <img
                             src={proofHref}
-                            alt="Preuve"
+                            alt={t("serviceTransactions.history.proofLabel")}
                             loading="lazy"
                             decoding="async"
                             className="w-full h-full object-cover"
@@ -616,30 +678,40 @@ function TransactionHistory({ transactions, getProofHref }) {
                               : "bg-gray-50 text-gray-700 border-gray-200"
                           }`}
                         >
-                          {proofKind === "image" ? "IMAGE" : proofKind === "pdf" ? "PDF" : "FICHIER"}
+                          {proofKind === "image"
+                            ? t("serviceTransactions.history.proofImage")
+                            : proofKind === "pdf"
+                            ? t("serviceTransactions.history.proofPdf")
+                            : t("serviceTransactions.history.proofFile")}
                         </span>
                       </a>
 
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs text-slate-500">Preuve</div>
+                        <div className="text-xs text-slate-500">
+                          {t("serviceTransactions.history.proofLabel")}
+                        </div>
                         <a
                           href={proofHref}
                           target="_blank"
                           rel="noreferrer"
                           className="text-sm font-semibold text-blue-600 hover:underline break-all"
                         >
-                          {proofLabel || "Pi\u00e8ce jointe"}
+                          {proofLabel ||
+                            t("serviceTransactions.history.attachmentFallback")}
                         </a>
                         <div className="text-[0.7rem] text-slate-500 mt-1">
-                          {proofKind === "image" ? "Aper\u00e7u disponible" : `Format: ${proofExt}`}
+                          {proofKind === "image"
+                            ? t("serviceTransactions.history.previewAvailable")
+                            : t("serviceTransactions.history.format", {
+                                ext: proofExt,
+                              })}
                         </div>
                       </div>
                     </div>
                   )}
 
-
                   <p className="text-xs text-gray-500 break-words">
-                    Enregistré par <strong>{createdBy}</strong>
+                    {t("serviceTransactions.history.createdBy", { name: createdBy })}
                   </p>
                 </div>
               </div>
@@ -650,3 +722,4 @@ function TransactionHistory({ transactions, getProofHref }) {
     </div>
   );
 }
+

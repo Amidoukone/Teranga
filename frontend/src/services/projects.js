@@ -221,7 +221,7 @@ export async function deleteProjectPhase(id) {
  */
 export async function getProjectDocuments(projectId) {
   const { data } = await api.get('/project-documents', {
-    params: { projectId },
+    params: mergeGeoParams({ projectId }),
   });
   return data?.documents || [];
 }

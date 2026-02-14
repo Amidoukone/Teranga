@@ -75,6 +75,59 @@ function applyGeoScope(where, user) {
   return where;
 }
 
+function buildStrictGeoFilter(user) {
+  if (!user) return {};
+  if (isGlobalAdmin(user)) return {};
+
+  const { countryId, regionId } = getUserGeoScope(user);
+
+  if (regionId != null) return { regionId };
+  if (countryId != null) return { countryId };
+
+  return { id: 0 };
+}
+
+function resolveGeoFromTransactionLinks(trx) {
+  return {
+    countryId:
+      trx?.countryId ??
+      trx?.order?.countryId ??
+      trx?.service?.countryId ??
+      trx?.task?.countryId ??
+      trx?.project?.countryId ??
+      trx?.user?.countryId ??
+      null,
+    regionId:
+      trx?.regionId ??
+      trx?.order?.regionId ??
+      trx?.service?.regionId ??
+      trx?.task?.regionId ??
+      trx?.project?.regionId ??
+      trx?.user?.regionId ??
+      null,
+  };
+}
+
+function passesGeoScopeForUser(user, trx) {
+  const scope = buildStrictGeoFilter(user);
+
+  if (scope.id === 0) return false;
+
+  if (scope.regionId == null && scope.countryId == null) return true;
+
+  const geo = resolveGeoFromTransactionLinks(trx);
+
+  if (scope.regionId != null) {
+    return geo.regionId != null && String(geo.regionId) === String(scope.regionId);
+  }
+
+  if (scope.countryId != null) {
+    return geo.countryId != null && String(geo.countryId) === String(scope.countryId);
+  }
+
+  return true;
+}
+
 /* =========================================================
    🔐 WHERE + ACL par rôle
    - filtre par serviceId / taskId / orderId / projectId
@@ -89,6 +142,8 @@ function buildWhereWithACL(req) {
   const tid = toSafeInt(query.taskId);
   const oid = toSafeInt(query.orderId);
   const pid = toSafeInt(query.projectId);
+  const qCountryId = toSafeInt(query.countryId ?? query.country_id);
+  const qRegionId = toSafeInt(query.regionId ?? query.region_id);
 
   // 🔗 filtres directs sur les IDs liés
   if (sid) where.serviceId = sid;
@@ -161,6 +216,10 @@ function buildWhereWithACL(req) {
         where[Op.and] = where[Op.and] || [];
         where[Op.and].push({ [Op.or]: scopeOr });
       }
+    } else {
+      // Admin global: filtre réactif si pays/région sélectionnés
+      if (qCountryId) where.countryId = qCountryId;
+      if (qRegionId) where.regionId = qRegionId;
     }
   } else if (role === 'agent') {
     // Agent :
@@ -174,6 +233,8 @@ function buildWhereWithACL(req) {
       { '$task.assignedTo$': userId },
       { '$project.agentId$': userId },
     ];
+
+    Object.assign(where, buildStrictGeoFilter(req.user));
   } else if (role === 'client') {
     // Client :
     //  - transactions créées par lui
@@ -186,6 +247,8 @@ function buildWhereWithACL(req) {
       { '$task.creatorId$': userId },
       { '$project.clientId$': userId },
     ];
+
+    Object.assign(where, buildStrictGeoFilter(req.user));
   }
 
   // Recherche texte simple (description + paymentMethod)
@@ -298,18 +361,24 @@ async function canAccessTransaction(req, trx) {
     if (t.userId === userId) return true;
 
     if (role === 'agent') {
-      if (t?.service && t.service.agentId === userId) return true;
-      if (t?.task && t.task.assignedTo === userId) return true;
-      if (t?.project && t.project.agentId === userId) return true;
-      return false;
+      const isRelated =
+        (t?.service && t.service.agentId === userId) ||
+        (t?.task && t.task.assignedTo === userId) ||
+        (t?.project && t.project.agentId === userId);
+
+      if (!isRelated) return false;
+      return passesGeoScopeForUser(req.user, t);
     }
 
     if (role === 'client') {
-      if (t?.service && t.service.clientId === userId) return true;
-      if (t?.task && t.task.creatorId === userId) return true;
-      if (t?.project && t.project.clientId === userId) return true;
-      if (t.userId === userId) return true;
-      return false;
+      const isRelated =
+        (t?.service && t.service.clientId === userId) ||
+        (t?.task && t.task.creatorId === userId) ||
+        (t?.project && t.project.clientId === userId) ||
+        t.userId === userId;
+
+      if (!isRelated) return false;
+      return passesGeoScopeForUser(req.user, t);
     }
 
     return false;
@@ -327,6 +396,8 @@ module.exports = {
   buildWhereWithACL,
   COMMON_INCLUDE,
   canAccessTransaction,
+  buildStrictGeoFilter,
+  resolveGeoFromTransactionLinks,
 
   // exports utilitaires GEO (optionnels, non cassants)
   applyGeoScope,

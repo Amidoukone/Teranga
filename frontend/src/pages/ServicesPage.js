@@ -7,6 +7,16 @@ import { getMyServices, createService } from '../services/services';
 import { getProperties } from '../services/properties';
 import { applyLabels, SERVICE_TYPES, SERVICE_STATUSES } from '../utils/labels';
 import PaginationBar from '../components/PaginationBar';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
+
+const DEFAULT_FILTERS = {
+  q: '',
+  type: '',
+  status: '',
+  property: '',
+  sort: '-createdAt',
+};
 
 /* ============================================================
    🧠 Page Services — Premium Pro 2025 (responsive & production-ready)
@@ -16,11 +26,14 @@ import PaginationBar from '../components/PaginationBar';
    ✅ Multi-pays MASTER: UI uniquement (backend applique le scope)
 ============================================================ */
 export default function ServicesPage() {
+  const { formatDate } = useLocale();
+  const { t } = useTranslation();
   const [services, setServices] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [properties, setProperties] = useState([]);
   const [clients, setClients] = useState([]);
   const [user, setUser] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -30,13 +43,7 @@ export default function ServicesPage() {
     return saved === null ? true : saved === '1';
   });
 
-  const [filters, setFilters] = useState({
-    q: '',
-    type: '',
-    status: '',
-    property: '',
-    sort: '-createdAt',
-  });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
   const [pagination, setPagination] = useState({ page: 1, limit: 8, total: 0 });
@@ -64,12 +71,33 @@ const isMasterUser = useCallback((u) => {
   return u.role === 'admin' && (u.countryId != null || u.regionId != null);
 }, []);
 
-const roleLabel = useMemo(() => {
+const roleVariant = useMemo(() => {
   if (!user) return '';
-  if (user.role === 'admin') return isMasterUser(user) ? 'MASTER' : 'ADMINISTRATEUR';
-  if (user.role === 'agent') return 'AGENT';
-  return 'CLIENT';
+  if (user.role === 'admin') return isMasterUser(user) ? 'master' : 'admin';
+  if (user.role === 'agent') return 'agent';
+  return 'client';
 }, [user, isMasterUser]);
+
+  const roleLabel = useMemo(() => {
+    if (!user) return '';
+    if (user.role === 'admin') return isMasterUser(user) ? t("roles.master") : t("roles.admin");
+    if (user.role === 'agent') return t("roles.agent");
+    return t("roles.client");
+  }, [user, isMasterUser, t]);
+
+  const resetFilters = useCallback(() => {
+    setFilters({ ...DEFAULT_FILTERS });
+  }, []);
+
+  const hasActiveFilters = useMemo(() => {
+    return (
+      Boolean(filters.q?.trim()) ||
+      Boolean(filters.type) ||
+      Boolean(filters.status) ||
+      Boolean(filters.property) ||
+      filters.sort !== DEFAULT_FILTERS.sort
+    );
+  }, [filters]);
 
 
   /* ==========================================
@@ -105,11 +133,8 @@ const roleLabel = useMemo(() => {
         ? res
         : res?.services || [];
 
-      // ??? Ajouter les labels fran?ais si backend ne les fournit pas d?j?
-      const enriched = list.map((s) => ({
-        ...s,
-        ...(s.statusLabel && s.typeLabel ? {} : applyLabels(s)),
-      }));
+      // Toujours recalculer les labels via i18n (évite les labels FR renvoyés par le backend)
+      const enriched = list.map((s) => applyLabels(s, 'service'));
 
       setServices(enriched);
       setFiltered(enriched);
@@ -125,15 +150,16 @@ const roleLabel = useMemo(() => {
           : { page, limit: pageSize, total: enriched.length }
       );
     } catch (e) {
-      console.error('? Load services:', e);
-      alert(
-        e?.response?.data?.error || 'Erreur lors du chargement des services.'
-      );
+      console.error('❌ Load services:', e);
+      setNotice({
+        type: 'error',
+        message: e?.response?.data?.error || t("services.alerts.loadError"),
+      });
       setServices([]);
       setFiltered([]);
       setPagination({ page, limit: pageSize, total: 0 });
     }
-  }, [filters, page, pageSize]);
+  }, [filters, page, pageSize, t]);
 
   const loadClientProperties = useCallback(
     async (clientId) => {
@@ -149,10 +175,13 @@ const roleLabel = useMemo(() => {
         setProperties(data.properties || []);
       } catch (e) {
         console.error('❌ Erreur chargement biens client:', e);
-        alert('Erreur lors du chargement des biens du client.');
+        setNotice({
+          type: 'error',
+          message: t("services.alerts.loadClientPropertiesError"),
+        });
       }
     },
-    [authHeaders]
+    [authHeaders, t]
   );
 
   const loadMyProperties = useCallback(async () => {
@@ -161,9 +190,12 @@ const roleLabel = useMemo(() => {
       setProperties(Array.isArray(props) ? props : props?.properties || []);
     } catch (e) {
       console.error('❌ Load properties (me):', e);
-      alert('Erreur lors du chargement des biens.');
+      setNotice({
+        type: 'error',
+        message: t("services.alerts.loadPropertiesError"),
+      });
     }
-  }, []);
+  }, [t]);
 
   const loadClients = useCallback(async () => {
     try {
@@ -236,6 +268,7 @@ const roleLabel = useMemo(() => {
   async function handleSubmit(e) {
     e.preventDefault();
     try {
+      setNotice(null);
       setLoading(true);
 
       // ✅ IMPORTANT : ne pas injecter countryId/regionId ici
@@ -244,12 +277,18 @@ const roleLabel = useMemo(() => {
 
       // ⚠️ sécurité UI : admin/master => clientId obligatoire (backend l’exige)
       if (user?.role === 'admin' && !payload.clientId) {
-        alert('Veuillez sélectionner un client.');
+        setNotice({
+          type: 'error',
+          message: t("services.alerts.selectClient"),
+        });
         return;
       }
 
       await createService(payload);
-      alert('✅ Service créé avec succès !');
+      setNotice({
+        type: 'success',
+        message: t("services.alerts.createSuccess"),
+      });
       resetForm();
       await loadServices();
 
@@ -260,9 +299,10 @@ const roleLabel = useMemo(() => {
       }
     } catch (e) {
       console.error('❌ createService:', e);
-      alert(
-        e?.response?.data?.error || 'Erreur lors de la création du service.'
-      );
+      setNotice({
+        type: 'error',
+        message: e?.response?.data?.error || t("services.alerts.createError"),
+      });
     } finally {
       setLoading(false);
     }
@@ -271,10 +311,14 @@ const roleLabel = useMemo(() => {
   async function handleUpdate(e) {
     e.preventDefault();
     try {
+      setNotice(null);
       setLoading(true);
 
       if (!editingId) {
-        alert('Aucun service à modifier.');
+        setNotice({
+          type: 'error',
+          message: t("services.alerts.noEditTarget"),
+        });
         return;
       }
 
@@ -295,32 +339,39 @@ const roleLabel = useMemo(() => {
       }
 
       await api.put(`/services/${editingId}`, payload, authHeaders);
-      alert('✅ Service mis à jour avec succès !');
+      setNotice({
+        type: 'success',
+        message: t("services.alerts.updateSuccess"),
+      });
       resetForm();
       setEditingId(null);
       await loadServices();
     } catch (e) {
       console.error('❌ Erreur mise à jour service:', e);
-      alert(
-        e?.response?.data?.error ||
-          'Erreur lors de la mise à jour du service.'
-      );
+      setNotice({
+        type: 'error',
+        message: e?.response?.data?.error || t("services.alerts.updateError"),
+      });
     } finally {
       setLoading(false);
     }
   }
 
   async function handleDelete(id) {
-    if (!window.confirm('Confirmer la suppression de ce service ?')) return;
+    if (!window.confirm(t("services.alerts.deleteConfirm"))) return;
     try {
       await api.delete(`/services/${id}`, authHeaders);
       await loadServices();
+      setNotice({
+        type: 'success',
+        message: t("services.alerts.deleteSuccess"),
+      });
     } catch (e) {
       console.error('❌ Erreur suppression service:', e);
-      alert(
-        e?.response?.data?.error ||
-          'Erreur lors de la suppression du service ❌'
-      );
+      setNotice({
+        type: 'error',
+        message: e?.response?.data?.error || t("services.alerts.deleteError"),
+      });
     }
   }
 
@@ -364,6 +415,12 @@ const roleLabel = useMemo(() => {
     () => pagination?.total ?? pagination?.count ?? services.length,
     [pagination, services.length]
   );
+  const emptyTitle = hasActiveFilters
+    ? t("services.emptyFilteredTitle")
+    : t("services.emptyTitle");
+  const emptySubtitle = hasActiveFilters
+    ? t("services.emptyFilteredSubtitle")
+    : t("services.emptySubtitle");
 
   useEffect(() => {
     setPage(1);
@@ -388,8 +445,24 @@ const roleLabel = useMemo(() => {
           loadServices={loadServices}
           totalCount={totalServices}
           roleLabel={roleLabel}
+          roleVariant={roleVariant}
           user={user}
         />
+
+        {notice && (
+          <div
+            className={`rounded-2xl border px-4 py-3 text-xs sm:text-sm flex gap-2 items-start ${
+              notice.type === 'error'
+                ? 'bg-rose-50 border-rose-200 text-rose-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+            }`}
+          >
+            <span className="mt-[1px]">
+              {notice.type === 'error' ? '⚠️' : '✅'}
+            </span>
+            <p className="break-words">{notice.message}</p>
+          </div>
+        )}
 
         {/* FILTRES */}
         <Filters
@@ -397,6 +470,7 @@ const roleLabel = useMemo(() => {
           setFilters={setFilters}
           properties={properties}
           filteredCount={totalServices}
+          onReset={resetFilters}
         />
 
         {/* FORMULAIRE */}
@@ -418,10 +492,10 @@ const roleLabel = useMemo(() => {
         {/* LISTE DES SERVICES */}
         <div className="flex items-center justify-between gap-2 mb-2">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">
-            📋 Mes services existants
+            📋 {t("services.listTitle")}
           </h2>
           <span className="text-xs sm:text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-full px-3 py-1">
-            {filtered.length} service(s) affiché(s)
+            {t("services.listCount", { count: filtered.length })}
           </span>
         </div>
 
@@ -436,9 +510,35 @@ const roleLabel = useMemo(() => {
         />
 
         {filtered.length === 0 ? (
-          <p className="text-gray-500 italic text-center py-6">
-            Aucun service correspondant à ces critères.
-          </p>
+          <div className="py-10 flex flex-col items-center justify-center text-center">
+            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+              <span className="text-xl">🗂️</span>
+            </div>
+            <p className="text-sm font-semibold text-gray-800 mb-1">
+              {emptyTitle}
+            </p>
+            <p className="text-xs text-gray-500 max-w-sm">
+              {emptySubtitle}
+            </p>
+            <div className="mt-4 flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              {hasActiveFilters && (
+                <button
+                  onClick={resetFilters}
+                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300"
+                >
+                  {t("services.filters.reset")}
+                </button>
+              )}
+              {!showForm && (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 transition"
+                >
+                  ➕ {t("services.buttons.newService")}
+                </button>
+              )}
+            </div>
+          </div>
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
             {filtered.map((s) => (
@@ -461,7 +561,8 @@ const roleLabel = useMemo(() => {
 /* ============================================================
    🧩 HEADER (responsive, mobile-first, plus pro)
 ============================================================ */
-function Header({ showForm, setShowForm, loading, loadServices, totalCount, roleLabel, user }) {
+function Header({ showForm, setShowForm, loading, loadServices, totalCount, roleLabel, roleVariant, user }) {
+  const { t } = useTranslation();
   const scopeText = (() => {
     if (!user || user.role !== 'admin') return null;
     const c = user.countryId != null ? `countryId=${user.countryId}` : null;
@@ -473,25 +574,28 @@ function Header({ showForm, setShowForm, loading, loadServices, totalCount, role
   return (
     <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-4 border-b border-gray-100">
       <div className="space-y-1 min-w-0">
+        <p className="text-[0.7rem] uppercase tracking-wide text-blue-600 font-semibold">
+          {t("services.kicker")}
+        </p>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 break-words">
-          🛠️ Gestion des services
+          🛠️ {t("services.title")}
         </h1>
         <p className="text-sm sm:text-base text-gray-600">
-          Créez, suivez et gérez vos services pour vos clients et leurs biens.
+          {t("services.subtitle")}
         </p>
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
           <span className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
             <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-            {totalCount} service(s) au total.
+            {t("services.totalCount", { count: totalCount })}
           </span>
 
           {roleLabel && (
             <span
               className={`inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 rounded-full border ${
-                roleLabel === 'MASTER'
+                roleVariant === 'master'
                   ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                  : roleLabel === 'ADMINISTRATEUR'
+                  : roleVariant === 'admin'
                   ? 'bg-slate-50 text-slate-700 border-slate-200'
                   : 'bg-gray-50 text-gray-600 border-gray-200'
               }`}
@@ -513,7 +617,7 @@ function Header({ showForm, setShowForm, loading, loadServices, totalCount, role
           onClick={() => setShowForm((v) => !v)}
           className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
         >
-          {showForm ? '➖ Masquer le formulaire' : '➕ Nouveau service'}
+          {showForm ? `➖ ${t("services.buttons.hideForm")}` : `➕ ${t("services.buttons.newService")}`}
         </button>
 
         <button
@@ -525,7 +629,7 @@ function Header({ showForm, setShowForm, loading, loadServices, totalCount, role
               : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
           }`}
         >
-          {loading ? 'Chargement…' : '🔄 Rafraîchir'}
+          {loading ? t("services.buttons.refreshLoading") : `🔄 ${t("services.buttons.refresh")}`}
         </button>
       </div>
     </div>
@@ -535,17 +639,18 @@ function Header({ showForm, setShowForm, loading, loadServices, totalCount, role
 /* ============================================================
    🧩 FILTRES (grid mobile-first, labels + meilleure lisibilité)
 ============================================================ */
-function Filters({ filters, setFilters, properties, filteredCount }) {
+function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
+  const { t } = useTranslation();
   return (
     <div className="mb-6 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         {/* Recherche */}
         <div className="col-span-1 sm:col-span-2 lg:col-span-2">
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Recherche globale
+            {t("services.filters.searchLabel")}
           </label>
           <input
-            placeholder="🔎 Rechercher un service (titre, contact, adresse...)"
+            placeholder={`🔎 ${t("services.filters.searchPlaceholder")}`}
             value={filters.q}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full"
@@ -555,17 +660,17 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
         {/* Type */}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Type
+            {t("services.filters.typeLabel")}
           </label>
           <select
             value={filters.type}
             onChange={(e) => setFilters({ ...filters, type: e.target.value })}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
           >
-            <option value="">Type (tous)</option>
-            {Object.entries(SERVICE_TYPES).map(([key, label]) => (
+            <option value="">{t("services.filters.typeAll")}</option>
+            {Object.keys(SERVICE_TYPES).map((key) => (
               <option key={key} value={key}>
-                {label}
+                {t(`services.type.${key}`)}
               </option>
             ))}
           </select>
@@ -574,17 +679,17 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
         {/* Statut */}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Statut
+            {t("services.filters.statusLabel")}
           </label>
           <select
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
           >
-            <option value="">Statut (tous)</option>
-            {Object.entries(SERVICE_STATUSES).map(([key, label]) => (
+            <option value="">{t("services.filters.statusAll")}</option>
+            {Object.keys(SERVICE_STATUSES).map((key) => (
               <option key={key} value={key}>
-                {label}
+                {t(`services.status.${key}`)}
               </option>
             ))}
           </select>
@@ -593,14 +698,14 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
         {/* Bien */}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Bien associé
+            {t("services.filters.propertyLabel")}
           </label>
           <select
             value={filters.property}
             onChange={(e) => setFilters({ ...filters, property: e.target.value })}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
           >
-            <option value="">Bien (tous)</option>
+            <option value="">{t("services.filters.propertyAll")}</option>
             {properties.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.title} — {p.city}
@@ -612,38 +717,30 @@ function Filters({ filters, setFilters, properties, filteredCount }) {
         {/* Tri */}
         <div className="col-span-1 sm:col-span-2 lg:col-span-2">
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Tri
+            {t("services.filters.sortLabel")}
           </label>
           <select
             value={filters.sort}
             onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
           >
-            <option value="-createdAt">Plus récents</option>
-            <option value="createdAt">Plus anciens</option>
-            <option value="title">Titre A → Z</option>
-            <option value="-title">Titre Z → A</option>
+            <option value="-createdAt">{t("services.filters.sortNewest")}</option>
+            <option value="createdAt">{t("services.filters.sortOldest")}</option>
+            <option value="title">{t("services.filters.sortTitleAsc")}</option>
+            <option value="-title">{t("services.filters.sortTitleDesc")}</option>
           </select>
         </div>
       </div>
 
       <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="text-xs sm:text-sm text-gray-500">
-          {filteredCount} service(s) après filtrage.
+          {t("services.filters.filteredCount", { count: filteredCount })}
         </div>
         <button
-          onClick={() =>
-            setFilters({
-              q: '',
-              type: '',
-              status: '',
-              property: '',
-              sort: '-createdAt',
-            })
-          }
+          onClick={onReset}
           className="text-xs sm:text-sm px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition w-full sm:w-auto text-center"
         >
-          Réinitialiser tous les filtres
+          {t("services.filters.reset")}
         </button>
       </div>
     </div>
@@ -665,16 +762,17 @@ function ServiceForm({
   loading,
   properties,
 }) {
+  const { t } = useTranslation();
   const isAdminOrMaster = user?.role === 'admin';
 
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-3 gap-2">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">
-          {editingId ? '✏️ Modifier le service' : '➕ Créer un nouveau service'}
+          {editingId ? `✏️ ${t("services.form.titleEdit")}` : `➕ ${t("services.form.titleCreate")}`}
         </h2>
         <p className="text-xs sm:text-sm text-gray-500">
-          Renseignez les informations du service ci-dessous.
+          {t("services.form.subtitle")}
         </p>
       </div>
 
@@ -689,7 +787,7 @@ function ServiceForm({
         {isAdminOrMaster && (
           <div className="col-span-1 sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Client associé <span className="text-red-500">*</span>
+              {t("services.form.clientLabel")} <span className="text-red-500">*</span>
             </label>
             <select
               value={form.clientId}
@@ -700,7 +798,7 @@ function ServiceForm({
                 focus:ring-2 focus:ring-blue-500 bg-white
               "
             >
-              <option value="">— Sélectionner un client —</option>
+              <option value="">{t("services.form.clientPlaceholder")}</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.firstName} {c.lastName} ({c.email})
@@ -713,7 +811,7 @@ function ServiceForm({
         {/* Biens — optionnel */}
         <div className="col-span-1 sm:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Bien associé (optionnel)
+            {t("services.form.propertyLabel")}
           </label>
           <select
             value={form.propertyId}
@@ -726,8 +824,8 @@ function ServiceForm({
           >
             <option value="">
               {isAdminOrMaster && !form.clientId
-                ? '— Choisir un client d’abord —'
-                : '— Aucun bien (service général) —'}
+                ? t("services.form.propertyPlaceholderSelectClient")
+                : t("services.form.propertyPlaceholderNone")}
             </option>
 
             {properties.map((p) => (
@@ -752,7 +850,7 @@ function ServiceForm({
                 text-sm font-semibold hover:bg-gray-400 transition
               "
             >
-              Annuler
+              {t("services.buttons.cancel")}
             </button>
           )}
 
@@ -768,7 +866,7 @@ function ServiceForm({
               }
             `}
           >
-            {editingId ? '💾 Mettre à jour' : 'Créer le service'}
+            {editingId ? `💾 ${t("services.buttons.update")}` : t("services.buttons.create")}
           </button>
         </div>
       </form>
@@ -780,12 +878,13 @@ function ServiceForm({
    🧩 Champs internes du formulaire
 ============================================================ */
 function ServiceFormFields({ form, setForm }) {
+  const { t } = useTranslation();
   return (
     <>
       {/* Type */}
       <div className="w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Type de service
+          {t("services.form.typeLabel")}
         </label>
         <select
           value={form.type}
@@ -795,9 +894,9 @@ function ServiceFormFields({ form, setForm }) {
             focus:ring-2 focus:ring-blue-500 bg-white
           "
         >
-          {Object.entries(SERVICE_TYPES).map(([key, label]) => (
+          {Object.keys(SERVICE_TYPES).map((key) => (
             <option key={key} value={key}>
-              {label}
+              {t(`services.type.${key}`)}
             </option>
           ))}
         </select>
@@ -806,10 +905,10 @@ function ServiceFormFields({ form, setForm }) {
       {/* Titre */}
       <div className="w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Titre <span className="text-red-500">*</span>
+          {t("services.form.titleLabel")} <span className="text-red-500">*</span>
         </label>
         <input
-          placeholder="Ex : Paiement facture ORANGE MALI"
+          placeholder={t("services.form.titlePlaceholder")}
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           required
@@ -823,10 +922,10 @@ function ServiceFormFields({ form, setForm }) {
       {/* Description */}
       <div className="col-span-1 sm:col-span-2 w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Description
+          {t("services.form.descriptionLabel")}
         </label>
         <textarea
-          placeholder="Détail du service…"
+          placeholder={t("services.form.descriptionPlaceholder")}
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           rows={3}
@@ -840,12 +939,12 @@ function ServiceFormFields({ form, setForm }) {
       {/* Personne de contact */}
       <div className="w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Personne de contact
+          {t("services.form.contactLabel")}
         </label>
         <input
           value={form.contactPerson}
           onChange={(e) => setForm({ ...form, contactPerson: e.target.value })}
-          placeholder="Nom du contact"
+          placeholder={t("services.form.contactPlaceholder")}
           className="
             w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
             focus:ring-2 focus:ring-blue-500
@@ -856,7 +955,7 @@ function ServiceFormFields({ form, setForm }) {
       {/* Téléphone */}
       <div className="w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Téléphone du contact
+          {t("services.form.phoneLabel")}
         </label>
         <input
           value={form.contactPhone}
@@ -872,12 +971,12 @@ function ServiceFormFields({ form, setForm }) {
       {/* Adresse */}
       <div className="col-span-1 sm:col-span-2 w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Adresse
+          {t("services.form.addressLabel")}
         </label>
         <input
           value={form.address}
           onChange={(e) => setForm({ ...form, address: e.target.value })}
-          placeholder="Adresse du lieu"
+          placeholder={t("services.form.addressPlaceholder")}
           className="
             w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
             focus:ring-2 focus:ring-blue-500
@@ -888,12 +987,12 @@ function ServiceFormFields({ form, setForm }) {
       {/* Budget */}
       <div className="w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Budget estimé (FCFA)
+          {t("services.form.budgetLabel")}
         </label>
         <input
           type="number"
           step="0.01"
-          placeholder="Ex : 15000"
+          placeholder={t("services.form.budgetPlaceholder")}
           value={form.budget}
           onChange={(e) => setForm({ ...form, budget: e.target.value })}
           className="
@@ -910,88 +1009,150 @@ function ServiceFormFields({ form, setForm }) {
    🔍 ServiceCard (Affichage – Optimisé mobile/desktop)
 ============================================================ */
 function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
+  const { formatDate, formatNumber } = useLocale();
+  const { t } = useTranslation();
   const isAdminOrMaster = user?.role === 'admin';
+  const typeLabel = SERVICE_TYPES[s.type] || s.type || t("common.dash");
+  const statusLabel =
+    SERVICE_STATUSES[s.status] ||
+    (s.status ? String(s.status).replace("_", " ") : t("common.dash"));
 
-  const statusClass =
+  const statusMeta =
     s.status === 'created'
-      ? 'bg-gray-100 text-gray-700'
+      ? {
+          icon: '🆕',
+          badge: 'bg-slate-100 text-slate-700 border-slate-200',
+          accent: 'border-l-slate-200',
+        }
       : s.status === 'in_progress'
-      ? 'bg-blue-100 text-blue-700'
+      ? {
+          icon: '⏳',
+          badge: 'bg-blue-50 text-blue-700 border-blue-100',
+          accent: 'border-l-blue-200',
+        }
       : s.status === 'completed'
-      ? 'bg-green-100 text-green-700'
-      : 'bg-emerald-100 text-emerald-700';
+      ? {
+          icon: '✅',
+          badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+          accent: 'border-l-emerald-200',
+        }
+      : {
+          icon: '✔️',
+          badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+          accent: 'border-l-emerald-200',
+        };
+
+  const propertyLabel = s.property?.title
+    ? `${s.property.title}${s.property.city ? ` — ${s.property.city}` : ''}`
+    : t("services.card.noProperty");
+
+  const contactLabel = s.contactPerson || t("services.card.contactFallback");
+  const contactPhone = s.contactPhone || t("common.dash");
+  const addressLabel = s.address || t("services.card.contactFallback");
+  const budgetValue =
+    s.budget != null && Number.isFinite(Number(s.budget))
+      ? `${formatNumber(Number(s.budget))} FCFA`
+      : t("services.card.budgetUnknown");
+  const agentLabel = s.agent
+    ? `${s.agent.firstName || ''} ${s.agent.lastName || ''}`.trim() ||
+      s.agent.email ||
+      t("services.card.unassigned")
+    : t("services.card.unassigned");
+  const createdLabel = s.createdAt ? formatDate(s.createdAt) : t("common.dash");
 
   return (
     <div
-      className="
-        bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-5
-        hover:shadow-md transition
+      className={`
+        bg-gradient-to-br from-white via-white to-slate-50
+        border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-5
+        hover:shadow-md hover:border-blue-100 transition
         w-full max-w-full
-      "
+        border-l-4 ${statusMeta.accent}
+      `}
     >
       {/* ENTÊTE (titre + statut) */}
       <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:items-start">
         <div className="min-w-0 break-words">
-          <h3 className="text-lg font-semibold text-gray-900 break-words">
-            {s.title}{' '}
-            <span className="text-sm text-gray-500">
-              ({s.typeLabel || s.type})
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-semibold text-gray-900 break-words">
+              {s.title}
+            </h3>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-semibold bg-white text-slate-700 border border-slate-200">
+              {typeLabel}
             </span>
-          </h3>
+          </div>
 
           <p className="text-sm text-gray-600 mt-1 whitespace-normal break-words">
-            {s.description || 'Aucune description.'}
+            {s.description || t("services.card.noDescription")}
           </p>
         </div>
 
         <div
           className={`
             mt-1 sm:mt-0 px-3 py-1 rounded-full text-xs font-semibold
-            whitespace-nowrap self-start border ${statusClass}
+            whitespace-nowrap self-start border ${statusMeta.badge}
           `}
         >
-          {s.statusLabel || String(s.status || '').replace('_', ' ')}
+          <span className="mr-1">{statusMeta.icon}</span>
+          {statusLabel}
         </div>
       </div>
 
       {/* META */}
-      <div className="mt-4 text-sm text-gray-700 space-y-1.5">
-        <p className="break-words">
-          <strong>Bien :</strong>{' '}
-          {s.property?.title
-            ? `${s.property.title} — ${s.property.city}`
-            : 'Aucun (service indépendant)'}
-        </p>
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-gray-700">
+        <div className="min-w-0">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+            {t("services.card.property")}
+          </div>
+          <div className="text-sm text-gray-900 break-words">
+            {propertyLabel}
+          </div>
+        </div>
 
-        <p className="break-words">
-          <strong>Contact :</strong> {s.contactPerson || 'N/A'} (
-          {s.contactPhone || '-'})
-        </p>
+        <div className="min-w-0">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+            {t("services.card.contact")}
+          </div>
+          <div className="text-sm text-gray-900 break-words">
+            {contactLabel} <span className="text-gray-500">({contactPhone})</span>
+          </div>
+        </div>
 
-        <p className="break-words">
-          <strong>Adresse :</strong> {s.address || 'N/A'}
-        </p>
+        <div className="min-w-0">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+            {t("services.card.address")}
+          </div>
+          <div className="text-sm text-gray-900 break-words">
+            {addressLabel}
+          </div>
+        </div>
 
-        <p>
-          <strong>Budget :</strong>{' '}
-          {s.budget != null ? `${s.budget} FCFA` : 'Non précisé'}
-        </p>
+        <div className="min-w-0">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+            {t("services.card.budget")}
+          </div>
+          <div className="text-sm text-gray-900 break-words">
+            {budgetValue}
+          </div>
+        </div>
 
-        <p className="break-words">
-          <strong>Agent :</strong>{' '}
-          {s.agent
-            ? `${s.agent.firstName} ${s.agent.lastName}`
-            : 'Non assigné'}
-        </p>
+        <div className="min-w-0">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+            {t("services.card.agent")}
+          </div>
+          <div className="text-sm text-gray-900 break-words">
+            {agentLabel}
+          </div>
+        </div>
 
-        {s.createdAt && (
-          <p className="text-xs text-gray-500">
-            Créé le{' '}
-            <span className="font-medium">
-              {new Date(s.createdAt).toLocaleDateString('fr-FR')}
-            </span>
-          </p>
-        )}
+        <div className="min-w-0">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+            {t("services.card.createdAt")}
+          </div>
+          <div className="text-sm text-gray-900 break-words">
+            {createdLabel}
+          </div>
+        </div>
       </div>
 
       {/* ACTIONS */}
@@ -1008,7 +1169,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
             rounded-lg hover:bg-blue-700 transition
           "
         >
-          📋 Voir les tâches
+          📋 {t("services.buttons.viewTasks")}
         </button>
 
         {isAdminOrMaster && (
@@ -1020,7 +1181,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
                 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition
               "
             >
-              ✏️ Modifier
+              ✏️ {t("services.buttons.edit")}
             </button>
 
             <button
@@ -1030,7 +1191,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
                 bg-red-600 text-white rounded-lg hover:bg-red-700 transition
               "
             >
-              🗑 Supprimer
+              🗑 {t("services.buttons.delete")}
             </button>
           </>
         )}
@@ -1038,3 +1199,4 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
     </div>
   );
 }
+

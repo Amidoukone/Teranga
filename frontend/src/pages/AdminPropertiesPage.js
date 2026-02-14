@@ -8,6 +8,7 @@
 // ============================================================================
 
 import { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   getAllProperties,
   getClientProperties,
@@ -82,6 +83,7 @@ function safeRevoke(url) {
 // 🧩 PAGE PRINCIPALE — Apple Light Premium
 // ============================================================================
 export default function AdminPropertiesPage() {
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
 
   const [properties, setProperties] = useState([]);
@@ -235,19 +237,19 @@ export default function AdminPropertiesPage() {
     e.preventDefault();
 
     if (!selectedClient) {
-      alert('Veuillez sélectionner un client.');
+      alert(t('adminPropertiesPage.alerts.selectClient'));
       return;
     }
 
     try {
       await createPropertyForClient(selectedClient, form, files);
-      alert('Bien créé avec succès.');
+      alert(t('adminPropertiesPage.alerts.createSuccess'));
       resetForm();
       setIsCreating(false);
       loadProperties(selectedClient);
     } catch (e2) {
       console.error('❌ Erreur création:', e2);
-      alert('Erreur lors de la création du bien.');
+      alert(t('adminPropertiesPage.alerts.createError'));
     }
   }
 
@@ -292,12 +294,12 @@ export default function AdminPropertiesPage() {
 
     try {
       await updateProperty(editId, form, files);
-      alert('Bien mis à jour avec succès.');
+      alert(t('adminPropertiesPage.alerts.updateSuccess'));
       resetForm();
       loadProperties(selectedClient);
     } catch (e2) {
       console.error('❌ Update:', e2);
-      alert('Erreur lors de la mise à jour.');
+      alert(t('adminPropertiesPage.alerts.updateError'));
     }
   }
 
@@ -305,13 +307,13 @@ export default function AdminPropertiesPage() {
   // 🔹 Supprimer Bien
   // ==========================================================================
   async function handleDelete(id) {
-    if (!window.confirm('Supprimer ce bien ?')) return;
+    if (!window.confirm(t('adminPropertiesPage.alerts.deleteConfirm'))) return;
     try {
       await api.delete(`/properties/${id}`);
       loadProperties(selectedClient);
     } catch (e) {
       console.error('❌ delete property:', e);
-      alert('Erreur lors de la suppression.');
+      alert(t('adminPropertiesPage.alerts.deleteError'));
     }
   }
 
@@ -377,15 +379,15 @@ export default function AdminPropertiesPage() {
         <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
-              🏡 Gestion des biens
+              {t('adminPropertiesPage.title')}
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Admin/Master — création, édition et suivi des biens immobiliers des clients.
+              {t('adminPropertiesPage.subtitle')}
             </p>
 
             {selectedClientObj && (
               <p className="text-xs text-slate-400 mt-1">
-                Client sélectionné :{' '}
+                {t('adminPropertiesPage.labels.selectedClient')}{' '}
                 <span className="font-medium text-slate-700">
                   {selectedClientObj.firstName} {selectedClientObj.lastName} ({selectedClientObj.email})
                 </span>
@@ -394,7 +396,7 @@ export default function AdminPropertiesPage() {
 
             {user?.role === 'master' && (
               <p className="text-[11px] text-slate-500 mt-2">
-                🌍 Mode <strong>Master</strong> : la liste et les actions sont automatiquement limitées au scope pays/région côté backend.
+                {t('adminPropertiesPage.labels.masterNote')}
               </p>
             )}
           </div>
@@ -404,7 +406,7 @@ export default function AdminPropertiesPage() {
               onClick={() => loadProperties(selectedClient)}
               className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium rounded-full bg-slate-900 text-white shadow-sm hover:bg-black transition"
             >
-              🔄 Rafraîchir la liste
+              {t('adminPropertiesPage.buttons.refresh')}
             </button>
           </div>
         </header>
@@ -413,11 +415,11 @@ export default function AdminPropertiesPage() {
         <section className="bg-slate-50/80 border border-slate-200 rounded-2xl px-4 sm:px-5 py-4 sm:py-5 shadow-sm">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              👤 Sélectionner un client
+              {t('adminPropertiesPage.client.title')}
             </h2>
             {selectedClient && (
               <span className="text-[11px] px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                {properties.length} bien(s) pour ce client
+                {t('adminPropertiesPage.client.badge', { count: properties.length })}
               </span>
             )}
           </div>
@@ -425,20 +427,20 @@ export default function AdminPropertiesPage() {
           <div className="flex flex-col lg:flex-row gap-3">
             <div className="flex-1">
               <label className="block text-[11px] font-medium text-slate-500 mb-1">
-                Recherche client
+                {t('adminPropertiesPage.client.searchLabel')}
               </label>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Nom, prénom ou email du client…"
+                placeholder={t('adminPropertiesPage.client.searchPlaceholder')}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
               />
             </div>
 
             <div className="w-full lg:w-80">
               <label className="block text-[11px] font-medium text-slate-500 mb-1">
-                Client
+                {t('adminPropertiesPage.client.selectLabel')}
               </label>
               <select
                 value={selectedClient}
@@ -450,7 +452,7 @@ export default function AdminPropertiesPage() {
                 }}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
               >
-                <option value="">— Choisir un client —</option>
+                <option value="">{t('adminPropertiesPage.client.selectPlaceholder')}</option>
                 {filteredClients.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.firstName} {c.lastName} ({c.email})
@@ -468,7 +470,7 @@ export default function AdminPropertiesPage() {
                   }}
                   className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium rounded-full bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition"
                 >
-                  ➕ Ajouter un bien
+                  {t('adminPropertiesPage.buttons.addProperty')}
                 </button>
               </div>
             )}
@@ -480,10 +482,12 @@ export default function AdminPropertiesPage() {
           <section className="bg-slate-50/80 border border-slate-200 rounded-2xl px-4 sm:px-5 py-5 shadow-sm">
             <div className="flex items-center justify-between gap-2 mb-4">
               <h2 className="text-base font-semibold text-slate-900">
-                {editId ? `✏️ Modifier le bien #${editId}` : '➕ Nouveau bien'}
+                {editId
+                  ? t('adminPropertiesPage.form.titleEdit', { id: editId })
+                  : t('adminPropertiesPage.form.titleCreate')}
               </h2>
               <span className="text-[11px] text-slate-500">
-                Les champs marqués d’un * sont obligatoires.
+                {t('adminPropertiesPage.form.requiredNote')}
               </span>
             </div>
 
@@ -494,10 +498,10 @@ export default function AdminPropertiesPage() {
               {/* Titre */}
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-slate-600">
-                  Titre *
+                  {t('adminPropertiesPage.form.labels.title')}
                 </label>
                 <input
-                  placeholder="Ex : Maison F3 à Dakar"
+                  placeholder={t('adminPropertiesPage.form.placeholders.title')}
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   required
@@ -508,27 +512,27 @@ export default function AdminPropertiesPage() {
               {/* Type */}
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-slate-600">
-                  Type
+                  {t('adminPropertiesPage.form.labels.type')}
                 </label>
                 <select
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
                   className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
                 >
-                  <option value="house">Maison</option>
-                  <option value="apartment">Appartement</option>
-                  <option value="land">Terrain</option>
-                  <option value="commercial">Local commercial</option>
+                  <option value="house">{t('labels.property.types.house')}</option>
+                  <option value="apartment">{t('labels.property.types.apartment')}</option>
+                  <option value="land">{t('labels.property.types.land')}</option>
+                  <option value="commercial">{t('labels.property.types.commercial')}</option>
                 </select>
               </div>
 
               {/* Adresse */}
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-slate-600">
-                  Adresse *
+                  {t('adminPropertiesPage.form.labels.address')}
                 </label>
                 <input
-                  placeholder="Adresse complète"
+                  placeholder={t('adminPropertiesPage.form.placeholders.address')}
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
                   required
@@ -539,10 +543,10 @@ export default function AdminPropertiesPage() {
               {/* Ville */}
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-slate-600">
-                  Ville *
+                  {t('adminPropertiesPage.form.labels.city')}
                 </label>
                 <input
-                  placeholder="Ville"
+                  placeholder={t('adminPropertiesPage.form.placeholders.city')}
                   value={form.city}
                   onChange={(e) => setForm({ ...form, city: e.target.value })}
                   required
@@ -553,10 +557,10 @@ export default function AdminPropertiesPage() {
               {/* Code postal */}
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-slate-600">
-                  Code postal
+                  {t('adminPropertiesPage.form.labels.postalCode')}
                 </label>
                 <input
-                  placeholder="Code postal"
+                  placeholder={t('adminPropertiesPage.form.placeholders.postalCode')}
                   value={form.postalCode}
                   onChange={(e) =>
                     setForm({ ...form, postalCode: e.target.value })
@@ -568,11 +572,11 @@ export default function AdminPropertiesPage() {
               {/* Surface */}
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-slate-600">
-                  Surface (m²)
+                  {t('adminPropertiesPage.form.labels.surface')}
                 </label>
                 <input
                   type="number"
-                  placeholder="Surface"
+                  placeholder={t('adminPropertiesPage.form.placeholders.surface')}
                   value={form.surfaceArea}
                   onChange={(e) =>
                     setForm({ ...form, surfaceArea: e.target.value })
@@ -583,11 +587,11 @@ export default function AdminPropertiesPage() {
               {/* Pièces */}
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-slate-600">
-                  Nombre de pièces
+                  {t('adminPropertiesPage.form.labels.rooms')}
                 </label>
                 <input
                   type="number"
-                  placeholder="Nombre de pièces"
+                  placeholder={t('adminPropertiesPage.form.placeholders.rooms')}
                   value={form.roomCount}
                   onChange={(e) =>
                     setForm({ ...form, roomCount: e.target.value })
@@ -599,10 +603,10 @@ export default function AdminPropertiesPage() {
               {/* Description */}
               <div className="sm:col-span-2 flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-slate-600">
-                  Description
+                  {t('adminPropertiesPage.form.labels.description')}
                 </label>
                 <textarea
-                  placeholder="Informations complémentaires sur le bien…"
+                  placeholder={t('adminPropertiesPage.form.placeholders.description')}
                   value={form.description}
                   onChange={(e) =>
                     setForm({ ...form, description: e.target.value })
@@ -615,7 +619,7 @@ export default function AdminPropertiesPage() {
               {/* FILES */}
               <div className="sm:col-span-2 flex flex-col gap-2 mt-1">
                 <label className="text-[11px] font-medium text-slate-600">
-                  📁 Photos & documents (JPG, PNG, PDF)
+                  {t('adminPropertiesPage.form.filesLabel')}
                 </label>
                 <input
                   type="file"
@@ -632,7 +636,7 @@ export default function AdminPropertiesPage() {
                         key={i}
                         src={url}
                         className="w-20 h-20 object-cover rounded-xl border border-slate-200 shadow-sm"
-                        alt=""
+                        alt={t('adminPropertiesPage.form.previewAlt', { index: i + 1 })}
                       />
                     ))}
                   </div>
@@ -649,13 +653,15 @@ export default function AdminPropertiesPage() {
                   }}
                   className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
                 >
-                  Annuler
+                  {t('adminPropertiesPage.buttons.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="inline-flex items-center justify-center px-5 py-2 text-xs sm:text-sm font-medium rounded-full bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition"
                 >
-                  {editId ? '💾 Enregistrer' : '➕ Créer'}
+                  {editId
+                    ? t('adminPropertiesPage.buttons.save')
+                    : t('adminPropertiesPage.buttons.create')}
                 </button>
               </div>
             </form>
@@ -666,16 +672,16 @@ export default function AdminPropertiesPage() {
         <section className="space-y-4">
           {loading ? (
             <p className="text-center text-slate-500 py-6 text-sm animate-pulse">
-              Chargement des biens…
+              {t('adminPropertiesPage.loading')}
             </p>
           ) : properties.length === 0 ? (
             <p className="text-center text-slate-500 italic py-6 text-sm">
-              Aucun bien trouvé pour cette sélection.
+              {t('adminPropertiesPage.empty')}
             </p>
           ) : (
             <>
               <div className="flex items-center justify-between text-xs text-slate-500 px-1">
-                <span>{properties.length} bien(s) affiché(s)</span>
+                <span>{t('adminPropertiesPage.list.count', { count: properties.length })}</span>
               </div>
 
               <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -683,6 +689,13 @@ export default function AdminPropertiesPage() {
                   const imageUrls = (p.photos || [])
                     .filter((ph) => !isPdf(ph))
                     .map((ph) => toAbsUrl(ph));
+                  const typeLabel = p.type
+                    ? t(`labels.property.types.${p.type}`, { defaultValue: p.type })
+                    : t('adminPropertiesPage.list.typeUnknown');
+                  const surfaceRoomsLabel = t('adminPropertiesPage.list.surfaceRooms', {
+                    surface: p.surfaceArea,
+                    count: p.roomCount || 0,
+                  });
 
                   return (
                     <article
@@ -704,7 +717,7 @@ export default function AdminPropertiesPage() {
                                   rel="noreferrer"
                                   className="w-20 h-20 border border-slate-200 bg-slate-50 rounded-xl flex items-center justify-center text-xs text-slate-600 hover:bg-slate-100 transition"
                                 >
-                                  📄 PDF
+                                  {t('adminPropertiesPage.list.pdfLabel')}
                                 </a>
                               );
                             }
@@ -715,7 +728,7 @@ export default function AdminPropertiesPage() {
                               <img
                                 key={i}
                                 src={abs}
-                                alt=""
+                                alt={t('adminPropertiesPage.list.photoAlt', { index: i + 1 })}
                                 onClick={() =>
                                   openLightbox(imageUrls, Math.max(idx, 0))
                                 }
@@ -732,7 +745,7 @@ export default function AdminPropertiesPage() {
                           {p.title}
                         </h3>
                         <p className="text-xs text-slate-500">
-                          {p.city} • <span className="uppercase">{p.type}</span>
+                          {p.city} • <span className="uppercase">{typeLabel}</span>
                         </p>
 
                         {p.description && (
@@ -743,17 +756,17 @@ export default function AdminPropertiesPage() {
 
                         {p.surfaceArea && (
                           <p className="text-sm text-slate-700 mt-2">
-                            🏠 {p.surfaceArea} m² — {p.roomCount || 0} pièce(s)
+                            {surfaceRoomsLabel}
                           </p>
                         )}
 
                         {(p.countryId || p.regionId) && (
                           <p className="text-[11px] text-slate-400 mt-1">
-                            🌍{' '}
+                            {t('adminPropertiesPage.list.scopePrefix')}{' '}
                             {p.regionId
-                              ? `Région #${p.regionId}`
+                              ? t('adminPropertiesPage.list.regionId', { id: p.regionId })
                               : p.countryId
-                              ? `Pays #${p.countryId}`
+                              ? t('adminPropertiesPage.list.countryId', { id: p.countryId })
                               : null}
                           </p>
                         )}
@@ -765,14 +778,14 @@ export default function AdminPropertiesPage() {
                           onClick={() => startEdit(p)}
                           className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-full bg-amber-500 text-white hover:bg-amber-600 transition"
                         >
-                          ✏️ Modifier
+                          {t('adminPropertiesPage.buttons.edit')}
                         </button>
 
                         <button
                           onClick={() => handleDelete(p.id)}
                           className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-full bg-red-600 text-white hover:bg-red-700 transition"
                         >
-                          ❌ Supprimer
+                          {t('adminPropertiesPage.buttons.delete')}
                         </button>
                       </div>
                     </article>
@@ -794,6 +807,7 @@ export default function AdminPropertiesPage() {
             <button
               onClick={closeLightbox}
               className="absolute top-6 right-6 bg-white/90 hover:bg-white text-slate-800 rounded-full p-2 text-xl shadow-md transition"
+              aria-label={t('adminPropertiesPage.lightbox.close')}
             >
               ✕
             </button>
@@ -804,13 +818,17 @@ export default function AdminPropertiesPage() {
                 prevImage();
               }}
               className="absolute left-6 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-800 rounded-full p-3 text-xl shadow-md transition"
+              aria-label={t('adminPropertiesPage.lightbox.prev')}
             >
               ‹
             </button>
 
             <img
               src={lightbox.images[lightbox.index]}
-              alt=""
+              alt={t('adminPropertiesPage.lightbox.imageAlt', {
+                index: lightbox.index + 1,
+                total: lightbox.images.length,
+              })}
               className="max-w-[90vw] max-h-[80vh] object-contain rounded-2xl shadow-2xl border border-white/15"
               onClick={(e) => e.stopPropagation()}
             />
@@ -821,12 +839,16 @@ export default function AdminPropertiesPage() {
                 nextImage();
               }}
               className="absolute right-6 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-800 rounded-full p-3 text-xl shadow-md transition"
+              aria-label={t('adminPropertiesPage.lightbox.next')}
             >
               ›
             </button>
 
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white text-xs bg-black/40 px-4 py-1 rounded-full">
-              {lightbox.index + 1} / {lightbox.images.length}
+              {t('adminPropertiesPage.lightbox.counter', {
+                index: lightbox.index + 1,
+                total: lightbox.images.length,
+              })}
             </div>
           </div>
         )}

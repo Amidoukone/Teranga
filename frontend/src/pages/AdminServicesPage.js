@@ -3,19 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { me } from '../services/auth';
 import { isMasterUser } from '../utils/role';
-
-/* ============================================================
-   🔧 Constantes
-============================================================ */
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'Tous les statuts' },
-  { value: 'created', label: 'Créés' },
-  { value: 'in_progress', label: 'En cours' },
-  { value: 'completed', label: 'Terminés' },
-  { value: 'validated', label: 'Validés' },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function AdminServicesPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [currentUser, setCurrentUser] = useState(null);
@@ -45,6 +36,17 @@ export default function AdminServicesPage() {
       },
     }),
     []
+  );
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'all', label: t('adminServicesPage.filters.statusAll') },
+      { value: 'created', label: t('services.status.created') },
+      { value: 'in_progress', label: t('services.status.in_progress') },
+      { value: 'completed', label: t('services.status.completed') },
+      { value: 'validated', label: t('services.status.validated') },
+    ],
+    [t]
   );
 
   /* ============================================================
@@ -152,7 +154,7 @@ export default function AdminServicesPage() {
       await loadServices();
     } catch (e) {
       console.error('❌ Erreur assignation:', e);
-      alert("Erreur lors de l’assignation ❌");
+      alert(t('adminServicesPage.alerts.assignError'));
     }
   }
 
@@ -160,7 +162,7 @@ export default function AdminServicesPage() {
      🧠 Helpers UI
   ============================================================ */
   function displayUser(u) {
-    if (!u) return '—';
+    if (!u) return t('adminServicesPage.table.emptyValue');
     const name = [u.firstName, u.lastName].filter(Boolean).join(' ');
     return name ? `${name} (${u.email})` : u.email;
   }
@@ -187,23 +189,24 @@ export default function AdminServicesPage() {
   if (isAdmin === null) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-500 text-lg animate-pulse">Chargement…</p>
+        <p className="text-gray-500 text-lg animate-pulse">
+          {t('adminServicesPage.loading')}
+        </p>
       </div>
     );
   }
 
-    return (
+  return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* 🧭 En-tête Apple Light */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="space-y-1">
             <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
-              🧩 Gestion des services
+              {t('adminServicesPage.title')}
             </h1>
             <p className="text-sm text-slate-500 max-w-xl">
-              Vue administrateur pour suivre, filtrer et assigner les services
-              aux agents.
+              {t('adminServicesPage.subtitle')}
             </p>
 
             {/* ✅ Badge scope (UX only, backend = source de vérité) */}
@@ -211,20 +214,28 @@ export default function AdminServicesPage() {
               <div className="pt-2 text-xs text-slate-500">
                 <span className="inline-flex items-center gap-2 flex-wrap">
                   <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-700">
-                    {isMaster ? 'MASTER' : 'ADMINISTRATEUR'}
+                    {isMaster
+                      ? t('adminServicesPage.badges.master')
+                      : t('adminServicesPage.badges.admin')}
                   </span>
                   {isMaster ? (
                     <span className="text-slate-500">
-                      Périmètre :
+                      {t('adminServicesPage.labels.perimeter')}
                       {currentUser?.countryId != null
-                        ? ` Pays #${currentUser.countryId}`
+                        ? ` ${t('adminServicesPage.labels.countryId', {
+                            id: currentUser.countryId,
+                          })}`
                         : ''}
                       {currentUser?.regionId != null
-                        ? ` · Région #${currentUser.regionId}`
+                        ? ` · ${t('adminServicesPage.labels.regionId', {
+                            id: currentUser.regionId,
+                          })}`
                         : ''}
                     </span>
                   ) : (
-                    <span className="text-slate-500">Accès global</span>
+                    <span className="text-slate-500">
+                      {t('adminServicesPage.labels.globalAccess')}
+                    </span>
                   )}
                 </span>
               </div>
@@ -241,7 +252,9 @@ export default function AdminServicesPage() {
                   : 'bg-slate-900 text-white hover:bg-black'
               }`}
             >
-              {loading ? 'Chargement…' : '🔄 Rafraîchir la liste'}
+              {loading
+                ? t('adminServicesPage.loading')
+                : t('adminServicesPage.buttons.refresh')}
             </button>
           </div>
         </div>
@@ -252,7 +265,7 @@ export default function AdminServicesPage() {
             {/* Statut */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-slate-600">
-                Statut du service
+                {t('adminServicesPage.filters.statusLabel')}
               </label>
               <select
                 value={status}
@@ -262,7 +275,7 @@ export default function AdminServicesPage() {
                 }}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {STATUS_OPTIONS.map((opt) => (
+                {statusOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -282,17 +295,17 @@ export default function AdminServicesPage() {
                   }}
                   className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span>Afficher uniquement les non assignés</span>
+                <span>{t('adminServicesPage.filters.onlyUnassigned')}</span>
               </label>
             </div>
 
             {/* Recherche */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-slate-600">
-                Recherche
+                {t('adminServicesPage.filters.searchLabel')}
               </label>
               <input
-                placeholder="Titre, client, description…"
+                placeholder={t('adminServicesPage.filters.searchPlaceholder')}
                 value={q}
                 onChange={(e) => {
                   setQ(e.target.value);
@@ -305,7 +318,7 @@ export default function AdminServicesPage() {
             {/* Limite */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-slate-600">
-                Limite par page
+                {t('adminServicesPage.filters.limitLabel')}
               </label>
               <select
                 value={limit}
@@ -317,7 +330,7 @@ export default function AdminServicesPage() {
               >
                 {[10, 25, 50, 100].map((n) => (
                   <option key={n} value={n}>
-                    {n} services
+                    {t('adminServicesPage.filters.limitOption', { count: n })}
                   </option>
                 ))}
               </select>
@@ -327,8 +340,8 @@ export default function AdminServicesPage() {
           <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-500">
             <span>
               {services.length === 0
-                ? 'Aucun service pour ces filtres.'
-                : `${services.length} service(s) chargé(s) pour cette page`}
+                ? t('adminServicesPage.empty')
+                : t('adminServicesPage.loadedCount', { count: services.length })}
             </span>
             <button
               type="button"
@@ -341,7 +354,7 @@ export default function AdminServicesPage() {
               }}
               className="self-start sm:self-auto inline-flex items-center px-3 py-1.5 rounded-full bg-slate-200 hover:bg-slate-300 text-[11px] font-medium transition"
             >
-              Réinitialiser les filtres
+              {t('adminServicesPage.buttons.resetFilters')}
             </button>
           </div>
         </section>
@@ -352,19 +365,19 @@ export default function AdminServicesPage() {
             <thead className="bg-slate-50/80 text-slate-600">
               <tr>
                 <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                  Titre / Type
+                  {t('adminServicesPage.table.headers.titleType')}
                 </th>
                 <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                  Client
+                  {t('adminServicesPage.table.headers.client')}
                 </th>
                 <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                  Agent
+                  {t('adminServicesPage.table.headers.agent')}
                 </th>
                 <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                  Statut
+                  {t('adminServicesPage.table.headers.status')}
                 </th>
                 <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                  Assigner / réassigner
+                  {t('adminServicesPage.table.headers.assign')}
                 </th>
               </tr>
             </thead>
@@ -376,7 +389,7 @@ export default function AdminServicesPage() {
                     colSpan={5}
                     className="text-center py-8 text-slate-400 text-sm italic"
                   >
-                    Aucun service pour ces filtres.
+                    {t('adminServicesPage.empty')}
                   </td>
                 </tr>
               ) : (
@@ -388,12 +401,14 @@ export default function AdminServicesPage() {
                     {/* Titre / Type / Description */}
                     <td className="px-4 sm:px-5 py-3 align-top">
                       <div className="font-medium text-slate-900 break-words">
-                        {s.title || `Service #${s.id}`}
+                        {s.title ||
+                          t('adminServicesPage.table.serviceFallback', { id: s.id })}
                       </div>
                       <div className="mt-0.5 text-xs text-slate-500">
-                        {s.type || 'Type inconnu'} • Budget :{' '}
+                        {s.type || t('adminServicesPage.table.typeUnknown')} •{' '}
+                        {t('adminServicesPage.table.budgetLabel')}{' '}
                         <span className="font-medium text-slate-700">
-                          {s.budget ?? '—'}
+                          {s.budget ?? t('adminServicesPage.table.emptyValue')}
                         </span>
                       </div>
                       {s.description && (
@@ -413,7 +428,9 @@ export default function AdminServicesPage() {
                     {/* Agent */}
                     <td className="px-4 sm:px-5 py-3 align-top">
                       <div className="text-sm text-slate-800 break-words">
-                        {s.agent ? displayUser(s.agent) : 'Non assigné'}
+                        {s.agent
+                          ? displayUser(s.agent)
+                          : t('adminServicesPage.table.unassigned')}
                       </div>
                     </td>
 
@@ -424,7 +441,11 @@ export default function AdminServicesPage() {
                           s.status
                         )}`}
                       >
-                        {String(s.status || '').replace('_', ' ')}
+                        {s.status
+                          ? t(`services.status.${s.status}`, {
+                              defaultValue: String(s.status).replace('_', ' '),
+                            })
+                          : t('adminServicesPage.table.statusUnknown')}
                       </span>
                     </td>
 
@@ -440,7 +461,9 @@ export default function AdminServicesPage() {
                             : 'bg-white border-slate-200'
                         }`}
                       >
-                        <option value="">— Choisir un agent —</option>
+                        <option value="">
+                          {t('adminServicesPage.assign.placeholder')}
+                        </option>
                         {agents.map((a) => (
                           <option key={a.id} value={a.id}>
                             {a.firstName} {a.lastName} ({a.email})
@@ -449,7 +472,7 @@ export default function AdminServicesPage() {
                       </select>
                       {!canReassign(s) && (
                         <p className="mt-1 text-[11px] text-slate-400">
-                          Réassignation désactivée (service clôturé).
+                          {t('adminServicesPage.assign.locked')}
                         </p>
                       )}
                     </td>
@@ -471,11 +494,13 @@ export default function AdminServicesPage() {
                 : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'
             }`}
           >
-            ← Précédent
+            {t('adminServicesPage.pagination.prev')}
           </button>
 
           <span className="text-xs sm:text-sm text-slate-500">
-            Offset : <span className="font-medium">{offset}</span> • Limite :{' '}
+            {t('adminServicesPage.pagination.offsetLabel')}{' '}
+            <span className="font-medium">{offset}</span> •{' '}
+            {t('adminServicesPage.pagination.limitLabel')}{' '}
             <span className="font-medium">{limit}</span>
           </span>
 
@@ -488,7 +513,7 @@ export default function AdminServicesPage() {
                 : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'
             }`}
           >
-            Suivant →
+            {t('adminServicesPage.pagination.next')}
           </button>
         </div>
       </div>

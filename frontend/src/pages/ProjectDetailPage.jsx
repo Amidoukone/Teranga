@@ -16,15 +16,24 @@ import {
   deleteProjectDocument,
   updateProject,
 } from "../services/projects";
-import { applyLabels, CURRENCY_LABELS } from "../utils/labels";
+import {
+  applyLabels,
+  CURRENCY_LABELS,
+  TRANSACTION_TYPES,
+  TRANSACTION_STATUSES,
+  PROJECT_STATUSES,
+} from "../utils/labels";
 import { getTransactions, createTransaction } from "../services/transactions";
 import { normalizeRole, isMasterUser } from "../utils/role";
+import { useLocale } from "../i18n/useLocale";
+import { useTranslation } from "react-i18next";
 
 /* ============================================================
    🌐 FILE_BASE + Helpers
 ============================================================ */
 const FILE_BASE =
   window.__TERANGA_FILE_BASE_URL || process.env.REACT_APP_FILE_BASE_URL || "";
+const CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 
 function normalizePath(path = "") {
   if (!path) return "";
@@ -39,6 +48,85 @@ function toAbsUrl(path = "") {
   if (/^https?:\/\//i.test(norm)) return norm;
 
   return FILE_BASE.replace(/\/$/, "") + "/" + norm.replace(/^\//, "");
+}
+
+function extractFileName(path = "") {
+  if (!path) return "";
+  try {
+    const url = new URL(path);
+    return decodeURIComponent(url.pathname.split("/").pop() || "");
+  } catch {
+    const last = String(path).split("/").pop() || "";
+    try {
+      return decodeURIComponent(last);
+    } catch {
+      return last;
+    }
+  }
+}
+
+function getDocDisplayName(doc, fallbackLabel = "Document") {
+  if (!doc) return fallbackLabel;
+  if (doc.title) return doc.title;
+  if (doc.originalName) return doc.originalName;
+  return extractFileName(doc.filePath || "") || fallbackLabel;
+}
+
+function getDocUploaderLabel(doc, fallbackLabel) {
+  if (!doc) return fallbackLabel;
+  if (doc.uploaderName) return doc.uploaderName;
+
+  const u =
+    doc.uploader ||
+    doc.createdByUser ||
+    doc.createdBy ||
+    doc.user ||
+    doc.author ||
+    null;
+
+  if (u) {
+    const fn = u.firstName || u.firstname || "";
+    const ln = u.lastName || u.lastname || "";
+    const full = `${fn} ${ln}`.trim();
+    return full || u.email || fallbackLabel;
+  }
+
+  return fallbackLabel;
+}
+
+function inferDocKind(doc) {
+  const mime = (doc?.mimeType || "").toLowerCase();
+  const name = doc?.originalName || doc?.filePath || doc?.title || "";
+
+  if (doc?.kind === "photo") return "image";
+  if (mime.startsWith("image/")) return "image";
+  if (mime === "application/pdf") return "pdf";
+  if (/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name)) return "image";
+  if (/\.pdf$/i.test(name)) return "pdf";
+  return "other";
+}
+
+function getFileExtLabel(name = "", fallback = "FILE") {
+  const base = String(name || "").trim();
+  if (!base) return fallback;
+  const parts = base.split(".");
+  if (parts.length < 2) return fallback;
+  const ext = parts[parts.length - 1].slice(0, 6).toUpperCase();
+  return ext || fallback;
+}
+
+function formatBytes(bytes) {
+  const n = Number(bytes);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let val = n;
+  let idx = 0;
+  while (val >= 1024 && idx < units.length - 1) {
+    val /= 1024;
+    idx += 1;
+  }
+  const precision = val >= 100 ? 0 : val >= 10 ? 1 : 2;
+  return `${val.toFixed(precision)} ${units[idx]}`;
 }
 
 /* ============================================================
@@ -97,30 +185,31 @@ function Btn({ variant = "primary", size = "md", children, className = "", ...pr
    🧾 Auteur transaction
    ✅ IMPORTANT : sera utilisé dans la table transactions (PARTIE 2)
 ============================================================ */
-function getTransactionAuthorLabel(t) {
-  if (!t) return "—";
+function getTransactionAuthorLabel(transaction, dashLabel = "—") {
+  if (!transaction) return dashLabel;
 
-  if (t.user) {
-    const fn = t.user.firstName || t.user.firstname || "";
-    const ln = t.user.lastName || t.user.lastname || "";
+  if (transaction.user) {
+    const fn = transaction.user.firstName || transaction.user.firstname || "";
+    const ln = transaction.user.lastName || transaction.user.lastname || "";
     const full = `${fn} ${ln}`.trim();
     if (full.length > 0) return full;
-    if (t.user.email) return t.user.email;
+    if (transaction.user.email) return transaction.user.email;
   }
 
-  if (t.createdByUser) {
-    const full = `${t.createdByUser.firstName || ""} ${t.createdByUser.lastName || ""}`.trim();
+  if (transaction.createdByUser) {
+    const full = `${transaction.createdByUser.firstName || ""} ${transaction.createdByUser.lastName || ""}`.trim();
     if (full.length > 0) return full;
-    if (t.createdByUser.email) return t.createdByUser.email;
+    if (transaction.createdByUser.email) return transaction.createdByUser.email;
   }
 
-  return "—";
+  return dashLabel;
 }
 
 /* ============================================================
    💰 Formulaire transaction projet
 ============================================================ */
 function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     type: "expense",
     amount: "",
@@ -130,6 +219,14 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
     proofFile: null,
   });
   const [saving, setSaving] = useState(false);
+  const currencyOptions = useMemo(
+    () =>
+      CURRENCY_CODES.map((code) => ({
+        value: code,
+        label: t(`currency.${code}`, { defaultValue: code }),
+      })),
+    [t]
+  );
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -143,7 +240,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         userId: currentUser?.id,
       });
 
-      alert("✅ Transaction enregistrée");
+      alert(t("projects.transaction.alerts.createSuccess"));
       setForm({
         type: "expense",
         amount: "",
@@ -155,7 +252,10 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       onSuccess?.();
     } catch (err) {
       console.error("❌ Transaction error:", err);
-      alert(err?.response?.data?.error || "Erreur lors de la création de la transaction.");
+      alert(
+        err?.response?.data?.error ||
+          t("projects.transaction.alerts.createError")
+      );
     } finally {
       setSaving(false);
     }
@@ -171,16 +271,16 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         onChange={(e) => setForm({ ...form, type: e.target.value })}
         className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
       >
-        <option value="expense">Dépense</option>
-        <option value="revenue">Revenu</option>
-        <option value="commission">Commission</option>
-        <option value="adjustment">Ajustement</option>
+        <option value="expense">{t("transactions.type.expense")}</option>
+        <option value="revenue">{t("transactions.type.revenue")}</option>
+        <option value="commission">{t("transactions.type.commission")}</option>
+        <option value="adjustment">{t("transactions.type.adjustment")}</option>
       </select>
 
       <input
         type="number"
         step="0.01"
-        placeholder="Montant"
+        placeholder={t("projects.transaction.amountPlaceholder")}
         value={form.amount}
         onChange={(e) => setForm({ ...form, amount: e.target.value })}
         required
@@ -192,22 +292,22 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         onChange={(e) => setForm({ ...form, currency: e.target.value })}
         className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
       >
-        {Object.entries(CURRENCY_LABELS).map(([key, label]) => (
-          <option key={key} value={key}>
-            {label}
+        {currencyOptions.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
           </option>
         ))}
       </select>
 
       <input
-        placeholder="Méthode de paiement"
+        placeholder={t("projects.transaction.paymentMethodPlaceholder")}
         value={form.paymentMethod}
         onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
         className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
       />
 
       <textarea
-        placeholder="Description"
+        placeholder={t("projects.transaction.descriptionPlaceholder")}
         value={form.description}
         onChange={(e) => setForm({ ...form, description: e.target.value })}
         className="sm:col-span-2 border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
@@ -222,7 +322,9 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
 
       <div className="sm:col-span-2 flex justify-end">
         <Btn type="submit" variant="primary" disabled={saving}>
-          {saving ? "Enregistrement…" : "💾 Enregistrer"}
+          {saving
+            ? t("projects.transaction.saving")
+            : `💾 ${t("projects.transaction.save")}`}
         </Btn>
       </div>
     </form>
@@ -232,6 +334,8 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
    🧠 PAGE PRINCIPALE — ProjectDetailPage (PARTIE 2 / 2)
 ============================================================ */
 export default function ProjectDetailPage() {
+  const { formatNumber, formatDate, formatDateTime } = useLocale();
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const isMounted = useRef(true);
@@ -257,6 +361,11 @@ export default function ProjectDetailPage() {
   const [selectedPhaseId, setSelectedPhaseId] = useState("");
   const [docTitle, setDocTitle] = useState("");
   const [docKind, setDocKind] = useState("other");
+  const [docFilters, setDocFilters] = useState({
+    q: "",
+    kind: "",
+    sort: "-createdAt",
+  });
 
   const [now, setNow] = useState(Date.now());
 
@@ -319,13 +428,13 @@ export default function ProjectDetailPage() {
       setProject(applyLabels(p));
       setPhases((phs || []).map(applyLabels));
       setDocuments(docs || []);
-      setTransactions((trxs || []).map(applyLabels));
+      setTransactions((trxs || []).map((t) => applyLabels(t, "transaction")));
     } catch (e) {
       console.error("❌ loadProject:", e);
-      setErrorMsg("Erreur lors du chargement du projet.");
+      setErrorMsg(t("projectDetail.alerts.loadError"));
       setProject(null);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -338,7 +447,7 @@ export default function ProjectDetailPage() {
         await loadProject(id);
       } catch (e) {
         console.error("❌ init:", e);
-        setErrorMsg("Erreur de chargement.");
+        setErrorMsg(t("projectDetail.alerts.genericError"));
       } finally {
         if (isMounted.current) setLoading(false);
       }
@@ -357,10 +466,10 @@ export default function ProjectDetailPage() {
     try {
       await updateProject(project.id, { status: newStatus });
       await loadProject(project.id);
-      alert("Statut mis à jour.");
+      alert(t("projectDetail.alerts.statusUpdateSuccess"));
     } catch (err) {
       console.error("❌ update status:", err);
-      alert("Erreur lors de la mise à jour.");
+      alert(t("projectDetail.alerts.statusUpdateError"));
     }
   }
 
@@ -393,7 +502,7 @@ export default function ProjectDetailPage() {
       await loadProject(project.id);
     } catch (err) {
       console.error("❌ savePhase:", err);
-      alert("Erreur lors de la sauvegarde.");
+      alert(t("projectDetail.phases.alerts.saveError"));
     }
   }
 
@@ -428,20 +537,68 @@ export default function ProjectDetailPage() {
       await loadProject(project.id);
     } catch (err) {
       console.error("❌ upload docs:", err);
-      alert("Erreur upload documents.");
+      alert(t("projectDetail.documents.alerts.uploadError"));
     }
   }
 
   async function handleDeleteDocument(docId) {
-    if (!window.confirm("Supprimer ce document ?")) return;
+    if (!window.confirm(t("projectDetail.documents.alerts.deleteConfirm"))) return;
     try {
       await deleteProjectDocument(docId);
       await loadProject(project.id);
     } catch (err) {
       console.error("❌ delete doc:", err);
-      alert("Erreur suppression.");
+      alert(t("projectDetail.documents.alerts.deleteError"));
     }
   }
+
+  const filteredDocuments = useMemo(() => {
+    let arr = [...(documents || [])];
+
+    if (docFilters.q.trim()) {
+      const q = docFilters.q.trim().toLowerCase();
+      arr = arr.filter((doc) =>
+        [
+          getDocDisplayName(doc, t("projectDetail.documents.itemFallback")),
+          doc.originalName,
+          doc.notes,
+          doc.kind,
+          doc.kindLabel,
+          doc.phase?.title,
+          doc.phaseTitle,
+          doc.uploaderName,
+          doc.uploader?.firstName,
+          doc.uploader?.lastName,
+          doc.uploader?.email,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      );
+    }
+
+    if (docFilters.kind) {
+      arr = arr.filter((doc) => inferDocKind(doc) === docFilters.kind);
+    }
+
+    const by = docFilters.sort || "-createdAt";
+    const sign = by.startsWith("-") ? -1 : 1;
+    const key = by.replace(/^-/, "");
+
+    arr.sort((a, b) => {
+      if (key === "createdAt") {
+        const va = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const vb = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (va < vb) return -1 * sign;
+        if (va > vb) return 1 * sign;
+        return 0;
+      }
+      return 0;
+    });
+
+    return arr;
+  }, [documents, docFilters, t]);
 
   /* ============================================================
      🎨 Rendu
@@ -449,7 +606,9 @@ export default function ProjectDetailPage() {
   if (loading)
     return (
       <div className="flex justify-center items-center min-h-screen bg-slate-50">
-        <p className="text-blue-700 text-lg animate-pulse font-medium">Chargement…</p>
+        <p className="text-blue-700 text-lg animate-pulse font-medium">
+          {t("projectDetail.loading")}
+        </p>
       </div>
     );
 
@@ -458,7 +617,7 @@ export default function ProjectDetailPage() {
       <div className="flex flex-col justify-center items-center min-h-screen bg-slate-50 p-6">
         <p className="text-rose-600 text-lg font-medium mb-4">{errorMsg}</p>
         <Btn onClick={() => navigate("/projects")} variant="primary">
-          ← Retour
+          ← {t("projectDetail.actions.backToProjects")}
         </Btn>
       </div>
     );
@@ -466,11 +625,13 @@ export default function ProjectDetailPage() {
   if (!project)
     return (
       <div className="flex justify-center items-center min-h-screen bg-slate-50">
-        <p className="text-slate-500 text-lg">Projet introuvable.</p>
+        <p className="text-slate-500 text-lg">{t("projectDetail.notFound")}</p>
       </div>
     );
 
-  const statusLabel = project.statusLabel || project.status || "—";
+  const statusLabel = project.status
+    ? PROJECT_STATUSES[project.status] || project.status
+    : t("common.dash");
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8">
@@ -480,7 +641,7 @@ export default function ProjectDetailPage() {
           onClick={() => navigate("/projects")}
           className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 mb-4"
         >
-          <span className="text-lg">←</span> Retour
+          <span className="text-lg">←</span> {t("projectDetail.actions.backToProjects")}
         </button>
 
         {/* CARD */}
@@ -493,7 +654,7 @@ export default function ProjectDetailPage() {
               </h1>
 
               <p className="text-sm text-slate-600 max-w-2xl break-words">
-                {project.description || "Aucune description."}
+                {project.description || t("projectDetail.descriptionFallback")}
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -503,27 +664,35 @@ export default function ProjectDetailPage() {
                     onChange={(e) => handleStatusChange(e.target.value)}
                     className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm"
                   >
-                    <option value="created">Créé</option>
-                    <option value="in_progress">En cours</option>
-                    <option value="completed">Terminé</option>
-                    <option value="validated">Validé</option>
-                    <option value="cancelled">Annulé</option>
+                    <option value="created">{t("projects.status.created")}</option>
+                    <option value="in_progress">{t("projects.status.in_progress")}</option>
+                    <option value="completed">{t("projects.status.completed")}</option>
+                    <option value="validated">{t("projects.status.validated")}</option>
+                    <option value="cancelled">{t("projects.status.cancelled")}</option>
                   </select>
                 ) : (
-                  <Badge color="blue">Statut : {statusLabel}</Badge>
+                  <Badge color="blue">
+                    {t("projectDetail.labels.status", { status: statusLabel })}
+                  </Badge>
                 )}
 
-                {isMaster && <Badge color="yellow">MASTER</Badge>}
+                {isMaster && (
+                  <Badge color="yellow">{t("projectDetail.badges.master")}</Badge>
+                )}
 
                 <Badge color="green">
-                  💰 Budget : {Number(project.budget || 0).toLocaleString("fr-FR")} XOF
+                  💰 {t("projectDetail.labels.budget")}{" "}
+                  {formatNumber(project.budget || 0)}{" "}
+                  {t("projects.card.currency", { defaultValue: "XOF" })}
                 </Badge>
 
                 {isClient && (
                   <Badge color={clientCanModifyOrDelete ? "yellow" : "gray"}>
                     {clientCanModifyOrDelete
-                      ? `Modification possible ${timeLeftText}`
-                      : "Fenêtre expirée"}
+                      ? t("projectDetail.badges.editWindowAllowed", {
+                          time: timeLeftText,
+                        })
+                      : t("projectDetail.badges.editWindowExpired")}
                   </Badge>
                 )}
               </div>
@@ -532,32 +701,35 @@ export default function ProjectDetailPage() {
             {/* FINANCES */}
             <div className="w-full md:w-80 bg-slate-50 border border-slate-200 rounded-2xl p-4">
               <h3 className="text-xs font-semibold text-slate-500 uppercase">
-                Synthèse financière
+                {t("projectDetail.finance.title")}
               </h3>
 
               <div className="space-y-2 text-sm mt-2">
                 <div className="flex justify-between">
-                  <span>Revenus</span>
+                  <span>{t("projectDetail.finance.revenues")}</span>
                   <span className="font-semibold text-emerald-700">
-                    {totals.revenues.toLocaleString("fr-FR")} XOF
+                    {formatNumber(totals.revenues)}{" "}
+                    {t("projects.card.currency", { defaultValue: "XOF" })}
                   </span>
                 </div>
 
                 <div className="flex justify-between">
-                  <span>Dépenses</span>
+                  <span>{t("projectDetail.finance.expenses")}</span>
                   <span className="font-semibold text-rose-700">
-                    {totals.expenses.toLocaleString("fr-FR")} XOF
+                    {formatNumber(totals.expenses)}{" "}
+                    {t("projects.card.currency", { defaultValue: "XOF" })}
                   </span>
                 </div>
 
                 <div className="flex justify-between border-t border-slate-200 pt-2">
-                  <span className="font-medium">Solde</span>
+                  <span className="font-medium">{t("projectDetail.finance.balance")}</span>
                   <span
                     className={`font-semibold ${
                       totals.balance >= 0 ? "text-emerald-700" : "text-rose-700"
                     }`}
                   >
-                    {totals.balance.toLocaleString("fr-FR")} XOF
+                    {formatNumber(totals.balance)}{" "}
+                    {t("projects.card.currency", { defaultValue: "XOF" })}
                   </span>
                 </div>
               </div>
@@ -571,7 +743,7 @@ export default function ProjectDetailPage() {
               {/* ---------------- TRANSACTIONS LIEES ---------------- */}
               <section>
                 <h2 className="text-lg font-semibold text-slate-900 mb-3">
-                  💰 Transactions liées
+                  💰 {t("projectDetail.sections.transactions")}
                 </h2>
 
                 {(isAdmin || isAssignedAgent) && (
@@ -583,42 +755,78 @@ export default function ProjectDetailPage() {
                 )}
 
                 {transactions.length === 0 ? (
-                  <p className="text-slate-500 italic text-sm">Aucune transaction.</p>
+                  <p className="text-slate-500 italic text-sm">
+                    {t("projectDetail.transactions.empty")}
+                  </p>
                 ) : (
                   <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm">
                     <table className="min-w-full text-xs md:text-sm">
                       <thead className="bg-slate-50 text-slate-600 font-semibold">
                         <tr>
-                          <th className="px-3 py-2 text-left">Type</th>
-                          <th className="px-3 py-2 text-left">Montant</th>
-                          <th className="px-3 py-2 text-left">Devise</th>
-                          <th className="px-3 py-2 text-left">Méthode</th>
-                          <th className="px-3 py-2 text-left">Créé par</th>
-                          <th className="px-3 py-2 text-left">Statut</th>
-                          <th className="px-3 py-2 text-left">Date</th>
+                          <th className="px-3 py-2 text-left">
+                            {t("projectDetail.transactions.headers.type")}
+                          </th>
+                          <th className="px-3 py-2 text-left">
+                            {t("projectDetail.transactions.headers.amount")}
+                          </th>
+                          <th className="px-3 py-2 text-left">
+                            {t("projectDetail.transactions.headers.currency")}
+                          </th>
+                          <th className="px-3 py-2 text-left">
+                            {t("projectDetail.transactions.headers.method")}
+                          </th>
+                          <th className="px-3 py-2 text-left">
+                            {t("projectDetail.transactions.headers.createdBy")}
+                          </th>
+                          <th className="px-3 py-2 text-left">
+                            {t("projectDetail.transactions.headers.status")}
+                          </th>
+                          <th className="px-3 py-2 text-left">
+                            {t("projectDetail.transactions.headers.date")}
+                          </th>
                         </tr>
                       </thead>
 
                       <tbody>
-                        {transactions.map((t) => (
-                          <tr key={t.id} className="border-t border-slate-100">
-                            <td className="px-3 py-2">{t.typeLabel || t.type}</td>
+                        {transactions.map((trx) => (
+                          <tr key={trx.id} className="border-t border-slate-100">
                             <td className="px-3 py-2">
-                              {Number(t.amount || 0).toLocaleString("fr-FR")}
+                              {trx.type
+                                ? TRANSACTION_TYPES[trx.type] ||
+                                  trx.type
+                                : t("common.dash")}
                             </td>
-                            <td className="px-3 py-2">{t.currency || "—"}</td>
-                            <td className="px-3 py-2">{t.paymentMethod || "—"}</td>
+                            <td className="px-3 py-2">
+                              {formatNumber(trx.amount || 0)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {trx.currency
+                                ? CURRENCY_LABELS[trx.currency] ||
+                                  trx.currency
+                                : t("common.dash")}
+                            </td>
+                            <td className="px-3 py-2">
+                              {trx.paymentMethod || t("common.dash")}
+                            </td>
 
                             {/* ✅ UTILISATION = supprime l’erreur eslint/ts */}
                             <td className="px-3 py-2">
-                              {getTransactionAuthorLabel(t)}
+                              {getTransactionAuthorLabel(
+                                trx,
+                                t("common.dash")
+                              )}
                             </td>
 
-                            <td className="px-3 py-2">{t.statusLabel || t.status || "—"}</td>
                             <td className="px-3 py-2">
-                              {t.createdAt
-                                ? new Date(t.createdAt).toLocaleDateString("fr-FR")
-                                : "—"}
+                              {trx.status
+                                ? TRANSACTION_STATUSES[trx.status] ||
+                                  trx.status
+                                : t("common.dash")}
+                            </td>
+                            <td className="px-3 py-2">
+                              {trx.createdAt
+                                ? formatDate(trx.createdAt)
+                                : t("common.dash")}
                             </td>
                           </tr>
                         ))}
@@ -631,7 +839,7 @@ export default function ProjectDetailPage() {
               {/* ---------------- PHASES DU PROJET ---------------- */}
               <section>
                 <h2 className="text-lg font-semibold text-slate-900 mb-3">
-                  🗂️ Phases du projet
+                  🗂️ {t("projectDetail.sections.phases")}
                 </h2>
 
                 {(isAdmin || (isClient && clientCanModifyOrDelete)) && (
@@ -640,7 +848,7 @@ export default function ProjectDetailPage() {
                     className="bg-slate-50 border border-slate-200 p-5 rounded-2xl mb-5 grid gap-4 md:grid-cols-2"
                   >
                     <input
-                      placeholder="Titre *"
+                      placeholder={t("projectDetail.phases.form.titlePlaceholder")}
                       value={phaseForm.title}
                       onChange={(e) => setPhaseForm({ ...phaseForm, title: e.target.value })}
                       required
@@ -648,7 +856,7 @@ export default function ProjectDetailPage() {
                     />
 
                     <input
-                      placeholder="Description"
+                      placeholder={t("projectDetail.phases.form.descriptionPlaceholder")}
                       value={phaseForm.description}
                       onChange={(e) =>
                         setPhaseForm({ ...phaseForm, description: e.target.value })
@@ -662,6 +870,7 @@ export default function ProjectDetailPage() {
                       onChange={(e) =>
                         setPhaseForm({ ...phaseForm, startDate: e.target.value })
                       }
+                      aria-label={t("projectDetail.phases.form.startDateLabel")}
                       className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
 
@@ -671,25 +880,30 @@ export default function ProjectDetailPage() {
                       onChange={(e) =>
                         setPhaseForm({ ...phaseForm, endDate: e.target.value })
                       }
+                      aria-label={t("projectDetail.phases.form.endDateLabel")}
                       className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
 
                     <div className="md:col-span-2 flex justify-end gap-2">
                       {editPhaseId && (
                         <Btn type="button" variant="secondary" size="sm" onClick={resetPhaseForm}>
-                          Annuler
+                          {t("projectDetail.phases.form.cancel")}
                         </Btn>
                       )}
 
                       <Btn type="submit" variant="primary" size="sm">
-                        {editPhaseId ? "💾 Enregistrer" : "➕ Ajouter"}
+                        {editPhaseId
+                          ? `💾 ${t("projectDetail.phases.form.save")}`
+                          : `➕ ${t("projectDetail.phases.form.add")}`}
                       </Btn>
                     </div>
                   </form>
                 )}
 
                 {phases.length === 0 ? (
-                  <p className="text-slate-500 italic text-sm">Aucune phase enregistrée.</p>
+                  <p className="text-slate-500 italic text-sm">
+                    {t("projectDetail.phases.empty")}
+                  </p>
                 ) : (
                   <div className="grid md:grid-cols-2 gap-5">
                     {phases.map((ph) => (
@@ -710,15 +924,15 @@ export default function ProjectDetailPage() {
                             )}
 
                             <p className="text-[11px] text-slate-500 mt-1">
-                              Début :
+                              {t("projectDetail.phases.labels.start")}{" "}
                               {ph.startDate
-                                ? new Date(ph.startDate).toLocaleDateString("fr-FR")
-                                : " —"}
+                                ? formatDate(ph.startDate)
+                                : ` ${t("common.dash")}`}
                               {" • "}
-                              Fin :
+                              {t("projectDetail.phases.labels.end")}{" "}
                               {ph.endDate
-                                ? new Date(ph.endDate).toLocaleDateString("fr-FR")
-                                : " —"}
+                                ? formatDate(ph.endDate)
+                                : ` ${t("common.dash")}`}
                             </p>
                           </div>
 
@@ -744,12 +958,12 @@ export default function ProjectDetailPage() {
                                 variant="danger"
                                 size="xs"
                                 onClick={async () => {
-                                  if (!window.confirm("Supprimer cette phase ?")) return;
+                                  if (!window.confirm(t("projectDetail.phases.alerts.deleteConfirm"))) return;
                                   try {
                                     await deleteProjectPhase(ph.id);
                                     await loadProject(project.id);
                                   } catch {
-                                    alert("Erreur suppression phase.");
+                                    alert(t("projectDetail.phases.alerts.deleteError"));
                                   }
                                 }}
                               >
@@ -768,7 +982,9 @@ export default function ProjectDetailPage() {
             {/* ----------- RIGHT COLUMN — DOCUMENTS ----------- */}
             <div className="space-y-6">
               <section>
-                <h2 className="text-lg font-semibold text-slate-900 mb-3">📎 Documents</h2>
+                <h2 className="text-lg font-semibold text-slate-900 mb-3">
+                  📎 {t("projectDetail.sections.documents")}
+                </h2>
 
                 {(isAdmin || clientCanAddDocs || agentCanAddDocs) && (
                   <form
@@ -800,7 +1016,9 @@ export default function ProjectDetailPage() {
                       onChange={(e) => setSelectedPhaseId(e.target.value)}
                       className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
                     >
-                      <option value="">— Phase (optionnel)</option>
+                      <option value="">
+                        {t("projectDetail.documents.phasePlaceholder")}
+                      </option>
                       {phases.map((ph) => (
                         <option key={ph.id} value={ph.id}>
                           {ph.title}
@@ -809,7 +1027,7 @@ export default function ProjectDetailPage() {
                     </select>
 
                     <input
-                      placeholder="Titre (optionnel)"
+                      placeholder={t("projectDetail.documents.titlePlaceholder")}
                       value={docTitle}
                       onChange={(e) => setDocTitle(e.target.value)}
                       className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
@@ -820,15 +1038,25 @@ export default function ProjectDetailPage() {
                       onChange={(e) => setDocKind(e.target.value)}
                       className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
                     >
-                      <option value="other">Autre</option>
-                      <option value="contract">Contrat</option>
-                      <option value="plan">Plan</option>
-                      <option value="report">Rapport</option>
-                      <option value="photo">Photo</option>
+                      <option value="other">
+                        {t("projectDetail.documents.kinds.other")}
+                      </option>
+                      <option value="contract">
+                        {t("projectDetail.documents.kinds.contract")}
+                      </option>
+                      <option value="plan">
+                        {t("projectDetail.documents.kinds.plan")}
+                      </option>
+                      <option value="report">
+                        {t("projectDetail.documents.kinds.report")}
+                      </option>
+                      <option value="photo">
+                        {t("projectDetail.documents.kinds.photo")}
+                      </option>
                     </select>
 
                     <input
-                      placeholder="Notes"
+                      placeholder={t("projectDetail.documents.notesPlaceholder")}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
@@ -836,63 +1064,219 @@ export default function ProjectDetailPage() {
 
                     <div className="sm:col-span-2 flex justify-end">
                       <Btn type="submit" variant="primary" size="sm">
-                        📤 Upload
+                        📤 {t("projectDetail.documents.upload")}
                       </Btn>
                     </div>
                   </form>
                 )}
 
                 {documents.length === 0 ? (
-                  <p className="text-slate-500 italic text-sm">Aucun document.</p>
+                  <p className="text-slate-500 italic text-sm">
+                    {t("projectDetail.documents.empty")}
+                  </p>
                 ) : (
                   <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-                    {documents.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="border border-slate-200 rounded-2xl p-3.5 bg-white shadow-sm flex flex-col min-w-0"
-                      >
-                        <div className="space-y-1 min-w-0">
-                          <p className="font-semibold text-sm text-slate-900 break-words">
-                            {doc.title || doc.originalName || "Document"}
-                          </p>
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input
+                          placeholder={`🔎 ${t(
+                            "projectDetail.documents.filters.searchPlaceholder"
+                          )}`}
+                          value={docFilters.q}
+                          onChange={(e) =>
+                            setDocFilters((prev) => ({
+                              ...prev,
+                              q: e.target.value,
+                            }))
+                          }
+                          className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
+                        />
 
-                          {(doc.phase?.title || doc.phaseTitle) && (
-                            <p className="text-[11px] text-slate-600 break-words">
-                              🔗 Phase : {doc.phase?.title || doc.phaseTitle}
-                            </p>
-                          )}
+                        <select
+                          value={docFilters.kind}
+                          onChange={(e) =>
+                            setDocFilters((prev) => ({
+                              ...prev,
+                              kind: e.target.value,
+                            }))
+                          }
+                          className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
+                        >
+                          <option value="">
+                            {t("projectDetail.documents.filters.kindAll")}
+                          </option>
+                          <option value="image">
+                            {t("projectDetail.documents.filters.kindImage")}
+                          </option>
+                          <option value="pdf">
+                            {t("projectDetail.documents.filters.kindPdf")}
+                          </option>
+                          <option value="other">
+                            {t("projectDetail.documents.filters.kindOther")}
+                          </option>
+                        </select>
 
-                          <p className="text-[11px] text-slate-500">
-                            {doc.mimeType} — {(doc.fileSize / 1024).toFixed(1)} Ko
-                          </p>
-
-                          <p className="text-[11px] text-slate-400">
-                            Ajouté le {new Date(doc.createdAt).toLocaleString("fr-FR")}
-                          </p>
-
-                          {doc.notes && (
-                            <p className="text-xs text-slate-700 break-words">{doc.notes}</p>
-                          )}
-                        </div>
-
-                        <div className="flex justify-between mt-2 items-center">
-                          <a
-                            href={toAbsUrl(doc.filePath)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                          >
-                            📄 Ouvrir
-                          </a>
-
-                          {(isAdmin || clientCanModifyOrDelete) && (
-                            <Btn onClick={() => handleDeleteDocument(doc.id)} variant="danger" size="xs">
-                              🗑️
-                            </Btn>
-                          )}
-                        </div>
+                        <select
+                          value={docFilters.sort}
+                          onChange={(e) =>
+                            setDocFilters((prev) => ({
+                              ...prev,
+                              sort: e.target.value,
+                            }))
+                          }
+                          className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
+                        >
+                          <option value="-createdAt">
+                            {t("projectDetail.documents.filters.sortNewest")}
+                          </option>
+                          <option value="createdAt">
+                            {t("projectDetail.documents.filters.sortOldest")}
+                          </option>
+                        </select>
                       </div>
-                    ))}
+
+                      <div className="mt-2 flex items-center justify-end">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDocFilters({ q: "", kind: "", sort: "-createdAt" })
+                          }
+                          className="text-[11px] text-slate-600 hover:text-slate-900"
+                        >
+                          {t("common.resetFilters")}
+                        </button>
+                      </div>
+                    </div>
+
+                    {filteredDocuments.map((doc) => {
+                      const displayName = getDocDisplayName(
+                        doc,
+                        t("projectDetail.documents.itemFallback")
+                      );
+                      const originalName =
+                        doc.title &&
+                        doc.originalName &&
+                        doc.originalName !== doc.title
+                          ? doc.originalName
+                          : "";
+                      const fileUrl = doc.filePath ? toAbsUrl(doc.filePath) : "";
+                      const kind = inferDocKind(doc);
+                      const extFallback = kind === "pdf" ? "PDF" : "FILE";
+                      const extLabel = getFileExtLabel(displayName, extFallback);
+                      const kindLabel =
+                        doc.kindLabel ||
+                        (doc.kind
+                          ? t(`projectDetail.documents.kinds.${doc.kind}`)
+                          : t("projectDetail.documents.kinds.other"));
+                      const phaseTitle = doc.phase?.title || doc.phaseTitle;
+                      const sizeLabel = formatBytes(doc.fileSize);
+                      const metaLine = [doc.mimeType, sizeLabel]
+                        .filter(Boolean)
+                        .join(" • ");
+                      const uploaderLabel = getDocUploaderLabel(
+                        doc,
+                        t("common.dash")
+                      );
+                      const createdAtLabel = doc.createdAt
+                        ? formatDateTime(doc.createdAt)
+                        : t("common.dash");
+                      const addedOnByLabel = t(
+                        "projectDetail.documents.addedOnBy",
+                        { date: createdAtLabel, name: uploaderLabel }
+                      );
+
+                      return (
+                        <div
+                          key={doc.id}
+                          className="group border border-slate-200 rounded-2xl p-4 bg-white shadow-sm flex flex-col min-w-0"
+                        >
+                          <div className="flex gap-3 min-w-0">
+                            <div className="w-16 h-16 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center shrink-0">
+                              {fileUrl && kind === "image" ? (
+                                <img
+                                  src={fileUrl}
+                                  alt={displayName}
+                                  className="w-full h-full object-cover"
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              ) : (
+                                <span className="text-[0.65rem] font-semibold text-slate-600 bg-white/80 border border-slate-200 px-2 py-1 rounded-full">
+                                  {extLabel}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                                  {kindLabel}
+                                </span>
+                                {phaseTitle && (
+                                  <span className="text-[10px] text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                                    🔗 {t("projectDetail.documents.phaseLabel")}{" "}
+                                    {phaseTitle}
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="font-semibold text-sm text-slate-900 break-words">
+                                {displayName}
+                              </p>
+
+                              {originalName && (
+                                <p className="text-[11px] text-slate-500 break-words">
+                                  {originalName}
+                                </p>
+                              )}
+
+                              {metaLine && (
+                                <p className="text-[11px] text-slate-500">
+                                  {metaLine}
+                                </p>
+                              )}
+
+                              <p className="text-[11px] text-slate-400">
+                                {addedOnByLabel}
+                              </p>
+
+                              {doc.notes && (
+                                <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 break-words">
+                                  {doc.notes}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            {fileUrl ? (
+                              <a
+                                href={fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                              >
+                                📄 {t("projectDetail.documents.open")}
+                              </a>
+                            ) : (
+                              <span className="text-xs text-slate-400">
+                                {t("common.dash")}
+                              </span>
+                            )}
+
+                            {(isAdmin || clientCanModifyOrDelete) && (
+                              <Btn
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                variant="danger"
+                                size="xs"
+                              >
+                                🗑️
+                              </Btn>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </section>
@@ -903,3 +1287,4 @@ export default function ProjectDetailPage() {
     </div>
   );
 }
+

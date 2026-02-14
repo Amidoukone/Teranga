@@ -10,6 +10,8 @@ import {
   deleteEvidence,
 } from '../services/evidences';
 import { me } from '../services/auth';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // 🌍 URL BASE — robuste production (inchangé)
@@ -33,6 +35,14 @@ const MAX_FILES = 20;
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
 const UPLOAD_BATCH_SIZE =
   Number(process.env.REACT_APP_UPLOAD_BATCH_SIZE) || 3;
+const DEFAULT_FILTERS = {
+  q: '',
+  kind: '',
+  withNotes: false,
+  dateFrom: '',
+  dateTo: '',
+  sort: '-createdAt',
+};
 
 // ============================================================================
 // HELPERS (inchangés)
@@ -80,11 +90,11 @@ function extractFileName(path = '') {
   }
 }
 
-function getEvidenceDisplayName(ev) {
+function getEvidenceDisplayName(ev, fallbackLabel = 'Fichier') {
   const original = fixMojibake(ev?.originalName || '');
   if (original) return original;
   const fallback = extractFileName(ev?.filePath || '');
-  return fixMojibake(fallback) || 'Fichier';
+  return fixMojibake(fallback) || fallbackLabel;
 }
 
 function getEvidenceKindForUI(ev) {
@@ -104,15 +114,17 @@ function getFileExtLabel(name = '', fallback = 'FILE') {
   return ext || fallback;
 }
 
-function getEvidenceLevelInfo(totalImages, maxImages) {
+function getEvidenceLevelInfo(totalImages, maxImages, t) {
   const count = Math.max(0, Number(totalImages) || 0);
   const max = Math.max(0, Number(maxImages) || 0);
 
   if (max && count > max) {
     return {
       level: 'overflow',
-      label: 'Trop élevé',
-      message: `Maximum ${max} preuves autorisées.`,
+      label: t('taskEvidencesPage.evidenceLevel.overflow.label'),
+      message: t('taskEvidencesPage.evidenceLevel.overflow.message', {
+        max,
+      }),
       toneClass: 'text-red-600',
     };
   }
@@ -120,32 +132,40 @@ function getEvidenceLevelInfo(totalImages, maxImages) {
   if (count <= 3) {
     return {
       level: 'low',
-      label: 'Faible',
-      message: 'Niveau faible — ajoutez plus de preuves.',
+      label: t('taskEvidencesPage.evidenceLevel.low.label'),
+      message: t('taskEvidencesPage.evidenceLevel.low.message'),
       toneClass: 'text-red-600',
     };
   }
   if (count <= 5) {
     return {
       level: 'acceptable',
-      label: 'Acceptable',
-      message: 'Niveau acceptable — ajoutez encore quelques preuves.',
+      label: t('taskEvidencesPage.evidenceLevel.acceptable.label'),
+      message: t('taskEvidencesPage.evidenceLevel.acceptable.message'),
       toneClass: 'text-amber-600',
     };
   }
-  if (count <= 10) {
+  if (count <= 9) {
     return {
       level: 'good',
-      label: 'Bon',
-      message: 'Niveau bon — ajoutez plus de preuves si possible.',
+      label: t('taskEvidencesPage.evidenceLevel.good.label'),
+      message: t('taskEvidencesPage.evidenceLevel.good.message'),
       toneClass: 'text-blue-600',
+    };
+  }
+  if (count <= 13) {
+    return {
+      level: 'excellent',
+      label: t('taskEvidencesPage.evidenceLevel.excellent.label'),
+      message: t('taskEvidencesPage.evidenceLevel.excellent.message'),
+      toneClass: 'text-emerald-600',
     };
   }
   return {
     level: 'excellent',
-    label: 'Excellent',
-    message: 'Niveau excellent — preuves suffisantes.',
-    toneClass: 'text-emerald-600',
+    label: t('taskEvidencesPage.evidenceLevel.excellentFull.label'),
+    message: t('taskEvidencesPage.evidenceLevel.excellentFull.message'),
+    toneClass: 'text-green-700',
   };
 }
 
@@ -183,6 +203,8 @@ function formatRemainingMs(ms) {
 // COMPONENT
 // ============================================================================
 export default function TaskEvidencesPage() {
+  const { t } = useTranslation();
+  const { formatDateTime } = useLocale();
   const { id } = useParams(); // taskId
 
   const [evidences, setEvidences] = useState([]);
@@ -200,19 +222,15 @@ export default function TaskEvidencesPage() {
     return saved === null ? true : saved === '1';
   });
 
-  const [filters, setFilters] = useState({
-    q: '',
-    kind: '',
-    withNotes: false,
-    dateFrom: '',
-    dateTo: '',
-    sort: '-createdAt',
-  });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
   // ========================================================================
   // 🔐 Permissions FRONTEND (MASTER SAFE)
   // ========================================================================
   const isAdmin = user?.role === 'admin';
+  const resetFilters = useCallback(() => {
+    setFilters({ ...DEFAULT_FILTERS });
+  }, []);
 
   const existingEvidenceCount = useMemo(() => {
     return (evidences || []).length;
@@ -226,20 +244,22 @@ export default function TaskEvidencesPage() {
   const totalEvidenceCount = existingEvidenceCount + selectedEvidenceCount;
 
   const evidenceLevel = useMemo(
-    () => getEvidenceLevelInfo(totalEvidenceCount, MAX_EVIDENCES),
-    [totalEvidenceCount]
+    () => getEvidenceLevelInfo(totalEvidenceCount, MAX_EVIDENCES, t),
+    [totalEvidenceCount, t]
   );
 
   const uploadValidationError = useMemo(() => {
     if (!files || files.length === 0) return '';
     if (files.length > MAX_FILES) {
-      return `Maximum ${MAX_FILES} fichiers par upload.`;
+      return t('taskEvidencesPage.validation.maxFiles', { max: MAX_FILES });
     }
     if (selectedEvidenceCount > 0 && totalEvidenceCount > MAX_EVIDENCES) {
-      return `Maximum ${MAX_EVIDENCES} preuves autorisées pour cette tâche.`;
+      return t('taskEvidencesPage.validation.maxEvidences', {
+        max: MAX_EVIDENCES,
+      });
     }
     return '';
-  }, [files, existingEvidenceCount, selectedEvidenceCount, totalEvidenceCount]);
+  }, [files, selectedEvidenceCount, totalEvidenceCount, t]);
 
   const disableUpload = uploading || !files.length || Boolean(uploadValidationError);
 
@@ -310,7 +330,7 @@ export default function TaskEvidencesPage() {
   async function handleUpload(e) {
     e.preventDefault();
     if (!files.length) {
-      alert('Ajoutez au moins un fichier.');
+      alert(t('taskEvidencesPage.validation.noFiles'));
       return;
     }
     if (uploadValidationError) {
@@ -357,7 +377,7 @@ export default function TaskEvidencesPage() {
       console.error('❌ upload:', err);
       const msg =
         err?.response?.data?.error ||
-        "Erreur lors de l'upload";
+        t('taskEvidencesPage.errors.upload');
       alert(msg);
     } finally {
       setUploading(false);
@@ -366,14 +386,14 @@ export default function TaskEvidencesPage() {
   }
 
   async function handleDelete(evidenceId) {
-    if (!window.confirm('Supprimer cette preuve ?')) return;
+    if (!window.confirm(t('taskEvidencesPage.confirmDelete'))) return;
     try {
       await deleteEvidence(evidenceId);
       await fetchEvidences();
     } catch (err) {
       console.error('❌ delete evidence:', err);
       const msg =
-        err?.response?.data?.error || 'Erreur lors de la suppression';
+        err?.response?.data?.error || t('taskEvidencesPage.errors.delete');
       alert(msg);
     }
   }
@@ -388,7 +408,7 @@ export default function TaskEvidencesPage() {
       const q = filters.q.trim().toLowerCase();
       arr = arr.filter((ev) =>
         [
-          getEvidenceDisplayName(ev),
+          getEvidenceDisplayName(ev, t('taskEvidencesPage.fileFallback')),
           ev.filePath,
           ev.notes,
           ev.kind,
@@ -442,7 +462,14 @@ export default function TaskEvidencesPage() {
     });
 
     return arr;
-  }, [evidences, filters]);
+  }, [evidences, filters, t]);
+  const hasAnyEvidences = (evidences || []).length > 0;
+  const emptyTitle = hasAnyEvidences
+    ? t('taskEvidencesPage.list.emptyFilteredTitle')
+    : t('taskEvidencesPage.list.empty');
+  const emptySubtitle = hasAnyEvidences
+    ? t('taskEvidencesPage.list.emptyFilteredSubtitle')
+    : t('taskEvidencesPage.list.emptySubtitle');
   // ========================================================================
   // LIGHTBOX
   // ========================================================================
@@ -463,16 +490,18 @@ export default function TaskEvidencesPage() {
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 pb-4 border-b border-gray-100">
           <div className="space-y-1">
+            <p className="text-[0.7rem] uppercase tracking-wide text-blue-600 font-semibold">
+              {t('taskEvidencesPage.header.kicker')}
+            </p>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
-              📎 Preuves de la tâche #{id}
+              📎 {t('taskEvidencesPage.header.title', { id })}
             </h1>
             <p className="text-sm sm:text-base text-gray-600">
-              Centralisez toutes les pièces jointes (photos, PDF, documents)
-              liées à cette tâche.
+              {t('taskEvidencesPage.header.subtitle')}
             </p>
             <p className="mt-2 inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
               <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-              {filtered.length} preuve(s) affichée(s) avec les filtres actuels.
+              {t('taskEvidencesPage.header.count', { count: filtered.length })}
             </p>
           </div>
 
@@ -481,14 +510,16 @@ export default function TaskEvidencesPage() {
               onClick={() => setShowForm((v) => !v)}
               className="w-full sm:w-auto px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-slate-800 transition"
             >
-              {showForm ? "➖ Masquer le formulaire" : "➕ Ajouter des preuves"}
+              {showForm
+                ? `➖ ${t('taskEvidencesPage.buttons.hideForm')}`
+                : `➕ ${t('taskEvidencesPage.buttons.showForm')}`}
             </button>
           </div>
         </div>
 
         {loading && (
           <p className="text-gray-500 animate-pulse text-center mb-4 text-sm sm:text-base">
-            Chargement des preuves…
+            {t('taskEvidencesPage.loading')}
           </p>
         )}
 
@@ -499,7 +530,7 @@ export default function TaskEvidencesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
             {/* Recherche */}
             <input
-              placeholder="🔎 Rechercher (nom de fichier, notes, utilisateur...)"
+              placeholder={`🔎 ${t('taskEvidencesPage.filters.searchPlaceholder')}`}
               value={filters.q}
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, q: e.target.value }))
@@ -519,10 +550,10 @@ export default function TaskEvidencesPage() {
               }
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Type (tous)</option>
-              <option value="image">Images</option>
-              <option value="pdf">PDF</option>
-              <option value="other">Autres fichiers</option>
+              <option value="">{t('taskEvidencesPage.filters.typeAll')}</option>
+              <option value="image">{t('taskEvidencesPage.filters.typeImage')}</option>
+              <option value="pdf">{t('taskEvidencesPage.filters.typePdf')}</option>
+              <option value="other">{t('taskEvidencesPage.filters.typeOther')}</option>
             </select>
 
             {/* Avec notes */}
@@ -542,8 +573,8 @@ export default function TaskEvidencesPage() {
               `}
             >
               {filters.withNotes
-                ? "✅ Avec notes uniquement"
-                : "Notes optionnelles"}
+                ? `✅ ${t('taskEvidencesPage.filters.withNotesOn')}`
+                : t('taskEvidencesPage.filters.withNotesOff')}
             </button>
 
             {/* Date de début */}
@@ -574,35 +605,26 @@ export default function TaskEvidencesPage() {
               }
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
             >
-              <option value="-createdAt">Plus récentes d’abord</option>
-              <option value="createdAt">Plus anciennes d’abord</option>
-              <option value="originalName">Nom de fichier (A-Z)</option>
-              <option value="-originalName">Nom de fichier (Z-A)</option>
+              <option value="-createdAt">{t('taskEvidencesPage.filters.sortNewest')}</option>
+              <option value="createdAt">{t('taskEvidencesPage.filters.sortOldest')}</option>
+              <option value="originalName">{t('taskEvidencesPage.filters.sortNameAsc')}</option>
+              <option value="-originalName">{t('taskEvidencesPage.filters.sortNameDesc')}</option>
             </select>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <p className="text-xs sm:text-sm text-gray-500">
-              {filtered.length} preuve(s) après filtrage.
+              {t('taskEvidencesPage.filters.foundCount', { count: filtered.length })}
             </p>
             <button
               type="button"
-              onClick={() =>
-                setFilters({
-                  q: "",
-                  kind: "",
-                  withNotes: false,
-                  dateFrom: "",
-                  dateTo: "",
-                  sort: "-createdAt",
-                })
-              }
+              onClick={resetFilters}
               className="
                 text-xs sm:text-sm px-3 py-1.5 bg-gray-200 rounded-md
                 hover:bg-gray-300 w-full sm:w-auto text-center
               "
             >
-              Réinitialiser tous les filtres
+              {t('taskEvidencesPage.filters.reset')}
             </button>
           </div>
         </div>
@@ -616,18 +638,17 @@ export default function TaskEvidencesPage() {
             className="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-8"
           >
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
-              ➕ Ajouter de nouvelles preuves
+              ➕ {t('taskEvidencesPage.form.title')}
             </h2>
             <p className="text-xs sm:text-sm text-gray-500 mb-4">
-              Sélectionnez vos fichiers (photos, PDF, documents…) et ajoutez une
-              note si nécessaire. Vous pouvez ajouter un seul fichier puis en
-              ajouter d’autres plus tard.
+              {t('taskEvidencesPage.form.subtitle')}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                  Fichiers <span className="text-red-500">*</span>
+                  {t('taskEvidencesPage.form.filesLabel')}{' '}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="file"
@@ -642,20 +663,27 @@ export default function TaskEvidencesPage() {
 
                 {files.length > 0 && (
                   <p className="mt-2 text-xs sm:text-sm text-gray-500">
-                    {files.length} fichier(s) sélectionné(s).
+                    {t('taskEvidencesPage.form.filesSelected', { count: files.length })}
                   </p>
                 )}
 
                 <p className="mt-2 text-xs sm:text-sm text-gray-500">
-                  Preuves existantes: {existingEvidenceCount}/{MAX_EVIDENCES} — sélectionnées: {selectedEvidenceCount} — total après upload: {totalEvidenceCount}
+                  {t('taskEvidencesPage.form.existingSummary', {
+                    existing: existingEvidenceCount,
+                    max: MAX_EVIDENCES,
+                    selected: selectedEvidenceCount,
+                    total: totalEvidenceCount,
+                  })}
                 </p>
                 <p className={`mt-1 text-xs sm:text-sm ${evidenceLevel.toneClass}`}>
-                  Niveau d&apos;appréciation :{' '}
-                  <span className="font-semibold">{evidenceLevel.label}</span> —{' '}
+                  {t('taskEvidencesPage.form.evidenceLevelLabel')}{' '}
+                  <span className="font-semibold">{evidenceLevel.label}</span>,{' '}
                   {evidenceLevel.message}
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
-                  Envoi par lots de {UPLOAD_BATCH_SIZE} fichier(s) pour plus de stabilité.
+                  {t('taskEvidencesPage.form.batchInfo', {
+                    count: UPLOAD_BATCH_SIZE,
+                  })}
                 </p>
 
                 {uploadValidationError && (
@@ -697,7 +725,7 @@ export default function TaskEvidencesPage() {
 
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                  Notes (optionnel)
+                  {t('taskEvidencesPage.form.notesLabel')}
                 </label>
                 <textarea
                   rows={5}
@@ -707,7 +735,7 @@ export default function TaskEvidencesPage() {
                     w-full border border-gray-300 rounded-lg px-3 py-2
                     text-sm sm:text-base focus:ring-2 focus:ring-blue-500
                   "
-                  placeholder="Ajoutez un contexte (lieu, date, détail précis…) pour faciliter le suivi."
+                  placeholder={t('taskEvidencesPage.form.notesPlaceholder')}
                 />
               </div>
             </div>
@@ -724,14 +752,23 @@ export default function TaskEvidencesPage() {
                   }
                 `}
               >
-                {uploading ? "⏳ Upload en cours…" : "Uploader les fichiers"}
+                {uploading
+                  ? t('taskEvidencesPage.form.submitting')
+                  : t('taskEvidencesPage.form.submit')}
               </button>
               {uploadProgress && (
                 <p className="mt-2 text-xs text-gray-500">
-                  Upload {uploadProgress.current}/{uploadProgress.total}
                   {uploadProgress.batches > 0
-                    ? ` — lot ${uploadProgress.batch}/${uploadProgress.batches}`
-                    : ''}
+                    ? t('taskEvidencesPage.form.uploadProgressBatch', {
+                        current: uploadProgress.current,
+                        total: uploadProgress.total,
+                        batch: uploadProgress.batch,
+                        batches: uploadProgress.batches,
+                      })
+                    : t('taskEvidencesPage.form.uploadProgress', {
+                        current: uploadProgress.current,
+                        total: uploadProgress.total,
+                      })}
                 </p>
               )}
             </div>
@@ -743,19 +780,47 @@ export default function TaskEvidencesPage() {
            - Admin + MASTER: pas d'avertissement
         ========================================================== */}
         {!isAdmin && (
-          <p className="text-xs sm:text-sm text-gray-500 italic mb-4">
-            🕒 Vous pouvez supprimer vos propres preuves pendant 1&nbsp;heure après
-            l&rsquo;ajout.
-          </p>
+          <div className="mb-4 rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 text-xs sm:text-sm text-slate-600 flex gap-2 items-start">
+            <span className="mt-[1px]">🕒</span>
+            <p className="break-words">
+              {t('taskEvidencesPage.warnings.deleteWindow')}
+            </p>
+          </div>
         )}
 
         {/* ==========================================================
            LISTE DES PREUVES
         ========================================================== */}
         {filtered.length === 0 ? (
-          <p className="text-gray-500 italic text-center py-8 text-sm sm:text-base">
-            Aucune preuve trouv&eacute;e pour cette t&acirc;che.
-          </p>
+          <div className="py-10 flex flex-col items-center justify-center text-center">
+            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+              <span className="text-xl">🗂️</span>
+            </div>
+            <p className="text-sm font-semibold text-gray-800 mb-1">
+              {emptyTitle}
+            </p>
+            <p className="text-xs text-gray-500 max-w-sm">
+              {emptySubtitle}
+            </p>
+            <div className="mt-4 flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              {hasAnyEvidences && (
+                <button
+                  onClick={resetFilters}
+                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300"
+                >
+                  {t('taskEvidencesPage.filters.reset')}
+                </button>
+              )}
+              {!showForm && (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 transition"
+                >
+                  ➕ {t('taskEvidencesPage.buttons.showForm')}
+                </button>
+              )}
+            </div>
+          </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {filtered.map((ev) => {
@@ -763,12 +828,33 @@ export default function TaskEvidencesPage() {
               const fileUrl = toAbsUrl(ev.filePath);
               const isImage = kindRaw === "image";
               const kind = kindRaw;
-              const displayName = getEvidenceDisplayName(ev);
-              const deleteInfo = getDeleteEligibility(user, ev);
-              const extLabel = getFileExtLabel(
-                displayName,
-                kind === 'pdf' ? 'PDF' : 'FILE'
+              const displayName = getEvidenceDisplayName(
+                ev,
+                t('taskEvidencesPage.fileFallback')
               );
+              const deleteInfo = getDeleteEligibility(user, ev);
+              const extFallback =
+                kind === 'pdf'
+                  ? t('taskEvidencesPage.fileKinds.pdf')
+                  : t('taskEvidencesPage.fileKinds.file');
+              const extLabel = getFileExtLabel(displayName, extFallback);
+              const kindLabel =
+                kind === 'image'
+                  ? t('taskEvidencesPage.fileKinds.image')
+                  : kind === 'pdf'
+                  ? t('taskEvidencesPage.fileKinds.pdf')
+                  : t('taskEvidencesPage.fileKinds.file');
+              const uploaderLabel = ev.uploader
+                ? (
+                    `${ev.uploader.firstName || ''} ${
+                      ev.uploader.lastName || ''
+                    }`.trim() || ev.uploader.email
+                  )
+                : t('common.dash');
+              const addedOnLabel = t('taskEvidencesPage.meta.addedOnBy', {
+                date: formatDateTime(ev.createdAt),
+                name: uploaderLabel,
+              });
 
               return (
                 <div
@@ -782,11 +868,11 @@ export default function TaskEvidencesPage() {
                         type="button"
                         onClick={() => openLightbox(fileUrl)}
                         className="w-full h-full"
-                        title={'Aper\u00e7u'}
+                        title={t('taskEvidencesPage.actions.preview')}
                       >
                         <img
                           src={fileUrl}
-                          alt={displayName || 'Preuve'}
+                          alt={displayName || t('taskEvidencesPage.fileAlt')}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                         />
                       </button>
@@ -810,7 +896,7 @@ export default function TaskEvidencesPage() {
                             : "bg-gray-50 text-gray-700 border-gray-200"
                         }`}
                       >
-                        {kind === "image" ? "IMAGE" : kind === "pdf" ? "PDF" : "FICHIER"}
+                        {kindLabel}
                       </span>
                     </div>
 
@@ -835,14 +921,7 @@ export default function TaskEvidencesPage() {
                     </div>
 
                     <div className="mt-2 text-xs sm:text-sm text-gray-500 break-words whitespace-normal w-full max-w-full">
-                      Ajout&eacute; le {new Date(ev.createdAt).toLocaleString()} par{' '}
-                      {ev.uploader
-                        ? (
-                            `${ev.uploader.firstName || ''} ${
-                              ev.uploader.lastName || ''
-                            }`.trim() || ev.uploader.email
-                          )
-                        : '-'}
+                      {addedOnLabel}
                     </div>
 
                     {ev.notes && (
@@ -855,7 +934,9 @@ export default function TaskEvidencesPage() {
                           w-full max-w-full
                         "
                       >
-                        <strong className="text-gray-700">Notes :</strong>{' '}
+                        <strong className="text-gray-700">
+                          {t('taskEvidencesPage.meta.notesLabel')}:
+                        </strong>{' '}
                         {ev.notes}
                       </div>
                     )}
@@ -867,7 +948,7 @@ export default function TaskEvidencesPage() {
                           onClick={() => openLightbox(fileUrl)}
                           className="px-3 py-1.5 text-[0.7rem] sm:text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
                         >
-                          Aper\u00e7u
+                          {t('taskEvidencesPage.actions.preview')}
                         </button>
                       )}
                       <a
@@ -876,14 +957,14 @@ export default function TaskEvidencesPage() {
                         rel="noreferrer"
                         className="px-3 py-1.5 text-[0.7rem] sm:text-xs font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800"
                       >
-                        Ouvrir
+                        {t('taskEvidencesPage.actions.open')}
                       </a>
                       <a
                         href={fileUrl}
                         download={displayName}
                         className="px-3 py-1.5 text-[0.7rem] sm:text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
                       >
-                        T\u00e9l\u00e9charger
+                        {t('taskEvidencesPage.actions.download')}
                       </a>
                     </div>
 
@@ -893,18 +974,20 @@ export default function TaskEvidencesPage() {
                           onClick={() => handleDelete(ev.id)}
                           className="px-3.5 py-2 bg-red-600 text-white text-xs sm:text-sm rounded-lg font-medium hover:bg-red-700 transition"
                         >
-                          Supprimer
+                        {t('taskEvidencesPage.actions.delete')}
                         </button>
                       </div>
                     )}
                     {!isAdmin && deleteInfo.allowed && deleteInfo.reason === 'within-window' && (
                       <p className="mt-2 text-[0.7rem] text-gray-400">
-                        Suppression possible encore {formatRemainingMs(deleteInfo.remainingMs)}.
+                        {t('taskEvidencesPage.delete.possible', {
+                          time: formatRemainingMs(deleteInfo.remainingMs),
+                        })}
                       </p>
                     )}
                     {!isAdmin && !deleteInfo.allowed && deleteInfo.reason === 'expired' && (
                       <p className="mt-2 text-[0.7rem] text-gray-400">
-                        Suppression expirée (1&nbsp;heure).
+                        {t('taskEvidencesPage.delete.expired')}
                       </p>
                     )}
                   </div>
@@ -933,3 +1016,5 @@ export default function TaskEvidencesPage() {
     </div>
   );
 }
+
+

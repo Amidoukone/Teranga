@@ -5,8 +5,8 @@ const { getLabel } = require("../utils/labels");
 const imageKit = require("../helpers/teranga-imagekit");
 const path = require("path");
 
-// ✅ GEO scope (admin global vs admin scoped)
-const { getUserGeoScope, isGlobalAdmin } = require("../utils/geoScope");
+// ✅ GEO scope (strict + admin global)
+const { canAccessGeoResource } = require("../utils/geoScope");
 
 /* =========================================================
    🏷 Types de documents
@@ -78,24 +78,7 @@ function isAssignedAgent(project, user) {
 function canAdminAccessProjectByGeo(project, user) {
   if (!project || !user) return false;
   if (!isAdmin(user)) return false;
-
-  if (isGlobalAdmin(user)) return true;
-
-  const scope = getUserGeoScope(user); // { countryId, regionId }
-  if (!scope?.countryId && !scope?.regionId) return true;
-
-  // Legacy: si le projet n'a pas encore de geo => on n’empêche pas (évite régressions prod)
-  if (project.countryId == null && project.regionId == null) return true;
-
-  if (scope.countryId && project.countryId != null) {
-    if (String(project.countryId) !== String(scope.countryId)) return false;
-  }
-
-  if (scope.regionId && project.regionId != null) {
-    if (String(project.regionId) !== String(scope.regionId)) return false;
-  }
-
-  return true;
+  return canAccessGeoResource(project, user);
 }
 
 /**
@@ -110,11 +93,18 @@ function canReadProject(project, user) {
   if (isAdmin(user)) return canAdminAccessProjectByGeo(project, user);
 
   if (user.role === "client") {
-    return String(project.clientId) === String(user.id);
+    return (
+      String(project.clientId) === String(user.id) &&
+      canAccessGeoResource(project, user)
+    );
   }
 
   if (user.role === "agent") {
-    return project.agentId != null && String(project.agentId) === String(user.id);
+    return (
+      project.agentId != null &&
+      String(project.agentId) === String(user.id) &&
+      canAccessGeoResource(project, user)
+    );
   }
 
   return false;
@@ -130,8 +120,8 @@ function canUploadToProject(project, user) {
   if (!project || !user?.role) return false;
 
   const adminOK = isAdmin(user) && canAdminAccessProjectByGeo(project, user);
-  const clientOK = isClientOwner(project, user);
-  const agentOK = isAssignedAgent(project, user);
+  const clientOK = isClientOwner(project, user) && canAccessGeoResource(project, user);
+  const agentOK = isAssignedAgent(project, user) && canAccessGeoResource(project, user);
 
   return adminOK || clientOK || agentOK;
 }
@@ -145,7 +135,7 @@ function canRemoveDocument(project, user) {
   if (!project || !user?.role) return false;
 
   const adminOK = isAdmin(user) && canAdminAccessProjectByGeo(project, user);
-  const clientOK = canClientModify(project, user);
+  const clientOK = canClientModify(project, user) && canAccessGeoResource(project, user);
 
   return adminOK || clientOK;
 }
@@ -308,6 +298,8 @@ exports.listByProject = async (req, res) => {
       return res.status(401).json({ error: "Non authentifié" });
 
     const projectId = toSafeInt(req.query.projectId || req.params.projectId);
+    const qCountryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const qRegionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
     if (!projectId)
       return res.status(400).json({ error: "projectId requis" });
 
@@ -320,6 +312,13 @@ exports.listByProject = async (req, res) => {
     // ✅ ACL lecture (admin scoped GEO inclus)
     if (!canReadProject(project, req.user)) {
       return res.status(403).json({ error: "Accès non autorisé" });
+    }
+
+    if (qCountryId && String(project.countryId) !== String(qCountryId)) {
+      return res.json({ projectId, documents: [] });
+    }
+    if (qRegionId && String(project.regionId) !== String(qRegionId)) {
+      return res.json({ projectId, documents: [] });
     }
 
     const docs = await ProjectDocument.findAll({

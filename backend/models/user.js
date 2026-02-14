@@ -59,6 +59,13 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
 
+      // Langue UI preferree (fr/en)
+      language: {
+        type: DataTypes.STRING(5),
+        allowNull: true,
+        defaultValue: 'fr',
+      },
+
       // Ancien champ legacy (ISO pays)
       country: {
         type: DataTypes.STRING(2), // ex: ML, FR

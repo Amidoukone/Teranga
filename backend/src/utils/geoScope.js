@@ -122,11 +122,14 @@ async function applyGeoScopeWithLegacy(where = {}, user) {
  * ⚠️ Comportement historique conservé :
  * si admin/agent n'a aucun scope => renvoie un where "vide" (id:0)
  */
-function applyGeoScope(where = {}, user) {
+function applyGeoScope(where = {}, user, options = {}) {
   if (!user) return where;
 
   const role = user?.role;
-  if (!["admin", "agent"].includes(role)) return where;
+  const includeClients = Boolean(options.includeClients);
+
+  if (!["admin", "agent", "client"].includes(role)) return where;
+  if (role === "client" && !includeClients) return where;
 
   if (isGlobalAdmin(user)) return where;
 
@@ -136,6 +139,7 @@ function applyGeoScope(where = {}, user) {
   if (countryId) return { ...where, countryId };
 
   // ✅ On conserve exactement la logique existante (anti-régression)
+  // + clients scoped si demandé (includeClients)
   return { ...where, id: 0 };
 }
 
@@ -158,9 +162,9 @@ function modelSupportsGeoScope(model) {
  * Applique le scope uniquement si le modèle a bien les champs geo.
  * ✅ Permet d'éviter des filtres sur des modèles non concernés.
  */
-function applyGeoScopeForModel(where = {}, user, model) {
+function applyGeoScopeForModel(where = {}, user, model, options = {}) {
   if (!modelSupportsGeoScope(model)) return where;
-  return applyGeoScope(where, user);
+  return applyGeoScope(where, user, options);
 }
 
 /**

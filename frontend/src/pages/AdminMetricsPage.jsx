@@ -6,11 +6,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getMetrics } from '../services/metrics';
-
-function formatNumber(value) {
-  if (!Number.isFinite(value)) return '0';
-  return new Intl.NumberFormat('fr-FR').format(value);
-}
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 
 function formatMs(value) {
   if (!Number.isFinite(value)) return '0 ms';
@@ -28,6 +25,8 @@ function toEntries(data) {
 }
 
 export default function AdminMetricsPage() {
+  const { t } = useTranslation();
+  const { formatNumber, formatDateTime } = useLocale();
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,7 +43,7 @@ export default function AdminMetricsPage() {
       setError(
         err?.response?.data?.error ||
           err?.message ||
-          'Impossible de charger les métriques.'
+          t('adminMetricsPage.errors.load')
       );
     } finally {
       setLoading(false);
@@ -69,13 +68,13 @@ export default function AdminMetricsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900">
-            Monitoring applicatif (lecture seule)
+            {t('adminMetricsPage.title')}
           </h1>
           <p className="text-sm text-gray-600">
-            Dernière mise à jour :{' '}
+            {t('adminMetricsPage.lastUpdated')}{' '}
             {lastFetched
-              ? lastFetched.toLocaleString('fr-FR')
-              : '—'}
+              ? formatDateTime(lastFetched)
+              : t('adminMetricsPage.emptyValue')}
           </p>
         </div>
         <button
@@ -83,7 +82,7 @@ export default function AdminMetricsPage() {
           onClick={fetchMetrics}
           className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
         >
-          Rafraîchir
+          {t('adminMetricsPage.buttons.refresh')}
         </button>
       </div>
 
@@ -95,14 +94,14 @@ export default function AdminMetricsPage() {
 
       {loading ? (
         <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
-          Chargement des métriques…
+          {t('adminMetricsPage.loading')}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <p className="text-xs font-semibold uppercase text-gray-500">
-                Requêtes totales
+                {t('adminMetricsPage.cards.totalRequests')}
               </p>
               <p className="mt-2 text-2xl font-extrabold text-gray-900">
                 {formatNumber(totals.requests || 0)}
@@ -110,7 +109,7 @@ export default function AdminMetricsPage() {
             </div>
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <p className="text-xs font-semibold uppercase text-gray-500">
-                Erreurs 5xx
+                {t('adminMetricsPage.cards.errors5xx')}
               </p>
               <p className="mt-2 text-2xl font-extrabold text-red-600">
                 {formatNumber(totals.errors || 0)}
@@ -118,13 +117,15 @@ export default function AdminMetricsPage() {
             </div>
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <p className="text-xs font-semibold uppercase text-gray-500">
-                Latence moyenne
+                {t('adminMetricsPage.cards.avgLatency')}
               </p>
               <p className="mt-2 text-2xl font-extrabold text-gray-900">
                 {formatMs(durations.avg || 0)}
               </p>
               <p className="mt-1 text-xs text-gray-500">
-                Max: {formatMs(durations.max || 0)}
+                {t('adminMetricsPage.cards.maxLatency', {
+                  value: formatMs(durations.max || 0),
+                })}
               </p>
             </div>
           </div>
@@ -132,10 +133,12 @@ export default function AdminMetricsPage() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <h2 className="text-sm font-semibold text-gray-900">
-                Statuts HTTP
+                {t('adminMetricsPage.sections.httpStatus')}
               </h2>
               <ul className="mt-3 space-y-2 text-sm text-gray-600">
-                {statusEntries.length === 0 && <li>—</li>}
+                {statusEntries.length === 0 && (
+                  <li>{t('adminMetricsPage.emptyValue')}</li>
+                )}
                 {statusEntries.map((entry) => (
                   <li key={entry.key} className="flex justify-between">
                     <span>{entry.key}</span>
@@ -149,10 +152,12 @@ export default function AdminMetricsPage() {
 
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <h2 className="text-sm font-semibold text-gray-900">
-                Méthodes HTTP
+                {t('adminMetricsPage.sections.httpMethods')}
               </h2>
               <ul className="mt-3 space-y-2 text-sm text-gray-600">
-                {methodEntries.length === 0 && <li>—</li>}
+                {methodEntries.length === 0 && (
+                  <li>{t('adminMetricsPage.emptyValue')}</li>
+                )}
                 {methodEntries.map((entry) => (
                   <li key={entry.key} className="flex justify-between">
                     <span>{entry.key}</span>
@@ -166,10 +171,12 @@ export default function AdminMetricsPage() {
 
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <h2 className="text-sm font-semibold text-gray-900">
-                Top routes
+                {t('adminMetricsPage.sections.topRoutes')}
               </h2>
               <ul className="mt-3 space-y-2 text-sm text-gray-600">
-                {routeEntries.length === 0 && <li>—</li>}
+                {routeEntries.length === 0 && (
+                  <li>{t('adminMetricsPage.emptyValue')}</li>
+                )}
                 {routeEntries.slice(0, 8).map((entry) => (
                   <li key={entry.key} className="flex justify-between gap-3">
                     <span className="truncate">{entry.key}</span>
@@ -185,10 +192,12 @@ export default function AdminMetricsPage() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <h2 className="text-sm font-semibold text-gray-900">
-                Erreurs récentes (5xx)
+                {t('adminMetricsPage.sections.recentErrors')}
               </h2>
               <div className="mt-3 space-y-3 text-sm text-gray-600">
-                {recentErrors.length === 0 && <p>—</p>}
+                {recentErrors.length === 0 && (
+                  <p>{t('adminMetricsPage.emptyValue')}</p>
+                )}
                 {recentErrors.map((entry, idx) => (
                   <div
                     key={`${entry.requestId || 'err'}-${idx}`}
@@ -198,8 +207,10 @@ export default function AdminMetricsPage() {
                       {entry.method} {entry.path}
                     </p>
                     <p>
-                      Status {entry.statusCode} ·{' '}
-                      {formatMs(entry.durationMs)}
+                      {t('adminMetricsPage.items.status', {
+                        code: entry.statusCode,
+                      })}{' '}
+                      · {formatMs(entry.durationMs)}
                     </p>
                     <p className="text-xs text-red-500">
                       {entry.timestamp}
@@ -211,10 +222,12 @@ export default function AdminMetricsPage() {
 
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <h2 className="text-sm font-semibold text-gray-900">
-                Requêtes lentes
+                {t('adminMetricsPage.sections.slowRequests')}
               </h2>
               <div className="mt-3 space-y-3 text-sm text-gray-600">
-                {slowRequests.length === 0 && <p>—</p>}
+                {slowRequests.length === 0 && (
+                  <p>{t('adminMetricsPage.emptyValue')}</p>
+                )}
                 {slowRequests.map((entry, idx) => (
                   <div
                     key={`${entry.requestId || 'slow'}-${idx}`}
@@ -224,8 +237,10 @@ export default function AdminMetricsPage() {
                       {entry.method} {entry.path}
                     </p>
                     <p>
-                      {formatMs(entry.durationMs)} · seuil{' '}
-                      {formatMs(entry.thresholdMs)}
+                      {formatMs(entry.durationMs)} ·{' '}
+                      {t('adminMetricsPage.items.threshold', {
+                        value: formatMs(entry.thresholdMs),
+                      })}
                     </p>
                     <p className="text-xs text-amber-500">
                       {entry.timestamp}
@@ -240,3 +255,4 @@ export default function AdminMetricsPage() {
     </div>
   );
 }
+

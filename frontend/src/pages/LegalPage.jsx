@@ -2,66 +2,59 @@
 // LegalPage.jsx — Mentions légales • Teranga 2025
 // ============================================================================
 
+import { useTranslation, Trans } from "react-i18next";
+
 export default function LegalPage() {
+  const { t } = useTranslation();
+
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
         <div className="page-shell max-w-4xl mx-auto p-6 sm:p-10">
-          <p className="page-kicker mb-3">Conformité légale</p>
-          <h1 className="page-title mb-6">
-            Mentions légales
-          </h1>
+          <p className="page-kicker mb-3">{t("legalPage.kicker")}</p>
+          <h1 className="page-title mb-6">{t("legalPage.title")}</h1>
 
           <section className="space-y-4 text-slate-700 leading-relaxed">
+            <p>{t("legalPage.intro")}</p>
+
+            <h2 className="text-xl font-semibold text-slate-900 mt-6">
+              {t("legalPage.sections.publisher.title")}
+            </h2>
             <p>
-              Conformément aux dispositions de la loi n°2004-575 du 21 juin 2004
-              pour la confiance dans l’économie numérique (LCEN), il est précisé
-              aux utilisateurs de l’application Teranga l’identité des différents
-              intervenants dans le cadre de sa réalisation et de son suivi.
+              <Trans
+                i18nKey="legalPage.sections.publisher.details"
+                components={{ strong: <strong />, br: <br /> }}
+              />
             </p>
 
             <h2 className="text-xl font-semibold text-slate-900 mt-6">
-              1. Éditeur du site
+              {t("legalPage.sections.editorial.title")}
+            </h2>
+            <p>{t("legalPage.sections.editorial.details")}</p>
+
+            <h2 className="text-xl font-semibold text-slate-900 mt-6">
+              {t("legalPage.sections.hosting.title")}
             </h2>
             <p>
-              <strong>Teranga Diaspora</strong><br />
-              Service de gestion de biens, projets et services pour la diaspora
-              africaine.<br />
-              Siège social : Hamdallaye ACI 200, Bamako – Mali<br />
-              Email : contact@teranga-platform.com
+              <Trans
+                i18nKey="legalPage.sections.hosting.details"
+                components={{ strong: <strong />, br: <br /> }}
+              />
             </p>
 
             <h2 className="text-xl font-semibold text-slate-900 mt-6">
-              2. Responsabilité éditoriale
+              {t("legalPage.sections.ip.title")}
             </h2>
-            <p>
-              Le responsable de la publication est joignable à l’adresse :
-              contact@teranga-platform.com
-            </p>
+            <p>{t("legalPage.sections.ip.details")}</p>
 
             <h2 className="text-xl font-semibold text-slate-900 mt-6">
-              3. Hébergement
+              {t("legalPage.sections.contact.title")}
             </h2>
             <p>
-              Application hébergée par : <strong>Netlify</strong><br />
-              https://www.netlify.com
-            </p>
-
-            <h2 className="text-xl font-semibold text-slate-900 mt-6">
-              4. Propriété intellectuelle
-            </h2>
-            <p>
-              L’application Teranga, son contenu, sa marque et son logo sont
-              protégés par la législation en vigueur. Toute reproduction sans
-              autorisation est interdite.
-            </p>
-
-            <h2 className="text-xl font-semibold text-slate-900 mt-6">
-              5. Contact
-            </h2>
-            <p>
-              Pour toute question ou réclamation, vous pouvez nous écrire à :<br />
-              <strong>contact@teranga-platform.com</strong>
+              <Trans
+                i18nKey="legalPage.sections.contact.details"
+                components={{ strong: <strong />, br: <br /> }}
+              />
             </p>
           </section>
         </div>

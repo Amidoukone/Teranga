@@ -44,6 +44,16 @@ function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
+const SUPPORTED_LANGS = new Set(['fr', 'en']);
+function normalizeLanguage(input) {
+  if (input === null || input === undefined) return null;
+  const raw = String(input).trim().toLowerCase();
+  if (!raw) return null;
+  if (raw.startsWith('fr')) return 'fr';
+  if (raw.startsWith('en')) return 'en';
+  return null;
+}
+
 /**
  * Signature du JWT d'accès.
  * Lève une erreur claire si JWT_SECRET est mal configuré.
@@ -322,7 +332,15 @@ exports.register = async (req, res) => {
     const email = normalizeEmail(rawEmail);
     const password = typeof rawPassword === 'string' ? rawPassword.trim() : '';
 
-    const { firstName, lastName, phone, country, countryId } = req.body || {};
+    const {
+      firstName,
+      lastName,
+      phone,
+      country,
+      countryId,
+      language: rawLanguage,
+    } = req.body || {};
+    const language = normalizeLanguage(rawLanguage) || 'fr';
 
     // Champs requis
     if (!email || !password) {
@@ -368,6 +386,7 @@ exports.register = async (req, res) => {
       country: geoScope?.countryIso || (trimmedCountry ? trimmedCountry.toUpperCase() : null),
       countryId: geoScope?.countryId ?? null,
       regionId: null,
+      language,
       role: 'client', // rôle par défaut cohérent avec ta structure
       // countryId / regionId restent null pour rétro-compatibilité,
       // et peuvent être backfill Mali/Bamako via migrations/seed si tu le fais.
@@ -383,6 +402,7 @@ exports.register = async (req, res) => {
         role: user.role,
         countryId: user.countryId ?? null,
         regionId: user.regionId ?? null,
+        language: user.language || 'fr',
       },
     });
   } catch (e) {
@@ -438,6 +458,7 @@ exports.login = async (req, res) => {
         role: user.role,
         countryId: user.countryId ?? null,
         regionId: user.regionId ?? null,
+      language: user.language || 'fr',
       });
     } catch (jwtErr) {
       console.error('❌ Erreur signature JWT:', jwtErr.message);
@@ -469,6 +490,7 @@ exports.login = async (req, res) => {
         role: user.role,
         countryId: user.countryId ?? null,
         regionId: user.regionId ?? null,
+      language: user.language || 'fr',
       },
     });
   } catch (e) {
@@ -500,6 +522,7 @@ exports.me = async (req, res) => {
         'role',
         'countryId',
         'regionId',
+        'language',
         'lastLogin',
         'createdAt',
       ],
@@ -513,6 +536,46 @@ exports.me = async (req, res) => {
   } catch (e) {
     console.error('❌ Erreur /auth/me:', e);
     return res.status(500).json({ error: 'Erreur' });
+  }
+};
+
+/* ======================================================
+   🌐 /auth/me — Mise a jour profil (langue)
+====================================================== */
+exports.updateMe = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Non authentifie' });
+    }
+
+    const nextLanguage = normalizeLanguage(req.body?.language);
+    if (!nextLanguage || !SUPPORTED_LANGS.has(nextLanguage)) {
+      return res.status(400).json({ error: 'Langue invalide (fr/en uniquement)' });
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur introuvable' });
+    }
+
+    await user.update({ language: nextLanguage });
+
+    return res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        countryId: user.countryId ?? null,
+        regionId: user.regionId ?? null,
+      language: user.language || 'fr',
+      },
+    });
+  } catch (e) {
+    console.error('❌ Erreur /auth/me PATCH:', e);
+    return res.status(500).json({ error: 'Erreur mise a jour profil' });
   }
 };
 
@@ -558,6 +621,7 @@ exports.refresh = async (req, res) => {
       role: user.role,
       countryId: user.countryId ?? null,
       regionId: user.regionId ?? null,
+      language: user.language || 'fr',
     });
 
     const { rawToken, refreshRecord, maxAge: refreshMaxAge } =
@@ -821,6 +885,9 @@ exports.changePassword = async (req, res) => {
       .json({ error: 'Erreur lors du changement de mot de passe' });
   }
 };
+
+
+
 
 
 

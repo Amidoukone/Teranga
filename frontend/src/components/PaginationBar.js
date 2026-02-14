@@ -1,4 +1,7 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
+const ELLIPSIS = "…";
 
 function buildPageItems(current, total) {
   if (total <= 7) {
@@ -15,7 +18,7 @@ function buildPageItems(current, total) {
   for (let i = 0; i < sorted.length; i += 1) {
     const n = sorted[i];
     const prev = sorted[i - 1];
-    if (prev && n - prev > 1) result.push("…");
+    if (prev && n - prev > 1) result.push(ELLIPSIS);
     result.push(n);
   }
 
@@ -32,6 +35,7 @@ export default function PaginationBar({
   showPageSize = true,
   className = "",
 }) {
+  const { t } = useTranslation();
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safePage = Math.min(Math.max(page, 1), totalPages);
 
@@ -49,11 +53,9 @@ export default function PaginationBar({
     >
       <div className="text-xs sm:text-sm text-slate-500">
         {totalItems > 0 ? (
-          <>
-            Affichage {start}–{end} sur {totalItems}
-          </>
+          <>{t("pagination.range", { start, end, total: totalItems })}</>
         ) : (
-          <>Aucun résultat</>
+          <>{t("pagination.empty")}</>
         )}
       </div>
 
@@ -68,14 +70,14 @@ export default function PaginationBar({
               : "bg-white text-slate-800 border-slate-300 hover:bg-slate-50"
           }`}
         >
-          Précédent
+          {t("pagination.prev")}
         </button>
 
         <div className="flex items-center gap-1">
           {items.map((it, idx) =>
-            it === "…" ? (
+            it === ELLIPSIS ? (
               <span key={`ellipsis-${idx}`} className="px-2 text-slate-400">
-                …
+                {ELLIPSIS}
               </span>
             ) : (
               <button
@@ -104,7 +106,7 @@ export default function PaginationBar({
               : "bg-white text-slate-800 border-slate-300 hover:bg-slate-50"
           }`}
         >
-          Suivant
+          {t("pagination.next")}
         </button>
 
         {showPageSize && (
@@ -115,7 +117,7 @@ export default function PaginationBar({
           >
             {pageSizeOptions.map((n) => (
               <option key={n} value={n}>
-                {n} / page
+                {t("pagination.perPage", { count: n })}
               </option>
             ))}
           </select>

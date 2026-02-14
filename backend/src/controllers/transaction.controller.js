@@ -17,7 +17,11 @@ const {
   Order,
   Project,
 } = require("../../models");
-const { applyGeoScopeForModel, getCountryIdByIso } = require("../utils/geoScope");
+const {
+  applyGeoScopeForModel,
+  getCountryIdByIso,
+  getUserGeoScope,
+} = require("../utils/geoScope");
 
 // 🧱 Service interne Teranga : ACL / WHERE / Pagination
 const {
@@ -287,16 +291,19 @@ exports.create = async (req, res) => {
     });
 
     const isAdminLike = req.user?.role === "admin";
+    const userScope = getUserGeoScope
+      ? getUserGeoScope(req.user)
+      : { countryId: null, regionId: null };
     const bodyCountryId = toSafeInt(countryId ?? country_id);
     const bodyRegionId = toSafeInt(regionId ?? region_id);
 
     const finalCountryId = isAdminLike
       ? (inferredGeo.countryId ?? bodyCountryId ?? null)
-      : (inferredGeo.countryId ?? null);
+      : (inferredGeo.countryId ?? userScope.countryId ?? null);
 
     const finalRegionId = isAdminLike
       ? (inferredGeo.regionId ?? bodyRegionId ?? null)
-      : (inferredGeo.regionId ?? null);
+      : (inferredGeo.regionId ?? userScope.regionId ?? null);
 
     const payload = {
       userId: ownerUserId,
@@ -786,6 +793,10 @@ exports.remove = async (req, res) => {
 exports.summary = async (req, res) => {
   try {
     const where = applyGeoScopeForModel({}, req.user, Transaction);
+    const qCountryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const qRegionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
+    if (qCountryId) where.countryId = qCountryId;
+    if (qRegionId) where.regionId = qRegionId;
     const [revenues, expenses, commissions, adjustments] = await Promise.all([
       Transaction.sum("amount", { where: { ...where, type: "revenue" } }),
       Transaction.sum("amount", { where: { ...where, type: "expense" } }),
@@ -831,6 +842,10 @@ exports.report = async (req, res) => {
       req.user,
       Transaction
     );
+    const qCountryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const qRegionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
+    if (qCountryId) where.countryId = qCountryId;
+    if (qRegionId) where.regionId = qRegionId;
 
     const transactions = await Transaction.findAll({
       where,

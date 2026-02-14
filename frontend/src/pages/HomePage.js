@@ -18,9 +18,73 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation, Trans } from "react-i18next";
 
 export default function HomePage() {
+  const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
+  const heroStats = [
+    {
+      label: t("homePage.hero.stats.realTime.label"),
+      text: t("homePage.hero.stats.realTime.text"),
+    },
+    {
+      label: t("homePage.hero.stats.agents.label"),
+      text: t("homePage.hero.stats.agents.text"),
+    },
+    {
+      label: t("homePage.hero.stats.diaspora.label"),
+      text: t("homePage.hero.stats.diaspora.text"),
+    },
+  ];
+  const serviceCards = [
+    {
+      icon: Home,
+      title: t("homePage.services.cards.realEstate.title"),
+      desc: t("homePage.services.cards.realEstate.desc"),
+    },
+    {
+      icon: Truck,
+      title: t("homePage.services.cards.personal.title"),
+      desc: t("homePage.services.cards.personal.desc"),
+    },
+    {
+      icon: Globe,
+      title: t("homePage.services.cards.transparency.title"),
+      desc: t("homePage.services.cards.transparency.desc"),
+    },
+  ];
+  const pillars = [
+    {
+      title: t("homePage.why.pillars.clarity.title"),
+      text: t("homePage.why.pillars.clarity.text"),
+    },
+    {
+      title: t("homePage.why.pillars.credibility.title"),
+      text: t("homePage.why.pillars.credibility.text"),
+    },
+    {
+      title: t("homePage.why.pillars.support.title"),
+      text: t("homePage.why.pillars.support.text"),
+    },
+  ];
+  const contactFields = [
+    {
+      label: t("homePage.contact.form.name.label"),
+      type: "text",
+      placeholder: t("homePage.contact.form.name.placeholder"),
+    },
+    {
+      label: t("homePage.contact.form.email.label"),
+      type: "email",
+      placeholder: t("homePage.contact.form.email.placeholder"),
+    },
+  ];
+  const contactInfos = [
+    { icon: Mail, text: t("homePage.contact.info.email") },
+    { icon: Phone, text: t("homePage.contact.info.phone") },
+    { icon: MapPin, text: t("homePage.contact.info.address") },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900 scroll-smooth">
@@ -53,7 +117,7 @@ export default function HomePage() {
               "
             >
               <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-              Plateforme de confiance pour la diaspora africaine
+              {t("homePage.hero.badge")}
             </span>
           </motion.div>
 
@@ -70,10 +134,10 @@ export default function HomePage() {
               "
             >
               <span className="block text-blue-700">
-                La confiance à distance,
+                {t("homePage.hero.titleLine1")}
               </span>
               <span className="block text-blue-700">
-                la sérénité à portée de main.
+                {t("homePage.hero.titleLine2")}
               </span>
             </h1>
 
@@ -83,10 +147,10 @@ export default function HomePage() {
                 max-w-2xl mx-auto mb-10 sm:mb-12
               "
             >
-              Avec <strong>Teranga</strong>, la diaspora africaine suit et gère
-              ses biens, projets et démarches depuis l’étranger —
-              avec transparence, fiabilité et une présence humaine sur le
-              terrain.
+              <Trans
+                i18nKey="homePage.hero.description"
+                components={{ strong: <strong /> }}
+              />
             </p>
 
             {/* CTA principal */}
@@ -95,14 +159,14 @@ export default function HomePage() {
                 to="/login"
                 className="btn-primary rounded-full px-7 py-3 text-sm sm:text-base flex items-center gap-2"
               >
-                Se connecter <ArrowRight size={18} />
+                {t("homePage.hero.ctaLogin")} <ArrowRight size={18} />
               </Link>
 
               <Link
                 to="/register"
                 className="btn-secondary rounded-full px-7 py-3 text-sm sm:text-base"
               >
-                Créer un compte
+                {t("homePage.hero.ctaRegister")}
               </Link>
             </div>
           </motion.div>
@@ -117,20 +181,7 @@ export default function HomePage() {
               max-w-3xl mx-auto text-slate-600 text-sm
             "
           >
-            {[
-              {
-                label: "Suivi en temps réel",
-                text: "Photos, preuves et rapports visibles à tout moment.",
-              },
-              {
-                label: "Agents sur le terrain",
-                text: "Des personnes de confiance, proches de vos projets.",
-              },
-              {
-                label: "Pensé pour la diaspora",
-                text: "Une interface claire, utilisable depuis l’étranger.",
-              },
-            ].map((item) => (
+            {heroStats.map((item) => (
               <div
                 key={item.label}
                 className="
@@ -155,8 +206,7 @@ export default function HomePage() {
               leading-relaxed tracking-wide
             "
           >
-            Parce que la distance ne devrait jamais vous éloigner de ce qui
-            compte.
+            {t("homePage.hero.tagline")}
           </p>
         </section>
 
@@ -169,32 +219,15 @@ export default function HomePage() {
         >
           <div className="max-w-5xl mx-auto text-center mb-12 sm:mb-16">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
-              Nos services, votre tranquillité
+              {t("homePage.services.title")}
             </h2>
             <p className="text-slate-600 text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
-              Des solutions conçues pour simplifier la vie de la diaspora tout
-              en garantissant transparence et présence humaine sur place.
+              {t("homePage.services.subtitle")}
             </p>
           </div>
 
           <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
-            {[
-              {
-                icon: Home,
-                title: "Gestion immobilière",
-                desc: "Suivi des biens, visites, états des lieux, rapport en images, gestion locative… Un agent dédié sur place.",
-              },
-              {
-                icon: Truck,
-                title: "Services personnalisés",
-                desc: "Courses, démarches, chantiers, missions personnelles… Nous gérons pour vous, en toute confiance.",
-              },
-              {
-                icon: Globe,
-                title: "Transparence absolue",
-                desc: "Photos, preuves, documents, transactions : accès instantané à toutes vos informations, où que vous soyez.",
-              },
-            ].map(({ icon: Icon, title, desc }) => (
+            {serviceCards.map(({ icon: Icon, title, desc }) => (
               <motion.div
                 key={title}
                 whileHover={{ y: -4, scale: 1.015 }}
@@ -234,29 +267,15 @@ export default function HomePage() {
         >
           <div className="max-w-5xl mx-auto text-center mb-10 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
-              Pourquoi choisir Teranga ?
+              {t("homePage.why.title")}
             </h2>
             <p className="text-slate-600 text-base sm:text-lg max-w-3xl mx-auto leading-relaxed">
-              Parce qu’il ne s’agit pas seulement d’une application, mais d’un
-              lien de confiance entre vous, vos proches et vos projets au pays.
+              {t("homePage.why.subtitle")}
             </p>
           </div>
 
           <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-sm">
-            {[
-              {
-                title: "Clarté",
-                text: "Interface simple, lisible, pensée pour être utilisée sur mobile, même avec peu de temps.",
-              },
-              {
-                title: "Crédibilité",
-                text: "Suivi documenté, preuves visuelles, historique clair : vous gardez toujours la main.",
-              },
-              {
-                title: "Accompagnement",
-                text: "Une équipe à taille humaine, disponible et à l’écoute des réalités de la diaspora.",
-              },
-            ].map((item) => (
+            {pillars.map((item) => (
               <div
                 key={item.title}
                 className="
@@ -282,11 +301,10 @@ export default function HomePage() {
         >
           <div className="max-w-5xl mx-auto text-center mb-10 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
-              Teranga : bien plus qu’un service
+              {t("homePage.about.title")}
             </h2>
             <p className="text-slate-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-              Une plateforme inspirée de la confiance et de l&apos;hospitalité,
-              offrant un lien direct entre diaspora et projets au pays.
+              {t("homePage.about.subtitle")}
             </p>
           </div>
 
@@ -301,20 +319,13 @@ export default function HomePage() {
             "
           >
             <p>
-              Le mot <strong>“Teranga”</strong> évoque chaleur humaine,
-              confiance et respect. Notre plateforme reprend ces valeurs pour
-              offrir une expérience moderne et rassurante.
+              <Trans
+                i18nKey="homePage.about.paragraphs.p1"
+                components={{ strong: <strong /> }}
+              />
             </p>
-            <p>
-              Vos projets méritent une visibilité totale : photos, preuves,
-              rapports, transactions, progression… tout est accessible en temps
-              réel, depuis n&apos;importe où.
-            </p>
-            <p>
-              Grâce à nos agents certifiés et à une interface claire, vous
-              gardez toujours le contrôle, sans devoir être physiquement sur
-              place.
-            </p>
+            <p>{t("homePage.about.paragraphs.p2")}</p>
+            <p>{t("homePage.about.paragraphs.p3")}</p>
           </motion.div>
 
           <div className="text-center mt-10 sm:mt-12">
@@ -322,7 +333,7 @@ export default function HomePage() {
               to="/register"
               className="btn-primary rounded-full px-7 py-3 text-sm sm:text-base inline-flex items-center gap-2"
             >
-              Rejoindre Teranga <HeartHandshake size={18} />
+              {t("homePage.about.cta")} <HeartHandshake size={18} />
             </Link>
           </div>
         </section>
@@ -336,10 +347,10 @@ export default function HomePage() {
         >
           <div className="max-w-6xl mx-auto text-center mb-10 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
-              Contactez-nous
+              {t("homePage.contact.title")}
             </h2>
             <p className="text-slate-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-              Notre équipe vous répond avec attention sous 24h.
+              {t("homePage.contact.subtitle")}
             </p>
           </div>
 
@@ -349,25 +360,14 @@ export default function HomePage() {
               onSubmit={(e) => {
                 e.preventDefault();
                 // Même comportement que ta version actuelle : simple alert côté client.
-                alert("Merci ! Votre message a bien été envoyé.");
+                alert(t("homePage.contact.form.success"));
               }}
               className="
                 bg-slate-50 border border-slate-200/70 rounded-3xl p-7 sm:p-8
                 shadow-sm flex flex-col gap-5
               "
             >
-              {[
-                {
-                  label: "Nom complet",
-                  type: "text",
-                  placeholder: "Votre nom",
-                },
-                {
-                  label: "Adresse email",
-                  type: "email",
-                  placeholder: "email@example.com",
-                },
-              ].map((input) => (
+              {contactFields.map((input) => (
                 <div key={input.label} className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-slate-700">
                     {input.label}
@@ -387,12 +387,12 @@ export default function HomePage() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-slate-700">
-                  Message
+                  {t("homePage.contact.form.message.label")}
                 </label>
                 <textarea
                   required
                   rows={4}
-                  placeholder="Votre message..."
+                  placeholder={t("homePage.contact.form.message.placeholder")}
                   className="
                     w-full border border-slate-300 rounded-xl px-3 py-2 text-sm
                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none
@@ -405,23 +405,13 @@ export default function HomePage() {
                 type="submit"
                 className="btn-primary rounded-full self-start px-6 py-2.5 text-sm shadow-sm"
               >
-                Envoyer le message
+                {t("homePage.contact.form.submit")}
               </button>
             </form>
 
             {/* Infos de contact */}
             <div className="flex flex-col justify-center space-y-5 sm:space-y-6 text-slate-700">
-              {[
-                { icon: Mail, text: "contact@teranga-platform.com" },
-                {
-                  icon: Phone,
-                  text: "+223 70 66 83 64 / +223 94 16 12 66",
-                },
-                {
-                  icon: MapPin,
-                  text: "Hamdallaye ACI 200, Bamako — Mali",
-                },
-              ].map(({ icon: Icon, text }) => (
+              {contactInfos.map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-blue-100/70 flex items-center justify-center">
                     <Icon className="text-blue-600" size={18} />
@@ -431,9 +421,7 @@ export default function HomePage() {
               ))}
 
               <p className="text-sm text-slate-500 leading-relaxed pt-2">
-                Nous vous accompagnons avec écoute, respect et
-                professionnalisme, pour que chaque échange soit simple et
-                rassurant.
+                {t("homePage.contact.note")}
               </p>
             </div>
           </div>
@@ -451,9 +439,11 @@ export default function HomePage() {
           "
         >
           <p>
-            © {currentYear}{" "}
-            <span className="text-blue-400 font-medium">Teranga</span> — Tous
-            droits réservés.
+            <Trans
+              i18nKey="homePage.footer.copyright"
+              values={{ year: currentYear }}
+              components={{ brand: <span className="text-blue-400 font-medium" /> }}
+            />
           </p>
 
           <div className="flex gap-5 sm:gap-6">
@@ -461,25 +451,25 @@ export default function HomePage() {
               href="#accueil"
               className="hover:text-blue-300 transition-colors"
             >
-              Accueil
+              {t("homePage.footer.links.home")}
             </a>
             <a
               href="#services"
               className="hover:text-blue-300 transition-colors"
             >
-              Services
+              {t("homePage.footer.links.services")}
             </a>
             <a
               href="#apropos"
               className="hover:text-blue-300 transition-colors"
             >
-              À propos
+              {t("homePage.footer.links.about")}
             </a>
             <a
               href="#contact"
               className="hover:text-blue-300 transition-colors"
             >
-              Contact
+              {t("homePage.footer.links.contact")}
             </a>
           </div>
         </div>

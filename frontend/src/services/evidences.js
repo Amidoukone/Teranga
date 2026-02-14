@@ -1,5 +1,6 @@
 // frontend/src/services/evidences.js
 import api from './api';
+import { mergeGeoParams } from './geo';
 
 const UPLOAD_TIMEOUT_MS =
   Number(process.env.REACT_APP_UPLOAD_TIMEOUT_MS) || 120000;
@@ -93,6 +94,7 @@ export async function getEvidences(taskId) {
       ...authHeader(),
     },
     withCredentials: true,
+    params: mergeGeoParams(),
   });
 
   return asEvidenceArray(data);
@@ -170,6 +172,7 @@ export async function getOrderEvidences(orderId) {
       ...authHeader(),
     },
     withCredentials: true,
+    params: mergeGeoParams(),
   });
 
   return asEvidenceArray(data);

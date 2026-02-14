@@ -1,10 +1,13 @@
 "use strict";
 
-const { Task, Service, User, Property, Country } = require("../../models");
+const { Task, Service, User, Property } = require("../../models");
 const { Op } = require("sequelize");
 
-// 🌍 Geo scope utils (admin scoped)
-const { getUserGeoScope } = require("../utils/geoScope");
+// 🌍 Geo scope utils (strict)
+const {
+  applyGeoScopeForModel,
+  canAccessGeoResource,
+} = require("../utils/geoScope");
 
 // 🌍 Labels FR
 const {
@@ -39,87 +42,18 @@ function toNullableNumber(v) {
 }
 
 /**
- * ✅ Admin global vs admin scoped
- * - admin global : role=admin ET (countryId/regionId NULL)
- * - admin scoped : role=admin avec countryId/regionId renseignés
- */
-function isGlobalAdmin(user) {
-  if (!user) return false;
-  if (user.role !== "admin") return false;
-  const c = user.countryId ?? null;
-  const r = user.regionId ?? null;
-  return c == null && r == null;
-}
-
-/**
  * ✅ Vérifie qu'une ressource est dans le scope geo du user (admin scoped)
  * - priorité région
  * - fallback pays
  */
 function canAccessByGeoScope(user, resource) {
-  if (!user) return false;
-  if (isGlobalAdmin(user)) return true;
-  if (user.role !== "admin") return true; // autres rôles: pas de scope
-  const scope = getUserGeoScope
-    ? getUserGeoScope(user)
-    : { countryId: toSafeInt(user.countryId), regionId: toSafeInt(user.regionId) };
-
-  const resRegion = toSafeInt(resource?.regionId ?? resource?.region_id);
-  const resCountry = toSafeInt(resource?.countryId ?? resource?.country_id);
-
-  if (scope.regionId) return resRegion != null && String(resRegion) === String(scope.regionId);
-  if (scope.countryId) return resCountry != null && String(resCountry) === String(scope.countryId);
-  return false;
+  return canAccessGeoResource(resource, user);
 }
 
-async function getCountryIsoById(countryId) {
-  if (!countryId) return null;
-  const record = await Country.findByPk(countryId, {
-    attributes: ["isoCode", "isActive"],
-  });
-  if (!record || record.isActive === false) return null;
-  return record.isoCode || null;
-}
-
-async function applyGeoScopeWithLegacy(where = {}, user) {
-  if (!user) return where;
-  if (isGlobalAdmin(user)) return where;
-
-  const scope = getUserGeoScope
-    ? getUserGeoScope(user)
-    : { countryId: toSafeInt(user.countryId), regionId: toSafeInt(user.regionId) };
-
-  if (scope.regionId) {
-    return { ...where, regionId: scope.regionId };
-  }
-
-  if (scope.countryId) {
-    const iso = await getCountryIsoById(scope.countryId);
-    const scopeOr = [{ countryId: scope.countryId }];
-
-    if (iso) {
-      scopeOr.push({
-        [Op.and]: [
-          { countryId: null },
-          { regionId: null },
-          { "$service.client.country$": iso },
-        ],
-      });
-      scopeOr.push({
-        [Op.and]: [
-          { countryId: null },
-          { regionId: null },
-          { "$property.owner.country$": iso },
-        ],
-      });
-    }
-
-    const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
-    andFilters.push({ [Op.or]: scopeOr });
-    return { ...where, [Op.and]: andFilters };
-  }
-
-  return { ...where, id: 0 };
+function applyTaskGeoScope(where = {}, user) {
+  return applyGeoScopeForModel
+    ? applyGeoScopeForModel(where, user, Task, { includeClients: true })
+    : where;
 }
 
 /* ============================================================
@@ -258,12 +192,10 @@ exports.create = async (req, res) => {
     const geoCountryId = service?.countryId ?? property?.countryId ?? null;
     const geoRegionId = service?.regionId ?? property?.regionId ?? null;
 
-    // 🌍 Scope admin scoped
-    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-      const pseudo = { countryId: geoCountryId, regionId: geoRegionId };
-      if (!canAccessByGeoScope(req.user, pseudo)) {
-        return res.status(403).json({ error: "Création hors scope géographique" });
-      }
+    // 🌍 Scope strict
+    const pseudo = { countryId: geoCountryId, regionId: geoRegionId };
+    if (!canAccessByGeoScope(req.user, pseudo)) {
+      return res.status(403).json({ error: "Création hors scope géographique" });
     }
 
     const created = await Task.create({
@@ -312,6 +244,10 @@ exports.list = async (req, res) => {
     if (req.query.status) where.status = String(req.query.status).trim();
     if (req.query.type) where.type = String(req.query.type).trim();
     if (req.query.priority) where.priority = String(req.query.priority).trim();
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
+    if (countryId) where.countryId = countryId;
+    if (regionId) where.regionId = regionId;
 
     // ACL métier existante (inchangée)
     if (req.user.role === "agent") {
@@ -328,9 +264,7 @@ exports.list = async (req, res) => {
     }
 
     // 🌍 GeoScope (admin scoped)
-    if (req.user.role === "admin" || req.user.role === "agent") {
-      where = await applyGeoScopeWithLegacy(where, req.user);
-    }
+    where = applyTaskGeoScope(where, req.user);
 
     const tasks = await Task.findAll({
       where,
@@ -366,6 +300,10 @@ exports.listByService = async (req, res) => {
     }
 
     let where = { serviceId };
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
+    if (countryId) where.countryId = countryId;
+    if (regionId) where.regionId = regionId;
 
     if (req.user.role === "agent") {
       where[Op.or] = [
@@ -380,9 +318,7 @@ exports.listByService = async (req, res) => {
     }
 
     // 🌍 GeoScope (admin scoped)
-    if (req.user.role === "admin" || req.user.role === "agent") {
-      where = await applyGeoScopeWithLegacy(where, req.user);
-    }
+    where = applyTaskGeoScope(where, req.user);
 
     const tasks = await Task.findAll({
       where,
@@ -415,11 +351,9 @@ exports.updateStatus = async (req, res) => {
     const task = await Task.findByPk(id, { include: BASE_INCLUDES });
     if (!task) return res.status(404).json({ error: "Tâche introuvable" });
 
-    // 🌍 Scope admin scoped
-    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-      if (!canAccessByGeoScope(req.user, task)) {
-        return res.status(403).json({ error: "Tâche hors scope géographique" });
-      }
+    // 🌍 Scope strict
+    if (!canAccessByGeoScope(req.user, task)) {
+      return res.status(403).json({ error: "Tâche hors scope géographique" });
     }
 
     // ACL existante
@@ -493,11 +427,9 @@ exports.assignAgent = async (req, res) => {
     const task = await Task.findByPk(id, { include: BASE_INCLUDES });
     if (!task) return res.status(404).json({ error: "Tâche introuvable" });
 
-    // 🌍 Scope admin scoped
-    if (!isGlobalAdmin(req.user)) {
-      if (!canAccessByGeoScope(req.user, task)) {
-        return res.status(403).json({ error: "Tâche hors scope géographique" });
-      }
+    // 🌍 Scope strict
+    if (!canAccessByGeoScope(req.user, task)) {
+      return res.status(403).json({ error: "Tâche hors scope géographique" });
     }
 
     if (task.status !== "created") {
@@ -511,18 +443,17 @@ exports.assignAgent = async (req, res) => {
       return res.status(400).json({ error: "Agent invalide" });
     }
 
-    // (optionnel mais recommandé) : si admin scoped/master, empêcher d'assigner un agent hors scope
-    if (!isGlobalAdmin(req.user) && req.user.role === "admin") {
-      // si ton User a countryId/regionId, on protège
-      const pseudoAgent = {
-        countryId: agent.countryId ?? agent.country_id ?? null,
-        regionId: agent.regionId ?? agent.region_id ?? null,
-      };
-      // Si l'agent n'a pas de scope, on autorise (rétro-compat)
-      const hasScope = pseudoAgent.countryId != null || pseudoAgent.regionId != null;
-      if (hasScope && !canAccessByGeoScope(req.user, pseudoAgent)) {
-        return res.status(403).json({ error: "Agent hors scope géographique" });
-      }
+    // Empêcher d'assigner un agent hors scope (strict)
+    const pseudoAgent = {
+      countryId: agent.countryId ?? agent.country_id ?? null,
+      regionId: agent.regionId ?? agent.region_id ?? null,
+    };
+    if (!canAccessByGeoScope(req.user, pseudoAgent)) {
+      return res.status(403).json({ error: "Agent hors scope géographique" });
+    }
+
+    if (!canAccessGeoResource(task, agent)) {
+      return res.status(403).json({ error: "Agent hors scope de la tâche" });
     }
 
     await task.update({ assignedTo: agent.id });

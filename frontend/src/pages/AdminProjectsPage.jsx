@@ -15,6 +15,8 @@ import {
 } from '../services/projects';
 import { createTransaction } from '../services/transactions';
 import { CURRENCY_LABELS } from '../utils/labels';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 import {
   normalizeRole,
   isMasterUser,
@@ -23,25 +25,21 @@ import {
 /* ============================================================
    🔧 Typologies et statuts
 ============================================================ */
-const PROJECT_TYPES = [
-  { value: 'immobilier', label: 'Immobilier' },
-  { value: 'agricole', label: 'Agricole' },
-  { value: 'commerce', label: 'Commerce' },
-  { value: 'autre', label: 'Autre' },
-];
-
-const PROJECT_STATUSES = [
-  { value: 'created', label: 'Créé' },
-  { value: 'in_progress', label: 'En cours' },
-  { value: 'completed', label: 'Terminé' },
-  { value: 'validated', label: 'Validé' },
-  { value: 'cancelled', label: 'Annulé' },
+const CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
+const PROJECT_TYPE_VALUES = ['immobilier', 'agricole', 'commerce', 'autre'];
+const PROJECT_STATUS_VALUES = [
+  'created',
+  'in_progress',
+  'completed',
+  'validated',
+  'cancelled',
 ];
 
 /* ============================================================
    💰 Formulaire transaction projet (inchangé)
 ============================================================ */
 function ProjectTransactionForm({ project, onClose, onSuccess }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     type: 'expense',
     amount: '',
@@ -51,6 +49,14 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
     proofFile: null,
   });
   const [loading, setLoading] = useState(false);
+  const currencyOptions = useMemo(
+    () =>
+      CURRENCY_CODES.map((code) => ({
+        value: code,
+        label: t(`currency.${code}`, { defaultValue: code }),
+      })),
+    [t]
+  );
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -65,7 +71,7 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
 
       await createTransaction(payload);
 
-      alert('✅ Transaction enregistrée avec succès');
+      alert(t('projects.transaction.alerts.createSuccess'));
       onSuccess?.();
       onClose?.();
     } catch (err) {
@@ -73,7 +79,7 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
       alert(
         err?.response?.data?.error ||
           err?.message ||
-          "Erreur lors de la création de la transaction."
+          t('projects.transaction.alerts.createError')
       );
     } finally {
       setLoading(false);
@@ -83,9 +89,9 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
   return (
     <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 mt-3 shadow-sm">
       <h4 className="text-sm font-semibold text-gray-900 mb-2 break-words">
-        💰 Nouvelle transaction pour&nbsp;
+        💰 {t('projects.transaction.titleFor')}{' '}
         <span className="font-bold text-slate-900">
-          {project.title || `Projet #${project.id}`}
+          {project.title || t('projects.itemFallback', { id: project.id })}
         </span>
       </h4>
 
@@ -96,28 +102,32 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
         {/* Type */}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Type
+            {t('projects.transaction.typeLabel')}
           </label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
           >
-            <option value="expense">Dépense</option>
-            <option value="revenue">Revenu</option>
-            <option value="commission">Commission</option>
-            <option value="adjustment">Ajustement</option>
+            <option value="expense">{t('transactions.type.expense')}</option>
+            <option value="revenue">{t('transactions.type.revenue')}</option>
+            <option value="commission">
+              {t('transactions.type.commission')}
+            </option>
+            <option value="adjustment">
+              {t('transactions.type.adjustment')}
+            </option>
           </select>
         </div>
 
         {/* Montant */}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Montant
+            {t('projects.transaction.amountLabel')}
           </label>
           <input
             type="number"
-            placeholder="Ex : 250000"
+            placeholder={t('projects.transaction.amountPlaceholder')}
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
@@ -128,16 +138,16 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
         {/* Devise */}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Devise
+            {t('projects.transaction.currencyLabel')}
           </label>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
           >
-            {Object.entries(CURRENCY_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
+            {currencyOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>
@@ -146,7 +156,7 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
         {/* Méthode paiement */}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Méthode de paiement (optionnel)
+            {t('projects.transaction.paymentMethodLabelOptional')}
           </label>
           <input
             value={form.paymentMethod}
@@ -161,7 +171,7 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
         <div className="sm:col-span-2">
           <textarea
             rows={2}
-            placeholder="Détail de la transaction…"
+            placeholder={t('projects.transaction.descriptionPlaceholder')}
             value={form.description}
             onChange={(e) =>
               setForm({ ...form, description: e.target.value })
@@ -177,7 +187,7 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
             onClick={onClose}
             className="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-200"
           >
-            Annuler
+            {t('projects.transaction.cancel')}
           </button>
           <button
             type="submit"
@@ -186,7 +196,9 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
               loading ? 'bg-blue-300' : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
-            {loading ? 'Enregistrement…' : '💾 Enregistrer'}
+            {loading
+              ? t('projects.transaction.saving')
+              : `💾 ${t('projects.transaction.save')}`}
           </button>
         </div>
       </form>
@@ -200,6 +212,8 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
    - AUCUN filtre geo côté frontend : le backend est source de vérité
 ============================================================ */
 export default function AdminProjectsPage() {
+  const { formatNumber, formatDate } = useLocale();
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [isAdmin, setIsAdmin] = useState(null);
@@ -229,6 +243,29 @@ export default function AdminProjectsPage() {
 
   // MASTER = admin + scope geo (déduction frontend)
   const isMaster = useMemo(() => isMasterUser(currentUser), [currentUser]);
+  const projectTypeOptions = useMemo(
+    () =>
+      PROJECT_TYPE_VALUES.map((value) => ({
+        value,
+        label: t(`projects.type.${value}`, { defaultValue: value }),
+      })),
+    [t]
+  );
+  const projectStatusOptions = useMemo(
+    () =>
+      PROJECT_STATUS_VALUES.map((value) => ({
+        value,
+        label: t(`projects.status.${value}`, { defaultValue: value }),
+      })),
+    [t]
+  );
+  const getProjectTypeLabel = useCallback(
+    (value) => {
+      if (!value) return t('common.dash');
+      return t(`projects.type.${value}`, { defaultValue: value });
+    },
+    [t]
+  );
 
   /* ============================================================
      👮 Vérification admin via /auth/me
@@ -325,10 +362,10 @@ export default function AdminProjectsPage() {
       const toSend = agentId ? Number(agentId) : null;
       await assignAgentToProject(projectId, toSend);
       await loadProjects();
-      alert('✅ Agent assigné avec succès');
+      alert(t('projects.alerts.assignSuccess'));
     } catch (err) {
       console.error('❌ Erreur assignation agent:', err);
-      alert("Erreur lors de l'assignation");
+      alert(t('projects.alerts.assignError'));
     }
   }
 
@@ -360,10 +397,10 @@ export default function AdminProjectsPage() {
       await updateProject(projectId, payload);
 
       await loadProjects();
-      alert('✅ Statut mis à jour avec succès');
+      alert(t('projects.alerts.statusUpdateSuccess'));
     } catch (err) {
       console.error('❌ Erreur mise à jour statut:', err);
-      alert('Erreur lors de la mise à jour du statut');
+      alert(t('projects.alerts.statusUpdateError'));
     }
   }
 
@@ -416,7 +453,9 @@ export default function AdminProjectsPage() {
   if (isAdmin === null) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-500 text-lg animate-pulse">Chargement…</p>
+        <p className="text-gray-500 text-lg animate-pulse">
+          {t('adminProjects.loading')}
+        </p>
       </div>
     );
   }
@@ -431,11 +470,10 @@ export default function AdminProjectsPage() {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 break-words">
-              🧩 Gestion des Projets
+              🧩 {t('adminProjects.title')}
             </h1>
             <p className="text-sm text-gray-600 mt-1 break-words">
-              Suivi des projets clients, assignation des agents et gestion des
-              transactions liées.
+              {t('adminProjects.subtitle')}
             </p>
 
             {/* ✅ Info scope (UX seulement, aucun filtre frontend) */}
@@ -443,16 +481,22 @@ export default function AdminProjectsPage() {
               <div className="mt-2 text-xs text-gray-500">
                 <span className="inline-flex items-center gap-2">
                   <span className="px-2 py-0.5 rounded-full border border-gray-200 bg-gray-50 text-gray-700">
-                    {isMaster ? 'MASTER' : 'ADMINISTRATEUR'}
+                    {isMaster
+                      ? t('adminProjects.scope.badge.master')
+                      : t('adminProjects.scope.badge.admin')}
                   </span>
                   {isMaster && (
                     <span className="text-gray-500">
-                      Périmètre :
+                      {t('adminProjects.scope.perimeter')}
                       {currentUser?.countryId != null
-                        ? ` Pays #${currentUser.countryId}`
+                        ? ` ${t('adminProjects.scope.country', {
+                            id: currentUser.countryId,
+                          })}`
                         : ''}
                       {currentUser?.regionId != null
-                        ? ` · Région #${currentUser.regionId}`
+                        ? ` · ${t('adminProjects.scope.region', {
+                            id: currentUser.regionId,
+                          })}`
                         : ''}
                     </span>
                   )}
@@ -471,7 +515,9 @@ export default function AdminProjectsPage() {
                   : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
               }`}
             >
-              {loading ? 'Chargement…' : '🔄 Rafraîchir'}
+              {loading
+                ? t('adminProjects.buttons.refreshLoading')
+                : `🔄 ${t('adminProjects.buttons.refresh')}`}
             </button>
           </div>
         </div>
@@ -482,14 +528,14 @@ export default function AdminProjectsPage() {
             {/* Recherche */}
             <div className="md:col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Recherche
+                {t('adminProjects.filters.searchLabel')}
               </label>
               <input
                 value={filters.q}
                 onChange={(e) =>
                   setFilters((f) => ({ ...f, q: e.target.value }))
                 }
-                placeholder="Titre, client, agent, description…"
+                placeholder={t('adminProjects.filters.searchPlaceholder')}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -497,7 +543,7 @@ export default function AdminProjectsPage() {
             {/* Statut */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Statut
+                {t('adminProjects.filters.statusLabel')}
               </label>
               <select
                 value={filters.status}
@@ -506,8 +552,10 @@ export default function AdminProjectsPage() {
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">Tous les statuts</option>
-                {PROJECT_STATUSES.map((s) => (
+                <option value="all">
+                  {t('adminProjects.filters.statusAll')}
+                </option>
+                {projectStatusOptions.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
                   </option>
@@ -518,7 +566,7 @@ export default function AdminProjectsPage() {
             {/* Type */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Type
+                {t('adminProjects.filters.typeLabel')}
               </label>
               <select
                 value={filters.type}
@@ -527,10 +575,12 @@ export default function AdminProjectsPage() {
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">Tous les types</option>
-                {PROJECT_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
+                <option value="all">
+                  {t('adminProjects.filters.typeAll')}
+                </option>
+                {projectTypeOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
                   </option>
                 ))}
               </select>
@@ -540,14 +590,16 @@ export default function AdminProjectsPage() {
           {/* Bas des filtres */}
           <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-500">
             <div>
-              {filteredProjects.length} projet(s) affiché(s) sur{' '}
-              {projects.length}
+              {t('adminProjects.filters.count', {
+                count: filteredProjects.length,
+                total: projects.length,
+              })}
             </div>
             <button
               onClick={() => setFilters({ q: '', status: 'all', type: 'all' })}
               className="w-full sm:w-auto px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium text-gray-700 text-center transition"
             >
-              Réinitialiser les filtres
+              {t('adminProjects.filters.reset')}
             </button>
           </div>
         </div>
@@ -558,19 +610,19 @@ export default function AdminProjectsPage() {
             <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                  Projet
+                  {t('adminProjects.table.project')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                  Client
+                  {t('adminProjects.table.client')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                  Agent
+                  {t('adminProjects.table.agent')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                  Statut
+                  {t('adminProjects.table.status')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                  Actions
+                  {t('adminProjects.table.actions')}
                 </th>
               </tr>
             </thead>
@@ -582,7 +634,7 @@ export default function AdminProjectsPage() {
                     colSpan={5}
                     className="text-center py-8 text-gray-500 italic"
                   >
-                    Aucun projet correspondant aux filtres.
+                    {t('adminProjects.list.empty')}
                   </td>
                 </tr>
               ) : (
@@ -590,22 +642,25 @@ export default function AdminProjectsPage() {
                   const trxOpen = openTrxProjectId === p.id;
 
                   const budgetLabel = p.budget
-                    ? `${Number(p.budget).toLocaleString('fr-FR')} XOF`
-                    : '—';
+                    ? `${formatNumber(p.budget)} ${t(
+                        'projects.card.currency',
+                        { defaultValue: 'XOF' }
+                      )}`
+                    : t('common.dash');
 
                   const clientName = p.client
                     ? `${p.client.firstName || ''} ${p.client.lastName || ''}`
                         .trim() ||
                       p.client.email ||
-                      '—'
-                    : '—';
+                      t('common.dash')
+                    : t('common.dash');
 
                   const agentName = p.agent
                     ? `${p.agent.firstName || ''} ${p.agent.lastName || ''}`
                         .trim() ||
                       p.agent.email ||
-                      'Non assigné'
-                    : 'Non assigné';
+                      t('projects.card.unassigned')
+                    : t('projects.card.unassigned');
 
                   return (
                     <tr
@@ -615,19 +670,22 @@ export default function AdminProjectsPage() {
                       {/* Projet : titre / type / budget / description courte */}
                       <td className="px-4 py-3 align-top max-w-xs md:max-w-sm">
                         <div className="font-semibold text-gray-900 break-words">
-                          {p.title || `Projet #${p.id}`}
+                          {p.title || t('projects.itemFallback', { id: p.id })}
                         </div>
                         <div className="mt-1 text-xs text-gray-500 flex flex-wrap gap-2 items-center">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                            {p.type || 'Type non défini'}
+                            {p.type
+                              ? getProjectTypeLabel(p.type)
+                              : t('projects.type.unknown')}
                           </span>
                           <span className="text-[11px] text-gray-500">
-                            Budget : <strong>{budgetLabel}</strong>
+                            {t('adminProjects.list.budgetLabel')}{' '}
+                            <strong>{budgetLabel}</strong>
                           </span>
                           {p.createdAt && (
                             <span className="text-[11px] text-gray-400">
-                              Créé le{' '}
-                              {new Date(p.createdAt).toLocaleDateString('fr-FR')}
+                              {t('adminProjects.list.createdAt')}{' '}
+                              {formatDate(p.createdAt)}
                             </span>
                           )}
                         </div>
@@ -657,7 +715,7 @@ export default function AdminProjectsPage() {
                           }
                           className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-blue-500"
                         >
-                          {PROJECT_STATUSES.map((s) => (
+                          {projectStatusOptions.map((s) => (
                             <option key={s.value} value={s.value}>
                               {s.label}
                             </option>
@@ -674,7 +732,9 @@ export default function AdminProjectsPage() {
                             onChange={(e) => handleAssign(p.id, e.target.value)}
                             className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-blue-500"
                           >
-                            <option value="">— Assigner un agent —</option>
+                            <option value="">
+                              {t('projects.actions.assignAgentPlaceholder')}
+                            </option>
                             {agents.map((a) => (
                               <option key={a.id} value={a.id}>
                                 {`${a.firstName || ''} ${a.lastName || ''}`
@@ -695,8 +755,8 @@ export default function AdminProjectsPage() {
                             }`}
                           >
                             {trxOpen
-                              ? '➖ Fermer la transaction'
-                              : '💰 Ajouter une transaction'}
+                              ? t('adminProjects.actions.closeTransaction')
+                              : t('adminProjects.actions.addTransaction')}
                           </button>
 
                           {/* Formulaire transaction liée */}
@@ -720,3 +780,4 @@ export default function AdminProjectsPage() {
     </div>
   );
 }
+

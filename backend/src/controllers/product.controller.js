@@ -335,7 +335,9 @@ exports.list = async (req, res) => {
     }
 
     // 🌍 scope (safe selon modèle)
-    where = applyGeoScopeForModel(where, req.user, Product);
+    where = applyGeoScopeForModel(where, req.user, Product, {
+      includeClients: true,
+    });
 
     const { rows, count } = await Product.findAndCountAll({
       where,
@@ -372,7 +374,9 @@ exports.detail = async (req, res) => {
     if (!id) return res.status(400).json({ error: 'ID invalide' });
 
     const prod = await Product.findOne({
-      where: applyGeoScopeForModel({ id }, req.user, Product),
+      where: applyGeoScopeForModel({ id }, req.user, Product, {
+        includeClients: true,
+      }),
       include: [{ model: Category, as: 'category' }],
     });
 

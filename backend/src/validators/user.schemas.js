@@ -15,6 +15,7 @@ const userBaseSchema = Joi.object({
   firstName: Joi.string().allow('', null).trim(),
   lastName: Joi.string().allow('', null).trim(),
   phone: Joi.string().allow('', null).trim(),
+  language: Joi.string().allow('', null).trim(),
   country: Joi.string().allow('', null).trim(),
   role: roleSchema,
   countryId: idSchema.allow(null),

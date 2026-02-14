@@ -13,9 +13,10 @@ const {
 const imageKit = require('../helpers/teranga-imagekit');
 const path = require('path');
 
-// ✅ GeoScope (admin scoped)
+// ✅ GeoScope (strict + admin global)
 const {
-  applyGeoScope,       // ✅ on utilise le scope simple pour Property
+  applyGeoScopeForModel,
+  canAccessGeoResource,
   getUserGeoScope,
   isGlobalAdmin,
 } = require('../utils/geoScope');
@@ -81,67 +82,7 @@ function toScopeFromObj(obj) {
 }
 
 function canAccessByGeoScope(user, resource) {
-  if (!user) return false;
-  if (isGlobalAdmin(user)) return true;
-
-  const scope = getUserGeoScope ? getUserGeoScope(user) : { countryId: null, regionId: null };
-  const r = toScopeFromObj(resource);
-
-  // rétro-compat : si la resource n’a pas de scope, on autorise
-  if (!r.countryId && !r.regionId) return true;
-
-  if (scope.regionId) return String(r.regionId) === String(scope.regionId);
-  if (scope.countryId) return String(r.countryId) === String(scope.countryId);
-  return true;
-}
-
-/**
- * ✅ Fallback legacy spécifique à Property (Biens)
- * Objectif: si un bien ancien n'a pas countryId/regionId,
- * on le rattache au pays via owner.country (ISO).
- *
- * ⚠️ Important:
- * - On utilise "$owner.country$" uniquement, car Property inclut "owner".
- * - On NE DOIT PAS utiliser "$client.country$" ici (alias absent).
- */
-async function applyLegacyOwnerCountryScopeForProperties(where = {}, user) {
-  if (!user) return where;
-  if (isGlobalAdmin(user)) return where;
-
-  // uniquement admin/agent
-  if (!['admin', 'agent'].includes(user.role)) return where;
-
-  const scope = getUserGeoScope ? getUserGeoScope(user) : { countryId: null, regionId: null };
-
-  // Si scope région => pas de fallback legacy ISO (on filtre par regionId déjà)
-  if (scope.regionId) return where;
-
-  // Si pas de scope pays => rien à faire
-  if (!scope.countryId) return where;
-
-  // ISO du pays scope
-  const record = await Country.findByPk(scope.countryId, { attributes: ['isoCode', 'isActive'] });
-  if (!record || record.isActive === false || !record.isoCode) return where;
-
-  const iso = record.isoCode;
-
-  // On ajoute: (countryId = scope.countryId) OR (countryId IS NULL AND regionId IS NULL AND owner.country = ISO)
-  // Mais attention: si le where contient déjà un Op.and, on l'étend proprement.
-  const orScope = [
-    { countryId: scope.countryId },
-    {
-      [Op.and]: [
-        { countryId: null },
-        { regionId: null },
-        { '$owner.country$': iso },
-      ],
-    },
-  ];
-
-  const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
-  andFilters.push({ [Op.or]: orScope });
-
-  return { ...where, [Op.and]: andFilters };
+  return canAccessGeoResource(resource, user);
 }
 
 /* ============================================================
@@ -256,6 +197,8 @@ exports.list = async (req, res) => {
   try {
     const { limit, offset, page } = getPagination(req);
     const { clientId, q } = req.query || {};
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id, null);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id, null);
 
     const where = {};
     const whereAnd = [];
@@ -293,17 +236,17 @@ exports.list = async (req, res) => {
       where.ownerId = req.user.id;
     }
 
+    if (countryId) where.countryId = countryId;
+    if (regionId) where.regionId = regionId;
+
     let finalWhere = whereAnd.length
       ? { ...where, [Op.and]: whereAnd }
       : where;
 
-    // 🌍 Scope pour admin scoped/agent : ✅ applyGeoScope (PAS legacy générique)
-    if (!isGlobalAdmin(req.user) && (req.user.role === 'admin' || req.user.role === 'agent')) {
-      finalWhere = applyGeoScope(finalWhere, req.user);
-
-      // ✅ Fallback legacy spécifique aux BIENS via owner.country (ISO)
-      finalWhere = await applyLegacyOwnerCountryScopeForProperties(finalWhere, req.user);
-    }
+    // 🌍 Scope strict (admin scoped/agent/client)
+    finalWhere = applyGeoScopeForModel
+      ? applyGeoScopeForModel(finalWhere, req.user, Property, { includeClients: true })
+      : finalWhere;
 
     const { rows, count } = await Property.findAndCountAll({
       where: finalWhere,
@@ -343,14 +286,17 @@ exports.listByClient = async (req, res) => {
     const { limit, offset, page } = getPagination(req);
     const cid = toSafeInt(req.params.id);
     if (!cid) return res.status(400).json({ error: 'clientId requis' });
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id, null);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id, null);
 
     let where = { ownerId: cid };
+    if (countryId) where.countryId = countryId;
+    if (regionId) where.regionId = regionId;
 
-    // admin scoped: on ne peut lister que dans son scope
-    if (!isGlobalAdmin(req.user)) {
-      where = applyGeoScope(where, req.user);
-      where = await applyLegacyOwnerCountryScopeForProperties(where, req.user);
-    }
+    // Scope strict (admin scoped/client)
+    where = applyGeoScopeForModel
+      ? applyGeoScopeForModel(where, req.user, Property, { includeClients: true })
+      : where;
 
     const { rows, count } = await Property.findAndCountAll({
       where,
@@ -497,6 +443,13 @@ exports.create = async (req, res) => {
       finalRegionId = fallbackRegionId;
     }
 
+    if (!isGlobalAdmin(req.user)) {
+      const targetScope = { countryId: finalCountryId, regionId: finalRegionId };
+      if (!canAccessByGeoScope(req.user, targetScope)) {
+        return res.status(403).json({ error: 'countryId/regionId hors scope' });
+      }
+    }
+
     const created = await Property.create({
       ownerId: targetOwnerId,
       title,
@@ -528,8 +481,8 @@ exports.create = async (req, res) => {
       ],
     });
 
-    // ✅ sécurité : si master/admin scoped, vérifier qu'on renvoie bien une property dans scope
-    if (!isGlobalAdmin(req.user) && req.user.role === 'admin') {
+    // ✅ sécurité : vérifier qu'on renvoie bien une property dans scope
+    if (!isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, property)) {
         return res.status(403).json({ error: 'Bien créé hors scope (bloqué)' });
       }
@@ -564,8 +517,8 @@ exports.update = async (req, res) => {
       return res.status(403).json({ error: 'Non autorisé' });
     }
 
-    // 🌍 ACL GeoScope (admin scoped)
-    if (isAdminOrMaster && !isGlobalAdmin(req.user)) {
+    // 🌍 ACL GeoScope (strict)
+    if (!isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, p)) {
         return res.status(403).json({ error: 'Bien hors scope géographique' });
       }
@@ -652,6 +605,16 @@ exports.update = async (req, res) => {
       }
     }
 
+    if (!isGlobalAdmin(req.user)) {
+      const nextScope = {
+        countryId: updates.countryId ?? p.countryId,
+        regionId: updates.regionId ?? p.regionId,
+      };
+      if (!canAccessByGeoScope(req.user, nextScope)) {
+        return res.status(403).json({ error: 'Mise à jour hors scope géographique' });
+      }
+    }
+
     /* ========================================================
        🔥 Gestion photos (ImageKit)
     ======================================================== */
@@ -713,8 +676,8 @@ exports.remove = async (req, res) => {
       return res.status(403).json({ error: 'Non autorisé' });
     }
 
-    // 🌍 GeoScope
-    if (isAdminOrMaster && !isGlobalAdmin(req.user)) {
+    // 🌍 GeoScope strict
+    if (!isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, p)) {
         return res.status(403).json({ error: 'Bien hors scope géographique' });
       }

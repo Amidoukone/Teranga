@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 
 import NavBar from './components/NavBar';
 import Analytics from './components/Analytics';
@@ -194,6 +195,7 @@ function PublicOnly({ children }) {
 // ============================================================================
 export default function App() {
   const trackingId = 'G-5JVYGYHZ7Y';
+  const { t } = useTranslation();
   const [analyticsConsent, setAnalyticsConsent] = useState(() =>
     getAnalyticsConsent()
   );
@@ -230,8 +232,8 @@ export default function App() {
               element={
                 <>
                   <SetSeo
-                    title="Teranga – Gestion de biens & services pour la diaspora"
-                    description="Teranga est la plateforme moderne qui permet à la diaspora africaine de gérer biens, projets et services à distance, avec transparence et preuves à chaque étape."
+                    title={t('seo.pages.home.title')}
+                    description={t('seo.pages.home.description')}
                   />
                   <HomePage />
                 </>
@@ -242,7 +244,7 @@ export default function App() {
               path="/shop"
               element={
                 <>
-                  <SetSeo title="Produits & Services" />
+                  <SetSeo title={t('seo.pages.shop.title')} />
                   <ProductCatalogPage />
                 </>
               }
@@ -252,7 +254,7 @@ export default function App() {
               path="/products/:id"
               element={
                 <>
-                  <SetSeo title="Détail produit" />
+                  <SetSeo title={t('seo.pages.productDetail.title')} />
                   <ProductDetailPage />
                 </>
               }
@@ -265,7 +267,7 @@ export default function App() {
               path="/legal"
               element={
                 <>
-                  <SetSeo title="Mentions légales" />
+                  <SetSeo title={t('seo.pages.legal.title')} />
                   <LegalPage />
                 </>
               }
@@ -283,7 +285,7 @@ export default function App() {
               element={
                 <PublicOnly>
                   <>
-                    <SetSeo title="Connexion" />
+                    <SetSeo title={t('seo.pages.login.title')} />
                     <LoginPage />
                   </>
                 </PublicOnly>
@@ -295,7 +297,7 @@ export default function App() {
               element={
                 <PublicOnly>
                   <>
-                    <SetSeo title="Inscription" />
+                    <SetSeo title={t('seo.pages.register.title')} />
                     <RegisterPage />
                   </>
                 </PublicOnly>
@@ -307,7 +309,7 @@ export default function App() {
               element={
                 <PublicOnly>
                   <>
-                    <SetSeo title="Mot de passe oublié" />
+                    <SetSeo title={t('seo.pages.forgotPassword.title')} />
                     <Navigate to="/login" replace />
                   </>
                 </PublicOnly>
@@ -319,7 +321,7 @@ export default function App() {
               element={
                 <PublicOnly>
                   <>
-                    <SetSeo title="Réinitialiser le mot de passe" />
+                    <SetSeo title={t('seo.pages.resetPassword.title')} />
                     <Navigate to="/login" replace />
                   </>
                 </PublicOnly>
@@ -334,7 +336,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Tableau de bord" />
+                    <SetSeo title={t('seo.pages.dashboard.title')} />
                     <DashboardPage />
                   </>
                 </RequireAuth>
@@ -346,7 +348,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Mes biens" />
+                    <SetSeo title={t('seo.pages.properties.title')} />
                     <PropertiesPage />
                   </>
                 </RequireAuth>
@@ -358,7 +360,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Mes projets" />
+                    <SetSeo title={t('seo.pages.projects.title')} />
                     <ProjectsPage />
                   </>
                 </RequireAuth>
@@ -370,7 +372,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Détail projet" />
+                    <SetSeo title={t('seo.pages.projectDetail.title')} />
                     <ProjectDetailPage />
                   </>
                 </RequireAuth>
@@ -382,7 +384,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Services" />
+                    <SetSeo title={t('seo.pages.services.title')} />
                     <ServicesPage />
                   </>
                 </RequireAuth>
@@ -394,7 +396,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Tâches du service" />
+                    <SetSeo title={t('seo.pages.serviceTasks.title')} />
                     <ServiceTasksPage />
                   </>
                 </RequireAuth>
@@ -406,7 +408,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Tâches" />
+                    <SetSeo title={t('seo.pages.tasks.title')} />
                     <TasksPage />
                   </>
                 </RequireAuth>
@@ -418,7 +420,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Preuves" />
+                    <SetSeo title={t('seo.pages.taskEvidences.title')} />
                     <TaskEvidencesPage />
                   </>
                 </RequireAuth>
@@ -430,7 +432,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Transactions" />
+                    <SetSeo title={t('seo.pages.transactions.title')} />
                     <TransactionsPage />
                   </>
                 </RequireAuth>
@@ -442,7 +444,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Sécurité du compte" />
+                    <SetSeo title={t('seo.pages.accountSecurity.title')} />
                     <ChangePasswordPage />
                   </>
                 </RequireAuth>
@@ -454,7 +456,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Finances" />
+                    <SetSeo title={t('seo.pages.finance.title')} />
                     <FinanceDashboardPage />
                   </>
                 </RequireAuth>
@@ -469,7 +471,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Commandes" />
+                    <SetSeo title={t('seo.pages.orders.title')} />
                     <OrdersPage />
                   </>
                 </RequireAuth>
@@ -481,7 +483,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Détail commande" />
+                    <SetSeo title={t('seo.pages.orderDetail.title')} />
                     <OrderDetailPage />
                   </>
                 </RequireAuth>
@@ -493,7 +495,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title="Transactions commande" />
+                    <SetSeo title={t('seo.pages.orderTransactions.title')} />
                     <OrderTransactionsPage />
                   </>
                 </RequireAuth>
@@ -509,7 +511,7 @@ export default function App() {
                 <RequireAuth>
                   <RequireRole allow={['agent', 'admin']}>
                     <>
-                      <SetSeo title="Services assignés" />
+                      <SetSeo title={t('seo.pages.agentServices.title')} />
                       <AgentServicesPage />
                     </>
                   </RequireRole>
@@ -528,7 +530,7 @@ export default function App() {
                 <RequireAuth>
                   <RequireRole allow={['admin']}>
                     <>
-                      <SetSeo title="Onboarding Pays & MASTER" />
+                      <SetSeo title={t('seo.pages.adminOnboarding.title')} />
                       <AdminOnboardingPage />
                     </>
                   </RequireRole>
@@ -542,7 +544,7 @@ export default function App() {
                 <RequireAuth>
                   <RequireRole allow={['admin']}>
                     <>
-                      <SetSeo title="Gestion des projets" />
+                      <SetSeo title={t('seo.pages.adminProjects.title')} />
                       <AdminProjectsPage />
                     </>
                   </RequireRole>
@@ -556,7 +558,7 @@ export default function App() {
                 <RequireAuth>
                   <RequireRole allow={['admin']}>
                     <>
-                      <SetSeo title="Monitoring" />
+                      <SetSeo title={t('seo.pages.adminMetrics.title')} />
                       <AdminMetricsPage />
                     </>
                   </RequireRole>
@@ -570,7 +572,7 @@ export default function App() {
                 <RequireAuth>
                   <RequireRole allow={['admin']}>
                     <>
-                      <SetSeo title="Agents" />
+                      <SetSeo title={t('seo.pages.adminAgents.title')} />
                       <AdminAgentsPage />
                     </>
                   </RequireRole>
@@ -584,7 +586,7 @@ export default function App() {
                 <RequireAuth>
                   <RequireRole allow={['admin']}>
                     <>
-                      <SetSeo title="Gestion des services" />
+                      <SetSeo title={t('seo.pages.adminServices.title')} />
                       <AdminServicesPage />
                     </>
                   </RequireRole>
@@ -598,7 +600,7 @@ export default function App() {
                 <RequireAuth>
                   <RequireRole allow={['admin']}>
                     <>
-                      <SetSeo title="Utilisateurs" />
+                      <SetSeo title={t('seo.pages.adminUsers.title')} />
                       <AdminUsersPage />
                     </>
                   </RequireRole>
@@ -612,7 +614,7 @@ export default function App() {
                 <RequireAuth>
                   <RequireRole allow={['admin']}>
                     <>
-                      <SetSeo title="Biens clients" />
+                      <SetSeo title={t('seo.pages.adminProperties.title')} />
                       <AdminPropertiesPage />
                     </>
                   </RequireRole>
@@ -626,7 +628,7 @@ export default function App() {
                 <RequireAuth>
                   <RequireRole allow={['admin']}>
                     <>
-                      <SetSeo title="Catégories" />
+                      <SetSeo title={t('seo.pages.adminCategories.title')} />
                       <AdminCategoriesPage />
                     </>
                   </RequireRole>
@@ -640,7 +642,7 @@ export default function App() {
                 <RequireAuth>
                   <RequireRole allow={['admin']}>
                     <>
-                      <SetSeo title="Produits (admin)" />
+                      <SetSeo title={t('seo.pages.adminProducts.title')} />
                       <AdminProductsPage />
                     </>
                   </RequireRole>
@@ -655,7 +657,7 @@ export default function App() {
               path="*"
               element={
                 <>
-                  <SetSeo title="Accueil" />
+                  <SetSeo title={t('seo.pages.fallback.title')} />
                   <HomePage />
                 </>
               }
@@ -666,9 +668,11 @@ export default function App() {
 
           {/* FOOTER */}
           <footer className="bg-gray-100 border-t border-gray-200 py-4 text-center text-sm text-gray-600">
-            © {new Date().getFullYear()}{' '}
-            <span className="font-semibold text-blue-600">Teranga</span> — Tous
-            droits réservés.
+            <Trans
+              i18nKey="footer.copyright"
+              values={{ year: new Date().getFullYear() }}
+              components={{ brand: <span className="font-semibold text-blue-600" /> }}
+            />
           </footer>
         </div>
       </GeoProvider>

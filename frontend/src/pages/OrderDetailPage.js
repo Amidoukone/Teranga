@@ -25,11 +25,11 @@ import {
 import { me } from '../services/auth';
 
 import {
-  formatCurrency,
-  formatStatus,
   canonicalizeOrderStatus,
   canonicalizePaymentStatus,
 } from '../utils/labels';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 
 /* ============================================================
    🌍 FILE_BASE + normalizePath + toAbsUrl (multi-pays / master)
@@ -61,11 +61,11 @@ function toAbsUrl(path = '') {
    🧭 Timeline des statuts (visuelle + animée)
 ============================================================ */
 const ORDER_STEP_DEFS = [
-  { key: 'created', label: 'Créée', icon: '📝' },
-  { key: 'processing', label: 'Traitement', icon: '⚙️' },
-  { key: 'paid', label: 'Payée', icon: '💳' },
-  { key: 'delivered', label: 'Livrée', icon: '📦' },
-  { key: 'closed', label: 'Clôturée', icon: '✅' },
+  { key: 'created', labelKey: 'orderDetail.timeline.created', icon: '📝' },
+  { key: 'processing', labelKey: 'orderDetail.timeline.processing', icon: '⚙️' },
+  { key: 'paid', labelKey: 'orderDetail.timeline.paid', icon: '💳' },
+  { key: 'delivered', labelKey: 'orderDetail.timeline.delivered', icon: '📦' },
+  { key: 'closed', labelKey: 'orderDetail.timeline.closed', icon: '✅' },
 ];
 
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
@@ -85,6 +85,8 @@ function mapStatusToStepKey(status = '') {
    ⭐ Page Détail Commande
 ============================================================ */
 export default function OrderDetailPage() {
+  const { formatNumber, formatDateTime } = useLocale();
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -299,10 +301,10 @@ export default function OrderDetailPage() {
 
       await updateOrder(id, payload);
       await refresh();
-      alert('✅ Commande mise à jour.');
+      alert(t("orderDetail.alerts.updateSuccess"));
     } catch (e) {
       console.error('❌ update order:', e);
-      alert('Erreur mise à jour commande.');
+      alert(t("orderDetail.alerts.updateError"));
     }
   }
 
@@ -312,8 +314,9 @@ export default function OrderDetailPage() {
   async function handleAddItem(e) {
     e.preventDefault();
 
-    if (!itemForm.productId) return alert('Produit requis.');
-    if (Number(itemForm.quantity) <= 0) return alert('Quantité invalide.');
+    if (!itemForm.productId) return alert(t("orderDetail.alerts.productRequired"));
+    if (Number(itemForm.quantity) <= 0)
+      return alert(t("orderDetail.alerts.invalidQuantity"));
 
     try {
       const payload = {
@@ -329,10 +332,10 @@ export default function OrderDetailPage() {
 
       setItemForm({ productId: '', quantity: 1, unitPrice: '' });
       await refresh();
-      alert('✅ Article ajouté.');
+      alert(t("orderDetail.alerts.itemAdded"));
     } catch (e2) {
       console.error('❌ add item:', e2);
-      alert('Erreur ajout article.');
+      alert(t("orderDetail.alerts.itemAddError"));
     }
   }
 
@@ -342,19 +345,19 @@ export default function OrderDetailPage() {
       await refresh();
     } catch (e) {
       console.error('❌ update item:', e);
-      alert('Erreur mise à jour article.');
+      alert(t("orderDetail.alerts.itemUpdateError"));
     }
   }
 
   async function handleDeleteItem(itemId) {
-    if (!window.confirm('Supprimer cet article ?')) return;
+    if (!window.confirm(t("orderDetail.alerts.confirmDeleteItem"))) return;
 
     try {
       await deleteOrderItem(id, itemId);
       await refresh();
     } catch (e) {
       console.error('❌ delete item:', e);
-      alert('Erreur suppression article.');
+      alert(t("orderDetail.alerts.itemDeleteError"));
     }
   }
 
@@ -368,7 +371,7 @@ export default function OrderDetailPage() {
 
   async function handleUpload(e) {
     e.preventDefault();
-    if (!files.length) return alert('Sélectionnez un fichier.');
+    if (!files.length) return alert(t("orderDetail.alerts.fileRequired"));
 
     setUploading(true);
     try {
@@ -381,17 +384,17 @@ export default function OrderDetailPage() {
       setFileInputKey(Date.now());
 
       await refreshEvidences();
-      alert('✅ Preuves ajoutées.');
+      alert(t("orderDetail.alerts.evidenceAdded"));
     } catch (e2) {
       console.error('❌ upload evidences:', e2);
-      alert('Erreur upload fichiers.');
+      alert(t("orderDetail.alerts.evidenceUploadError"));
     } finally {
       setUploading(false);
     }
   }
 
   async function handleDeleteEvidence(evId) {
-    if (!window.confirm('Supprimer cette preuve ?')) return;
+    if (!window.confirm(t("orderDetail.alerts.confirmDeleteEvidence"))) return;
 
     try {
       await deleteOrderEvidence(evId);
@@ -399,7 +402,7 @@ export default function OrderDetailPage() {
     } catch (e) {
       console.error('❌ delete evidence:', e);
       const msg =
-        e?.response?.data?.error || 'Erreur suppression preuve.';
+        e?.response?.data?.error || t("orderDetail.alerts.evidenceDeleteError");
       alert(msg);
     }
   }
@@ -409,7 +412,9 @@ export default function OrderDetailPage() {
   if (!user || loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <p className="text-lg text-gray-600 animate-pulse">Chargement…</p>
+        <p className="text-lg text-gray-600 animate-pulse">
+          {t("orderDetail.loading")}
+        </p>
       </div>
     );
   }
@@ -417,7 +422,7 @@ export default function OrderDetailPage() {
   if (!order) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <p className="text-gray-600 text-lg">Commande introuvable.</p>
+        <p className="text-gray-600 text-lg">{t("orderDetail.notFound")}</p>
       </div>
     );
   }
@@ -428,6 +433,17 @@ export default function OrderDetailPage() {
 
   const total = Number(order.totalAmount || 0);
   const currency = order.currency || 'XOF';
+  const currencyLabel = t(`currency.${currency}`, { defaultValue: currency });
+  const getCurrencyLabel = (code) =>
+    t(`currency.${code || currency}`, { defaultValue: code || currency });
+  const orderStatusLabel = t(
+    `orders.status.${canonicalizeOrderStatus(order.orderStatus)}`,
+    { defaultValue: order.orderStatus }
+  );
+  const paymentStatusLabel = t(
+    `orders.payment.${canonicalizePaymentStatus(order.paymentStatus)}`,
+    { defaultValue: order.paymentStatus }
+  );
 
   const statusStepKey = mapStatusToStepKey(order.orderStatus);
   const activeStepIndex = ORDER_STEP_DEFS.findIndex((s) => s.key === statusStepKey);
@@ -442,10 +458,10 @@ export default function OrderDetailPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-words">
-              🧾 {order.code || `Commande #${order.id}`}
+              🧾 {order.code || t("orderDetail.title", { id: order.id })}
             </h1>
             <p className="text-sm text-slate-600">
-              Détails complets de la commande, articles, paiements et preuves.
+              {t("orderDetail.subtitle")}
             </p>
           </div>
 
@@ -454,7 +470,7 @@ export default function OrderDetailPage() {
               to="/orders"
               className="px-4 py-2 text-sm rounded-lg bg-slate-700 text-white hover:bg-slate-800 shadow-sm"
             >
-              ← Retour
+              {t("orderDetail.actions.back")}
             </Link>
 
             {canAdmin && (
@@ -462,7 +478,7 @@ export default function OrderDetailPage() {
                 onClick={() => handleOrderUpdate({ orderStatus: 'cancelled' })}
                 className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 shadow-sm"
               >
-                Annuler
+                {t("orderDetail.actions.cancel")}
               </button>
             )}
           </div>
@@ -473,7 +489,7 @@ export default function OrderDetailPage() {
           {/* CLIENT */}
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 p-4 rounded-xl shadow-sm">
             <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-              👤 Client
+              👤 {t("orderDetail.sections.customer")}
             </h3>
             <p className="font-medium text-slate-900 break-words">{customerDisplay}</p>
 
@@ -483,7 +499,10 @@ export default function OrderDetailPage() {
 
             {order.customerNote && (
               <p className="text-sm text-slate-700 mt-3 break-words">
-                <span className="font-semibold">Note client :</span> {order.customerNote}
+                <span className="font-semibold">
+                  {t("orderDetail.labels.note")}
+                </span>{' '}
+                {order.customerNote}
               </p>
             )}
           </div>
@@ -491,15 +510,15 @@ export default function OrderDetailPage() {
           {/* STATUTS + TIMELINE */}
           <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-slate-200 p-4 rounded-xl shadow-sm">
             <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-              📌 Statuts
+              📌 {t("orderDetail.sections.statuses")}
             </h3>
 
             <div className="flex flex-wrap gap-2 mb-3">
               <span className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-xs font-semibold">
-                Commande : {formatStatus(order.orderStatus, 'order')}
+                {t("orderDetail.labels.orderStatus")} {orderStatusLabel}
               </span>
               <span className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-xs font-semibold">
-                Paiement : {formatStatus(order.paymentStatus, 'payment')}
+                {t("orderDetail.labels.paymentStatus")} {paymentStatusLabel}
               </span>
             </div>
 
@@ -512,7 +531,7 @@ export default function OrderDetailPage() {
                       ? 'bg-blue-600 text-white border-blue-600'
                       : 'bg-slate-100 text-slate-400 border-slate-200'
                   }`}
-                  title={s.label}
+                  title={t(s.labelKey)}
                 >
                   {s.icon}
                 </div>
@@ -530,7 +549,7 @@ export default function OrderDetailPage() {
                     })
                   }
                 >
-                  Marquer payée
+                  {t("orderDetail.actions.markPaid")}
                 </button>
 
                 <button
@@ -542,7 +561,7 @@ export default function OrderDetailPage() {
                     })
                   }
                 >
-                  Marquer livrée
+                  {t("orderDetail.actions.markDelivered")}
                 </button>
               </div>
             )}
@@ -551,17 +570,21 @@ export default function OrderDetailPage() {
           {/* MONTANT */}
           <div className="bg-gradient-to-br from-emerald-50 via-white to-blue-50 border border-emerald-100 p-4 rounded-xl shadow-sm">
             <h3 className="text-slate-800 font-semibold mb-2 flex items-center gap-2">
-              💰 Résumé
+              💰 {t("orderDetail.sections.summary")}
             </h3>
 
-            <p className="text-xs text-slate-500 uppercase">Montant total</p>
+            <p className="text-xs text-slate-500 uppercase">
+              {t("orderDetail.labels.totalAmount")}
+            </p>
             <p className="text-2xl font-extrabold text-blue-600">
-              {total.toLocaleString('fr-FR')} {formatCurrency(currency)}
+              {formatNumber(total)} {currencyLabel}
             </p>
 
             {order.items?.length > 0 && (
               <p className="text-xs text-slate-500 mt-3">
-                {order.items.length} article{order.items.length > 1 ? 's' : ''}.
+                {t("orderDetail.summary.itemsCount", {
+                  count: order.items.length,
+                })}
               </p>
             )}
           </div>
@@ -570,10 +593,10 @@ export default function OrderDetailPage() {
         {/* ===================== ARTICLES ===================== */}
         <section className="mb-10">
           <h2 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
-            🧩 Articles
+            🧩 {t("orderDetail.items.title")}
             {order.items?.length ? (
               <span className="text-xs text-slate-500">
-                ({order.items.length} élément{order.items.length > 1 ? 's' : ''})
+                ({t("orderDetail.items.count", { count: order.items.length })})
               </span>
             ) : null}
           </h2>
@@ -591,28 +614,30 @@ export default function OrderDetailPage() {
                   >
                     <div className="space-y-1 min-w-0">
                       <p className="font-semibold text-slate-900 break-words">
-                        {it.product?.name || `Article #${it.id}`}
+                        {it.product?.name ||
+                          t("orderDetail.items.itemFallback", { id: it.id })}
                       </p>
 
                       <p className="text-xs text-slate-500">
-                        ID article : #{it.id}
+                        {t("orderDetail.items.itemId", { id: it.id })}
                       </p>
 
                       <p className="text-sm text-slate-700">
-                        Qté : <span className="font-semibold">{it.quantity}</span>
+                        {t("orderDetail.items.quantity")}{" "}
+                        <span className="font-semibold">{it.quantity}</span>
                       </p>
 
                       <p className="text-sm text-slate-700">
-                        PU :{' '}
+                        {t("orderDetail.items.unitPrice")}{' '}
                         <span className="font-semibold">
-                          {unit.toLocaleString('fr-FR')} {formatCurrency(currency)}
+                          {formatNumber(unit)} {getCurrencyLabel(currency)}
                         </span>
                       </p>
 
                       <p className="text-sm text-slate-700">
-                        Total :{' '}
+                        {t("orderDetail.items.total")}{' '}
                         <span className="font-semibold text-blue-700">
-                          {lineTotal.toLocaleString('fr-FR')} {formatCurrency(currency)}
+                          {formatNumber(lineTotal)} {getCurrencyLabel(currency)}
                         </span>
                       </p>
                     </div>
@@ -623,14 +648,14 @@ export default function OrderDetailPage() {
                           className="px-3 py-1 bg-amber-500 text-white rounded-lg text-xs hover:bg-amber-600"
                           onClick={() => handleUpdateItem(it.id, { itemStatus: 'cancelled' })}
                         >
-                          Annuler
+                          {t("orderDetail.items.cancel")}
                         </button>
 
                         <button
                           className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700"
                           onClick={() => handleDeleteItem(it.id)}
                         >
-                          Supprimer
+                          {t("orderDetail.items.delete")}
                         </button>
                       </div>
                     )}
@@ -640,7 +665,7 @@ export default function OrderDetailPage() {
             </div>
           ) : (
             <p className="text-sm text-slate-500 italic">
-              Aucun article dans cette commande.
+              {t("orderDetail.items.empty")}
             </p>
           )}
 
@@ -651,7 +676,7 @@ export default function OrderDetailPage() {
               className="mt-5 bg-gray-50 border border-slate-200 p-4 rounded-xl shadow-sm"
             >
               <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                ➕ Ajouter un article
+                ➕ {t("orderDetail.items.addTitle")}
               </h3>
 
               <div className="grid md:grid-cols-4 gap-3">
@@ -660,11 +685,11 @@ export default function OrderDetailPage() {
                   onChange={(e) => setItemForm({ ...itemForm, productId: e.target.value })}
                   className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
                 >
-                  <option value="">— Sélectionner —</option>
+                  <option value="">{t("orderDetail.items.selectPlaceholder")}</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} — {Number(p.price || 0).toLocaleString('fr-FR')}{' '}
-                      {formatCurrency(p.currency || currency)}
+                      {p.name} — {formatNumber(p.price || 0)}{' '}
+                      {getCurrencyLabel(p.currency || currency)}
                     </option>
                   ))}
                 </select>
@@ -675,7 +700,7 @@ export default function OrderDetailPage() {
                   value={itemForm.quantity}
                   onChange={(e) => setItemForm({ ...itemForm, quantity: e.target.value })}
                   className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="Quantité"
+                  placeholder={t("orderDetail.items.quantityPlaceholder")}
                 />
 
                 <input
@@ -684,14 +709,14 @@ export default function OrderDetailPage() {
                   value={itemForm.unitPrice}
                   onChange={(e) => setItemForm({ ...itemForm, unitPrice: e.target.value })}
                   className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="PU (optionnel)"
+                  placeholder={t("orderDetail.items.unitPricePlaceholder")}
                 />
 
                 <button
                   type="submit"
                   className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm"
                 >
-                  Ajouter
+                  {t("orderDetail.items.addButton")}
                 </button>
               </div>
             </form>
@@ -702,17 +727,18 @@ export default function OrderDetailPage() {
         {canUploadProofs && (
           <section className="mb-10">
             <h2 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
-              📎 Preuves du paiement
+              📎 {t("orderDetail.sections.evidences")}
               {evidences.length > 0 && (
                 <span className="text-xs text-slate-500">
-                  ({evidences.length} fichier{evidences.length > 1 ? 's' : ''})
+                  ({t("orderDetail.evidences.count", {
+                    count: evidences.length,
+                  })})
                 </span>
               )}
             </h2>
             {!canAdmin && (
               <p className="text-xs text-slate-500 italic mb-3">
-                🕒 Vous pouvez supprimer vos propres preuves pendant 1&nbsp;heure après
-                l&rsquo;ajout.
+                🕒 {t("orderDetail.evidences.hintDeleteWindow")}
               </p>
             )}
 
@@ -724,7 +750,7 @@ export default function OrderDetailPage() {
               <div className="grid md:grid-cols-3 gap-3">
                 <div className="md:col-span-2">
                   <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                    Fichiers (images ou PDF)
+                    {t("orderDetail.labels.files")}
                   </label>
                   <input
                     key={fileInputKey}
@@ -737,22 +763,24 @@ export default function OrderDetailPage() {
                   />
                   {files.length > 0 && (
                     <p className="text-xs text-slate-500 mt-1">
-                      {files.length} fichier(s) sélectionné(s)
+                      {t("orderDetail.evidences.filesSelected", {
+                        count: files.length,
+                      })}
                     </p>
                   )}
                   <p className="text-[0.7rem] text-slate-400 mt-1">
-                    Vous pouvez ajouter un seul fichier puis en ajouter d’autres plus tard.
+                    {t("orderDetail.evidences.addMoreLater")}
                   </p>
                 </div>
 
                 <div>
                   <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                    Notes (optionnel)
+                    {t("orderDetail.labels.uploadNotes")}
                   </label>
                   <input
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Commentaire…"
+                    placeholder={t("orderDetail.evidences.notesPlaceholder")}
                     className="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm bg-white"
                   />
                 </div>
@@ -768,7 +796,9 @@ export default function OrderDetailPage() {
                       : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}
                 >
-                  {uploading ? 'Upload…' : 'Uploader les preuves'}
+                  {uploading
+                    ? t("orderDetail.evidences.uploading")
+                    : t("orderDetail.evidences.uploadButton")}
                 </button>
               </div>
             </form>
@@ -777,10 +807,12 @@ export default function OrderDetailPage() {
               <div className="mb-5">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm sm:text-base font-semibold text-slate-900">
-                    Galerie des images
+                    {t("orderDetail.sections.imagesGallery")}
                   </h3>
                   <span className="text-xs text-slate-500">
-                    {imageEvidences.length} image(s)
+                    {t("orderDetail.evidences.imagesCount", {
+                      count: imageEvidences.length,
+                    })}
                   </span>
                 </div>
 
@@ -793,18 +825,18 @@ export default function OrderDetailPage() {
                         type="button"
                         onClick={() => openEvidenceLightbox(ev.id)}
                         className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-slate-200 bg-slate-50"
-                        title={'Aper\u00e7u'}
+                        title={t("orderDetail.labels.preview")}
                       >
                         <img
                           src={fileUrl}
-                          alt={ev.originalName || 'Preuve'}
+                          alt={ev.originalName || t("orderDetail.labels.proof")}
                           loading="lazy"
                           decoding="async"
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
                         <div className="absolute bottom-2 left-2 right-2 text-[0.7rem] text-white font-semibold truncate drop-shadow">
-                          {ev.originalName || 'Preuve'}
+                          {ev.originalName || t("orderDetail.labels.proof")}
                         </div>
                       </button>
                     );
@@ -817,10 +849,12 @@ export default function OrderDetailPage() {
               <div className="mb-5">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm sm:text-base font-semibold text-slate-900">
-                    Galerie des documents
+                    {t("orderDetail.sections.docsGallery")}
                   </h3>
                   <span className="text-xs text-slate-500">
-                    {nonImageEvidences.length} fichier(s)
+                    {t("orderDetail.evidences.docsCount", {
+                      count: nonImageEvidences.length,
+                    })}
                   </span>
                 </div>
 
@@ -830,9 +864,14 @@ export default function OrderDetailPage() {
                     const kind = inferEvidenceKind(ev);
                     const extLabel = getFileExtLabel(
                       ev.originalName || ev.filePath,
-                      kind === 'pdf' ? 'PDF' : 'FILE'
+                      kind === 'pdf'
+                        ? t("orderDetail.labels.pdf")
+                        : t("orderDetail.labels.file")
                     );
-                    const typeLabel = kind === 'pdf' ? 'PDF' : 'FICHIER';
+                    const typeLabel =
+                      kind === 'pdf'
+                        ? t("orderDetail.labels.pdf")
+                        : t("orderDetail.labels.file");
 
                     return (
                       <a
@@ -857,7 +896,7 @@ export default function OrderDetailPage() {
                             {extLabel}
                           </div>
                           <div className="mt-2 text-[0.7rem] text-slate-600 truncate w-full">
-                            {ev.originalName || 'Document'}
+                            {ev.originalName || t("orderDetail.labels.document")}
                           </div>
                         </div>
                       </a>
@@ -870,7 +909,7 @@ export default function OrderDetailPage() {
             {/* Liste des preuves */}
             {evidences.length === 0 ? (
               <p className="text-sm text-slate-500 italic">
-                Aucune preuve enregistr&eacute;e pour cette commande.
+                {t("orderDetail.evidences.noEvidence")}
               </p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
@@ -880,7 +919,9 @@ export default function OrderDetailPage() {
                   const fileUrl = toAbsUrl(ev.filePath);
                   const extLabel = getFileExtLabel(
                     ev.originalName || ev.filePath,
-                    kind === 'pdf' ? 'PDF' : 'FILE'
+                    kind === 'pdf'
+                      ? t("orderDetail.labels.pdf")
+                      : t("orderDetail.labels.file")
                   );
                   const deleteInfo = getDeleteEligibility(user, ev);
 
@@ -896,11 +937,11 @@ export default function OrderDetailPage() {
                             type="button"
                             onClick={() => openEvidenceLightbox(ev.id)}
                             className="w-full h-full"
-                            title={'Aper\u00e7u'}
+                            title={t("orderDetail.labels.preview")}
                           >
                             <img
                               src={fileUrl}
-                              alt={ev.originalName || 'Preuve'}
+                              alt={ev.originalName || t("orderDetail.labels.proof")}
                               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                             />
                           </button>
@@ -924,7 +965,11 @@ export default function OrderDetailPage() {
                                 : 'bg-gray-50 text-gray-700 border-gray-200'
                             }`}
                           >
-                            {kind === 'image' ? 'IMAGE' : kind === 'pdf' ? 'PDF' : 'FICHIER'}
+                            {kind === 'image'
+                              ? t("orderDetail.labels.image")
+                              : kind === 'pdf'
+                              ? t("orderDetail.labels.pdf")
+                              : t("orderDetail.labels.file")}
                           </span>
                         </div>
 
@@ -935,7 +980,7 @@ export default function OrderDetailPage() {
                               onClick={() => openEvidenceLightbox(ev.id)}
                               className="px-2.5 py-1.5 text-[0.7rem] font-semibold bg-white/90 border border-slate-200 rounded-lg hover:bg-white"
                             >
-                              {'Aper\u00e7u'}
+                              {t("orderDetail.labels.preview")}
                             </button>
                           )}
                           <a
@@ -944,7 +989,7 @@ export default function OrderDetailPage() {
                             rel="noopener noreferrer"
                             className="px-2.5 py-1.5 text-[0.7rem] font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800"
                           >
-                            Ouvrir
+                            {t("orderDetail.labels.open")}
                           </a>
                         </div>
                       </div>
@@ -961,16 +1006,20 @@ export default function OrderDetailPage() {
                         </a>
 
                         <p className="mt-2 text-xs text-slate-500">
-                          Ajout&eacute; le{' '}
+                          {t("orderDetail.labels.addedOn")}{' '}
                           {ev.createdAt
-                            ? new Date(ev.createdAt).toLocaleString('fr-FR')
-                            : '-'}{' '}
-                          par <strong>{formatUploader(ev.uploader)}</strong>
+                            ? formatDateTime(ev.createdAt)
+                            : t("common.dash")}{' '}
+                          {t("orderDetail.labels.by")}{' '}
+                          <strong>{formatUploader(ev.uploader)}</strong>
                         </p>
 
                         {ev.notes && (
                           <p className="mt-2 text-sm text-slate-700 break-words">
-                            <span className="font-semibold">Notes :</span> {ev.notes}
+                            <span className="font-semibold">
+                              {t("orderDetail.labels.notes")}
+                            </span>{' '}
+                            {ev.notes}
                           </p>
                         )}
 
@@ -981,18 +1030,20 @@ export default function OrderDetailPage() {
                               onClick={() => handleDeleteEvidence(ev.id)}
                               className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700"
                             >
-                              Supprimer
+                              {t("orderDetail.evidences.delete")}
                             </button>
                           </div>
                         )}
                         {!canAdmin && deleteInfo.allowed && deleteInfo.reason === 'within-window' && (
                           <p className="mt-2 text-[0.7rem] text-slate-400">
-                            Suppression possible encore {formatRemainingMs(deleteInfo.remainingMs)}.
+                            {t("orderDetail.evidences.deletePossible", {
+                              time: formatRemainingMs(deleteInfo.remainingMs),
+                            })}
                           </p>
                         )}
                         {!canAdmin && !deleteInfo.allowed && deleteInfo.reason === 'expired' && (
                           <p className="mt-2 text-[0.7rem] text-slate-400">
-                            Suppression expirée (1&nbsp;heure).
+                            {t("orderDetail.evidences.deleteExpired")}
                           </p>
                         )}
                       </div>
@@ -1010,14 +1061,14 @@ export default function OrderDetailPage() {
             to={`/orders/${id}/transactions`}
             className="px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 shadow-sm"
           >
-            💰 Voir transactions
+            💰 {t("orderDetail.actions.viewTransactions")}
           </Link>
 
           <Link
             to="/orders"
             className="px-4 py-2 text-sm bg-gray-200 text-slate-800 rounded-lg hover:bg-gray-300"
           >
-            ← Retour commandes
+            {t("orderDetail.actions.backToOrders")}
           </Link>
         </div>
       </div>
@@ -1031,7 +1082,7 @@ export default function OrderDetailPage() {
           onClick={closeEvidenceLightbox}
           role="dialog"
           aria-modal="true"
-          aria-label="Aperçu des preuves"
+          aria-label={t("orderDetail.lightbox.ariaLabel")}
         >
           {/* Close */}
           <button
@@ -1041,7 +1092,7 @@ export default function OrderDetailPage() {
               closeEvidenceLightbox();
             }}
             className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white"
-            aria-label="Fermer la lightbox"
+            aria-label={t("orderDetail.lightbox.close")}
           >
             ✕
           </button>
@@ -1056,7 +1107,7 @@ export default function OrderDetailPage() {
                   prevEvidence();
                 }}
                 className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
-                aria-label="Image précédente"
+                aria-label={t("orderDetail.lightbox.prev")}
               >
                 ‹
               </button>
@@ -1068,7 +1119,7 @@ export default function OrderDetailPage() {
                   nextEvidence();
                 }}
                 className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
-                aria-label="Image suivante"
+                aria-label={t("orderDetail.lightbox.next")}
               >
                 ›
               </button>
@@ -1101,7 +1152,8 @@ export default function OrderDetailPage() {
               <img
                 src={toAbsUrl(imageEvidences[evidenceLightbox.index].filePath)}
                 alt={
-                  imageEvidences[evidenceLightbox.index].originalName || 'Preuve'
+                  imageEvidences[evidenceLightbox.index].originalName ||
+                    t("orderDetail.labels.proof")
                 }
                 className="max-h-[70vh] max-w-full object-contain rounded-lg"
               />
@@ -1112,3 +1164,4 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+

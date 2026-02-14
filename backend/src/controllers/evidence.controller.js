@@ -9,13 +9,12 @@ const imagekit = require("../helpers/teranga-imagekit");
 // 🌍 Labels
 const { EVIDENCE_KINDS, getLabel } = require("../utils/labels");
 
-// ✅ GeoScope (admin scoped)
-const geo = require("../utils/geoScope");
-const applyGeoScope = geo.applyGeoScope;
-const getUserGeoScope = geo.getUserGeoScope;
-const isGlobalAdmin =
-  geo.isGlobalAdmin ||
-  ((u) => u?.role === "admin" && !(u?.countryId || u?.regionId));
+// ✅ GeoScope (strict + admin global)
+const {
+  applyGeoScopeForModel,
+  canAccessGeoResource,
+  isGlobalAdmin,
+} = require("../utils/geoScope");
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
 
 function toIntOr(value, fallback) {
@@ -217,32 +216,8 @@ function getEvidenceLevel(totalImages, maxImages) {
 /* ======================================================
    🌍 Scope helpers (source de vérité = resource liée)
 ====================================================== */
-function getScopeFromResource(resource) {
-  if (!resource) return { countryId: null, regionId: null };
-  return {
-    countryId: toSafeInt(resource.countryId ?? resource.country_id),
-    regionId: toSafeInt(resource.regionId ?? resource.region_id),
-  };
-}
-
 function canAccessGeoScope(user, resource) {
-  if (!user) return false;
-
-  // Admin global => OK
-  if (isGlobalAdmin(user)) return true;
-
-  // Client/agent/admin scoped => vérifier via scope user
-  const scope = getUserGeoScope ? getUserGeoScope(user) : { countryId: null, regionId: null };
-  const r = getScopeFromResource(resource);
-
-  // Si resource n'a pas de scope => on autorise pour rétro-compat (legacy)
-  if (!r.countryId && !r.regionId) return true;
-
-  if (scope.regionId) return String(r.regionId) === String(scope.regionId);
-  if (scope.countryId) return String(r.countryId) === String(scope.countryId);
-
-  // user sans scope => considéré global (mais normalement admin global déjà catch)
-  return true;
+  return canAccessGeoResource(resource, user);
 }
 
 /* ======================================================
@@ -299,8 +274,8 @@ function canAccessTask(user, task) {
     if (task.service && task.service.clientId === user.id) ok = true;
     if (task.property && task.property.ownerId === user.id) ok = true;
 
-    // Client: ne force pas scope (rétro-compat) mais si task scoped => ok
-    return ok;
+    // ✅ + scope geo strict
+    return ok && canAccessGeoScope(user, task.service || task.property || task);
   }
 
   return false;
@@ -326,7 +301,8 @@ function canAccessOrder(user, order) {
   const uid = String(user.id);
 
   if (user.role === "client") {
-    return String(order.userId) === uid || String(order.clientId) === uid;
+    const ok = String(order.userId) === uid || String(order.clientId) === uid;
+    return ok && canAccessGeoScope(user, order);
   }
 
   if (user.role === "agent") {
@@ -570,6 +546,10 @@ exports.list = async (req, res) => {
     }
 
     const where = {};
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
+    if (countryId) where.countryId = countryId;
+    if (regionId) where.regionId = regionId;
 
     if (taskId) {
       const task = await loadTaskForAcl(taskId);
@@ -590,8 +570,8 @@ exports.list = async (req, res) => {
     }
 
     // 🌍 Filtrage géographique (admin scoped)
-    const finalWhere = applyGeoScope
-      ? applyGeoScope(where, req.user)
+    const finalWhere = applyGeoScopeForModel
+      ? applyGeoScopeForModel(where, req.user, Evidence, { includeClients: true })
       : where;
 
     const evidences = await Evidence.findAll({
@@ -633,9 +613,16 @@ exports.listByTask = async (req, res) => {
       return res.status(403).json({ error: "Accès interdit" });
     }
 
-    const where = applyGeoScope
-      ? applyGeoScope({ taskId }, req.user)
-      : { taskId };
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
+
+    let where = { taskId };
+    if (countryId) where.countryId = countryId;
+    if (regionId) where.regionId = regionId;
+
+    where = applyGeoScopeForModel
+      ? applyGeoScopeForModel(where, req.user, Evidence, { includeClients: true })
+      : where;
 
     const evidences = await Evidence.findAll({
       where,
@@ -676,9 +663,16 @@ exports.listByOrder = async (req, res) => {
       return res.status(403).json({ error: "Accès interdit" });
     }
 
-    const where = applyGeoScope
-      ? applyGeoScope({ orderId }, req.user)
-      : { orderId };
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
+
+    let where = { orderId };
+    if (countryId) where.countryId = countryId;
+    if (regionId) where.regionId = regionId;
+
+    where = applyGeoScopeForModel
+      ? applyGeoScopeForModel(where, req.user, Evidence, { includeClients: true })
+      : where;
 
     const evidences = await Evidence.findAll({
       where,

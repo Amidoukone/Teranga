@@ -120,7 +120,17 @@ function getEffectiveScopeForCreate(req, norm) {
     };
   }
 
-  // Client : legacy => accepte si fourni, ne force pas sinon
+  // Client : scope imposé si défini, sinon fallback legacy
+  if (req.user?.role === 'client') {
+    if (userScope.countryId || userScope.regionId) {
+      return {
+        countryId: userScope.countryId,
+        regionId: userScope.regionId,
+      };
+    }
+  }
+
+  // fallback legacy => accepte si fourni, ne force pas sinon
   return {
     countryId: toSafeInt(norm.countryId),
     regionId: toSafeInt(norm.regionId),
@@ -151,7 +161,9 @@ function applyOrderScopeWhere(
       if (qRegionId) out.regionId = qRegionId;
     }
 
-    return out;
+    return applyGeoScopeForModel
+      ? applyGeoScopeForModel(out, req.user, Order, { includeClients: true })
+      : out;
   }
 
   if (isGlobalAdmin(req.user)) return where;
@@ -203,10 +215,9 @@ function applyOrderScopeWhere(
  */
 function applyProductScopeWhere(where, req) {
   if (isGlobalAdmin(req.user)) return where;
-  if (req.user?.role === 'admin' || req.user?.role === 'agent') {
-    return applyGeoScopeForModel ? applyGeoScopeForModel(where, req.user, Product) : where;
-  }
-  return where;
+  return applyGeoScopeForModel
+    ? applyGeoScopeForModel(where, req.user, Product, { includeClients: true })
+    : where;
 }
 
 /* ============================================================
@@ -399,11 +410,17 @@ exports.create = async (req, res) => {
 
       products.forEach((p) => productsById.set(p.id, p));
 
-      // Si admin scoped, et qu’un produit n’est pas visible => bloquer
-      if (
+      const userScope = getUserGeoScope
+        ? getUserGeoScope(req.user)
+        : { countryId: null, regionId: null };
+      const hasUserScope = Boolean(userScope?.countryId || userScope?.regionId);
+      const shouldEnforceProductScope =
         !isGlobalAdmin(req.user) &&
-        (req.user.role === 'admin' || req.user.role === 'agent')
-      ) {
+        ['admin', 'agent', 'client'].includes(req.user.role) &&
+        hasUserScope;
+
+      // Si scoped, et qu’un produit n’est pas visible => bloquer
+      if (shouldEnforceProductScope) {
         for (const pid of productIds) {
           if (!productsById.has(pid)) {
             await order.destroy();

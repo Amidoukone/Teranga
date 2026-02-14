@@ -12,20 +12,33 @@ import {
   TASK_TYPES,
   TASK_PRIORITIES,
   TASK_STATUSES,
+  SERVICE_TYPES,
   applyLabels,
 } from '../utils/labels';
 import { normalizeRole, isMasterUser } from '../utils/role';
+import { useTranslation } from 'react-i18next';
+
+const DEFAULT_FILTERS = {
+  q: '',
+  type: '',
+  status: '',
+  priority: '',
+  service: '',
+  agent: '',
+};
 
 // ============================================================================
 // 🧩 PAGE PRINCIPALE
 // ============================================================================
 export default function TasksPage() {
+  const { t } = useTranslation();
   const [tasks, setTasks] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [services, setServices] = useState([]);
   const [agents, setAgents] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState(null);
 
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_tasks_showForm');
@@ -41,6 +54,7 @@ export default function TasksPage() {
   const isAdmin = role === 'admin';
   const isMaster = isMasterUser(user); // UX uniquement
   const isAdminLike = isAdmin; // MASTER = admin côté UI
+  const canCreateTask = role === 'client' || isAdminLike;
 
   // ========================================================================
   // Formulaire
@@ -59,14 +73,22 @@ export default function TasksPage() {
   // ========================================================================
   // Filtres
   // =========================================================================
-  const [filters, setFilters] = useState({
-    q: '',
-    type: '',
-    status: '',
-    priority: '',
-    service: '',
-    agent: '',
-  });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+
+  const resetFilters = useCallback(() => {
+    setFilters({ ...DEFAULT_FILTERS });
+  }, []);
+
+  const hasActiveFilters = useMemo(() => {
+    return (
+      Boolean(filters.q?.trim()) ||
+      Boolean(filters.type) ||
+      Boolean(filters.status) ||
+      Boolean(filters.priority) ||
+      Boolean(filters.service) ||
+      Boolean(filters.agent)
+    );
+  }, [filters]);
 
   // ========================================================================
   // Auth header
@@ -89,19 +111,20 @@ export default function TasksPage() {
         headers: authHeader,
       });
 
-      const enriched = (data.tasks || []).map((t) => ({
-        ...t,
-        ...(t.statusLabel ? {} : applyLabels(t)),
-      }));
+      const enriched = (data.tasks || []).map((t) => applyLabels(t, 'task'));
 
       setTasks(enriched);
     } catch (err) {
       console.error('❌ Erreur chargement tâches:', err);
+      setNotice({
+        type: 'error',
+        message: t('tasksPage.alerts.loadError'),
+      });
       setTasks([]);
     } finally {
       setLoading(false);
     }
-  }, [authHeader]);
+  }, [authHeader, t]);
 
   // ========================================================================
   // Initialisation
@@ -130,10 +153,9 @@ export default function TasksPage() {
                 }),
               ]);
 
-            const enrichedServices = (allServices?.services || []).map((s) => ({
-              ...s,
-              ...(s.typeLabel ? {} : applyLabels(s)),
-            }));
+            const enrichedServices = (allServices?.services || []).map((s) =>
+              applyLabels(s, 'service')
+            );
 
             setServices(enrichedServices);
             setAgents(agentsRes?.users || []);
@@ -169,6 +191,7 @@ export default function TasksPage() {
     e.preventDefault();
 
     try {
+      setNotice(null);
       const payload = {
         serviceId: form.serviceId ? parseInt(form.serviceId, 10) : null,
         title: form.title.trim(),
@@ -183,7 +206,10 @@ export default function TasksPage() {
 
       await api.post('/tasks', payload, { headers: authHeader });
 
-      alert('✅ Tâche créée avec succès');
+      setNotice({
+        type: 'success',
+        message: t('tasksPage.alerts.createSuccess'),
+      });
 
       setForm({
         serviceId: '',
@@ -199,9 +225,11 @@ export default function TasksPage() {
       await loadTasks();
     } catch (err) {
       console.error('❌ Erreur création tâche:', err);
-      alert(
-        err?.response?.data?.error || 'Erreur lors de la création de la tâche ❌'
-      );
+      setNotice({
+        type: 'error',
+        message:
+          err?.response?.data?.error || t('tasksPage.alerts.createError'),
+      });
     }
   }
 
@@ -210,13 +238,17 @@ export default function TasksPage() {
   // =========================================================================
   async function updateStatus(id, status) {
     try {
+      setNotice(null);
       await api.put(`/tasks/${id}/status`, { status }, { headers: authHeader });
       await loadTasks();
     } catch (err) {
       console.error('❌ Erreur maj statut:', err);
-      alert(
-        err?.response?.data?.error || "Erreur lors de la mise à jour du statut ❌"
-      );
+      setNotice({
+        type: 'error',
+        message:
+          err?.response?.data?.error ||
+          t('tasksPage.alerts.updateStatusError'),
+      });
     }
   }
 
@@ -226,16 +258,23 @@ export default function TasksPage() {
   async function updateAssignment(taskId, agentId) {
     if (!agentId) return;
     try {
+      setNotice(null);
       await api.put(
         `/tasks/${taskId}/assign`,
         { agentId },
         { headers: authHeader }
       );
-      alert('✅ Tâche assignée avec succès.');
+      setNotice({
+        type: 'success',
+        message: t('tasksPage.alerts.assignSuccess'),
+      });
       await loadTasks();
     } catch (err) {
       console.error('❌ Erreur assignation tâche:', err);
-      alert(err?.response?.data?.error || "Erreur lors de l'assignation.");
+      setNotice({
+        type: 'error',
+        message: err?.response?.data?.error || t('tasksPage.alerts.assignError'),
+      });
     }
   }
 
@@ -243,7 +282,7 @@ export default function TasksPage() {
   // Affichage nom utilisateur
   // =========================================================================
   function displayUser(u) {
-    if (!u) return '—';
+    if (!u) return t('common.dash');
     return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email;
   }
 
@@ -301,6 +340,21 @@ export default function TasksPage() {
           isMaster={isMaster}
         />
 
+        {notice && (
+          <div
+            className={`mb-6 rounded-2xl border px-4 py-3 text-xs sm:text-sm flex gap-2 items-start ${
+              notice.type === 'error'
+                ? 'bg-rose-50 border-rose-200 text-rose-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+            }`}
+          >
+            <span className="mt-[1px]">
+              {notice.type === 'error' ? '⚠️' : '✅'}
+            </span>
+            <p className="break-words">{notice.message}</p>
+          </div>
+        )}
+
         {/* FILTRES */}
         <TaskFilters
           filters={filters}
@@ -310,6 +364,7 @@ export default function TasksPage() {
           user={user}
           filteredCount={filtered.length}
           isAdminLike={isAdminLike}
+          onReset={resetFilters}
         />
 
         {/* FORMULAIRE */}
@@ -326,17 +381,53 @@ export default function TasksPage() {
         )}
 
         {/* LISTE */}
-        <TaskList
-          tasks={filtered}
-          user={user}
-          role={role}
-          isAdminLike={isAdminLike}
-          updateStatus={updateStatus}
-          updateAssignment={updateAssignment}
-          navigate={navigate}
-          displayUser={displayUser}
-          agents={agents}
-        />
+        {filtered.length === 0 ? (
+          <div className="py-10 flex flex-col items-center justify-center text-center">
+            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+              <span className="text-xl">🗂️</span>
+            </div>
+            <p className="text-sm font-semibold text-gray-800 mb-1">
+              {hasActiveFilters
+                ? t('tasksPage.emptyFilteredTitle')
+                : t('tasksPage.emptyTitle')}
+            </p>
+            <p className="text-xs text-gray-500 max-w-sm">
+              {hasActiveFilters
+                ? t('tasksPage.emptyFilteredSubtitle')
+                : t('tasksPage.emptySubtitle')}
+            </p>
+            <div className="mt-4 flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              {hasActiveFilters && (
+                <button
+                  onClick={resetFilters}
+                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300"
+                >
+                  {t('tasksPage.filters.reset')}
+                </button>
+              )}
+              {canCreateTask && !showForm && (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 transition"
+                >
+                  ➕ {t('tasksPage.buttons.newTask')}
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <TaskList
+            tasks={filtered}
+            user={user}
+            role={role}
+            isAdminLike={isAdminLike}
+            updateStatus={updateStatus}
+            updateAssignment={updateAssignment}
+            navigate={navigate}
+            displayUser={displayUser}
+            agents={agents}
+          />
+        )}
       </div>
     </div>
   );
@@ -347,25 +438,29 @@ export default function TasksPage() {
 // ============================================================================
 
 function Header({ showForm, setShowForm, loadTasks, loading, total, isMaster }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7 pb-4 border-b border-gray-100">
       <div className="max-w-full break-words">
+        <p className="text-[0.7rem] uppercase tracking-wide text-blue-600 font-semibold">
+          {t('tasksPage.kicker')}
+        </p>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
-          📋 Gestion des tâches
+          📋 {t('tasksPage.title')}
         </h1>
         <p className="text-sm sm:text-base text-gray-600 mt-1">
-          Créez, assignez et suivez vos tâches opérationnelles au même endroit.
+          {t('tasksPage.subtitle')}
         </p>
 
         <div className="mt-2 flex flex-wrap gap-2 items-center">
           <p className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
             <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-            {total} tâche(s) affichée(s) avec les filtres actuels.
+            {t('tasksPage.count', { count: total })}
           </p>
 
           {isMaster && (
             <p className="inline-flex items-center gap-2 text-xs sm:text-sm text-amber-800 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200">
-              ⭐ MASTER
+              ⭐ {t('roles.master')}
             </p>
           )}
         </div>
@@ -376,7 +471,9 @@ function Header({ showForm, setShowForm, loadTasks, loading, total, isMaster }) 
           onClick={() => setShowForm((v) => !v)}
           className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
         >
-          {showForm ? '➖ Masquer le formulaire' : '➕ Nouvelle tâche'}
+          {showForm
+            ? `➖ ${t('tasksPage.buttons.hideForm')}`
+            : `➕ ${t('tasksPage.buttons.newTask')}`}
         </button>
 
         <button
@@ -388,7 +485,9 @@ function Header({ showForm, setShowForm, loadTasks, loading, total, isMaster }) 
               : 'bg-blue-600 text-white hover:bg-blue-700'
           }`}
         >
-          {loading ? 'Chargement…' : '🔄 Rafraîchir'}
+          {loading
+            ? t('tasksPage.buttons.refreshLoading')
+            : `🔄 ${t('tasksPage.buttons.refresh')}`}
         </button>
       </div>
     </div>
@@ -403,13 +502,15 @@ function TaskFilters({
   user,
   filteredCount,
   isAdminLike,
+  onReset,
 }) {
+  const { t } = useTranslation();
   return (
     <div className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Recherche */}
         <input
-          placeholder="🔎 Rechercher une tâche (titre, description, service...)"
+          placeholder={`🔎 ${t('tasksPage.filters.searchPlaceholder')}`}
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
           className="
@@ -425,7 +526,7 @@ function TaskFilters({
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Type (tous)</option>
+          <option value="">{t('tasksPage.filters.typeAll')}</option>
           {Object.entries(TASK_TYPES).map(([key, label]) => (
             <option key={key} value={key}>
               {label}
@@ -439,7 +540,7 @@ function TaskFilters({
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Statut (tous)</option>
+          <option value="">{t('tasksPage.filters.statusAll')}</option>
           {Object.entries(TASK_STATUSES).map(([key, label]) => (
             <option key={key} value={key}>
               {label}
@@ -453,7 +554,7 @@ function TaskFilters({
           onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Priorité (toutes)</option>
+          <option value="">{t('tasksPage.filters.priorityAll')}</option>
           {Object.entries(TASK_PRIORITIES).map(([key, label]) => (
             <option key={key} value={key}>
               {label}
@@ -467,10 +568,10 @@ function TaskFilters({
           onChange={(e) => setFilters({ ...filters, service: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Service (tous)</option>
+          <option value="">{t('tasksPage.filters.serviceAll')}</option>
           {services.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.title} — {s.typeLabel || s.type}
+              {s.title} — {SERVICE_TYPES[s.type] || s.type || t('common.dash')}
             </option>
           ))}
         </select>
@@ -482,7 +583,7 @@ function TaskFilters({
             onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Agent (tous)</option>
+            <option value="">{t('tasksPage.filters.agentAll')}</option>
             {agents.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.firstName} {a.lastName}
@@ -494,25 +595,16 @@ function TaskFilters({
 
       <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="text-xs sm:text-sm text-gray-500">
-          {filteredCount} tâche(s) trouvée(s).
+          {t('tasksPage.filters.foundCount', { count: filteredCount })}
         </div>
         <button
-          onClick={() =>
-            setFilters({
-              q: '',
-              type: '',
-              status: '',
-              priority: '',
-              service: '',
-              agent: '',
-            })
-          }
+          onClick={onReset}
           className="
             text-xs sm:text-sm px-3 py-1.5 bg-gray-200 rounded-md
             hover:bg-gray-300 w-full sm:w-auto text-center
           "
         >
-          Réinitialiser tous les filtres
+          {t('tasksPage.filters.reset')}
         </button>
       </div>
     </div>
@@ -520,13 +612,14 @@ function TaskFilters({
 }
 
 function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLike }) {
+  const { t } = useTranslation();
   return (
     <div className="mb-10">
       <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">
-        ➕ Créer une nouvelle tâche
+        ➕ {t('tasksPage.form.title')}
       </h2>
       <p className="text-xs sm:text-sm text-gray-500 mb-4">
-        Renseignez les informations ci-dessous pour organiser clairement le travail à effectuer.
+        {t('tasksPage.form.subtitle')}
       </p>
 
       <form
@@ -539,7 +632,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
         {/* Service lié */}
         <div className="w-full">
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-            Service associé <span className="text-red-500">*</span>
+            {t('tasksPage.form.serviceLabel')} <span className="text-red-500">*</span>
           </label>
           <select
             value={form.serviceId}
@@ -550,10 +643,10 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
               text-sm sm:text-base focus:ring-2 focus:ring-blue-500
             "
           >
-            <option value="">— Choisir un service —</option>
+            <option value="">{t('tasksPage.form.servicePlaceholder')}</option>
             {services.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.title} ({s.typeLabel || s.type})
+                {s.title} ({SERVICE_TYPES[s.type] || s.type || t('common.dash')})
               </option>
             ))}
           </select>
@@ -562,7 +655,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
         {/* Type de tâche */}
         <div className="w-full">
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-            Type de tâche
+            {t('tasksPage.form.typeLabel')}
           </label>
           <select
             value={form.type}
@@ -584,10 +677,10 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
         {/* Titre */}
         <div className="w-full col-span-1 sm:col-span-2">
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-            Titre de la tâche <span className="text-red-500">*</span>
+            {t('tasksPage.form.titleLabel')} <span className="text-red-500">*</span>
           </label>
           <input
-            placeholder="Ex : Inspection du bien à Hamdallaye"
+            placeholder={t('tasksPage.form.titlePlaceholder')}
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             required
@@ -601,10 +694,10 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
         {/* Description */}
         <div className="w-full col-span-1 sm:col-span-2">
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-            Description
+            {t('tasksPage.form.descriptionLabel')}
           </label>
           <textarea
-            placeholder="Ajoutez des détails pour que l’agent comprenne clairement la mission."
+            placeholder={t('tasksPage.form.descriptionPlaceholder')}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
@@ -618,7 +711,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
         {/* Priorité */}
         <div className="w-full">
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-            Priorité
+            {t('tasksPage.form.priorityLabel')}
           </label>
           <select
             value={form.priority}
@@ -639,7 +732,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
         {/* Date d’échéance */}
         <div className="w-full">
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-            Date d’échéance
+            {t('tasksPage.form.dueDateLabel')}
           </label>
           <input
             type="date"
@@ -655,12 +748,12 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
         {/* Coût estimé */}
         <div className="w-full">
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-            Coût estimé (FCFA)
+            {t('tasksPage.form.estimatedCostLabel')}
           </label>
           <input
             type="number"
             step="0.01"
-            placeholder="Ex : 15 000"
+            placeholder={t('tasksPage.form.estimatedCostPlaceholder')}
             value={form.estimatedCost}
             onChange={(e) => setForm({ ...form, estimatedCost: e.target.value })}
             className="
@@ -674,7 +767,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
         {isAdminLike && (
           <div className="w-full">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-              Assigné à (optionnel)
+              {t('tasksPage.form.assignedLabel')}
             </label>
             <select
               value={form.assignedTo}
@@ -684,7 +777,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
                 text-sm sm:text-base focus:ring-2 focus:ring-blue-500
               "
             >
-              <option value="">— Aucun agent (pour l’instant) —</option>
+              <option value="">{t('tasksPage.form.assignedPlaceholder')}</option>
               {agents.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.firstName || a.lastName
@@ -705,7 +798,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
               text-sm sm:text-base font-semibold hover:bg-blue-700 transition
             "
           >
-            Créer la tâche
+            {t('tasksPage.form.submit')}
           </button>
         </div>
       </form>
@@ -724,19 +817,20 @@ function TaskList({
   displayUser,
   agents,
 }) {
+  const { t } = useTranslation();
   if (!tasks || tasks.length === 0) {
     return (
       <p className="text-gray-500 italic text-center py-8">
-        Aucune tâche trouvée avec ces filtres.
+        {t('tasksPage.list.empty')}
       </p>
     );
   }
 
   return (
     <div className="grid gap-5">
-      {tasks.map((t) => (
+      {tasks.map((task) => (
         <div
-          key={t.id}
+          key={task.id}
           className="
             bg-white border border-gray-200 rounded-2xl shadow-sm
             p-4 sm:p-5 hover:shadow-md transition
@@ -746,10 +840,10 @@ function TaskList({
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
             <div className="min-w-0 break-words">
               <h3 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">
-                {t.title}
+                {task.title}
               </h3>
               <p className="text-sm sm:text-base text-gray-600 mt-1 break-words">
-                {t.description || 'Aucune description'}
+                {task.description || t('tasksPage.list.noDescription')}
               </p>
             </div>
 
@@ -758,34 +852,37 @@ function TaskList({
                 mt-1 sm:mt-0 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold
                 whitespace-nowrap self-start
                 ${
-                  t.status === 'created'
+                  task.status === 'created'
                     ? 'bg-gray-100 text-gray-700'
-                    : t.status === 'in_progress'
+                    : task.status === 'in_progress'
                     ? 'bg-blue-100 text-blue-700'
-                    : t.status === 'completed'
+                    : task.status === 'completed'
                     ? 'bg-green-100 text-green-700'
                     : 'bg-emerald-100 text-emerald-700'
                 }
               `}
             >
-              {t.statusLabel || TASK_STATUSES[t.status] || t.status}
+              {TASK_STATUSES[task.status] || task.status || t('common.dash')}
             </div>
           </div>
 
           {/* Meta infos */}
           <div className="mt-4 text-sm sm:text-base text-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-2">
             <p className="break-words">
-              <strong>Type :</strong> {t.typeLabel || TASK_TYPES[t.type]}
+              <strong>{t('tasksPage.list.typeLabel')}:</strong>{' '}
+              {TASK_TYPES[task.type] || task.type || t('common.dash')}
             </p>
             <p className="break-words">
-              <strong>Priorité :</strong>{' '}
-              {t.priorityLabel || TASK_PRIORITIES[t.priority]}
+              <strong>{t('tasksPage.list.priorityLabel')}:</strong>{' '}
+              {TASK_PRIORITIES[task.priority] || task.priority || t('common.dash')}
             </p>
             <p className="break-words">
-              <strong>Service :</strong> {t.service?.title || t.serviceId}
+              <strong>{t('tasksPage.list.serviceLabel')}:</strong>{' '}
+              {task.service?.title || task.serviceId}
             </p>
             <p className="break-words">
-              <strong>Assigné à :</strong> {displayUser(t.assignee)}
+              <strong>{t('tasksPage.list.assigneeLabel')}:</strong>{' '}
+              {displayUser(task.assignee)}
             </p>
           </div>
 
@@ -793,26 +890,26 @@ function TaskList({
           <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
             {/* PREUVES */}
             <button
-              onClick={() => navigate(`/tasks/${t.id}/evidences`)}
+              onClick={() => navigate(`/tasks/${task.id}/evidences`)}
               className="
                 w-full sm:w-auto px-4 py-2 bg-blue-600 text-white text-sm sm:text-base
                 font-medium rounded-lg hover:bg-blue-700 transition
               "
             >
-              📎 Voir les preuves
+              📎 {t('tasksPage.list.viewEvidences')}
             </button>
 
             {/* Assignation (admin/master) */}
-            {isAdminLike && !t.assignee && t.status === 'created' && (
+            {isAdminLike && !task.assignee && task.status === 'created' && (
               <select
-                onChange={(e) => updateAssignment(t.id, e.target.value)}
+                onChange={(e) => updateAssignment(task.id, e.target.value)}
                 defaultValue=""
                 className="
                   w-full sm:w-auto border border-gray-300 rounded-lg px-3 py-2
                   text-sm sm:text-base
                 "
               >
-                <option value="">— Assigner à un agent —</option>
+                <option value="">{t('tasksPage.list.assignPlaceholder')}</option>
                 {agents.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.firstName} {a.lastName}
@@ -822,41 +919,41 @@ function TaskList({
             )}
 
             {/* Agent → Démarrer */}
-            {role === 'agent' && t.status === 'created' && (
+            {role === 'agent' && task.status === 'created' && (
               <button
-                onClick={() => updateStatus(t.id, 'in_progress')}
+                onClick={() => updateStatus(task.id, 'in_progress')}
                 className="
                   w-full sm:w-auto px-4 py-2 bg-yellow-500 text-white text-sm sm:text-base
                   font-medium rounded-lg hover:bg-yellow-600 transition
                 "
               >
-                ▶️ Démarrer
+                ▶️ {t('tasksPage.list.start')}
               </button>
             )}
 
             {/* Agent → Terminer */}
-            {role === 'agent' && t.status === 'in_progress' && (
+            {role === 'agent' && task.status === 'in_progress' && (
               <button
-                onClick={() => updateStatus(t.id, 'completed')}
+                onClick={() => updateStatus(task.id, 'completed')}
                 className="
                   w-full sm:w-auto px-4 py-2 bg-green-600 text-white text-sm sm:text-base
                   font-medium rounded-lg hover:bg-green-700 transition
                 "
               >
-                ✅ Terminer
+                ✅ {t('tasksPage.list.finish')}
               </button>
             )}
 
             {/* Admin/master UI → Valider (backend reste la vérité : admin only) */}
-            {isAdminLike && role === 'admin' && t.status === 'completed' && (
+            {isAdminLike && role === 'admin' && task.status === 'completed' && (
               <button
-                onClick={() => updateStatus(t.id, 'validated')}
+                onClick={() => updateStatus(task.id, 'validated')}
                 className="
                   w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white text-sm sm:text-base
                   font-medium rounded-lg hover:bg-emerald-700 transition
                 "
               >
-                ✔️ Valider
+                ✔️ {t('tasksPage.list.validate')}
               </button>
             )}
           </div>

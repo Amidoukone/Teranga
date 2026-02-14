@@ -11,6 +11,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getProductById } from '../services/products';
 import { formatCurrency } from '../utils/labels';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 
 /* ============================================================
    🌍 CONFIG PRODUCTION — FILE_BASE / toAbsUrl()
@@ -88,6 +90,8 @@ function getImagesForProduct(p) {
    ⭐ PAGE DÉTAIL PRODUIT — Style A
 ============================================================ */
 export default function ProductDetailPage() {
+  const { formatNumber, formatDate } = useLocale();
+  const { t } = useTranslation();
   const { id } = useParams();
 
   const [product, setProduct] = useState(null);
@@ -123,7 +127,7 @@ export default function ProductDetailPage() {
         console.error('❌ Erreur chargement produit:', e);
         const msg =
           e?.response?.data?.error ||
-          "Impossible de charger ce produit pour le moment.";
+          t('productDetailPage.errors.load');
         if (mounted) setError(msg);
       } finally {
         if (mounted) setLoading(false);
@@ -156,7 +160,7 @@ export default function ProductDetailPage() {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
         <p className="text-gray-600 text-lg animate-pulse">
-          Chargement du produit…
+          {t('productDetailPage.loading')}
         </p>
       </div>
     );
@@ -174,7 +178,7 @@ export default function ProductDetailPage() {
             to="/shop"
             className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
           >
-            ← Retour au catalogue
+            {t('productDetailPage.actions.backToCatalog')}
           </Link>
         </div>
       </div>
@@ -186,13 +190,13 @@ export default function ProductDetailPage() {
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
         <div className="max-w-md w-full bg-white border border-gray-100 rounded-2xl shadow-lg p-6 text-center">
           <p className="text-gray-500 text-base sm:text-lg italic mb-4">
-            Produit introuvable.
+            {t('productDetailPage.notFound')}
           </p>
           <Link
             to="/shop"
             className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
           >
-            ← Retour au catalogue
+            {t('productDetailPage.actions.backToCatalog')}
           </Link>
         </div>
       </div>
@@ -250,7 +254,7 @@ export default function ProductDetailPage() {
                 to="/shop"
                 className="inline-flex items-center gap-1 hover:text-slate-700 flex-shrink-0"
               >
-                <span>Catalogue</span>
+                <span>{t('productDetailPage.header.catalog')}</span>
                 <span aria-hidden="true">/</span>
               </Link>
               <span className="font-medium text-slate-700 line-clamp-1">
@@ -258,7 +262,7 @@ export default function ProductDetailPage() {
               </span>
             </div>
             <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900">
-              Détail du produit
+              {t('productDetailPage.header.title')}
             </h1>
           </div>
 
@@ -285,7 +289,10 @@ export default function ProductDetailPage() {
                     onClick={openLightbox}
                     role="button"
                     tabIndex={0}
-                    aria-label={`Voir image ${safeIndex + 1} de ${images.length}`}
+                    aria-label={t('productDetailPage.images.viewAria', {
+                      index: safeIndex + 1,
+                      total: images.length,
+                    })}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') openLightbox();
                     }}
@@ -313,7 +320,7 @@ export default function ProductDetailPage() {
 
                     {/* Hint zoom */}
                     <span className="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full">
-                      Cliquer pour agrandir
+                      {t('productDetailPage.images.zoomHint')}
                     </span>
                   </div>
 
@@ -334,11 +341,16 @@ export default function ProductDetailPage() {
                                 : 'border-slate-200 hover:border-blue-300'
                             }
                           `}
-                          aria-label={`Voir la vignette ${idx + 1}`}
+                          aria-label={t('productDetailPage.images.thumbAria', {
+                            index: idx + 1,
+                          })}
                         >
                           <img
                             src={img}
-                            alt={`${name} vignette ${idx + 1}`}
+                            alt={t('productDetailPage.images.thumbAlt', {
+                              name,
+                              index: idx + 1,
+                            })}
                             className="w-full h-full object-cover"
                           />
                         </button>
@@ -348,7 +360,7 @@ export default function ProductDetailPage() {
                 </>
               ) : (
                 <div className="w-full h-80 sm:h-96 flex items-center justify-center rounded-2xl border border-dashed border-slate-300 text-slate-400 text-sm bg-slate-50">
-                  Aucun visuel disponible
+                  {t('productDetailPage.images.noImage')}
                 </div>
               )}
             </div>
@@ -373,18 +385,18 @@ export default function ProductDetailPage() {
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 <div>
                   <p className="text-[11px] uppercase text-slate-400">
-                    Prix
+                    {t('productDetailPage.info.priceLabel')}
                   </p>
                   <p className="text-2xl sm:text-3xl font-semibold text-blue-600">
                     {formatCurrency(currency || 'XOF')}{' '}
-                    {Number(price || 0).toLocaleString('fr-FR')}
+                    {formatNumber(price || 0)}
                   </p>
                 </div>
 
                 {typeof stock === 'number' && (
                   <div>
                     <p className="text-[11px] uppercase text-slate-400">
-                      Stock
+                      {t('productDetailPage.info.stockLabel')}
                     </p>
                     <p
                       className={`text-sm font-semibold ${
@@ -392,10 +404,10 @@ export default function ProductDetailPage() {
                       }`}
                     >
                       {stock > 0
-                        ? `${stock} article${stock > 1 ? 's' : ''} disponible${
-                            stock > 1 ? 's' : ''
-                          }`
-                        : 'Rupture de stock'}
+                        ? t('productDetailPage.info.stockAvailable', {
+                            count: stock,
+                          })
+                        : t('productDetailPage.info.stockOut')}
                     </p>
                   </div>
                 )}
@@ -403,21 +415,25 @@ export default function ProductDetailPage() {
 
               {/* Description */}
               <div className="mb-4 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                {description || 'Aucune description disponible.'}
+                {description || t('productDetailPage.info.noDescription')}
               </div>
 
               {/* Métadonnées */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-500 mb-6">
                 {createdAt && (
                   <div>
-                    <span className="font-semibold">Créé le :</span>{' '}
-                    {new Date(createdAt).toLocaleDateString('fr-FR')}
+                    <span className="font-semibold">
+                      {t('productDetailPage.meta.createdAt')}
+                    </span>{' '}
+                    {formatDate(createdAt)}
                   </div>
                 )}
                 {updatedAt && (
                   <div>
-                    <span className="font-semibold">Dernière mise à jour :</span>{' '}
-                    {new Date(updatedAt).toLocaleDateString('fr-FR')}
+                    <span className="font-semibold">
+                      {t('productDetailPage.meta.updatedAt')}
+                    </span>{' '}
+                    {formatDate(updatedAt)}
                   </div>
                 )}
               </div>
@@ -428,7 +444,7 @@ export default function ProductDetailPage() {
                   to="/shop"
                   className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
                 >
-                  ← Retour au catalogue
+                  {t('productDetailPage.actions.backToCatalog')}
                 </Link>
               </div>
             </div>
@@ -445,7 +461,7 @@ export default function ProductDetailPage() {
           onClick={closeLightbox}
           role="dialog"
           aria-modal="true"
-          aria-label={`Images du produit ${name}`}
+          aria-label={t('productDetailPage.lightbox.ariaLabel', { name })}
         >
           {/* Bouton fermer */}
           <button
@@ -455,7 +471,7 @@ export default function ProductDetailPage() {
               closeLightbox();
             }}
             className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white"
-            aria-label="Fermer la lightbox"
+            aria-label={t('productDetailPage.lightbox.close')}
           >
             ✕
           </button>
@@ -467,7 +483,7 @@ export default function ProductDetailPage() {
                 type="button"
                 onClick={goPrev}
                 className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
-                aria-label="Image précédente"
+                aria-label={t('productDetailPage.lightbox.prev')}
               >
                 ‹
               </button>
@@ -476,7 +492,7 @@ export default function ProductDetailPage() {
                 type="button"
                 onClick={goNext}
                 className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
-                aria-label="Image suivante"
+                aria-label={t('productDetailPage.lightbox.next')}
               >
                 ›
               </button>
@@ -486,14 +502,20 @@ export default function ProductDetailPage() {
           {/* Image */}
           <img
             src={currentImage}
-            alt={`${name} (image ${safeIndex + 1})`}
+            alt={t('productDetailPage.lightbox.imageAlt', {
+              name,
+              index: safeIndex + 1,
+            })}
             className="max-w-[92vw] max-h-[80vh] object-contain rounded-xl shadow-2xl border border-white/20"
           />
 
           {/* Compteur */}
           {images.length > 1 && (
             <div className="absolute bottom-4 text-white text-xs bg-black/40 px-3 py-1 rounded-full">
-              {safeIndex + 1} / {images.length}
+              {t('productDetailPage.lightbox.counter', {
+                index: safeIndex + 1,
+                total: images.length,
+              })}
             </div>
           )}
         </div>
@@ -501,3 +523,4 @@ export default function ProductDetailPage() {
     </div>
   );
 }
+

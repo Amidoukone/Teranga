@@ -14,6 +14,7 @@ const registerSchema = Joi.object({
   country: Joi.string().allow('', null),
   countryId: Joi.number().integer().allow(null),
   regionId: Joi.number().integer().allow(null),
+  language: Joi.string().allow('', null),
 });
 
 const loginSchema = Joi.object({
@@ -35,10 +36,15 @@ const changePasswordSchema = Joi.object({
   newPassword: password.required(),
 });
 
+const updateMeSchema = Joi.object({
+  language: Joi.string().allow('', null),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   changePasswordSchema,
+  updateMeSchema,
 };

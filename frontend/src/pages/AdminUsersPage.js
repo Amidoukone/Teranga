@@ -17,6 +17,7 @@ import { me } from "../services/auth";
 import { motion } from "framer-motion";
 import { normalizeRole, isMasterUser, prettyRoleLabel } from "../utils/role";
 import { useGeo } from "../contexts/GeoContext";
+import { useTranslation } from "react-i18next";
 
 /* ============================================================
    Helpers locaux (safe, non cassants)
@@ -34,16 +35,17 @@ function toSafeIntOrEmpty(v) {
 function upper2(v) {
   return toSafeStr(v).trim().toUpperCase().slice(0, 2);
 }
-function extractApiError(err) {
+function extractApiError(err, fallbackMessage) {
   return (
     err?.response?.data?.error ||
     err?.response?.data?.message ||
     err?.message ||
-    "Erreur lors de la soumission"
+    fallbackMessage
   );
 }
 
 export default function AdminUsersPage() {
+  const { t } = useTranslation();
   const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(null);
 
@@ -271,7 +273,7 @@ export default function AdminUsersPage() {
 
     // MASTER => interdit admin
     if (isMaster && targetRole === "admin") {
-      const err = new Error("⛔ Un ADMIN MASTER ne peut pas créer ou promouvoir un compte admin.");
+      const err = new Error(t("adminUsersPage.alerts.masterCannotPromote"));
       err.status = 403;
       throw err;
     }
@@ -280,7 +282,7 @@ export default function AdminUsersPage() {
 
     // Création : password requis
     if (!editing && !toSafeStr(form.password).trim()) {
-      const err = new Error("Mot de passe requis à la création.");
+      const err = new Error(t("adminUsersPage.alerts.passwordRequired"));
       err.status = 400;
       throw err;
     }
@@ -317,16 +319,16 @@ export default function AdminUsersPage() {
 
       if (editing) {
         await updateUser(editing, payload);
-        alert("✅ Utilisateur mis à jour");
+        alert(t("adminUsersPage.alerts.updated"));
       } else {
         await createUser(payload);
-        alert("✅ Utilisateur créé");
+        alert(t("adminUsersPage.alerts.created"));
       }
 
       resetForm();
       await load();
     } catch (err) {
-      alert(extractApiError(err));
+      alert(extractApiError(err, t("adminUsersPage.alerts.submitError")));
       console.error("❌ Submit error:", err);
     }
   }
@@ -351,7 +353,7 @@ export default function AdminUsersPage() {
   function handleEdit(u) {
     // 🔒 MASTER ne peut pas éditer un admin existant
     if (isMaster && normalizeRole(u.role) === "admin") {
-      alert("⛔ Impossible de modifier un admin en tant que MASTER.");
+      alert(t("adminUsersPage.alerts.masterCannotEdit"));
       return;
     }
 
@@ -378,17 +380,17 @@ export default function AdminUsersPage() {
   async function handleDelete(u) {
     // 🔒 MASTER ne peut pas supprimer un admin
     if (isMaster && normalizeRole(u.role) === "admin") {
-      alert("⛔ Impossible de supprimer un admin en tant que MASTER.");
+      alert(t("adminUsersPage.alerts.masterCannotDelete"));
       return;
     }
-    if (!window.confirm("Supprimer cet utilisateur ?")) return;
+    if (!window.confirm(t("adminUsersPage.alerts.deleteConfirm"))) return;
 
     try {
       await deleteUser(u.id);
-      alert("✅ Utilisateur supprimé");
+      alert(t("adminUsersPage.alerts.deleted"));
       await load();
     } catch (err) {
-      alert(extractApiError(err));
+      alert(extractApiError(err, t("adminUsersPage.alerts.submitError")));
       console.error("❌ Delete error:", err);
     }
   }
@@ -399,7 +401,7 @@ export default function AdminUsersPage() {
   if (isAdmin === null) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500 animate-pulse">Chargement…</p>
+        <p className="text-gray-500 animate-pulse">{t("adminUsersPage.loading")}</p>
       </div>
     );
   }
@@ -418,7 +420,7 @@ export default function AdminUsersPage() {
         <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
           <div className="min-w-0">
             <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
-              👥 Gestion des utilisateurs
+              {t("adminUsersPage.title")}
             </h1>
 
             {/* ✅ Info scope + badges */}
@@ -438,29 +440,54 @@ export default function AdminUsersPage() {
                           ? "border-blue-200 bg-blue-50 text-blue-700"
                           : "border-emerald-200 bg-emerald-50 text-emerald-700"
                       }`}
-                      title={isMaster ? "Admin MASTER (scopé)" : "Admin GLOBAL"}
+                      title={
+                        isMaster
+                          ? t("adminUsersPage.badges.masterTitle")
+                          : t("adminUsersPage.badges.globalTitle")
+                      }
                     >
-                      {isMaster ? "MASTER" : "GLOBAL"}
+                      {isMaster
+                        ? t("adminUsersPage.badges.master")
+                        : t("adminUsersPage.badges.global")}
                     </span>
                   )}
 
                   {/* Périmètre */}
                   {isMaster && (
                     <span className="text-gray-500">
-                      Périmètre :
-                      {currentUser?.countryId != null ? ` Pays #${currentUser.countryId}` : ""}
-                      {currentUser?.regionId != null ? ` · Région #${currentUser.regionId}` : ""}
+                      {t("adminUsersPage.labels.perimeter")}
+                      {currentUser?.countryId != null
+                        ? ` ${t("adminUsersPage.labels.countryId", {
+                            id: currentUser.countryId,
+                          })}`
+                        : ""}
+                      {currentUser?.regionId != null
+                        ? ` · ${t("adminUsersPage.labels.regionId", {
+                            id: currentUser.regionId,
+                          })}`
+                        : ""}
                     </span>
                   )}
 
-                  {!isMaster && <span className="text-gray-500">Accès global</span>}
+                  {!isMaster && (
+                    <span className="text-gray-500">
+                      {t("adminUsersPage.labels.globalAccess")}
+                    </span>
+                  )}
 
                   {/* Filtre GeoContext */}
                   {geoCountryId && !isScopedRole && (
                     <span className="text-gray-500">
-                      Filtre: {geoCountry?.name || `Pays #${geoCountryId}`}
-                      {geoRegionId ? ` · ${geoRegion?.name || `Région #${geoRegionId}`}` : ""}
-                      {canSelect ? " (sélection)" : ""}
+                      {t("adminUsersPage.labels.filter")}{" "}
+                      {geoCountry?.name ||
+                        t("adminUsersPage.labels.countryId", { id: geoCountryId })}
+                      {geoRegionId
+                        ? ` · ${
+                            geoRegion?.name ||
+                            t("adminUsersPage.labels.regionId", { id: geoRegionId })
+                          }`
+                        : ""}
+                      {canSelect ? ` ${t("adminUsersPage.labels.selection")}` : ""}
                     </span>
                   )}
                 </span>
@@ -473,7 +500,9 @@ export default function AdminUsersPage() {
               onClick={() => setShowForm((v) => !v)}
               className="px-5 py-2 rounded-full bg-[#1c1c1e] text-white text-sm font-medium shadow hover:bg-black transition"
             >
-              {showForm ? "➖ Masquer" : "➕ Créer utilisateur"}
+              {showForm
+                ? t("adminUsersPage.buttons.hideForm")
+                : t("adminUsersPage.buttons.showForm")}
             </button>
 
             <button
@@ -485,7 +514,7 @@ export default function AdminUsersPage() {
                   : "bg-[#0a84ff] text-white hover:bg-[#0066cc]"
               }`}
             >
-              {loading ? "Chargement…" : "🔄 Rafraîchir"}
+              {loading ? t("adminUsersPage.loading") : t("adminUsersPage.buttons.refresh")}
             </button>
           </div>
         </div>
@@ -495,7 +524,9 @@ export default function AdminUsersPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
             {/* Rôle */}
             <div>
-              <label className="text-xs font-medium text-gray-600">Catégorie</label>
+              <label className="text-xs font-medium text-gray-600">
+                {t("adminUsersPage.filters.category")}
+              </label>
               <select
                 value={role}
                 onChange={(e) => {
@@ -507,16 +538,18 @@ export default function AdminUsersPage() {
                 }}
                 className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
               >
-                <option value="client">Clients</option>
-                <option value="agent">Agents</option>
-                <option value="admin">Admins</option>
+                <option value="client">{t("adminUsersPage.filters.roles.clients")}</option>
+                <option value="agent">{t("adminUsersPage.filters.roles.agents")}</option>
+                <option value="admin">{t("adminUsersPage.filters.roles.admins")}</option>
               </select>
             </div>
 
             {/* Type d'admin (GLOBAL uniquement) */}
             {role === "admin" && isGlobalAdmin && (
               <div>
-                <label className="text-xs font-medium text-gray-600">Type d’admin</label>
+                <label className="text-xs font-medium text-gray-600">
+                  {t("adminUsersPage.filters.adminType")}
+                </label>
                 <select
                   value={filters.adminType}
                   onChange={(e) =>
@@ -527,18 +560,20 @@ export default function AdminUsersPage() {
                   }
                   className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
                 >
-                  <option value="all">Tous</option>
-                  <option value="master">Masters (scopés)</option>
-                  <option value="global">Admins globaux</option>
+                  <option value="all">{t("adminUsersPage.filters.adminTypes.all")}</option>
+                  <option value="master">{t("adminUsersPage.filters.adminTypes.master")}</option>
+                  <option value="global">{t("adminUsersPage.filters.adminTypes.global")}</option>
                 </select>
               </div>
             )}
 
             {/* Recherche */}
             <div className="lg:col-span-2">
-              <label className="text-xs font-medium text-gray-600">Recherche</label>
+              <label className="text-xs font-medium text-gray-600">
+                {t("adminUsersPage.filters.search")}
+              </label>
               <input
-                placeholder="Nom, email, téléphone…"
+                placeholder={t("adminUsersPage.placeholders.search")}
                 value={filters.q}
                 onChange={(e) => setFilters({ ...filters, q: e.target.value })}
                 className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
@@ -547,9 +582,11 @@ export default function AdminUsersPage() {
 
             {/* Pays */}
             <div>
-              <label className="text-xs font-medium text-gray-600">Pays (ISO2)</label>
+              <label className="text-xs font-medium text-gray-600">
+                {t("adminUsersPage.filters.country")}
+              </label>
               <input
-                placeholder="SN, ML, FR…"
+                placeholder={t("adminUsersPage.placeholders.country")}
                 value={filters.country}
                 onChange={(e) =>
                   setFilters({
@@ -569,30 +606,32 @@ export default function AdminUsersPage() {
                   checked={filters.onlyPhone}
                   onChange={(e) => setFilters({ ...filters, onlyPhone: e.target.checked })}
                 />
-                Avec téléphone
+                {t("adminUsersPage.filters.withPhone")}
               </label>
             </div>
 
             {/* Tri */}
             <div>
-              <label className="text-xs font-medium text-gray-600">Tri</label>
+              <label className="text-xs font-medium text-gray-600">
+                {t("adminUsersPage.filters.sort")}
+              </label>
               <select
                 value={filters.sort}
                 onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
                 className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
               >
-                <option value="-createdAt">Plus récents</option>
-                <option value="createdAt">Plus anciens</option>
-                <option value="firstName">Prénom A→Z</option>
-                <option value="-firstName">Prénom Z→A</option>
-                <option value="email">Email A→Z</option>
-                <option value="-email">Email Z→A</option>
+                <option value="-createdAt">{t("adminUsersPage.filters.sortOptions.newest")}</option>
+                <option value="createdAt">{t("adminUsersPage.filters.sortOptions.oldest")}</option>
+                <option value="firstName">{t("adminUsersPage.filters.sortOptions.firstNameAsc")}</option>
+                <option value="-firstName">{t("adminUsersPage.filters.sortOptions.firstNameDesc")}</option>
+                <option value="email">{t("adminUsersPage.filters.sortOptions.emailAsc")}</option>
+                <option value="-email">{t("adminUsersPage.filters.sortOptions.emailDesc")}</option>
               </select>
             </div>
           </div>
 
           <div className="mt-3 flex justify-between text-xs text-gray-500">
-            <span>{filtered.length} utilisateur(s)</span>
+            <span>{t("adminUsersPage.countUsers", { count: filtered.length })}</span>
             <button
               onClick={() =>
                 setFilters({
@@ -605,7 +644,7 @@ export default function AdminUsersPage() {
               }
               className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300"
             >
-              Réinitialiser
+              {t("adminUsersPage.buttons.reset")}
             </button>
           </div>
         </div>
@@ -619,10 +658,10 @@ export default function AdminUsersPage() {
             className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#f8f8fa] p-6 rounded-2xl border border-gray-200 mb-10"
           >
             {[
-              ["firstName", "Prénom"],
-              ["lastName", "Nom"],
-              ["phone", "Téléphone"],
-              ["country", "Pays (ISO2)"],
+              ["firstName", t("adminUsersPage.placeholders.firstName")],
+              ["lastName", t("adminUsersPage.placeholders.lastName")],
+              ["phone", t("adminUsersPage.placeholders.phone")],
+              ["country", t("adminUsersPage.placeholders.countryIso")],
             ].map(([key, label]) => (
               <input
                 key={key}
@@ -634,7 +673,7 @@ export default function AdminUsersPage() {
             ))}
 
             <input
-              placeholder="Email"
+              placeholder={t("adminUsersPage.placeholders.email")}
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -642,7 +681,7 @@ export default function AdminUsersPage() {
             />
 
             <input
-              placeholder="Mot de passe (laisser vide si inchangé)"
+              placeholder={t("adminUsersPage.placeholders.password")}
               type="password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -664,16 +703,14 @@ export default function AdminUsersPage() {
               }
               className="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
             >
-              <option value="client">Client</option>
-              <option value="agent">Agent</option>
-              {isGlobalAdmin && <option value="admin">Admin</option>}
+              <option value="client">{t("adminUsersPage.roles.client")}</option>
+              <option value="agent">{t("adminUsersPage.roles.agent")}</option>
+              {isGlobalAdmin && <option value="admin">{t("adminUsersPage.roles.admin")}</option>}
             </select>
 
             {normalizeRole(form.role) === "client" && (
               <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-                Info: les clients inscrits publiquement sont crees au niveau pays (region
-                vide). Un admin/master peut ensuite affecter la region en modifiant le
-                compte.
+                {t("adminUsersPage.info.clientScope")}
               </div>
             )}
 
@@ -681,7 +718,9 @@ export default function AdminUsersPage() {
             {isGlobalAdmin && normalizeRole(form.role) === "admin" && (
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-gray-600">Périmètre pays</label>
+                  <label className="text-xs font-medium text-gray-600">
+                    {t("adminUsersPage.info.countryScopeLabel")}
+                  </label>
                   <select
                     value={form.scopeCountryId}
                     onChange={(e) =>
@@ -693,7 +732,7 @@ export default function AdminUsersPage() {
                     }
                     className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
                   >
-                    <option value="">— Admin global (aucun périmètre) —</option>
+                    <option value="">{t("adminUsersPage.info.globalScopeOption")}</option>
                     {(countries || []).map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name} ({c.isoCode})
@@ -703,7 +742,9 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-gray-600">Périmètre région (optionnel)</label>
+                  <label className="text-xs font-medium text-gray-600">
+                    {t("adminUsersPage.info.regionScopeLabel")}
+                  </label>
                   <select
                     value={form.scopeRegionId}
                     disabled={
@@ -718,10 +759,10 @@ export default function AdminUsersPage() {
                   >
                     <option value="">
                       {!form.scopeCountryId
-                        ? "— Choisir d'abord un pays —"
+                        ? t("adminUsersPage.info.chooseCountryFirst")
                         : loadingFormRegions
-                          ? "Chargement des régions..."
-                          : "— MASTER pays (toutes régions) —"}
+                          ? t("adminUsersPage.info.regionsLoading")
+                          : t("adminUsersPage.info.masterCountryOption")}
                     </option>
                     {formRegions.map((r) => (
                       <option key={r.id} value={r.id}>
@@ -732,8 +773,7 @@ export default function AdminUsersPage() {
                 </div>
 
                 <p className="md:col-span-2 text-xs text-gray-500">
-                  ℹ️ Pour créer un <strong>MASTER</strong>, sélectionne un pays (MASTER pays)
-                  ou un pays + une région (MASTER régional). Laisser vide = admin global.
+                  {t("adminUsersPage.info.masterHint")}
                 </p>
               </div>
             )}
@@ -745,7 +785,7 @@ export default function AdminUsersPage() {
                   onClick={resetForm}
                   className="px-4 py-2 rounded-full bg-gray-300 hover:bg-gray-400 text-sm"
                 >
-                  Annuler
+                  {t("adminUsersPage.buttons.cancel")}
                 </button>
               )}
 
@@ -753,7 +793,9 @@ export default function AdminUsersPage() {
                 type="submit"
                 className="px-6 py-2 rounded-full bg-[#0a84ff] text-white text-sm font-medium hover:bg-[#0066cc]"
               >
-                {editing ? "💾 Mettre à jour" : "➕ Créer"}
+                {editing
+                  ? t("adminUsersPage.buttons.update")
+                  : t("adminUsersPage.buttons.create")}
               </button>
             </div>
           </motion.form>
@@ -761,19 +803,32 @@ export default function AdminUsersPage() {
 
         {/* TABLE */}
         {loading ? (
-          <p className="text-center text-gray-500 py-6">Chargement…</p>
+          <p className="text-center text-gray-500 py-6">{t("adminUsersPage.loading")}</p>
         ) : filtered.length === 0 ? (
-          <p className="text-center text-gray-500 py-6">Aucun utilisateur.</p>
+          <p className="text-center text-gray-500 py-6">{t("adminUsersPage.empty")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-separate border-spacing-y-2 text-sm">
               <thead>
                 <tr className="bg-gray-100 text-gray-700">
-                  {["Nom", "Email", "Téléphone", "Pays", "Rôle", "Actions"].map((h) => (
-                    <th key={h} className="text-left px-4 py-2 font-medium">
-                      {h}
-                    </th>
-                  ))}
+                  <th className="text-left px-4 py-2 font-medium">
+                    {t("adminUsersPage.table.headers.name")}
+                  </th>
+                  <th className="text-left px-4 py-2 font-medium">
+                    {t("adminUsersPage.table.headers.email")}
+                  </th>
+                  <th className="text-left px-4 py-2 font-medium">
+                    {t("adminUsersPage.table.headers.phone")}
+                  </th>
+                  <th className="text-left px-4 py-2 font-medium">
+                    {t("adminUsersPage.table.headers.country")}
+                  </th>
+                  <th className="text-left px-4 py-2 font-medium">
+                    {t("adminUsersPage.table.headers.role")}
+                  </th>
+                  <th className="text-left px-4 py-2 font-medium">
+                    {t("adminUsersPage.table.headers.actions")}
+                  </th>
                 </tr>
               </thead>
 
@@ -789,11 +844,16 @@ export default function AdminUsersPage() {
                       className="bg-white hover:bg-gray-50 transition border border-gray-200 rounded-xl"
                     >
                       <td className="px-4 py-2">
-                        {[u.firstName, u.lastName].filter(Boolean).join(" ") || "—"}
+                        {[u.firstName, u.lastName].filter(Boolean).join(" ") ||
+                          t("adminUsersPage.table.emptyValue")}
                       </td>
                       <td className="px-4 py-2">{u.email}</td>
-                      <td className="px-4 py-2">{u.phone || "—"}</td>
-                      <td className="px-4 py-2">{u.country || "—"}</td>
+                      <td className="px-4 py-2">
+                        {u.phone || t("adminUsersPage.table.emptyValue")}
+                      </td>
+                      <td className="px-4 py-2">
+                        {u.country || t("adminUsersPage.table.emptyValue")}
+                      </td>
                       <td className="px-4 py-2 uppercase">{prettyRoleLabel(u)}</td>
 
                       <td className="px-4 py-2 flex gap-3 items-center">
@@ -806,8 +866,8 @@ export default function AdminUsersPage() {
                           }`}
                           title={
                             actionsLocked
-                              ? "Verrouillé pour MASTER"
-                              : "Modifier"
+                              ? t("adminUsersPage.table.lockedTitle")
+                              : t("adminUsersPage.table.edit")
                           }
                           disabled={actionsLocked}
                         >
@@ -823,8 +883,8 @@ export default function AdminUsersPage() {
                           }`}
                           title={
                             actionsLocked
-                              ? "Verrouillé pour MASTER"
-                              : "Supprimer"
+                              ? t("adminUsersPage.table.lockedTitle")
+                              : t("adminUsersPage.table.delete")
                           }
                           disabled={actionsLocked}
                         >
@@ -833,7 +893,7 @@ export default function AdminUsersPage() {
 
                         {actionsLocked && (
                           <span className="text-[11px] text-gray-400">
-                            (admin protégé)
+                            {t("adminUsersPage.table.protected")}
                           </span>
                         )}
                       </td>
@@ -843,7 +903,9 @@ export default function AdminUsersPage() {
               </tbody>
             </table>
 
-            <p className="text-xs text-gray-500 mt-4">{filtered.length} résultat(s)</p>
+            <p className="text-xs text-gray-500 mt-4">
+              {t("adminUsersPage.table.results", { count: filtered.length })}
+            </p>
           </div>
         )}
       </motion.div>

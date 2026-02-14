@@ -189,7 +189,9 @@ export async function deleteTransaction(id) {
 
 /* ------------------- API: Stats & Report ------------------ */
 export async function getFinancialSummary() {
-  const { data } = await api.get('/transactions/summary');
+  const { data } = await api.get('/transactions/summary', {
+    params: mergeGeoParams(),
+  });
   return data;
 }
 

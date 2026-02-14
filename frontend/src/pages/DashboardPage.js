@@ -23,16 +23,13 @@ import {
   isGlobalAdminUser,
   isMasterUser,
   normalizeRole,
-  prettyRoleLabel,
 } from '../utils/role';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 
 /* ============================================================================
    🔧 UTILITAIRES
 =========================================================================== */
-
-function formatAmount(value) {
-  return Number(value || 0).toLocaleString('fr-FR');
-}
 
 function getInitials(user) {
   if (!user) return '?';
@@ -47,6 +44,8 @@ function getInitials(user) {
    PAGE PRINCIPALE
 =========================================================================== */
 export default function DashboardPage() {
+  const { formatNumber } = useLocale();
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
 
   const [stats, setStats] = useState({
@@ -285,7 +284,7 @@ export default function DashboardPage() {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
         <p className="text-gray-700 text-lg sm:text-xl font-medium animate-pulse text-center">
-          Chargement du tableau de bord…
+          {t("dashboard.loading")}
         </p>
       </div>
     );
@@ -298,15 +297,25 @@ export default function DashboardPage() {
   const balanceLabel =
     roleKey === 'admin'
       ? isGlobalAdmin
-        ? 'Solde global'
-        : 'Solde de votre périmètre'
-      : 'Solde global';
+        ? t("dashboard.balance.global")
+        : t("dashboard.balance.scope")
+      : t("dashboard.balance.global");
   const balanceDescription =
     roleKey === 'admin' && isMaster
-      ? 'Synthèse de vos revenus et dépenses sur votre pays ou région.'
-      : 'Synthèse de vos revenus et dépenses sur l’ensemble de vos opérations.';
+      ? t("dashboard.balance.descScope")
+      : t("dashboard.balance.descGlobal");
 
   const firstName = user.firstName || user.email || '';
+  const shortName =
+    (firstName.split(' ')[0] || '').trim() || t("dashboard.careFallbackName");
+  const roleLabel =
+    isMaster
+      ? t("roles.master")
+      : roleKey === 'admin'
+      ? t("roles.admin")
+      : roleKey === 'agent'
+      ? t("roles.agent")
+      : t("roles.client");
 
   /* ============================================================================
      🎨 UI PRINCIPALE — VERSION RÉORGANISÉE & PLUS LISIBLE / ÉLÉGANTE
@@ -326,18 +335,18 @@ export default function DashboardPage() {
             </div>
             <div className="min-w-0">
               <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-snug truncate">
-                Bonjour, {user.firstName || user.email} 👋
+                {t("dashboard.greeting", { name: user.firstName || user.email })} 👋
               </h1>
               <p className="text-sm sm:text-base text-gray-600 mt-1">
-                Rôle :
+                {t("dashboard.roleLabel")}{' '}
                 <span className="font-semibold text-blue-700 uppercase ml-1">
-                  {prettyRoleLabel(user)}
+                  {roleLabel}
                 </span>
               </p>
               {/* ✅ Message EXACT, personnalisé par le prénom */}
               <p className="text-sm sm:text-base text-gray-800 mt-2">
                 <span className="font-semibold text-blue-700">
-                  {firstName.split(' ')[0] || 'Nous'}, nous veillons sur tout ce qui compte pour vous.
+                  {t("dashboard.careLine", { firstName: shortName })}
                 </span>
               </p>
             </div>
@@ -346,7 +355,7 @@ export default function DashboardPage() {
           {/* Badge rôle + solde global */}
           <div className="flex flex-col items-start md:items-end gap-3">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-              {prettyRoleLabel(user)}
+              {roleLabel}
             </span>
 
             <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 shadow-sm min-w-[200px]">
@@ -361,7 +370,9 @@ export default function DashboardPage() {
                       : 'bg-red-50 text-red-600 border border-red-100'
                   }`}
                 >
-                  {isPositiveBalance ? 'Positif' : 'Négatif'}
+                  {isPositiveBalance
+                    ? t("dashboard.balance.positive")
+                    : t("dashboard.balance.negative")}
                 </span>
               </div>
               <div
@@ -369,7 +380,7 @@ export default function DashboardPage() {
                   isPositiveBalance ? 'text-emerald-600' : 'text-red-600'
                 }`}
               >
-                {formatAmount(stats.balance)} XOF
+                {formatNumber(stats.balance)} XOF
               </div>
               <p className="text-[0.75rem] sm:text-xs text-gray-500 mt-2 leading-snug">
                 {balanceDescription}
@@ -385,21 +396,21 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
             <div>
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                Vue rapide
+                {t("dashboard.quickView.title")}
               </h2>
               <p className="text-sm text-gray-600">
-                Un aperçu clair de vos services, activités et flux financiers.
+                {t("dashboard.quickView.subtitle")}
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Services totaux" value={stats.servicesCount} icon="📦" />
-            <StatCard label="Services actifs" value={stats.activeServices} icon="⚡" />
-            <StatCard label="Transactions" value={stats.transactionsCount} icon="💳" />
+            <StatCard label={t("dashboard.stats.totalServices")} value={stats.servicesCount} icon="📦" />
+            <StatCard label={t("dashboard.stats.activeServices")} value={stats.activeServices} icon="⚡" />
+            <StatCard label={t("dashboard.stats.transactions")} value={stats.transactionsCount} icon="💳" />
             <StatCard
-              label="Solde actuel"
-              value={`${formatAmount(stats.balance)} XOF`}
+              label={t("dashboard.stats.currentBalance")}
+              value={`${formatNumber(stats.balance)} XOF`}
               highlight={isPositiveBalance}
               icon={isPositiveBalance ? '📈' : '📉'}
             />
@@ -417,10 +428,10 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                    💰 Vue détaillée des finances
+                    💰 {t("dashboard.finance.title")}
                   </h2>
                   <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                    Basée sur vos transactions et opérations déclarées.
+                    {t("dashboard.finance.subtitle")}
                   </p>
                 </div>
               </div>
@@ -432,10 +443,10 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                    📦 Vue globale de vos opérations
+                    📦 {t("dashboard.modules.title")}
                   </h2>
                   <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                    Biens, tâches, projets et commandes en un coup d’œil.
+                    {t("dashboard.modules.subtitle")}
                   </p>
                 </div>
               </div>
@@ -443,12 +454,14 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* BIENS */}
                 <ModuleCard
-                  title="Biens immobiliers"
+                  title={t("dashboard.modules.properties")}
                   icon="🏡"
-                  main={`${detailStats.properties.total} bien(s)`}
+                  main={t("dashboard.modules.counts.property", {
+                    count: detailStats.properties.total,
+                  })}
                   items={[
                     {
-                      label: 'Actifs',
+                      label: t("dashboard.modules.items.active"),
                       value: detailStats.properties.active,
                     },
                   ]}
@@ -461,24 +474,26 @@ export default function DashboardPage() {
 
                 {/* TÂCHES */}
                 <ModuleCard
-                  title="Tâches"
+                  title={t("dashboard.modules.tasks")}
                   icon="📝"
-                  main={`${detailStats.tasks.total} tâche(s)`}
+                  main={t("dashboard.modules.counts.task", {
+                    count: detailStats.tasks.total,
+                  })}
                   items={[
                     {
-                      label: 'Créées',
+                      label: t("dashboard.modules.items.created"),
                       value: detailStats.tasks.created,
                     },
                     {
-                      label: 'En cours',
+                      label: t("dashboard.modules.items.inProgress"),
                       value: detailStats.tasks.inProgress,
                     },
                     {
-                      label: 'Terminées',
+                      label: t("dashboard.modules.items.completed"),
                       value: detailStats.tasks.completed,
                     },
                     {
-                      label: 'Validées',
+                      label: t("dashboard.modules.items.validated"),
                       value: detailStats.tasks.validated,
                     },
                   ]}
@@ -487,24 +502,26 @@ export default function DashboardPage() {
 
                 {/* PROJETS */}
                 <ModuleCard
-                  title="Projets"
+                  title={t("dashboard.modules.projects")}
                   icon="📂"
-                  main={`${detailStats.projects.total} projet(s)`}
+                  main={t("dashboard.modules.counts.project", {
+                    count: detailStats.projects.total,
+                  })}
                   items={[
                     {
-                      label: 'Créés',
+                      label: t("dashboard.modules.items.created"),
                       value: detailStats.projects.created,
                     },
                     {
-                      label: 'En cours',
+                      label: t("dashboard.modules.items.inProgress"),
                       value: detailStats.projects.inProgress,
                     },
                     {
-                      label: 'Terminés',
+                      label: t("dashboard.modules.items.completed"),
                       value: detailStats.projects.completed,
                     },
                     {
-                      label: 'Validés',
+                      label: t("dashboard.modules.items.validated"),
                       value: detailStats.projects.validated,
                     },
                   ]}
@@ -513,16 +530,18 @@ export default function DashboardPage() {
 
                 {/* COMMANDES */}
                 <ModuleCard
-                  title="Commandes"
+                  title={t("dashboard.modules.orders")}
                   icon="🛒"
-                  main={`${detailStats.orders.total} commande(s)`}
+                  main={t("dashboard.modules.counts.order", {
+                    count: detailStats.orders.total,
+                  })}
                   items={[
                     {
-                      label: 'En cours',
+                      label: t("dashboard.modules.items.open"),
                       value: detailStats.orders.open,
                     },
                     {
-                      label: 'Payées',
+                      label: t("dashboard.modules.items.paid"),
                       value: detailStats.orders.paid,
                     },
                   ]}
@@ -538,47 +557,45 @@ export default function DashboardPage() {
             <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
               <div>
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
-                  Synthèse financière rapide
+                  {t("dashboard.summary.title")}
                 </h3>
                 <ul className="space-y-2 text-sm sm:text-base text-gray-800">
                   <li className="flex justify-between">
-                    <span>Revenus</span>
+                    <span>{t("dashboard.summary.revenue")}</span>
                     <span className="font-semibold text-emerald-600">
-                      {formatAmount(stats.totalRevenue)} XOF
+                      {formatNumber(stats.totalRevenue)} XOF
                     </span>
                   </li>
                   <li className="flex justify-between">
-                    <span>Dépenses</span>
+                    <span>{t("dashboard.summary.expense")}</span>
                     <span className="font-semibold text-red-600">
-                      {formatAmount(stats.totalExpense)} XOF
+                      {formatNumber(stats.totalExpense)} XOF
                     </span>
                   </li>
                   <li className="flex justify-between border-t border-dashed border-gray-200 pt-3 mt-2">
-                    <span>Solde net</span>
+                    <span>{t("dashboard.summary.net")}</span>
                     <span
                       className={`font-bold ${
                         isPositiveBalance ? 'text-emerald-600' : 'text-red-600'
                       }`}
                     >
-                      {formatAmount(stats.balance)} XOF
+                      {formatNumber(stats.balance)} XOF
                     </span>
                   </li>
                 </ul>
               </div>
               <p className="text-xs sm:text-sm text-gray-500 border-t border-gray-100 mt-4 pt-3 leading-snug">
-                Pour plus de détails, consultez le tableau financier complet dans la
-                section <span className="font-semibold">Finances</span>.
+                {t("dashboard.summary.note")}
               </p>
             </div>
 
             {/* Accès rapides */}
             <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-md">
               <h3 className="text-base sm:text-lg font-semibold mb-2 flex items-center gap-2">
-                🚀 Accès rapides
+                🚀 {t("dashboard.quickAccess.title")}
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 mb-4 leading-relaxed">
-                Accédez en un clic aux sections clés de votre espace Teranga selon
-                votre rôle.
+                {t("dashboard.quickAccess.subtitle")}
               </p>
 
               <div className="grid grid-cols-1 gap-3">
@@ -586,39 +603,87 @@ export default function DashboardPage() {
                 {/* ADMIN */}
                 {roleKey === 'admin' && (
                   <>
-                    <QuickLink to="/services" label="Services clients" icon="🧾" />
+                    <QuickLink
+                      to="/services"
+                      label={t("dashboard.quickAccess.admin.services")}
+                      icon="🧾"
+                    />
                     <QuickLink
                       to="/admin/services"
-                      label="Gestion services"
+                      label={t("dashboard.quickAccess.admin.adminServices")}
                       icon="🧩"
                     />
-                    <QuickLink to="/admin/users" label="Utilisateurs" icon="👥" />
-                    <QuickLink to="/admin/agents" label="Agents" icon="🧑‍🔧" />
-                    <QuickLink to="/properties" label="Biens" icon="🏡" />
-                    <QuickLink to="/projects" label="Projets" icon="📂" />
-                    <QuickLink to="/orders" label="Commandes" icon="🛒" />
+                    <QuickLink
+                      to="/admin/users"
+                      label={t("dashboard.quickAccess.admin.users")}
+                      icon="👥"
+                    />
+                    <QuickLink
+                      to="/admin/agents"
+                      label={t("dashboard.quickAccess.admin.agents")}
+                      icon="🧑‍🔧"
+                    />
+                    <QuickLink
+                      to="/properties"
+                      label={t("dashboard.quickAccess.admin.properties")}
+                      icon="🏡"
+                    />
+                    <QuickLink
+                      to="/projects"
+                      label={t("dashboard.quickAccess.admin.projects")}
+                      icon="📂"
+                    />
+                    <QuickLink
+                      to="/orders"
+                      label={t("dashboard.quickAccess.admin.orders")}
+                      icon="🛒"
+                    />
                     <QuickLink
                       to="/transactions"
-                      label="Transactions"
+                      label={t("dashboard.quickAccess.admin.transactions")}
                       icon="💰"
                     />
-                    <QuickLink to="/finance" label="Finances" icon="📊" />
+                    <QuickLink
+                      to="/finance"
+                      label={t("dashboard.quickAccess.admin.finance")}
+                      icon="📊"
+                    />
                   </>
                 )}
 
                 {/* CLIENT */}
                 {roleKey === 'client' && (
                   <>
-                    <QuickLink to="/services" label="Mes services" icon="🧾" />
-                    <QuickLink to="/properties" label="Mes biens" icon="🏡" />
-                    <QuickLink to="/projects" label="Mes projets" icon="📂" />
-                    <QuickLink to="/orders" label="Mes commandes" icon="🛒" />
+                    <QuickLink
+                      to="/services"
+                      label={t("dashboard.quickAccess.client.services")}
+                      icon="🧾"
+                    />
+                    <QuickLink
+                      to="/properties"
+                      label={t("dashboard.quickAccess.client.properties")}
+                      icon="🏡"
+                    />
+                    <QuickLink
+                      to="/projects"
+                      label={t("dashboard.quickAccess.client.projects")}
+                      icon="📂"
+                    />
+                    <QuickLink
+                      to="/orders"
+                      label={t("dashboard.quickAccess.client.orders")}
+                      icon="🛒"
+                    />
                     <QuickLink
                       to="/transactions"
-                      label="Mes transactions"
+                      label={t("dashboard.quickAccess.client.transactions")}
                       icon="💰"
                     />
-                    <QuickLink to="/finance" label="Mes finances" icon="📊" />
+                    <QuickLink
+                      to="/finance"
+                      label={t("dashboard.quickAccess.client.finance")}
+                      icon="📊"
+                    />
                   </>
                 )}
 
@@ -627,16 +692,24 @@ export default function DashboardPage() {
                   <>
                     <QuickLink
                       to="/agent/services"
-                      label="Services assignés"
+                      label={t("dashboard.quickAccess.agent.assignedServices")}
                       icon="⚙️"
                     />
-                    <QuickLink to="/tasks" label="Mes tâches" icon="📝" />
+                    <QuickLink
+                      to="/tasks"
+                      label={t("dashboard.quickAccess.agent.tasks")}
+                      icon="📝"
+                    />
                     <QuickLink
                       to="/transactions"
-                      label="Mes transactions"
+                      label={t("dashboard.quickAccess.agent.transactions")}
                       icon="💰"
                     />
-                    <QuickLink to="/finance" label="Mes finances" icon="📊" />
+                    <QuickLink
+                      to="/finance"
+                      label={t("dashboard.quickAccess.agent.finance")}
+                      icon="📊"
+                    />
                   </>
                 )}
               </div>
@@ -713,6 +786,7 @@ function QuickLink({ to, label, icon }) {
 }
 
 function ModuleCard({ title, icon, main, items = [], link }) {
+  const { t } = useTranslation();
   const cardContent = (
     <div
       className="
@@ -749,7 +823,7 @@ function ModuleCard({ title, icon, main, items = [], link }) {
       {link && (
         <div className="mt-4 pt-2 border-t border-gray-100 text-right">
           <span className="inline-flex items-center text-xs text-blue-600 font-medium">
-            Voir le détail
+            {t("common.viewDetails")}
             <span className="ml-1">↗</span>
           </span>
         </div>
@@ -759,3 +833,4 @@ function ModuleCard({ title, icon, main, items = [], link }) {
 
   return link ? <Link to={link}>{cardContent}</Link> : cardContent;
 }
+

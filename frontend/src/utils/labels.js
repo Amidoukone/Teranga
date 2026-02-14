@@ -1,3 +1,5 @@
+import i18n from '../i18n';
+
 /**
  * ============================================================
  * 🌍 Dictionnaire central des labels Teranga (Frontend)
@@ -9,118 +11,183 @@
  * ============================================================
  */
 
+const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+
+function translateLabel(path, fallback) {
+  if (!path) return fallback || '';
+  try {
+    if (i18n?.t) {
+      const translated = i18n.t(path, { defaultValue: fallback });
+      return translated ?? fallback ?? path;
+    }
+  } catch {
+    // noop
+  }
+  return fallback ?? path;
+}
+
+function createLabelMap(namespace, fallbackMap) {
+  return new Proxy(fallbackMap, {
+    get(target, prop) {
+      if (typeof prop !== 'string') return Reflect.get(target, prop);
+      if (!hasOwn(target, prop)) return Reflect.get(target, prop);
+      return translateLabel(`${namespace}.${prop}`, target[prop]);
+    },
+  });
+}
+
 /* ============================================================
    👤 Rôles utilisateur
 ============================================================ */
-export const ROLE_LABELS = {
+const ROLE_LABELS_BASE = {
   client: 'Client',
   agent: 'Agent',
   admin: 'Administrateur',
 };
+export const ROLE_LABELS = createLabelMap('roles', ROLE_LABELS_BASE);
 
 /* ============================================================
    🏗 Projets
    (aligné avec backend Project + PROJECT_STATUSES du controller)
 ============================================================ */
-export const PROJECT_TYPES = {
+const PROJECT_TYPES_BASE = {
   immobilier: 'Immobilier',
   agricole: 'Agricole',
   commerce: 'Commerce',
   autre: 'Autre',
 };
+export const PROJECT_TYPES = createLabelMap('projects.type', PROJECT_TYPES_BASE);
 
-export const PROJECT_STATUSES = {
+const PROJECT_STATUSES_BASE = {
   created: 'Créé',
   in_progress: 'En cours',
   completed: 'Terminé',
   validated: 'Validé',
   cancelled: 'Annulé',
 };
+export const PROJECT_STATUSES = createLabelMap(
+  'projects.status',
+  PROJECT_STATUSES_BASE
+);
 
 /* ============================================================
    🏡 Biens immobiliers
 ============================================================ */
-export const PROPERTY_TYPES = {
+const PROPERTY_TYPES_BASE = {
   house: 'Maison',
   apartment: 'Appartement',
   land: 'Terrain',
   commercial: 'Local commercial',
 };
+export const PROPERTY_TYPES = createLabelMap(
+  'labels.property.types',
+  PROPERTY_TYPES_BASE
+);
 
-export const PROPERTY_STATUSES = {
+const PROPERTY_STATUSES_BASE = {
   active: 'Actif',
   inactive: 'Inactif',
   sold: 'Vendu',
 };
+export const PROPERTY_STATUSES = createLabelMap(
+  'labels.property.statuses',
+  PROPERTY_STATUSES_BASE
+);
 
 /* ============================================================
    🧾 Services
 ============================================================ */
-export const SERVICE_TYPES = {
+const SERVICE_TYPES_BASE = {
   errand: 'Course / Commission',
   administrative: 'Démarche administrative',
   payment: 'Paiement',
   money_transfer: 'Transfert d’argent',
   other: 'Autre service',
 };
+export const SERVICE_TYPES = createLabelMap('services.type', SERVICE_TYPES_BASE);
 
-export const SERVICE_STATUSES = {
+const SERVICE_STATUSES_BASE = {
   created: 'Créé',
   in_progress: 'En cours',
   completed: 'Terminé',
   validated: 'Validé',
 };
+export const SERVICE_STATUSES = createLabelMap(
+  'services.status',
+  SERVICE_STATUSES_BASE
+);
 
 /* ============================================================
    🧰 Tâches
 ============================================================ */
-export const TASK_TYPES = {
+const TASK_TYPES_BASE = {
   repair: 'Réparation',
   visit: 'Visite / Inspection',
   administrative: 'Démarche administrative',
   shopping: 'Achat / Courses',
   other: 'Autre tâche',
 };
+export const TASK_TYPES = createLabelMap('labels.task.types', TASK_TYPES_BASE);
 
-export const TASK_PRIORITIES = {
+const TASK_PRIORITIES_BASE = {
   normal: 'Normale',
   urgent: 'Urgente',
   critical: 'Critique',
 };
+export const TASK_PRIORITIES = createLabelMap(
+  'labels.task.priorities',
+  TASK_PRIORITIES_BASE
+);
 
-export const TASK_STATUSES = {
+const TASK_STATUSES_BASE = {
   created: 'Créée',
   in_progress: 'En cours',
   completed: 'Terminée',
   validated: 'Validée',
   cancelled: 'Annulée',
 };
+export const TASK_STATUSES = createLabelMap(
+  'labels.task.statuses',
+  TASK_STATUSES_BASE
+);
 
 /* ============================================================
    📄 Preuves / fichiers
 ============================================================ */
-export const EVIDENCE_KINDS = {
+const EVIDENCE_KINDS_BASE = {
   photo: 'Photo',
   document: 'Document',
   receipt: 'Reçu',
   other: 'Autre',
 };
+export const EVIDENCE_KINDS = createLabelMap(
+  'labels.evidence.kinds',
+  EVIDENCE_KINDS_BASE
+);
 
 /* ============================================================
    💰 Transactions
 ============================================================ */
-export const TRANSACTION_TYPES = {
+const TRANSACTION_TYPES_BASE = {
   revenue: 'Revenu',
   expense: 'Dépense',
   commission: 'Commission',
   adjustment: 'Ajustement',
 };
+export const TRANSACTION_TYPES = createLabelMap(
+  'transactions.type',
+  TRANSACTION_TYPES_BASE
+);
 
-export const TRANSACTION_STATUSES = {
+const TRANSACTION_STATUSES_BASE = {
   pending: 'En attente',
   completed: 'Effectuée',
   cancelled: 'Annulée',
 };
+export const TRANSACTION_STATUSES = createLabelMap(
+  'transactions.status',
+  TRANSACTION_STATUSES_BASE
+);
 
 /**
  * 🔁 Aliases transaction UI -> Canonique (afin d’absorber l’historique UI)
@@ -144,34 +211,44 @@ export const TRANSACTION_STATUS_ALIASES = {
   failed: 'cancelled',
 };
 
-export const CURRENCY_LABELS = {
+const CURRENCY_LABELS_BASE = {
   XOF: 'Franc CFA (XOF)',
+  XAF: 'Franc CFA (XAF)',
   EUR: 'Euro (€)',
   USD: 'Dollar US ($)',
   GBP: 'Livre sterling (£)',
 };
+export const CURRENCY_LABELS = createLabelMap('currency', CURRENCY_LABELS_BASE);
 
 /* ============================================================
    🛒 Commerce : Catégories / Produits / Commandes
 ============================================================ */
 // Catégories
-export const CATEGORY_STATUSES = {
+const CATEGORY_STATUSES_BASE = {
   active: 'Active',
   inactive: 'Inactive',
 };
+export const CATEGORY_STATUSES = createLabelMap(
+  'labels.category.statuses',
+  CATEGORY_STATUSES_BASE
+);
 
 // Produits
-export const PRODUCT_STATUSES = {
+const PRODUCT_STATUSES_BASE = {
   active: 'Actif',
   inactive: 'Inactif',
   archived: 'Archivé',
 };
+export const PRODUCT_STATUSES = createLabelMap(
+  'labels.product.statuses',
+  PRODUCT_STATUSES_BASE
+);
 
 /**
  * ⚠️ IMPORTANT : Statuts de commande canoniques = EXACTEMENT ceux de la DB
  * Backend (ENUM): 'created','paid','processing','shipped','delivered','cancelled','refunded'
  */
-export const ORDER_STATUSES = {
+const ORDER_STATUSES_BASE = {
   created: 'Créée',
   processing: 'En traitement',
   shipped: 'Expédiée',
@@ -180,6 +257,10 @@ export const ORDER_STATUSES = {
   cancelled: 'Annulée',
   refunded: 'Remboursée',
 };
+export const ORDER_STATUSES = createLabelMap(
+  'orders.status',
+  ORDER_STATUSES_BASE
+);
 
 /**
  * 🔁 Aliases UI -> Canonique (pour absorber l’historique front)
@@ -197,12 +278,16 @@ export const ORDER_STATUS_ALIASES = {
  * 💳 Statuts de paiement canoniques = EXACTEMENT ceux de la DB
  * Backend (ENUM): 'unpaid','paid','refunded','partial'
  */
-export const PAYMENT_STATUSES = {
+const PAYMENT_STATUSES_BASE = {
   unpaid: 'Non payée',
   partial: 'Partiellement payée',
   paid: 'Payée',
   refunded: 'Remboursée',
 };
+export const PAYMENT_STATUSES = createLabelMap(
+  'orders.payment',
+  PAYMENT_STATUSES_BASE
+);
 
 /**
  * 🔁 Aliases paiement UI -> Canonique
@@ -214,7 +299,7 @@ export const PAYMENT_STATUS_ALIASES = {
 /**
  * 🧩 Articles de commande
  */
-export const ORDER_ITEM_STATUSES = {
+const ORDER_ITEM_STATUSES_BASE = {
   pending: 'En attente',
   prepared: 'Préparé',
   fulfilled: 'Expédié / Livré',
@@ -222,6 +307,10 @@ export const ORDER_ITEM_STATUSES = {
   returned: 'Retourné',
   cancelled: 'Annulé',
 };
+export const ORDER_ITEM_STATUSES = createLabelMap(
+  'labels.orderItem.statuses',
+  ORDER_ITEM_STATUSES_BASE
+);
 
 /* ============================================================
    🧩 Utilitaires

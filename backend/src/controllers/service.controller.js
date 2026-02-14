@@ -8,8 +8,12 @@ const {
   getLabel,
 } = require("../utils/labels");
 
-// 🌍 GeoScope utils (admin global / admin scoped)
-const { applyGeoScopeWithLegacy, getUserGeoScope } = require("../utils/geoScope");
+// 🌍 GeoScope utils (strict)
+const {
+  applyGeoScopeForModel,
+  canAccessGeoResource,
+  getUserGeoScope,
+} = require("../utils/geoScope");
 const { getPagination } = require("../utils/pagination");
 
 /* ============================================================
@@ -54,12 +58,6 @@ function buildServiceOrder(sort) {
   }
 }
 
-function isGlobalAdmin(user) {
-  if (!user) return false;
-  if (user.role !== "admin") return false;
-  return user.countryId == null && user.regionId == null;
-}
-
 async function resolveCountryIdFromLegacy(countryValue) {
   const trimmed = toTrimOrNull(countryValue);
   if (!trimmed) return null;
@@ -82,26 +80,13 @@ async function resolveCountryIdFromLegacy(countryValue) {
 }
 
 function canAccessByGeoScope(user, resource) {
-  if (!user) return false;
-  if (isGlobalAdmin(user)) return true;
-  if (user.role !== "admin") return true;
+  return canAccessGeoResource(resource, user);
+}
 
-  const scope = getUserGeoScope
-    ? getUserGeoScope(user)
-    : {
-        countryId: toSafeInt(user.countryId),
-        regionId: toSafeInt(user.regionId),
-      };
-
-  const rCountry = toSafeInt(resource?.countryId);
-  const rRegion = toSafeInt(resource?.regionId);
-
-  if (scope.regionId)
-    return rRegion != null && String(rRegion) === String(scope.regionId);
-  if (scope.countryId)
-    return rCountry != null && String(rCountry) === String(scope.countryId);
-
-  return false;
+function applyServiceGeoScope(where = {}, user) {
+  return applyGeoScopeForModel
+    ? applyGeoScopeForModel(where, user, Service, { includeClients: true })
+    : where;
 }
 
 const ALLOWED_TYPES = new Set(Object.keys(SERVICE_TYPES));
@@ -207,17 +192,15 @@ exports.create = async (req, res) => {
       resolvedCountryId = await resolveCountryIdFromLegacy(targetClient.country);
     }
 
-    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-      if (
-        !canAccessByGeoScope(req.user, {
-          countryId: resolvedCountryId,
-          regionId: resolvedRegionId,
-        })
-      ) {
-        return res.status(403).json({
-          error: "Création hors scope géographique",
-        });
-      }
+    if (
+      !canAccessByGeoScope(req.user, {
+        countryId: resolvedCountryId,
+        regionId: resolvedRegionId,
+      })
+    ) {
+      return res.status(403).json({
+        error: "Création hors scope géographique",
+      });
     }
 
     const service = await Service.create({
@@ -267,6 +250,8 @@ exports.listClient = async (req, res) => {
     const status = toTrimOrNull(req.query?.status);
     const type = toTrimOrNull(req.query?.type);
     const propertyId = toSafeInt(req.query?.propertyId);
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
     const sort = toTrimOrNull(req.query?.sort);
 
     let where = {};
@@ -281,6 +266,8 @@ exports.listClient = async (req, res) => {
     if (status && ALLOWED_STATUSES.has(status)) where.status = status;
     if (type && ALLOWED_TYPES.has(type)) where.type = type;
     if (propertyId) where.propertyId = propertyId;
+    if (countryId) where.countryId = countryId;
+    if (regionId) where.regionId = regionId;
 
     if (q) {
       const like = { [Op.like]: `%${q}%` };
@@ -305,9 +292,7 @@ exports.listClient = async (req, res) => {
       where = { ...where, [Op.and]: andWhere };
     }
 
-    if (req.user.role === "admin" || req.user.role === "agent") {
-      where = await applyGeoScopeWithLegacy(where, req.user);
-    }
+    where = applyServiceGeoScope(where, req.user);
 
     const { rows, count } = await Service.findAndCountAll({
       where,
@@ -352,6 +337,8 @@ exports.listAll = async (req, res) => {
     const q = (req.query.q || "").trim();
     const type = toTrimOrNull(req.query?.type);
     const propertyId = toSafeInt(req.query?.propertyId);
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
     const sort = toTrimOrNull(req.query?.sort);
 
     let where = {};
@@ -361,6 +348,8 @@ exports.listAll = async (req, res) => {
     if (unassigned) where.agentId = null;
     if (type && ALLOWED_TYPES.has(type)) where.type = type;
     if (propertyId) where.propertyId = propertyId;
+    if (countryId) where.countryId = countryId;
+    if (regionId) where.regionId = regionId;
 
     if (q) {
       const like = { [Op.like]: `%${q}%` };
@@ -385,7 +374,7 @@ exports.listAll = async (req, res) => {
       where = { ...where, [Op.and]: andWhere };
     }
 
-    where = await applyGeoScopeWithLegacy(where, req.user);
+    where = applyServiceGeoScope(where, req.user);
 
     const { rows, count } = await Service.findAndCountAll({
       where,
@@ -440,14 +429,12 @@ exports.assignAgent = async (req, res) => {
       if (!service)
         throw Object.assign(new Error("Service introuvable"), { status: 404 });
 
-      // 🔐 Scope géographique
-      if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-        if (!canAccessByGeoScope(req.user, service)) {
-          throw Object.assign(
-            new Error("Service hors scope géographique"),
-            { status: 403 }
-          );
-        }
+      // 🔐 Scope géographique (strict)
+      if (!canAccessByGeoScope(req.user, service)) {
+        throw Object.assign(
+          new Error("Service hors scope géographique"),
+          { status: 403 }
+        );
       }
 
       if (["completed", "validated"].includes(service.status)) {
@@ -462,6 +449,13 @@ exports.assignAgent = async (req, res) => {
         throw Object.assign(
           new Error("agentId invalide : ce n'est pas un agent"),
           { status: 400 }
+        );
+      }
+
+      if (!canAccessGeoResource(service, agent)) {
+        throw Object.assign(
+          new Error("Agent hors scope géographique"),
+          { status: 403 }
         );
       }
 
@@ -521,13 +515,11 @@ exports.updateService = async (req, res) => {
         .json({ error: "Non autorisé à modifier ce service" });
     }
 
-    // 🔐 Scope géographique
-    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-      if (!canAccessByGeoScope(req.user, service)) {
-        return res
-          .status(403)
-          .json({ error: "Service hors scope géographique" });
-      }
+    // 🔐 Scope géographique (strict)
+    if (!canAccessByGeoScope(req.user, service)) {
+      return res
+        .status(403)
+        .json({ error: "Service hors scope géographique" });
     }
 
     const updatable = [
@@ -568,6 +560,17 @@ exports.updateService = async (req, res) => {
         updates.countryId = property.countryId ?? service.countryId;
         updates.regionId = property.regionId ?? service.regionId;
       }
+    }
+
+    const nextScope = {
+      countryId: updates.countryId ?? service.countryId,
+      regionId: updates.regionId ?? service.regionId,
+    };
+
+    if (!canAccessByGeoScope(req.user, nextScope)) {
+      return res
+        .status(403)
+        .json({ error: "Mise à jour hors scope géographique" });
     }
 
     await service.update(updates);
@@ -618,12 +621,10 @@ exports.deleteService = async (req, res) => {
     if (req.user.role !== "admin" && req.user.id !== service.clientId)
       return res.status(403).json({ error: "Non autorisé" });
 
-    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-      if (!canAccessByGeoScope(req.user, service)) {
-        return res
-          .status(403)
-          .json({ error: "Service hors scope géographique" });
-      }
+    if (!canAccessByGeoScope(req.user, service)) {
+      return res
+        .status(403)
+        .json({ error: "Service hors scope géographique" });
     }
 
     await service.destroy();
@@ -647,6 +648,8 @@ exports.listAgent = async (req, res) => {
     const status = toTrimOrNull(req.query?.status);
     const type = toTrimOrNull(req.query?.type);
     const propertyId = toSafeInt(req.query?.propertyId);
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
     const sort = toTrimOrNull(req.query?.sort);
 
     let where = { agentId: req.user.id };
@@ -655,6 +658,8 @@ exports.listAgent = async (req, res) => {
     if (status && ALLOWED_STATUSES.has(status)) where.status = status;
     if (type && ALLOWED_TYPES.has(type)) where.type = type;
     if (propertyId) where.propertyId = propertyId;
+    if (countryId) where.countryId = countryId;
+    if (regionId) where.regionId = regionId;
 
     if (q) {
       const like = { [Op.like]: `%${q}%` };
@@ -679,7 +684,7 @@ exports.listAgent = async (req, res) => {
       where = { ...where, [Op.and]: andWhere };
     }
 
-    where = await applyGeoScopeWithLegacy(where, req.user);
+    where = applyServiceGeoScope(where, req.user);
 
     const { rows, count } = await Service.findAndCountAll({
       where,
@@ -723,6 +728,18 @@ exports.startService = async (req, res) => {
 
     if (!service)
       return res.status(404).json({ error: "Service introuvable" });
+
+    if (!canAccessByGeoScope(req.user, service)) {
+      return res
+        .status(403)
+        .json({ error: "Service hors scope géographique" });
+    }
+
+    if (!canAccessByGeoScope(req.user, service)) {
+      return res
+        .status(403)
+        .json({ error: "Service hors scope géographique" });
+    }
 
     if (service.agentId !== req.user.id)
       return res.status(403).json({ error: "Non autorisé" });

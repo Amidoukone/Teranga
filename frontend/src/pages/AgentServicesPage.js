@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
 import { applyLabels, SERVICE_STATUSES, SERVICE_TYPES } from '../utils/labels';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 
 const TOKEN_KEY = 'teranga_token';
 
@@ -13,6 +15,8 @@ const TOKEN_KEY = 'teranga_token';
  *   (le backend applique le scope via req.user)
  */
 export default function AgentServicesPage() {
+  const { formatDateTime } = useLocale();
+  const { t } = useTranslation();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actingId, setActingId] = useState(null);
@@ -34,17 +38,17 @@ export default function AgentServicesPage() {
       });
 
       const enriched = (data?.services || []).map((s) =>
-        s?.statusLabel ? s : applyLabels(s)
+        applyLabels(s, 'service')
       );
       setServices(enriched);
     } catch (err) {
       console.error('❌ Erreur chargement services agent:', err);
       setServices([]);
-      alert('Erreur lors du chargement des services assignés ❌');
+      alert(t('agentServicesPage.errors.load'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -77,7 +81,7 @@ export default function AgentServicesPage() {
       await load();
     } catch (err) {
       console.error('❌ Erreur mise à jour statut service:', err);
-      alert("Erreur lors de la mise à jour du statut ❌");
+      alert(t('agentServicesPage.errors.updateStatus'));
     } finally {
       setActingId(null);
     }
@@ -87,13 +91,15 @@ export default function AgentServicesPage() {
      🔹 Formatage utilisateur
   ============================================================ */
   const displayUser = (u) => {
-    if (!u) return '—';
+    if (!u) return t('agentServicesPage.emptyValue');
     return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email;
   };
 
   /* ============================================================
      🔹 UI Apple Light — Clean / Minimal / Premium
   ============================================================ */
+  const emptyValue = t('agentServicesPage.emptyValue');
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5f5f7] via-white to-[#e5e5ea] px-4 py-10">
       <div className="max-w-5xl mx-auto bg-white/90 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.06)] rounded-3xl border border-[#e5e5ea] p-8">
@@ -101,10 +107,10 @@ export default function AgentServicesPage() {
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold text-[#111827] tracking-tight">
-              🧑‍🔧 Mes Services assignés
+              {t('agentServicesPage.title')}
             </h1>
             <p className="text-sm text-gray-500">
-              Les services pour lesquels vous êtes responsable.
+              {t('agentServicesPage.subtitle')}
             </p>
           </div>
 
@@ -120,18 +126,20 @@ export default function AgentServicesPage() {
               }
             `}
           >
-            {loading ? 'Chargement…' : '🔄 Rafraîchir'}
+            {loading
+              ? t('agentServicesPage.loading.refresh')
+              : t('agentServicesPage.buttons.refresh')}
           </button>
         </div>
 
         {/* 📦 Liste des services */}
         {loading ? (
           <div className="text-center py-10 text-gray-500 animate-pulse">
-            Chargement des services…
+            {t('agentServicesPage.loading.list')}
           </div>
         ) : services.length === 0 ? (
           <p className="text-center text-gray-500 italic py-8">
-            Aucun service assigné pour le moment.
+            {t('agentServicesPage.empty')}
           </p>
         ) : (
           <div className="grid gap-6">
@@ -155,9 +163,11 @@ export default function AgentServicesPage() {
                     </h3>
 
                     <p className="text-sm text-gray-600">
-                      {s.typeLabel || SERVICE_TYPES[s.type]} •{' '}
+                      {SERVICE_TYPES[s.type] || s.type} •{' '}
                       <span className="font-medium text-gray-800">
-                        Budget : {s.budget ?? '—'} FCFA
+                        {t('agentServicesPage.labels.budget', {
+                          amount: s.budget ?? emptyValue,
+                        })}
                       </span>
                     </p>
 
@@ -186,7 +196,7 @@ export default function AgentServicesPage() {
                       }
                     `}
                   >
-                    {s.statusLabel || SERVICE_STATUSES[s.status]}
+                    {SERVICE_STATUSES[s.status] || s.status}
                   </div>
                 </div>
 
@@ -195,35 +205,50 @@ export default function AgentServicesPage() {
                 {/* ===================== */}
                 <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
                   <div>
-                    <span className="font-medium">Client :</span>{' '}
+                    <span className="font-medium">
+                      {t('agentServicesPage.labels.client')}
+                    </span>{' '}
                     {displayUser(s.client)}
                   </div>
 
                   <div>
-                    <span className="font-medium">Bien associé :</span>{' '}
+                    <span className="font-medium">
+                      {t('agentServicesPage.labels.property')}
+                    </span>{' '}
                     {s.property?.title
-                      ? `${s.property.title} — ${s.property.city}`
-                      : '—'}
+                      ? t('agentServicesPage.labels.propertyValue', {
+                          title: s.property.title,
+                          city: s.property.city,
+                        })
+                      : emptyValue}
                   </div>
 
                   <div>
-                    <span className="font-medium">Personne de contact :</span>{' '}
-                    {s.contactPerson || '—'}
+                    <span className="font-medium">
+                      {t('agentServicesPage.labels.contactPerson')}
+                    </span>{' '}
+                    {s.contactPerson || emptyValue}
                   </div>
 
                   <div>
-                    <span className="font-medium">Téléphone :</span>{' '}
-                    {s.contactPhone || '—'}
+                    <span className="font-medium">
+                      {t('agentServicesPage.labels.phone')}
+                    </span>{' '}
+                    {s.contactPhone || emptyValue}
                   </div>
 
                   <div className="sm:col-span-2">
-                    <span className="font-medium">Adresse :</span>{' '}
-                    {s.address || '—'}
+                    <span className="font-medium">
+                      {t('agentServicesPage.labels.address')}
+                    </span>{' '}
+                    {s.address || emptyValue}
                   </div>
 
                   <div>
-                    <span className="font-medium">Date création :</span>{' '}
-                    {s.createdAt ? new Date(s.createdAt).toLocaleString() : '—'}
+                    <span className="font-medium">
+                      {t('agentServicesPage.labels.createdAt')}
+                    </span>{' '}
+                    {s.createdAt ? formatDateTime(s.createdAt) : emptyValue}
                   </div>
                 </div>
 
@@ -244,7 +269,7 @@ export default function AgentServicesPage() {
                         }
                       `}
                     >
-                      ▶️ Démarrer
+                      {t('agentServicesPage.actions.start')}
                     </button>
                   )}
 
@@ -261,19 +286,19 @@ export default function AgentServicesPage() {
                         }
                       `}
                     >
-                      ✅ Terminer
+                      {t('agentServicesPage.actions.complete')}
                     </button>
                   )}
 
                   {s.status === 'completed' && (
                     <span className="text-sm italic text-gray-500">
-                      ✅ Service terminé — en attente de validation
+                      {t('agentServicesPage.status.completed')}
                     </span>
                   )}
 
                   {s.status === 'validated' && (
                     <span className="text-sm italic text-green-700">
-                      🏁 Service validé et clôturé
+                      {t('agentServicesPage.status.validated')}
                     </span>
                   )}
                 </div>
@@ -285,3 +310,4 @@ export default function AgentServicesPage() {
     </div>
   );
 }
+

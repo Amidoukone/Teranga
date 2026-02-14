@@ -7,6 +7,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import api from "../services/api";
 import { createUser } from "../services/users";
 import { me } from "../services/auth";
@@ -20,6 +21,7 @@ import {
 import { getRegions, updateRegion, deleteRegion } from "../services/regions";
 
 export default function AdminOnboardingPage() {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
 
   // 🔐 Auth guard state
@@ -201,7 +203,7 @@ export default function AdminOnboardingPage() {
     const trimmedIso = countryDraft.isoCode.trim().toUpperCase();
 
     if (trimmedName.length < 2 || trimmedIso.length !== 2) {
-      alert("Nom et ISO2 (2 lettres) requis.");
+      alert(t("adminOnboardingPage.errors.countryEditValidation"));
       return;
     }
 
@@ -214,13 +216,15 @@ export default function AdminOnboardingPage() {
       setEditingCountryId(null);
       await loadCountries();
     } catch (err) {
-      alert(err?.response?.data?.error || "Erreur mise à jour pays");
+      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.countryEdit"));
     }
   }
 
   async function handleDeleteCountry(country) {
     const confirmDelete = window.confirm(
-      `Supprimer le pays "${country.name}" ? Cette action est définitive.`
+      t("adminOnboardingPage.confirmations.deleteCountry", {
+        name: country.name,
+      })
     );
     if (!confirmDelete) return;
 
@@ -233,7 +237,7 @@ export default function AdminOnboardingPage() {
       await loadCountries();
       await loadRegions();
     } catch (err) {
-      alert(err?.response?.data?.error || "Erreur suppression pays");
+      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.countryDelete"));
     }
   }
 
@@ -252,7 +256,7 @@ export default function AdminOnboardingPage() {
     const trimmedCode = regionDraft.code.trim().toUpperCase();
 
     if (trimmedName.length < 2) {
-      alert("Nom de région requis.");
+      alert(t("adminOnboardingPage.errors.regionEditValidation"));
       return;
     }
 
@@ -265,13 +269,15 @@ export default function AdminOnboardingPage() {
       setEditingRegionId(null);
       await loadRegions();
     } catch (err) {
-      alert(err?.response?.data?.error || "Erreur mise à jour région");
+      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.regionEdit"));
     }
   }
 
   async function handleDeleteRegion(region) {
     const confirmDelete = window.confirm(
-      `Supprimer la région "${region.name}" ? Cette action est définitive.`
+      t("adminOnboardingPage.confirmations.deleteRegion", {
+        name: region.name,
+      })
     );
     if (!confirmDelete) return;
 
@@ -280,7 +286,7 @@ export default function AdminOnboardingPage() {
       setRegions((prev) => prev.filter((r) => r.id !== region.id));
       setRegionsCreated((prev) => prev.filter((r) => r.id !== region.id));
     } catch (err) {
-      alert(err?.response?.data?.error || "Erreur suppression région");
+      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.regionDelete"));
     }
   }
 
@@ -290,7 +296,7 @@ export default function AdminOnboardingPage() {
   async function createCountry(e) {
     e.preventDefault();
     if (!isCountryFormValid) {
-      alert("Veuillez saisir un nom valide et un ISO2 (2 lettres).");
+      alert(t("adminOnboardingPage.errors.countryCreateValidation"));
       return;
     }
 
@@ -315,7 +321,7 @@ export default function AdminOnboardingPage() {
         regionId: "",
       }));
     } catch (err) {
-      alert(err?.response?.data?.error || "Erreur création pays");
+      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.countryCreate"));
     } finally {
       setLoadingCountry(false);
     }
@@ -327,7 +333,7 @@ export default function AdminOnboardingPage() {
   async function addRegion(e) {
     e.preventDefault();
     if (!isRegionFormValid) {
-      alert("Veuillez saisir un nom et un code région valides.");
+      alert(t("adminOnboardingPage.errors.regionCreateValidation"));
       return;
     }
 
@@ -345,7 +351,7 @@ export default function AdminOnboardingPage() {
       setRegionForm({ name: "", code: "" });
       await loadRegions();
     } catch (err) {
-      alert(err?.response?.data?.error || "Erreur création région");
+      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.regionCreate"));
     } finally {
       setLoadingRegion(false);
     }
@@ -359,8 +365,8 @@ export default function AdminOnboardingPage() {
     if (!isMasterFormValid) {
       alert(
         masterForm.scope === "region"
-          ? "Email + mot de passe (6+) + région requise."
-          : "Email + mot de passe (6+) requis."
+          ? t("adminOnboardingPage.errors.masterValidationRegion")
+          : t("adminOnboardingPage.errors.masterValidationCountry")
       );
       return;
     }
@@ -392,10 +398,10 @@ export default function AdminOnboardingPage() {
 
       await createUser(payload);
 
-      alert("✅ MASTER créé avec succès !");
+      alert(t("adminOnboardingPage.success.masterCreated"));
       window.location.href = "/admin/users";
     } catch (err) {
-      alert(err?.response?.data?.error || "Erreur création MASTER");
+      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.masterCreate"));
     } finally {
       setLoadingMaster(false);
     }
@@ -407,7 +413,9 @@ export default function AdminOnboardingPage() {
   if (isAllowed === null) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500 animate-pulse">Chargement…</p>
+        <p className="text-gray-500 animate-pulse">
+          {t("adminOnboardingPage.loading.page")}
+        </p>
       </div>
     );
   }
@@ -422,18 +430,21 @@ export default function AdminOnboardingPage() {
         animate={{ opacity: 1, y: 0 }}
         className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl p-8 border border-gray-200"
       >
-        <h1 className="text-3xl font-semibold mb-2">🚀 Onboarding Pays & MASTER</h1>
+        <h1 className="text-3xl font-semibold mb-2">
+          {t("adminOnboardingPage.title")}
+        </h1>
         <p className="text-sm text-gray-500 mb-6">
-          1) Crée un pays • 2) Ajoute des régions (optionnel) • 3) Crée le MASTER
-          avec sélection guidée
+          {t("adminOnboardingPage.subtitle")}
         </p>
 
         <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-8">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-medium">Gestion des pays & régions</h2>
+              <h2 className="text-lg font-medium">
+                {t("adminOnboardingPage.management.title")}
+              </h2>
               <p className="text-xs text-gray-500">
-                Modifier, désactiver ou supprimer les pays et régions existants.
+                {t("adminOnboardingPage.management.subtitle")}
               </p>
             </div>
             <button
@@ -444,16 +455,24 @@ export default function AdminOnboardingPage() {
               }}
               className="px-3 py-1.5 rounded-full text-xs bg-white border border-gray-200 hover:border-gray-300"
             >
-              {loadingCountries || loadingRegions ? "Actualisation…" : "Rafraîchir"}
+              {loadingCountries || loadingRegions
+                ? t("adminOnboardingPage.loading.refresh")
+                : t("adminOnboardingPage.buttons.refresh")}
             </button>
           </div>
 
           <div className="grid md:grid-cols-2 gap-5 mt-4">
             <div className="bg-white border border-gray-200 rounded-xl p-3">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium">Pays</h3>
+                <h3 className="text-sm font-medium">
+                  {t("adminOnboardingPage.lists.countries")}
+                </h3>
                 <span className="text-xs text-gray-400">
-                  {loadingCountries ? "Chargement…" : `${countries.length} éléments`}
+                  {loadingCountries
+                    ? t("adminOnboardingPage.loading.countries")
+                    : t("adminOnboardingPage.counts.items", {
+                        count: countries.length,
+                      })}
                 </span>
               </div>
 
@@ -498,7 +517,7 @@ export default function AdminOnboardingPage() {
                                 }))
                               }
                             />
-                            Actif
+                            {t("adminOnboardingPage.status.active")}
                           </label>
                           <div className="flex gap-2">
                             <button
@@ -506,14 +525,14 @@ export default function AdminOnboardingPage() {
                               onClick={saveCountryEdit}
                               className="px-3 py-1.5 rounded-full text-xs bg-[#0a84ff] text-white"
                             >
-                              Enregistrer
+                              {t("adminOnboardingPage.buttons.save")}
                             </button>
                             <button
                               type="button"
                               onClick={() => setEditingCountryId(null)}
                               className="px-3 py-1.5 rounded-full text-xs bg-gray-100"
                             >
-                              Annuler
+                              {t("adminOnboardingPage.buttons.cancel")}
                             </button>
                           </div>
                         </div>
@@ -524,7 +543,9 @@ export default function AdminOnboardingPage() {
                               {country.name} ({country.isoCode})
                             </div>
                             <div className="text-[11px] text-gray-400">
-                              {country.isActive ? "Actif" : "Inactif"}
+                              {country.isActive
+                                ? t("adminOnboardingPage.status.active")
+                                : t("adminOnboardingPage.status.inactive")}
                             </div>
                           </div>
                           <div className="flex gap-2">
@@ -533,14 +554,14 @@ export default function AdminOnboardingPage() {
                               onClick={() => startEditCountry(country)}
                               className="text-xs text-blue-600 hover:text-blue-800"
                             >
-                              Modifier
+                              {t("adminOnboardingPage.buttons.edit")}
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteCountry(country)}
                               className="text-xs text-rose-600 hover:text-rose-800"
                             >
-                              Supprimer
+                              {t("adminOnboardingPage.buttons.delete")}
                             </button>
                           </div>
                         </div>
@@ -550,16 +571,24 @@ export default function AdminOnboardingPage() {
                 })}
 
                 {!countries.length && !loadingCountries && (
-                  <p className="text-xs text-gray-400">Aucun pays enregistré.</p>
+                  <p className="text-xs text-gray-400">
+                    {t("adminOnboardingPage.empty.countries")}
+                  </p>
                 )}
               </div>
             </div>
 
             <div className="bg-white border border-gray-200 rounded-xl p-3">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium">Régions</h3>
+                <h3 className="text-sm font-medium">
+                  {t("adminOnboardingPage.lists.regions")}
+                </h3>
                 <span className="text-xs text-gray-400">
-                  {loadingRegions ? "Chargement…" : `${regions.length} éléments`}
+                  {loadingRegions
+                    ? t("adminOnboardingPage.loading.regions")
+                    : t("adminOnboardingPage.counts.items", {
+                        count: regions.length,
+                      })}
                 </span>
               </div>
 
@@ -606,7 +635,7 @@ export default function AdminOnboardingPage() {
                                 }))
                               }
                             />
-                            Actif
+                            {t("adminOnboardingPage.status.active")}
                           </label>
                           <div className="flex gap-2">
                             <button
@@ -614,14 +643,14 @@ export default function AdminOnboardingPage() {
                               onClick={saveRegionEdit}
                               className="px-3 py-1.5 rounded-full text-xs bg-[#0a84ff] text-white"
                             >
-                              Enregistrer
+                              {t("adminOnboardingPage.buttons.save")}
                             </button>
                             <button
                               type="button"
                               onClick={() => setEditingRegionId(null)}
                               className="px-3 py-1.5 rounded-full text-xs bg-gray-100"
                             >
-                              Annuler
+                              {t("adminOnboardingPage.buttons.cancel")}
                             </button>
                           </div>
                         </div>
@@ -634,8 +663,13 @@ export default function AdminOnboardingPage() {
                             <div className="text-[11px] text-gray-400">
                               {country?.name
                                 ? `${country.name} (${country.isoCode || "—"})`
-                                : `Pays #${region.countryId || "—"}`}{" "}
-                              • {region.isActive ? "Actif" : "Inactif"}
+                                : t("adminOnboardingPage.labels.countryFallback", {
+                                    id: region.countryId || "—",
+                                  })}{" "}
+                              •{" "}
+                              {region.isActive
+                                ? t("adminOnboardingPage.status.active")
+                                : t("adminOnboardingPage.status.inactive")}
                             </div>
                           </div>
                           <div className="flex gap-2">
@@ -644,14 +678,14 @@ export default function AdminOnboardingPage() {
                               onClick={() => startEditRegion(region)}
                               className="text-xs text-blue-600 hover:text-blue-800"
                             >
-                              Modifier
+                              {t("adminOnboardingPage.buttons.edit")}
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteRegion(region)}
                               className="text-xs text-rose-600 hover:text-rose-800"
                             >
-                              Supprimer
+                              {t("adminOnboardingPage.buttons.delete")}
                             </button>
                           </div>
                         </div>
@@ -661,7 +695,9 @@ export default function AdminOnboardingPage() {
                 })}
 
                 {!regions.length && !loadingRegions && (
-                  <p className="text-xs text-gray-400">Aucune région enregistrée.</p>
+                  <p className="text-xs text-gray-400">
+                    {t("adminOnboardingPage.empty.regions")}
+                  </p>
                 )}
               </div>
             </div>
@@ -683,10 +719,12 @@ export default function AdminOnboardingPage() {
         {/* STEP 1 */}
         {step === 1 && (
           <form onSubmit={createCountry} className="space-y-4">
-            <h2 className="text-xl font-medium">1️⃣ Créer un pays</h2>
+            <h2 className="text-xl font-medium">
+              {t("adminOnboardingPage.steps.step1")}
+            </h2>
 
             <input
-              placeholder="Nom du pays"
+              placeholder={t("adminOnboardingPage.placeholders.countryName")}
               value={countryForm.name}
               onChange={(e) =>
                 setCountryForm({ ...countryForm, name: e.target.value })
@@ -695,7 +733,7 @@ export default function AdminOnboardingPage() {
             />
 
             <input
-              placeholder="Code ISO2 (ex: NE, ML)"
+              placeholder={t("adminOnboardingPage.placeholders.iso2")}
               value={countryForm.isoCode}
               onChange={(e) =>
                 setCountryForm({ ...countryForm, isoCode: e.target.value })
@@ -711,7 +749,9 @@ export default function AdminOnboardingPage() {
                   : "bg-[#0a84ff] hover:bg-[#0066cc]"
               }`}
             >
-              {loadingCountry ? "Création…" : "Créer le pays →"}
+              {loadingCountry
+                ? t("adminOnboardingPage.loading.creatingCountry")
+                : t("adminOnboardingPage.buttons.createCountry")}
             </button>
           </form>
         )}
@@ -720,11 +760,11 @@ export default function AdminOnboardingPage() {
         {step === 2 && (
           <form onSubmit={addRegion} className="space-y-4">
             <h2 className="text-xl font-medium">
-              2️⃣ Ajouter des régions (optionnel)
+              {t("adminOnboardingPage.steps.step2")}
             </h2>
 
             <div className="text-sm text-gray-600">
-              Pays créé :{" "}
+              {t("adminOnboardingPage.labels.countryCreated")}{" "}
               <span className="font-medium">
                 {createdCountry?.name} ({createdCountry?.isoCode})
               </span>
@@ -732,7 +772,9 @@ export default function AdminOnboardingPage() {
 
             {availableRegions.length > 0 && (
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-                <div className="text-xs text-gray-500 mb-2">Régions ajoutées</div>
+                <div className="text-xs text-gray-500 mb-2">
+                  {t("adminOnboardingPage.lists.addedRegions")}
+                </div>
                 {availableRegions.map((r) => (
                   <div key={r.id} className="text-sm text-gray-700">
                     ✓ {r.name} {r.code ? `(${r.code})` : ""}
@@ -742,7 +784,7 @@ export default function AdminOnboardingPage() {
             )}
 
             <input
-              placeholder="Nom de la région"
+              placeholder={t("adminOnboardingPage.placeholders.regionName")}
               value={regionForm.name}
               onChange={(e) =>
                 setRegionForm({ ...regionForm, name: e.target.value })
@@ -751,7 +793,7 @@ export default function AdminOnboardingPage() {
             />
 
             <input
-              placeholder="Code région (ex: BKO)"
+              placeholder={t("adminOnboardingPage.placeholders.regionCode")}
               value={regionForm.code}
               onChange={(e) =>
                 setRegionForm({ ...regionForm, code: e.target.value })
@@ -768,7 +810,9 @@ export default function AdminOnboardingPage() {
                     : "bg-gray-200 hover:bg-gray-300"
                 }`}
               >
-                {loadingRegion ? "Ajout…" : "➕ Ajouter région"}
+                {loadingRegion
+                  ? t("adminOnboardingPage.loading.addingRegion")
+                  : t("adminOnboardingPage.buttons.addRegion")}
               </button>
 
               <button
@@ -781,7 +825,7 @@ export default function AdminOnboardingPage() {
                     : "bg-[#0a84ff] text-white hover:bg-[#0066cc]"
                 }`}
               >
-                Continuer →
+                {t("adminOnboardingPage.buttons.continue")}
               </button>
             </div>
           </form>
@@ -790,17 +834,19 @@ export default function AdminOnboardingPage() {
         {/* STEP 3 */}
         {step === 3 && (
           <form onSubmit={createMaster} className="space-y-4">
-            <h2 className="text-xl font-medium">3️⃣ Créer le compte MASTER</h2>
+            <h2 className="text-xl font-medium">
+              {t("adminOnboardingPage.steps.step3")}
+            </h2>
 
             <div className="text-sm text-gray-600">
-              Pays cible :{" "}
+              {t("adminOnboardingPage.labels.targetCountry")}{" "}
               <span className="font-medium">
                 {createdCountry?.name} ({createdCountry?.isoCode})
               </span>
             </div>
 
             <input
-              placeholder="Email du master"
+              placeholder={t("adminOnboardingPage.placeholders.masterEmail")}
               type="email"
               value={masterForm.email}
               onChange={(e) =>
@@ -810,7 +856,7 @@ export default function AdminOnboardingPage() {
             />
 
             <input
-              placeholder="Mot de passe (min 6)"
+              placeholder={t("adminOnboardingPage.placeholders.masterPassword")}
               type="password"
               value={masterForm.password}
               onChange={(e) =>
@@ -830,8 +876,12 @@ export default function AdminOnboardingPage() {
               }
               className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#0a84ff]"
             >
-              <option value="country">MASTER du pays</option>
-              <option value="region">MASTER d’une région</option>
+              <option value="country">
+                {t("adminOnboardingPage.options.masterCountry")}
+              </option>
+              <option value="region">
+                {t("adminOnboardingPage.options.masterRegion")}
+              </option>
             </select>
 
             {masterForm.scope === "region" && (
@@ -842,7 +892,9 @@ export default function AdminOnboardingPage() {
                 }
                 className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#0a84ff]"
               >
-                <option value="">Choisir une région</option>
+                <option value="">
+                  {t("adminOnboardingPage.options.selectRegion")}
+                </option>
                 {availableRegions.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name} {r.code ? `(${r.code})` : ""}
@@ -853,8 +905,7 @@ export default function AdminOnboardingPage() {
 
             {masterForm.scope === "region" && availableRegions.length === 0 && (
               <div className="text-xs text-amber-600">
-                ⚠️ Aucune région créée. Ajoute au moins une région à l’étape 2,
-                ou repasse en “MASTER du pays”.
+                {t("adminOnboardingPage.hints.noRegionsForMaster")}
               </div>
             )}
 
@@ -866,7 +917,9 @@ export default function AdminOnboardingPage() {
                   : "bg-[#0a84ff] hover:bg-[#0066cc]"
               }`}
             >
-              {loadingMaster ? "Création…" : "🎉 Créer le MASTER"}
+              {loadingMaster
+                ? t("adminOnboardingPage.loading.creatingMaster")
+                : t("adminOnboardingPage.buttons.createMaster")}
             </button>
 
             <button
@@ -874,7 +927,7 @@ export default function AdminOnboardingPage() {
               onClick={() => setStep(2)}
               className="text-sm text-gray-500 hover:text-gray-800 underline"
             >
-              ← Retour aux régions
+              {t("adminOnboardingPage.buttons.backToRegions")}
             </button>
           </form>
         )}

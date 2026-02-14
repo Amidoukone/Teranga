@@ -4,13 +4,11 @@ const { Project, ProjectPhase, Region, User } = require("../../models");
 const { getLabel } = require("../utils/labels");
 const { Op } = require("sequelize");
 const {
-  applyGeoScope,
-  applyGeoScopeWithLegacy,
   canAccessGeoResource,
   getCountryIdByIso,
-  getCountryIsoById,
   getUserGeoScope,
   isGlobalAdmin,
+  applyGeoScopeForModel,
 } = require("../utils/geoScope");
 
 /* =========================================================
@@ -52,24 +50,6 @@ function isClientOwner(project, user) {
 
 function canClientEditOrDelete(project, user) {
   return isClientOwner(project, user) && isWithinOneHour(project.createdAt);
-}
-
-async function canAdminAccessProject(project, user) {
-  if (!project || !user) return false;
-  if (isGlobalAdmin(user)) return true;
-  if (canAccessGeoResource(project, user)) return true;
-
-  const scope = getUserGeoScope(user);
-  if (scope.regionId) return false;
-
-  if (scope.countryId && project.countryId == null && project.regionId == null) {
-    const scopeIso = await getCountryIsoById(scope.countryId);
-    const clientIso = project?.client?.country;
-    if (!scopeIso || !clientIso) return false;
-    return String(scopeIso).toUpperCase() === String(clientIso).toUpperCase();
-  }
-
-  return false;
 }
 
 /* =========================================================
@@ -233,11 +213,9 @@ exports.list = async (req, res) => {
     if (countryId) where.countryId = countryId;
     if (regionId) where.regionId = regionId;
 
-    if (req.user.role === "admin") {
-      where = await applyGeoScopeWithLegacy(where, req.user);
-    } else {
-      where = applyGeoScope(where, req.user);
-    }
+    where = applyGeoScopeForModel
+      ? applyGeoScopeForModel(where, req.user, Project, { includeClients: true })
+      : where;
 
     const projects = await Project.findAll({
       where,
@@ -310,11 +288,12 @@ exports.detail = async (req, res) => {
       return res.status(403).json({ error: "Accès non autorisé à ce projet" });
     }
 
-    if (req.user.role === "admin" && !isGlobalAdmin(req.user)) {
-      const canAccess = await canAdminAccessProject(project, req.user);
-      if (!canAccess) {
-        return res.status(403).json({ error: "Accès hors scope géographique" });
-      }
+    if (req.user.role === "agent" && project.agentId !== req.user.id) {
+      return res.status(403).json({ error: "Accès non autorisé à ce projet" });
+    }
+
+    if (!canAccessGeoResource(project, req.user)) {
+      return res.status(403).json({ error: "Accès hors scope géographique" });
     }
 
     return res.json({
@@ -364,11 +343,8 @@ exports.update = async (req, res) => {
       });
     }
 
-    if (adminOK && !isGlobalAdmin(req.user)) {
-      const canAccess = await canAdminAccessProject(project, req.user);
-      if (!canAccess) {
-        return res.status(403).json({ error: "Action hors scope géographique" });
-      }
+    if (!canAccessGeoResource(project, req.user)) {
+      return res.status(403).json({ error: "Action hors scope géographique" });
     }
 
     const body = req.body || {};
@@ -486,11 +462,8 @@ exports.remove = async (req, res) => {
       });
     }
 
-    if (adminOK && !isGlobalAdmin(req.user)) {
-      const canAccess = await canAdminAccessProject(project, req.user);
-      if (!canAccess) {
-        return res.status(403).json({ error: "Suppression hors scope géographique" });
-      }
+    if (!canAccessGeoResource(project, req.user)) {
+      return res.status(403).json({ error: "Suppression hors scope géographique" });
     }
 
     await project.destroy();

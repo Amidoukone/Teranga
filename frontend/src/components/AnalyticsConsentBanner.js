@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   getAnalyticsConsent,
@@ -11,6 +12,7 @@ export default function AnalyticsConsentBanner({
   consent,
   onConsentChange,
 }) {
+  const { t } = useTranslation();
   const shouldShow = useMemo(() => {
     if (consent) return false;
     return getAnalyticsConsent() === null;
@@ -34,11 +36,10 @@ export default function AnalyticsConsentBanner({
       <div className="mx-auto flex max-w-5xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="text-sm text-gray-700">
           <p className="font-semibold text-gray-900">
-            Votre confidentialité compte
+            {t('analyticsConsent.title')}
           </p>
           <p>
-            Nous utilisons des cookies d’analytics pour mesurer l’audience et
-            améliorer l’expérience Teranga. Vous pouvez accepter ou refuser.
+            {t('analyticsConsent.description')}
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -47,14 +48,14 @@ export default function AnalyticsConsentBanner({
             onClick={handleDecline}
             className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
           >
-            Refuser
+            {t('analyticsConsent.decline')}
           </button>
           <button
             type="button"
             onClick={handleAccept}
             className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
           >
-            Accepter
+            {t('analyticsConsent.accept')}
           </button>
         </div>
       </div>

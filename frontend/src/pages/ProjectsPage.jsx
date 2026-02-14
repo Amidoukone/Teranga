@@ -12,6 +12,8 @@ import {
 import { createTransaction } from '../services/transactions';
 import api from '../services/api';
 import { applyLabels, CURRENCY_LABELS } from '../utils/labels';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 
 // ✅ MASTER-safe helpers (pas de rôle "master", seulement admin + scope)
 import { normalizeRole, isMasterUser } from '../utils/role';
@@ -19,19 +21,14 @@ import { normalizeRole, isMasterUser } from '../utils/role';
 /* ============================================================
    🔧 CONFIG UI — DESIGN SYSTEM PREMIUM (OPTION B)
 ============================================================ */
-const PROJECT_TYPES = [
-  { value: 'immobilier', label: 'Immobilier' },
-  { value: 'agricole', label: 'Agricole' },
-  { value: 'commerce', label: 'Commerce' },
-  { value: 'autre', label: 'Autre' },
-];
-
-const PROJECT_STATUSES = [
-  { value: 'created', label: 'Créé' },
-  { value: 'in_progress', label: 'En cours' },
-  { value: 'completed', label: 'Terminé' },
-  { value: 'validated', label: 'Validé' },
-  { value: 'cancelled', label: 'Annulé' },
+const CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
+const PROJECT_TYPE_VALUES = ['immobilier', 'agricole', 'commerce', 'autre'];
+const PROJECT_STATUS_VALUES = [
+  'created',
+  'in_progress',
+  'completed',
+  'validated',
+  'cancelled',
 ];
 
 const STATUS_STYLES = {
@@ -124,16 +121,15 @@ function Btn({
 /* ============================================================
    Status Badge (premium)
 ============================================================ */
-function StatusBadge({ value }) {
+function StatusBadge({ value, label }) {
   const s = STATUS_STYLES[value] || STATUS_STYLES['created'];
-  const label = PROJECT_STATUSES.find((e) => e.value === value)?.label || value;
 
   return (
     <span
       className={`inline-flex items-center gap-1 ${s.bg} ${s.text} ${s.ring}
         ring-1 px-2.5 py-0.5 rounded-full text-xs font-medium`}
     >
-      ● {label}
+      ● {label || value}
     </span>
   );
 }
@@ -149,6 +145,7 @@ function FieldRow({ children }) {
    Inline Transaction Form (Premium B)
 ============================================================ */
 function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     type: 'expense',
@@ -164,6 +161,15 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
   const canSeeOrder =
     normalizeRole(currentUser?.role) === 'admin' ||
     normalizeRole(currentUser?.role) === 'agent';
+
+  const currencyOptions = useMemo(
+    () =>
+      CURRENCY_CODES.map((code) => ({
+        value: code,
+        label: t(`currency.${code}`, { defaultValue: code }),
+      })),
+    [t]
+  );
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -181,12 +187,12 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
         projectId: Number(project.id),
       });
 
-      alert('Transaction créée');
+      alert(t('projects.transaction.alerts.createSuccess'));
       onSuccess?.();
       onClose?.();
     } catch (err) {
       console.error('❌ Transaction error:', err);
-      alert('Erreur lors de la création de la transaction.');
+      alert(t('projects.transaction.alerts.createError'));
     } finally {
       setSaving(false);
     }
@@ -201,7 +207,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
       "
     >
       <h4 className="text-sm font-semibold text-slate-700 mb-3">
-        💰 Nouvelle transaction
+        💰 {t('projects.transaction.title')}
       </h4>
 
       <form
@@ -210,23 +216,27 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
       >
         <div>
           <label className="text-xs text-slate-600 font-medium mb-1 block">
-            Type
+            {t('projects.transaction.typeLabel')}
           </label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
           >
-            <option value="expense">Dépense</option>
-            <option value="revenue">Revenu</option>
-            <option value="commission">Commission</option>
-            <option value="adjustment">Ajustement</option>
+            <option value="expense">{t('transactions.type.expense')}</option>
+            <option value="revenue">{t('transactions.type.revenue')}</option>
+            <option value="commission">
+              {t('transactions.type.commission')}
+            </option>
+            <option value="adjustment">
+              {t('transactions.type.adjustment')}
+            </option>
           </select>
         </div>
 
         <div>
           <label className="text-xs text-slate-600 font-medium mb-1 block">
-            Montant
+            {t('projects.transaction.amountLabel')}
           </label>
           <input
             type="number"
@@ -239,16 +249,16 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
 
         <div>
           <label className="text-xs text-slate-600 font-medium mb-1 block">
-            Devise
+            {t('projects.transaction.currencyLabel')}
           </label>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
           >
-            {Object.entries(CURRENCY_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
+            {currencyOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>
@@ -256,7 +266,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
 
         <div>
           <label className="text-xs text-slate-600 font-medium mb-1 block">
-            Méthode paiement
+            {t('projects.transaction.paymentMethodLabel')}
           </label>
           <input
             value={form.paymentMethod}
@@ -264,14 +274,14 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
               setForm({ ...form, paymentMethod: e.target.value })
             }
             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-            placeholder="Ex : OM, Wave"
+            placeholder={t('projects.transaction.paymentMethodPlaceholder')}
           />
         </div>
 
         {canSeeOrder && (
           <div className="md:col-span-2">
             <label className="text-xs text-slate-600 font-medium mb-1 block">
-              ID Commande (optionnel)
+              {t('projects.transaction.orderIdLabel')}
             </label>
             <input
               type="number"
@@ -286,7 +296,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
 
         <div className="md:col-span-2">
           <label className="text-xs text-slate-600 font-medium mb-1 block">
-            Description
+            {t('projects.transaction.descriptionLabel')}
           </label>
           <textarea
             rows={3}
@@ -300,7 +310,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
 
         <div className="md:col-span-2">
           <label className="text-xs text-slate-600 font-medium mb-1 block">
-            Preuve (image / PDF)
+            {t('projects.transaction.proofLabel')}
           </label>
           <input
             type="file"
@@ -314,10 +324,12 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
 
         <div className="md:col-span-2 flex justify-end gap-2">
           <Btn variant="secondary" size="sm" onClick={onClose}>
-            Annuler
+            {t('projects.transaction.cancel')}
           </Btn>
           <Btn variant="primary" size="sm" type="submit" disabled={saving}>
-            {saving ? 'Enregistrement…' : '💾 Enregistrer'}
+            {saving
+              ? t('projects.transaction.saving')
+              : `💾 ${t('projects.transaction.save')}`}
           </Btn>
         </div>
       </form>
@@ -329,6 +341,8 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
    🧠 PAGE PRINCIPALE — Début
 ============================================================ */
 export default function ProjectsPage() {
+  const { formatDateTime, formatNumber } = useLocale();
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);
@@ -368,6 +382,36 @@ export default function ProjectsPage() {
   // ✅ MASTER-safe flags (UX only — pas de filtre frontend)
   const isAdmin = useMemo(() => normalizeRole(user?.role) === 'admin', [user]);
   const isMaster = useMemo(() => isMasterUser(user), [user]);
+  const projectTypeOptions = useMemo(
+    () =>
+      PROJECT_TYPE_VALUES.map((value) => ({
+        value,
+        label: t(`projects.type.${value}`, { defaultValue: value }),
+      })),
+    [t]
+  );
+  const projectStatusOptions = useMemo(
+    () =>
+      PROJECT_STATUS_VALUES.map((value) => ({
+        value,
+        label: t(`projects.status.${value}`, { defaultValue: value }),
+      })),
+    [t]
+  );
+  const getProjectTypeLabel = useCallback(
+    (value) => {
+      if (!value) return t('common.dash');
+      return t(`projects.type.${value}`, { defaultValue: value });
+    },
+    [t]
+  );
+  const getProjectStatusLabel = useCallback(
+    (value) => {
+      if (!value) return t('common.dash');
+      return t(`projects.status.${value}`, { defaultValue: value });
+    },
+    [t]
+  );
 
   /* ============================================================
      🔹 Chargement des données (clients, agents, projets)
@@ -407,12 +451,12 @@ export default function ProjectsPage() {
       setErrorMsg(
         e?.response?.data?.error ||
           e?.message ||
-          'Erreur lors du chargement des projets.'
+          t('projects.alerts.loadError')
       );
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  }, []);
+  }, [t]);
   /* ============================================================
      🔹 Initialisation
      - MASTER = admin backend + scope → ici traité comme admin
@@ -441,7 +485,7 @@ export default function ProjectsPage() {
       } catch (err) {
         console.error('❌ Erreur chargement user:', err);
         setUser(null);
-        setErrorMsg("Erreur lors du chargement de l’utilisateur.");
+        setErrorMsg(t('projects.alerts.userLoadError'));
       } finally {
         if (isMounted.current) setLoading(false);
       }
@@ -452,7 +496,7 @@ export default function ProjectsPage() {
     return () => {
       isMounted.current = false;
     };
-  }, [getToken, loadForUser, loadClients, loadAgents]);
+  }, [getToken, loadForUser, loadClients, loadAgents, t]);
 
   /* ============================================================
      🔹 Handlers CRUD
@@ -468,33 +512,34 @@ export default function ProjectsPage() {
 
       if (editId) {
         await updateProject(editId, payload);
-        alert('✅ Projet mis à jour avec succès');
+        alert(t('projects.alerts.updateSuccess'));
       } else {
         await createProject(payload);
-        alert('✅ Projet créé avec succès');
+        alert(t('projects.alerts.createSuccess'));
       }
 
       resetForm();
       await loadForUser(user);
     } catch (err) {
       console.error('❌ Erreur sauvegarde projet:', err);
-      alert(
-        err?.response?.data?.error ||
-          err?.message ||
-          'Erreur lors de la sauvegarde du projet.'
-      );
+      const fallback = editId
+        ? t('projects.alerts.updateError')
+        : t('projects.alerts.createError');
+      alert(err?.response?.data?.error || err?.message || fallback);
     }
   }
 
   async function handleDelete(id) {
-    if (!window.confirm('Supprimer ce projet ?')) return;
+    if (!window.confirm(t('projects.alerts.deleteConfirm'))) return;
     try {
       await deleteProject(id);
-      alert('✅ Projet supprimé');
+      alert(t('projects.alerts.deleteSuccess'));
       await loadForUser(user);
     } catch (err) {
       console.error('❌ Erreur suppression projet:', err);
-      alert(err?.response?.data?.error || 'Erreur lors de la suppression.');
+      alert(
+        err?.response?.data?.error || t('projects.alerts.deleteError')
+      );
     }
   }
 
@@ -504,11 +549,11 @@ export default function ProjectsPage() {
         projectId,
         agentId ? Number(agentId) : null
       );
-      alert('✅ Agent assigné avec succès');
+      alert(t('projects.alerts.assignSuccess'));
       await loadForUser(user);
     } catch (err) {
       console.error('❌ Erreur assignation agent:', err);
-      alert("Erreur lors de l’assignation.");
+      alert(t('projects.alerts.assignError'));
     }
   }
 
@@ -529,10 +574,10 @@ export default function ProjectsPage() {
 
       await updateProject(projectId, payload);
       await loadForUser(user);
-      alert('✅ Statut mis à jour avec succès');
+      alert(t('projects.alerts.statusUpdateSuccess'));
     } catch (err) {
       console.error('❌ Erreur mise à jour du statut:', err);
-      alert('Erreur lors de la mise à jour du statut.');
+      alert(t('projects.alerts.statusUpdateError'));
     }
   }
 
@@ -552,9 +597,7 @@ export default function ProjectsPage() {
       });
       setShowForm(true);
     } else {
-      alert(
-        '⏱️ Vous ne pouvez plus modifier ce projet (limité à 1h pour les clients).'
-      );
+      alert(`⏱️ ${t('projects.alerts.editWindowExpired')}`);
     }
   }
 
@@ -621,13 +664,14 @@ export default function ProjectsPage() {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
         <p className="text-blue-700 text-base sm:text-lg animate-pulse text-center px-4">
-          ⏳ Chargement des projets…
+          ⏳ {t('projects.loading')}
         </p>
       </div>
     );
   }
 
-  const canCreate = Boolean(user?.role && normalizeRole(user.role) !== 'agent');
+  const role = normalizeRole(user?.role);
+  const canCreate = Boolean(user?.role && role !== 'agent');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-6 sm:py-10 overflow-x-hidden">
@@ -637,20 +681,20 @@ export default function ProjectsPage() {
         <div className="w-full flex flex-wrap items-start justify-between gap-4 mb-6">
           <div className="space-y-1 min-w-0">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              📁 Projets
+              📁 {t('projects.title')}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500">
               {isAdmin
-                ? 'Gérez tous les projets des clients.'
-                : normalizeRole(user?.role) === 'agent'
-                ? 'Projets qui vous sont assignés.'
-                : 'Vos projets personnels.'}
+                ? t('projects.subtitle.admin')
+                : role === 'agent'
+                ? t('projects.subtitle.agent')
+                : t('projects.subtitle.client')}
             </p>
 
             {/* UX info MASTER (non bloquant, informatif) */}
             {isMaster && (
               <p className="text-[11px] text-slate-400 mt-1">
-                Mode MASTER activé — périmètre géré automatiquement par le backend
+                {t('projects.masterInfo')}
               </p>
             )}
           </div>
@@ -662,7 +706,9 @@ export default function ProjectsPage() {
                 variant="ghost"
                 size="sm"
               >
-                {showForm ? '➖ Masquer le formulaire' : '➕ Nouveau projet'}
+                {showForm
+                  ? `➖ ${t('projects.buttons.hideForm')}`
+                  : `➕ ${t('projects.buttons.newProject')}`}
               </Btn>
             )}
             <Btn
@@ -671,7 +717,7 @@ export default function ProjectsPage() {
               variant="primary"
               size="sm"
             >
-              🔄 Rafraîchir
+              🔄 {t('common.refresh')}
             </Btn>
           </div>
         </div>
@@ -684,7 +730,7 @@ export default function ProjectsPage() {
               onChange={(e) =>
                 setFilters((f) => ({ ...f, q: e.target.value }))
               }
-              placeholder="Rechercher…"
+              placeholder={t('projects.filters.searchPlaceholder')}
               className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
             />
 
@@ -695,8 +741,8 @@ export default function ProjectsPage() {
               }
               className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
             >
-              <option value="">Tous les statuts</option>
-              {PROJECT_STATUSES.map((s) => (
+              <option value="">{t('projects.filters.statusAll')}</option>
+              {projectStatusOptions.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
                 </option>
@@ -710,12 +756,20 @@ export default function ProjectsPage() {
               }
               className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
             >
-              <option value="-createdAt">Plus récents</option>
-              <option value="createdAt">Plus anciens</option>
-              <option value="-updatedAt">Maj récentes</option>
-              <option value="updatedAt">Maj anciennes</option>
-              <option value="title">Titre A→Z</option>
-              <option value="-title">Titre Z→A</option>
+              <option value="-createdAt">
+                {t('projects.filters.sortNewest')}
+              </option>
+              <option value="createdAt">{t('projects.filters.sortOldest')}</option>
+              <option value="-updatedAt">
+                {t('projects.filters.sortUpdatedNewest')}
+              </option>
+              <option value="updatedAt">
+                {t('projects.filters.sortUpdatedOldest')}
+              </option>
+              <option value="title">{t('projects.filters.sortTitleAsc')}</option>
+              <option value="-title">
+                {t('projects.filters.sortTitleDesc')}
+              </option>
             </select>
 
             <Btn
@@ -726,7 +780,7 @@ export default function ProjectsPage() {
               size="sm"
               className="w-full"
             >
-              Réinitialiser filtres
+              {t('projects.filters.reset')}
             </Btn>
           </div>
         </div>
@@ -741,7 +795,7 @@ export default function ProjectsPage() {
               <FieldRow>
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1 block">
-                    Client *
+                    {t('projects.form.clientLabel')} *
                   </label>
                   <select
                     value={form.clientId}
@@ -751,7 +805,9 @@ export default function ProjectsPage() {
                     required
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
                   >
-                    <option value="">— Choisir un client —</option>
+                    <option value="">
+                      {t('projects.form.clientPlaceholder')}
+                    </option>
                     {clients.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.firstName} {c.lastName}
@@ -762,7 +818,7 @@ export default function ProjectsPage() {
 
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1 block">
-                    Agent (optionnel)
+                    {t('projects.form.agentLabel')}
                   </label>
                   <select
                     value={form.agentId}
@@ -771,7 +827,9 @@ export default function ProjectsPage() {
                     }
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
                   >
-                    <option value="">— Aucun agent —</option>
+                    <option value="">
+                      {t('projects.form.agentPlaceholder')}
+                    </option>
                     {agents.map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.firstName} {a.lastName}
@@ -785,29 +843,29 @@ export default function ProjectsPage() {
             <FieldRow>
               <div>
                 <label className="text-xs font-medium text-slate-600 mb-1 block">
-                  Titre *
+                  {t('projects.form.titleLabel')} *
                 </label>
                 <input
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   required
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                  placeholder="Ex: Construction villa"
+                  placeholder={t('projects.form.titlePlaceholder')}
                 />
               </div>
 
               <div>
                 <label className="text-xs font-medium text-slate-600 mb-1 block">
-                  Type
+                  {t('projects.form.typeLabel')}
                 </label>
                 <select
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
                 >
-                  {PROJECT_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
+                  {projectTypeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
                     </option>
                   ))}
                 </select>
@@ -817,7 +875,7 @@ export default function ProjectsPage() {
             <FieldRow>
               <div>
                 <label className="text-xs font-medium text-slate-600 mb-1 block">
-                  Budget
+                  {t('projects.form.budgetLabel')}
                 </label>
                 <input
                   type="number"
@@ -830,7 +888,7 @@ export default function ProjectsPage() {
 
               <div>
                 <label className="text-xs font-medium text-slate-600 mb-1 block">
-                  Statut
+                  {t('projects.form.statusLabel')}
                 </label>
                 <select
                   value={form.status}
@@ -838,7 +896,7 @@ export default function ProjectsPage() {
                   disabled={!isAdmin}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm disabled:bg-slate-100"
                 >
-                  {PROJECT_STATUSES.map((s) => (
+                  {projectStatusOptions.map((s) => (
                     <option key={s.value} value={s.value}>
                       {s.label}
                     </option>
@@ -849,7 +907,7 @@ export default function ProjectsPage() {
 
             <div>
               <label className="text-xs font-medium text-slate-600 mb-1 block">
-                Description
+                {t('projects.form.descriptionLabel')}
               </label>
               <textarea
                 value={form.description}
@@ -858,16 +916,18 @@ export default function ProjectsPage() {
                 }
                 rows={4}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-y"
-                placeholder="Décrivez le projet…"
+                placeholder={t('projects.form.descriptionPlaceholder')}
               />
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
               <Btn variant="secondary" size="sm" type="button" onClick={resetForm}>
-                Annuler
+                {t('projects.form.cancel')}
               </Btn>
               <Btn variant="primary" size="sm" type="submit">
-                {editId ? '💾 Mettre à jour' : '💾 Créer'}
+                {editId
+                  ? `💾 ${t('projects.form.update')}`
+                  : `💾 ${t('projects.form.create')}`}
               </Btn>
             </div>
           </form>
@@ -875,7 +935,7 @@ export default function ProjectsPage() {
 {/* ================= LISTE DES PROJETS ================= */}
         {filtered.length === 0 ? (
           <p className="text-slate-500 italic text-center py-6 text-sm">
-            Aucun projet trouvé.
+            {t('projects.list.empty')}
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
@@ -908,10 +968,10 @@ export default function ProjectsPage() {
                         {p.title}
                       </h3>
                       <p className="text-[11px] sm:text-xs text-slate-400 mt-1">
-                        Créé le{' '}
+                        {t('projects.card.createdAt')}{' '}
                         {p.createdAt
-                          ? new Date(p.createdAt).toLocaleString('fr-FR')
-                          : '—'}
+                          ? formatDateTime(p.createdAt)
+                          : t('common.dash')}
                       </p>
                     </div>
 
@@ -924,14 +984,17 @@ export default function ProjectsPage() {
                           }
                           className="border border-slate-300 rounded-md px-2 py-1 text-xs sm:text-sm max-w-[140px]"
                         >
-                          {PROJECT_STATUSES.map((s) => (
+                          {projectStatusOptions.map((s) => (
                             <option key={s.value} value={s.value}>
                               {s.label}
                             </option>
                           ))}
                         </select>
                       ) : (
-                        <StatusBadge value={p.status} />
+                        <StatusBadge
+                          value={p.status}
+                          label={getProjectStatusLabel(p.status)}
+                        />
                       )}
                     </div>
                   </div>
@@ -940,7 +1003,7 @@ export default function ProjectsPage() {
                   <div className="mt-2 space-y-1 text-xs sm:text-[13px] text-slate-700">
                     {p.client && (
                       <p className="truncate w-full max-w-full">
-                        👤 Client :{' '}
+                        👤 {t('projects.card.client')}{' '}
                         <span className="font-medium">
                           {p.client.firstName} {p.client.lastName}
                         </span>
@@ -948,7 +1011,7 @@ export default function ProjectsPage() {
                     )}
                     {p.agent && (
                       <p className="truncate w-full max-w-full">
-                        🧑‍💼 Agent :{' '}
+                        🧑‍💼 {t('projects.card.agent')}{' '}
                         <span className="font-medium">
                           {p.agent.firstName} {p.agent.lastName}
                         </span>
@@ -956,12 +1019,9 @@ export default function ProjectsPage() {
                     )}
                     {p.type && (
                       <p className="text-slate-500 break-words w-full max-w-full">
-                        🏷 Type :{' '}
+                        🏷 {t('projects.card.type')}{' '}
                         <span className="font-medium">
-                          {
-                            PROJECT_TYPES.find((t) => t.value === p.type)
-                              ?.label ?? p.type
-                          }
+                          {getProjectTypeLabel(p.type)}
                         </span>
                       </p>
                     )}
@@ -977,8 +1037,9 @@ export default function ProjectsPage() {
                   {/* Budget */}
                   {p.budget && (
                     <p className="mt-2 text-sm text-slate-800 font-medium">
-                      💰 Budget :{' '}
-                      {Number(p.budget).toLocaleString('fr-FR')} XOF
+                      💰 {t('projects.card.budget')}{' '}
+                      {formatNumber(p.budget)}{' '}
+                      {t('projects.card.currency', { defaultValue: 'XOF' })}
                     </p>
                   )}
 
@@ -999,7 +1060,9 @@ export default function ProjectsPage() {
                         }
                         className="border border-slate-300 rounded-lg px-2 py-1 text-xs sm:text-sm max-w-full"
                       >
-                        <option value="">— Assigner agent —</option>
+                        <option value="">
+                          {t('projects.actions.assignAgentPlaceholder')}
+                        </option>
                         {agents.map((a) => (
                           <option key={a.id} value={a.id}>
                             {a.firstName} {a.lastName}
@@ -1014,7 +1077,7 @@ export default function ProjectsPage() {
                         variant="primary"
                         size="xs"
                       >
-                        📂 Détails
+                        📂 {t('projects.actions.details')}
                       </Btn>
 
                       {canCreateTrx && (
@@ -1025,7 +1088,9 @@ export default function ProjectsPage() {
                           variant="ghost"
                           size="xs"
                         >
-                          {isTrxOpen ? '➖ Transaction' : '💰 Transaction'}
+                          {isTrxOpen
+                            ? t('projects.actions.closeTransaction')
+                            : t('projects.actions.openTransaction')}
                         </Btn>
                       )}
 
@@ -1036,14 +1101,14 @@ export default function ProjectsPage() {
                             variant="warning"
                             size="xs"
                           >
-                            ✏️ Modifier
+                            ✏️ {t('projects.actions.edit')}
                           </Btn>
                           <Btn
                             onClick={() => handleDelete(p.id)}
                             variant="danger"
                             size="xs"
                           >
-                            ❌ Supprimer
+                            ❌ {t('projects.actions.delete')}
                           </Btn>
                         </>
                       )}
@@ -1068,3 +1133,4 @@ export default function ProjectsPage() {
     </div>
   );
 }
+

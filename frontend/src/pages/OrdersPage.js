@@ -11,11 +11,11 @@ import { getProducts } from '../services/products';
 import { me } from '../services/auth';
 import PaginationBar from '../components/PaginationBar';
 import {
-  formatCurrency,
-  formatStatus,
   canonicalizeOrderStatus,
   canonicalizePaymentStatus,
 } from '../utils/labels';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 
 /* ============================================================
    🎨 Helpers de style pour les statuts (Badges / Timeline)
@@ -71,6 +71,8 @@ function normalizeListResponse(data, key) {
    ⭐ Page Commandes — Clean Shop Premium (Style B)
 ============================================================ */
 export default function OrdersPage() {
+  const { formatNumber, formatDateTime } = useLocale();
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
 
   const [orders, setOrders] = useState([]);
@@ -141,7 +143,7 @@ export default function OrdersPage() {
       );
     } catch (e) {
       console.error('? Erreur chargement commandes:', e);
-      alert('Erreur lors du chargement des commandes.');
+      alert(t("orders.alerts.loadError"));
       setOrders([]);
       setPagination({ page, limit: pageSize, total: 0 });
     } finally {
@@ -242,7 +244,7 @@ export default function OrdersPage() {
         unitPrice: '',
       });
 
-      alert('✅ Commande créée avec succès.');
+      alert(t("orders.alerts.createSuccess"));
 
       // Redirection automatique vers la commande
       const id = newOrder?.id || newOrder?.order?.id;
@@ -253,7 +255,7 @@ export default function OrdersPage() {
       }
     } catch (err) {
       console.error('❌ Erreur création commande:', err);
-      alert('Erreur lors de la création de la commande.');
+      alert(t("orders.alerts.createError"));
     } finally {
       setCreating(false);
     }
@@ -265,6 +267,28 @@ export default function OrdersPage() {
   const totalOrders = useMemo(
     () => pagination?.total ?? pagination?.count ?? orders.length,
     [pagination, orders.length]
+  );
+  const activeFiltersCount = [filters.q, filters.status, filters.payment].filter(
+    Boolean
+  ).length;
+
+  const getCurrencyLabel = useCallback(
+    (code) => t(`currency.${code}`, { defaultValue: code || 'XOF' }),
+    [t]
+  );
+  const getOrderStatusLabel = useCallback(
+    (status) =>
+      t(`orders.status.${canonicalizeOrderStatus(status)}`, {
+        defaultValue: status,
+      }),
+    [t]
+  );
+  const getPaymentStatusLabel = useCallback(
+    (status) =>
+      t(`orders.payment.${canonicalizePaymentStatus(status)}`, {
+        defaultValue: status,
+      }),
+    [t]
   );
 
   useEffect(() => {
@@ -282,7 +306,9 @@ export default function OrdersPage() {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-600 text-lg animate-pulse">Chargement…</p>
+        <p className="text-gray-600 text-lg animate-pulse">
+          {t("common.loading")}
+        </p>
       </div>
     );
   }
@@ -297,10 +323,10 @@ export default function OrdersPage() {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8">
           <div className="max-w-full break-words">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              🧾 <span>Gestion des commandes</span>
+              🧾 <span>{t("orders.title")}</span>
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Suivi complet, filtres avancés et création rapide de commandes.
+              {t("orders.subtitle")}
             </p>
           </div>
 
@@ -309,7 +335,7 @@ export default function OrdersPage() {
               to="/shop"
               className="w-full sm:w-auto px-4 py-2 text-sm bg-blue-600 text-white font-semibold rounded-lg shadow-sm hover:bg-blue-700 text-center"
             >
-              🛍️ Voir catalogue
+              🛍️ {t("orders.buttons.viewCatalog")}
             </Link>
 
             <button
@@ -317,7 +343,9 @@ export default function OrdersPage() {
               onClick={() => setShowForm((v) => !v)}
               className="w-full sm:w-auto px-4 py-2 text-sm bg-slate-900 text-white font-semibold rounded-lg shadow-sm hover:bg-black text-center"
             >
-              {showForm ? '➖ Masquer' : '➕ Nouvelle commande'}
+              {showForm
+                ? `➖ ${t("orders.buttons.hideForm")}`
+                : `➕ ${t("orders.buttons.newOrder")}`}
             </button>
 
             <button
@@ -330,7 +358,9 @@ export default function OrdersPage() {
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
-              {loading ? 'Chargement…' : '🔄 Rafraîchir'}
+              {loading
+                ? t("orders.buttons.refreshLoading")
+                : `🔄 ${t("orders.buttons.refresh")}`}
             </button>
           </div>
         </div>
@@ -343,7 +373,7 @@ export default function OrdersPage() {
           <div className="flex flex-col lg:flex-row gap-3 mb-4">
             <div className="w-full lg:w-2/3">
               <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-                Rechercher
+                {t("orders.filters.searchLabel")}
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
@@ -352,7 +382,7 @@ export default function OrdersPage() {
                 <input
                   value={filters.q}
                   onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-                  placeholder="Email client, code commande, montant, statut..."
+                  placeholder={t("orders.filters.searchPlaceholder")}
                   className="w-full border border-gray-300 rounded-xl pl-8 pr-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-blue-500 break-words"
                 />
               </div>
@@ -361,8 +391,10 @@ export default function OrdersPage() {
             <div className="w-full lg:w-1/3 flex items-end justify-end">
               <div className="text-xs text-slate-500 flex flex-col items-start lg:items-end gap-1 w-full">
                 <span className="inline-flex items-center px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm">
-                  {orders.length} commande{orders.length > 1 ? 's' : ''} affichée
-                  {orders.length > 1 ? 's' : ''} / {totalOrders}
+                  {t("orders.filters.displayedCount", {
+                    count: orders.length,
+                    total: totalOrders,
+                  })}
                 </span>
               </div>
             </div>
@@ -373,55 +405,55 @@ export default function OrdersPage() {
             {/* Statut commande */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-                Statut commande
+                {t("orders.filters.orderStatusLabel")}
               </label>
               <select
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                 className="border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white w-full"
               >
-                <option value="">Tous</option>
-                <option value="created">Créée</option>
-                <option value="processing">En traitement</option>
-                <option value="shipped">Expédiée</option>
-                <option value="delivered">Livrée</option>
-                <option value="cancelled">Annulée</option>
-                <option value="refunded">Remboursée</option>
+                <option value="">{t("orders.filters.all")}</option>
+                <option value="created">{t("orders.status.created")}</option>
+                <option value="processing">{t("orders.status.processing")}</option>
+                <option value="shipped">{t("orders.status.shipped")}</option>
+                <option value="delivered">{t("orders.status.delivered")}</option>
+                <option value="cancelled">{t("orders.status.cancelled")}</option>
+                <option value="refunded">{t("orders.status.refunded")}</option>
               </select>
             </div>
 
             {/* Paiement */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-                Statut paiement
+                {t("orders.filters.paymentStatusLabel")}
               </label>
               <select
                 value={filters.payment}
                 onChange={(e) => setFilters({ ...filters, payment: e.target.value })}
                 className="border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white w-full"
               >
-                <option value="">Tous</option>
-                <option value="unpaid">Non payée</option>
-                <option value="partial">Partielle</option>
-                <option value="paid">Payée</option>
-                <option value="refunded">Remboursée</option>
+                <option value="">{t("orders.filters.all")}</option>
+                <option value="unpaid">{t("orders.payment.unpaid")}</option>
+                <option value="partial">{t("orders.payment.partial")}</option>
+                <option value="paid">{t("orders.payment.paid")}</option>
+                <option value="refunded">{t("orders.payment.refunded")}</option>
               </select>
             </div>
 
             {/* Tri */}
             <div className="sm:col-span-2 lg:col-span-2">
               <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-                Trier par
+                {t("orders.filters.sortLabel")}
               </label>
               <select
                 value={filters.sort}
                 onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
                 className="border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white w-full"
               >
-                <option value="-createdAt">Plus récentes</option>
-                <option value="createdAt">Plus anciennes</option>
-                <option value="-totalAmount">Montant décroissant</option>
-                <option value="totalAmount">Montant croissant</option>
+                <option value="-createdAt">{t("orders.filters.sortNewest")}</option>
+                <option value="createdAt">{t("orders.filters.sortOldest")}</option>
+                <option value="-totalAmount">{t("orders.filters.sortAmountDesc")}</option>
+                <option value="totalAmount">{t("orders.filters.sortAmountAsc")}</option>
               </select>
             </div>
           </div>
@@ -429,13 +461,11 @@ export default function OrdersPage() {
           {/* Reset + compteur en bas */}
           <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-500">
             <div className="flex items-center gap-2">
-              <span>Filtre(s) actif(s) :</span>
+              <span>{t("orders.filters.activeLabel")}</span>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white border border-slate-200">
-                {[
-                  filters.q && 'Recherche',
-                  filters.status && 'Statut',
-                  filters.payment && 'Paiement',
-                ].filter(Boolean).length || 'Aucun'}
+                {activeFiltersCount
+                  ? activeFiltersCount
+                  : t("orders.filters.activeNone")}
               </span>
             </div>
 
@@ -444,7 +474,7 @@ export default function OrdersPage() {
               onClick={() => setFilters({ q: '', status: '', payment: '', sort: '-createdAt' })}
               className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium w-full sm:w-auto text-center"
             >
-              Réinitialiser tous les filtres
+              {t("orders.filters.reset")}
             </button>
           </div>
         </div>
@@ -457,13 +487,13 @@ export default function OrdersPage() {
             className="bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-6 mb-8"
           >
             <h2 className="text-lg font-semibold text-slate-900 mb-3">
-              ➕ Nouvelle commande
+              ➕ {t("orders.form.title")}
             </h2>
 
             {/* Note client */}
             <div className="mb-3">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Note client (optionnel)
+                {t("orders.form.customerNoteLabel")}
               </label>
               <textarea
                 rows={3}
@@ -472,7 +502,7 @@ export default function OrdersPage() {
                   setForm((f) => ({ ...f, customerNote: e.target.value }))
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 break-words"
-                placeholder="Informations particulières, adresse, consignes..."
+                placeholder={t("orders.form.customerNotePlaceholder")}
               />
             </div>
 
@@ -497,7 +527,7 @@ export default function OrdersPage() {
                 htmlFor="withItem"
                 className="text-sm text-gray-700 cursor-pointer"
               >
-                Ajouter un article dès la création
+                {t("orders.form.addItemLabel")}
               </label>
             </div>
 
@@ -506,7 +536,7 @@ export default function OrdersPage() {
                 {/* Produit */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Produit
+                    {t("orders.form.productLabel")}
                   </label>
                   <select
                     disabled={loadingProducts}
@@ -516,12 +546,12 @@ export default function OrdersPage() {
                     }
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
                   >
-                    <option value="">— Sélectionner —</option>
+                    <option value="">{t("orders.form.productPlaceholder")}</option>
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name} —{' '}
-                        {Number(p.price || 0).toLocaleString('fr-FR')}{' '}
-                        {formatCurrency(p.currency || 'XOF')}
+                        {formatNumber(p.price || 0)}{' '}
+                        {getCurrencyLabel(p.currency || 'XOF')}
                       </option>
                     ))}
                   </select>
@@ -530,7 +560,7 @@ export default function OrdersPage() {
                 {/* Quantité */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Quantité
+                    {t("orders.form.quantityLabel")}
                   </label>
                   <input
                     type="number"
@@ -546,7 +576,7 @@ export default function OrdersPage() {
                 {/* PU */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    PU (optionnel)
+                    {t("orders.form.unitPriceLabel")}
                   </label>
                   <input
                     type="number"
@@ -556,7 +586,7 @@ export default function OrdersPage() {
                       setForm((f) => ({ ...f, unitPrice: e.target.value }))
                     }
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-                    placeholder="PU du produit par défaut"
+                    placeholder={t("orders.form.unitPricePlaceholder")}
                   />
                 </div>
               </div>
@@ -573,7 +603,7 @@ export default function OrdersPage() {
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
-                {creating ? 'Création…' : '➕ Créer la commande'}
+                {creating ? t("orders.form.submitting") : `➕ ${t("orders.form.submit")}`}
               </button>
             </div>
           </form>
@@ -594,11 +624,11 @@ export default function OrdersPage() {
         {/* ===================================================== */}
         {loading ? (
           <p className="text-gray-500 italic text-center py-6">
-            Chargement…
+            {t("orders.list.loading")}
           </p>
         ) : orders.length === 0 ? (
           <p className="text-gray-500 italic text-center py-6">
-            Aucune commande trouvée.
+            {t("orders.list.empty")}
           </p>
         ) : (
           <div className="grid gap-5">
@@ -606,8 +636,8 @@ export default function OrdersPage() {
               const currency = o.currency || 'XOF';
               const total = Number(o.totalAmount || 0);
 
-              const orderStatusChip = formatStatus(o.orderStatus, 'order');
-              const paymentStatusChip = formatStatus(o.paymentStatus, 'payment');
+              const orderStatusChip = getOrderStatusLabel(o.orderStatus);
+              const paymentStatusChip = getPaymentStatusLabel(o.paymentStatus);
 
               const orderStatusClass = getOrderStatusStyle(o.orderStatus);
               const paymentStatusClass = getPaymentStatusStyle(o.paymentStatus);
@@ -621,23 +651,23 @@ export default function OrdersPage() {
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 px-4 sm:px-5 pt-4 pb-3 border-b border-gray-100 bg-slate-50/60">
                     <div className="min-w-0">
                       <h3 className="text-base sm:text-lg font-semibold text-gray-900 break-words">
-                        {o.code || `Commande #${o.id}`}
+                        {o.code || t("orders.list.orderNumber", { id: o.id })}
                       </h3>
                       <p className="text-xs text-gray-500 mt-0.5 break-words">
-                        ID interne : {o.id}
+                        {t("orders.list.internalId", { id: o.id })}
                       </p>
                     </div>
 
                     <div className="flex flex-col items-start sm:items-end text-xs text-gray-500">
                       <span>
                         {o.createdAt
-                          ? new Date(o.createdAt).toLocaleString('fr-FR')
-                          : '—'}
+                          ? formatDateTime(o.createdAt)
+                          : t("common.dash")}
                       </span>
                       {o.updatedAt && (
                         <span className="mt-0.5">
-                          MAJ :{' '}
-                          {new Date(o.updatedAt).toLocaleString('fr-FR')}
+                          {t("orders.list.updatedAt")}{' '}
+                          {formatDateTime(o.updatedAt)}
                         </span>
                       )}
                     </div>
@@ -649,13 +679,15 @@ export default function OrdersPage() {
                       <div className="text-sm text-gray-700 space-y-1">
                         <p>
                           <span className="font-medium text-gray-800">
-                            Client :
+                            {t("orders.list.customerLabel")}
                           </span>{' '}
-                          {o.customer?.email || '—'}
+                          {o.customer?.email || t("common.dash")}
                         </p>
                         {o.customerNote && (
                           <p className="text-xs text-gray-500">
-                            <span className="font-medium">Note :</span>{' '}
+                            <span className="font-medium">
+                              {t("orders.list.noteLabel")}
+                            </span>{' '}
                             {o.customerNote}
                           </p>
                         )}
@@ -663,11 +695,11 @@ export default function OrdersPage() {
 
                       <div className="text-right">
                         <p className="text-[11px] uppercase text-slate-400">
-                          Montant
+                          {t("orders.list.amountLabel")}
                         </p>
                         <p className="text-lg font-bold text-blue-600">
-                          {total.toLocaleString('fr-FR')}{' '}
-                          {formatCurrency(currency)}
+                          {formatNumber(total)}{' '}
+                          {getCurrencyLabel(currency)}
                         </p>
                       </div>
                     </div>
@@ -677,13 +709,13 @@ export default function OrdersPage() {
                       <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${orderStatusClass}`}
                       >
-                        Commande : {orderStatusChip}
+                        {t("orders.list.orderStatusLabel")} {orderStatusChip}
                       </span>
 
                       <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${paymentStatusClass}`}
                       >
-                        Paiement : {paymentStatusChip}
+                        {t("orders.list.paymentStatusLabel")} {paymentStatusChip}
                       </span>
                     </div>
                   </div>
@@ -695,14 +727,14 @@ export default function OrdersPage() {
                         to={`/orders/${o.id}`}
                         className="w-full sm:w-auto px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-center"
                       >
-                        📄 Ouvrir la commande
+                        📄 {t("orders.buttons.openOrder")}
                       </Link>
 
                       <Link
                         to={`/orders/${o.id}/transactions`}
                         className="w-full sm:w-auto px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 text-center"
                       >
-                        💰 Transactions
+                        💰 {t("orders.buttons.viewTransactions")}
                       </Link>
                     </div>
                   </div>
@@ -715,3 +747,4 @@ export default function OrdersPage() {
     </div>
   );
 }
+

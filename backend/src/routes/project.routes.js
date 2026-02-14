@@ -93,6 +93,10 @@ router.post(
         if (!isGlobalAdmin(req.user) && !canAccessGeoResource(agent, req.user)) {
           return res.status(403).json({ error: 'Agent hors scope géographique.' });
         }
+
+        if (!canAccessGeoResource(project, agent)) {
+          return res.status(403).json({ error: 'Agent hors scope du projet.' });
+        }
       }
 
       // ✅ Idempotence: si l’état cible = état actuel → juste renvoyer l’agrégat

@@ -12,10 +12,11 @@ import {
 } from '../services/properties';
 import api from '../services/api';
 import {
-  applyLabels,
   PROPERTY_TYPES,
   PROPERTY_STATUSES,
 } from '../utils/labels';
+import { useLocale } from '../i18n/useLocale';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // 🌍 FILE_BASE — Standard Teranga (Render / Netlify / CDN / Multi-pays SAFE)
@@ -44,6 +45,7 @@ function isPdf(path = '') {
 // 🧩 PAGE PRINCIPALE
 // ============================================================================
 export default function PropertiesPage() {
+  const { t } = useTranslation();
   // --------------------------------------------------------------------------
   // STATE
   // --------------------------------------------------------------------------
@@ -127,13 +129,10 @@ export default function PropertiesPage() {
   async function load() {
     try {
       const props = await getProperties();
-      const enriched = (props || []).map((p) =>
-        p.typeLabel ? p : applyLabels(p)
-      );
-      setProperties(enriched);
+      setProperties(props || []);
     } catch (e) {
       console.error('❌ load properties:', e);
-      alert('Erreur lors du chargement des biens.');
+      alert(t('propertiesPage.alerts.loadError'));
     }
   }
 
@@ -165,12 +164,12 @@ export default function PropertiesPage() {
 
     try {
       await createProperty(payload, files);
-      alert('✅ Bien créé avec succès');
+      alert(t('propertiesPage.alerts.createSuccess'));
       resetForm();
       load();
     } catch (e) {
       console.error('❌ create property:', e);
-      alert('Erreur lors de la création du bien.');
+      alert(t('propertiesPage.alerts.createError'));
     }
   }
 
@@ -189,12 +188,12 @@ export default function PropertiesPage() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      alert('✅ Bien mis à jour');
+      alert(t('propertiesPage.alerts.updateSuccess'));
       resetForm();
       load();
     } catch (e) {
       console.error('❌ update property:', e);
-      alert('Erreur lors de la mise à jour.');
+      alert(t('propertiesPage.alerts.updateError'));
     }
   }
 
@@ -204,18 +203,18 @@ export default function PropertiesPage() {
   async function handleDelete(id, createdAt) {
     const created = new Date(createdAt).getTime();
     if (Date.now() - created > 3600 * 1000) {
-      alert("❌ Suppression non autorisée (délai dépassé)");
+      alert(t('propertiesPage.alerts.deleteNotAllowed'));
       return;
     }
 
-    if (!window.confirm('Confirmer la suppression ?')) return;
+    if (!window.confirm(t('propertiesPage.alerts.deleteConfirm'))) return;
 
     try {
       await deleteProperty(id);
       load();
     } catch (e) {
       console.error('❌ delete property:', e);
-      alert('Erreur lors de la suppression.');
+      alert(t('propertiesPage.alerts.deleteError'));
     }
   }
 
@@ -280,21 +279,25 @@ export default function PropertiesPage() {
 
     if (filters.q.trim()) {
       const q = filters.q.toLowerCase();
-      arr = arr.filter((p) =>
-        [
-          p.title,
-          p.city,
-          p.address,
-          p.description,
-          p.typeLabel,
-          p.statusLabel,
-          p.postalCode,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-          .includes(q)
-      );
+        arr = arr.filter((p) => {
+          const typeLabel = PROPERTY_TYPES[p.type] || p.type || t('common.dash');
+          const statusLabel =
+            PROPERTY_STATUSES[p.status] || p.status || t('common.dash');
+
+          return [
+            p.title,
+            p.city,
+            p.address,
+            p.description,
+            typeLabel,
+            statusLabel,
+            p.postalCode,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .includes(q);
+        });
     }
 
     if (filters.type) arr = arr.filter((p) => p.type === filters.type);
@@ -429,8 +432,8 @@ export default function PropertiesPage() {
             <button
               onClick={closeLightbox}
               className="absolute top-6 right-6 bg-white/90 hover:bg-white text-gray-900 rounded-full p-2 shadow-md text-xl"
-              aria-label="Fermer l’aperçu"
-              title="Fermer"
+              aria-label={t('propertiesPage.lightbox.closeLabel')}
+              title={t('propertiesPage.lightbox.closeTitle')}
             >
               ✕
             </button>
@@ -441,15 +444,17 @@ export default function PropertiesPage() {
                 prevImage();
               }}
               className="absolute left-6 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 rounded-full p-3 shadow-lg text-xl"
-              aria-label="Image précédente"
-              title="Précédente (←)"
+              aria-label={t('propertiesPage.lightbox.prevLabel')}
+              title={t('propertiesPage.lightbox.prevTitle')}
             >
               ‹
             </button>
 
             <img
               src={lightbox.images[lightbox.index]}
-              alt={`Aperçu ${lightbox.index + 1}`}
+              alt={t('propertiesPage.lightbox.alt', {
+                index: lightbox.index + 1,
+              })}
               className="max-w-[92vw] max-h-[86vh] object-contain rounded-xl shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
@@ -460,8 +465,8 @@ export default function PropertiesPage() {
                 nextImage();
               }}
               className="absolute right-6 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 rounded-full p-3 shadow-lg text-xl"
-              aria-label="Image suivante"
-              title="Suivante (→)"
+              aria-label={t('propertiesPage.lightbox.nextLabel')}
+              title={t('propertiesPage.lightbox.nextTitle')}
             >
               ›
             </button>
@@ -481,18 +486,20 @@ export default function PropertiesPage() {
 ============================================================================ */
 
 function Header({ showForm, setShowForm, load, total }) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 pb-4 border-b border-gray-100">
       <div className="space-y-1">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
-          🏠 Gestion de vos biens
+          🏠 {t('propertiesPage.header.title')}
         </h1>
         <p className="text-sm sm:text-base text-gray-600">
-          Centralisez vos biens, leurs photos et toutes les informations importantes.
+          {t('propertiesPage.header.subtitle')}
         </p>
         <span className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 mt-2">
           <span className="h-2 w-2 rounded-full bg-blue-500 inline-block" />
-          {total} bien(s) enregistré(s).
+          {t('propertiesPage.header.count', { count: total })}
         </span>
       </div>
 
@@ -501,13 +508,15 @@ function Header({ showForm, setShowForm, load, total }) {
           onClick={() => setShowForm((v) => !v)}
           className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
         >
-          {showForm ? '➖ Masquer le formulaire' : '➕ Nouveau bien'}
+          {showForm
+            ? `➖ ${t('propertiesPage.buttons.hideForm')}`
+            : `➕ ${t('propertiesPage.buttons.newProperty')}`}
         </button>
         <button
           onClick={load}
           className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
         >
-          🔄 Rafraîchir
+          🔄 {t('common.refresh')}
         </button>
       </div>
     </div>
@@ -521,12 +530,14 @@ function PropertyFilters({
   cityOptions,
   filteredCount,
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-3">
         {/* Recherche globale */}
         <input
-          placeholder="🔎 Rechercher (titre, ville, adresse...)"
+          placeholder={t('propertiesPage.filters.searchPlaceholder')}
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm sm:text-base focus:ring-2 focus:ring-blue-500 col-span-1 lg:col-span-3"
@@ -538,7 +549,7 @@ function PropertyFilters({
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Type (tous)</option>
+          <option value="">{t('propertiesPage.filters.typeAll')}</option>
           {Object.entries(PROPERTY_TYPES).map(([key, label]) => (
             <option key={key} value={key}>
               {label}
@@ -559,7 +570,7 @@ function PropertyFilters({
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Statut (tous)</option>
+          <option value="">{t('propertiesPage.filters.statusAll')}</option>
           {Object.entries(PROPERTY_STATUSES).map(([k, v]) => (
             <option key={k} value={k}>
               {v}
@@ -570,7 +581,7 @@ function PropertyFilters({
         {/* Ville */}
         <input
           list="cities"
-          placeholder="Ville"
+          placeholder={t('propertiesPage.filters.cityPlaceholder')}
           value={filters.city}
           onChange={(e) => setFilters({ ...filters, city: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
@@ -585,7 +596,7 @@ function PropertyFilters({
         <input
           type="number"
           step="0.01"
-          placeholder="Surface min (m²)"
+          placeholder={t('propertiesPage.filters.minSurfacePlaceholder')}
           value={filters.minSurface}
           onChange={(e) => setFilters({ ...filters, minSurface: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
@@ -595,7 +606,7 @@ function PropertyFilters({
         <input
           type="number"
           step="0.01"
-          placeholder="Surface max (m²)"
+          placeholder={t('propertiesPage.filters.maxSurfacePlaceholder')}
           value={filters.maxSurface}
           onChange={(e) => setFilters({ ...filters, maxSurface: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
@@ -605,7 +616,11 @@ function PropertyFilters({
       {/* Ligne tri + reset */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-3 text-xs sm:text-sm text-gray-500">
-          <span>{filteredCount} bien(s) après filtrage.</span>
+          <span>
+            {t('propertiesPage.filters.filteredCount', {
+              count: filteredCount,
+            })}
+          </span>
           <select
             value={filters.sort}
             onChange={(e) =>
@@ -613,12 +628,24 @@ function PropertyFilters({
             }
             className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 bg-white"
           >
-            <option value="-createdAt">Plus récents d’abord</option>
-            <option value="createdAt">Plus anciens d’abord</option>
-            <option value="title">Titre (A-Z)</option>
-            <option value="-title">Titre (Z-A)</option>
-            <option value="-surface">Surface (max → min)</option>
-            <option value="surface">Surface (min → max)</option>
+            <option value="-createdAt">
+              {t('propertiesPage.filters.sortNewest')}
+            </option>
+            <option value="createdAt">
+              {t('propertiesPage.filters.sortOldest')}
+            </option>
+            <option value="title">
+              {t('propertiesPage.filters.sortTitleAsc')}
+            </option>
+            <option value="-title">
+              {t('propertiesPage.filters.sortTitleDesc')}
+            </option>
+            <option value="-surface">
+              {t('propertiesPage.filters.sortSurfaceDesc')}
+            </option>
+            <option value="surface">
+              {t('propertiesPage.filters.sortSurfaceAsc')}
+            </option>
           </select>
         </div>
 
@@ -636,7 +663,7 @@ function PropertyFilters({
           }
           className="text-xs sm:text-sm px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition w-full sm:w-auto text-center"
         >
-          Réinitialiser tous les filtres
+          {t('propertiesPage.filters.reset')}
         </button>
       </div>
     </div>
@@ -656,15 +683,19 @@ function PropertyForm({
   resetForm,
   editId,
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="mb-10">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-          {editId ? '✏️ Modifier le bien' : '➕ Ajouter un nouveau bien'}
+          {editId
+            ? `✏️ ${t('propertiesPage.form.titleEdit')}`
+            : `➕ ${t('propertiesPage.form.titleCreate')}`}
         </h2>
         {!editId && (
           <p className="text-xs sm:text-sm text-gray-500">
-            Remplissez les informations, ajoutez des photos, puis validez.
+            {t('propertiesPage.form.helperCreate')}
           </p>
         )}
       </div>
@@ -693,49 +724,65 @@ function PropertyForm({
 }
 
 function PropertyPreview({ form, previewUrls, setShowPreview, handleSubmit }) {
+  const { t } = useTranslation();
+  const surfaceValue = form.surfaceArea || t('common.dash');
+  const roomsValue = form.roomCount
+    ? t('propertiesPage.preview.roomsCount', {
+        count: Number(form.roomCount),
+      })
+    : t('common.dash');
+
   return (
     <div className="bg-gray-50 border border-gray-200 p-5 sm:p-6 rounded-2xl mb-8">
       <h3 className="text-base sm:text-lg font-semibold mb-4 text-gray-900">
-        Aperçu du bien avant validation
+        {t('propertiesPage.preview.title')}
       </h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm sm:text-base">
         <p>
-          <strong>Titre :</strong> {form.title || '—'}
+          <strong>{t('propertiesPage.preview.labels.title')} :</strong>{' '}
+          {form.title || t('common.dash')}
         </p>
         <p>
-          <strong>Type :</strong> {PROPERTY_TYPES[form.type] || form.type}
+          <strong>{t('propertiesPage.preview.labels.type')} :</strong>{' '}
+          {PROPERTY_TYPES[form.type] || form.type}
         </p>
         <p>
-          <strong>Adresse :</strong> {form.address || '—'}
+          <strong>{t('propertiesPage.preview.labels.address')} :</strong>{' '}
+          {form.address || t('common.dash')}
         </p>
         <p>
-          <strong>Ville :</strong> {form.city || '—'}
+          <strong>{t('propertiesPage.preview.labels.city')} :</strong>{' '}
+          {form.city || t('common.dash')}
         </p>
         <p>
-          <strong>Code postal :</strong> {form.postalCode || '—'}
+          <strong>{t('propertiesPage.preview.labels.postalCode')} :</strong>{' '}
+          {form.postalCode || t('common.dash')}
         </p>
         <p>
-          <strong>Surface / Pièces :</strong>{' '}
-          {form.surfaceArea || '—'} m² — {form.roomCount || '—'} pièce(s)
+          <strong>{t('propertiesPage.preview.labels.surfaceRooms')} :</strong>{' '}
+          {t('propertiesPage.preview.surfaceRoomsValue', {
+            surface: surfaceValue,
+            rooms: roomsValue,
+          })}
         </p>
         <p className="sm:col-span-2">
-          <strong>Description :</strong>{' '}
-          {form.description || 'Aucune description renseignée.'}
+          <strong>{t('propertiesPage.preview.labels.description')} :</strong>{' '}
+          {form.description || t('propertiesPage.preview.noDescription')}
         </p>
       </div>
 
       {previewUrls.length > 0 && (
         <div className="mt-4">
           <p className="text-xs sm:text-sm text-gray-500 mb-2">
-            Aperçu des photos sélectionnées :
+            {t('propertiesPage.preview.photosLabel')}
           </p>
           <div className="flex flex-wrap gap-3">
             {previewUrls.map((url, i) => (
               <img
                 key={i}
                 src={url}
-                alt="preview"
+                alt={t('propertiesPage.preview.photoAlt', { index: i + 1 })}
                 className="w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-lg border border-gray-200 shadow-sm"
               />
             ))}
@@ -748,13 +795,13 @@ function PropertyPreview({ form, previewUrls, setShowPreview, handleSubmit }) {
           onClick={() => setShowPreview(false)}
           className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 text-sm font-semibold"
         >
-          🔙 Modifier
+          🔙 {t('propertiesPage.preview.edit')}
         </button>
         <button
           onClick={handleSubmit}
           className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold"
         >
-          ✅ Créer le bien
+          ✅ {t('propertiesPage.preview.create')}
         </button>
       </div>
     </div>
@@ -771,6 +818,8 @@ function PropertyEditor({
   resetForm,
   setShowPreview,
 }) {
+  const { t } = useTranslation();
+
   return (
     <form
       onSubmit={(e) => {
@@ -783,10 +832,11 @@ function PropertyEditor({
       {/* Titre */}
       <div className="w-full">
         <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-          Titre du bien <span className="text-red-500">*</span>
+          {t('propertiesPage.form.labels.title')}{' '}
+          <span className="text-red-500">*</span>
         </label>
         <input
-          placeholder="Ex : Appartement F3 centre-ville"
+          placeholder={t('propertiesPage.form.placeholders.title')}
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           required
@@ -797,7 +847,7 @@ function PropertyEditor({
       {/* Type */}
       <div className="w-full">
         <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-          Type de bien
+          {t('propertiesPage.form.labels.type')}
         </label>
         <select
           value={form.type}
@@ -816,10 +866,11 @@ function PropertyEditor({
       {/* Adresse */}
       <div className="w-full">
         <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-          Adresse <span className="text-red-500">*</span>
+          {t('propertiesPage.form.labels.address')}{' '}
+          <span className="text-red-500">*</span>
         </label>
         <input
-          placeholder="Adresse complète"
+          placeholder={t('propertiesPage.form.placeholders.address')}
           value={form.address}
           onChange={(e) => setForm({ ...form, address: e.target.value })}
           required
@@ -830,10 +881,11 @@ function PropertyEditor({
       {/* Ville */}
       <div className="w-full">
         <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-          Ville <span className="text-red-500">*</span>
+          {t('propertiesPage.form.labels.city')}{' '}
+          <span className="text-red-500">*</span>
         </label>
         <input
-          placeholder="Ex : Dakar"
+          placeholder={t('propertiesPage.form.placeholders.city')}
           value={form.city}
           onChange={(e) => setForm({ ...form, city: e.target.value })}
           required
@@ -844,10 +896,10 @@ function PropertyEditor({
       {/* Code postal */}
       <div className="w-full">
         <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-          Code postal
+          {t('propertiesPage.form.labels.postalCode')}
         </label>
         <input
-          placeholder="Code postal"
+          placeholder={t('propertiesPage.form.placeholders.postalCode')}
           value={form.postalCode}
           onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
@@ -857,12 +909,12 @@ function PropertyEditor({
       {/* Surface */}
       <div className="w-full">
         <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-          Surface (m²)
+          {t('propertiesPage.form.labels.surface')}
         </label>
         <input
           type="number"
           step="0.01"
-          placeholder="Ex : 85"
+          placeholder={t('propertiesPage.form.placeholders.surface')}
           value={form.surfaceArea}
           onChange={(e) => setForm({ ...form, surfaceArea: e.target.value })}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
@@ -872,12 +924,12 @@ function PropertyEditor({
       {/* Nombre de pièces */}
       <div className="w-full">
         <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-          Nombre de pièces
+          {t('propertiesPage.form.labels.rooms')}
         </label>
         <input
           type="number"
           step="1"
-          placeholder="Ex : 3"
+          placeholder={t('propertiesPage.form.placeholders.rooms')}
           value={form.roomCount}
           onChange={(e) => setForm({ ...form, roomCount: e.target.value })}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
@@ -887,10 +939,10 @@ function PropertyEditor({
       {/* Description */}
       <div className="sm:col-span-2">
         <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-          Description
+          {t('propertiesPage.form.labels.description')}
         </label>
         <textarea
-          placeholder="Ajoutez des précisions : étage, vue, état général, équipements…"
+          placeholder={t('propertiesPage.form.placeholders.description')}
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
@@ -901,7 +953,7 @@ function PropertyEditor({
       {/* Fichiers */}
       <div className="sm:col-span-2">
         <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-          📁 Photos / documents (jpg, png, pdf)
+          📁 {t('propertiesPage.form.filesLabel')}
         </label>
         <input
           type="file"
@@ -912,7 +964,9 @@ function PropertyEditor({
         />
         {previewUrls.length > 0 && (
           <p className="mt-1 text-xs text-gray-500">
-            {previewUrls.length} fichier(s) sélectionné(s).
+            {t('propertiesPage.form.filesSelected', {
+              count: previewUrls.length,
+            })}
           </p>
         )}
       </div>
@@ -927,7 +981,7 @@ function PropertyEditor({
             >
               <img
                 src={url}
-                alt={`preview-${i}`}
+                alt={t('propertiesPage.form.previewAlt', { index: i + 1 })}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -943,14 +997,16 @@ function PropertyEditor({
             onClick={resetForm}
             className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-300 hover:bg-gray-400 transition"
           >
-            Annuler
+            {t('propertiesPage.form.cancel')}
           </button>
         )}
         <button
           type="submit"
           className="px-5 py-2.5 text-sm sm:text-base font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
         >
-          {editId ? '💾 Enregistrer' : '👁 Aperçu'}
+          {editId
+            ? `💾 ${t('propertiesPage.form.save')}`
+            : `👁 ${t('propertiesPage.form.preview')}`}
         </button>
       </div>
     </form>
@@ -969,20 +1025,23 @@ function PropertyList({
   isPdf,
   openLightbox,
 }) {
+  const { t } = useTranslation();
+  const { formatDateTime } = useLocale();
+
   return (
     <>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-          📋 Liste de vos biens
+          📋 {t('propertiesPage.list.title')}
         </h2>
         <span className="text-xs sm:text-sm text-gray-500">
-          {filtered.length} résultat(s)
+          {t('propertiesPage.list.results', { count: filtered.length })}
         </span>
       </div>
 
       {filtered.length === 0 ? (
         <p className="text-gray-500 italic text-center py-6 text-sm sm:text-base">
-          Aucun bien correspondant aux critères.
+          {t('propertiesPage.list.empty')}
         </p>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -990,6 +1049,14 @@ function PropertyList({
             const createdAt = new Date(p.createdAt);
             const diffHours = (now - createdAt) / (1000 * 60 * 60);
             const canEditOrDelete = diffHours <= 1;
+            const statusLabel =
+              PROPERTY_STATUSES[p.status] ||
+              p.status ||
+              t('common.dash');
+            const surfaceLabel = p.surfaceArea
+              ? `${p.surfaceArea} m²`
+              : t('common.dash');
+            const roomCount = Number(p.roomCount || 0);
 
             const imageUrls = (p.photos || [])
               .filter((ph) => !isPdf(ph))
@@ -1022,9 +1089,9 @@ function PropertyList({
                                 rounded-lg border border-gray-200 bg-gray-50 text-[0.7rem] sm:text-xs
                                 font-medium text-gray-700 hover:bg-gray-100 transition
                               "
-                              title="Ouvrir le PDF dans un nouvel onglet"
+                              title={t('propertiesPage.list.openPdf')}
                             >
-                              📄 PDF
+                              📄 {t('propertiesPage.list.pdfLabel')}
                             </a>
                           );
                         }
@@ -1033,7 +1100,9 @@ function PropertyList({
                           <img
                             key={i}
                             src={absUrl}
-                            alt={`photo-${i}`}
+                            alt={t('propertiesPage.list.photoAlt', {
+                              index: i + 1,
+                            })}
                             onClick={() =>
                               openLightbox(imageUrls, Math.max(0, startIndex))
                             }
@@ -1041,7 +1110,7 @@ function PropertyList({
                               w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border border-gray-200
                               cursor-zoom-in hover:scale-105 transition-transform duration-200
                             "
-                            title="Cliquer pour agrandir"
+                            title={t('propertiesPage.list.zoomHint')}
                           />
                         );
                       })}
@@ -1052,28 +1121,32 @@ function PropertyList({
                     {p.title}
                   </h3>
                   <p className="text-sm text-gray-600 mt-0.5">
-                    {p.city} — {p.typeLabel || PROPERTY_TYPES[p.type] || p.type}
+                    {p.city} — {PROPERTY_TYPES[p.type] || p.type || t('common.dash')}
                   </p>
 
                   {p.status && (
                     <p className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[0.7rem] font-medium bg-gray-50 text-gray-700 border border-gray-200">
-                      Statut : {p.statusLabel || PROPERTY_STATUSES[p.status]}
+                      {t('propertiesPage.list.status', { status: statusLabel })}
                     </p>
                   )}
 
                   <p className="text-sm text-gray-500 mt-2 line-clamp-3">
-                    {p.description || 'Aucune description.'}
+                    {p.description || t('propertiesPage.list.noDescription')}
                   </p>
 
                   {(p.surfaceArea || p.roomCount) && (
                     <p className="text-sm text-gray-700 mt-2">
-                      🏠 {p.surfaceArea ? `${p.surfaceArea} m²` : '—'} —{' '}
-                      {p.roomCount || 0} pièce(s)
+                      {t('propertiesPage.list.surfaceRooms', {
+                        surface: surfaceLabel,
+                        count: roomCount,
+                      })}
                     </p>
                   )}
 
                   <p className="text-[0.7rem] text-gray-400 mt-2">
-                    Créé le {new Date(p.createdAt).toLocaleString('fr-FR')}
+                    {t('propertiesPage.list.createdAt', {
+                      date: formatDateTime(p.createdAt),
+                    })}
                   </p>
                 </div>
 
@@ -1101,7 +1174,7 @@ function PropertyList({
                           text-xs sm:text-sm font-medium hover:bg-yellow-600 transition
                         "
                       >
-                        ✏️ Modifier
+                        ✏️ {t('propertiesPage.list.edit')}
                       </button>
 
                       <button
@@ -1111,12 +1184,12 @@ function PropertyList({
                           text-xs sm:text-sm font-medium hover:bg-red-700 transition
                         "
                       >
-                        ❌ Supprimer
+                        ❌ {t('propertiesPage.list.delete')}
                       </button>
                     </>
                   ) : (
                     <p className="text-[0.7rem] sm:text-xs text-gray-400 italic">
-                      ⏰ Modifications verrouillées (délai dépassé).
+                      {t('propertiesPage.list.locked')}
                     </p>
                   )}
                 </div>
@@ -1128,3 +1201,4 @@ function PropertyList({
     </>
   );
 }
+

@@ -1,4 +1,5 @@
 import React from 'react';
+import { withTranslation } from 'react-i18next';
 
 const isDev = (process.env.NODE_ENV || 'development') !== 'production';
 
@@ -39,18 +40,19 @@ class ErrorBoundary extends React.Component {
       return this.props.children;
     }
 
+    const { t } = this.props;
+
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-xl w-full bg-white shadow-lg rounded-2xl border border-gray-200 p-6 sm:p-10 text-center">
           <p className="text-sm font-semibold uppercase tracking-wide text-red-500">
-            Oups, une erreur est survenue
+            {t('errorBoundary.kicker')}
           </p>
           <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-gray-900">
-            Nous travaillons à la résoudre
+            {t('errorBoundary.title')}
           </h1>
           <p className="mt-4 text-gray-600">
-            Un incident technique a empêché l’affichage de cette page. Merci de
-            réessayer ou de recharger l’application.
+            {t('errorBoundary.description')}
           </p>
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
@@ -58,21 +60,21 @@ class ErrorBoundary extends React.Component {
               onClick={this.handleReset}
               className="w-full sm:w-auto rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
             >
-              Réessayer
+              {t('errorBoundary.retry')}
             </button>
             <button
               type="button"
               onClick={() => window.location.reload()}
               className="w-full sm:w-auto rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
             >
-              Recharger l’application
+              {t('errorBoundary.reload')}
             </button>
           </div>
 
           {isDev && this.state.error && (
             <details className="mt-6 text-left text-xs text-gray-500">
               <summary className="cursor-pointer font-semibold text-gray-700">
-                Détails techniques
+                {t('errorBoundary.details')}
               </summary>
               <pre className="mt-2 whitespace-pre-wrap break-words">
                 {this.state.error?.toString()}
@@ -87,4 +89,4 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-export default ErrorBoundary;
+export default withTranslation()(ErrorBoundary);

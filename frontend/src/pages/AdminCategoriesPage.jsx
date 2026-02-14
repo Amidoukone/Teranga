@@ -1,6 +1,7 @@
 // ============================== PARTIE 1 / 2 ==============================
 // frontend/src/pages/AdminCategoriesPage.jsx
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   getCategories,
   createCategory,
@@ -39,6 +40,7 @@ function computeIsMaster(user) {
 }
 
 export default function AdminCategoriesPage() {
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -75,7 +77,7 @@ export default function AdminCategoriesPage() {
       } catch (err) {
         console.error("❌ init AdminCategoriesPage:", err);
         if (!mounted) return;
-        setErrorMsg("Erreur lors du chargement de la session.");
+        setErrorMsg(t("adminCategoriesPage.errors.sessionLoad"));
       }
     }
 
@@ -95,8 +97,8 @@ export default function AdminCategoriesPage() {
       setCategories(cats || []);
     } catch (err) {
       console.error("❌ loadCategories:", err);
-      setErrorMsg("Erreur lors du chargement des catégories.");
-      alert("Erreur lors du chargement des catégories.");
+      setErrorMsg(t("adminCategoriesPage.errors.load"));
+      alert(t("adminCategoriesPage.errors.load"));
     } finally {
       setLoading(false);
     }
@@ -117,14 +119,14 @@ export default function AdminCategoriesPage() {
     e.preventDefault();
 
     if (!canWrite) {
-      alert("Accès interdit.");
+      alert(t("adminCategoriesPage.errors.forbidden"));
       return;
     }
 
     if (saving) return; // 🔒 empêche double-clic si la requête est en cours
 
     if (!form.name.trim()) {
-      alert("Le nom est requis.");
+      alert(t("adminCategoriesPage.errors.nameRequired"));
       return;
     }
 
@@ -134,10 +136,10 @@ export default function AdminCategoriesPage() {
 
       if (editing) {
         await updateCategory(editing.id, form);
-        alert("✅ Catégorie mise à jour.");
+        alert(t("adminCategoriesPage.alerts.updated"));
       } else {
         await createCategory(form);
-        alert("✅ Catégorie ajoutée.");
+        alert(t("adminCategoriesPage.alerts.created"));
       }
 
       resetForm();
@@ -145,8 +147,8 @@ export default function AdminCategoriesPage() {
       setShowForm(false);
     } catch (err) {
       console.error("❌ handleSubmit:", err);
-      setErrorMsg("Erreur lors de l'enregistrement de la catégorie.");
-      alert("Erreur lors de l'enregistrement de la catégorie.");
+      setErrorMsg(t("adminCategoriesPage.errors.save"));
+      alert(t("adminCategoriesPage.errors.save"));
     } finally {
       setSaving(false);
     }
@@ -157,11 +159,11 @@ export default function AdminCategoriesPage() {
   ============================================================ */
   async function handleDelete(id) {
     if (!canWrite) {
-      alert("Accès interdit.");
+      alert(t("adminCategoriesPage.errors.forbidden"));
       return;
     }
 
-    if (!window.confirm("Supprimer cette catégorie ?")) return;
+    if (!window.confirm(t("adminCategoriesPage.alerts.deleteConfirm"))) return;
 
     try {
       setErrorMsg("");
@@ -169,8 +171,8 @@ export default function AdminCategoriesPage() {
       await loadCategories();
     } catch (err) {
       console.error("❌ deleteCategory:", err);
-      setErrorMsg("Erreur lors de la suppression.");
-      alert("Erreur lors de la suppression.");
+      setErrorMsg(t("adminCategoriesPage.errors.delete"));
+      alert(t("adminCategoriesPage.errors.delete"));
     }
   }
 
@@ -189,7 +191,9 @@ export default function AdminCategoriesPage() {
   if (!user) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <p className="text-gray-600 text-lg animate-pulse">Chargement…</p>
+        <p className="text-gray-600 text-lg animate-pulse">
+          {t("adminCategoriesPage.loading")}
+        </p>
       </div>
     );
   }
@@ -208,25 +212,28 @@ export default function AdminCategoriesPage() {
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
-              📂 <span>Gestion des catégories</span>
+              📂 <span>{t("adminCategoriesPage.title")}</span>
             </h1>
 
             <p className="text-sm text-slate-600 mt-1 flex flex-wrap items-center gap-2">
               <span>
-                Connecté en tant que <strong>{user.email}</strong> ({user.role})
+                {t("adminCategoriesPage.labels.connectedAs", {
+                  email: user.email,
+                  role: user.role,
+                })}
               </span>
 
               {/* ✅ Badge master/admin scoped (n'impacte pas les fonctions) */}
               {isMaster && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.7rem] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">
-                  MASTER
+                  {t("adminCategoriesPage.badges.master")}
                 </span>
               )}
 
               {/* ✅ Lecture seule si pas admin/master */}
               {!canWrite && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.7rem] font-semibold border bg-amber-50 text-amber-700 border-amber-200">
-                  🔒 Lecture seule
+                  {t("adminCategoriesPage.badges.readOnly")}
                 </span>
               )}
             </p>
@@ -234,10 +241,10 @@ export default function AdminCategoriesPage() {
             {/* ✅ Optionnel: info scope si présent (safe) */}
             {(isTruthyId(user.countryId) || isTruthyId(user.regionId)) && (
               <p className="text-xs text-slate-500 mt-2">
-                Scope :{" "}
+                {t("adminCategoriesPage.labels.scope")}{" "}
                 {isTruthyId(user.regionId)
-                  ? `Région #${user.regionId}`
-                  : `Pays #${user.countryId}`}
+                  ? t("adminCategoriesPage.labels.regionId", { id: user.regionId })
+                  : t("adminCategoriesPage.labels.countryId", { id: user.countryId })}
               </p>
             )}
           </div>
@@ -246,7 +253,7 @@ export default function AdminCategoriesPage() {
             <button
               onClick={() => {
                 if (!canWrite) {
-                  alert("Accès interdit.");
+                  alert(t("adminCategoriesPage.errors.forbidden"));
                   return;
                 }
                 if (showForm) resetForm();
@@ -259,7 +266,9 @@ export default function AdminCategoriesPage() {
                   : "bg-slate-200 text-slate-500 cursor-not-allowed"
               }`}
             >
-              {showForm ? "➖ Masquer le formulaire" : "➕ Nouvelle catégorie"}
+              {showForm
+                ? t("adminCategoriesPage.buttons.hideForm")
+                : t("adminCategoriesPage.buttons.showForm")}
             </button>
 
             <button
@@ -271,7 +280,9 @@ export default function AdminCategoriesPage() {
                   : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
               }`}
             >
-              {loading ? "Chargement…" : "🔄 Rafraîchir"}
+              {loading
+                ? t("adminCategoriesPage.loading")
+                : t("adminCategoriesPage.buttons.refresh")}
             </button>
           </div>
         </div>
@@ -293,7 +304,7 @@ export default function AdminCategoriesPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher une catégorie par nom…"
+              placeholder={t("adminCategoriesPage.searchPlaceholder")}
               className="w-full pl-10 pr-3 py-2 rounded-xl border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -308,11 +319,11 @@ export default function AdminCategoriesPage() {
             {/* Nom */}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-slate-800">
-                Nom de la catégorie *
+                {t("adminCategoriesPage.form.nameLabel")}
               </label>
               <input
                 type="text"
-                placeholder="Ex : Informatique"
+                placeholder={t("adminCategoriesPage.form.namePlaceholder")}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
@@ -326,10 +337,10 @@ export default function AdminCategoriesPage() {
             {/* Description */}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-slate-800">
-                Description (optionnelle)
+                {t("adminCategoriesPage.form.descriptionLabel")}
               </label>
               <textarea
-                placeholder="Description de la catégorie…"
+                placeholder={t("adminCategoriesPage.form.descriptionPlaceholder")}
                 rows={3}
                 value={form.description}
                 onChange={(e) =>
@@ -353,7 +364,7 @@ export default function AdminCategoriesPage() {
                   }}
                   className="px-5 py-2.5 text-sm font-semibold rounded-xl shadow-sm bg-slate-200 text-slate-700 hover:bg-slate-300 transition"
                 >
-                  Annuler
+                  {t("adminCategoriesPage.buttons.cancel")}
                 </button>
               )}
 
@@ -368,10 +379,10 @@ export default function AdminCategoriesPage() {
                   }`}
               >
                 {saving
-                  ? "Enregistrement…"
+                  ? t("adminCategoriesPage.buttons.saving")
                   : editing
-                  ? "💾 Mettre à jour"
-                  : "➕ Ajouter"}
+                  ? t("adminCategoriesPage.buttons.update")
+                  : t("adminCategoriesPage.buttons.create")}
               </button>
             </div>
           </form>
@@ -380,11 +391,11 @@ export default function AdminCategoriesPage() {
         {/* LISTE DES CATÉGORIES */}
         {loading && categories.length === 0 ? (
           <p className="text-slate-500 italic text-center py-8">
-            Chargement des catégories…
+            {t("adminCategoriesPage.loadingCategories")}
           </p>
         ) : filteredCategories.length === 0 ? (
           <p className="text-slate-500 italic text-center py-8">
-            Aucune catégorie trouvée.
+            {t("adminCategoriesPage.empty")}
           </p>
         ) : (
           <div className="space-y-3">
@@ -399,7 +410,7 @@ export default function AdminCategoriesPage() {
                     {c.name}
                   </h3>
                   <p className="text-sm text-slate-600 mt-1 break-words">
-                    {c.description || "—"}
+                    {c.description || t("adminCategoriesPage.table.emptyValue")}
                   </p>
                 </div>
 
@@ -408,7 +419,7 @@ export default function AdminCategoriesPage() {
                   <button
                     onClick={() => {
                       if (!canWrite) {
-                        alert("Accès interdit.");
+                        alert(t("adminCategoriesPage.errors.forbidden"));
                         return;
                       }
                       setForm({
@@ -425,7 +436,7 @@ export default function AdminCategoriesPage() {
                         : "bg-amber-200 text-amber-700 cursor-not-allowed"
                     }`}
                   >
-                    ✏️ Modifier
+                    {t("adminCategoriesPage.table.edit")}
                   </button>
 
                   <button
@@ -437,7 +448,7 @@ export default function AdminCategoriesPage() {
                         : "bg-red-200 text-red-700 cursor-not-allowed"
                     }`}
                   >
-                    🗑 Supprimer
+                    {t("adminCategoriesPage.table.delete")}
                   </button>
                 </div>
               </div>

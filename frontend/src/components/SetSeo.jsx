@@ -1,9 +1,8 @@
 // frontend/src/components/SetSeo.jsx
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
-const DEFAULT_TITLE = "Teranga – Diaspora & Services";
-const DEFAULT_DESCRIPTION =
-  "Teranga — La plateforme qui rapproche la diaspora de son pays. Gérez vos biens et services même quand vous êtes loin.";
+const SITE_NAME = "Teranga";
 
 function setOrCreateMeta(selector, attr, value) {
   if (!value) return;
@@ -23,9 +22,13 @@ function setOrCreateMeta(selector, attr, value) {
 }
 
 export default function SetSeo({ title, description }) {
+  const { t, i18n } = useTranslation();
+
   useEffect(() => {
-    const finalTitle = title ? `${title} – Teranga` : DEFAULT_TITLE;
-    const finalDescription = description || DEFAULT_DESCRIPTION;
+    const defaultTitle = t("seo.defaultTitle");
+    const defaultDescription = t("seo.defaultDescription");
+    const finalTitle = title ? `${title} – ${SITE_NAME}` : defaultTitle;
+    const finalDescription = description || defaultDescription;
 
     document.title = finalTitle;
 
@@ -34,7 +37,7 @@ export default function SetSeo({ title, description }) {
     setOrCreateMeta('meta[property="og:description"]', "content", finalDescription);
     setOrCreateMeta('meta[name="twitter:title"]', "content", finalTitle);
     setOrCreateMeta('meta[name="twitter:description"]', "content", finalDescription);
-  }, [title, description]);
+  }, [title, description, t, i18n.language]);
 
   return null;
 }

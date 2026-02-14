@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { register } from "../services/auth";
+import { useTranslation } from "react-i18next";
 import {
   Eye,
   EyeOff,
@@ -16,15 +17,60 @@ import {
    Suggestions de pays ISO2
 ========================================================== */
 const COUNTRY_SUGGESTIONS = [
-  { code: "ML", name: "Mali 🇲🇱" },
-  { code: "SN", name: "Sénégal 🇸🇳" },
-  { code: "CI", name: "Côte d’Ivoire 🇨🇮" },
-  { code: "NE", name: "Niger 🇳🇪" },
-  { code: "BF", name: "Burkina Faso 🇧🇫" },
-  { code: "FR", name: "France 🇫🇷" },
-  { code: "BE", name: "Belgique 🇧🇪" },
-  { code: "CA", name: "Canada 🇨🇦" },
-  { code: "US", name: "États-Unis 🇺🇸" },
+  { code: "DZ", name: "Algerie" },
+  { code: "AO", name: "Angola" },
+  { code: "BJ", name: "Benin" },
+  { code: "BW", name: "Botswana" },
+  { code: "BF", name: "Burkina Faso" },
+  { code: "BI", name: "Burundi" },
+  { code: "CV", name: "Cabo Verde" },
+  { code: "CM", name: "Cameroun" },
+  { code: "CF", name: "Republique centrafricaine" },
+  { code: "TD", name: "Tchad" },
+  { code: "KM", name: "Comores" },
+  { code: "CG", name: "Congo (Republique)" },
+  { code: "CD", name: "RD Congo" },
+  { code: "DJ", name: "Djibouti" },
+  { code: "EG", name: "Egypte" },
+  { code: "GQ", name: "Guinee equatoriale" },
+  { code: "ER", name: "Erythree" },
+  { code: "SZ", name: "Eswatini" },
+  { code: "ET", name: "Ethiopie" },
+  { code: "GA", name: "Gabon" },
+  { code: "GM", name: "Gambie" },
+  { code: "GH", name: "Ghana" },
+  { code: "GN", name: "Guinee" },
+  { code: "GW", name: "Guinee-Bissau" },
+  { code: "CI", name: "Cote d'Ivoire" },
+  { code: "KE", name: "Kenya" },
+  { code: "LS", name: "Lesotho" },
+  { code: "LR", name: "Liberia" },
+  { code: "LY", name: "Libye" },
+  { code: "MG", name: "Madagascar" },
+  { code: "MW", name: "Malawi" },
+  { code: "ML", name: "Mali" },
+  { code: "MR", name: "Mauritanie" },
+  { code: "MU", name: "Maurice" },
+  { code: "MA", name: "Maroc" },
+  { code: "MZ", name: "Mozambique" },
+  { code: "NA", name: "Namibie" },
+  { code: "NE", name: "Niger" },
+  { code: "NG", name: "Nigeria" },
+  { code: "RW", name: "Rwanda" },
+  { code: "ST", name: "Sao Tome-et-Principe" },
+  { code: "SN", name: "Senegal" },
+  { code: "SC", name: "Seychelles" },
+  { code: "SL", name: "Sierra Leone" },
+  { code: "SO", name: "Somalie" },
+  { code: "ZA", name: "Afrique du Sud" },
+  { code: "SS", name: "Soudan du Sud" },
+  { code: "SD", name: "Soudan" },
+  { code: "TZ", name: "Tanzanie" },
+  { code: "TG", name: "Togo" },
+  { code: "TN", name: "Tunisie" },
+  { code: "UG", name: "Ouganda" },
+  { code: "ZM", name: "Zambie" },
+  { code: "ZW", name: "Zimbabwe" },
 ];
 
 // map "nom saisi" -> ISO2 (simple mais efficace, extensible)
@@ -87,6 +133,7 @@ function normalizeCountryInputToISO2(inputRaw = "", suggestions = []) {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegisterPage() {
+  const { t, i18n } = useTranslation();
   const [form, setForm] = useState(() => {
     const savedCountry = localStorage.getItem("teranga_register_country") || "ML";
     return {
@@ -140,13 +187,13 @@ export default function RegisterPage() {
     const password = String(form.password || "");
     const iso2 = String(countryISO2 || "").trim();
 
-    if (!firstName) return "Veuillez renseigner votre prénom.";
-    if (!lastName) return "Veuillez renseigner votre nom.";
-    if (!email || !EMAIL_RE.test(email)) return "Adresse email invalide.";
+    if (!firstName) return t("auth.register.errors.firstName");
+    if (!lastName) return t("auth.register.errors.lastName");
+    if (!email || !EMAIL_RE.test(email)) return t("auth.register.errors.email");
     if (!password || password.length < 8)
-      return "Le mot de passe doit contenir au moins 8 caractères.";
+      return t("auth.register.errors.password");
     if (!iso2 || !/^[A-Z]{2}$/.test(iso2))
-      return "Veuillez renseigner un pays valide (format ISO2 : ML, SN, FR...).";
+      return t("auth.register.errors.countryIso");
 
     return "";
   }
@@ -174,6 +221,7 @@ export default function RegisterPage() {
         lastName: String(form.lastName || "").trim(),
         phone: String(form.phone || "").trim() || undefined,
         country: countryISO2, // multi-pays safe : ISO2 canonique
+        language: i18n.language || "fr",
         role: "client",
       };
 
@@ -181,15 +229,12 @@ export default function RegisterPage() {
 
       navigate("/login", {
         state: {
-          successMsg:
-            "✔ Votre compte a été créé avec succès ! Vous pouvez vous connecter.",
+          successMsg: t("auth.register.success"),
         },
       });
     } catch (err) {
       const backendMsg = err?.response?.data?.error;
-      setErrorMsg(
-        backendMsg || "Une erreur est survenue. Vérifiez vos informations."
-      );
+      setErrorMsg(backendMsg || t("auth.register.errors.generic"));
     } finally {
       setLoading(false);
     }
@@ -203,20 +248,20 @@ export default function RegisterPage() {
       <div className="page-shell w-full max-w-md p-8">
         {/* HEADER */}
         <div className="text-center mb-8">
-          <p className="page-kicker mb-3">Rejoignez Teranga</p>
+          <p className="page-kicker mb-3">{t("auth.register.kicker")}</p>
           <img
             src="/logo_180x180.png"
             alt="Logo Teranga"
             className="w-16 h-16 mx-auto mb-3 drop-shadow-sm"
           />
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Créer un compte
+            {t("auth.register.title")}
           </h1>
           <p className="page-lead">
-            Inscription pour les <strong>clients</strong>
+            {t("auth.register.subtitle")}
           </p>
           <p className="text-xs text-slate-500 mt-1">
-            Créez votre accès client en quelques minutes.
+            {t("auth.register.subline")}
           </p>
         </div>
 
@@ -233,32 +278,32 @@ export default function RegisterPage() {
           {[
             {
               field: "firstName",
-              label: "Prénom",
+              label: t("auth.register.firstName"),
               icon: User,
-              placeholder: "Votre prénom",
+              placeholder: t("auth.register.firstNamePlaceholder"),
               required: true,
             },
             {
               field: "lastName",
-              label: "Nom",
+              label: t("auth.register.lastName"),
               icon: User,
-              placeholder: "Votre nom",
+              placeholder: t("auth.register.lastNamePlaceholder"),
               required: true,
             },
             {
               field: "email",
-              label: "Adresse email",
+              label: t("auth.register.email"),
               icon: Mail,
               type: "email",
-              placeholder: "exemple@email.com",
+              placeholder: t("auth.register.emailPlaceholder"),
               required: true,
             },
             {
               field: "phone",
-              label: "Téléphone (optionnel)",
+              label: t("auth.register.phone"),
               icon: Phone,
               type: "tel",
-              placeholder: "+223 70 00 00 00",
+              placeholder: t("auth.register.phonePlaceholder"),
               required: false,
             },
           ].map(
@@ -292,7 +337,7 @@ export default function RegisterPage() {
           {/* PAYS */}
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">
-              Pays (ISO2 ou nom)
+              {t("auth.register.countryLabel")}
             </label>
 
             <div className="relative">
@@ -300,18 +345,17 @@ export default function RegisterPage() {
               <input
                 type="text"
                 value={form.country}
-                placeholder="ML, SN, FR… ou nom du pays"
+                placeholder={t("auth.register.countryPlaceholder")}
                 onChange={(e) => updateField("country", e.target.value)}
                 className="w-full border border-slate-300 rounded-xl pl-10 pr-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <p className="text-xs text-slate-500 mt-1">
-              Exemple : <strong>ML</strong> pour Mali, <strong>SN</strong> pour
-              Sénégal.{" "}
+              {t("auth.register.countryExample")}{" "}
               {countryISO2 && /^[A-Z]{2}$/.test(countryISO2) ? (
                 <>
-                  (Détecté : <strong>{countryISO2}</strong>)
+                  ({t("auth.register.countryDetected")} <strong>{countryISO2}</strong>)
                 </>
               ) : null}
             </p>
@@ -335,15 +379,14 @@ export default function RegisterPage() {
             </div>
 
             <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-              Compte régional ? Contactez l'admin ou le master de votre pays.
-              L'inscription publique est réservée au pays uniquement.
+              {t("auth.register.regionInfo")}
             </div>
           </div>
 
-          {/* MOT DE PASSE */}
+          {/* {t("auth.register.passwordLabel")} */}
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">
-              Mot de passe
+              {t("auth.register.passwordLabel")}
             </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -352,7 +395,7 @@ export default function RegisterPage() {
                 required
                 minLength={8}
                 value={form.password}
-                placeholder="••••••••"
+                placeholder={t("auth.register.passwordPlaceholder")}
                 onChange={(e) => updateField("password", e.target.value)}
                 className="w-full border border-slate-300 rounded-xl pl-10 pr-10 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
               />
@@ -360,7 +403,11 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute inset-y-0 right-3 flex items-center text-slate-500 hover:text-blue-600"
-                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                aria-label={
+                  showPassword
+                    ? t("auth.register.passwordHide")
+                    : t("auth.register.passwordShow")
+                }
               >
                 {showPassword ? (
                   <EyeOff className="w-5 h-5" />
@@ -370,7 +417,7 @@ export default function RegisterPage() {
               </button>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Minimum <strong>8 caractères</strong>.
+              {t("auth.register.passwordMin")}
             </p>
           </div>
 
@@ -387,25 +434,35 @@ export default function RegisterPage() {
           >
             {loading ? (
               <>
-                <Loader2 className="animate-spin w-5 h-5 mr-2" /> Création…
+                <Loader2 className="animate-spin w-5 h-5 mr-2" /> {t("auth.register.submitting")}
               </>
             ) : (
-              "Créer mon compte"
+              t("auth.register.submit")
             )}
           </button>
         </form>
 
         {/* FOOTER */}
         <div className="mt-8 text-center text-sm text-slate-600">
-          Déjà un compte ?{" "}
+          {t("auth.register.haveAccount")}{" "}
           <Link
             to="/login"
             className="text-blue-600 font-medium hover:underline"
           >
-            Se connecter
+            {t("auth.register.loginLink")}
           </Link>
         </div>
       </div>
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+

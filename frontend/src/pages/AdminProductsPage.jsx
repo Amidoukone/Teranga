@@ -10,6 +10,9 @@ import {
 import { getCategories } from "../services/categories";
 import { me } from "../services/auth";
 import { formatCurrency } from "../utils/labels";
+import { prettyRoleLabel } from "../utils/roles";
+import { useLocale } from "../i18n/useLocale";
+import { useTranslation } from "react-i18next";
 
 /* ============================================================
    🌍 CONFIG PRODUCTION
@@ -79,6 +82,8 @@ function getProductImages(product) {
    ⭐ ADMIN PRODUITS — Apple Light Premium (Table + Miniature)
 ============================================================ */
 export default function AdminProductsPage() {
+  const { formatNumber } = useLocale();
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -176,7 +181,7 @@ export default function AdminProductsPage() {
       setProducts(list || []);
     } catch (e) {
       console.error("❌ Erreur chargement produits:", e);
-      alert("Erreur chargement produits");
+      alert(t("adminProductsPage.alerts.loadProductsError"));
       setProducts([]);
     } finally {
       setLoading(false);
@@ -236,8 +241,10 @@ export default function AdminProductsPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     try {
-      if (!form.name.trim()) return alert("Nom requis");
-      if (form.price === "") return alert("Prix requis");
+      if (!form.name.trim())
+        return alert(t("adminProductsPage.alerts.nameRequired"));
+      if (form.price === "")
+        return alert(t("adminProductsPage.alerts.priceRequired"));
 
       const payload = {
         ...form,
@@ -248,10 +255,10 @@ export default function AdminProductsPage() {
 
       if (editing) {
         await updateProduct(editing.id, payload);
-        alert("Produit mis à jour");
+        alert(t("adminProductsPage.alerts.updateSuccess"));
       } else {
         await createProduct(payload);
-        alert("Produit ajouté !");
+        alert(t("adminProductsPage.alerts.createSuccess"));
       }
 
       resetForm();
@@ -259,20 +266,20 @@ export default function AdminProductsPage() {
       setShowForm(false);
     } catch (err) {
       console.error("❌ Erreur sauvegarde produit:", err);
-      alert("Erreur sauvegarde");
+      alert(t("adminProductsPage.alerts.saveError"));
     }
   }
 
   async function handleDelete(id) {
-    if (!window.confirm("Supprimer ce produit ?")) return;
+    if (!window.confirm(t("adminProductsPage.alerts.deleteConfirm"))) return;
 
     try {
       await deleteProduct(`${id}?force=true`);
       await loadProducts();
-      alert("Produit supprimé !");
+      alert(t("adminProductsPage.alerts.deleteSuccess"));
     } catch (err) {
       console.error("❌ Erreur suppression :", err);
-      alert("Erreur suppression");
+      alert(t("adminProductsPage.alerts.deleteError"));
     }
   }
 
@@ -315,10 +322,14 @@ export default function AdminProductsPage() {
   if (!user) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <p className="text-gray-600 text-lg animate-pulse">Chargement…</p>
+        <p className="text-gray-600 text-lg animate-pulse">
+          {t("adminProductsPage.loading")}
+        </p>
       </div>
     );
   }
+
+  const roleLabel = prettyRoleLabel(user);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
@@ -329,10 +340,11 @@ export default function AdminProductsPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-              📦 Gestion des produits
+              📦 {t("adminProductsPage.header.title")}
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Connecté : <strong>{user.email}</strong> ({user.role})
+              {t("adminProductsPage.header.connectedLabel")}{" "}
+              <strong>{user.email}</strong> ({roleLabel})
             </p>
           </div>
 
@@ -341,7 +353,9 @@ export default function AdminProductsPage() {
               onClick={() => setShowForm((v) => !v)}
               className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-semibold shadow-sm"
             >
-              {showForm ? "➖ Masquer le formulaire" : "➕ Nouveau produit"}
+              {showForm
+                ? `➖ ${t("adminProductsPage.buttons.hideForm")}`
+                : `➕ ${t("adminProductsPage.buttons.newProduct")}`}
             </button>
 
             <button
@@ -353,7 +367,9 @@ export default function AdminProductsPage() {
                   : "bg-blue-600 hover:bg-blue-700 text-white"
               }`}
             >
-              {loading ? "Chargement…" : "🔄 Rafraîchir"}
+              {loading
+                ? t("adminProductsPage.buttons.refreshLoading")
+                : `🔄 ${t("adminProductsPage.buttons.refresh")}`}
             </button>
           </div>
         </div>
@@ -369,12 +385,15 @@ export default function AdminProductsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un produit (par nom)…"
+              placeholder={t("adminProductsPage.search.placeholder")}
               className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            {filteredProducts.length} produit(s) affiché(s) sur {products.length}.
+            {t("adminProductsPage.search.count", {
+              count: filteredProducts.length,
+              total: products.length,
+            })}
           </p>
         </div>
 
@@ -389,7 +408,7 @@ export default function AdminProductsPage() {
             {/* NOM */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-slate-700">
-                Nom *
+                {t("adminProductsPage.form.nameLabel")} *
               </label>
               <input
                 value={form.name}
@@ -402,7 +421,7 @@ export default function AdminProductsPage() {
             {/* PRIX */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-slate-700">
-                Prix *
+                {t("adminProductsPage.form.priceLabel")} *
               </label>
               <input
                 type="number"
@@ -416,23 +435,23 @@ export default function AdminProductsPage() {
             {/* DEVISE */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-slate-700">
-                Devise
+                {t("adminProductsPage.form.currencyLabel")}
               </label>
               <select
                 value={form.currency}
                 onChange={(e) => setForm({ ...form, currency: e.target.value })}
                 className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
               >
-                <option value="XOF">Franc CFA (XOF)</option>
-                <option value="EUR">Euro (EUR)</option>
-                <option value="USD">Dollar (USD)</option>
+                <option value="XOF">{t("currency.XOF")}</option>
+                <option value="EUR">{t("currency.EUR")}</option>
+                <option value="USD">{t("currency.USD")}</option>
               </select>
             </div>
 
             {/* STOCK */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-slate-700">
-                Stock
+                {t("adminProductsPage.form.stockLabel")}
               </label>
               <input
                 type="number"
@@ -445,14 +464,14 @@ export default function AdminProductsPage() {
             {/* CATÉGORIE */}
             <div className="md:col-span-2 flex flex-col gap-1">
               <label className="text-xs font-semibold text-slate-700">
-                Catégorie
+                {t("adminProductsPage.form.categoryLabel")}
               </label>
               <select
                 value={form.categoryId}
                 onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
                 className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
               >
-                <option value="">— Sans catégorie —</option>
+                <option value="">{t("adminProductsPage.form.categoryNone")}</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -464,7 +483,7 @@ export default function AdminProductsPage() {
             {/* DESCRIPTION */}
             <div className="md:col-span-2 flex flex-col gap-1">
               <label className="text-xs font-semibold text-slate-700">
-                Description
+                {t("adminProductsPage.form.descriptionLabel")}
               </label>
               <textarea
                 rows={3}
@@ -479,7 +498,7 @@ export default function AdminProductsPage() {
             {/* IMAGE PRINCIPALE */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-slate-700">
-                Image principale
+                {t("adminProductsPage.form.coverLabel")}
               </label>
               <input
                 type="file"
@@ -493,12 +512,12 @@ export default function AdminProductsPage() {
               {previewCoverUrl ? (
                 <img
                   src={previewCoverUrl}
-                  alt="Prévisualisation image principale"
+                  alt={t("adminProductsPage.form.coverAlt")}
                   className="w-24 h-24 object-cover rounded-xl border"
                 />
               ) : (
                 <div className="w-24 h-24 border border-dashed rounded-xl flex items-center justify-center text-xs text-slate-400">
-                  Aucun aperçu
+                  {t("adminProductsPage.form.coverEmpty")}
                 </div>
               )}
             </div>
@@ -506,7 +525,7 @@ export default function AdminProductsPage() {
             {/* GALERIE */}
             <div className="md:col-span-2 flex flex-col gap-1">
               <label className="text-xs font-semibold text-slate-700">
-                Galerie (max 3)
+                {t("adminProductsPage.form.galleryLabel")}
               </label>
               <input
                 type="file"
@@ -522,7 +541,7 @@ export default function AdminProductsPage() {
                 <img
                   key={i}
                   src={u}
-                  alt="galerie"
+                  alt={t("adminProductsPage.form.galleryAlt", { index: i + 1 })}
                   className="w-20 h-20 rounded-xl border object-cover"
                 />
               ))}
@@ -535,14 +554,16 @@ export default function AdminProductsPage() {
                 onClick={resetForm}
                 className="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 hover:bg-slate-300 text-sm font-semibold"
               >
-                Réinitialiser
+                {t("adminProductsPage.form.reset")}
               </button>
 
               <button
                 type="submit"
                 className="px-5 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow-sm text-sm font-semibold"
               >
-                {editing ? "💾 Mettre à jour" : "➕ Ajouter le produit"}
+                {editing
+                  ? `💾 ${t("adminProductsPage.form.update")}`
+                  : `➕ ${t("adminProductsPage.form.create")}`}
               </button>
             </div>
           </form>
@@ -557,19 +578,19 @@ export default function AdminProductsPage() {
               <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                    Produit
+                    {t("adminProductsPage.table.product")}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                    Prix
+                    {t("adminProductsPage.table.price")}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                    Stock
+                    {t("adminProductsPage.table.stock")}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                    Catégorie
+                    {t("adminProductsPage.table.category")}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                    Actions
+                    {t("adminProductsPage.table.actions")}
                   </th>
                 </tr>
               </thead>
@@ -581,7 +602,7 @@ export default function AdminProductsPage() {
                       colSpan={5}
                       className="py-6 text-center text-slate-500 text-sm italic"
                     >
-                      Aucun produit trouvé pour ces critères.
+                      {t("adminProductsPage.table.empty")}
                     </td>
                   </tr>
                 ) : (
@@ -612,17 +633,17 @@ export default function AdminProductsPage() {
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">
-                                  Pas d’image
+                                  {t("adminProductsPage.table.noImage")}
                                 </div>
                               )}
                             </button>
 
                             <div className="min-w-0">
                               <div className="font-semibold text-slate-900 truncate">
-                                {p.name || "—"}
+                                {p.name || t("common.dash")}
                               </div>
                               <div className="text-[11px] text-slate-400 mt-1">
-                                ID : #{p.id}
+                                {t("adminProductsPage.table.id", { id: p.id })}
                               </div>
                             </div>
                           </div>
@@ -631,7 +652,7 @@ export default function AdminProductsPage() {
                         {/* PRIX */}
                         <td className="px-4 py-3 align-top whitespace-nowrap">
                           <div className="font-semibold text-slate-900">
-                            {Number(p.price || 0).toLocaleString("fr-FR")}{" "}
+                            {formatNumber(p.price || 0)}{" "}
                             {formatCurrency(p.currency)}
                           </div>
                         </td>
@@ -646,7 +667,7 @@ export default function AdminProductsPage() {
                         {/* CATÉGORIE */}
                         <td className="px-4 py-3 align-top">
                           <span className="text-sm text-slate-800">
-                            {cat ? cat.name : "—"}
+                            {cat ? cat.name : t("common.dash")}
                           </span>
                         </td>
 
@@ -658,14 +679,14 @@ export default function AdminProductsPage() {
                               onClick={() => handleEdit(p)}
                               className="px-3 py-1.5 text-xs rounded-xl bg-amber-500 text-white hover:bg-amber-600"
                             >
-                              ✏️ Modifier
+                              ✏️ {t("adminProductsPage.table.edit")}
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDelete(p.id)}
                               className="px-3 py-1.5 text-xs rounded-xl bg-red-600 text-white hover:bg-red-700"
                             >
-                              🗑 Supprimer
+                              🗑 {t("adminProductsPage.table.delete")}
                             </button>
                           </div>
                         </td>
@@ -687,11 +708,13 @@ export default function AdminProductsPage() {
           <div
             className="relative bg-black rounded-2xl max-w-3xl w-full border border-slate-700 overflow-hidden"
             role="dialog"
+            aria-label={t("adminProductsPage.lightbox.ariaLabel")}
           >
             {/* Bouton fermer */}
             <button
               onClick={closeLightbox}
               className="absolute top-3 right-3 z-50 bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-full text-sm font-semibold backdrop-blur-md"
+              aria-label={t("adminProductsPage.lightbox.close")}
             >
               ✕
             </button>
@@ -701,6 +724,7 @@ export default function AdminProductsPage() {
               <button
                 onClick={goPrev}
                 className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
+                aria-label={t("adminProductsPage.lightbox.prev")}
               >
                 ◀
               </button>
@@ -711,7 +735,9 @@ export default function AdminProductsPage() {
               <img
                 src={lightbox.product._images[lightbox.index]}
                 className="max-h-[75vh] max-w-full object-contain rounded-lg"
-                alt="Product zoom"
+                alt={t("adminProductsPage.lightbox.imageAlt", {
+                  index: lightbox.index + 1,
+                })}
               />
             </div>
 
@@ -720,6 +746,7 @@ export default function AdminProductsPage() {
               <button
                 onClick={goNext}
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
+                aria-label={t("adminProductsPage.lightbox.next")}
               >
                 ▶
               </button>
@@ -730,4 +757,5 @@ export default function AdminProductsPage() {
     </div>
   );
 }
+
 

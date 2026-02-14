@@ -1,5 +1,6 @@
 // frontend/src/services/auth.js
 import api from './api';
+import { setLanguage, normalizeLanguage } from '../i18n';
 
 /**
  * ============================================================
@@ -109,6 +110,11 @@ function writeCachedUser(user) {
   }
 }
 
+function syncLanguageFromUser(user) {
+  const lang = normalizeLanguage(user?.language);
+  if (lang) setLanguage(lang);
+}
+
 /* ============================================================
    🔹 Inscription d’un nouvel utilisateur
 ============================================================ */
@@ -144,7 +150,10 @@ export async function login(payload) {
     }
 
     // ✅ Cache user pour UX immédiate
-    if (data.user) writeCachedUser(data.user);
+    if (data.user) {
+      writeCachedUser(data.user);
+      syncLanguageFromUser(data.user);
+    }
 
     return data; // { token, user }
   } catch (error) {
@@ -163,7 +172,10 @@ export async function me() {
   if (!shouldUseLocalStorage()) {
     try {
       const { data } = await api.get('/auth/me');
-      if (data?.user) writeCachedUser(data.user);
+      if (data?.user) {
+        writeCachedUser(data.user);
+        syncLanguageFromUser(data.user);
+      }
       return data;
     } catch (error) {
       const status = error?.response?.status;
@@ -176,6 +188,7 @@ export async function me() {
       if (isNetworkError) {
         const cached = readCachedUser();
         if (cached) {
+          syncLanguageFromUser(cached);
           console.warn('⚠️ Backend indisponible — utilisation du user en cache (mode “offline”).');
           return { user: cached, offline: true };
         }
@@ -190,7 +203,10 @@ export async function me() {
       });
 
       const cached = readCachedUser();
-      if (cached) return { user: cached, offline: true };
+      if (cached) {
+        syncLanguageFromUser(cached);
+        return { user: cached, offline: true };
+      }
 
       return { user: null };
     }
@@ -200,28 +216,9 @@ export async function me() {
 
   // 🔸 Pas de token → on tente un fallback user (offline)
   if (!token) {
-    try {
-      const { data } = await api.get('/auth/me');
-      if (data?.user) writeCachedUser(data.user);
-      return data;
-    } catch (error) {
-      const status = error?.response?.status;
-      if (status === 401) {
-        writeCachedUser(null);
-        return { user: null };
-      }
-
-      const isNetworkError = !error?.response;
-      if (isNetworkError) {
-        const cached = readCachedUser();
-        if (cached) {
-          console.warn('⚠️ Backend indisponible — utilisation du user en cache (mode “offline”).');
-          return { user: cached, offline: true };
-        }
-      }
-    }
     const cached = readCachedUser();
     if (cached) {
+      syncLanguageFromUser(cached);
       console.warn('⚠️ Aucun token, mode “offline” — utilisation du user en cache.');
       return { user: cached, offline: true };
     }
@@ -269,8 +266,11 @@ export async function me() {
     });
 
     // On tente aussi le cache si dispo
-    const cached = readCachedUser();
-    if (cached) return { user: cached, offline: true };
+      const cached = readCachedUser();
+      if (cached) {
+        syncLanguageFromUser(cached);
+        return { user: cached, offline: true };
+      }
 
     return { user: null };
   }
@@ -304,12 +304,32 @@ export function logout() {
 }
 
 /* ============================================================
+   🌐 Mettre a jour la langue (profil)
+============================================================ */
+export async function updateMyLanguage(language) {
+  const { data } = await api.patch('/auth/me', { language });
+  if (data?.user) {
+    writeCachedUser(data.user);
+    syncLanguageFromUser(data.user);
+  }
+  return data?.user;
+}
+
+/* ============================================================
    🔹 Utilitaires publics
 ============================================================ */
 
 /** Récupère l’utilisateur local (offline) sans requête réseau. */
 export function getLocalUser() {
   return readCachedUser();
+}
+
+/** Met a jour le user local (offline) */
+export function setLocalUser(patch) {
+  const current = readCachedUser() || {};
+  const next = typeof patch === 'function' ? patch(current) : { ...current, ...patch };
+  writeCachedUser(next);
+  return next;
 }
 
 /** Récupère le token (nouveau ou legacy). */
@@ -326,7 +346,9 @@ const AuthService = {
   changePassword,
   me,
   logout,
+  updateMyLanguage,
   getLocalUser,
+  setLocalUser,
   getToken,
 };
 
