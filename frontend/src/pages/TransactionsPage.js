@@ -3,7 +3,7 @@
 // Master / Multi-pays READY — ZERO régression
 // ============================================================================
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -126,6 +126,52 @@ export default function TransactionsPage() {
     sort: '-createdAt',
   });
 
+
+  useEffect(() => {
+    localStorage.setItem(
+      'teranga_transactions_showForm',
+      showForm ? '1' : '0'
+    );
+  }, [showForm]);
+
+  // ========================================================================
+  // 🔹 SERVICES SELON RÔLE (client / agent / admin / master)
+  // ========================================================================
+  const loadServicesByRole = useCallback(async (u) => {
+    try {
+      let servs = [];
+
+      if (u.role === 'client') {
+        servs = await getMyServices();
+      } else if (u.role === 'agent') {
+        servs = await getAgentServices();
+      } else if (u.role === 'admin' || u.role === 'master') {
+        servs = await getAllServicesAdmin();
+      }
+
+      setServices(servs || []);
+    } catch (e) {
+      console.error('❌ Erreur services:', e);
+      setServices([]);
+    }
+  }, []);
+
+  // ========================================================================
+  // 🔹 TRANSACTIONS
+  // ========================================================================
+  const loadTransactions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getTransactions();
+      const labeled = (data || []).map((t) => applyLabels(t, 'transaction'));
+      setTransactions(labeled);
+    } catch (e) {
+      console.error('❌ loadTransactions:', e);
+      alert(t('transactionsPage.alerts.loadError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
   // ========================================================================
   // 🔐 INIT USER + DATA
   // ========================================================================
@@ -154,53 +200,7 @@ export default function TransactionsPage() {
     return () => {
       active = false;
     };
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(
-      'teranga_transactions_showForm',
-      showForm ? '1' : '0'
-    );
-  }, [showForm]);
-
-  // ========================================================================
-  // 🔹 SERVICES SELON RÔLE (client / agent / admin / master)
-  // ========================================================================
-  async function loadServicesByRole(u) {
-    try {
-      let servs = [];
-
-      if (u.role === 'client') {
-        servs = await getMyServices();
-      } else if (u.role === 'agent') {
-        servs = await getAgentServices();
-      } else if (u.role === 'admin' || u.role === 'master') {
-        servs = await getAllServicesAdmin();
-      }
-
-      setServices(servs || []);
-    } catch (e) {
-      console.error('❌ Erreur services:', e);
-      setServices([]);
-    }
-  }
-
-  // ========================================================================
-  // 🔹 TRANSACTIONS
-  // ========================================================================
-  async function loadTransactions() {
-    setLoading(true);
-    try {
-      const data = await getTransactions();
-      const labeled = (data || []).map((t) => applyLabels(t, 'transaction'));
-      setTransactions(labeled);
-    } catch (e) {
-      console.error('❌ loadTransactions:', e);
-      alert(t('transactionsPage.alerts.loadError'));
-    } finally {
-      setLoading(false);
-    }
-  }
+  }, [loadServicesByRole, loadTransactions]);
 
   // ========================================================================
   // 🔹 SERVICE → TASKS
@@ -288,13 +288,13 @@ export default function TransactionsPage() {
   // ========================================================================
   // 🔹 USER DISPLAY
   // ========================================================================
-  function getUserDisplayName(u) {
+  const getUserDisplayName = useCallback((u) => {
     if (!u) return t('common.dash');
     const full = `${u.firstName || u.firstname || ''} ${
       u.lastName || u.lastname || ''
     }`.trim();
     return full || u.name || u.email || t('common.dash');
-  }
+  }, [t]);
 
   // ========================================================================
   // 🔍 FILTERING & SORTING
@@ -357,7 +357,7 @@ export default function TransactionsPage() {
     });
 
     setFiltered(arr);
-  }, [transactions, filters]);
+  }, [transactions, filters, getUserDisplayName]);
 
   // ========================================================================
   // ⏳ LOADING

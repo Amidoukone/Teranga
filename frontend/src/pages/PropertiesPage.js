@@ -349,7 +349,7 @@ export default function PropertiesPage() {
     });
 
     return arr;
-  }, [properties, filters]);
+  }, [properties, filters, t]);
 
   const now = new Date();
 

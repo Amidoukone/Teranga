@@ -196,7 +196,7 @@ export default function ServiceTasksPage() {
     return () => {
       active = false;
     };
-  }, [loadTasks]);
+  }, [loadTasks, authHeaders, id]);
 
   useEffect(() => {
     localStorage.setItem("teranga_service_tasks_showForm", showForm ? "1" : "0");

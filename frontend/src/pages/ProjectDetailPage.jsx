@@ -456,7 +456,7 @@ export default function ProjectDetailPage() {
     return () => {
       isMounted.current = false;
     };
-  }, [id, loadProject]);
+  }, [id, loadProject, t]);
 
   /* ============================================================
      🔹 Update status (admin/master = admin)

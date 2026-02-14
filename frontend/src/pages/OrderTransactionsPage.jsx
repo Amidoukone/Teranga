@@ -185,7 +185,7 @@ export default function OrderTransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, t]);
 
   /* ============================================================
       Init user + data

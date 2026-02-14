@@ -149,7 +149,7 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters, page, pageSize]);
+  }, [filters, page, pageSize, t]);
 
   const loadProducts = useCallback(async () => {
     setLoadingProducts(true);

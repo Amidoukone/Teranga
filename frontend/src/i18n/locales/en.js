@@ -424,7 +424,9 @@ const en = {
       agricole: "Agriculture",
       commerce: "Commerce",
       autre: "Other",
+      unknown: "Type not set",
     },
+
     transaction: {
       title: "New transaction",
       titleFor: "New transaction for",
@@ -447,20 +449,7 @@ const en = {
         createError: "Error creating the transaction.",
       },
     },
-    status: {
-      created: "Created",
-      in_progress: "In progress",
-      completed: "Completed",
-      validated: "Validated",
-      cancelled: "Cancelled",
-    },
-    type: {
-      immobilier: "Real estate",
-      agricole: "Agriculture",
-      commerce: "Commerce",
-      autre: "Other",
-      unknown: "Type not set",
-    },
+
     itemFallback: "Project #{{id}}",
   },
   projectDetail: {

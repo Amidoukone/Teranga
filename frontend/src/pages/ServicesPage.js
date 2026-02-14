@@ -26,7 +26,6 @@ const DEFAULT_FILTERS = {
    ✅ Multi-pays MASTER: UI uniquement (backend applique le scope)
 ============================================================ */
 export default function ServicesPage() {
-  const { formatDate } = useLocale();
   const { t } = useTranslation();
   const [services, setServices] = useState([]);
   const [filtered, setFiltered] = useState([]);

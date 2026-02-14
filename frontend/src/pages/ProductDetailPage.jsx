@@ -139,7 +139,7 @@ export default function ProductDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [id]);
+  }, [id, t]);
 
   /* ============================================================
      🧮 Images dérivées (memo)

@@ -232,7 +232,7 @@ export default function ProductCatalogPage() {
     return () => {
       mounted = false;
     };
-  }, [search, categoryFilter, priceMin, priceMax, sort, page, pageSize]);
+  }, [search, categoryFilter, priceMin, priceMax, sort, page, pageSize, t]);
 
   /* ============================================================
      🖼️ Lightbox controls (utilisés => pas de warnings)
