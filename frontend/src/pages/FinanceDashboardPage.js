@@ -292,8 +292,6 @@ export default function FinanceDashboardPage() {
   const linkedCount = filtered.filter(
     (t) => t.service || t.task || t.order || t.project
   ).length;
-  const linkedRatio =
-    totalCount > 0 ? Math.round((linkedCount / totalCount) * 100) : 0;
 
   const largestTx = filtered.reduce((best, t) => {
     if (!best) return t;

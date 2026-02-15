@@ -522,7 +522,7 @@ export default function ProjectDetailPage() {
     return () => {
       isMounted.current = false;
     };
-  }, [id, loadProject, t]);
+  }, [id, loadProject, navigate, t]);
 
   /* ============================================================
      🔹 Update status (admin/master = admin)
