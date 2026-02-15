@@ -19,6 +19,8 @@ const fr = {
     security: "Sécurité",
     dashboard: "Dashboard",
     dashboardTitle: "Tableau de bord",
+    notifications: "Notifications",
+    activities: "Centre d'activité",
     projects: "Projets",
     properties: "Biens",
     services: "Services",
@@ -129,6 +131,9 @@ const fr = {
     none: "Aucun",
     notAvailable: "N/A",
     dash: "—",
+    locationLabel: "Zone",
+    countryLabel: "Pays",
+    regionLabel: "Région",
   },
   dashboard: {
     loading: "Chargement du tableau de bord…",
@@ -916,7 +921,14 @@ const fr = {
       orderFallbackId: "#{{id}}",
       projectLabel: "Projet {{title}}",
       projectFallbackId: "#{{id}}",
+      paymentLabel: "Paiement",
       byLine: "Par {{name}} • {{date}}",
+    },
+    pagination: {
+      showing: "Affichage {{from}}–{{to}} sur {{total}}",
+      prev: "Précédent",
+      next: "Suivant",
+      perPage: "Par page",
     },
     alerts: {
       loadError: "Erreur lors du chargement des transactions.",
@@ -1689,11 +1701,12 @@ const fr = {
     },
   },
   financeDashboardPage: {
-    title: "Tableau de bord financier",
+    title: "Aperçu financier",
     descriptions: {
-      admin: "Vue globale sur les flux financiers (tous rôles confondus).",
-      agent: "Vue de vos transactions liées à vos services et tâches.",
-      client: "Vue de vos transactions personnelles.",
+      admin: "Vue globale des flux (tous rôles).",
+      master: "Vue financière par périmètre.",
+      agent: "Activité financière services/tâches.",
+      client: "Vue financière personnelle.",
     },
     loading: {
       page: "Chargement…",
@@ -1703,14 +1716,15 @@ const fr = {
     },
     buttons: {
       hideChart: "Masquer le graphique",
-      showChart: "Afficher le graphique 📈",
-      exportCsv: "⬇️ Export CSV",
+      showChart: "Afficher le graphique",
+      exportCsv: "Export CSV",
     },
     filters: {
       searchLabel: "Recherche",
       searchPlaceholder: "Description, paiement, service/tâche, email…",
       typeLabel: "Type",
       roleLabel: "Rôle",
+      roleHint: "(A/M)",
       fromLabel: "Du",
       toLabel: "Au",
       sortLabel: "Tri",
@@ -1742,13 +1756,69 @@ const fr = {
       adjustments: "Ajustements",
     },
     sections: {
-      roleDetails: "👥 Détails par rôle",
+      highlights: "Aperçu",
+      insights: "Indicateurs",
+      roleDetails: "Par rôle",
+      activity: "Activité",
+      topEntities: "Top entités",
+      breakdown: "Par type",
+      recent: "Récentes",
     },
     stats: {
-      revenues: "💰 Revenus",
-      expenses: "💸 Dépenses",
-      commissions: "🏢 Commissions",
-      adjustments: "⚙️ Ajustements",
+      totalIn: "Entrées",
+      totalOut: "Sorties",
+      balance: "Solde net",
+      transactions: "Transactions",
+      transactionsValue: "{{count}}",
+      revenues: "Revenus",
+      expenses: "Dépenses",
+      commissions: "Commissions",
+      adjustments: "Ajustements",
+    },
+    insights: {
+      average: "Montant moyen",
+      largest: "Plus grande",
+      linkedRatio: "Transactions liées",
+      linkedRatioValue: "{{linked}} sur {{total}} liées",
+      linkedRatioHint: "Liées = associées à un service/tâche/commande/projet",
+      lastActivity: "Dernière activité",
+    },
+    activity: {
+      services: "Services",
+      tasks: "Tâches",
+      projects: "Projets",
+      orders: "Commandes",
+      count: "{{count}}",
+    },
+    badges: {
+      role: "Rôle : {{role}}",
+      scope: "Périmètre : {{scope}}",
+    },
+    scope: {
+      global: "Global",
+      country: "Pays",
+      region: "Région",
+    },
+    topEntities: {
+      services: "Top services",
+      projects: "Top projets",
+      orders: "Top commandes",
+      tasks: "Top tâches",
+      empty: "Aucune donnée",
+    },
+    entities: {
+      serviceLabel: "Service {{title}}",
+      projectLabel: "Projet {{title}}",
+      orderLabel: "Commande {{code}}",
+      taskLabel: "Tâche {{title}}",
+      serviceFallback: "Service #{{id}}",
+      projectFallback: "Projet #{{id}}",
+      orderFallback: "Commande #{{id}}",
+      taskFallback: "Tâche #{{id}}",
+      unlinked: "Non liée",
+    },
+    recent: {
+      empty: "Aucune transaction récente",
     },
     roleBreakdown: {
       clients: "👤 Clients",
@@ -1767,7 +1837,7 @@ const fr = {
       titleLine1: "La confiance à distance,",
       titleLine2: "la sérénité à portée de main.",
       description:
-        "Avec <strong>Teranga</strong>, la diaspora africaine suit et gère ses biens, projets et démarches depuis l’étranger — avec transparence, fiabilité et une présence humaine sur le terrain.",
+        "Avec <0>Teranga</0>, la diaspora africaine suit et gère ses biens, projets et démarches depuis l’étranger — avec transparence, fiabilité et une présence humaine sur le terrain.",
       ctaLogin: "Se connecter",
       ctaRegister: "Créer un compte",
       stats: {
@@ -1830,7 +1900,7 @@ const fr = {
       subtitle:
         "Une plateforme inspirée de la confiance et de l'hospitalité, offrant un lien direct entre diaspora et projets au pays.",
       paragraphs: {
-        p1: "Le mot <strong>“Teranga”</strong> évoque chaleur humaine, confiance et respect. Notre plateforme reprend ces valeurs pour offrir une expérience moderne et rassurante.",
+        p1: "Le mot <0>“Teranga”</0> évoque chaleur humaine, confiance et respect. Notre plateforme reprend ces valeurs pour offrir une expérience moderne et rassurante.",
         p2: "Vos projets méritent une visibilité totale : photos, preuves, rapports, transactions, progression… tout est accessible en temps réel, depuis n'importe où.",
         p3: "Grâce à nos agents certifiés et à une interface claire, vous gardez toujours le contrôle, sans devoir être physiquement sur place.",
       },
@@ -1865,7 +1935,7 @@ const fr = {
     },
     footer: {
       copyright:
-        "© {{year}} <brand>Teranga</brand> — Tous droits réservés.",
+        "© {{year}} <0>Teranga</0> — Tous droits réservés.",
       links: {
         home: "Accueil",
         services: "Services",
@@ -2606,10 +2676,114 @@ const fr = {
       adminProducts: {
         title: "Produits (admin)",
       },
+      notifications: {
+        title: "Notifications",
+      },
+      activities: {
+        title: "Centre d'activité",
+      },
       fallback: {
         title: "Accueil",
       },
     },
+  },
+  notifications: {
+    kicker: "Centre d'activité",
+    title: "Notifications",
+    subtitle:
+      "Suivez les nouvelles demandes, celles en cours et celles terminées en un seul endroit.",
+    unreadCount: "{{count}} non lue",
+    unreadCount_other: "{{count}} non lues",
+    markAllRead: "Tout marquer comme lu",
+    tabs: {
+      new: "Nouvelles",
+      inProgress: "En cours",
+      done: "Terminées",
+    },
+    entities: {
+      service: "Service",
+      task: "Tâche",
+      order: "Commande",
+      evidence: "Preuve",
+      project: "Projet",
+      other: "Activité",
+    },
+    actions: {
+      created: "Créé",
+      assigned: "Assigné",
+      status_updated: "Statut mis à jour",
+    },
+    messages: {
+      action: "{{entity}} : {{action}}",
+      status: "Statut : {{status}}",
+      evidenceCount: "{{count}} preuve ajoutée",
+      evidenceCount_other: "{{count}} preuves ajoutées",
+    },
+    unread: "Non lue",
+    view: "Voir",
+    markRead: "Marquer lu",
+    loading: "Chargement des notifications...",
+    empty: "Aucune notification pour le moment.",
+    genericMessage: "Nouvelle activité détectée.",
+  },
+  activities: {
+    kicker: "Centre d'activité",
+    title: "Centre d'activité",
+    subtitle:
+      "Parcourez la chronologie complète des actions dans votre espace.",
+    filters: {
+      label: "Filtres",
+      allEntities: "Toutes les entités",
+      allActions: "Toutes les actions",
+      allDates: "Toutes les dates",
+      last7Days: "7 derniers jours",
+      last30Days: "30 derniers jours",
+      customRange: "Période personnalisée",
+      from: "Du",
+      to: "Au",
+    },
+    tabs: {
+      all: "Tout",
+      new: "Nouvelles",
+      inProgress: "En cours",
+      done: "Terminées",
+    },
+    progress: {
+      new: "Nouvelles",
+      in_progress: "En cours",
+      done: "Terminées",
+    },
+    entities: {
+      service: "Service",
+      task: "Tâche",
+      order: "Commande",
+      evidence: "Preuve",
+      project: "Projet",
+      other: "Activité",
+    },
+    actions: {
+      created: "Créé",
+      assigned: "Assigné",
+      status_updated: "Statut mis à jour",
+    },
+    messages: {
+      action: "{{entity}} : {{action}}",
+      status: "Statut : {{status}}",
+      evidenceCount: "{{count}} preuve ajoutée",
+      evidenceCount_other: "{{count}} preuves ajoutées",
+    },
+    actor: {
+      label: "Acteur",
+      unknown: "Système",
+    },
+    validation: {
+      invalidDateRange: "La date de début doit être antérieure à la date de fin.",
+    },
+    view: "Voir",
+    by: "par {{name}}",
+    loading: "Chargement des activités...",
+    empty: "Aucune activité pour le moment.",
+    genericMessage: "Nouvelle activité détectée.",
   },
   labels: {
     property: {

@@ -212,6 +212,37 @@ function canWriteGeoField(fieldName) {
   return Boolean(Product.rawAttributes?.[fieldName]);
 }
 
+function buildScopedSlug(baseSlug, scopeAssignments) {
+  const cleanBase = baseSlug || `p-${Date.now()}`;
+  const countryId = scopeAssignments?.countryId ?? scopeAssignments?.country_id ?? null;
+  const regionId = scopeAssignments?.regionId ?? scopeAssignments?.region_id ?? null;
+
+  if (!countryId && !regionId) return cleanBase;
+
+  const parts = [];
+  if (countryId) parts.push(`c${countryId}`);
+  if (regionId) parts.push(`r${regionId}`);
+
+  return `${cleanBase}-${parts.join("-")}`;
+}
+
+async function ensureUniqueSlug(slug, excludeId = null) {
+  let finalSlug = slug;
+  let i = 1;
+
+  while (
+    await Product.findOne({
+      where: excludeId
+        ? { slug: finalSlug, id: { [Op.ne]: excludeId } }
+        : { slug: finalSlug },
+    })
+  ) {
+    finalSlug = `${slug}-${i++}`;
+  }
+
+  return finalSlug;
+}
+
 /* ============================================================
    1️⃣ CREATE
 ============================================================ */
@@ -252,18 +283,10 @@ exports.create = async (req, res) => {
 
     const { coverImage, gallery } = await extractImagesFromRequestImageKit(req);
 
+    const scopeAssignments = buildProductScopeAssignments(req);
     const baseSlug = slugify(name);
-    let finalSlug = baseSlug || `p-${Date.now()}`;
-    let i = 1;
-
-    // ✅ Unique slug dans le scope (multi-pays)
-    while (
-      await Product.findOne({
-        where: applyGeoScopeForModel({ slug: finalSlug }, req.user, Product),
-      })
-    ) {
-      finalSlug = `${baseSlug}-${i++}`;
-    }
+    const scopedSlug = buildScopedSlug(baseSlug, scopeAssignments);
+    const finalSlug = await ensureUniqueSlug(scopedSlug);
 
     const prod = await Product.create({
       categoryId: category?.id ?? null,
@@ -281,7 +304,7 @@ exports.create = async (req, res) => {
         typeof isActive === 'undefined'
           ? true
           : String(isActive) === 'true' || isActive === true,
-      ...buildProductScopeAssignments(req),
+      ...scopeAssignments,
     });
 
     const created = await Product.findOne({
@@ -514,22 +537,11 @@ exports.update = async (req, res) => {
     --------------------------- */
     if (regenerateSlug && prod.name) {
       const baseSlug = slugify(prod.name);
-      let finalSlug = baseSlug || `p-${Date.now()}`;
-      let i = 1;
-
-      while (
-        await Product.findOne({
-          where: applyGeoScopeForModel(
-            { slug: finalSlug, id: { [Op.ne]: prod.id } },
-            req.user,
-            Product
-          ),
-        })
-      ) {
-        finalSlug = `${baseSlug}-${i++}`;
-      }
-
-      prod.slug = finalSlug;
+      const scopedSlug = buildScopedSlug(baseSlug, {
+        countryId: prod.countryId ?? prod.country_id,
+        regionId: prod.regionId ?? prod.region_id,
+      });
+      prod.slug = await ensureUniqueSlug(scopedSlug, prod.id);
     }
 
     await prod.save();

@@ -15,6 +15,11 @@ const {
   canAccessGeoResource,
   isGlobalAdmin,
 } = require("../utils/geoScope");
+const {
+  getAdminRecipientIds,
+  computeProgress,
+} = require("../services/notification.service");
+const { emitEvent } = require("../services/activity.service");
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
 
 function toIntOr(value, fallback) {
@@ -521,6 +526,56 @@ exports.create = async (req, res) => {
       response.warnings = {
         failedFiles: failed,
       };
+    }
+
+    try {
+      const adminIds = await getAdminRecipientIds({
+        countryId: geoCountryId,
+        regionId: geoRegionId,
+      });
+
+      const agentRecipient = task
+        ? task.assignedTo ?? task?.service?.agentId ?? null
+        : null;
+      const clientRecipient = task
+        ? task?.service?.clientId ?? task?.property?.ownerId ?? task?.creatorId ?? null
+        : order
+        ? order?.userId ?? order?.clientId ?? null
+        : null;
+
+      const recipients = [...adminIds, agentRecipient, clientRecipient];
+      const evidenceCount = createdIds.length;
+
+      if (evidenceCount > 0) {
+        await emitEvent({
+          recipients,
+          actorId: req.user.id,
+          entityType: "evidence",
+          entityId: createdIds[0],
+          action: "created",
+          title:
+            evidenceCount > 1
+              ? "Nouvelles preuves"
+              : "Nouvelle preuve",
+          message:
+            evidenceCount > 1
+              ? `${evidenceCount} preuves ajoutées`
+              : "Une preuve a été ajoutée",
+          progress: computeProgress("evidence", null),
+          entityStatus: null,
+          metadata: {
+            evidenceCount,
+            taskId: task?.id || null,
+            orderId: order?.id || null,
+          },
+          countryId: geoCountryId,
+          regionId: geoRegionId,
+          excludeRecipientId: req.user.id,
+          notificationMode: "create",
+        });
+      }
+    } catch (err) {
+      console.warn("⚠️ Notification preuve (create) échouée:", err?.message || err);
     }
 
     return res.status(createdIds.length ? 201 : 500).json(response);

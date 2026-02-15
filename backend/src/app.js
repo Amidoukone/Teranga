@@ -152,6 +152,8 @@ loadRouter('./routes/service.routes', '/services', apiRouter);
 loadRouter('./routes/task.routes', '/tasks', apiRouter);
 loadRouter('./routes/evidence.routes', '/evidences', apiRouter);
 loadRouter('./routes/transaction.routes', '/transactions', apiRouter);
+loadRouter('./routes/notification.routes', '/notifications', apiRouter);
+loadRouter('./routes/activity.routes', '/activities', apiRouter);
 
 // ✅ Multi-pays / franchise
 loadRouter('./routes/country.routes', '/countries', apiRouter);

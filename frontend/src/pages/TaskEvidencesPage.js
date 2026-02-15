@@ -290,7 +290,12 @@ export default function TaskEvidencesPage() {
       try {
         const u = await me();
         if (!active) return;
-        setUser(u.user || null);
+        const current = u?.user;
+        if (!current) {
+          window.location.href = '/login';
+          return;
+        }
+        setUser(current);
         await fetchEvidences();
       } catch (err) {
         console.error('❌ init evidence:', err);

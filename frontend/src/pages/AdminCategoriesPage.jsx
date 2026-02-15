@@ -9,7 +9,7 @@ import {
   deleteCategory,
 } from "../services/categories";
 import { me } from "../services/auth";
-import { isGlobalAdminUser, isMasterUser } from "../utils/role";
+import { normalizeRole, isGlobalAdminUser, isMasterUser } from "../utils/role";
 
 /*
 ============================================================================
@@ -72,7 +72,16 @@ export default function AdminCategoriesPage() {
       try {
         const ud = await me();
         if (!mounted) return;
-        setUser(ud.user);
+        const current = ud?.user;
+        if (!current) {
+          window.location.href = "/login";
+          return;
+        }
+        if (normalizeRole(current.role) !== "admin") {
+          window.location.href = "/dashboard";
+          return;
+        }
+        setUser(current);
         await loadCategories();
       } catch (err) {
         console.error("❌ init AdminCategoriesPage:", err);

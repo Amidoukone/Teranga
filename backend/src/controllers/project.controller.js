@@ -10,6 +10,11 @@ const {
   isGlobalAdmin,
   applyGeoScopeForModel,
 } = require("../utils/geoScope");
+const {
+  getAdminRecipientIds,
+  computeProgress,
+} = require("../services/notification.service");
+const { emitEvent } = require("../services/activity.service");
 
 /* =========================================================
    🏷️ Labels (FR)
@@ -177,6 +182,37 @@ exports.create = async (req, res) => {
       ],
     });
 
+    try {
+      const adminIds = await getAdminRecipientIds({
+        countryId: finalCountryId,
+        regionId: finalRegionId,
+      });
+
+      const recipients = [
+        ...adminIds,
+        targetClientId,
+        full?.agent?.id ?? project.agentId,
+      ];
+
+      await emitEvent({
+        recipients,
+        actorId: req.user.id,
+        entityType: "project",
+        entityId: project.id,
+        action: "created",
+        title: "Nouveau projet",
+        message: project.title ? `Projet: ${project.title}` : "Projet créé",
+        progress: computeProgress("project", "created"),
+        entityStatus: "created",
+        metadata: { projectId: project.id, title: project.title || null },
+        countryId: finalCountryId,
+        regionId: finalRegionId,
+        notificationMode: "create",
+      });
+    } catch (err) {
+      console.warn("⚠️ Notification projet (create) échouée:", err?.message || err);
+    }
+
     return res.status(201).json({
       message: "Projet cree avec succes",
       project: {
@@ -333,6 +369,9 @@ exports.update = async (req, res) => {
     if (!project)
       return res.status(404).json({ error: "Projet introuvable" });
 
+    const previousStatus = project.status;
+    const previousAgentId = project.agentId;
+
     const adminOK = isAdminLike(req.user);
     const clientOK = canClientEditOrDelete(project, req.user);
 
@@ -367,6 +406,11 @@ exports.update = async (req, res) => {
       }
     }
 
+    const nextStatus = adminOK ? body.status ?? project.status : project.status;
+    const nextAgentId = adminOK
+      ? toSafeInt(body.agentId ?? project.agentId)
+      : project.agentId;
+
     await project.update({
       title: body.title ?? project.title,
       type: body.type ?? project.type,
@@ -379,11 +423,9 @@ exports.update = async (req, res) => {
       currency: body.currency ?? project.currency,
 
       // 🔐 Admin only
-      agentId: adminOK
-        ? toSafeInt(body.agentId ?? project.agentId)
-        : project.agentId,
+      agentId: nextAgentId,
 
-      status: adminOK ? body.status ?? project.status : project.status,
+      status: nextStatus,
 
       // 🌍 GEO (non destructif)
       countryId: adminOK
@@ -413,6 +455,69 @@ exports.update = async (req, res) => {
         },
       ],
     });
+
+    if (nextAgentId && String(nextAgentId) !== String(previousAgentId || "")) {
+      try {
+        const clientRecipient = updated?.client?.id || updated?.clientId || null;
+        await emitEvent({
+          recipients: [nextAgentId, clientRecipient],
+          actorId: req.user.id,
+          entityType: "project",
+          entityId: updated.id,
+          action: "assigned",
+          title: "Projet assigné",
+          message: updated.title
+            ? `Projet assigné: ${updated.title}`
+            : "Un projet vous a été assigné",
+          progress: computeProgress("project", updated.status),
+          entityStatus: updated.status,
+          metadata: { projectId: updated.id, title: updated.title || null },
+          countryId: updated.countryId,
+          regionId: updated.regionId,
+          notificationMode: "create",
+        });
+      } catch (err) {
+        console.warn(
+          "⚠️ Notification projet (assign) échouée:",
+          err?.message || err
+        );
+      }
+    }
+
+    if (nextStatus !== previousStatus) {
+      try {
+        const adminIds = await getAdminRecipientIds({
+          countryId: updated.countryId,
+          regionId: updated.regionId,
+        });
+        const recipients = [
+          ...adminIds,
+          updated?.client?.id ?? updated.clientId,
+          updated?.agent?.id ?? updated.agentId,
+        ];
+
+        await emitEvent({
+          recipients,
+          actorId: req.user.id,
+          entityType: "project",
+          entityId: project.id,
+          action: "status_updated",
+          title: "Statut projet mis à jour",
+          message: updated.title ? `Projet: ${updated.title}` : null,
+          progress: computeProgress("project", nextStatus),
+          entityStatus: nextStatus,
+          metadata: { projectId: updated.id, title: updated.title || null },
+          countryId: updated.countryId,
+          regionId: updated.regionId,
+          notificationMode: "update",
+        });
+      } catch (err) {
+        console.warn(
+          "⚠️ Notification projet (status update) échouée:",
+          err?.message || err
+        );
+      }
+    }
 
     return res.json({
       message: "Projet mis à jour avec succès",

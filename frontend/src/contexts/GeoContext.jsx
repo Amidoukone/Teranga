@@ -5,6 +5,11 @@ import { getGeoSelection, setGeoSelection } from '../services/geo';
 import { getLocalUser, getToken } from '../services/auth';
 import { normalizeRole } from '../utils/role';
 
+const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
+  .toLowerCase()
+  .trim();
+const USES_COOKIE_AUTH = AUTH_STORAGE_MODE === 'cookie';
+
 const GeoContext = createContext(null);
 
 export function GeoProvider({ children }) {
@@ -17,7 +22,7 @@ export function GeoProvider({ children }) {
   const [user, setUser] = useState(getLocalUser());
   const [token, setToken] = useState(getToken());
   const role = normalizeRole(user?.role);
-  const isAuthenticated = Boolean(token || user);
+  const isAuthenticated = USES_COOKIE_AUTH ? Boolean(user) : Boolean(token);
   const isAdmin = role === 'admin';
   const scopedCountryId = user?.countryId ?? null;
   const scopedRegionId = user?.regionId ?? null;

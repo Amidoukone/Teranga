@@ -14,9 +14,13 @@
 
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { me, logout, getLocalUser } from "../services/auth";
+import { me, logout, getLocalUser, getToken } from "../services/auth";
 import { normalizeRole } from "../utils/roles";
 import { useTranslation } from "react-i18next";
+import {
+  getNotificationSummary,
+  markAllNotificationsRead,
+} from "../services/notifications";
 
 import {
   X,
@@ -39,6 +43,7 @@ import {
   ShieldCheck,
   ChevronDown,
   Check,
+  Bell,
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -70,6 +75,8 @@ const ACCOUNT_SECURITY_LINK = {
 const ROLE_LINKS = {
   client: [
     { path: "/dashboard", labelKey: "nav.dashboard" },
+    { path: "/notifications", labelKey: "nav.notifications" },
+    { path: "/activities", labelKey: "nav.activities" },
     { path: "/projects", labelKey: "nav.projects" },
     { path: "/properties", labelKey: "nav.properties" },
     { path: "/services", labelKey: "nav.services" },
@@ -81,6 +88,8 @@ const ROLE_LINKS = {
   ],
   agent: [
     { path: "/dashboard", labelKey: "nav.dashboard" },
+    { path: "/notifications", labelKey: "nav.notifications" },
+    { path: "/activities", labelKey: "nav.activities" },
     { path: "/projects", labelKey: "nav.projects" },
     { path: "/agent/services", labelKey: "nav.services" },
     { path: "/tasks", labelKey: "nav.tasks" },
@@ -91,6 +100,8 @@ const ROLE_LINKS = {
   ],
   admin: [
     { path: "/dashboard", labelKey: "nav.dashboard" },
+    { path: "/notifications", labelKey: "nav.notifications" },
+    { path: "/activities", labelKey: "nav.activities" },
     { path: "/projects", labelKey: "nav.projects" },
     { path: "/admin/projects", labelKey: "nav.adminProjects" },
 
@@ -140,6 +151,8 @@ const BOTTOM_LINKS = {
 
 const ICON_BY_PATH_PREFIX = [
   { prefix: "/dashboard", icon: LayoutDashboard },
+  { prefix: "/notifications", icon: Bell },
+  { prefix: "/activities", icon: BarChart3 },
   { prefix: "/projects", icon: FolderKanban },
   { prefix: "/properties", icon: Building2 },
   { prefix: "/services", icon: Wrench },
@@ -190,6 +203,8 @@ function buildSections(role, links, t) {
 
   pushSection(t("nav.sections.essential"), [
     byPath("/dashboard"),
+    byPath("/notifications"),
+    byPath("/activities"),
     ...byPrefix("/projects"),
     ...byPrefix("/properties"),
     ...byPrefix("/services"),
@@ -267,8 +282,14 @@ function NavBar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [user, setUser] = useState(getLocalUser());
-  const [loading, setLoading] = useState(!getLocalUser());
+  const [user, setUser] = useState(() => {
+    const token = getToken();
+    return token ? getLocalUser() : null;
+  });
+  const [loading, setLoading] = useState(() => {
+    const token = getToken();
+    return token ? !getLocalUser() : false;
+  });
 
   // Mobile "Plus"
   const [openMore, setOpenMore] = useState(false);
@@ -276,15 +297,68 @@ function NavBar() {
   // Desktop dropdowns
   const [openDesktopMore, setOpenDesktopMore] = useState(false);
   const [openUserMenu, setOpenUserMenu] = useState(false);
+  const [notificationSummary, setNotificationSummary] = useState({
+    unread: 0,
+    byProgress: {},
+  });
+  const unreadCount = notificationSummary?.unread || 0;
+
+  const loadNotificationSummary = useCallback(async () => {
+    const token = getToken();
+    if (!user || !token) return;
+    try {
+      const data = await getNotificationSummary();
+      setNotificationSummary({
+        unread: data?.unread ?? 0,
+        byProgress: data?.byProgress || {},
+      });
+    } catch (e) {
+      console.error("❌ notifications summary:", e);
+      setNotificationSummary((prev) => prev || { unread: 0, byProgress: {} });
+    }
+  }, [user]);
+
+  const handleOpenNotifications = useCallback(async () => {
+    const token = getToken();
+    if (!unreadCount || !token) return;
+    setNotificationSummary((prev) => ({
+      ...(prev || {}),
+      unread: 0,
+    }));
+    try {
+      await markAllNotificationsRead();
+    } catch (e) {
+      console.error("❌ mark all notifications read:", e);
+    } finally {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("notifications:refresh"));
+      }
+    }
+  }, [unreadCount]);
 
   /* LOAD USER (unchanged logic) */
   useEffect(() => {
     let active = true;
 
     async function load() {
+      const token = getToken();
+      if (!token) {
+        if (active) {
+          setUser(null);
+          setLoading(false);
+        }
+        return;
+      }
+
       try {
         const res = await me();
-        if (active) setUser(res?.user || null);
+        if (!active) return;
+        const hasToken = Boolean(getToken());
+        if (res?.offline && !hasToken) {
+          setUser(null);
+        } else {
+          setUser(res?.user || null);
+        }
       } catch {
         if (active) setUser((u) => u || null);
       } finally {
@@ -297,6 +371,27 @@ function NavBar() {
       active = false;
     };
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!user) return;
+    loadNotificationSummary();
+  }, [user, location.pathname, loadNotificationSummary]);
+
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      loadNotificationSummary();
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [user, loadNotificationSummary]);
+
+  useEffect(() => {
+    function onRefresh() {
+      loadNotificationSummary();
+    }
+    window.addEventListener("notifications:refresh", onRefresh);
+    return () => window.removeEventListener("notifications:refresh", onRefresh);
+  }, [loadNotificationSummary]);
 
   // Close panels on route change
   useEffect(() => {
@@ -355,6 +450,7 @@ function NavBar() {
     return t("roles.client");
   }, [user, isAdmin, isGlobalAdmin, role, t]);
 
+
   // ✅ Links de rôle (inject onboarding uniquement pour admin global)
   const links = useMemo(() => {
     const base = ROLE_LINKS[role] || [];
@@ -371,8 +467,12 @@ function NavBar() {
       }
     }
 
+    if (role === "admin" && !isGlobalAdmin) {
+      out = out.filter((item) => item.path !== "/admin/metrics");
+    }
+
     return out.map((item) => ({ ...item, label: t(item.labelKey) }));
-  }, [role, t]);
+  }, [isGlobalAdmin, role, t]);
 
   const bottomLinks = useMemo(() => {
     let base = BOTTOM_LINKS[role] || [];
@@ -423,8 +523,8 @@ function NavBar() {
   const desktopPrimaryTabs = useMemo(() => {
     const candidates =
       role === "admin" && isGlobalAdmin
-        ? ["/dashboard", "/services", "/tasks"]
-        : ["/dashboard", "/projects", servicePrimaryPath, "/tasks"];
+        ? ["/dashboard", "/services"]
+        : ["/dashboard", servicePrimaryPath, "/tasks"];
 
     const tabs = [];
     for (const p of candidates) {
@@ -466,6 +566,23 @@ function NavBar() {
     const initial = String(base).trim().charAt(0);
     return (initial || "?").toUpperCase();
   }, [user?.email, user?.firstName, user?.lastName]);
+
+  const NotificationBell = (
+    <Link
+      to="/notifications"
+      onClick={handleOpenNotifications}
+      className="relative inline-flex items-center justify-center w-10 h-10 rounded-2xl border border-border/60 bg-surface-main/40 hover:bg-surface-main/70 transition focus:outline-none focus:ring-4 focus:ring-primary/10"
+      aria-label={t("nav.notifications")}
+      title={t("nav.notifications")}
+    >
+      <Bell size={18} className="text-text-secondary" />
+      {unreadCount > 0 && (
+        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[0.65rem] font-semibold flex items-center justify-center">
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
+    </Link>
+  );
 
   if (!user && loading) return null;
 
@@ -528,14 +645,16 @@ function NavBar() {
             </div>
 
             {/* Page context (desktop) */}
-            <div className="hidden md:flex flex-col min-w-0">
-              <div className="text-sm font-semibold text-text-primary truncate">
-                {activeLabel || t("nav.dashboardTitle")}
+            {!isGlobalAdmin && (
+              <div className="hidden md:flex flex-col min-w-0 flex-shrink-0">
+                <div className="text-sm font-semibold text-text-primary whitespace-nowrap">
+                  {activeLabel || t("nav.dashboardTitle")}
+                </div>
+                <div className="text-[0.72rem] text-text-muted whitespace-nowrap">
+                  {roleLabel}
+                </div>
               </div>
-              <div className="text-[0.72rem] text-text-muted truncate">
-                {roleLabel}
-              </div>
-            </div>
+            )}
           </div>
 
           {/* CENTER: Desktop nav tabs */}
@@ -658,6 +777,7 @@ function NavBar() {
           {/* RIGHT: Geo (desktop) + User menu */}
           <div className="hidden md:flex items-center gap-3 shrink-0">
             <LanguageSwitcher compact />
+            {NotificationBell}
             <div className="hidden lg:flex items-center">
                 <div className="rounded-xl border border-border bg-surface-main/50 px-3 py-2">
                   <GeoSelector />
@@ -760,8 +880,8 @@ function NavBar() {
             </div>
           </div>
 
-          {/* MOBILE: spacer */}
-          <span className="md:hidden" aria-hidden="true" />
+          {/* MOBILE: notifications shortcut */}
+          <div className="md:hidden">{NotificationBell}</div>
         </div>
       </nav>
 

@@ -19,6 +19,11 @@ const {
   getLabel,
 } = require("../utils/labels");
 const { getPagination } = require("../utils/pagination");
+const {
+  getAdminRecipientIds,
+  computeProgress,
+} = require("../services/notification.service");
+const { emitEvent } = require("../services/activity.service");
 
 /* ============================================================
    🧩 Helpers généraux
@@ -216,6 +221,45 @@ exports.create = async (req, res) => {
 
     const full = await Task.findByPk(created.id, { include: BASE_INCLUDES });
 
+    try {
+      const adminIds = await getAdminRecipientIds({
+        countryId: geoCountryId,
+        regionId: geoRegionId,
+      });
+
+      const clientRecipient =
+        service?.clientId ??
+        property?.ownerId ??
+        (req.user.role === "client" ? req.user.id : null);
+
+      const agentRecipient =
+        assignedTo ? toSafeInt(assignedTo) : service?.agentId ?? null;
+
+      const recipients = [...adminIds, clientRecipient, agentRecipient];
+
+      await emitEvent({
+        recipients,
+        actorId: req.user.id,
+        entityType: "task",
+        entityId: created.id,
+        action: "created",
+        title: "Nouvelle tâche",
+        message: created.title ? `Tâche: ${created.title}` : "Tâche créée",
+        progress: computeProgress("task", "created"),
+        entityStatus: "created",
+        metadata: {
+          taskId: created.id,
+          title: created.title || null,
+          serviceId: created.serviceId || null,
+        },
+        countryId: geoCountryId,
+        regionId: geoRegionId,
+        notificationMode: "create",
+      });
+    } catch (err) {
+      console.warn("⚠️ Notification tâche (create) échouée:", err?.message || err);
+    }
+
     return res.status(201).json({
       message: "Tâche créée",
       task: addLabels(full),
@@ -387,6 +431,42 @@ exports.updateStatus = async (req, res) => {
 
     await task.update({ status: newStatus });
 
+    try {
+      const adminIds = await getAdminRecipientIds({
+        countryId: task.countryId,
+        regionId: task.regionId,
+      });
+      const clientRecipient =
+        task?.service?.clientId ??
+        task?.property?.ownerId ??
+        task?.creatorId ??
+        null;
+      const agentRecipient = task?.assignedTo ?? task?.service?.agentId ?? null;
+      const recipients = [...adminIds, clientRecipient, agentRecipient];
+
+      await emitEvent({
+        recipients,
+        actorId: req.user.id,
+        entityType: "task",
+        entityId: task.id,
+        action: "status_updated",
+        title: "Statut tâche mis à jour",
+        message: task.title ? `Tâche: ${task.title}` : null,
+        progress: computeProgress("task", newStatus),
+        entityStatus: newStatus,
+        metadata: {
+          taskId: task.id,
+          title: task.title || null,
+          serviceId: task.serviceId || null,
+        },
+        countryId: task.countryId,
+        regionId: task.regionId,
+        notificationMode: "update",
+      });
+    } catch (err) {
+      console.warn("⚠️ Notification tâche (status update) échouée:", err?.message || err);
+    }
+
     const updated = await Task.findByPk(task.id, { include: BASE_INCLUDES });
 
     return res.json({
@@ -459,6 +539,38 @@ exports.assignAgent = async (req, res) => {
     await task.update({ assignedTo: agent.id });
 
     const updated = await Task.findByPk(task.id, { include: BASE_INCLUDES });
+
+    try {
+      const clientRecipient =
+        updated.service?.clientId ??
+        updated.property?.ownerId ??
+        updated.creatorId ??
+        null;
+
+      await emitEvent({
+        recipients: [agent.id, clientRecipient],
+        actorId: req.user.id,
+        entityType: "task",
+        entityId: updated.id,
+        action: "assigned",
+        title: "Tâche assignée",
+        message: updated.title
+          ? `Tâche assignée: ${updated.title}`
+          : "Une tâche vous a été assignée",
+        progress: computeProgress("task", updated.status),
+        entityStatus: updated.status,
+        metadata: {
+          taskId: updated.id,
+          title: updated.title || null,
+          serviceId: updated.serviceId || null,
+        },
+        countryId: updated.countryId,
+        regionId: updated.regionId,
+        notificationMode: "create",
+      });
+    } catch (err) {
+      console.warn("⚠️ Notification tâche (assign) échouée:", err?.message || err);
+    }
 
     return res.json({
       message: "Tâche assignée avec succès",

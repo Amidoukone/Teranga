@@ -89,6 +89,10 @@ export default function AdminOnboardingPage() {
         if (!alive) return;
 
         const user = res?.user;
+        if (!user) {
+          window.location.href = "/login";
+          return;
+        }
         const role = normalizeRole(user?.role);
 
         const isAdmin = role === "admin";

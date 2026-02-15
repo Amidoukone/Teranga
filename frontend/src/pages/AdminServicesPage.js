@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { me } from '../services/auth';
-import { isMasterUser } from '../utils/role';
+import { normalizeRole, isMasterUser } from '../utils/role';
 import { useTranslation } from 'react-i18next';
 
 export default function AdminServicesPage() {
@@ -60,7 +60,12 @@ export default function AdminServicesPage() {
         const { user } = await me();
         if (!active) return;
 
-        if (!user || user.role !== 'admin') {
+        if (!user) {
+          navigate('/login');
+          return;
+        }
+
+        if (normalizeRole(user.role) !== 'admin') {
           navigate('/dashboard');
           return;
         }

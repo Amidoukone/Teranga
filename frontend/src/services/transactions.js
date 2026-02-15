@@ -42,6 +42,17 @@ function asNumeric(v) {
   return Number.isFinite(n) ? n : undefined;
 }
 
+function isFileLike(value) {
+  if (!value) return false;
+  if (typeof File !== 'undefined' && value instanceof File) return true;
+  if (typeof Blob !== 'undefined' && value instanceof Blob) return true;
+  return (
+    typeof value === 'object' &&
+    typeof value.size === 'number' &&
+    typeof value.type === 'string'
+  );
+}
+
 /* ---------------- Noyau upload résilient ------------------ */
 /**
  * Envoie un FormData en essayant plusieurs noms de champ pour le fichier
@@ -61,9 +72,7 @@ async function postMultipartResilient(url, payloadFields = {}, file) {
       // Fichier éventuel sous le nom testé
       if (file) fd.append(fieldName, file);
 
-      const { data } = await api.post(url, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const { data } = await api.post(url, fd);
       return data;
     } catch (err) {
       lastError = err;
@@ -115,7 +124,7 @@ export async function createTransaction(data) {
   }
 
   // 1️⃣ Pas de fichier => JSON simple (évite 500 si backend attend JSON)
-  if (!(data.proofFile instanceof File)) {
+  if (!isFileLike(data.proofFile)) {
     const { data: res } = await api.post('/transactions', cleanObj(payload));
     return applyLabels(res.transaction || res);
   }
@@ -171,7 +180,7 @@ export async function updateTransaction(id, updates) {
   }
 
   // Pas de fichier -> JSON
-  if (!(updates?.proofFile instanceof File)) {
+  if (!isFileLike(updates?.proofFile)) {
     const { data } = await api.put(`/transactions/${id}`, cleanObj(payload));
     return applyLabels(data.transaction || data);
   }

@@ -83,6 +83,8 @@ export default function TransactionsPage() {
 
   const [transactions, setTransactions] = useState([]);
   const [filtered, setFiltered] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
 
   const [services, setServices] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -183,9 +185,14 @@ export default function TransactionsPage() {
         const userData = await me();
         if (!active) return;
 
-        setUser(userData.user);
+        const current = userData?.user;
+        if (!current) {
+          window.location.href = '/login';
+          return;
+        }
+        setUser(current);
 
-        await loadServicesByRole(userData.user);
+        await loadServicesByRole(current);
         await loadTransactions();
       } catch (err) {
         if (err?.response?.status === 401) {
@@ -359,6 +366,29 @@ export default function TransactionsPage() {
     setFiltered(arr);
   }, [transactions, filters, getUserDisplayName]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [
+    filters.q,
+    filters.type,
+    filters.payment,
+    filters.service,
+    filters.order,
+    filters.project,
+    filters.sort,
+    pageSize,
+  ]);
+
+  useEffect(() => {
+    const total = Math.max(1, Math.ceil(filtered.length / pageSize));
+    if (page > total) setPage(total);
+  }, [filtered.length, pageSize, page]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filtered.length);
+  const pagedTransactions = filtered.slice(startIndex, endIndex);
+
   // ========================================================================
   // ⏳ LOADING
   // ========================================================================
@@ -446,12 +476,25 @@ export default function TransactionsPage() {
 
         {/* LISTE */}
         <TransactionList
-          transactions={filtered}
+          transactions={pagedTransactions}
           loading={loading}
           getUserDisplayName={getUserDisplayName}
           formatNumber={formatNumber}
           formatDate={formatDate}
         />
+
+        {filtered.length > 0 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filtered.length}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        )}
       </div>
     </div>
   );
@@ -750,7 +793,7 @@ function TransactionList({
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="[column-width:260px] md:[column-width:300px] [column-gap:1rem]">
       {transactions.map((trx) => {
         const proof =
           trx?.proofFile?.url ||
@@ -787,7 +830,7 @@ function TransactionList({
         return (
           <div
             key={trx.id}
-            className="border rounded-2xl bg-white shadow-sm overflow-hidden"
+            className="mb-4 break-inside-avoid rounded-2xl border bg-white shadow-sm overflow-hidden min-w-0 flex flex-col"
           >
             {proof && (
               <a
@@ -832,21 +875,29 @@ function TransactionList({
               </a>
             )}
 
-            <div className="p-4">
+            <div className="p-4 min-w-0 flex flex-col flex-1">
               <div className="font-bold">
                 {formatNumber(trx.amount || 0)} {currencyLabel}
               </div>
 
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs text-gray-500 mt-1 break-words line-clamp-1">
                 {typeLabel} • {statusLabel}
               </div>
 
-              <p className="text-sm mt-2">{descriptionLabel}</p>
+              <p className="text-sm mt-2 break-words line-clamp-3">
+                {descriptionLabel}
+              </p>
+
+              {trx.paymentMethod && (
+                <div className="text-xs text-slate-600 mt-2 break-words line-clamp-2">
+                  {t('transactionsPage.list.paymentLabel')}: {trx.paymentMethod}
+                </div>
+              )}
 
               {trx.order && (
                 <Link
                   to={`/orders/${trx.order.id}`}
-                  className="text-blue-600 text-sm"
+                  className="text-blue-600 text-sm break-words line-clamp-2"
                 >
                   {t('transactionsPage.list.orderLabel', {
                     code:
@@ -861,7 +912,7 @@ function TransactionList({
               {trx.project && (
                 <Link
                   to={`/projects/${trx.project.id}`}
-                  className="text-blue-600 text-sm"
+                  className="text-blue-600 text-sm break-words line-clamp-2"
                 >
                   {t('transactionsPage.list.projectLabel', {
                     title:
@@ -878,13 +929,13 @@ function TransactionList({
                   href={proof}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center text-sm font-semibold text-blue-600 hover:underline mt-2 break-all"
+                  className="inline-flex items-center text-sm font-semibold text-blue-600 hover:underline mt-2 break-words line-clamp-1"
                 >
                   {proofLabel || t('transactionsPage.list.attachmentFallback')}
                 </a>
               )}
 
-              <div className="text-xs text-gray-400 mt-3">
+              <div className="text-xs text-gray-400 mt-auto pt-3 break-words line-clamp-1">
                 {t('transactionsPage.list.byLine', {
                   name: getUserDisplayName(trx.user),
                   date: createdAtLabel,
@@ -894,6 +945,130 @@ function TransactionList({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ============================================================================
+// 🔢 PAGINATION
+// ============================================================================
+function buildPageItems(current, total) {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  const pages = new Set([1, total, current, current - 1, current + 1]);
+
+  if (current <= 3) {
+    pages.add(2);
+    pages.add(3);
+    pages.add(4);
+  }
+  if (current >= total - 2) {
+    pages.add(total - 1);
+    pages.add(total - 2);
+    pages.add(total - 3);
+  }
+
+  const sorted = Array.from(pages)
+    .filter((n) => n >= 1 && n <= total)
+    .sort((a, b) => a - b);
+
+  const items = [];
+  for (let i = 0; i < sorted.length; i += 1) {
+    items.push(sorted[i]);
+    if (i < sorted.length - 1 && sorted[i + 1] - sorted[i] > 1) {
+      items.push('…');
+    }
+  }
+  return items;
+}
+
+function Pagination({
+  page,
+  totalPages,
+  pageSize,
+  totalItems,
+  startIndex,
+  endIndex,
+  onPageChange,
+  onPageSizeChange,
+}) {
+  const { t } = useTranslation();
+  const items = buildPageItems(page, totalPages);
+
+  return (
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-2">
+      <div className="text-xs text-gray-500">
+        {t('transactionsPage.pagination.showing', {
+          from: totalItems === 0 ? 0 : startIndex + 1,
+          to: endIndex,
+          total: totalItems,
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+          disabled={page <= 1}
+          className={`px-3 py-1.5 text-xs rounded-lg border ${
+            page <= 1
+              ? 'text-gray-400 border-gray-200 cursor-not-allowed'
+              : 'text-gray-700 border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          {t('transactionsPage.pagination.prev')}
+        </button>
+
+        {items.map((item, idx) =>
+          item === '…' ? (
+            <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">
+              …
+            </span>
+          ) : (
+            <button
+              key={`page-${item}`}
+              onClick={() => onPageChange(item)}
+              className={`px-3 py-1.5 text-xs rounded-lg border ${
+                item === page
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {item}
+            </button>
+          )
+        )}
+
+        <button
+          onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+          disabled={page >= totalPages}
+          className={`px-3 py-1.5 text-xs rounded-lg border ${
+            page >= totalPages
+              ? 'text-gray-400 border-gray-200 cursor-not-allowed'
+              : 'text-gray-700 border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          {t('transactionsPage.pagination.next')}
+        </button>
+
+        <div className="flex items-center gap-2 ml-2">
+          <span className="text-xs text-gray-500">
+            {t('transactionsPage.pagination.perPage')}
+          </span>
+          <select
+            value={pageSize}
+            onChange={(e) => onPageSizeChange(Number(e.target.value))}
+            className="text-xs border border-gray-300 rounded-lg px-2 py-1"
+          >
+            {[9, 12, 18, 24].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { setLanguage, normalizeLanguage } from '../i18n';
 const TOKEN_KEY = 'teranga_token';
 const LEGACY_TOKEN_KEYS = ['token']; // compat héritée
 const USER_KEY = 'teranga_user';
+const CSRF_COOKIE = 'teranga_csrf';
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
   .toLowerCase()
   .trim();
@@ -84,6 +85,16 @@ function safeRemove(key) {
   } catch {
     // noop
   }
+}
+
+function hasCookie(name) {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.split(';').some((c) => c.trim().startsWith(`${name}=`));
+}
+
+function clearCookie(name) {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${name}=; Max-Age=0; path=/`;
 }
 
 function notifyAuthChange() {
@@ -164,7 +175,7 @@ export async function login(payload) {
 
 /* ============================================================
    🔹 Récupérer l’utilisateur courant (/auth/me)
-   - Si pas de token → renvoie le user caché (si dispo) sinon {user:null}
+   - Si pas de token => session invalide : {user:null} (+ purge cache)
    - Si réseau KO → renvoie le user caché (si dispo) sinon {user:null}
    - Si 401 → clear tokens + cache et {user:null}
 ============================================================ */
@@ -214,17 +225,66 @@ export async function me() {
 
   const token = readTokenAny();
 
-  // 🔸 Pas de token → on tente un fallback user (offline)
+  // Pas de token => tentative via cookie (utile si auth en mode cookie)
   if (!token) {
+    const hasCsrf = hasCookie(CSRF_COOKIE);
+    if (!hasCsrf) {
+      const cached = readCachedUser();
+      if (cached) writeCachedUser(null);
+      return { user: null };
+    }
+
+    try {
+      const { data } = await api.get('/auth/me', {
+        skipAuthRedirect: true,
+        silentAuth: true,
+      });
+      if (data?.user) {
+        writeCachedUser(data.user);
+        syncLanguageFromUser(data.user);
+        return data;
+      }
+      return data || { user: null };
+    } catch (error) {
+      const status = error?.response?.status;
+
+      if (status === 401) {
+        clearCookie(CSRF_COOKIE);
+        writeCachedUser(null);
+        return { user: null };
+      }
+
+      const isNetworkError = !error?.response;
+      if (isNetworkError) {
+        const cached = readCachedUser();
+        if (cached) {
+          syncLanguageFromUser(cached);
+          console.warn(
+            '⚠️ Backend indisponible — utilisation du user en cache (mode “offline”).'
+          );
+          return { user: cached, offline: true };
+        }
+        console.warn('⚠️ Erreur connexion backend /auth/me:', error?.message || error);
+        return { user: null };
+      }
+
+      console.warn('⚠️ Erreur /auth/me sans token:', {
+        status,
+        data: error?.response?.data,
+        msg: error?.message,
+      });
+    }
+
     const cached = readCachedUser();
     if (cached) {
-      syncLanguageFromUser(cached);
-      console.warn('⚠️ Aucun token, mode “offline” — utilisation du user en cache.');
-      return { user: cached, offline: true };
+      console.warn('Aucun token detecte - purge du user en cache.');
+      writeCachedUser(null);
+    } else {
+      console.warn('Aucun token trouve (localStorage vide)');
     }
-    console.warn('⚠️ Aucun token trouvé (localStorage vide)');
     return { user: null };
   }
+
 
   try {
     // ✅ /auth/me — l’intercepteur axios injecte déjà Authorization

@@ -37,6 +37,7 @@ const ALLOWED_MIMES = new Set([
   "image/jpg",
   "image/png",
   "application/pdf",
+  "application/x-pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
@@ -46,7 +47,12 @@ const ALLOWED_MIMES = new Set([
 const fileFilter = (_req, file, cb) => {
   const ext = (path.extname(file.originalname) || "").toLowerCase();
   const okExt = ALLOWED_EXTS.has(ext);
-  const okMime = file.mimetype ? ALLOWED_MIMES.has(file.mimetype) : true;
+  const mime = (file.mimetype || "").toLowerCase();
+  const okMime =
+    !mime ||
+    ALLOWED_MIMES.has(mime) ||
+    mime === "application/octet-stream" ||
+    mime === "binary/octet-stream";
 
   if (!okExt || !okMime) {
     return cb(

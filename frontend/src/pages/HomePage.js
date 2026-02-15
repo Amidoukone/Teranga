@@ -149,7 +149,7 @@ export default function HomePage() {
             >
               <Trans
                 i18nKey="homePage.hero.description"
-                components={{ strong: <strong /> }}
+                components={[<strong key="hero-strong" />]}
               />
             </p>
 
@@ -321,7 +321,7 @@ export default function HomePage() {
             <p>
               <Trans
                 i18nKey="homePage.about.paragraphs.p1"
-                components={{ strong: <strong /> }}
+                components={[<strong key="about-strong" />]}
               />
             </p>
             <p>{t("homePage.about.paragraphs.p2")}</p>
@@ -442,7 +442,12 @@ export default function HomePage() {
             <Trans
               i18nKey="homePage.footer.copyright"
               values={{ year: currentYear }}
-              components={{ brand: <span className="text-blue-400 font-medium" /> }}
+              components={[
+                <span
+                  key="footer-brand"
+                  className="text-blue-400 font-medium"
+                />,
+              ]}
             />
           </p>
 

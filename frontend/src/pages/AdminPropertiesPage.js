@@ -17,6 +17,7 @@ import {
 } from '../services/properties';
 import api from '../services/api';
 import { me } from '../services/auth';
+import { normalizeRole } from '../utils/role';
 
 // ============================================================================
 // 🌍 FILE_BASE + normalizePath + toAbsUrl — Standard Teranga (PRODUCTION SAFE)
@@ -143,7 +144,16 @@ export default function AdminPropertiesPage() {
     (async () => {
       try {
         const u = await me();
-        setUser(u.user);
+        const current = u?.user;
+        if (!current) {
+          window.location.href = '/login';
+          return;
+        }
+        if (normalizeRole(current.role) !== 'admin') {
+          window.location.href = '/dashboard';
+          return;
+        }
+        setUser(current);
         await Promise.all([loadClients(), loadProperties()]);
       } catch (e) {
         console.error('❌ init AdminPropertiesPage:', e);

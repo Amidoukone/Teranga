@@ -158,7 +158,23 @@ function tryFlipDevHostOnce(cfg) {
 
 /* ---------- Intercepteur: gestion d’erreurs ---------- */
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    try {
+      const method = (response?.config?.method || 'get').toUpperCase();
+      const url = response?.config?.url || '';
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        // Evite la boucle sur les endpoints notifications
+        if (!/\/notifications(\/|$)/.test(url)) {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('notifications:refresh'));
+          }
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    return response;
+  },
   async (error) => {
     const status = error?.response?.status;
     let cfg = error?.config || {};
@@ -166,15 +182,18 @@ api.interceptors.response.use(
     const method = cfg?.method;
 
     // Log utile en dev (non bloquant)
-    try {
-      console.error('❌ API ERROR:', {
-        url,
-        method,
-        status,
-        data: error?.response?.data,
-      });
-    } catch {
-      // ignore
+    const silentAuth = Boolean(cfg?.silentAuth);
+    if (!silentAuth) {
+      try {
+        console.error('❌ API ERROR:', {
+          url,
+          method,
+          status,
+          data: error?.response?.data,
+        });
+      } catch {
+        // ignore
+      }
     }
 
     // 1) Erreurs réseau (pas de response) → pas de redirect/logout
@@ -200,6 +219,10 @@ api.interceptors.response.use(
     if (status === 401) {
       localStorage.removeItem('teranga_token');
       localStorage.removeItem('token');
+      localStorage.removeItem('teranga_user');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('teranga_auth_changed'));
+      }
 
       const path = typeof window !== 'undefined' ? window.location.pathname : '';
       const skipRedirect =

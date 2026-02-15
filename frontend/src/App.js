@@ -39,6 +39,8 @@ import TaskEvidencesPage from './pages/TaskEvidencesPage';
 import TransactionsPage from './pages/TransactionsPage';
 import FinanceDashboardPage from './pages/FinanceDashboardPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
+import NotificationsPage from './pages/NotificationsPage';
+import ActivityCenterPage from './pages/ActivityCenterPage';
 
 // 🧱 Projets
 import ProjectsPage from './pages/ProjectsPage';
@@ -69,6 +71,11 @@ import OrderTransactionsPage from './pages/OrderTransactionsPage';
 import { getToken, getLocalUser, me } from './services/auth';
 import { normalizeRole } from './utils/role'; // ✅ ensure roles are canonical (admin/agent/client)
 
+const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
+  .toLowerCase()
+  .trim();
+const USES_COOKIE_AUTH = AUTH_STORAGE_MODE === 'cookie';
+
 // ============================================================================
 // 🧭 Scroll automatique
 // ============================================================================
@@ -97,7 +104,7 @@ function getSession() {
   const user = getLocalUser();
 
   // Rétro-compat: certains fronts stockent user mais pas token (ou inverse)
-  const hasSession = Boolean(token || user);
+  const hasSession = USES_COOKIE_AUTH ? Boolean(user) : Boolean(token);
 
   const role = normalizeRole(user?.role);
   const isAdmin = role === 'admin';
@@ -151,15 +158,17 @@ function RequireRole({ allow = [], children }) {
 }
 
 function PublicOnly({ children }) {
-  const { token, user } = getSession();
-  const [checked, setChecked] = useState(() => !token && !user);
-  const [allow, setAllow] = useState(() => !token && !user);
+  const { token, user, hasSession } = getSession();
+  const userKey = user?.id || user?.email || '';
+  const sessionKey = USES_COOKIE_AUTH ? (userKey || 'cookie') : (token || '');
+  const [checked, setChecked] = useState(() => !hasSession);
+  const [allow, setAllow] = useState(() => !hasSession);
 
   useEffect(() => {
     let active = true;
 
     async function check() {
-      if (!token && !user) {
+      if (!sessionKey) {
         if (active) {
           setAllow(true);
           setChecked(true);
@@ -183,7 +192,7 @@ function PublicOnly({ children }) {
     return () => {
       active = false;
     };
-  }, [token, user]);
+  }, [sessionKey]);
 
   if (!checked) return null;
   if (!allow) return <Navigate to="/dashboard" replace />;
@@ -446,6 +455,30 @@ export default function App() {
                   <>
                     <SetSeo title={t('seo.pages.accountSecurity.title')} />
                     <ChangePasswordPage />
+                  </>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/notifications"
+              element={
+                <RequireAuth>
+                  <>
+                    <SetSeo title={t('seo.pages.notifications.title')} />
+                    <NotificationsPage />
+                  </>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/activities"
+              element={
+                <RequireAuth>
+                  <>
+                    <SetSeo title={t('seo.pages.activities.title')} />
+                    <ActivityCenterPage />
                   </>
                 </RequireAuth>
               }

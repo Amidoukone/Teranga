@@ -13,12 +13,15 @@ import {
   createOrderTransaction,
 } from '../services/transactions';
 import { me } from '../services/auth';
+import { getCountries } from '../services/countries';
+import { getRegions } from '../services/regions';
 import {
   applyLabels,
   TRANSACTION_TYPES,
   CURRENCY_LABELS,
   TRANSACTION_STATUSES,
 } from '../utils/labels';
+import { isGlobalAdminUser } from '../utils/role';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 
@@ -133,6 +136,8 @@ export default function OrderTransactionsPage() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
+  const [countries, setCountries] = useState([]);
+  const [regions, setRegions] = useState([]);
 
   // Liste
   const [transactions, setTransactions] = useState([]);
@@ -162,6 +167,55 @@ export default function OrderTransactionsPage() {
     payment: '',
     sort: '-createdAt',
   });
+
+  const isGlobalAdmin = isGlobalAdminUser(user);
+
+  const countriesById = useMemo(() => {
+    const map = new Map();
+    (countries || []).forEach((c) => map.set(String(c.id), c));
+    return map;
+  }, [countries]);
+
+  const regionsById = useMemo(() => {
+    const map = new Map();
+    (regions || []).forEach((r) => map.set(String(r.id), r));
+    return map;
+  }, [regions]);
+
+  const getGeoLabel = useCallback(
+    (entity) => {
+      if (!entity) return '';
+      const countryId =
+        entity.countryId ?? entity.country?.id ?? entity.country_id ?? null;
+      const regionId =
+        entity.regionId ?? entity.region?.id ?? entity.region_id ?? null;
+
+      const countryName =
+        entity.country?.name ||
+        countriesById.get(String(countryId))?.name ||
+        '';
+      const regionName =
+        entity.region?.name ||
+        regionsById.get(String(regionId))?.name ||
+        '';
+
+      const countryLabel =
+        countryName ||
+        (countryId ? `${t('common.countryLabel')} #${countryId}` : '');
+      const regionLabel =
+        regionName ||
+        (regionId ? `${t('common.regionLabel')} #${regionId}` : '');
+
+      if (countryLabel && regionLabel) return `${countryLabel} • ${regionLabel}`;
+      return countryLabel || regionLabel || '';
+    },
+    [countriesById, regionsById, t]
+  );
+
+  const orderGeoLabel = useMemo(() => {
+    const source = transactions?.[0]?.order || transactions?.[0] || null;
+    return getGeoLabel(source);
+  }, [transactions, getGeoLabel]);
 
   /* ============================================================
       Chargement transactions (robuste: array vs {transactions})
@@ -194,7 +248,12 @@ export default function OrderTransactionsPage() {
     (async () => {
       try {
         const userData = await me();
-        setUser(userData.user);
+        const current = userData?.user;
+        if (!current) {
+          window.location.href = '/login';
+          return;
+        }
+        setUser(current);
         await loadTransactions();
       } catch (err) {
         console.error('❌ Erreur init OrderTransactionsPage:', err);
@@ -206,6 +265,31 @@ export default function OrderTransactionsPage() {
       }
     })();
   }, [loadTransactions]);
+
+  useEffect(() => {
+    if (!isGlobalAdmin) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const [cList, rList] = await Promise.all([
+          getCountries({ limit: 500 }),
+          getRegions({ limit: 1000 }),
+        ]);
+        if (!mounted) return;
+        setCountries(Array.isArray(cList) ? cList : []);
+        setRegions(Array.isArray(rList) ? rList : []);
+      } catch (e) {
+        console.error('❌ Erreur chargement pays/régions:', e);
+        if (mounted) {
+          setCountries([]);
+          setRegions([]);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [isGlobalAdmin]);
 
   // Persistance affichage formulaire
   useEffect(() => {
@@ -357,6 +441,14 @@ export default function OrderTransactionsPage() {
             <p className="text-sm text-slate-600 mt-1 break-words">
               {t("orderTransactions.subtitle")}
             </p>
+            {isGlobalAdmin && (
+              <p className="text-xs text-slate-500 mt-1 break-words">
+                <span className="font-semibold text-slate-700">
+                  {t("common.locationLabel")}:
+                </span>{' '}
+                {orderGeoLabel || t("common.dash")}
+              </p>
+            )}
           </div>
 
           {/* Boutons actions (stack sur mobile, inline sur desktop) */}

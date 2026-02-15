@@ -226,7 +226,12 @@ export default function ServiceTransactionsPage() {
         const u = await me();
         if (!active) return;
 
-        setUser(u.user);
+        const current = u?.user;
+        if (!current) {
+          window.location.href = "/login";
+          return;
+        }
+        setUser(current);
 
         await Promise.all([fetchTransactions(), fetchTasks()]);
       } catch (err) {

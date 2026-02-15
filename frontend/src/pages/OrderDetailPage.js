@@ -15,6 +15,8 @@ import {
 } from '../services/orders';
 
 import { getProducts } from '../services/products';
+import { getCountries } from '../services/countries';
+import { getRegions } from '../services/regions';
 
 import {
   uploadOrderEvidences,
@@ -28,6 +30,7 @@ import {
   canonicalizeOrderStatus,
   canonicalizePaymentStatus,
 } from '../utils/labels';
+import { isGlobalAdminUser } from '../utils/role';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 
@@ -91,6 +94,8 @@ export default function OrderDetailPage() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
+  const [countries, setCountries] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [order, setOrder] = useState(null);
   const [products, setProducts] = useState([]);
 
@@ -117,6 +122,50 @@ export default function OrderDetailPage() {
     open: false,
     index: 0,
   });
+
+  const isGlobalAdmin = isGlobalAdminUser(user);
+
+  const countriesById = useMemo(() => {
+    const map = new Map();
+    (countries || []).forEach((c) => map.set(String(c.id), c));
+    return map;
+  }, [countries]);
+
+  const regionsById = useMemo(() => {
+    const map = new Map();
+    (regions || []).forEach((r) => map.set(String(r.id), r));
+    return map;
+  }, [regions]);
+
+  const getGeoLabel = useCallback(
+    (entity) => {
+      if (!entity) return '';
+      const countryId =
+        entity.countryId ?? entity.country?.id ?? entity.country_id ?? null;
+      const regionId =
+        entity.regionId ?? entity.region?.id ?? entity.region_id ?? null;
+
+      const countryName =
+        entity.country?.name ||
+        countriesById.get(String(countryId))?.name ||
+        '';
+      const regionName =
+        entity.region?.name ||
+        regionsById.get(String(regionId))?.name ||
+        '';
+
+      const countryLabel =
+        countryName ||
+        (countryId ? `${t('common.countryLabel')} #${countryId}` : '');
+      const regionLabel =
+        regionName ||
+        (regionId ? `${t('common.regionLabel')} #${regionId}` : '');
+
+      if (countryLabel && regionLabel) return `${countryLabel} • ${regionLabel}`;
+      return countryLabel || regionLabel || '';
+    },
+    [countriesById, regionsById, t]
+  );
 
   /* ============================================================
      👤 Affichage client
@@ -237,7 +286,12 @@ export default function OrderDetailPage() {
   const init = useCallback(async () => {
     try {
       const ud = await me();
-      setUser(ud.user);
+      const current = ud?.user;
+      if (!current) {
+        navigate('/login');
+        return;
+      }
+      setUser(current);
 
       const [o, prodsRes] = await Promise.all([
         getOrderById(id),
@@ -273,6 +327,31 @@ export default function OrderDetailPage() {
   useEffect(() => {
     init();
   }, [init]);
+
+  useEffect(() => {
+    if (!isGlobalAdmin) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const [cList, rList] = await Promise.all([
+          getCountries({ limit: 500 }),
+          getRegions({ limit: 1000 }),
+        ]);
+        if (!mounted) return;
+        setCountries(Array.isArray(cList) ? cList : []);
+        setRegions(Array.isArray(rList) ? rList : []);
+      } catch (e) {
+        console.error('❌ Erreur chargement pays/régions:', e);
+        if (mounted) {
+          setCountries([]);
+          setRegions([]);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [isGlobalAdmin]);
 
   const refresh = useCallback(async () => {
     const o = await getOrderById(id);
@@ -495,6 +574,15 @@ export default function OrderDetailPage() {
 
             {order.customer?.email && (
               <p className="text-xs text-slate-500 mt-1 break-all">{order.customer.email}</p>
+            )}
+
+            {isGlobalAdmin && (
+              <p className="text-xs text-slate-500 mt-2 break-words">
+                <span className="font-semibold text-slate-700">
+                  {t("common.locationLabel")}:
+                </span>{' '}
+                {getGeoLabel(order) || t("common.dash")}
+              </p>
             )}
 
             {order.customerNote && (

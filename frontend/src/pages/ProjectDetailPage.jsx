@@ -210,12 +210,16 @@ function getTransactionAuthorLabel(transaction, dashLabel = "—") {
 ============================================================ */
 function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
   const { t } = useTranslation();
+  const canSeeOrder =
+    normalizeRole(currentUser?.role) === "admin" ||
+    normalizeRole(currentUser?.role) === "agent";
   const [form, setForm] = useState({
     type: "expense",
     amount: "",
     currency: "XOF",
     paymentMethod: "",
     description: "",
+    orderId: "",
     proofFile: null,
   });
   const [saving, setSaving] = useState(false);
@@ -234,8 +238,13 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       setSaving(true);
 
       await createTransaction({
-        ...form,
+        type: form.type,
         amount: form.amount === "" ? undefined : Number(form.amount),
+        currency: form.currency,
+        paymentMethod: form.paymentMethod || undefined,
+        description: form.description || undefined,
+        orderId: form.orderId ? Number(form.orderId) : undefined,
+        proofFile: form.proofFile || undefined,
         projectId: Number(projectId),
         userId: currentUser?.id,
       });
@@ -247,6 +256,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         currency: "XOF",
         paymentMethod: "",
         description: "",
+        orderId: "",
         proofFile: null,
       });
       onSuccess?.();
@@ -262,72 +272,124 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-slate-50 border border-slate-200 p-4 rounded-2xl mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3 shadow-sm"
-    >
-      <select
-        value={form.type}
-        onChange={(e) => setForm({ ...form, type: e.target.value })}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+    <div className="mb-6 bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm w-full max-w-full min-w-0">
+      <h4 className="text-sm font-semibold text-slate-700 mb-3">
+        {t("projects.transaction.title")}
+      </h4>
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
       >
-        <option value="expense">{t("transactions.type.expense")}</option>
-        <option value="revenue">{t("transactions.type.revenue")}</option>
-        <option value="commission">{t("transactions.type.commission")}</option>
-        <option value="adjustment">{t("transactions.type.adjustment")}</option>
-      </select>
+        <div>
+          <label className="text-xs text-slate-600 font-medium mb-1 block">
+            {t("projects.transaction.typeLabel")}
+          </label>
+          <select
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+          >
+            <option value="expense">{t("transactions.type.expense")}</option>
+            <option value="revenue">{t("transactions.type.revenue")}</option>
+            <option value="commission">{t("transactions.type.commission")}</option>
+            <option value="adjustment">{t("transactions.type.adjustment")}</option>
+          </select>
+        </div>
 
-      <input
-        type="number"
-        step="0.01"
-        placeholder={t("projects.transaction.amountPlaceholder")}
-        value={form.amount}
-        onChange={(e) => setForm({ ...form, amount: e.target.value })}
-        required
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
-      />
+        <div>
+          <label className="text-xs text-slate-600 font-medium mb-1 block">
+            {t("projects.transaction.amountLabel")}
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            placeholder={t("projects.transaction.amountPlaceholder")}
+            value={form.amount}
+            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+            required
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+          />
+        </div>
 
-      <select
-        value={form.currency}
-        onChange={(e) => setForm({ ...form, currency: e.target.value })}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
-      >
-        {currencyOptions.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        <div>
+          <label className="text-xs text-slate-600 font-medium mb-1 block">
+            {t("projects.transaction.currencyLabel")}
+          </label>
+          <select
+            value={form.currency}
+            onChange={(e) => setForm({ ...form, currency: e.target.value })}
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+          >
+            {currencyOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      <input
-        placeholder={t("projects.transaction.paymentMethodPlaceholder")}
-        value={form.paymentMethod}
-        onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
-      />
+        <div>
+          <label className="text-xs text-slate-600 font-medium mb-1 block">
+            {t("projects.transaction.paymentMethodLabel")}
+          </label>
+          <input
+            placeholder={t("projects.transaction.paymentMethodPlaceholder")}
+            value={form.paymentMethod}
+            onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+          />
+        </div>
 
-      <textarea
-        placeholder={t("projects.transaction.descriptionPlaceholder")}
-        value={form.description}
-        onChange={(e) => setForm({ ...form, description: e.target.value })}
-        className="sm:col-span-2 border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
-      />
+        {canSeeOrder && (
+          <div className="sm:col-span-2">
+            <label className="text-xs text-slate-600 font-medium mb-1 block">
+              {t("projects.transaction.orderIdLabel")}
+            </label>
+            <input
+              type="number"
+              value={form.orderId}
+              onChange={(e) => setForm({ ...form, orderId: e.target.value })}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
+            />
+          </div>
+        )}
 
-      <input
-        type="file"
-        accept=".jpg,.jpeg,.png,.pdf"
-        onChange={(e) => setForm({ ...form, proofFile: e.target.files?.[0] || null })}
-        className="sm:col-span-2 text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white w-full block min-w-0"
-      />
+        <div className="sm:col-span-2">
+          <label className="text-xs text-slate-600 font-medium mb-1 block">
+            {t("projects.transaction.descriptionLabel")}
+          </label>
+          <textarea
+            rows={3}
+            placeholder={t("projects.transaction.descriptionPlaceholder")}
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+          />
+        </div>
 
-      <div className="sm:col-span-2 flex justify-end">
-        <Btn type="submit" variant="primary" disabled={saving}>
-          {saving
+        <div className="sm:col-span-2">
+          <label className="text-xs text-slate-600 font-medium mb-1 block">
+            {t("projects.transaction.proofLabel")}
+          </label>
+          <input
+            type="file"
+            accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
+            onChange={(e) =>
+              setForm({ ...form, proofFile: e.target.files?.[0] || null })
+            }
+            className="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white w-full block min-w-0"
+          />
+        </div>
+
+        <div className="sm:col-span-2 flex justify-end gap-2">
+          <Btn type="submit" variant="primary" disabled={saving}>
+            {saving
             ? t("projects.transaction.saving")
             : `💾 ${t("projects.transaction.save")}`}
-        </Btn>
-      </div>
-    </form>
+          </Btn>
+        </div>
+      </form>
+    </div>
   );
 }
 /* ============================================================
@@ -443,6 +505,10 @@ export default function ProjectDetailPage() {
       try {
         const { user: u } = await me();
         if (!isMounted.current) return;
+        if (!u) {
+          navigate("/login");
+          return;
+        }
         setUser(u);
         await loadProject(id);
       } catch (e) {
@@ -760,28 +826,28 @@ export default function ProjectDetailPage() {
                   </p>
                 ) : (
                   <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm">
-                    <table className="min-w-full text-xs md:text-sm">
+                    <table className="min-w-full text-xs md:text-sm table-fixed">
                       <thead className="bg-slate-50 text-slate-600 font-semibold">
                         <tr>
-                          <th className="px-3 py-2 text-left">
+                          <th className="px-3 py-2 text-left w-28">
                             {t("projectDetail.transactions.headers.type")}
                           </th>
-                          <th className="px-3 py-2 text-left">
+                          <th className="px-3 py-2 text-left w-28">
                             {t("projectDetail.transactions.headers.amount")}
                           </th>
-                          <th className="px-3 py-2 text-left">
+                          <th className="px-3 py-2 text-left w-28">
                             {t("projectDetail.transactions.headers.currency")}
                           </th>
-                          <th className="px-3 py-2 text-left">
+                          <th className="px-3 py-2 text-left w-52">
                             {t("projectDetail.transactions.headers.method")}
                           </th>
-                          <th className="px-3 py-2 text-left">
+                          <th className="px-3 py-2 text-left w-44">
                             {t("projectDetail.transactions.headers.createdBy")}
                           </th>
-                          <th className="px-3 py-2 text-left">
+                          <th className="px-3 py-2 text-left w-28">
                             {t("projectDetail.transactions.headers.status")}
                           </th>
-                          <th className="px-3 py-2 text-left">
+                          <th className="px-3 py-2 text-left w-28">
                             {t("projectDetail.transactions.headers.date")}
                           </th>
                         </tr>
@@ -791,39 +857,45 @@ export default function ProjectDetailPage() {
                         {transactions.map((trx) => (
                           <tr key={trx.id} className="border-t border-slate-100">
                             <td className="px-3 py-2">
-                              {trx.type
-                                ? TRANSACTION_TYPES[trx.type] ||
-                                  trx.type
-                                : t("common.dash")}
+                              <div className="truncate">
+                                {trx.type
+                                  ? TRANSACTION_TYPES[trx.type] ||
+                                    trx.type
+                                  : t("common.dash")}
+                              </div>
                             </td>
-                            <td className="px-3 py-2">
+                            <td className="px-3 py-2 whitespace-nowrap">
                               {formatNumber(trx.amount || 0)}
                             </td>
-                            <td className="px-3 py-2">
+                            <td className="px-3 py-2 whitespace-nowrap">
                               {trx.currency
                                 ? CURRENCY_LABELS[trx.currency] ||
                                   trx.currency
                                 : t("common.dash")}
                             </td>
                             <td className="px-3 py-2">
-                              {trx.paymentMethod || t("common.dash")}
+                              <div className="max-w-[220px] break-words line-clamp-2">
+                                {trx.paymentMethod || t("common.dash")}
+                              </div>
                             </td>
 
                             {/* ✅ UTILISATION = supprime l’erreur eslint/ts */}
                             <td className="px-3 py-2">
-                              {getTransactionAuthorLabel(
-                                trx,
-                                t("common.dash")
-                              )}
+                              <div className="max-w-[180px] break-words line-clamp-2">
+                                {getTransactionAuthorLabel(
+                                  trx,
+                                  t("common.dash")
+                                )}
+                              </div>
                             </td>
 
-                            <td className="px-3 py-2">
+                            <td className="px-3 py-2 whitespace-nowrap">
                               {trx.status
                                 ? TRANSACTION_STATUSES[trx.status] ||
                                   trx.status
                                 : t("common.dash")}
                             </td>
-                            <td className="px-3 py-2">
+                            <td className="px-3 py-2 whitespace-nowrap">
                               {trx.createdAt
                                 ? formatDate(trx.createdAt)
                                 : t("common.dash")}

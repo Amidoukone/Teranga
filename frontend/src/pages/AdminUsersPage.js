@@ -117,7 +117,11 @@ export default function AdminUsersPage() {
         if (!active) return;
 
         const user = res?.user;
-        if (!user || normalizeRole(user.role) !== "admin") {
+        if (!user) {
+          window.location.href = "/login";
+          return;
+        }
+        if (normalizeRole(user.role) !== "admin") {
           window.location.href = "/dashboard";
           return;
         }

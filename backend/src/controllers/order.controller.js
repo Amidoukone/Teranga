@@ -13,6 +13,11 @@ const {
   formatCurrency,
 } = require('../utils/labels');
 const { getPagination } = require('../utils/pagination');
+const {
+  getAdminRecipientIds,
+  computeProgress,
+} = require('../services/notification.service');
+const { emitEvent } = require('../services/activity.service');
 
 // ✅ Geo-scope (model-aware)
 const {
@@ -515,6 +520,39 @@ exports.create = async (req, res) => {
       ],
     });
 
+    try {
+      const adminIds = await getAdminRecipientIds({
+        countryId: order.countryId,
+        regionId: order.regionId,
+      });
+      const recipients = [...adminIds, order.userId];
+
+      await emitEvent({
+        recipients,
+        actorId: req.user.id,
+        entityType: 'order',
+        entityId: order.id,
+        action: 'created',
+        title: 'Nouvelle commande',
+        message: order.code
+          ? `Commande ${order.code}`
+          : `Commande #${order.id}`,
+        progress: computeProgress('order', order.status),
+        entityStatus: order.status,
+        metadata: {
+          orderId: order.id,
+          code: order.code || null,
+          total: order.total || null,
+          currency: order.currency || null,
+        },
+        countryId: order.countryId,
+        regionId: order.regionId,
+        notificationMode: 'create',
+      });
+    } catch (err) {
+      console.warn('⚠️ Notification commande (create) échouée:', err?.message || err);
+    }
+
     return res.status(201).json({ order: withLabels(created) });
   } catch (e) {
     console.error('❌ create order:', e);
@@ -714,6 +752,37 @@ exports.update = async (req, res) => {
 
     syncPaymentStatus(order);
     await order.save();
+
+    try {
+      const adminIds = await getAdminRecipientIds({
+        countryId: order.countryId,
+        regionId: order.regionId,
+      });
+      const recipients = [...adminIds, order.userId];
+
+      await emitEvent({
+        recipients,
+        actorId: req.user.id,
+        entityType: 'order',
+        entityId: order.id,
+        action: 'status_updated',
+        title: 'Statut commande mis à jour',
+        message: order.code ? `Commande ${order.code}` : `Commande #${order.id}`,
+        progress: computeProgress('order', order.status),
+        entityStatus: order.status,
+        metadata: {
+          orderId: order.id,
+          code: order.code || null,
+          total: order.total || null,
+          currency: order.currency || null,
+        },
+        countryId: order.countryId,
+        regionId: order.regionId,
+        notificationMode: 'update',
+      });
+    } catch (err) {
+      console.warn('⚠️ Notification commande (status update) échouée:', err?.message || err);
+    }
 
     /* ============================================================
        💳 Création / MAJ automatique de transaction

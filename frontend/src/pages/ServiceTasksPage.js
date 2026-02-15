@@ -128,9 +128,14 @@ export default function ServiceTasksPage() {
       try {
         const u = await me();
         if (!active) return;
-        setUser(u?.user || null);
+        const current = u?.user;
+        if (!current) {
+          window.location.href = "/login";
+          return;
+        }
+        setUser(current);
 
-        const roleNow = normalizeRole(u?.user?.role);
+        const roleNow = normalizeRole(current?.role);
         if (id) {
           const serviceId = parseInt(id, 10);
           if (Number.isFinite(serviceId)) {

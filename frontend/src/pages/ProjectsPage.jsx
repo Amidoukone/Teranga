@@ -200,11 +200,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
 
   return (
     <div
-      className="
-        mt-4 bg-slate-50 border border-slate-200 rounded-2xl p-4
-        w-full max-w-full min-w-0
-        overflow-auto
-      "
+      className="mt-4 bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm w-full max-w-full min-w-0"
     >
       <h4 className="text-sm font-semibold text-slate-700 mb-3">
         💰 {t('projects.transaction.title')}
@@ -212,7 +208,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
 
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
       >
         <div>
           <label className="text-xs text-slate-600 font-medium mb-1 block">
@@ -221,7 +217,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
           >
             <option value="expense">{t('transactions.type.expense')}</option>
             <option value="revenue">{t('transactions.type.revenue')}</option>
@@ -240,9 +236,11 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
           </label>
           <input
             type="number"
+            step="0.01"
+            placeholder={t('projects.transaction.amountPlaceholder')}
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
             required
           />
         </div>
@@ -254,7 +252,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
           >
             {currencyOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -273,13 +271,13 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
             onChange={(e) =>
               setForm({ ...form, paymentMethod: e.target.value })
             }
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
             placeholder={t('projects.transaction.paymentMethodPlaceholder')}
           />
         </div>
 
         {canSeeOrder && (
-          <div className="md:col-span-2">
+          <div className="sm:col-span-2">
             <label className="text-xs text-slate-600 font-medium mb-1 block">
               {t('projects.transaction.orderIdLabel')}
             </label>
@@ -289,40 +287,41 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
               onChange={(e) =>
                 setForm({ ...form, orderId: e.target.value })
               }
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
             />
           </div>
         )}
 
-        <div className="md:col-span-2">
+        <div className="sm:col-span-2">
           <label className="text-xs text-slate-600 font-medium mb-1 block">
             {t('projects.transaction.descriptionLabel')}
           </label>
           <textarea
             rows={3}
+            placeholder={t('projects.transaction.descriptionPlaceholder')}
             value={form.description}
             onChange={(e) =>
               setForm({ ...form, description: e.target.value })
             }
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
           />
         </div>
 
-        <div className="md:col-span-2">
+        <div className="sm:col-span-2">
           <label className="text-xs text-slate-600 font-medium mb-1 block">
             {t('projects.transaction.proofLabel')}
           </label>
           <input
             type="file"
-            accept=".jpg,.jpeg,.png,.pdf"
+            accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
             onChange={(e) =>
               setForm({ ...form, proofFile: e.target.files?.[0] || null })
             }
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white min-w-0"
           />
         </div>
 
-        <div className="md:col-span-2 flex justify-end gap-2">
+        <div className="sm:col-span-2 flex justify-end gap-2">
           <Btn variant="secondary" size="sm" onClick={onClose}>
             {t('projects.transaction.cancel')}
           </Btn>
@@ -468,6 +467,7 @@ export default function ProjectsPage() {
       const token = getToken();
       if (!token) {
         setLoading(false);
+        navigate('/login');
         return;
       }
 
@@ -475,6 +475,10 @@ export default function ProjectsPage() {
         const { user: u } = await me();
         if (!isMounted.current) return;
 
+        if (!u) {
+          navigate('/login');
+          return;
+        }
         setUser(u);
         await loadForUser(u);
 
@@ -496,7 +500,7 @@ export default function ProjectsPage() {
     return () => {
       isMounted.current = false;
     };
-  }, [getToken, loadForUser, loadClients, loadAgents, t]);
+  }, [getToken, loadForUser, loadClients, loadAgents, navigate, t]);
 
   /* ============================================================
      🔹 Handlers CRUD

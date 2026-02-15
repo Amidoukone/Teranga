@@ -133,6 +133,10 @@ export default function TasksPage() {
     async function init() {
       try {
         const { user: u } = await me();
+        if (!u) {
+          window.location.href = '/login';
+          return;
+        }
         setUser(u);
 
         // CLIENT

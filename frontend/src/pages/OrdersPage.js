@@ -8,12 +8,15 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getOrders, createOrder } from '../services/orders';
 import { getProducts } from '../services/products';
+import { getCountries } from '../services/countries';
+import { getRegions } from '../services/regions';
 import { me } from '../services/auth';
 import PaginationBar from '../components/PaginationBar';
 import {
   canonicalizeOrderStatus,
   canonicalizePaymentStatus,
 } from '../utils/labels';
+import { isGlobalAdminUser } from '../utils/role';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 
@@ -79,6 +82,10 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
 
+  const isGlobalAdmin = isGlobalAdminUser(user);
+  const [countries, setCountries] = useState([]);
+  const [regions, setRegions] = useState([]);
+
   // Produits pour création rapide de commande
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -107,6 +114,48 @@ export default function OrdersPage() {
   });
 
   const navigate = useNavigate();
+
+  const countriesById = useMemo(() => {
+    const map = new Map();
+    (countries || []).forEach((c) => map.set(String(c.id), c));
+    return map;
+  }, [countries]);
+
+  const regionsById = useMemo(() => {
+    const map = new Map();
+    (regions || []).forEach((r) => map.set(String(r.id), r));
+    return map;
+  }, [regions]);
+
+  const getGeoLabel = useCallback(
+    (entity) => {
+      if (!entity) return '';
+      const countryId =
+        entity.countryId ?? entity.country?.id ?? entity.country_id ?? null;
+      const regionId =
+        entity.regionId ?? entity.region?.id ?? entity.region_id ?? null;
+
+      const countryName =
+        entity.country?.name ||
+        countriesById.get(String(countryId))?.name ||
+        '';
+      const regionName =
+        entity.region?.name ||
+        regionsById.get(String(regionId))?.name ||
+        '';
+
+      const countryLabel =
+        countryName ||
+        (countryId ? `${t('common.countryLabel')} #${countryId}` : '');
+      const regionLabel =
+        regionName ||
+        (regionId ? `${t('common.regionLabel')} #${regionId}` : '');
+
+      if (countryLabel && regionLabel) return `${countryLabel} • ${regionLabel}`;
+      return countryLabel || regionLabel || '';
+    },
+    [countriesById, regionsById, t]
+  );
 
   /* ============================================================
      🔄 Loaders (useCallback pour éviter les recréations)
@@ -174,7 +223,12 @@ export default function OrdersPage() {
       try {
         const ud = await me();
         if (!mounted) return;
-        setUser(ud.user);
+        const current = ud?.user;
+        if (!current) {
+          window.location.href = '/login';
+          return;
+        }
+        setUser(current);
         await loadProducts();
       } catch (e) {
         console.error('? Erreur init OrdersPage:', e);
@@ -191,6 +245,31 @@ export default function OrdersPage() {
       mounted = false;
     };
   }, [loadProducts]);
+
+  useEffect(() => {
+    if (!isGlobalAdmin) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const [cList, rList] = await Promise.all([
+          getCountries({ limit: 500 }),
+          getRegions({ limit: 1000 }),
+        ]);
+        if (!mounted) return;
+        setCountries(Array.isArray(cList) ? cList : []);
+        setRegions(Array.isArray(rList) ? rList : []);
+      } catch (e) {
+        console.error('❌ Erreur chargement pays/régions:', e);
+        if (mounted) {
+          setCountries([]);
+          setRegions([]);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [isGlobalAdmin]);
 
   useEffect(() => {
     if (!user) return;
@@ -683,6 +762,14 @@ export default function OrdersPage() {
                           </span>{' '}
                           {o.customer?.email || t("common.dash")}
                         </p>
+                        {isGlobalAdmin && (
+                          <p className="text-xs text-slate-500 break-words">
+                            <span className="font-medium text-gray-700">
+                              {t("common.locationLabel")}:
+                            </span>{' '}
+                            {getGeoLabel(o) || t("common.dash")}
+                          </p>
+                        )}
                         {o.customerNote && (
                           <p className="text-xs text-gray-500">
                             <span className="font-medium">

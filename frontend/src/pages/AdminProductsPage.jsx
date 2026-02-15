@@ -7,10 +7,12 @@ import {
   updateProduct,
   deleteProduct,
 } from "../services/products";
+import { getCountries } from "../services/countries";
+import { getRegions } from "../services/regions";
 import { getCategories } from "../services/categories";
 import { me } from "../services/auth";
 import { formatCurrency } from "../utils/labels";
-import { prettyRoleLabel } from "../utils/roles";
+import { normalizeRole, prettyRoleLabel, isGlobalAdminUser } from "../utils/roles";
 import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
 
@@ -85,6 +87,8 @@ export default function AdminProductsPage() {
   const { formatNumber } = useLocale();
   const { t } = useTranslation();
   const [user, setUser] = useState(null);
+  const [countries, setCountries] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -106,6 +110,49 @@ export default function AdminProductsPage() {
 
   const [previewCoverUrl, setPreviewCoverUrl] = useState("");
   const [previewGalleryUrls, setPreviewGalleryUrls] = useState([]);
+
+  const isGlobalAdmin = isGlobalAdminUser(user);
+
+  const countriesById = useMemo(() => {
+    const map = new Map();
+    (countries || []).forEach((c) => map.set(String(c.id), c));
+    return map;
+  }, [countries]);
+
+  const regionsById = useMemo(() => {
+    const map = new Map();
+    (regions || []).forEach((r) => map.set(String(r.id), r));
+    return map;
+  }, [regions]);
+
+  const getGeoLabel = useMemo(() => {
+    return (entity) => {
+      if (!entity) return "";
+      const countryId =
+        entity.countryId ?? entity.country?.id ?? entity.country_id ?? null;
+      const regionId =
+        entity.regionId ?? entity.region?.id ?? entity.region_id ?? null;
+
+      const countryName =
+        entity.country?.name ||
+        countriesById.get(String(countryId))?.name ||
+        "";
+      const regionName =
+        entity.region?.name ||
+        regionsById.get(String(regionId))?.name ||
+        "";
+
+      const countryLabel =
+        countryName ||
+        (countryId ? `${t("common.countryLabel")} #${countryId}` : "");
+      const regionLabel =
+        regionName ||
+        (regionId ? `${t("common.regionLabel")} #${regionId}` : "");
+
+      if (countryLabel && regionLabel) return `${countryLabel} • ${regionLabel}`;
+      return countryLabel || regionLabel || "";
+    };
+  }, [countriesById, regionsById, t]);
 
   /* ============================================================
      LIGHTBOX (Premium + responsive)
@@ -157,18 +204,59 @@ export default function AdminProductsPage() {
      INIT
   ============================================================ */
   useEffect(() => {
+    let mounted = true;
     async function init() {
       try {
         const u = await me();
-        setUser(u.user);
+        if (!mounted) return;
+        const current = u?.user;
+        if (!current) {
+          window.location.href = "/login";
+          return;
+        }
+        if (normalizeRole(current.role) !== "admin") {
+          window.location.href = "/dashboard";
+          return;
+        }
+        setUser(current);
         await Promise.all([loadCategories(), loadProducts()]);
       } catch (err) {
         console.error("❌ init AdminProductsPage:", err);
+        if (!mounted) return;
+        window.location.href = "/login";
       }
     }
     init();
+    return () => {
+      mounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!isGlobalAdmin) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const [cList, rList] = await Promise.all([
+          getCountries({ limit: 500 }),
+          getRegions({ limit: 1000 }),
+        ]);
+        if (!mounted) return;
+        setCountries(Array.isArray(cList) ? cList : []);
+        setRegions(Array.isArray(rList) ? rList : []);
+      } catch (e) {
+        console.error("❌ Erreur chargement pays/régions:", e);
+        if (mounted) {
+          setCountries([]);
+          setRegions([]);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [isGlobalAdmin]);
 
   async function loadProducts() {
     setLoading(true);
@@ -266,7 +354,26 @@ export default function AdminProductsPage() {
       setShowForm(false);
     } catch (err) {
       console.error("❌ Erreur sauvegarde produit:", err);
-      alert(t("adminProductsPage.alerts.saveError"));
+      const status = err?.response?.status;
+      const apiMessage =
+        err?.response?.data?.error || err?.response?.data?.message || "";
+      const fallback = err?.message || "";
+      const detail = apiMessage || fallback;
+      const statusHint =
+        status === 401
+          ? t("common.sessionExpired", {
+              defaultValue: "Session expirée. Veuillez vous reconnecter.",
+            })
+          : status === 403
+            ? t("common.accessDenied", {
+                defaultValue: "Accès interdit pour cette action.",
+              })
+            : "";
+      const suffix = [statusHint, detail]
+        .filter(Boolean)
+        .map((msg) => `\n${msg}`)
+        .join("");
+      alert(`${t("adminProductsPage.alerts.saveError")}${suffix}`);
     }
   }
 
@@ -589,6 +696,11 @@ export default function AdminProductsPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                     {t("adminProductsPage.table.category")}
                   </th>
+                  {isGlobalAdmin && (
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                      {t("common.locationLabel")}
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                     {t("adminProductsPage.table.actions")}
                   </th>
@@ -599,7 +711,7 @@ export default function AdminProductsPage() {
                 {filteredProducts.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={isGlobalAdmin ? 6 : 5}
                       className="py-6 text-center text-slate-500 text-sm italic"
                     >
                       {t("adminProductsPage.table.empty")}
@@ -670,6 +782,14 @@ export default function AdminProductsPage() {
                             {cat ? cat.name : t("common.dash")}
                           </span>
                         </td>
+
+                        {isGlobalAdmin && (
+                          <td className="px-4 py-3 align-top">
+                            <span className="text-xs text-slate-600 break-words line-clamp-2">
+                              {getGeoLabel(p) || t("common.dash")}
+                            </span>
+                          </td>
+                        )}
 
                         {/* ACTIONS */}
                         <td className="px-4 py-3 align-top">

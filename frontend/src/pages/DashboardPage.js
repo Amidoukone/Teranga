@@ -13,7 +13,6 @@ import {
   HandCoins,
   Landmark,
   Layers,
-  ShieldCheck,
   ShieldPlus,
   Users,
   UserCog,
@@ -115,6 +114,10 @@ export default function DashboardPage() {
       try {
         const res = await me();
         const u = res.user;
+        if (!u) {
+          window.location.href = '/login';
+          return;
+        }
         setUser(u);
         await loadStats(u);
       } catch (err) {
