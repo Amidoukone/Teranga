@@ -2766,6 +2766,8 @@ const fr = {
       "Suivez les nouvelles demandes, celles en cours et celles terminées en un seul endroit.",
     unreadCount: "{{count}} non lue",
     unreadCount_other: "{{count}} non lues",
+    filterUnread: "Filtrer non lues",
+    resetUnreadFilter: "Réinitialiser filtre",
     markAllRead: "Tout marquer comme lu",
     tabs: {
       new: "Nouvelles",

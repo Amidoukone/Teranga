@@ -7,9 +7,12 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "../services/notifications";
+import { getLocalUser } from "../services/auth";
 import PaginationBar from "../components/PaginationBar";
 import { useLocale } from "../i18n/useLocale";
 import { formatStatus } from "../utils/labels";
+import { normalizeRole } from "../utils/role";
+import { notify } from "../utils/notify";
 
 const PROGRESS_TABS = [
   { key: "new", labelKey: "notifications.tabs.new" },
@@ -21,11 +24,18 @@ export default function NotificationsPage() {
   const { t } = useTranslation();
   const { formatDate } = useLocale();
   const navigate = useNavigate();
+  const currentUserRole = useMemo(
+    () => normalizeRole(getLocalUser()?.role),
+    []
+  );
 
   const [progress, setProgress] = useState("new");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [items, setItems] = useState([]);
   const [summary, setSummary] = useState({ unread: 0, byProgress: {} });
   const [loading, setLoading] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
+  const [markingOneIds, setMarkingOneIds] = useState({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0 });
@@ -47,6 +57,7 @@ export default function NotificationsPage() {
       setLoading(true);
       const data = await getNotifications({
         progress,
+        status: statusFilter === "all" ? undefined : statusFilter,
         page,
         limit: pageSize,
       });
@@ -67,7 +78,7 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, progress]);
+  }, [page, pageSize, progress, statusFilter]);
 
   useEffect(() => {
     loadSummary();
@@ -91,7 +102,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [progress, pageSize]);
+  }, [progress, statusFilter, pageSize]);
 
   const totalItems = useMemo(
     () => pagination?.total ?? pagination?.count ?? items.length,
@@ -138,49 +149,100 @@ export default function NotificationsPage() {
 
   const handleMarkRead = useCallback(
     async (id) => {
+      if (!id || markingOneIds[id]) return;
       try {
+        setMarkingOneIds((prev) => ({ ...prev, [id]: true }));
         await markNotificationRead(id);
         setItems((prev) =>
           prev.map((n) => (n.id === id ? { ...n, status: "read" } : n))
         );
-        await loadSummary();
+        await Promise.all([loadSummary(), loadItems()]);
+        notify(
+          t("notifications.markReadSuccess", {
+            defaultValue: "Notification marquée comme lue.",
+          }),
+          { type: "success" }
+        );
         if (typeof window !== "undefined") {
           window.dispatchEvent(new Event("notifications:refresh"));
         }
       } catch (e) {
         console.error("❌ mark notification read:", e);
+        notify(
+          t("notifications.markReadError", {
+            defaultValue: "Impossible de marquer cette notification comme lue.",
+          }),
+          { type: "error" }
+        );
+      } finally {
+        setMarkingOneIds((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
       }
     },
-    [loadSummary]
+    [loadItems, loadSummary, markingOneIds, t]
   );
 
   const handleMarkAllRead = useCallback(async () => {
+    if (markingAll) return;
+    if ((summary.unread || 0) <= 0) {
+      notify(
+        t("notifications.nothingToMark", {
+          defaultValue: "Aucune notification non lue à marquer.",
+        }),
+        { type: "info" }
+      );
+      return;
+    }
+
     try {
+      setMarkingAll(true);
       await markAllNotificationsRead();
       setItems((prev) => prev.map((n) => ({ ...n, status: "read" })));
-      await loadSummary();
+      await Promise.all([loadSummary(), loadItems()]);
+      notify(
+        t("notifications.markAllReadSuccess", {
+          defaultValue: "Toutes les notifications sont maintenant lues.",
+        }),
+        { type: "success" }
+      );
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
     } catch (e) {
       console.error("❌ mark all notifications read:", e);
+      notify(
+        t("notifications.markAllReadError", {
+          defaultValue: "Erreur lors du marquage global des notifications.",
+        }),
+        { type: "error" }
+      );
+    } finally {
+      setMarkingAll(false);
     }
-  }, [loadSummary]);
+  }, [loadItems, loadSummary, markingAll, summary.unread, t]);
 
-  const resolveLink = useCallback((n) => {
-    if (!n) return "/dashboard";
-    if (n.entityType === "order") return n.entityId ? `/orders/${n.entityId}` : "/orders";
-    if (n.entityType === "project") return n.entityId ? `/projects/${n.entityId}` : "/projects";
-    if (n.entityType === "task") return "/tasks";
-    if (n.entityType === "service") return "/services";
-    if (n.entityType === "evidence") {
-      const taskId = n?.metadata?.taskId;
-      const orderId = n?.metadata?.orderId;
-      if (taskId) return `/tasks/${taskId}/evidences`;
-      if (orderId) return `/orders/${orderId}`;
-    }
-    return "/dashboard";
-  }, []);
+  const resolveLink = useCallback(
+    (n) => {
+      if (!n) return "/dashboard";
+      if (n.entityType === "order") return n.entityId ? `/orders/${n.entityId}` : "/orders";
+      if (n.entityType === "project") return n.entityId ? `/projects/${n.entityId}` : "/projects";
+      if (n.entityType === "task") return "/tasks";
+      if (n.entityType === "service") {
+        return currentUserRole === "agent" ? "/agent/services" : "/services";
+      }
+      if (n.entityType === "evidence") {
+        const taskId = n?.metadata?.taskId;
+        const orderId = n?.metadata?.orderId;
+        if (taskId) return `/tasks/${taskId}/evidences`;
+        if (orderId) return `/orders/${orderId}`;
+      }
+      return "/dashboard";
+    },
+    [currentUserRole]
+  );
 
   return (
     <div className="app-page-wrap">
@@ -199,9 +261,28 @@ export default function NotificationsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="app-toolbar-pill">
-              {t("notifications.unreadCount", { count: summary.unread || 0 })}
-            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setStatusFilter((prev) => (prev === "unread" ? "all" : "unread"))
+              }
+              className={[
+                "app-toolbar-pill transition",
+                statusFilter === "unread"
+                  ? "ring-2 ring-primary/40 bg-primary/10 text-primary"
+                  : "",
+              ].join(" ")}
+              title={
+                statusFilter === "unread"
+                  ? t("notifications.resetUnreadFilter")
+                  : t("notifications.filterUnread")
+              }
+            >
+              {t("notifications.unreadCount", { count: summary.unread || 0 })} ·{" "}
+              {statusFilter === "unread"
+                ? t("notifications.resetUnreadFilter")
+                : t("notifications.filterUnread")}
+            </button>
             <button
               onClick={() => navigate("/activities")}
               className="app-btn-primary"
@@ -210,9 +291,17 @@ export default function NotificationsPage() {
             </button>
             <button
               onClick={handleMarkAllRead}
-              className="app-btn-neutral"
+              disabled={markingAll || (summary.unread || 0) <= 0}
+              className={[
+                "app-btn-neutral",
+                markingAll || (summary.unread || 0) <= 0
+                  ? "opacity-60 cursor-not-allowed"
+                  : "",
+              ].join(" ")}
             >
-              {t("notifications.markAllRead")}
+              {markingAll
+                ? t("common.loading", { defaultValue: "Chargement..." })
+                : t("notifications.markAllRead")}
             </button>
           </div>
         </div>
@@ -352,10 +441,14 @@ export default function NotificationsPage() {
                     </button>
                     {n.status !== "read" && (
                       <button
+                        type="button"
                         onClick={() => handleMarkRead(n.id)}
+                        disabled={Boolean(markingOneIds[n.id])}
                         className="app-btn-soft"
                       >
-                        {t("notifications.markRead")}
+                        {markingOneIds[n.id]
+                          ? t("common.loading", { defaultValue: "Chargement..." })
+                          : t("notifications.markRead")}
                       </button>
                     )}
                   </div>

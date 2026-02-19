@@ -2754,6 +2754,8 @@ const en = {
       "Track new requests, in-progress work, and completed items in one place.",
     unreadCount: "{{count}} unread",
     unreadCount_other: "{{count}} unread",
+    filterUnread: "Filter unread",
+    resetUnreadFilter: "Reset filter",
     markAllRead: "Mark all as read",
     tabs: {
       new: "New",
