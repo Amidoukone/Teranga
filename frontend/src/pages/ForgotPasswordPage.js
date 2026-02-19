@@ -1,0 +1,171 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Mail, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { forgotPassword } from '../services/auth';
+
+export default function ForgotPasswordPage() {
+  const { t } = useTranslation();
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [debugToken, setDebugToken] = useState('');
+  const [debugUrl, setDebugUrl] = useState('');
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+    setDebugToken('');
+    setDebugUrl('');
+    setLoading(true);
+
+    try {
+      const data = await forgotPassword({
+        email: String(email || '').trim().toLowerCase(),
+      });
+      setSuccessMsg(
+        data?.message ||
+          t('auth.forgotPassword.success', {
+            defaultValue:
+              'Si un compte existe, un lien de reinitialisation a ete envoye.',
+          })
+      );
+
+      const maybeToken = String(data?.debug?.resetToken || '').trim();
+      const maybeUrl = String(data?.debug?.resetUrl || '').trim();
+      if (maybeToken) setDebugToken(maybeToken);
+      if (maybeUrl) setDebugUrl(maybeUrl);
+    } catch (err) {
+      setErrorMsg(
+        err?.response?.data?.error ||
+          t('auth.forgotPassword.error', {
+            defaultValue: 'Impossible d envoyer la demande pour le moment.',
+          })
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-sm p-8">
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">
+          {t('auth.forgotPassword.title', { defaultValue: 'Mot de passe oublie' })}
+        </h1>
+        <p className="text-sm text-slate-600 mb-6">
+          {t('auth.forgotPassword.subtitle', {
+            defaultValue:
+              'Entrez votre email pour recevoir un lien de reinitialisation.',
+          })}
+        </p>
+
+        {errorMsg ? (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {errorMsg}
+          </div>
+        ) : null}
+        {successMsg ? (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {successMsg}
+          </div>
+        ) : null}
+
+        {(debugToken || debugUrl) ? (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+            <p className="font-semibold">
+              {t('auth.forgotPassword.debugTitle', {
+                defaultValue: 'Mode debug actif (sans SMTP)',
+              })}
+            </p>
+            <p className="text-xs text-amber-800 mt-1">
+              {t('auth.forgotPassword.debugInfo', {
+                defaultValue:
+                  'Utilisez ce token/lien pour reinitialiser le mot de passe.',
+              })}
+            </p>
+            {debugToken ? (
+              <div className="mt-2">
+                <p className="text-xs text-amber-800 mb-1">Token:</p>
+                <code className="block break-all rounded-lg border border-amber-300 bg-white px-2 py-1 text-xs text-slate-800">
+                  {debugToken}
+                </code>
+              </div>
+            ) : null}
+            {debugUrl ? (
+              <div className="mt-2">
+                <a
+                  href={debugUrl}
+                  className="text-blue-700 hover:underline text-xs font-medium"
+                >
+                  {t('auth.forgotPassword.debugOpenLink', {
+                    defaultValue: 'Ouvrir le lien de reinitialisation',
+                  })}
+                </a>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="block text-sm font-medium text-slate-800">
+            {t('auth.forgotPassword.email', { defaultValue: 'Email' })}
+          </label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t('auth.forgotPassword.emailPlaceholder', {
+                defaultValue: 'exemple@email.com',
+              })}
+              className="w-full border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full py-2.5 text-white font-semibold rounded-xl transition flex items-center justify-center ${
+              loading
+                ? 'bg-blue-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
+            }`}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin w-5 h-5 mr-2" />
+                {t('auth.forgotPassword.sending', { defaultValue: 'Envoi...' })}
+              </>
+            ) : (
+              t('auth.forgotPassword.submit', { defaultValue: 'Envoyer le lien' })
+            )}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center text-sm">
+          <div className="mb-2">
+            <Link to="/reset-password/code" className="text-blue-600 font-medium hover:underline">
+              {t('auth.forgotPassword.recoveryCodeLink', {
+                defaultValue: 'Utiliser un code de recuperation',
+              })}
+            </Link>
+            <p className="mt-1 text-xs text-slate-500">
+              {t('auth.forgotPassword.recoveryCodeInfo', {
+                defaultValue:
+                  'Les codes sont affiches uniquement lors de leur generation.',
+              })}
+            </p>
+          </div>
+          <Link to="/login" className="text-blue-600 font-medium hover:underline">
+            {t('auth.forgotPassword.backToLogin', { defaultValue: 'Retour a la connexion' })}
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}

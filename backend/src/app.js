@@ -11,6 +11,7 @@ const securityHeaders = require('./middleware/securityHeaders.middleware');
 const {
   metricsMiddleware,
   metricsHandler,
+  frontendErrorHandler,
 } = require('./middleware/metrics.middleware');
 
 const app = express();
@@ -49,9 +50,7 @@ const allowAllOrigins =
   allowedOrigins.includes('*') || (isDev && allowedOrigins.length === 0);
 
 if (!isDev && allowedOrigins.length === 0) {
-  logger.warn(
-    '⚠️ Aucune origine CORS configurée. Pense à définir CORS_ORIGINS ou FRONTEND_URL.'
-  );
+  logger.warn('app.cors.origins.missing_configuration');
 }
 
 app.use(
@@ -60,7 +59,7 @@ app.use(
       if (!origin || allowAllOrigins) return callback(null, true);
       const normalizedOrigin = normalizeOrigin(origin);
       if (allowedOrigins.includes(normalizedOrigin)) return callback(null, true);
-      logger.warn({ origin }, '🚫 CORS origin refusée');
+      logger.warn({ origin }, 'app.cors.origin.rejected');
       return callback(null, false);
     },
     credentials: true,
@@ -70,6 +69,7 @@ app.use(
       'Authorization',
       'X-CSRF-Token',
       'X-Metrics-Token',
+      'X-Observability-Token',
       'X-Request-Id',
     ],
     exposedHeaders: ['X-Request-Id'],
@@ -84,10 +84,11 @@ app.use(express.urlencoded({ extended: true }));
    📂 Fichiers uploadés (uploads/)
    ====================================================== */
 const uploadsRoot = path.join(__dirname, '..', 'uploads');
+const openapiContractPath = path.join(__dirname, '..', 'openapi', 'openapi.json');
 
 if (!fs.existsSync(uploadsRoot)) {
   fs.mkdirSync(uploadsRoot, { recursive: true });
-  logger.info({ uploadsRoot }, '📂 Dossier uploads créé automatiquement');
+  logger.info({ uploadsRoot }, 'app.uploads.directory.created');
 }
 
 app.use(
@@ -101,7 +102,7 @@ app.use(
     },
   })
 );
-logger.info('✅ Fichiers statiques disponibles sur /uploads');
+logger.info('app.uploads.static_serving.enabled');
 
 /* ======================================================
    🔧 Chargement des routeurs Express
@@ -123,20 +124,14 @@ function loadRouter(routeFsPath, mountPath, target = app) {
     if (!router) {
       const keys =
         mod && typeof mod === 'object' ? Object.keys(mod) : '(aucune clé)';
-      logger.error(
-        { mountPath, routeFsPath, keys },
-        '❌ Routeur invalide'
-      );
+      logger.error({ mountPath, routeFsPath, keys }, 'app.router.invalid');
       return;
     }
 
     target.use(mountPath, router);
-    logger.info({ mountPath }, '✅ Routeur chargé');
+    logger.info({ mountPath }, 'app.router.loaded');
   } catch (err) {
-    logger.error(
-      { err, routeFsPath, mountPath },
-      '❌ Échec du chargement du routeur'
-    );
+    logger.error({ err, routeFsPath, mountPath }, 'app.router.load.failed');
   }
 }
 
@@ -179,6 +174,13 @@ app.use('/api/v1', apiRouter);
    ====================================================== */
 apiRouter.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 apiRouter.get('/metrics', metricsHandler);
+apiRouter.post('/observability/frontend-errors', frontendErrorHandler);
+apiRouter.get('/openapi.json', (_req, res) => {
+  if (!fs.existsSync(openapiContractPath)) {
+    return res.status(404).json({ error: 'OpenAPI contract introuvable' });
+  }
+  return res.sendFile(openapiContractPath);
+});
 
 app.get('/', (_req, res) => {
   res.json({
@@ -198,7 +200,7 @@ app.use((req, res, next) => {
 });
 
 app.use((err, req, res, _next) => {
-  logger.error({ err, requestId: req.requestId }, '❌ Erreur backend');
+  logger.error({ err, requestId: req.requestId }, 'app.request.unhandled_error');
   if (res.headersSent) return;
   if (err?.name === 'MulterError') {
     let message = 'Erreur upload fichier';
@@ -224,3 +226,5 @@ app.use((err, req, res, _next) => {
 });
 
 module.exports = app;
+
+

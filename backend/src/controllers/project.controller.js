@@ -15,6 +15,7 @@ const {
   computeProgress,
 } = require("../services/notification.service");
 const { emitEvent } = require("../services/activity.service");
+const logger = require('../utils/logger');
 
 /* =========================================================
    🏷️ Labels (FR)
@@ -210,7 +211,7 @@ exports.create = async (req, res) => {
         notificationMode: "create",
       });
     } catch (err) {
-      console.warn("⚠️ Notification projet (create) échouée:", err?.message || err);
+      logger.warn({ err }, "project.notification.create.failed");
     }
 
     return res.status(201).json({
@@ -221,7 +222,7 @@ exports.create = async (req, res) => {
       },
     });
   } catch (e) {
-    console.error("Erreur creation projet:", e);
+    logger.error({ err: e }, "project.create.failed");
     return res
       .status(500)
       .json({ error: "Erreur lors de la cr??ation du projet" });
@@ -283,7 +284,7 @@ exports.list = async (req, res) => {
       })),
     });
   } catch (e) {
-    console.error("❌ Erreur list projects:", e);
+    logger.error({ err: e }, "project.list.failed");
     return res
       .status(500)
       .json({ error: "Erreur lors de la récupération des projets" });
@@ -339,7 +340,7 @@ exports.detail = async (req, res) => {
       },
     });
   } catch (e) {
-    console.error("❌ Erreur detail project:", e);
+    logger.error({ err: e }, "project.detail.failed");
     return res
       .status(500)
       .json({ error: "Erreur lors de la récupération du projet" });
@@ -477,10 +478,7 @@ exports.update = async (req, res) => {
           notificationMode: "create",
         });
       } catch (err) {
-        console.warn(
-          "⚠️ Notification projet (assign) échouée:",
-          err?.message || err
-        );
+        logger.warn({ err }, "project.notification.assign.failed");
       }
     }
 
@@ -512,10 +510,7 @@ exports.update = async (req, res) => {
           notificationMode: "update",
         });
       } catch (err) {
-        console.warn(
-          "⚠️ Notification projet (status update) échouée:",
-          err?.message || err
-        );
+        logger.warn({ err }, "project.notification.status_update.failed");
       }
     }
 
@@ -527,7 +522,7 @@ exports.update = async (req, res) => {
       },
     });
   } catch (e) {
-    console.error("❌ Erreur update project:", e);
+    logger.error({ err: e }, "project.update.failed");
     return res
       .status(500)
       .json({ error: "Erreur lors de la mise à jour du projet" });
@@ -575,9 +570,10 @@ exports.remove = async (req, res) => {
 
     return res.json({ message: "Projet supprimé avec succès" });
   } catch (e) {
-    console.error("❌ Erreur suppression projet:", e);
+    logger.error({ err: e }, "project.remove.failed");
     return res
       .status(500)
       .json({ error: "Erreur lors de la suppression du projet" });
   }
 };
+

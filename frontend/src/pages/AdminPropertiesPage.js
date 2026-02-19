@@ -18,6 +18,8 @@ import {
 import api from '../services/api';
 import { me } from '../services/auth';
 import { normalizeRole } from '../utils/role';
+import { notify } from '../utils/notify';
+import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 // ============================================================================
 // 🌍 FILE_BASE + normalizePath + toAbsUrl — Standard Teranga (PRODUCTION SAFE)
@@ -50,6 +52,50 @@ function toAbsUrl(path = '') {
 
 function isPdf(path = '') {
   return /\.pdf($|\?)/i.test(String(path || ''));
+}
+
+function getPropertyTypeFieldConfig(type, t) {
+  if (type === 'land') {
+    return {
+      showSurface: true,
+      showRooms: false,
+      surfaceLabel: t('adminPropertiesPage.form.dynamic.landSurfaceLabel'),
+      surfacePlaceholder: t('adminPropertiesPage.form.dynamic.landSurfacePlaceholder'),
+      roomsLabel: t('adminPropertiesPage.form.labels.rooms'),
+      roomsPlaceholder: t('adminPropertiesPage.form.placeholders.rooms'),
+    };
+  }
+
+  if (type === 'commercial') {
+    return {
+      showSurface: true,
+      showRooms: true,
+      surfaceLabel: t('adminPropertiesPage.form.dynamic.commercialSurfaceLabel'),
+      surfacePlaceholder: t('adminPropertiesPage.form.placeholders.surface'),
+      roomsLabel: t('adminPropertiesPage.form.dynamic.commercialRoomsLabel'),
+      roomsPlaceholder: t('adminPropertiesPage.form.dynamic.commercialRoomsPlaceholder'),
+    };
+  }
+
+  if (type === 'automobile') {
+    return {
+      showSurface: true,
+      showRooms: true,
+      surfaceLabel: t('adminPropertiesPage.form.dynamic.automobileSurfaceLabel'),
+      surfacePlaceholder: t('adminPropertiesPage.form.dynamic.automobileSurfacePlaceholder'),
+      roomsLabel: t('adminPropertiesPage.form.dynamic.automobileRoomsLabel'),
+      roomsPlaceholder: t('adminPropertiesPage.form.dynamic.automobileRoomsPlaceholder'),
+    };
+  }
+
+  return {
+    showSurface: true,
+    showRooms: true,
+    surfaceLabel: t('adminPropertiesPage.form.labels.surface'),
+    surfacePlaceholder: t('adminPropertiesPage.form.placeholders.surface'),
+    roomsLabel: t('adminPropertiesPage.form.labels.rooms'),
+    roomsPlaceholder: t('adminPropertiesPage.form.placeholders.rooms'),
+  };
 }
 
 // ============================================================================
@@ -85,6 +131,7 @@ function safeRevoke(url) {
 // ============================================================================
 export default function AdminPropertiesPage() {
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   const [user, setUser] = useState(null);
 
   const [properties, setProperties] = useState([]);
@@ -94,6 +141,7 @@ export default function AdminPropertiesPage() {
   const [selectedClient, setSelectedClient] = useState('');
 
   const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editId, setEditId] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -245,21 +293,25 @@ export default function AdminPropertiesPage() {
   // ==========================================================================
   async function handleCreate(e) {
     e.preventDefault();
+    if (isSubmitting) return;
 
     if (!selectedClient) {
-      alert(t('adminPropertiesPage.alerts.selectClient'));
+      notify(t('adminPropertiesPage.alerts.selectClient'));
       return;
     }
 
     try {
+      setIsSubmitting(true);
       await createPropertyForClient(selectedClient, form, files);
-      alert(t('adminPropertiesPage.alerts.createSuccess'));
+      notify(t('adminPropertiesPage.alerts.createSuccess'));
       resetForm();
       setIsCreating(false);
-      loadProperties(selectedClient);
+      await loadProperties(selectedClient);
     } catch (e2) {
       console.error('❌ Erreur création:', e2);
-      alert(t('adminPropertiesPage.alerts.createError'));
+      notify(t('adminPropertiesPage.alerts.createError'));
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -301,15 +353,19 @@ export default function AdminPropertiesPage() {
 
   async function handleUpdate(e) {
     e.preventDefault();
+    if (isSubmitting) return;
 
     try {
+      setIsSubmitting(true);
       await updateProperty(editId, form, files);
-      alert(t('adminPropertiesPage.alerts.updateSuccess'));
+      notify(t('adminPropertiesPage.alerts.updateSuccess'));
       resetForm();
-      loadProperties(selectedClient);
+      await loadProperties(selectedClient);
     } catch (e2) {
       console.error('❌ Update:', e2);
-      alert(t('adminPropertiesPage.alerts.updateError'));
+      notify(t('adminPropertiesPage.alerts.updateError'));
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -317,13 +373,14 @@ export default function AdminPropertiesPage() {
   // 🔹 Supprimer Bien
   // ==========================================================================
   async function handleDelete(id) {
-    if (!window.confirm(t('adminPropertiesPage.alerts.deleteConfirm'))) return;
+    const ok = await confirmDelete("property");
+    if (!ok) return;
     try {
       await api.delete(`/properties/${id}`);
-      loadProperties(selectedClient);
+      await loadProperties(selectedClient);
     } catch (e) {
       console.error('❌ delete property:', e);
-      alert(t('adminPropertiesPage.alerts.deleteError'));
+      notify(t('adminPropertiesPage.alerts.deleteError'));
     }
   }
 
@@ -378,6 +435,7 @@ export default function AdminPropertiesPage() {
     () => clients.find((c) => String(c.id) === String(selectedClient)),
     [clients, selectedClient]
   );
+  const fieldConfig = getPropertyTypeFieldConfig(form.type, t);
 
   // ==========================================================================
   // 🖥️ UI — Apple Light Premium (Cartes uniquement)
@@ -478,6 +536,7 @@ export default function AdminPropertiesPage() {
                     setIsCreating(true);
                     resetForm();
                   }}
+                  disabled={isSubmitting}
                   className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium rounded-full bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition"
                 >
                   {t('adminPropertiesPage.buttons.addProperty')}
@@ -526,12 +585,22 @@ export default function AdminPropertiesPage() {
                 </label>
                 <select
                   value={form.type}
-                  onChange={(e) => setForm({ ...form, type: e.target.value })}
+                  onChange={(e) => {
+                    const nextType = e.target.value;
+                    const nextConfig = getPropertyTypeFieldConfig(nextType, t);
+                    setForm((prev) => ({
+                      ...prev,
+                      type: nextType,
+                      surfaceArea: nextConfig.showSurface ? prev.surfaceArea : '',
+                      roomCount: nextConfig.showRooms ? prev.roomCount : '',
+                    }));
+                  }}
                   className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
                 >
                   <option value="house">{t('labels.property.types.house')}</option>
                   <option value="apartment">{t('labels.property.types.apartment')}</option>
                   <option value="land">{t('labels.property.types.land')}</option>
+                  <option value="automobile">{t('labels.property.types.automobile')}</option>
                   <option value="commercial">{t('labels.property.types.commercial')}</option>
                 </select>
               </div>
@@ -579,36 +648,40 @@ export default function AdminPropertiesPage() {
                 />
               </div>
 
-              {/* Surface */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-600">
-                  {t('adminPropertiesPage.form.labels.surface')}
-                </label>
-                <input
-                  type="number"
-                  placeholder={t('adminPropertiesPage.form.placeholders.surface')}
-                  value={form.surfaceArea}
-                  onChange={(e) =>
-                    setForm({ ...form, surfaceArea: e.target.value })
-                  }
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
-                />
-              </div>
-              {/* Pièces */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-600">
-                  {t('adminPropertiesPage.form.labels.rooms')}
-                </label>
-                <input
-                  type="number"
-                  placeholder={t('adminPropertiesPage.form.placeholders.rooms')}
-                  value={form.roomCount}
-                  onChange={(e) =>
-                    setForm({ ...form, roomCount: e.target.value })
-                  }
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
-                />
-              </div>
+              {/* Surface / Kilométrage */}
+              {fieldConfig.showSurface && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-medium text-slate-600">
+                    {fieldConfig.surfaceLabel}
+                  </label>
+                  <input
+                    type="number"
+                    placeholder={fieldConfig.surfacePlaceholder}
+                    value={form.surfaceArea}
+                    onChange={(e) =>
+                      setForm({ ...form, surfaceArea: e.target.value })
+                    }
+                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                  />
+                </div>
+              )}
+              {/* Pièces / Espaces / Places */}
+              {fieldConfig.showRooms && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-medium text-slate-600">
+                    {fieldConfig.roomsLabel}
+                  </label>
+                  <input
+                    type="number"
+                    placeholder={fieldConfig.roomsPlaceholder}
+                    value={form.roomCount}
+                    onChange={(e) =>
+                      setForm({ ...form, roomCount: e.target.value })
+                    }
+                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                  />
+                </div>
+              )}
 
               {/* Description */}
               <div className="sm:col-span-2 flex flex-col gap-1">
@@ -661,13 +734,15 @@ export default function AdminPropertiesPage() {
                     resetForm();
                     setIsCreating(false);
                   }}
+                  disabled={isSubmitting}
                   className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
                 >
                   {t('adminPropertiesPage.buttons.cancel')}
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center px-5 py-2 text-xs sm:text-sm font-medium rounded-full bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition"
+                  disabled={isSubmitting}
+                  className="inline-flex items-center justify-center px-5 py-2 text-xs sm:text-sm font-medium rounded-full bg-blue-600 text-white shadow-sm hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition"
                 >
                   {editId
                     ? t('adminPropertiesPage.buttons.save')
@@ -866,3 +941,4 @@ export default function AdminPropertiesPage() {
     </div>
   );
 }
+

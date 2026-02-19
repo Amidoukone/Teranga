@@ -19,9 +19,12 @@ import {
   deleteCountry,
 } from "../services/countries";
 import { getRegions, updateRegion, deleteRegion } from "../services/regions";
+import { notify } from '../utils/notify';
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 export default function AdminOnboardingPage() {
   const { t } = useTranslation();
+  const { confirmDeleteNamed } = useDeleteConfirm();
   const [step, setStep] = useState(1);
 
   // 🔐 Auth guard state
@@ -207,7 +210,7 @@ export default function AdminOnboardingPage() {
     const trimmedIso = countryDraft.isoCode.trim().toUpperCase();
 
     if (trimmedName.length < 2 || trimmedIso.length !== 2) {
-      alert(t("adminOnboardingPage.errors.countryEditValidation"));
+      notify(t("adminOnboardingPage.errors.countryEditValidation"));
       return;
     }
 
@@ -220,16 +223,12 @@ export default function AdminOnboardingPage() {
       setEditingCountryId(null);
       await loadCountries();
     } catch (err) {
-      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.countryEdit"));
+      notify(err?.response?.data?.error || t("adminOnboardingPage.errors.countryEdit"));
     }
   }
 
   async function handleDeleteCountry(country) {
-    const confirmDelete = window.confirm(
-      t("adminOnboardingPage.confirmations.deleteCountry", {
-        name: country.name,
-      })
-    );
+    const confirmDelete = await confirmDeleteNamed("country", country.name);
     if (!confirmDelete) return;
 
     try {
@@ -241,7 +240,7 @@ export default function AdminOnboardingPage() {
       await loadCountries();
       await loadRegions();
     } catch (err) {
-      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.countryDelete"));
+      notify(err?.response?.data?.error || t("adminOnboardingPage.errors.countryDelete"));
     }
   }
 
@@ -260,7 +259,7 @@ export default function AdminOnboardingPage() {
     const trimmedCode = regionDraft.code.trim().toUpperCase();
 
     if (trimmedName.length < 2) {
-      alert(t("adminOnboardingPage.errors.regionEditValidation"));
+      notify(t("adminOnboardingPage.errors.regionEditValidation"));
       return;
     }
 
@@ -273,16 +272,12 @@ export default function AdminOnboardingPage() {
       setEditingRegionId(null);
       await loadRegions();
     } catch (err) {
-      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.regionEdit"));
+      notify(err?.response?.data?.error || t("adminOnboardingPage.errors.regionEdit"));
     }
   }
 
   async function handleDeleteRegion(region) {
-    const confirmDelete = window.confirm(
-      t("adminOnboardingPage.confirmations.deleteRegion", {
-        name: region.name,
-      })
-    );
+    const confirmDelete = await confirmDeleteNamed("region", region.name);
     if (!confirmDelete) return;
 
     try {
@@ -290,7 +285,7 @@ export default function AdminOnboardingPage() {
       setRegions((prev) => prev.filter((r) => r.id !== region.id));
       setRegionsCreated((prev) => prev.filter((r) => r.id !== region.id));
     } catch (err) {
-      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.regionDelete"));
+      notify(err?.response?.data?.error || t("adminOnboardingPage.errors.regionDelete"));
     }
   }
 
@@ -300,7 +295,7 @@ export default function AdminOnboardingPage() {
   async function createCountry(e) {
     e.preventDefault();
     if (!isCountryFormValid) {
-      alert(t("adminOnboardingPage.errors.countryCreateValidation"));
+      notify(t("adminOnboardingPage.errors.countryCreateValidation"));
       return;
     }
 
@@ -325,7 +320,7 @@ export default function AdminOnboardingPage() {
         regionId: "",
       }));
     } catch (err) {
-      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.countryCreate"));
+      notify(err?.response?.data?.error || t("adminOnboardingPage.errors.countryCreate"));
     } finally {
       setLoadingCountry(false);
     }
@@ -337,7 +332,7 @@ export default function AdminOnboardingPage() {
   async function addRegion(e) {
     e.preventDefault();
     if (!isRegionFormValid) {
-      alert(t("adminOnboardingPage.errors.regionCreateValidation"));
+      notify(t("adminOnboardingPage.errors.regionCreateValidation"));
       return;
     }
 
@@ -355,7 +350,7 @@ export default function AdminOnboardingPage() {
       setRegionForm({ name: "", code: "" });
       await loadRegions();
     } catch (err) {
-      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.regionCreate"));
+      notify(err?.response?.data?.error || t("adminOnboardingPage.errors.regionCreate"));
     } finally {
       setLoadingRegion(false);
     }
@@ -367,7 +362,7 @@ export default function AdminOnboardingPage() {
   async function createMaster(e) {
     e.preventDefault();
     if (!isMasterFormValid) {
-      alert(
+      notify(
         masterForm.scope === "region"
           ? t("adminOnboardingPage.errors.masterValidationRegion")
           : t("adminOnboardingPage.errors.masterValidationCountry")
@@ -402,10 +397,10 @@ export default function AdminOnboardingPage() {
 
       await createUser(payload);
 
-      alert(t("adminOnboardingPage.success.masterCreated"));
+      notify(t("adminOnboardingPage.success.masterCreated"));
       window.location.href = "/admin/users";
     } catch (err) {
-      alert(err?.response?.data?.error || t("adminOnboardingPage.errors.masterCreate"));
+      notify(err?.response?.data?.error || t("adminOnboardingPage.errors.masterCreate"));
     } finally {
       setLoadingMaster(false);
     }
@@ -939,3 +934,4 @@ export default function AdminOnboardingPage() {
     </div>
   );
 }
+

@@ -15,6 +15,7 @@ const {
   Order,
 } = require('../../models');
 const { getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
+const logger = require('../utils/logger');
 
 /* ======================================================
    🧩 Helpers
@@ -107,7 +108,7 @@ exports.list = async (req, res) => {
 
     return res.json({ countries: rows });
   } catch (e) {
-    console.error('❌ list countries:', e);
+    logger.error('❌ list countries:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la récupération des pays' });
@@ -159,7 +160,7 @@ exports.create = async (req, res) => {
       });
     }
 
-    console.error('❌ create country:', e);
+    logger.error('❌ create country:', e);
     return res.status(500).json({ error: 'Erreur lors de la création du pays' });
   }
 };
@@ -227,7 +228,7 @@ exports.update = async (req, res) => {
       });
     }
 
-    console.error('❌ update country:', e);
+    logger.error('❌ update country:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la mise à jour du pays' });
@@ -258,7 +259,7 @@ exports.remove = async (req, res) => {
 
     return res.json({ success: true });
   } catch (e) {
-    console.error('❌ delete country:', e);
+    logger.error('❌ delete country:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la suppression du pays' });

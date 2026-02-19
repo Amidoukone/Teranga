@@ -7,6 +7,7 @@ const path = require("path");
 
 // ✅ GEO scope (strict + admin global)
 const { canAccessGeoResource } = require("../utils/geoScope");
+const logger = require('../utils/logger');
 
 /* =========================================================
    🏷 Types de documents
@@ -162,7 +163,7 @@ function extractFiles(req) {
 ========================================================= */
 async function uploadToImageKit(file, projectId) {
   if (!isImageKitEnabled()) {
-    console.warn("⚠️ ImageKit désactivé — upload ignoré");
+    logger.warn("⚠️ ImageKit désactivé — upload ignoré");
     return { url: null, fileId: null };
   }
 
@@ -178,7 +179,7 @@ async function uploadToImageKit(file, projectId) {
       fileId: uploaded.fileId,
     };
   } catch (err) {
-    console.error(`❌ Upload ImageKit échoué (${file.originalname}):`, err);
+    logger.error(`❌ Upload ImageKit échoué (${file.originalname}):`, err);
     return { url: null, fileId: null };
   }
 }
@@ -284,7 +285,7 @@ exports.upload = async (req, res) => {
       documents: createdDocs,
     });
   } catch (e) {
-    console.error("❌ Erreur upload document:", e);
+    logger.error("❌ Erreur upload document:", e);
     return res.status(500).json({ error: "Erreur lors de l'ajout du document" });
   }
 };
@@ -355,7 +356,7 @@ exports.listByProject = async (req, res) => {
       documents: formatted,
     });
   } catch (e) {
-    console.error("❌ Erreur list documents:", e);
+    logger.error("❌ Erreur list documents:", e);
     return res
       .status(500)
       .json({ error: "Erreur lors de la récupération des documents" });
@@ -395,7 +396,7 @@ exports.remove = async (req, res) => {
       try {
         await imageKit.deleteFile(doc.fileId);
       } catch (e) {
-        console.warn("⚠️ Suppression ImageKit impossible:", e.message);
+        logger.warn("⚠️ Suppression ImageKit impossible:", e.message);
       }
     }
 
@@ -406,7 +407,7 @@ exports.remove = async (req, res) => {
       projectId: project.id,
     });
   } catch (e) {
-    console.error("❌ Erreur suppression document:", e);
+    logger.error("❌ Erreur suppression document:", e);
     return res
       .status(500)
       .json({ error: "Erreur lors de la suppression du document" });

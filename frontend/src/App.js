@@ -14,8 +14,11 @@ import Analytics from './components/Analytics';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import SetSeo from './components/SetSeo'; // ✅ Source unique SEO
+import ToastProvider from './components/ToastProvider';
+import ConfirmProvider from './components/ConfirmProvider';
 import { GeoProvider } from './contexts/GeoContext';
 import { getAnalyticsConsent, loadAnalytics } from './utils/analytics';
+import { installGlobalErrorHandlers } from './utils/errorReporter';
 
 // 🌐 Pages publiques
 import HomePage from './pages/HomePage';
@@ -215,12 +218,18 @@ export default function App() {
     }
   }, [analyticsConsent, trackingId]);
 
+  useEffect(() => {
+    installGlobalErrorHandlers();
+  }, []);
+
   return (
     <ErrorBoundary>
-      <GeoProvider>
-        <div className="min-h-screen flex flex-col bg-surface-main text-text-primary">
-          <ScrollToTop />
-          <NavBar />
+      <ToastProvider>
+        <ConfirmProvider>
+          <GeoProvider>
+            <div className="min-h-screen flex flex-col bg-surface-main text-text-primary">
+              <ScrollToTop />
+              <NavBar />
 
           {/* 📈 Google Analytics v4 — tracking automatique */}
           <Analytics trackingId={trackingId} enabled={analyticsConsent === 'granted'} />
@@ -319,7 +328,14 @@ export default function App() {
                 <PublicOnly>
                   <>
                     <SetSeo title={t('seo.pages.forgotPassword.title')} />
-                    <Navigate to="/login" replace />
+                    <Navigate
+                      to="/login"
+                      replace
+                      state={{
+                        errorMsg:
+                          "Mot de passe oublie ? Contactez l'admin ou le master de votre pays/region pour reinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                      }}
+                    />
                   </>
                 </PublicOnly>
               }
@@ -331,7 +347,33 @@ export default function App() {
                 <PublicOnly>
                   <>
                     <SetSeo title={t('seo.pages.resetPassword.title')} />
-                    <Navigate to="/login" replace />
+                    <Navigate
+                      to="/login"
+                      replace
+                      state={{
+                        errorMsg:
+                          "Mot de passe oublie ? Contactez l'admin ou le master de votre pays/region pour reinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                      }}
+                    />
+                  </>
+                </PublicOnly>
+              }
+            />
+
+            <Route
+              path="/reset-password/code"
+              element={
+                <PublicOnly>
+                  <>
+                    <SetSeo title={t('seo.pages.resetPassword.title')} />
+                    <Navigate
+                      to="/login"
+                      replace
+                      state={{
+                        errorMsg:
+                          "Mot de passe oublie ? Contactez l'admin ou le master de votre pays/region pour reinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                      }}
+                    />
                   </>
                 </PublicOnly>
               }
@@ -707,8 +749,10 @@ export default function App() {
               components={{ brand: <span className="font-semibold text-blue-600" /> }}
             />
           </footer>
-        </div>
-      </GeoProvider>
+            </div>
+          </GeoProvider>
+        </ConfirmProvider>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }

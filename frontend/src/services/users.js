@@ -45,3 +45,21 @@ export async function deleteUser(id) {
   const { data } = await api.delete(`/users/${id}`);
   return data;
 }
+
+/**
+ * 🔐 Reset manuel du mot de passe (admin/master)
+ */
+export async function manualPasswordReset(id, payload) {
+  const { data } = await api.post(`/users/${id}/manual-password-reset`, payload);
+  return data;
+}
+
+/**
+ * 📜 Historique des resets manuels (admin/master)
+ */
+export async function getManualPasswordResetAudit(id, limit = 20) {
+  const { data } = await api.get(`/users/${id}/manual-password-reset/audit`, {
+    params: { limit },
+  });
+  return data?.audits || [];
+}

@@ -10,6 +10,7 @@ const {
   Project,
 } = require('../../models');
 const { getPagination: baseGetPagination } = require('../utils/pagination');
+const logger = require('../utils/logger');
 
 /* =========================================================
    🔧 Helpers génériques
@@ -383,7 +384,7 @@ async function canAccessTransaction(req, trx) {
 
     return false;
   } catch (e) {
-    console.error('❌ canAccessTransaction error:', e);
+    logger.error('❌ canAccessTransaction error:', e);
     return false;
   }
 }

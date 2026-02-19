@@ -7,6 +7,7 @@ import api from "../services/api";
 import { applyLabels, CURRENCY_LABELS, TRANSACTION_TYPES } from "../utils/labels";
 import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
+import { notify } from '../utils/notify';
 
 /* ============================================================================
    🌍 FILE_BASE + normalizePath + toAbsUrl — PRODUCTION READY (SSR safe)
@@ -262,11 +263,11 @@ export default function ServiceTransactionsPage() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!id) return alert(t("serviceTransactions.alerts.serviceNotFound"));
+    if (!id) return notify(t("serviceTransactions.alerts.serviceNotFound"));
 
     const amountNum = parseFloat(form.amount);
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
-      return alert(t("serviceTransactions.alerts.invalidAmount"));
+      return notify(t("serviceTransactions.alerts.invalidAmount"));
     }
 
     if (submitting) return; // anti double clic
@@ -287,7 +288,7 @@ export default function ServiceTransactionsPage() {
 
       await createTransaction(finalPayload);
 
-      alert(t("serviceTransactions.alerts.createSuccess"));
+      notify(t("serviceTransactions.alerts.createSuccess"));
 
       setForm({
         type: "expense",
@@ -301,7 +302,7 @@ export default function ServiceTransactionsPage() {
       await fetchTransactions();
     } catch (err) {
       console.error("❌ Erreur ajout transaction:", err);
-      alert(t("serviceTransactions.alerts.createError"));
+      notify(t("serviceTransactions.alerts.createError"));
     } finally {
       setSubmitting(false);
     }
@@ -727,4 +728,5 @@ function TransactionHistory({ transactions, getProofHref }) {
     </div>
   );
 }
+
 

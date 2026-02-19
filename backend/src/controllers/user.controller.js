@@ -2,8 +2,17 @@
 
 const bcrypt = require('bcrypt');
 const { Op, fn, col, where: sqlWhere } = require('sequelize');
-const { User, Country, Region } = require('../../models');
+const { User, Country, Region, Activity, RefreshToken } = require('../../models');
 const { applyGeoScope, getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
+const { createActivities } = require('../services/activity.service');
+const {
+  isScopedAdmin,
+  isAdminRole,
+  getCountryIsoById,
+  canAccessUserByScope,
+  assertGlobalAdminOnly,
+} = require('../services/userAccess.service');
+const logger = require('../utils/logger');
 
 // ————————————————————————
 // Helpers
@@ -111,7 +120,7 @@ function sendError(res, err, fallbackMessage = 'Erreur serveur') {
     return res.status(409).json({ error: 'Conflit : valeur déjà existante' });
   }
 
-  console.error('❌ Unexpected error:', err);
+  logger.error({ err }, 'Unexpected error in user.controller');
   return res.status(500).json({ error: fallbackMessage });
 }
 
@@ -123,72 +132,6 @@ function sendError(res, err, fallbackMessage = 'Erreur serveur') {
  * Admin MASTER = admin + scope (countryId ou regionId)
  * Admin GLOBAL = admin sans scope
  */
-function isScopedAdmin(user) {
-  if (!user || user.role !== 'admin') return false;
-  return user.countryId != null || user.regionId != null;
-}
-
-function isAdminRole(role) {
-  return String(role || '').trim().toLowerCase() === 'admin';
-}
-
-/**
- * Vérifie si un admin (global ou master) peut accéder à un user (lecture/modif/suppression).
- * - Global admin: ok
- * - Master: doit respecter son scope :
- *   - si regionId => user.regionId doit matcher
- *   - sinon si countryId => user.countryId doit matcher
- */
-async function getCountryIsoById(countryId) {
-  if (!countryId) return null;
-
-  const record = await Country.findByPk(countryId, {
-    attributes: ['isoCode', 'isActive'],
-  });
-
-  if (!record || record.isActive === false) return null;
-  return record.isoCode || null;
-}
-
-async function canAccessUserByScope(actor, targetUser) {
-  if (!actor || actor.role !== 'admin') return false;
-  if (!targetUser) return false;
-
-  if (isGlobalAdmin(actor)) return true;
-
-  const actorScope = getUserGeoScope(actor);
-  if (actorScope.regionId != null) {
-    return String(targetUser.regionId ?? '') === String(actorScope.regionId);
-  }
-  if (actorScope.countryId != null) {
-    if (String(targetUser.countryId ?? '') === String(actorScope.countryId)) {
-      return true;
-    }
-
-    const actorIso = await getCountryIsoById(actorScope.countryId);
-    const targetIso = toTrimOrNull(targetUser.country)?.toUpperCase() || null;
-    return Boolean(actorIso && targetIso && actorIso === targetIso);
-  }
-
-  // admin sans scope => global admin (déjà géré) ; mais par sécurité :
-  return false;
-}
-
-/**
- * Bloque toute action admin/master si acteur n'est pas admin global.
- * - création admin (dont master) => global seulement
- * - update role vers admin => global seulement
- * - modification d'un admin => global seulement
- * - suppression d'un admin => global seulement
- */
-function assertGlobalAdminOnly(reqUser, errMessage) {
-  if (!isGlobalAdmin(reqUser)) {
-    const err = new Error(errMessage || 'Action réservée à un administrateur global');
-    err.status = 403;
-    throw err;
-  }
-}
-
 /* =========================================================
    🔎 GEO RESOLUTION (Country / Region)
 ========================================================= */
@@ -408,7 +351,7 @@ exports.createAgent = async (req, res) => {
       agent: toSafeUser(agent),
     });
   } catch (e) {
-    console.error('❌ Erreur création agent:', e);
+    logger.error({ err: e }, 'Erreur creation agent');
     return res.status(500).json({ error: 'Erreur lors de la création de l’agent' });
   }
 };
@@ -512,7 +455,7 @@ exports.listByRole = async (req, res) => {
 
     return res.json({ users });
   } catch (e) {
-    console.error('❌ Erreur listByRole:', e);
+    logger.error({ err: e }, 'Erreur listByRole');
     return res
       .status(500)
       .json({ error: 'Erreur lors de la récupération des utilisateurs' });
@@ -526,7 +469,7 @@ exports.me = async (req, res) => {
     if (!me) return res.status(404).json({ error: 'Utilisateur introuvable' });
     return res.json({ user: toSafeUser(me) });
   } catch (e) {
-    console.error('❌ Erreur me:', e);
+    logger.error({ err: e }, 'Erreur me');
     return res.status(500).json({ error: 'Erreur lors de la récupération du profil' });
   }
 };
@@ -809,5 +752,181 @@ exports.deleteUser = async (req, res) => {
     return res.json({ message: 'Utilisateur supprimé' });
   } catch (e) {
     return sendError(res, e, 'Erreur suppression utilisateur');
+  }
+};
+
+/** 🔐 Reset manuel du mot de passe (admin/master) + audit */
+exports.manualPasswordReset = async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
+    const targetUser = await User.findByPk(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'Utilisateur introuvable' });
+    }
+
+    if (String(req.user.id) === String(targetUser.id)) {
+      return res.status(400).json({
+        error: "Utilisez 'changer mot de passe' pour votre propre compte.",
+      });
+    }
+
+    if (!(await canAccessUserByScope(req.user, targetUser))) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
+    if (isScopedAdmin(req.user) && isAdminRole(targetUser.role)) {
+      return res.status(403).json({
+        error: "Action réservée à l'admin global : reset d'un admin interdit pour un MASTER",
+      });
+    }
+
+    const newPassword = String(req.body?.newPassword || '');
+    const reason = toTrimOrNull(req.body?.reason);
+    const invalidateSessions = req.body?.invalidateSessions !== false;
+
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({
+        error: 'Mot de passe trop court (minimum 8 caractères)',
+      });
+    }
+
+    targetUser.passwordHash = await bcrypt.hash(newPassword, 10);
+    await targetUser.save();
+
+    let revokedSessions = 0;
+    if (invalidateSessions) {
+      const [count] = await RefreshToken.update(
+        { revokedAt: new Date(), revokedByIp: req.ip || null },
+        { where: { userId: targetUser.id, revokedAt: null } }
+      );
+      revokedSessions = Number(count || 0);
+    }
+
+    const actorName = [req.user.firstName, req.user.lastName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    const actorLabel = actorName || req.user.email || `admin#${req.user.id}`;
+    const targetName = [targetUser.firstName, targetUser.lastName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    const targetLabel = targetName || targetUser.email || `user#${targetUser.id}`;
+
+    const activityTitle = 'Réinitialisation manuelle du mot de passe';
+    const activityMessage = `Le mot de passe de ${targetLabel} a été réinitialisé manuellement par ${actorLabel}.`;
+
+    await createActivities({
+      recipients: [req.user.id, targetUser.id],
+      actorId: req.user.id,
+      entityType: 'user_password',
+      entityId: targetUser.id,
+      action: 'manual_reset',
+      title: activityTitle,
+      message: activityMessage,
+      progress: 'done',
+      metadata: {
+        reason: reason || null,
+        targetUserId: targetUser.id,
+        targetUserEmail: targetUser.email || null,
+        actorIp: req.ip || null,
+        actorUserAgent: req.get?.('user-agent') || null,
+        invalidateSessions,
+        revokedSessions,
+      },
+      countryId: targetUser.countryId ?? req.user.countryId ?? null,
+      regionId: targetUser.regionId ?? req.user.regionId ?? null,
+    });
+
+    return res.json({
+      message:
+        'Mot de passe réinitialisé manuellement avec succès. Communiquez le mot de passe temporaire par canal sécurisé.',
+      user: toSafeUser(targetUser),
+      audit: {
+        action: 'manual_reset',
+        reason: reason || null,
+        revokedSessions,
+        at: new Date().toISOString(),
+      },
+    });
+  } catch (e) {
+    return sendError(res, e, 'Erreur lors de la réinitialisation manuelle');
+  }
+};
+
+/** 📜 Historique audit reset manuel par utilisateur (admin/master) */
+exports.listManualPasswordResetAudit = async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
+    const targetUser = await User.findByPk(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'Utilisateur introuvable' });
+    }
+
+    if (!(await canAccessUserByScope(req.user, targetUser))) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
+    if (isScopedAdmin(req.user) && isAdminRole(targetUser.role)) {
+      return res.status(403).json({
+        error: "Action réservée à l'admin global : accès audit admin interdit pour un MASTER",
+      });
+    }
+
+    const requestedLimit = Number.parseInt(String(req.query?.limit || '20'), 10);
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.max(1, Math.min(requestedLimit, 100))
+      : 20;
+
+    const rows = await Activity.findAll({
+      where: {
+        entityType: 'user_password',
+        entityId: targetUser.id,
+        action: 'manual_reset',
+      },
+      include: [
+        {
+          model: User,
+          as: 'actor',
+          attributes: ['id', 'email', 'firstName', 'lastName', 'role'],
+          required: false,
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+      limit,
+    });
+
+    return res.json({
+      audits: rows.map((row) => ({
+        id: row.id,
+        createdAt: row.createdAt,
+        title: row.title,
+        message: row.message,
+        actor: row.actor
+          ? {
+              id: row.actor.id,
+              email: row.actor.email,
+              firstName: row.actor.firstName,
+              lastName: row.actor.lastName,
+              role: row.actor.role,
+            }
+          : null,
+        metadata: {
+          reason: row.metadata?.reason || null,
+          actorIp: row.metadata?.actorIp || null,
+          actorUserAgent: row.metadata?.actorUserAgent || null,
+          invalidateSessions: Boolean(row.metadata?.invalidateSessions),
+          revokedSessions: Number(row.metadata?.revokedSessions || 0),
+        },
+      })),
+    });
+  } catch (e) {
+    return sendError(res, e, "Erreur lors de la lecture de l'historique");
   }
 };

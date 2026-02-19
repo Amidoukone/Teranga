@@ -1,39 +1,57 @@
 'use strict';
 
 const rateLimit = require('express-rate-limit');
+const logger = require('../utils/logger');
 
-function buildRateLimiter({ windowMs, max, message }) {
+function buildRateLimiter({ windowMs, max, message, limiterName }) {
   return rateLimit({
     windowMs,
     max,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: message },
+    handler: (req, res) => {
+      logger.warn(
+        {
+          limiter: limiterName,
+          method: req.method,
+          path: req.originalUrl,
+          ip: req.ip,
+          max,
+          windowMs,
+        },
+        'rate_limit.request.blocked'
+      );
+      return res.status(429).json({ error: message });
+    },
   });
 }
 
 const authLimiter = buildRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 15,
-  message: 'Trop de tentatives, rÃ©essayez plus tard.',
+  message: 'Trop de tentatives, reessayez plus tard.',
+  limiterName: 'auth',
 });
 
 const refreshLimiter = buildRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 30,
-  message: 'Trop de tentatives de rafraÃ®chissement.',
+  message: 'Trop de tentatives de rafraichissement.',
+  limiterName: 'refresh',
 });
 
 const passwordResetLimiter = buildRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: 'Trop de tentatives de rÃ©initialisation. RÃ©essayez plus tard.',
+  message: 'Trop de tentatives de reinitialisation. Reessayez plus tard.',
+  limiterName: 'password_reset',
 });
 
 const writeLimiter = buildRateLimiter({
   windowMs: 60 * 1000,
   max: 120,
-  message: 'Trop de requÃªtes, merci de ralentir.',
+  message: 'Trop de requetes, merci de ralentir.',
+  limiterName: 'write',
 });
 
 module.exports = {

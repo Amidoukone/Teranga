@@ -12,6 +12,7 @@ import {
   Globe,
   Lock,
 } from "lucide-react";
+import { getMasterCountries } from "../services/franchises";
 
 /* ==========================================================
    Suggestions de pays ISO2
@@ -149,24 +150,79 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [masterCountries, setMasterCountries] = useState([]);
+  const [masterLoading, setMasterLoading] = useState(true);
+  const [masterError, setMasterError] = useState("");
 
   const navigate = useNavigate();
 
   /* ==========================================================
      Pays ISO2 "canonique" calcule (pour multi-pays master)
   ========================================================== */
+  const masterOptions = useMemo(() => {
+    const map = new Map();
+    for (const c of masterCountries) {
+      const iso = String(c?.isoCode || "").toUpperCase().slice(0, 2);
+      if (!iso || map.has(iso)) continue;
+      map.set(iso, {
+        code: iso,
+        name: c?.name || iso,
+      });
+    }
+    return Array.from(map.values());
+  }, [masterCountries]);
+
+  const suggestionsSource =
+    masterOptions.length > 0 ? masterOptions : COUNTRY_SUGGESTIONS;
+
   const countryISO2 = useMemo(() => {
     return (
-      normalizeCountryInputToISO2(form.country, COUNTRY_SUGGESTIONS) ||
+      normalizeCountryInputToISO2(form.country, suggestionsSource) ||
       String(form.country || "").toUpperCase().slice(0, 2)
     );
-  }, [form.country]);
+  }, [form.country, suggestionsSource]);
+
+  const supportedIsoSet = useMemo(
+    () => new Set(masterOptions.map((c) => c.code)),
+    [masterOptions]
+  );
+
+  const countrySupported = supportedIsoSet.has(
+    String(countryISO2 || "").toUpperCase()
+  );
 
   useEffect(() => {
     if (countryISO2 && /^[A-Z]{2}$/.test(countryISO2)) {
       localStorage.setItem("teranga_register_country", countryISO2);
     }
   }, [countryISO2]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      setMasterLoading(true);
+      setMasterError("");
+      try {
+        const countries = await getMasterCountries();
+        if (!active) return;
+        const normalized = Array.isArray(countries) ? countries : [];
+        setMasterCountries(normalized);
+        if (!normalized.length) {
+          setMasterError(t("auth.register.errors.countryNoMaster"));
+        }
+      } catch (err) {
+        if (!active) return;
+        console.error("Unable to load master countries", err);
+        setMasterCountries([]);
+        setMasterError(t("auth.register.errors.countriesUnavailable"));
+      } finally {
+        if (active) setMasterLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [t]);
 
   /* ==========================================================
      Mise a jour champs
@@ -194,6 +250,9 @@ export default function RegisterPage() {
       return t("auth.register.errors.password");
     if (!iso2 || !/^[A-Z]{2}$/.test(iso2))
       return t("auth.register.errors.countryIso");
+    if (masterLoading) return t("auth.register.errors.loadingCountries");
+    if (masterError) return masterError;
+    if (!countrySupported) return t("auth.register.errors.countryNoMaster");
 
     return "";
   }
@@ -222,7 +281,6 @@ export default function RegisterPage() {
         phone: String(form.phone || "").trim() || undefined,
         country: countryISO2, // multi-pays safe : ISO2 canonique
         language: i18n.language || "fr",
-        role: "client",
       };
 
       await register(payload);
@@ -360,22 +418,48 @@ export default function RegisterPage() {
               ) : null}
             </p>
 
-            {/* SUGGESTIONS */}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {COUNTRY_SUGGESTIONS.map((c) => (
-                <button
-                  key={c.code}
-                  type="button"
-                  onClick={() => updateField("country", c.code)}
-                  className={`px-3 py-1.5 rounded-full text-xs border transition ${
-                    countryISO2 === c.code
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
-                  }`}
-                >
-                  {c.name}
-                </button>
-              ))}
+            {/* SUGGESTED PAYS COUVERTS */}
+            <div className="mt-3">
+              {masterLoading ? (
+                <p className="text-xs text-slate-500">
+                  {t("auth.register.countriesLoading")}
+                </p>
+              ) : masterError ? (
+                <p className="text-xs text-red-600">{masterError}</p>
+              ) : masterOptions.length ? (
+                <>
+                  <p className="text-xs text-slate-500">
+                    {t("auth.register.countriesHint", {
+                      count: masterOptions.length,
+                    })}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {masterOptions.map((c) => (
+                      <button
+                        key={c.code}
+                        type="button"
+                        onClick={() => updateField("country", c.code)}
+                        className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                          countryISO2 === c.code
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                        }`}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  {t("auth.register.countriesEmpty")}
+                </p>
+              )}
+              {!masterLoading && !masterError && countryISO2 && !countrySupported && (
+                <p className="text-xs text-red-600 mt-2">
+                  {t("auth.register.errors.countryNoMaster")}
+                </p>
+              )}
             </div>
 
             <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
@@ -424,10 +508,10 @@ export default function RegisterPage() {
           {/* SUBMIT */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || masterLoading || Boolean(masterError)}
             className={`w-full py-2.5 text-white font-semibold rounded-xl transition flex items-center justify-center shadow-sm
               ${
-                loading
+                loading || masterLoading || Boolean(masterError)
                   ? "bg-blue-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
               }`}

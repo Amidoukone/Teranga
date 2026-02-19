@@ -1,6 +1,7 @@
 'use strict';
 
 const ImageKit = require('imagekit');
+const logger = require('../utils/logger');
 
 const isConfigured = Boolean(
   process.env.IMAGEKIT_PUBLIC_KEY &&
@@ -9,7 +10,7 @@ const isConfigured = Boolean(
 );
 
 if (!isConfigured) {
-  console.warn(
+  logger.warn(
     '⚠️ ImageKit: variables manquantes. ' +
       'Assurez-vous que IMAGEKIT_PUBLIC_KEY, IMAGEKIT_PRIVATE_KEY et IMAGEKIT_URL_ENDPOINT sont définies.'
   );

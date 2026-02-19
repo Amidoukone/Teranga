@@ -17,6 +17,8 @@ import {
 } from '../utils/labels';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
+import { notify } from '../utils/notify';
+import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 // ============================================================================
 // 🌍 FILE_BASE — Standard Teranga (Render / Netlify / CDN / Multi-pays SAFE)
@@ -41,11 +43,56 @@ function isPdf(path = '') {
   return /\.pdf($|\?)/i.test(path);
 }
 
+function getPropertyTypeFieldConfig(type, t) {
+  if (type === 'land') {
+    return {
+      showSurface: true,
+      showRooms: false,
+      surfaceLabel: t('propertiesPage.form.dynamic.landSurfaceLabel'),
+      surfacePlaceholder: t('propertiesPage.form.dynamic.landSurfacePlaceholder'),
+      roomsLabel: t('propertiesPage.form.labels.rooms'),
+      roomsPlaceholder: t('propertiesPage.form.placeholders.rooms'),
+    };
+  }
+
+  if (type === 'commercial') {
+    return {
+      showSurface: true,
+      showRooms: true,
+      surfaceLabel: t('propertiesPage.form.dynamic.commercialSurfaceLabel'),
+      surfacePlaceholder: t('propertiesPage.form.placeholders.surface'),
+      roomsLabel: t('propertiesPage.form.dynamic.commercialRoomsLabel'),
+      roomsPlaceholder: t('propertiesPage.form.dynamic.commercialRoomsPlaceholder'),
+    };
+  }
+
+  if (type === 'automobile') {
+    return {
+      showSurface: true,
+      showRooms: true,
+      surfaceLabel: t('propertiesPage.form.dynamic.automobileSurfaceLabel'),
+      surfacePlaceholder: t('propertiesPage.form.dynamic.automobileSurfacePlaceholder'),
+      roomsLabel: t('propertiesPage.form.dynamic.automobileRoomsLabel'),
+      roomsPlaceholder: t('propertiesPage.form.dynamic.automobileRoomsPlaceholder'),
+    };
+  }
+
+  return {
+    showSurface: true,
+    showRooms: true,
+    surfaceLabel: t('propertiesPage.form.labels.surface'),
+    surfacePlaceholder: t('propertiesPage.form.placeholders.surface'),
+    roomsLabel: t('propertiesPage.form.labels.rooms'),
+    roomsPlaceholder: t('propertiesPage.form.placeholders.rooms'),
+  };
+}
+
 // ============================================================================
 // 🧩 PAGE PRINCIPALE
 // ============================================================================
 export default function PropertiesPage() {
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   // --------------------------------------------------------------------------
   // STATE
   // --------------------------------------------------------------------------
@@ -66,6 +113,7 @@ export default function PropertiesPage() {
   const [previewUrls, setPreviewUrls] = useState([]);
   const [editId, setEditId] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Affichage formulaire persisté
   const [showForm, setShowForm] = useState(() => {
@@ -132,7 +180,7 @@ export default function PropertiesPage() {
       setProperties(props || []);
     } catch (e) {
       console.error('❌ load properties:', e);
-      alert(t('propertiesPage.alerts.loadError'));
+      notify(t('propertiesPage.alerts.loadError'));
     }
   }
 
@@ -153,6 +201,7 @@ export default function PropertiesPage() {
   // --------------------------------------------------------------------------
   async function handleSubmit(e) {
     if (e?.preventDefault) e.preventDefault();
+    if (isSubmitting) return;
 
     const payload = {
       ...form,
@@ -163,13 +212,16 @@ export default function PropertiesPage() {
     };
 
     try {
+      setIsSubmitting(true);
       await createProperty(payload, files);
-      alert(t('propertiesPage.alerts.createSuccess'));
+      notify(t('propertiesPage.alerts.createSuccess'));
       resetForm();
-      load();
+      await load();
     } catch (e) {
       console.error('❌ create property:', e);
-      alert(t('propertiesPage.alerts.createError'));
+      notify(t('propertiesPage.alerts.createError'));
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -177,7 +229,10 @@ export default function PropertiesPage() {
   // UPDATE
   // --------------------------------------------------------------------------
   async function handleUpdate(id) {
+    if (isSubmitting) return;
+
     try {
+      setIsSubmitting(true);
       const formData = new FormData();
       Object.entries(form).forEach(([k, v]) => {
         if (v !== undefined && v !== null) formData.append(k, v);
@@ -188,12 +243,14 @@ export default function PropertiesPage() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      alert(t('propertiesPage.alerts.updateSuccess'));
+      notify(t('propertiesPage.alerts.updateSuccess'));
       resetForm();
-      load();
+      await load();
     } catch (e) {
       console.error('❌ update property:', e);
-      alert(t('propertiesPage.alerts.updateError'));
+      notify(t('propertiesPage.alerts.updateError'));
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -203,18 +260,19 @@ export default function PropertiesPage() {
   async function handleDelete(id, createdAt) {
     const created = new Date(createdAt).getTime();
     if (Date.now() - created > 3600 * 1000) {
-      alert(t('propertiesPage.alerts.deleteNotAllowed'));
+      notify(t('propertiesPage.alerts.deleteNotAllowed'));
       return;
     }
 
-    if (!window.confirm(t('propertiesPage.alerts.deleteConfirm'))) return;
+    const ok = await confirmDelete("property");
+    if (!ok) return;
 
     try {
       await deleteProperty(id);
       load();
     } catch (e) {
       console.error('❌ delete property:', e);
-      alert(t('propertiesPage.alerts.deleteError'));
+      notify(t('propertiesPage.alerts.deleteError'));
     }
   }
 
@@ -404,6 +462,7 @@ export default function PropertiesPage() {
             handleUpdate={handleUpdate}
             resetForm={resetForm}
             editId={editId}
+            isSubmitting={isSubmitting}
           />
         )}
 
@@ -682,6 +741,7 @@ function PropertyForm({
   handleUpdate,
   resetForm,
   editId,
+  isSubmitting,
 }) {
   const { t } = useTranslation();
 
@@ -706,6 +766,7 @@ function PropertyForm({
           previewUrls={previewUrls}
           setShowPreview={setShowPreview}
           handleSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
         />
       ) : (
         <PropertyEditor
@@ -717,13 +778,20 @@ function PropertyForm({
           handleUpdate={handleUpdate}
           resetForm={resetForm}
           setShowPreview={setShowPreview}
+          isSubmitting={isSubmitting}
         />
       )}
     </div>
   );
 }
 
-function PropertyPreview({ form, previewUrls, setShowPreview, handleSubmit }) {
+function PropertyPreview({
+  form,
+  previewUrls,
+  setShowPreview,
+  handleSubmit,
+  isSubmitting,
+}) {
   const { t } = useTranslation();
   const surfaceValue = form.surfaceArea || t('common.dash');
   const roomsValue = form.roomCount
@@ -793,13 +861,15 @@ function PropertyPreview({ form, previewUrls, setShowPreview, handleSubmit }) {
       <div className="flex flex-col sm:flex-row gap-3 mt-5 justify-end">
         <button
           onClick={() => setShowPreview(false)}
+          disabled={isSubmitting}
           className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 text-sm font-semibold"
         >
           🔙 {t('propertiesPage.preview.edit')}
         </button>
         <button
           onClick={handleSubmit}
-          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold"
+          disabled={isSubmitting}
+          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-sm font-semibold"
         >
           ✅ {t('propertiesPage.preview.create')}
         </button>
@@ -817,8 +887,10 @@ function PropertyEditor({
   handleUpdate,
   resetForm,
   setShowPreview,
+  isSubmitting,
 }) {
   const { t } = useTranslation();
+  const fieldConfig = getPropertyTypeFieldConfig(form.type, t);
 
   return (
     <form
@@ -851,7 +923,16 @@ function PropertyEditor({
         </label>
         <select
           value={form.type}
-          onChange={(e) => setForm({ ...form, type: e.target.value })}
+          onChange={(e) => {
+            const nextType = e.target.value;
+            const nextConfig = getPropertyTypeFieldConfig(nextType, t);
+            setForm((prev) => ({
+              ...prev,
+              type: nextType,
+              surfaceArea: nextConfig.showSurface ? prev.surfaceArea : '',
+              roomCount: nextConfig.showRooms ? prev.roomCount : '',
+            }));
+          }}
           required
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
         >
@@ -906,35 +987,39 @@ function PropertyEditor({
         />
       </div>
 
-      {/* Surface */}
-      <div className="w-full">
-        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-          {t('propertiesPage.form.labels.surface')}
-        </label>
-        <input
-          type="number"
-          step="0.01"
-          placeholder={t('propertiesPage.form.placeholders.surface')}
-          value={form.surfaceArea}
-          onChange={(e) => setForm({ ...form, surfaceArea: e.target.value })}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      {/* Surface / Kilométrage */}
+      {fieldConfig.showSurface && (
+        <div className="w-full">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+            {fieldConfig.surfaceLabel}
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            placeholder={fieldConfig.surfacePlaceholder}
+            value={form.surfaceArea}
+            onChange={(e) => setForm({ ...form, surfaceArea: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      )}
 
-      {/* Nombre de pièces */}
-      <div className="w-full">
-        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-          {t('propertiesPage.form.labels.rooms')}
-        </label>
-        <input
-          type="number"
-          step="1"
-          placeholder={t('propertiesPage.form.placeholders.rooms')}
-          value={form.roomCount}
-          onChange={(e) => setForm({ ...form, roomCount: e.target.value })}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      {/* Pièces / Espaces / Places */}
+      {fieldConfig.showRooms && (
+        <div className="w-full">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+            {fieldConfig.roomsLabel}
+          </label>
+          <input
+            type="number"
+            step="1"
+            placeholder={fieldConfig.roomsPlaceholder}
+            value={form.roomCount}
+            onChange={(e) => setForm({ ...form, roomCount: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      )}
 
       {/* Description */}
       <div className="sm:col-span-2">
@@ -995,6 +1080,7 @@ function PropertyEditor({
           <button
             type="button"
             onClick={resetForm}
+            disabled={isSubmitting}
             className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-300 hover:bg-gray-400 transition"
           >
             {t('propertiesPage.form.cancel')}
@@ -1002,7 +1088,8 @@ function PropertyEditor({
         )}
         <button
           type="submit"
-          className="px-5 py-2.5 text-sm sm:text-base font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
+          disabled={isSubmitting && Boolean(editId)}
+          className="px-5 py-2.5 text-sm sm:text-base font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-400 disabled:cursor-not-allowed transition"
         >
           {editId
             ? `💾 ${t('propertiesPage.form.save')}`

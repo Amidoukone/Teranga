@@ -9,6 +9,7 @@ import { applyLabels, SERVICE_TYPES, SERVICE_STATUSES } from '../utils/labels';
 import PaginationBar from '../components/PaginationBar';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
+import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 const DEFAULT_FILTERS = {
   q: '',
@@ -27,6 +28,7 @@ const DEFAULT_FILTERS = {
 ============================================================ */
 export default function ServicesPage() {
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   const [services, setServices] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [properties, setProperties] = useState([]);
@@ -357,7 +359,8 @@ const roleVariant = useMemo(() => {
   }
 
   async function handleDelete(id) {
-    if (!window.confirm(t("services.alerts.deleteConfirm"))) return;
+    const ok = await confirmDelete("service");
+    if (!ok) return;
     try {
       await api.delete(`/services/${id}`, authHeaders);
       await loadServices();

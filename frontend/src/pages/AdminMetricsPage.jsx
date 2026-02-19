@@ -56,6 +56,8 @@ export default function AdminMetricsPage() {
 
   const totals = metrics?.totals || {};
   const durations = metrics?.durationsMs || {};
+  const sloLatency = metrics?.slo?.latency || {};
+  const frontendErrors = metrics?.frontendErrors || { total: 0, recent: [] };
 
   const statusEntries = useMemo(() => toEntries(metrics?.byStatus), [metrics]);
   const methodEntries = useMemo(() => toEntries(metrics?.byMethod), [metrics]);
@@ -98,7 +100,7 @@ export default function AdminMetricsPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <p className="text-xs font-semibold uppercase text-gray-500">
                 {t('adminMetricsPage.cards.totalRequests')}
@@ -126,6 +128,31 @@ export default function AdminMetricsPage() {
                 {t('adminMetricsPage.cards.maxLatency', {
                   value: formatMs(durations.max || 0),
                 })}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase text-gray-500">
+                SLO latency
+              </p>
+              <p className="mt-2 text-2xl font-extrabold text-gray-900">
+                {Number.isFinite(sloLatency.currentCompliancePct)
+                  ? `${sloLatency.currentCompliancePct}%`
+                  : 'n/a'}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                target {sloLatency.targetCompliancePct || 95}% ≤{' '}
+                {formatMs(sloLatency.targetMs || 800)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase text-gray-500">
+                Frontend errors
+              </p>
+              <p className="mt-2 text-2xl font-extrabold text-gray-900">
+                {formatNumber(frontendErrors.total || 0)}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                last {formatNumber(frontendErrors.recent?.length || 0)} events
               </p>
             </div>
           </div>
@@ -189,7 +216,7 @@ export default function AdminMetricsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <h2 className="text-sm font-semibold text-gray-900">
                 {t('adminMetricsPage.sections.recentErrors')}
@@ -243,6 +270,33 @@ export default function AdminMetricsPage() {
                       })}
                     </p>
                     <p className="text-xs text-amber-500">
+                      {entry.timestamp}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <h2 className="text-sm font-semibold text-gray-900">
+                Frontend errors (recent)
+              </h2>
+              <div className="mt-3 space-y-3 text-sm text-gray-600">
+                {frontendErrors.recent?.length === 0 && (
+                  <p>{t('adminMetricsPage.emptyValue')}</p>
+                )}
+                {(frontendErrors.recent || []).slice(0, 12).map((entry, idx) => (
+                  <div
+                    key={`${entry.requestId || 'fe'}-${idx}`}
+                    className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2"
+                  >
+                    <p className="font-semibold text-rose-700">
+                      {entry.name || 'Error'}: {entry.message || 'Unknown'}
+                    </p>
+                    <p className="truncate">
+                      {entry.path || '/'}
+                    </p>
+                    <p className="text-xs text-rose-500">
                       {entry.timestamp}
                     </p>
                   </div>

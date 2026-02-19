@@ -3,6 +3,7 @@
 const { Activity, User } = require("../../models");
 const { Op } = require("sequelize");
 const { getPagination } = require("../utils/pagination");
+const logger = require("../utils/logger");
 
 function toSafeInt(v) {
   if (v === null || v === undefined || v === "") return null;
@@ -27,7 +28,7 @@ function toDateOrNull(value) {
 exports.list = async (req, res) => {
   try {
     if (!req.user?.id) {
-      return res.status(401).json({ error: "Non authentifiÃ©" });
+      return res.status(401).json({ error: "Non authentifie" });
     }
 
     const { limit, offset, page } = getPagination(req, 20, 100);
@@ -71,9 +72,10 @@ exports.list = async (req, res) => {
       pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
-    console.error("âŒ list activities:", e);
+    logger.error({ err: e, userId: req.user?.id || null }, "list activities failed");
     return res.status(500).json({
-      error: "Erreur lors de la rÃ©cupÃ©ration des activitÃ©s",
+      error: "Erreur lors de la recuperation des activites",
     });
   }
 };
+

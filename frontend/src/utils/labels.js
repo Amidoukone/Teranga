@@ -77,6 +77,7 @@ const PROPERTY_TYPES_BASE = {
   house: 'Maison',
   apartment: 'Appartement',
   land: 'Terrain',
+  automobile: 'Automobile',
   commercial: 'Local commercial',
 };
 export const PROPERTY_TYPES = createLabelMap(

@@ -31,9 +31,15 @@ const userBaseSchema = Joi.object({
 const createUserSchema = userBaseSchema;
 const updateUserSchema = userBaseSchema;
 const createAgentSchema = userBaseSchema;
+const manualPasswordResetSchema = Joi.object({
+  newPassword: Joi.string().min(8).required(),
+  reason: Joi.string().allow('', null).max(500).trim(),
+  invalidateSessions: Joi.boolean().default(true),
+});
 
 module.exports = {
   createUserSchema,
   updateUserSchema,
   createAgentSchema,
+  manualPasswordResetSchema,
 };

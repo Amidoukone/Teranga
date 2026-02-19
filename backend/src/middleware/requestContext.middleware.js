@@ -21,9 +21,10 @@ module.exports = function requestContext(req, res, next) {
         statusCode: res.statusCode,
         durationMs: Number(durationMs.toFixed(2)),
       },
-      '✅ Requête traitée'
+      'http.request.completed'
     );
   });
 
   next();
 };
+

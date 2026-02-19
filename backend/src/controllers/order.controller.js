@@ -1,7 +1,7 @@
 'use strict';
 
 const { Op, col } = require('sequelize');
-const { Order, OrderItem, User, Product, Transaction } = require('../../models'); // ✅ Transaction + Product
+const { Order, OrderItem, User, Product } = require('../../models');
 
 const {
   ORDER_STATUSES,
@@ -14,10 +14,11 @@ const {
 } = require('../utils/labels');
 const { getPagination } = require('../utils/pagination');
 const {
-  getAdminRecipientIds,
-  computeProgress,
-} = require('../services/notification.service');
-const { emitEvent } = require('../services/activity.service');
+  notifyOrderCreated,
+  notifyOrderStatusUpdated,
+  syncOrderPaymentTransaction,
+} = require('../services/orderLifecycle.service');
+const logger = require('../utils/logger');
 
 // ✅ Geo-scope (model-aware)
 const {
@@ -520,42 +521,11 @@ exports.create = async (req, res) => {
       ],
     });
 
-    try {
-      const adminIds = await getAdminRecipientIds({
-        countryId: order.countryId,
-        regionId: order.regionId,
-      });
-      const recipients = [...adminIds, order.userId];
-
-      await emitEvent({
-        recipients,
-        actorId: req.user.id,
-        entityType: 'order',
-        entityId: order.id,
-        action: 'created',
-        title: 'Nouvelle commande',
-        message: order.code
-          ? `Commande ${order.code}`
-          : `Commande #${order.id}`,
-        progress: computeProgress('order', order.status),
-        entityStatus: order.status,
-        metadata: {
-          orderId: order.id,
-          code: order.code || null,
-          total: order.total || null,
-          currency: order.currency || null,
-        },
-        countryId: order.countryId,
-        regionId: order.regionId,
-        notificationMode: 'create',
-      });
-    } catch (err) {
-      console.warn('⚠️ Notification commande (create) échouée:', err?.message || err);
-    }
+    await notifyOrderCreated({ actorId: req.user.id, order });
 
     return res.status(201).json({ order: withLabels(created) });
   } catch (e) {
-    console.error('❌ create order:', e);
+    logger.error({ err: e }, 'order.create.failed');
     const msg = e?.message || '';
     if (msg.toLowerCase().includes('stock insuffisant')) {
       return res.status(400).json({ error: msg });
@@ -627,7 +597,7 @@ exports.list = async (req, res) => {
       pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
-    console.error('❌ list orders:', e);
+    logger.error({ err: e }, 'order.list.failed');
     return res
       .status(500)
       .json({ error: 'Erreur lors de la récupération des commandes.' });
@@ -668,7 +638,7 @@ exports.detail = async (req, res) => {
 
     return res.json({ order: withLabels(order) });
   } catch (e) {
-    console.error('❌ detail order:', e);
+    logger.error({ err: e }, 'order.detail.failed');
     return res
       .status(500)
       .json({ error: 'Erreur lors de la récupération de la commande.' });
@@ -753,82 +723,13 @@ exports.update = async (req, res) => {
     syncPaymentStatus(order);
     await order.save();
 
-    try {
-      const adminIds = await getAdminRecipientIds({
-        countryId: order.countryId,
-        regionId: order.regionId,
-      });
-      const recipients = [...adminIds, order.userId];
-
-      await emitEvent({
-        recipients,
-        actorId: req.user.id,
-        entityType: 'order',
-        entityId: order.id,
-        action: 'status_updated',
-        title: 'Statut commande mis à jour',
-        message: order.code ? `Commande ${order.code}` : `Commande #${order.id}`,
-        progress: computeProgress('order', order.status),
-        entityStatus: order.status,
-        metadata: {
-          orderId: order.id,
-          code: order.code || null,
-          total: order.total || null,
-          currency: order.currency || null,
-        },
-        countryId: order.countryId,
-        regionId: order.regionId,
-        notificationMode: 'update',
-      });
-    } catch (err) {
-      console.warn('⚠️ Notification commande (status update) échouée:', err?.message || err);
-    }
+    await notifyOrderStatusUpdated({ actorId: req.user.id, order });
 
     /* ============================================================
        💳 Création / MAJ automatique de transaction
        (logique EXISTANTE conservée)
     ============================================================ */
-    if (['paid', 'delivered'].includes(order.status)) {
-      try {
-        const existingTx = await Transaction.findOne({
-          where: {
-            orderId: order.id,
-            userId: order.userId,
-            type: 'expense',
-          },
-        });
-
-        if (!existingTx) {
-          await Transaction.create(
-            filterGeoAssignmentsForModel(Transaction, {
-              userId: order.userId,
-              orderId: order.id,
-              type: 'expense',
-              amount: order.total || 0,
-              currency: order.currency || 'XOF',
-              paymentMethod: order.paymentMethod || 'inconnu',
-              description: `Paiement de la commande ${order.code || `#${order.id}`}`,
-              status: 'completed',
-              countryId: order.countryId ?? null,
-              regionId: order.regionId ?? null,
-            })
-          );
-        } else if (existingTx.status !== 'completed') {
-          existingTx.status = 'completed';
-
-          if (existingTx.countryId == null && order.countryId != null) {
-            existingTx.countryId = order.countryId;
-          }
-          if (existingTx.regionId == null && order.regionId != null) {
-            existingTx.regionId = order.regionId;
-          }
-
-          await existingTx.save();
-        }
-      } catch (err) {
-        console.error('⚠️ Erreur transaction automatique commande:', err);
-      }
-    }
+    await syncOrderPaymentTransaction({ order });
 
     const updated = await Order.findOne({
       where: applyOrderScopeWhere(
@@ -848,7 +749,7 @@ exports.update = async (req, res) => {
 
     return res.json({ order: withLabels(updated) });
   } catch (e) {
-    console.error('❌ update order:', e);
+    logger.error({ err: e }, 'order.update.failed');
     return res
       .status(500)
       .json({ error: 'Erreur lors de la mise à jour de la commande.' });
@@ -906,7 +807,7 @@ exports.remove = async (req, res) => {
     await order.destroy();
     return res.json({ message: 'Commande supprimée avec succès.' });
   } catch (e) {
-    console.error('❌ remove order:', e);
+    logger.error({ err: e }, 'order.remove.failed');
     return res
       .status(500)
       .json({ error: 'Erreur lors de la suppression de la commande.' });

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation, Trans } from "react-i18next";
+import { notify } from '../utils/notify';
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -360,7 +361,7 @@ export default function HomePage() {
               onSubmit={(e) => {
                 e.preventDefault();
                 // Même comportement que ta version actuelle : simple alert côté client.
-                alert(t("homePage.contact.form.success"));
+                notify(t("homePage.contact.form.success"));
               }}
               className="
                 bg-slate-50 border border-slate-200/70 rounded-3xl p-7 sm:p-8
@@ -482,3 +483,4 @@ export default function HomePage() {
     </div>
   );
 }
+

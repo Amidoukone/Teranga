@@ -19,6 +19,7 @@ import {
 import { isGlobalAdminUser } from '../utils/role';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
+import { notify } from '../utils/notify';
 
 /* ============================================================
    🎨 Helpers de style pour les statuts (Badges / Timeline)
@@ -192,7 +193,7 @@ export default function OrdersPage() {
       );
     } catch (e) {
       console.error('? Erreur chargement commandes:', e);
-      alert(t("orders.alerts.loadError"));
+      notify(t("orders.alerts.loadError"));
       setOrders([]);
       setPagination({ page, limit: pageSize, total: 0 });
     } finally {
@@ -323,7 +324,7 @@ export default function OrdersPage() {
         unitPrice: '',
       });
 
-      alert(t("orders.alerts.createSuccess"));
+      notify(t("orders.alerts.createSuccess"));
 
       // Redirection automatique vers la commande
       const id = newOrder?.id || newOrder?.order?.id;
@@ -334,7 +335,7 @@ export default function OrdersPage() {
       }
     } catch (err) {
       console.error('❌ Erreur création commande:', err);
-      alert(t("orders.alerts.createError"));
+      notify(t("orders.alerts.createError"));
     } finally {
       setCreating(false);
     }
@@ -834,4 +835,5 @@ export default function OrdersPage() {
     </div>
   );
 }
+
 

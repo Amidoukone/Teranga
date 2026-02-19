@@ -58,6 +58,10 @@ const en = {
       admin: "Administration",
     },
   },
+  footer: {
+    copyright:
+      "© {{year}} <brand>Teranga Diaspora</brand>. All rights reserved.",
+  },
   auth: {
     login: {
       kicker: "Secure area",
@@ -98,6 +102,9 @@ const en = {
       countryDetected: "Detected:",
       regionInfo:
         "Regional account? Contact the admin or the master of your country. Public registration is limited to country scope only.",
+      countriesLoading: "Checking which countries are available...",
+      countriesHint: "Currently supported countries: {{count}}",
+      countriesEmpty: "No countries are covered at the moment.",
       passwordLabel: "Password",
       passwordPlaceholder: "••••••••",
       passwordHide: "Hide password",
@@ -114,6 +121,11 @@ const en = {
         email: "Invalid email address.",
         password: "Password must be at least 8 characters.",
         countryIso: "Please provide a valid country (ISO2: ML, SN, CI...).",
+        loadingCountries: "Still checking available countries…",
+        countriesUnavailable:
+          "Cannot confirm country coverage right now, please try again shortly.",
+        countryNoMaster:
+          "Our services are not available yet in this country.",
         generic: "An error occurred. Please check your information.",
       },
     },
@@ -132,6 +144,28 @@ const en = {
     locationLabel: "Location",
     countryLabel: "Country",
     regionLabel: "Region",
+    confirmModal: {
+      title: "Confirmation",
+      message: "Do you want to continue?",
+      confirm: "Confirm",
+      cancel: "Cancel",
+      delete: "Delete {{entity}}?",
+      deleteNamed: "Delete {{entity}} \"{{name}}\"?",
+      entities: {
+        service: "this service",
+        category: "this category",
+        evidence: "this evidence",
+        property: "this property",
+        project: "this project",
+        projectDocument: "this document",
+        projectPhase: "this phase",
+        user: "this user",
+        orderItem: "this item",
+        product: "this product",
+        country: "this country",
+        region: "this region",
+      },
+    },
   },
   dashboard: {
     loading: "Loading dashboard…",
@@ -321,7 +355,6 @@ const en = {
       updateSuccess: "Service updated successfully!",
       updateError: "Error updating service.",
       deleteSuccess: "Service deleted successfully.",
-      deleteConfirm: "Confirm deletion of this service?",
       deleteError: "Error deleting service ❌",
       noEditTarget: "No service to update.",
     },
@@ -406,7 +439,6 @@ const en = {
       createError: "Error creating the project.",
       updateSuccess: "Project updated successfully.",
       updateError: "Error updating the project.",
-      deleteConfirm: "Delete this project?",
       deleteSuccess: "Project deleted.",
       deleteError: "Error deleting the project.",
       assignSuccess: "Agent assigned successfully.",
@@ -513,7 +545,6 @@ const en = {
       },
       alerts: {
         saveError: "Error while saving.",
-        deleteConfirm: "Delete this phase?",
         deleteError: "Error deleting phase.",
       },
     },
@@ -546,7 +577,6 @@ const en = {
       },
       alerts: {
         uploadError: "Error uploading documents.",
-        deleteConfirm: "Delete this document?",
         deleteError: "Error deleting.",
       },
     },
@@ -765,8 +795,6 @@ const en = {
       evidenceAdded: "Evidence added.",
       evidenceUploadError: "Error uploading files.",
       evidenceDeleteError: "Error deleting evidence.",
-      confirmDeleteItem: "Delete this item?",
-      confirmDeleteEvidence: "Delete this evidence?",
     },
     evidences: {
       hintDeleteWindow:
@@ -1055,6 +1083,17 @@ const en = {
         description:
           "Add details: floor, view, condition, amenities...",
       },
+      dynamic: {
+        landSurfaceLabel: "Land area (m²)",
+        landSurfacePlaceholder: "e.g., 600",
+        commercialSurfaceLabel: "Commercial area (m²)",
+        commercialRoomsLabel: "Number of spaces/offices",
+        commercialRoomsPlaceholder: "e.g., 4",
+        automobileSurfaceLabel: "Mileage (km)",
+        automobileSurfacePlaceholder: "e.g., 45000",
+        automobileRoomsLabel: "Number of seats",
+        automobileRoomsPlaceholder: "e.g., 5",
+      },
       filesLabel: "Photos / documents (jpg, png, pdf)",
       filesSelected: "{{count}} file selected.",
       filesSelected_other: "{{count}} files selected.",
@@ -1117,7 +1156,6 @@ const en = {
       updateSuccess: "Property updated",
       updateError: "Error updating.",
       deleteNotAllowed: "Deletion not allowed (time window expired)",
-      deleteConfirm: "Confirm deletion?",
       deleteError: "Error deleting.",
     },
   },
@@ -1133,6 +1171,7 @@ const en = {
       cancel: "Cancel",
       update: "💾 Update",
       create: "➕ Create",
+      resetPassword: "🔐 Reset password",
     },
     badges: {
       master: "MASTER",
@@ -1211,7 +1250,12 @@ const en = {
       submitError: "Error submitting form",
       masterCannotEdit: "⛔ A MASTER cannot edit an admin.",
       masterCannotDelete: "⛔ A MASTER cannot delete an admin.",
-      deleteConfirm: "Delete this user?",
+      masterCannotResetAdmin: "⛔ A MASTER cannot reset an admin password.",
+      resetSuccess:
+        "✅ Password reset completed. Share the temporary password through a secure channel.",
+      resetPasswordMin: "Password must be at least 8 characters.",
+      resetPasswordMismatch: "Passwords do not match.",
+      resetAuditError: "Unable to load reset audit history.",
     },
     countUsers: "{{count}} user",
     countUsers_other: "{{count}} users",
@@ -1227,10 +1271,24 @@ const en = {
       emptyValue: "—",
       edit: "Edit",
       delete: "Delete",
+      resetPassword: "Reset password",
       lockedTitle: "Locked for MASTER",
       protected: "(admin protected)",
       results: "{{count}} result",
       results_other: "{{count}} results",
+    },
+    resetPanel: {
+      title: "Manual password reset",
+      close: "Close",
+      newPassword: "Temporary new password (min 8)",
+      confirmPassword: "Confirm temporary password",
+      reason: "Reason / ticket (optional)",
+      submit: "Confirm reset",
+      submitting: "Submitting...",
+      auditTitle: "Manual reset history",
+      auditEmpty: "No manual reset recorded for this user.",
+      reasonLabel: "Reason:",
+      revokedSessions: "{{count}} revoked session(s)",
     },
   },
   adminAgentsPage: {
@@ -1392,7 +1450,6 @@ const en = {
       createError: "Error creating the property.",
       updateSuccess: "Property updated successfully.",
       updateError: "Error updating the property.",
-      deleteConfirm: "Delete this property?",
       deleteError: "Error deleting the property.",
     },
     client: {
@@ -1426,6 +1483,17 @@ const en = {
         surface: "Area",
         rooms: "Number of rooms",
         description: "Additional details about the property…",
+      },
+      dynamic: {
+        landSurfaceLabel: "Land area (m²)",
+        landSurfacePlaceholder: "Area",
+        commercialSurfaceLabel: "Commercial area (m²)",
+        commercialRoomsLabel: "Number of spaces/offices",
+        commercialRoomsPlaceholder: "Number of spaces/offices",
+        automobileSurfaceLabel: "Mileage (km)",
+        automobileSurfacePlaceholder: "Mileage in km",
+        automobileRoomsLabel: "Number of seats",
+        automobileRoomsPlaceholder: "Number of seats",
       },
       filesLabel: "📁 Photos & documents (JPG, PNG, PDF)",
       previewAlt: "Preview {{index}}",
@@ -1497,7 +1565,6 @@ const en = {
     alerts: {
       updated: "✅ Category updated.",
       created: "✅ Category added.",
-      deleteConfirm: "Delete this category?",
     },
   },
   adminMetricsPage: {
@@ -2118,7 +2185,6 @@ const en = {
       updateSuccess: "Product updated",
       createSuccess: "Product added!",
       saveError: "Error saving.",
-      deleteConfirm: "Delete this product?",
       deleteSuccess: "Product deleted!",
       deleteError: "Error deleting.",
     },
@@ -2462,7 +2528,6 @@ const en = {
       upload: "Error during upload.",
       delete: "Error deleting evidence.",
     },
-    confirmDelete: "Delete this evidence?",
     warnings: {
       deleteWindow:
         "You can delete your own evidences within 1 hour after upload.",
@@ -2780,6 +2845,7 @@ const en = {
         house: "House",
         apartment: "Apartment",
         land: "Land",
+        automobile: "Automobile",
         commercial: "Commercial space",
       },
       statuses: {

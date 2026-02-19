@@ -68,6 +68,7 @@ router.post(
 
       // Chargement dynamique pour éviter les imports circulaires
       const { Project, User } = require('../../models');
+const logger = require('../utils/logger');
 
       // ✅ Vérifier l’existence du projet
       const project = await Project.findByPk(pid);
@@ -156,7 +157,7 @@ router.post(
 
       res.json({ message: msg, project: updated });
     } catch (e) {
-      console.error('❌ Erreur assignation projet:', e);
+      logger.error('❌ Erreur assignation projet:', e);
       res
         .status(500)
         .json({ error: "Erreur lors de l’assignation de l’agent au projet." });

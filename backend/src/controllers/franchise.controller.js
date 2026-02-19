@@ -1,7 +1,9 @@
 'use strict';
 
-const { Franchise, Country, Region } = require('../../models');
+const { Op } = require('sequelize');
+const { Franchise, Country, Region, User } = require('../../models');
 const { getUserGeoScope, isGlobalAdmin, canAccessGeoResource } = require('../utils/geoScope');
+const logger = require('../utils/logger');
 
 /* ======================================================
    🧩 Helpers
@@ -71,10 +73,90 @@ exports.list = async (req, res) => {
 
     return res.json({ franchises: rows });
   } catch (e) {
-    console.error('❌ list franchises:', e);
+    logger.error('❌ list franchises:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la récupération des franchises' });
+  }
+};
+
+exports.listMasterCountries = async (req, res) => {
+  try {
+    const franchiseMasters = await Franchise.findAll({
+      where: {
+        type: 'MASTER',
+        status: 'active',
+      },
+      attributes: ['countryId'],
+    });
+
+    const scopedAdmins = await User.findAll({
+      where: {
+        role: 'admin',
+        [Op.or]: [{ countryId: { [Op.not]: null } }, { regionId: { [Op.not]: null } }],
+      },
+      attributes: ['countryId', 'regionId'],
+    });
+
+    const countryIdSet = new Set();
+    const orphanRegionIds = [];
+
+    for (const item of franchiseMasters) {
+      const cid = toSafeInt(item?.countryId);
+      if (cid) countryIdSet.add(cid);
+    }
+
+    for (const admin of scopedAdmins) {
+      const cid = toSafeInt(admin?.countryId);
+      if (cid) {
+        countryIdSet.add(cid);
+        continue;
+      }
+      const rid = toSafeInt(admin?.regionId);
+      if (rid) orphanRegionIds.push(rid);
+    }
+
+    if (orphanRegionIds.length) {
+      const regions = await Region.findAll({
+        where: { id: { [Op.in]: orphanRegionIds } },
+        attributes: ['countryId'],
+      });
+      for (const region of regions) {
+        const cid = toSafeInt(region?.countryId);
+        if (cid) countryIdSet.add(cid);
+      }
+    }
+
+    if (!countryIdSet.size) {
+      return res.json({ countries: [] });
+    }
+
+    const countries = await Country.findAll({
+      where: {
+        id: { [Op.in]: Array.from(countryIdSet) },
+        isActive: true,
+      },
+      attributes: ['id', 'name', 'isoCode'],
+      order: [['name', 'ASC']],
+    });
+
+    const uniqueByIso = new Map();
+    for (const country of countries) {
+      const iso = String(country?.isoCode || '').toUpperCase();
+      if (!iso || uniqueByIso.has(iso)) continue;
+      uniqueByIso.set(iso, {
+        id: country.id,
+        name: country.name,
+        isoCode: iso,
+      });
+    }
+
+    return res.json({ countries: Array.from(uniqueByIso.values()) });
+  } catch (e) {
+    logger.error('❌ list master countries:', e);
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la récupération des pays disponibles' });
   }
 };
 
@@ -186,7 +268,7 @@ exports.create = async (req, res) => {
 
     return res.status(201).json({ franchise: withIncludes || created });
   } catch (e) {
-    console.error('❌ create franchise:', e);
+    logger.error('❌ create franchise:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la création de la franchise' });
@@ -291,7 +373,7 @@ exports.update = async (req, res) => {
 
     return res.json({ franchise: withIncludes || franchise });
   } catch (e) {
-    console.error('❌ update franchise:', e);
+    logger.error('❌ update franchise:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la mise à jour de la franchise' });

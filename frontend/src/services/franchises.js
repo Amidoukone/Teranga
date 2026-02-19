@@ -17,10 +17,16 @@ export async function updateFranchise(id, payload) {
   return data?.franchise || data;
 }
 
+export async function getMasterCountries() {
+  const { data } = await api.get('/franchises/masters');
+  return data?.countries || [];
+}
+
 const FranchisesService = {
   getFranchises,
   createFranchise,
   updateFranchise,
+  getMasterCountries,
 };
 
 export default FranchisesService;

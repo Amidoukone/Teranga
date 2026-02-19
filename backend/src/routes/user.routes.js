@@ -10,6 +10,7 @@ const {
   createUserSchema,
   updateUserSchema,
   createAgentSchema,
+  manualPasswordResetSchema,
 } = require('../validators/user.schemas');
 
 /**
@@ -111,6 +112,21 @@ router.put(
   validateBody(updateUserSchema),
   requireGlobalAdminIfTargetRoleAdmin,
   ctrl.updateUser
+);
+
+router.post(
+  '/:id/manual-password-reset',
+  auth,
+  requireRoles('admin'),
+  validateBody(manualPasswordResetSchema),
+  ctrl.manualPasswordReset
+);
+
+router.get(
+  '/:id/manual-password-reset/audit',
+  auth,
+  requireRoles('admin'),
+  ctrl.listManualPasswordResetAudit
 );
 
 /**

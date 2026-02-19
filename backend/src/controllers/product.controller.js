@@ -11,6 +11,7 @@ const {
   isGlobalAdmin,
 } = require('../utils/geoScope');
 const { getPagination } = require('../utils/pagination');
+const logger = require('../utils/logger');
 
 /* ============================================================
    🔧 Helpers génériques
@@ -91,7 +92,7 @@ async function uploadToImageKit(file) {
 
     return { url: uploaded.url, fileId: uploaded.fileId };
   } catch (err) {
-    console.error(`❌ Erreur upload ImageKit (${file?.originalname || 'file'}):`, err);
+    logger.error(`❌ Erreur upload ImageKit (${file?.originalname || 'file'}):`, err);
     return null;
   }
 }
@@ -317,7 +318,7 @@ exports.create = async (req, res) => {
       product: withLabels(created),
     });
   } catch (e) {
-    console.error('❌ create product:', e);
+    logger.error('❌ create product:', e);
     return res.status(500).json({ error: e.message || 'Erreur serveur' });
   }
 };
@@ -379,7 +380,7 @@ exports.list = async (req, res) => {
       pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
-    console.error('❌ list products:', e);
+    logger.error('❌ list products:', e);
     return res.status(500).json({ error: 'Erreur lors de la récupération' });
   }
 };
@@ -407,7 +408,7 @@ exports.detail = async (req, res) => {
 
     return res.json({ product: withLabels(prod) });
   } catch (e) {
-    console.error('❌ detail product:', e);
+    logger.error('❌ detail product:', e);
     return res.status(500).json({ error: 'Erreur lors de la récupération' });
   }
 };
@@ -556,7 +557,7 @@ exports.update = async (req, res) => {
       product: withLabels(updated),
     });
   } catch (e) {
-    console.error('❌ update product:', e);
+    logger.error('❌ update product:', e);
     return res.status(500).json({ error: e.message || 'Erreur serveur' });
   }
 };
@@ -602,7 +603,7 @@ exports.remove = async (req, res) => {
 
     return res.json({ message: 'Produit supprimé avec succès' });
   } catch (e) {
-    console.error('❌ remove product:', e);
+    logger.error('❌ remove product:', e);
     return res.status(500).json({ error: 'Erreur lors de la suppression' });
   }
 };

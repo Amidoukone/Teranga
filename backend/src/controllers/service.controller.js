@@ -8,10 +8,10 @@ const {
   getLabel,
 } = require("../utils/labels");
 const {
-  getAdminRecipientIds,
-  computeProgress,
-} = require("../services/notification.service");
-const { emitEvent } = require("../services/activity.service");
+  notifyServiceCreated,
+  notifyServiceAssigned,
+  notifyServiceStatusUpdate,
+} = require("../services/serviceNotification.service");
 
 // 🌍 GeoScope utils (strict)
 const {
@@ -20,6 +20,7 @@ const {
   getUserGeoScope,
 } = require("../utils/geoScope");
 const { getPagination } = require("../utils/pagination");
+const logger = require('../utils/logger');
 
 /* ============================================================
    🔧 Helpers généraux
@@ -232,42 +233,21 @@ exports.create = async (req, res) => {
       ],
     });
 
-    try {
-      const adminIds = await getAdminRecipientIds({
-        countryId: resolvedCountryId,
-        regionId: resolvedRegionId,
-      });
-      const recipients = [
-        ...adminIds,
-        targetClientId,
-        full?.agent?.id ?? service.agentId,
-      ];
-
-      await emitEvent({
-        recipients,
-        actorId: req.user.id,
-        entityType: "service",
-        entityId: service.id,
-        action: "created",
-        title: "Nouveau service",
-        message: service.title ? `Service: ${service.title}` : "Service créé",
-        progress: computeProgress("service", "created"),
-        entityStatus: "created",
-        metadata: { serviceId: service.id, title: service.title || null },
-        countryId: resolvedCountryId,
-        regionId: resolvedRegionId,
-        notificationMode: "create",
-      });
-    } catch (err) {
-      console.warn("⚠️ Notification service (create) échouée:", err?.message || err);
-    }
+    await notifyServiceCreated({
+      actorId: req.user.id,
+      service,
+      fullService: full,
+      targetClientId,
+      countryId: resolvedCountryId,
+      regionId: resolvedRegionId,
+    });
 
     return res.status(201).json({
       message: "Service créé",
       service: addLabels(full),
     });
   } catch (e) {
-    console.error("❌ Erreur création service:", e);
+    logger.error({ err: e }, "service.create.failed");
     return res.status(500).json({
       error: "Erreur lors de la création du service",
     });
@@ -351,7 +331,7 @@ exports.listClient = async (req, res) => {
       pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
-    console.error("❌ erreur listClient:", e);
+    logger.error({ err: e }, "service.list_client.failed");
     return res.status(500).json({
       error: "Erreur lors de la récupération des services",
     });
@@ -433,7 +413,7 @@ exports.listAll = async (req, res) => {
       pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
-    console.error("❌ erreur listAll:", e);
+    logger.error({ err: e }, "service.list_all.failed");
     return res.status(500).json({
       error: "Erreur lors de la récupération des services",
     });
@@ -521,29 +501,10 @@ exports.assignAgent = async (req, res) => {
       });
     });
 
-    try {
-      const recipients = [result.agent?.id || result.agentId, result.client?.id || result.clientId];
-      await emitEvent({
-        recipients,
-        actorId: req.user.id,
-        entityType: "service",
-        entityId: result.id,
-        action: "assigned",
-        title: "Service assigné",
-        message: result.title
-          ? `Service assigné: ${result.title}`
-          : "Un service vous a été assigné",
-        progress: computeProgress("service", result.status),
-        entityStatus: result.status,
-        metadata: { serviceId: result.id, title: result.title || null },
-        countryId: result.countryId,
-        regionId: result.regionId,
-        excludeRecipientId: null,
-        notificationMode: "create",
-      });
-    } catch (err) {
-      console.warn("⚠️ Notification service (assign) échouée:", err?.message || err);
-    }
+    await notifyServiceAssigned({
+      actorId: req.user.id,
+      service: result,
+    });
 
     return res.json({
       message: "Agent assigné",
@@ -551,7 +512,7 @@ exports.assignAgent = async (req, res) => {
     });
   } catch (e) {
     const status = e.status || 500;
-    console.error("❌ erreur assignAgent:", e);
+    logger.error({ err: e }, "service.assign_agent.failed");
     return res.status(status).json({ error: e.message });
   }
 };
@@ -636,35 +597,12 @@ exports.updateService = async (req, res) => {
     await service.update(updates);
 
     if (updates.status && updates.status !== previousStatus) {
-      try {
-        const adminIds = await getAdminRecipientIds({
-          countryId: service.countryId,
-          regionId: service.regionId,
-        });
-        const recipients = [
-          ...adminIds,
-          service.clientId,
-          service.agentId,
-        ];
-
-        await emitEvent({
-          recipients,
-          actorId: req.user.id,
-          entityType: "service",
-          entityId: service.id,
-          action: "status_updated",
-          title: "Statut service mis à jour",
-          message: service.title ? `Service: ${service.title}` : null,
-          progress: computeProgress("service", updates.status),
-          entityStatus: updates.status,
-          metadata: { serviceId: service.id, title: service.title || null },
-          countryId: service.countryId,
-          regionId: service.regionId,
-          notificationMode: "update",
-        });
-      } catch (err) {
-        console.warn("⚠️ Notification service (status update) échouée:", err?.message || err);
-      }
+      await notifyServiceStatusUpdate({
+        actorId: req.user.id,
+        service,
+        title: "Statut service mis a jour",
+        status: updates.status,
+      });
     }
 
     const full = await Service.findByPk(id, {
@@ -692,7 +630,7 @@ exports.updateService = async (req, res) => {
       service: addLabels(full),
     });
   } catch (e) {
-    console.error("❌ erreur updateService:", e);
+    logger.error({ err: e }, "service.update.failed");
     return res.status(500).json({
       error: "Erreur lors de la mise à jour du service",
     });
@@ -723,7 +661,7 @@ exports.deleteService = async (req, res) => {
 
     return res.json({ message: "Service supprimé" });
   } catch (e) {
-    console.error("❌ erreur deleteService:", e);
+    logger.error({ err: e }, "service.delete.failed");
     return res.status(500).json({
       error: "Erreur lors de la suppression",
     });
@@ -803,7 +741,7 @@ exports.listAgent = async (req, res) => {
       pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
-    console.error("❌ erreur listAgent:", e);
+    logger.error({ err: e }, "service.list_agent.failed");
     return res.status(500).json({
       error: "Erreur lors de la récupération des services",
     });
@@ -843,42 +781,19 @@ exports.startService = async (req, res) => {
 
     await service.update({ status: "in_progress" });
 
-    try {
-      const adminIds = await getAdminRecipientIds({
-        countryId: service.countryId,
-        regionId: service.regionId,
-      });
-      const recipients = [
-        ...adminIds,
-        service.clientId,
-        service.agentId,
-      ];
-
-      await emitEvent({
-        recipients,
-        actorId: req.user.id,
-        entityType: "service",
-        entityId: service.id,
-        action: "status_updated",
-        title: "Service démarré",
-        message: service.title ? `Service: ${service.title}` : null,
-        progress: computeProgress("service", "in_progress"),
-        entityStatus: "in_progress",
-        metadata: { serviceId: service.id, title: service.title || null },
-        countryId: service.countryId,
-        regionId: service.regionId,
-        notificationMode: "update",
-      });
-    } catch (err) {
-      console.warn("⚠️ Notification service (start) échouée:", err?.message || err);
-    }
+    await notifyServiceStatusUpdate({
+      actorId: req.user.id,
+      service,
+      title: "Service demarre",
+      status: "in_progress",
+    });
 
     return res.json({
       message: "Service démarré",
       service: addLabels(service),
     });
   } catch (e) {
-    console.error("❌ erreur startService:", e);
+    logger.error({ err: e }, "service.start.failed");
     return res.status(500).json({
       error: "Erreur lors du démarrage du service",
     });
@@ -906,44 +821,26 @@ exports.completeService = async (req, res) => {
 
     await service.update({ status: "completed" });
 
-    try {
-      const adminIds = await getAdminRecipientIds({
-        countryId: service.countryId,
-        regionId: service.regionId,
-      });
-      const recipients = [
-        ...adminIds,
-        service.clientId,
-        service.agentId,
-      ];
-
-      await emitEvent({
-        recipients,
-        actorId: req.user.id,
-        entityType: "service",
-        entityId: service.id,
-        action: "status_updated",
-        title: "Service terminé",
-        message: service.title ? `Service: ${service.title}` : null,
-        progress: computeProgress("service", "completed"),
-        entityStatus: "completed",
-        metadata: { serviceId: service.id, title: service.title || null },
-        countryId: service.countryId,
-        regionId: service.regionId,
-        notificationMode: "update",
-      });
-    } catch (err) {
-      console.warn("⚠️ Notification service (complete) échouée:", err?.message || err);
-    }
+    await notifyServiceStatusUpdate({
+      actorId: req.user.id,
+      service,
+      title: "Service termine",
+      status: "completed",
+    });
 
     return res.json({
       message: "Service terminé",
       service: addLabels(service),
     });
   } catch (e) {
-    console.error("❌ erreur completeService:", e);
+    logger.error({ err: e }, "service.complete.failed");
     return res.status(500).json({
       error: "Erreur lors de la finalisation du service",
     });
   }
 };
+
+
+
+
+

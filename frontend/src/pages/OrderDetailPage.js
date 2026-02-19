@@ -33,6 +33,8 @@ import {
 import { isGlobalAdminUser } from '../utils/role';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
+import { notify } from '../utils/notify';
+import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 /* ============================================================
    🌍 FILE_BASE + normalizePath + toAbsUrl (multi-pays / master)
@@ -90,6 +92,7 @@ function mapStatusToStepKey(status = '') {
 export default function OrderDetailPage() {
   const { formatNumber, formatDateTime } = useLocale();
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -380,10 +383,10 @@ export default function OrderDetailPage() {
 
       await updateOrder(id, payload);
       await refresh();
-      alert(t("orderDetail.alerts.updateSuccess"));
+      notify(t("orderDetail.alerts.updateSuccess"));
     } catch (e) {
       console.error('❌ update order:', e);
-      alert(t("orderDetail.alerts.updateError"));
+      notify(t("orderDetail.alerts.updateError"));
     }
   }
 
@@ -393,9 +396,9 @@ export default function OrderDetailPage() {
   async function handleAddItem(e) {
     e.preventDefault();
 
-    if (!itemForm.productId) return alert(t("orderDetail.alerts.productRequired"));
+    if (!itemForm.productId) return notify(t("orderDetail.alerts.productRequired"));
     if (Number(itemForm.quantity) <= 0)
-      return alert(t("orderDetail.alerts.invalidQuantity"));
+      return notify(t("orderDetail.alerts.invalidQuantity"));
 
     try {
       const payload = {
@@ -411,10 +414,10 @@ export default function OrderDetailPage() {
 
       setItemForm({ productId: '', quantity: 1, unitPrice: '' });
       await refresh();
-      alert(t("orderDetail.alerts.itemAdded"));
+      notify(t("orderDetail.alerts.itemAdded"));
     } catch (e2) {
       console.error('❌ add item:', e2);
-      alert(t("orderDetail.alerts.itemAddError"));
+      notify(t("orderDetail.alerts.itemAddError"));
     }
   }
 
@@ -424,19 +427,20 @@ export default function OrderDetailPage() {
       await refresh();
     } catch (e) {
       console.error('❌ update item:', e);
-      alert(t("orderDetail.alerts.itemUpdateError"));
+      notify(t("orderDetail.alerts.itemUpdateError"));
     }
   }
 
   async function handleDeleteItem(itemId) {
-    if (!window.confirm(t("orderDetail.alerts.confirmDeleteItem"))) return;
+    const ok = await confirmDelete("orderItem");
+    if (!ok) return;
 
     try {
       await deleteOrderItem(id, itemId);
       await refresh();
     } catch (e) {
       console.error('❌ delete item:', e);
-      alert(t("orderDetail.alerts.itemDeleteError"));
+      notify(t("orderDetail.alerts.itemDeleteError"));
     }
   }
 
@@ -450,7 +454,7 @@ export default function OrderDetailPage() {
 
   async function handleUpload(e) {
     e.preventDefault();
-    if (!files.length) return alert(t("orderDetail.alerts.fileRequired"));
+    if (!files.length) return notify(t("orderDetail.alerts.fileRequired"));
 
     setUploading(true);
     try {
@@ -463,17 +467,18 @@ export default function OrderDetailPage() {
       setFileInputKey(Date.now());
 
       await refreshEvidences();
-      alert(t("orderDetail.alerts.evidenceAdded"));
+      notify(t("orderDetail.alerts.evidenceAdded"));
     } catch (e2) {
       console.error('❌ upload evidences:', e2);
-      alert(t("orderDetail.alerts.evidenceUploadError"));
+      notify(t("orderDetail.alerts.evidenceUploadError"));
     } finally {
       setUploading(false);
     }
   }
 
   async function handleDeleteEvidence(evId) {
-    if (!window.confirm(t("orderDetail.alerts.confirmDeleteEvidence"))) return;
+    const ok = await confirmDelete("evidence");
+    if (!ok) return;
 
     try {
       await deleteOrderEvidence(evId);
@@ -482,7 +487,7 @@ export default function OrderDetailPage() {
       console.error('❌ delete evidence:', e);
       const msg =
         e?.response?.data?.error || t("orderDetail.alerts.evidenceDeleteError");
-      alert(msg);
+      notify(msg);
     }
   }
   /* ============================================================
@@ -1252,4 +1257,5 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
 

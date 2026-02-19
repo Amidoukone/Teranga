@@ -2,6 +2,7 @@
 
 const { Notification, User } = require("../../models");
 const { getPagination } = require("../utils/pagination");
+const logger = require('../utils/logger');
 const {
   getNotificationSummary,
 } = require("../services/notification.service");
@@ -61,7 +62,7 @@ exports.list = async (req, res) => {
       pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
-    console.error("❌ list notifications:", e);
+    logger.error("❌ list notifications:", e);
     return res.status(500).json({
       error: "Erreur lors de la récupération des notifications",
     });
@@ -77,7 +78,7 @@ exports.summary = async (req, res) => {
     const data = await getNotificationSummary(req.user.id);
     return res.json(data);
   } catch (e) {
-    console.error("❌ notifications summary:", e);
+    logger.error("❌ notifications summary:", e);
     return res.status(500).json({
       error: "Erreur lors du chargement des indicateurs",
     });
@@ -108,7 +109,7 @@ exports.markRead = async (req, res) => {
       notification: notif.toJSON ? notif.toJSON() : notif,
     });
   } catch (e) {
-    console.error("❌ markRead notification:", e);
+    logger.error("❌ markRead notification:", e);
     return res.status(500).json({
       error: "Erreur lors de la mise à jour de la notification",
     });
@@ -131,7 +132,7 @@ exports.markAllRead = async (req, res) => {
       updated: count || 0,
     });
   } catch (e) {
-    console.error("❌ markAllRead notification:", e);
+    logger.error("❌ markAllRead notification:", e);
     return res.status(500).json({
       error: "Erreur lors de la mise à jour des notifications",
     });

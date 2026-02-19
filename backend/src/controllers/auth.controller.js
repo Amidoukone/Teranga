@@ -4,6 +4,7 @@
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const logger = require('../utils/logger');
 let nodemailer = null;
 try {
   nodemailer = require('nodemailer');
@@ -14,6 +15,8 @@ const {
   User,
   Country,
   Region,
+  Franchise,
+  RecoveryCode,
   RefreshToken,
   TokenBlacklist,
   PasswordResetToken,
@@ -27,10 +30,18 @@ const PASSWORD_RESET_EXPIRES =
   process.env.PASSWORD_RESET_EXPIRES || '30m';
 const PASSWORD_RESET_DEBUG =
   String(process.env.PASSWORD_RESET_DEBUG || '').toLowerCase() === 'true';
+const RECOVERY_CODES_COUNT = Number.parseInt(
+  process.env.RECOVERY_CODES_COUNT || '8',
+  10
+);
+const RECOVERY_CODE_EXPIRES =
+  process.env.RECOVERY_CODE_EXPIRES || '365d';
 
 const COOKIE_ACCESS = 'teranga_access';
 const COOKIE_REFRESH = 'teranga_refresh';
 const COOKIE_CSRF = 'teranga_csrf';
+const MANUAL_RESET_MESSAGE =
+  "Mot de passe oublie ? Contactez l'admin ou le master de votre pays/region pour reinitialiser. Ensuite, vous pourrez le modifier dans votre compte.";
 
 /* ======================================================
    🔧 Helpers
@@ -106,6 +117,70 @@ function buildCookieOptions({ maxAge, httpOnly = true } = {}) {
 
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function normalizeRecoveryCode(input) {
+  return String(input || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .trim();
+}
+
+function generateRecoveryCodeRaw(length = 10) {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = '';
+  for (let i = 0; i < length; i += 1) {
+    const idx = crypto.randomInt(0, alphabet.length);
+    out += alphabet[idx];
+  }
+  return out;
+}
+
+function formatRecoveryCode(raw) {
+  const normalized = normalizeRecoveryCode(raw);
+  if (normalized.length <= 5) return normalized;
+  return `${normalized.slice(0, 5)}-${normalized.slice(5)}`;
+}
+
+function generateRecoveryCodes(count = RECOVERY_CODES_COUNT) {
+  const finalCount = Number.isFinite(count) && count > 0 ? count : 8;
+  const set = new Set();
+  while (set.size < finalCount) {
+    set.add(formatRecoveryCode(generateRecoveryCodeRaw(10)));
+  }
+  return Array.from(set);
+}
+
+async function rotateRecoveryCodes({
+  userId,
+  req,
+  invalidateExisting = true,
+}) {
+  if (!userId) return [];
+
+  const now = new Date();
+  const expiresMs = parseDurationToMs(RECOVERY_CODE_EXPIRES);
+  const expiresAt = expiresMs > 0 ? new Date(Date.now() + expiresMs) : null;
+
+  if (invalidateExisting) {
+    await RecoveryCode.update(
+      { usedAt: now, usedByIp: req?.ip || null },
+      { where: { userId, usedAt: null } }
+    );
+  }
+
+  const plainCodes = generateRecoveryCodes();
+  const rows = plainCodes.map((code) => ({
+    userId,
+    codeHash: hashToken(normalizeRecoveryCode(code)),
+    expiresAt,
+    usedAt: null,
+    createdByIp: req?.ip || null,
+    userAgent: req?.get?.('user-agent') || null,
+  }));
+
+  await RecoveryCode.bulkCreate(rows);
+  return plainCodes;
 }
 
 async function issueRefreshToken(user, req) {
@@ -321,6 +396,45 @@ async function resolveGeoScope({ country, countryId, regionId }) {
   return resolved;
 }
 
+async function countryHasActiveMaster(countryId) {
+  if (!countryId) return false;
+  const franchiseCount = await Franchise.count({
+    where: {
+      countryId,
+      type: 'MASTER',
+      status: 'active',
+    },
+  });
+  if (franchiseCount > 0) return true;
+
+  const directScopedAdminCount = await User.count({
+    where: {
+      role: 'admin',
+      countryId,
+    },
+  });
+  if (directScopedAdminCount > 0) return true;
+
+  const regions = await Region.findAll({
+    where: { countryId },
+    attributes: ['id'],
+  });
+  if (!regions.length) return false;
+
+  const regionIds = regions
+    .map((r) => toSafeInt(r?.id))
+    .filter((id) => id !== null);
+  if (!regionIds.length) return false;
+
+  const regionalScopedAdminCount = await User.count({
+    where: {
+      role: 'admin',
+      regionId: { [Sequelize.Op.in]: regionIds },
+    },
+  });
+  return regionalScopedAdminCount > 0;
+}
+
 /* ======================================================
    🧩 Register (inscription)
 ====================================================== */
@@ -377,6 +491,13 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: geoScope.error });
     }
 
+    const hasMaster = await countryHasActiveMaster(geoScope.countryId);
+    if (!hasMaster) {
+      return res
+        .status(400)
+        .json({ error: 'Nos services ne sont pas disponibles pour le moment dans ce pays.' });
+    }
+
     const user = await User.create({
       email,
       passwordHash,
@@ -392,6 +513,19 @@ exports.register = async (req, res) => {
       // et peuvent être backfill Mali/Bamako via migrations/seed si tu le fais.
     });
 
+    let recoveryCodes = [];
+    let recoveryCodesWarning = '';
+    try {
+      recoveryCodes = await rotateRecoveryCodes({ userId: user.id, req });
+    } catch (recoveryErr) {
+      recoveryCodesWarning =
+        "Codes de recuperation indisponibles pour le moment. Contactez l'administrateur.";
+      logger.warn(
+        'Generation recovery codes impossible:',
+        recoveryErr?.message || recoveryErr
+      );
+    }
+
     return res.status(201).json({
       message: 'Utilisateur créé',
       user: {
@@ -404,6 +538,8 @@ exports.register = async (req, res) => {
         regionId: user.regionId ?? null,
         language: user.language || 'fr',
       },
+      recoveryCodes,
+      recoveryCodesWarning,
     });
   } catch (e) {
     // Gestion spécifique des doublons DB (au cas où la contrainte unique remonte ici)
@@ -411,7 +547,7 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: 'Email déjà utilisé' });
     }
 
-    console.error('❌ Erreur register:', e);
+    logger.error('❌ Erreur register:', e);
     return res.status(500).json({ error: "Erreur lors de l'inscription" });
   }
 };
@@ -446,7 +582,7 @@ exports.login = async (req, res) => {
     try {
       await user.update({ lastLogin: new Date() });
     } catch (errUpdate) {
-      console.warn('⚠️ Impossible de mettre à jour lastLogin:', errUpdate.message);
+      logger.warn('⚠️ Impossible de mettre à jour lastLogin:', errUpdate.message);
     }
 
     let token;
@@ -461,7 +597,7 @@ exports.login = async (req, res) => {
       language: user.language || 'fr',
       });
     } catch (jwtErr) {
-      console.error('❌ Erreur signature JWT:', jwtErr.message);
+      logger.error('❌ Erreur signature JWT:', jwtErr.message);
       return res.status(500).json({ error: 'Configuration serveur invalide (JWT)' });
     }
 
@@ -494,7 +630,7 @@ exports.login = async (req, res) => {
       },
     });
   } catch (e) {
-    console.error('❌ Erreur login:', e);
+    logger.error('❌ Erreur login:', e);
     return res.status(500).json({ error: 'Erreur lors de la connexion' });
   }
 };
@@ -534,7 +670,7 @@ exports.me = async (req, res) => {
 
     return res.json({ user });
   } catch (e) {
-    console.error('❌ Erreur /auth/me:', e);
+    logger.error('❌ Erreur /auth/me:', e);
     return res.status(500).json({ error: 'Erreur' });
   }
 };
@@ -574,7 +710,7 @@ exports.updateMe = async (req, res) => {
       },
     });
   } catch (e) {
-    console.error('❌ Erreur /auth/me PATCH:', e);
+    logger.error('❌ Erreur /auth/me PATCH:', e);
     return res.status(500).json({ error: 'Erreur mise a jour profil' });
   }
 };
@@ -651,7 +787,7 @@ exports.refresh = async (req, res) => {
       csrfToken,
     });
   } catch (e) {
-    console.error('❌ Erreur refresh:', e);
+    logger.error('❌ Erreur refresh:', e);
     return res.status(500).json({ error: 'Erreur lors du refresh' });
   }
 };
@@ -696,7 +832,7 @@ exports.logout = async (req, res) => {
     clearAuthCookies(res);
     return res.json({ message: 'Déconnexion réussie' });
   } catch (e) {
-    console.error('❌ Erreur logout:', e);
+    logger.error('❌ Erreur logout:', e);
     return res.status(500).json({ error: 'Erreur lors de la déconnexion' });
   }
 };
@@ -705,117 +841,28 @@ exports.logout = async (req, res) => {
    Mot de passe oublie (demande de reset)
 ====================================================== */
 exports.forgotPassword = async (req, res) => {
-  try {
-    const email = normalizeEmail(req.body?.email);
-    if (!email) {
-      return res.status(400).json({ error: 'Email requis' });
-    }
-
-    const user = await User.findOne({ where: { email } });
-    let debug = null;
-
-    if (user) {
-      const { rawToken, expiresAt } = await issuePasswordResetToken(user, req);
-      const resetUrl = buildResetUrl(req, rawToken);
-
-      let sent = false;
-      if (resetUrl) {
-        try {
-          sent = await sendPasswordResetEmail({ to: email, resetUrl });
-        } catch (err) {
-          console.warn('Email reset non envoye:', err?.message || err);
-        }
-      }
-
-      if (!sent) {
-        console.warn('Reset email non envoye (SMTP non configure).');
-      }
-
-      if (shouldExposeResetDebug(req)) {
-        debug = { resetToken: rawToken, resetUrl, expiresAt };
-      }
-    }
-
-    const response = {
-      message:
-        'Si un compte existe, un lien de reinitialisation a ete envoye.',
-    };
-
-    if (debug) response.debug = debug;
-
-    return res.json(response);
-  } catch (e) {
-    console.error('Erreur forgotPassword:', e);
-    return res
-      .status(500)
-      .json({ error: 'Erreur lors de la demande de reinitialisation' });
-  }
+  return res.status(403).json({ error: MANUAL_RESET_MESSAGE });
 };
 
 /* ======================================================
    Reset mot de passe (token)
 ====================================================== */
 exports.resetPassword = async (req, res) => {
-  try {
-    const token = String(req.body?.token || '').trim();
-    const password = String(req.body?.password || '');
+  return res.status(403).json({ error: MANUAL_RESET_MESSAGE });
+};
 
-    if (!token || !password) {
-      return res.status(400).json({ error: 'Token et mot de passe requis' });
-    }
+/* ======================================================
+   Reset mot de passe (recovery code)
+====================================================== */
+exports.recoverWithCode = async (req, res) => {
+  return res.status(403).json({ error: MANUAL_RESET_MESSAGE });
+};
 
-    if (password.length < 8) {
-      return res.status(400).json({
-        error: 'Mot de passe trop court (minimum 8 caracteres)',
-      });
-    }
-
-    const tokenHash = hashToken(token);
-    const record = await PasswordResetToken.findOne({
-      where: { tokenHash },
-    });
-
-    if (
-      !record ||
-      record.usedAt ||
-      (record.expiresAt && new Date(record.expiresAt) < new Date())
-    ) {
-      return res.status(400).json({ error: 'Token invalide ou expire' });
-    }
-
-    const user = await User.findByPk(record.userId);
-    if (!user) {
-      return res.status(400).json({ error: 'Utilisateur introuvable' });
-    }
-
-    user.passwordHash = await bcrypt.hash(password, 10);
-    await user.save();
-
-    await record.update({
-      usedAt: new Date(),
-      usedByIp: req.ip,
-    });
-
-    await PasswordResetToken.update(
-      { usedAt: new Date(), usedByIp: req.ip },
-      {
-        where: {
-          userId: user.id,
-          usedAt: null,
-          id: { [Sequelize.Op.ne]: record.id },
-        },
-      }
-    );
-
-    await revokeUserRefreshTokens(user.id, req);
-
-    return res.json({ message: 'Mot de passe reinitialise avec succes' });
-  } catch (e) {
-    console.error('Erreur resetPassword:', e);
-    return res
-      .status(500)
-      .json({ error: 'Erreur lors de la reinitialisation du mot de passe' });
-  }
+/* ======================================================
+   Regenerer recovery codes (auth)
+====================================================== */
+exports.regenerateRecoveryCodes = async (req, res) => {
+  return res.status(403).json({ error: MANUAL_RESET_MESSAGE });
 };
 
 /* ======================================================
@@ -879,12 +926,13 @@ exports.changePassword = async (req, res) => {
       message: 'Mot de passe modifie. Veuillez vous reconnecter.',
     });
   } catch (e) {
-    console.error('Erreur changePassword:', e);
+    logger.error('Erreur changePassword:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors du changement de mot de passe' });
   }
 };
+
 
 
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { withTranslation } from 'react-i18next';
+import { reportFrontendError } from '../utils/errorReporter';
 
 const isDev = (process.env.NODE_ENV || 'development') !== 'production';
 
@@ -19,6 +20,7 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
+    reportFrontendError(error, { componentStack: errorInfo?.componentStack });
     if (typeof this.props.onError === 'function') {
       this.props.onError(error, errorInfo);
     }

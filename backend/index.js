@@ -24,10 +24,10 @@ if (sequelize?.options) {
    Garde-fou global contre les crashs silencieux
    ====================================================== */
 process.on('unhandledRejection', (reason) => {
-  logger.error({ err: reason }, 'Unhandled Rejection');
+  logger.error({ err: reason }, 'process.unhandled_rejection');
 });
 process.on('uncaughtException', (err) => {
-  logger.error({ err }, 'Uncaught Exception');
+  logger.error({ err }, 'process.uncaught_exception');
 });
 
 /* ======================================================
@@ -54,7 +54,7 @@ const startServer = () => {
   if (serverStarted) return;
   serverStarted = true;
   app.listen(PORT, '0.0.0.0', () => {
-    logger.info({ port: PORT }, 'API Teranga lancee');
+    logger.info({ port: PORT }, 'server.start.listening');
   });
 };
 
@@ -75,11 +75,11 @@ async function connectAndBootstrap({ exitOnFail }) {
     attempt += 1;
     try {
       await sequelize.authenticate();
-      logger.info('Connexion MySQL OK');
+      logger.info('db.connection.authenticated');
       await bootstrapAdmin();
       return;
     } catch (err) {
-      logger.warn({ err, attempt }, 'Connexion DB echouee, retry en cours');
+      logger.warn({ err, attempt }, 'db.connection.retrying');
 
       const elapsed = Date.now() - startedAt;
       const hitMaxAttempts =
@@ -92,7 +92,7 @@ async function connectAndBootstrap({ exitOnFail }) {
         }
         logger.error(
           { err, attempt, elapsedMs: elapsed },
-          'DB toujours indisponible, le service reste en ligne'
+          'db.connection.unavailable.service_continues'
         );
         return;
       }
@@ -112,7 +112,7 @@ async function start() {
       // La DB peut etre en sleep (PlanetScale); on tente en boucle en background.
       startServer();
       connectAndBootstrap({ exitOnFail: false }).catch((err) => {
-        logger.error({ err }, 'Erreur DB');
+        logger.error({ err }, 'db.connection.failed');
       });
       return;
     }
@@ -120,9 +120,10 @@ async function start() {
     await connectAndBootstrap({ exitOnFail: true });
     startServer();
   } catch (err) {
-    logger.error({ err }, 'Erreur DB');
+    logger.error({ err }, 'db.connection.failed');
     process.exit(1);
   }
 }
 
 start();
+

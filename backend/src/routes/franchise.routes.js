@@ -16,6 +16,8 @@ const { requireScopeMatch } = require('../middleware/scope.middleware');
  * ============================================================
  */
 
+router.get('/masters', ctrl.listMasterCountries);
+
 router.get('/', auth, requireRoles('admin'), ctrl.list);
 router.post('/', auth, requireRoles('admin'), requireScopeMatch(), ctrl.create);
 router.put('/:id', auth, requireRoles('admin'), requireScopeMatch(), ctrl.update);

@@ -7,18 +7,71 @@ function shouldLog(level) {
   return LOG_LEVELS.indexOf(level) >= levelIndex;
 }
 
-function log(level, meta, message) {
+function normalizeError(err) {
+  if (!err) return null;
+  return {
+    name: err.name,
+    message: err.message,
+    stack: err.stack,
+  };
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Error);
+}
+
+function parseLogArgs(args) {
+  if (!args.length) return { message: '', meta: {} };
+
+  const [first, second, ...rest] = args;
+
+  if (typeof first === 'string') {
+    const meta = {};
+
+    if (second instanceof Error) {
+      meta.err = normalizeError(second);
+    } else if (isPlainObject(second)) {
+      Object.assign(meta, second);
+    } else if (second !== undefined) {
+      meta.data = second;
+    }
+
+    if (rest.length) {
+      meta.extra = rest.map((item) => (item instanceof Error ? normalizeError(item) : item));
+    }
+
+    return { message: first, meta };
+  }
+
+  if (first instanceof Error) {
+    return {
+      message: first.message || '',
+      meta: { err: normalizeError(first) },
+    };
+  }
+
+  if (isPlainObject(first)) {
+    if (typeof second === 'string') {
+      const meta = { ...first };
+      if (rest.length) meta.extra = rest;
+      return { message: second, meta };
+    }
+    return { message: '', meta: { ...first } };
+  }
+
+  return { message: String(first), meta: second && isPlainObject(second) ? second : {} };
+}
+
+function log(level, ...args) {
   if (!shouldLog(level)) return;
 
-  const normalizedMeta = typeof meta === 'string' ? {} : meta || {};
-  const normalizedMessage =
-    typeof meta === 'string' ? meta : message || '';
+  const { message, meta } = parseLogArgs(args);
 
   const entry = {
     level,
-    message: normalizedMessage,
+    message: message || '',
     time: new Date().toISOString(),
-    ...normalizedMeta,
+    ...(meta || {}),
   };
 
   const output = JSON.stringify(entry);
@@ -33,10 +86,10 @@ function log(level, meta, message) {
 }
 
 const logger = {
-  debug: (meta, message) => log('debug', meta, message),
-  info: (meta, message) => log('info', meta, message),
-  warn: (meta, message) => log('warn', meta, message),
-  error: (meta, message) => log('error', meta, message),
+  debug: (...args) => log('debug', ...args),
+  info: (...args) => log('info', ...args),
+  warn: (...args) => log('warn', ...args),
+  error: (...args) => log('error', ...args),
 };
 
 module.exports = logger;

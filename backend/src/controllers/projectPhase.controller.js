@@ -3,6 +3,7 @@
 const { Project, ProjectPhase } = require('../../models');
 const { getLabel } = require('../utils/labels');
 const { getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
+const logger = require('../utils/logger');
 
 const PHASE_STATUSES = {
   pending: 'En attente',
@@ -142,7 +143,7 @@ exports.create = async (req, res) => {
       projectId: pid,
     });
   } catch (e) {
-    console.error('❌ Erreur création phase:', e);
+    logger.error('❌ Erreur création phase:', e);
     return res.status(500).json({ error: "Erreur lors de la création de la phase" });
   }
 };
@@ -182,7 +183,7 @@ exports.listByProject = async (req, res) => {
       })),
     });
   } catch (e) {
-    console.error('❌ Erreur list phases:', e);
+    logger.error('❌ Erreur list phases:', e);
     return res.status(500).json({ error: 'Erreur lors de la récupération des phases' });
   }
 };
@@ -226,7 +227,7 @@ exports.update = async (req, res) => {
       projectId: project.id,
     });
   } catch (e) {
-    console.error('❌ Erreur update phase:', e);
+    logger.error('❌ Erreur update phase:', e);
     return res.status(500).json({ error: 'Erreur lors de la mise à jour de la phase' });
   }
 };
@@ -265,7 +266,7 @@ exports.remove = async (req, res) => {
       projectId: project.id,
     });
   } catch (e) {
-    console.error('❌ Erreur suppression phase:', e);
+    logger.error('❌ Erreur suppression phase:', e);
     return res.status(500).json({ error: 'Erreur lors de la suppression de la phase' });
   }
 };

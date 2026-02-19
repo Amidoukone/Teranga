@@ -1,6 +1,7 @@
 'use strict';
 
 const ImageKit = require("imagekit");
+const logger = require('./logger');
 
 // --------------------------------------------------
 // 🌍 Initialisation ImageKit avec les variables .env
@@ -12,7 +13,7 @@ const isConfigured = Boolean(
 );
 
 if (!isConfigured) {
-  console.warn(
+  logger.warn(
     '⚠️ ImageKit: variables manquantes. ' +
       'Assurez-vous que IMAGEKIT_PUBLIC_KEY, IMAGEKIT_PRIVATE_KEY et IMAGEKIT_URL_ENDPOINT sont définies.'
   );
@@ -51,7 +52,7 @@ async function uploadToImageKit(folder, fileBuffer, fileName) {
       filePath: response.filePath // chemin interne chez ImageKit
     };
   } catch (err) {
-    console.error("❌ ImageKit upload error:", err);
+    logger.error("❌ ImageKit upload error:", err);
     return null;
   }
 }
@@ -67,7 +68,7 @@ async function deleteFromImageKit(fileId) {
     await imagekit.deleteFile(fileId);
     return true;
   } catch (err) {
-    console.error("❌ ImageKit delete error:", err);
+    logger.error("❌ ImageKit delete error:", err);
     return false;
   }
 }

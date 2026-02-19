@@ -4,6 +4,7 @@ import api from '../services/api';
 import { me } from '../services/auth';
 import { normalizeRole, isMasterUser } from '../utils/role';
 import { useTranslation } from 'react-i18next';
+import { notify } from '../utils/notify';
 
 export default function AdminServicesPage() {
   const { t } = useTranslation();
@@ -159,7 +160,7 @@ export default function AdminServicesPage() {
       await loadServices();
     } catch (e) {
       console.error('❌ Erreur assignation:', e);
-      alert(t('adminServicesPage.alerts.assignError'));
+      notify(t('adminServicesPage.alerts.assignError'));
     }
   }
 
@@ -525,3 +526,4 @@ export default function AdminServicesPage() {
     </div>
   );
 }
+

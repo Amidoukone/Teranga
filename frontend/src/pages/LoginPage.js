@@ -31,9 +31,15 @@ export default function LoginPage() {
   ========================================================== */
   useEffect(() => {
     const msg = location.state?.successMsg;
+    const routeError = location.state?.errorMsg;
     if (msg) {
       setSuccessMsg(msg);
-      window.history.replaceState({}, ""); // Nettoyage de l'historique
+    }
+    if (routeError) {
+      setErrorMsg(routeError);
+    }
+    if (msg || routeError) {
+      window.history.replaceState({}, "");
     }
   }, [location.state]);
 
@@ -171,16 +177,11 @@ export default function LoginPage() {
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            {t("auth.login.forgotInfo")}
+            {t("auth.login.forgotInfo", {
+              defaultValue:
+                "Mot de passe oublie ? Contactez l'admin ou le master de votre pays/region pour reinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+            })}
           </div>
-
-          {/*
-            <Link
-              className="text-sm text-blue-600 hover:underline"
-            >
-              Mot de passe oubliÃ© ?
-            </Link>
-          */}
 
           {/* BOUTON CONNEXION */}
           <button

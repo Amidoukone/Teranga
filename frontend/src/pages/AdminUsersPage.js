@@ -11,13 +11,22 @@
 // ============================================================================
 
 import { useEffect, useState, useCallback } from "react";
-import { getUsers, createUser, updateUser, deleteUser } from "../services/users";
+import {
+  getUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  manualPasswordReset,
+  getManualPasswordResetAudit,
+} from "../services/users";
 import { getRegions } from "../services/regions";
 import { me } from "../services/auth";
 import { motion } from "framer-motion";
 import { normalizeRole, isMasterUser, prettyRoleLabel } from "../utils/role";
 import { useGeo } from "../contexts/GeoContext";
 import { useTranslation } from "react-i18next";
+import { notify } from '../utils/notify';
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 /* ============================================================
    Helpers locaux (safe, non cassants)
@@ -44,8 +53,16 @@ function extractApiError(err, fallbackMessage) {
   );
 }
 
+function formatDateTime(value, locale = "fr-FR") {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(locale);
+}
+
 export default function AdminUsersPage() {
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(null);
 
@@ -81,6 +98,15 @@ export default function AdminUsersPage() {
   });
 
   const [editing, setEditing] = useState(null);
+  const [resetTarget, setResetTarget] = useState(null);
+  const [resetPasswordForm, setResetPasswordForm] = useState({
+    newPassword: "",
+    confirmPassword: "",
+    reason: "",
+  });
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetAudit, setResetAudit] = useState([]);
+  const [resetAuditLoading, setResetAuditLoading] = useState(false);
 
   const [filters, setFilters] = useState({
     q: "",
@@ -323,16 +349,16 @@ export default function AdminUsersPage() {
 
       if (editing) {
         await updateUser(editing, payload);
-        alert(t("adminUsersPage.alerts.updated"));
+        notify(t("adminUsersPage.alerts.updated"));
       } else {
         await createUser(payload);
-        alert(t("adminUsersPage.alerts.created"));
+        notify(t("adminUsersPage.alerts.created"));
       }
 
       resetForm();
       await load();
     } catch (err) {
-      alert(extractApiError(err, t("adminUsersPage.alerts.submitError")));
+      notify(extractApiError(err, t("adminUsersPage.alerts.submitError")));
       console.error("❌ Submit error:", err);
     }
   }
@@ -357,7 +383,7 @@ export default function AdminUsersPage() {
   function handleEdit(u) {
     // 🔒 MASTER ne peut pas éditer un admin existant
     if (isMaster && normalizeRole(u.role) === "admin") {
-      alert(t("adminUsersPage.alerts.masterCannotEdit"));
+      notify(t("adminUsersPage.alerts.masterCannotEdit"));
       return;
     }
 
@@ -384,18 +410,98 @@ export default function AdminUsersPage() {
   async function handleDelete(u) {
     // 🔒 MASTER ne peut pas supprimer un admin
     if (isMaster && normalizeRole(u.role) === "admin") {
-      alert(t("adminUsersPage.alerts.masterCannotDelete"));
+      notify(t("adminUsersPage.alerts.masterCannotDelete"));
       return;
     }
-    if (!window.confirm(t("adminUsersPage.alerts.deleteConfirm"))) return;
+    const ok = await confirmDelete("user");
+    if (!ok) return;
 
     try {
       await deleteUser(u.id);
-      alert(t("adminUsersPage.alerts.deleted"));
+      notify(t("adminUsersPage.alerts.deleted"));
       await load();
     } catch (err) {
-      alert(extractApiError(err, t("adminUsersPage.alerts.submitError")));
+      notify(extractApiError(err, t("adminUsersPage.alerts.submitError")));
       console.error("❌ Delete error:", err);
+    }
+  }
+
+  async function openResetPanel(u) {
+    if (isMaster && normalizeRole(u.role) === "admin") {
+      notify(t("adminUsersPage.alerts.masterCannotResetAdmin"));
+      return;
+    }
+
+    setResetTarget(u);
+    setResetPasswordForm({
+      newPassword: "",
+      confirmPassword: "",
+      reason: "",
+    });
+    setResetAudit([]);
+    setResetAuditLoading(true);
+
+    try {
+      const items = await getManualPasswordResetAudit(u.id, 20);
+      setResetAudit(Array.isArray(items) ? items : []);
+    } catch (err) {
+      notify(extractApiError(err, t("adminUsersPage.alerts.resetAuditError")));
+      setResetAudit([]);
+    } finally {
+      setResetAuditLoading(false);
+    }
+  }
+
+  function closeResetPanel() {
+    setResetTarget(null);
+    setResetLoading(false);
+    setResetAuditLoading(false);
+    setResetAudit([]);
+    setResetPasswordForm({
+      newPassword: "",
+      confirmPassword: "",
+      reason: "",
+    });
+  }
+
+  async function submitManualReset(e) {
+    e.preventDefault();
+    if (!resetTarget) return;
+
+    const newPassword = String(resetPasswordForm.newPassword || "");
+    const confirmPassword = String(resetPasswordForm.confirmPassword || "");
+
+    if (newPassword.length < 8) {
+      notify(t("adminUsersPage.alerts.resetPasswordMin"));
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      notify(t("adminUsersPage.alerts.resetPasswordMismatch"));
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await manualPasswordReset(resetTarget.id, {
+        newPassword,
+        reason: String(resetPasswordForm.reason || "").trim() || null,
+        invalidateSessions: true,
+      });
+
+      notify(t("adminUsersPage.alerts.resetSuccess"));
+
+      const items = await getManualPasswordResetAudit(resetTarget.id, 20);
+      setResetAudit(Array.isArray(items) ? items : []);
+      setResetPasswordForm((prev) => ({
+        ...prev,
+        newPassword: "",
+        confirmPassword: "",
+      }));
+    } catch (err) {
+      notify(extractApiError(err, t("adminUsersPage.alerts.submitError")));
+    } finally {
+      setResetLoading(false);
     }
   }
 
@@ -879,6 +985,23 @@ export default function AdminUsersPage() {
                         </button>
 
                         <button
+                          onClick={() => openResetPanel(u)}
+                          className={`${
+                            actionsLocked
+                              ? "text-gray-300 cursor-not-allowed"
+                              : "text-blue-600 hover:text-blue-800"
+                          }`}
+                          title={
+                            actionsLocked
+                              ? t("adminUsersPage.table.lockedTitle")
+                              : t("adminUsersPage.table.resetPassword")
+                          }
+                          disabled={actionsLocked}
+                        >
+                          🔐
+                        </button>
+
+                        <button
                           onClick={() => handleDelete(u)}
                           className={`${
                             actionsLocked
@@ -912,7 +1035,121 @@ export default function AdminUsersPage() {
             </p>
           </div>
         )}
+
+        {resetTarget && (
+          <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50/40 p-5">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h2 className="text-lg font-semibold text-slate-900">
+                {t("adminUsersPage.resetPanel.title")}{" "}
+                <span className="text-sm font-normal text-slate-600">
+                  ({resetTarget.email})
+                </span>
+              </h2>
+              <button
+                type="button"
+                onClick={closeResetPanel}
+                className="px-3 py-1.5 rounded-full bg-slate-200 hover:bg-slate-300 text-sm"
+              >
+                {t("adminUsersPage.resetPanel.close")}
+              </button>
+            </div>
+
+            <form onSubmit={submitManualReset} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                type="password"
+                value={resetPasswordForm.newPassword}
+                onChange={(e) =>
+                  setResetPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
+                }
+                placeholder={t("adminUsersPage.resetPanel.newPassword")}
+                className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+                minLength={8}
+                required
+              />
+              <input
+                type="password"
+                value={resetPasswordForm.confirmPassword}
+                onChange={(e) =>
+                  setResetPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                }
+                placeholder={t("adminUsersPage.resetPanel.confirmPassword")}
+                className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+                minLength={8}
+                required
+              />
+              <input
+                type="text"
+                value={resetPasswordForm.reason}
+                onChange={(e) =>
+                  setResetPasswordForm((prev) => ({ ...prev, reason: e.target.value }))
+                }
+                placeholder={t("adminUsersPage.resetPanel.reason")}
+                className="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+              />
+              <div className="md:col-span-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={resetLoading}
+                  className={`px-5 py-2 rounded-full text-sm font-medium text-white ${
+                    resetLoading
+                      ? "bg-blue-300 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {resetLoading
+                    ? t("adminUsersPage.resetPanel.submitting")
+                    : t("adminUsersPage.resetPanel.submit")}
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-5">
+              <h3 className="text-sm font-semibold text-slate-800 mb-2">
+                {t("adminUsersPage.resetPanel.auditTitle")}
+              </h3>
+
+              {resetAuditLoading ? (
+                <p className="text-xs text-slate-500">{t("adminUsersPage.loading")}</p>
+              ) : resetAudit.length === 0 ? (
+                <p className="text-xs text-slate-500">
+                  {t("adminUsersPage.resetPanel.auditEmpty")}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {resetAudit.map((item) => {
+                    const actorLabel =
+                      [item?.actor?.firstName, item?.actor?.lastName]
+                        .filter(Boolean)
+                        .join(" ")
+                        .trim() || item?.actor?.email || "admin";
+                    return (
+                      <div
+                        key={item.id}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2"
+                      >
+                        <p className="text-xs text-slate-700">
+                          <strong>{formatDateTime(item.createdAt)}</strong> · {actorLabel}
+                        </p>
+                        {item?.metadata?.reason ? (
+                          <p className="text-xs text-slate-600 mt-1">
+                            {t("adminUsersPage.resetPanel.reasonLabel")} {item.metadata.reason}
+                          </p>
+                        ) : null}
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          {t("adminUsersPage.resetPanel.revokedSessions", {
+                            count: Number(item?.metadata?.revokedSessions || 0),
+                          })}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   );
 }
+

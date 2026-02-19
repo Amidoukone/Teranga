@@ -47,6 +47,32 @@ describe('P2-T1 critical integration flows', () => {
     expect(res.status).toBe(401);
   });
 
+  test('recover-with-code validates required fields', async () => {
+    const res = await request(app)
+      .post('/api/auth/recover-with-code')
+      .send({ email: 'test@example.com' });
+    expect(res.status).toBe(400);
+  });
+
+  test('recovery-codes regenerate requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/auth/recovery-codes/regenerate')
+      .send({ currentPassword: 'password' });
+    expect(res.status).toBe(401);
+  });
+
+  test('manual password reset requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/users/1/manual-password-reset')
+      .send({ newPassword: 'Password123!' });
+    expect(res.status).toBe(401);
+  });
+
+  test('manual password reset audit requires authentication', async () => {
+    const res = await request(app).get('/api/users/1/manual-password-reset/audit');
+    expect(res.status).toBe(401);
+  });
+
   test('auth register/login + project create when DB is available', async () => {
     if (!dbReady) {
       return;

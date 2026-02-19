@@ -17,6 +17,7 @@ import { createTransaction } from '../services/transactions';
 import { CURRENCY_LABELS } from '../utils/labels';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
+import { notify } from '../utils/notify';
 import {
   normalizeRole,
   isMasterUser,
@@ -71,12 +72,12 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
 
       await createTransaction(payload);
 
-      alert(t('projects.transaction.alerts.createSuccess'));
+      notify(t('projects.transaction.alerts.createSuccess'));
       onSuccess?.();
       onClose?.();
     } catch (err) {
       console.error('❌ Erreur création transaction projet:', err);
-      alert(
+      notify(
         err?.response?.data?.error ||
           err?.message ||
           t('projects.transaction.alerts.createError')
@@ -362,10 +363,10 @@ export default function AdminProjectsPage() {
       const toSend = agentId ? Number(agentId) : null;
       await assignAgentToProject(projectId, toSend);
       await loadProjects();
-      alert(t('projects.alerts.assignSuccess'));
+      notify(t('projects.alerts.assignSuccess'));
     } catch (err) {
       console.error('❌ Erreur assignation agent:', err);
-      alert(t('projects.alerts.assignError'));
+      notify(t('projects.alerts.assignError'));
     }
   }
 
@@ -397,10 +398,10 @@ export default function AdminProjectsPage() {
       await updateProject(projectId, payload);
 
       await loadProjects();
-      alert(t('projects.alerts.statusUpdateSuccess'));
+      notify(t('projects.alerts.statusUpdateSuccess'));
     } catch (err) {
       console.error('❌ Erreur mise à jour statut:', err);
-      alert(t('projects.alerts.statusUpdateError'));
+      notify(t('projects.alerts.statusUpdateError'));
     }
   }
 
@@ -780,4 +781,5 @@ export default function AdminProjectsPage() {
     </div>
   );
 }
+
 

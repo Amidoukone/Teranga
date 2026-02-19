@@ -12,6 +12,8 @@ import {
 import { me } from '../services/auth';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
+import { notify } from '../utils/notify';
+import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 // ============================================================================
 // 🌍 URL BASE — robuste production (inchangé)
@@ -204,6 +206,7 @@ function formatRemainingMs(ms) {
 // ============================================================================
 export default function TaskEvidencesPage() {
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   const { formatDateTime } = useLocale();
   const { id } = useParams(); // taskId
 
@@ -335,11 +338,11 @@ export default function TaskEvidencesPage() {
   async function handleUpload(e) {
     e.preventDefault();
     if (!files.length) {
-      alert(t('taskEvidencesPage.validation.noFiles'));
+      notify(t('taskEvidencesPage.validation.noFiles'));
       return;
     }
     if (uploadValidationError) {
-      alert(uploadValidationError);
+      notify(uploadValidationError);
       return;
     }
 
@@ -383,7 +386,7 @@ export default function TaskEvidencesPage() {
       const msg =
         err?.response?.data?.error ||
         t('taskEvidencesPage.errors.upload');
-      alert(msg);
+      notify(msg);
     } finally {
       setUploading(false);
       setUploadProgress(null);
@@ -391,7 +394,8 @@ export default function TaskEvidencesPage() {
   }
 
   async function handleDelete(evidenceId) {
-    if (!window.confirm(t('taskEvidencesPage.confirmDelete'))) return;
+    const ok = await confirmDelete("evidence");
+    if (!ok) return;
     try {
       await deleteEvidence(evidenceId);
       await fetchEvidences();
@@ -399,7 +403,7 @@ export default function TaskEvidencesPage() {
       console.error('❌ delete evidence:', err);
       const msg =
         err?.response?.data?.error || t('taskEvidencesPage.errors.delete');
-      alert(msg);
+      notify(msg);
     }
   }
 
@@ -1021,5 +1025,6 @@ export default function TaskEvidencesPage() {
     </div>
   );
 }
+
 
 

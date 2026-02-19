@@ -339,14 +339,36 @@ export async function me() {
 /* ============================================================
    🔐 Mot de passe oublié (demande de reset)
 ============================================================ */
+export async function forgotPassword(payload) {
+  const inProd = (process.env.NODE_ENV || 'development') === 'production';
+  const debugSuffix = inProd ? '' : '?debug=true';
+  const { data } = await api.post(`/auth/forgot-password${debugSuffix}`, payload);
+  return data;
+}
+
 /* ============================================================
    🔁 Reset mot de passe (token)
 ============================================================ */
+export async function resetPassword(payload) {
+  const { data } = await api.post('/auth/reset-password', payload);
+  return data;
+}
+
+export async function recoverWithCode(payload) {
+  const { data } = await api.post('/auth/recover-with-code', payload);
+  return data;
+}
+
 /* ============================================================
    🔐 Changer mot de passe (auth)
 ============================================================ */
 export async function changePassword(payload) {
   const { data } = await api.post('/auth/change-password', payload);
+  return data;
+}
+
+export async function regenerateRecoveryCodes(payload) {
+  const { data } = await api.post('/auth/recovery-codes/regenerate', payload);
   return data;
 }
 
@@ -403,7 +425,11 @@ export function getToken() {
 const AuthService = {
   register,
   login,
+  forgotPassword,
+  resetPassword,
+  recoverWithCode,
   changePassword,
+  regenerateRecoveryCodes,
   me,
   logout,
   updateMyLanguage,

@@ -1,7 +1,9 @@
 'use strict';
 
 const bcrypt = require('bcrypt');
-const db = require('../../models');  // <-- Chemin corrigé
+const logger = require('./logger');
+const db = require('../../models');
+
 const { User } = db;
 
 module.exports = async function bootstrapAdmin() {
@@ -18,51 +20,48 @@ module.exports = async function bootstrapAdmin() {
     if ((!email || !password) && !isProd && allowDefaults) {
       email = email || defaultEmail;
       password = password || defaultPassword;
-      console.log(
-        `⚠️ Bootstrap admin: variables manquantes, utilisation des valeurs par défaut en dev (${email}).`
-      );
+      logger.info({ email }, 'bootstrap_admin.defaults_applied_dev');
     }
 
     if (!email || !password) {
-      console.log("⚠️ Variables BOOTSTRAP_ADMIN_EMAIL ou PASSWORD manquantes. Bootstrap ignoré.");
+      logger.info('bootstrap_admin.skipped.missing_credentials');
       return;
     }
 
     if (isProd && !enabled) {
-      console.log("⚠️ Bootstrap admin désactivé en production (BOOTSTRAP_ADMIN_ENABLED=false).");
+      logger.info('bootstrap_admin.skipped.disabled_in_production');
       return;
     }
 
     if (expiresAt) {
       const expiry = new Date(expiresAt);
       if (Number.isNaN(expiry.getTime()) || expiry < new Date()) {
-        console.log("⚠️ Bootstrap admin expiré (BOOTSTRAP_ADMIN_EXPIRES_AT).");
+        logger.info({ expiresAt }, 'bootstrap_admin.skipped.expired');
         return;
       }
     }
 
-    // Vérifie si l'admin existe déjà
     const exists = await User.findOne({ where: { email } });
     if (exists) {
-      console.log(`ℹ️ Admin "${email}" existe déjà. Aucun bootstrap nécessaire.`);
+      logger.info({ email }, 'bootstrap_admin.skipped.already_exists');
       return;
     }
 
-    console.log(`🛠️ Création du compte admin "${email}"…`);
+    logger.info({ email }, 'bootstrap_admin.create.started');
 
     const passwordHash = await bcrypt.hash(password, 10);
 
     await User.create({
       email,
       passwordHash,
-      firstName: "Super",
-      lastName: "Admin",
-      role: "admin",
+      firstName: 'Super',
+      lastName: 'Admin',
+      role: 'admin',
       emailVerified: true,
     });
 
-    console.log(`✅ Admin "${email}" créé avec succès !`);
+    logger.info({ email }, 'bootstrap_admin.create.succeeded');
   } catch (err) {
-    console.error("❌ Erreur bootstrap admin :", err.message);
+    logger.error({ err }, 'bootstrap_admin.create.failed');
   }
 };

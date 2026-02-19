@@ -23,15 +23,19 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "lint": "eslint \"src/**/*.{js,jsx}\"",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "react-scripts test --watch=false --passWithNoTests",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "no-alert": "error"
+    }
   },
   "browserslist": {
     "production": [

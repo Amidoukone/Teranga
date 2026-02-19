@@ -15,6 +15,7 @@ const {
   Order,
 } = require('../../models');
 const { getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
+const logger = require('../utils/logger');
 
 /* ======================================================
    🧩 Helpers
@@ -111,7 +112,7 @@ exports.list = async (req, res) => {
 
     return res.json({ regions: rows });
   } catch (e) {
-    console.error('❌ list regions:', e);
+    logger.error('❌ list regions:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la récupération des régions' });
@@ -153,7 +154,7 @@ exports.create = async (req, res) => {
 
     return res.status(201).json({ region: withCountry || created });
   } catch (e) {
-    console.error('❌ create region:', e);
+    logger.error('❌ create region:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la création de la région' });
@@ -204,7 +205,7 @@ exports.update = async (req, res) => {
 
     return res.json({ region: withCountry || region });
   } catch (e) {
-    console.error('❌ update region:', e);
+    logger.error('❌ update region:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la mise à jour de la région' });
@@ -235,7 +236,7 @@ exports.remove = async (req, res) => {
 
     return res.json({ success: true });
   } catch (e) {
-    console.error('❌ delete region:', e);
+    logger.error('❌ delete region:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la suppression de la région' });

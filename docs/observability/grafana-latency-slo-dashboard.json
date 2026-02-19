@@ -1,0 +1,88 @@
+{
+  "title": "Teranga API - Latency SLO",
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "title": "SLO Compliance (%)",
+      "type": "stat",
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "jsonpath",
+          "urlPath": "/api/v1/metrics",
+          "jsonPath": "$.slo.latency.currentCompliancePct"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 90
+              },
+              {
+                "color": "green",
+                "value": 95
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Average Latency (ms)",
+      "type": "stat",
+      "targets": [
+        {
+          "refId": "B",
+          "queryType": "jsonpath",
+          "urlPath": "/api/v1/metrics",
+          "jsonPath": "$.durationsMs.avg"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Frontend Errors (total)",
+      "type": "stat",
+      "targets": [
+        {
+          "refId": "C",
+          "queryType": "jsonpath",
+          "urlPath": "/api/v1/metrics",
+          "jsonPath": "$.frontendErrors.total"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "5xx Errors",
+      "type": "stat",
+      "targets": [
+        {
+          "refId": "D",
+          "queryType": "jsonpath",
+          "urlPath": "/api/v1/metrics",
+          "jsonPath": "$.totals.errors"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s"
+}

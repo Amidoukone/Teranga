@@ -8,6 +8,10 @@ module.exports = (sequelize, DataTypes) => {
       // User.hasMany(models.Property, { foreignKey: 'ownerId', as: 'properties' });
       // User.hasMany(models.Service, { foreignKey: 'clientId', as: 'servicesRequested' });
       // User.hasMany(models.Service, { foreignKey: 'agentId', as: 'servicesAssigned' });
+      User.hasMany(models.RecoveryCode, {
+        foreignKey: 'userId',
+        as: 'recoveryCodes',
+      });
     }
 
     /**

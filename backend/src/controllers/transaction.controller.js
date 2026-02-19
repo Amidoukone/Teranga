@@ -35,6 +35,7 @@ const {
 
 // 📸 ImageKit Helper unifié
 const imageKit = require("../helpers/teranga-imagekit");
+const logger = require('../utils/logger');
 
 // 📌 Labels français
 const {
@@ -183,7 +184,7 @@ async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
  * ============================================================================ */
 async function uploadProofToImageKit(file) {
   if (!isImageKitEnabled()) {
-    console.warn("⚠️ ImageKit désactivé — upload ignoré");
+    logger.warn("transaction.imagekit.disabled_upload_skipped");
     return {
       url: null,
       fileId: null,
@@ -208,7 +209,7 @@ async function uploadProofToImageKit(file) {
       size: file.size,
     };
   } catch (e) {
-    console.error("❌ Upload ImageKit échoué:", e);
+    logger.error({ err: e }, "transaction.imagekit.upload.failed");
     return {
       url: null,
       fileId: null,
@@ -392,7 +393,7 @@ exports.create = async (req, res) => {
       transaction: withLabels(created),
     });
   } catch (e) {
-    console.error("❌ Erreur création transaction:", e);
+    logger.error({ err: e }, "transaction.create.failed");
     return res.status(500).json({
       error: "Erreur lors de l'ajout de la transaction",
     });
@@ -494,7 +495,7 @@ exports.list = async (req, res) => {
       pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
-    console.error("❌ Erreur list transactions:", e);
+    logger.error({ err: e }, "transaction.list.failed");
     return res.status(500).json({
       error: "Erreur lors de la récupération des transactions",
     });
@@ -524,7 +525,7 @@ exports.detail = async (req, res) => {
 
     return res.json({ transaction: withLabels(trx) });
   } catch (e) {
-    console.error("❌ Erreur detail transaction:", e);
+    logger.error({ err: e }, "transaction.detail.failed");
     return res.status(500).json({
       error: "Erreur lors de la récupération de la transaction",
     });
@@ -586,7 +587,7 @@ exports.update = async (req, res) => {
         try {
           await imageKit.deleteFile(trx.proofFile.fileId);
         } catch (err) {
-          console.warn("⚠️ Impossible de supprimer ancienne preuve:", err.message);
+          logger.warn({ err }, "transaction.proof.delete_old.failed");
         }
       }
       trx.proofFile = await uploadProofToImageKit(up);
@@ -738,7 +739,7 @@ exports.update = async (req, res) => {
       transaction: withLabels(updated),
     });
   } catch (e) {
-    console.error("❌ Erreur update transaction:", e);
+    logger.error({ err: e }, "transaction.update.failed");
     return res.status(500).json({
       error: "Erreur lors de la mise à jour de la transaction",
     });
@@ -769,10 +770,7 @@ exports.remove = async (req, res) => {
       try {
         await imageKit.deleteFile(trx.proofFile.fileId);
       } catch (err) {
-        console.warn(
-          "⚠️ Impossible de supprimer la preuve ImageKit:",
-          err.message
-        );
+        logger.warn({ err }, "transaction.proof.delete.failed");
       }
     }
 
@@ -780,7 +778,7 @@ exports.remove = async (req, res) => {
 
     return res.json({ message: "Transaction supprimée" });
   } catch (e) {
-    console.error("❌ Erreur suppression transaction:", e);
+    logger.error({ err: e }, "transaction.remove.failed");
     return res.status(500).json({
       error: "Erreur lors de la suppression de la transaction",
     });
@@ -818,7 +816,7 @@ exports.summary = async (req, res) => {
       balance,
     });
   } catch (e) {
-    console.error("❌ Erreur summary:", e);
+    logger.error({ err: e }, "transaction.summary.failed");
     return res.status(500).json({
       error: "Erreur lors du calcul du résumé financier",
     });
@@ -882,7 +880,7 @@ exports.report = async (req, res) => {
       totalsWithLabels,
     });
   } catch (e) {
-    console.error("❌ Erreur report:", e);
+    logger.error({ err: e }, "transaction.report.failed");
     return res.status(500).json({
       error: "Erreur lors de la génération du rapport",
     });
@@ -916,9 +914,10 @@ exports.listByOrder = async (req, res) => {
       pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
-    console.error("❌ Erreur listByOrder transactions:", e);
+    logger.error({ err: e }, "transaction.list_by_order.failed");
     return res.status(500).json({
       error: "Erreur lors de la récupération des transactions de cette commande",
     });
   }
 };
+

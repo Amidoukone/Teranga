@@ -3,6 +3,7 @@ import api from '../services/api';
 import { applyLabels, SERVICE_STATUSES, SERVICE_TYPES } from '../utils/labels';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
+import { notify } from '../utils/notify';
 
 const TOKEN_KEY = 'teranga_token';
 
@@ -44,7 +45,7 @@ export default function AgentServicesPage() {
     } catch (err) {
       console.error('❌ Erreur chargement services agent:', err);
       setServices([]);
-      alert(t('agentServicesPage.errors.load'));
+      notify(t('agentServicesPage.errors.load'));
     } finally {
       setLoading(false);
     }
@@ -81,7 +82,7 @@ export default function AgentServicesPage() {
       await load();
     } catch (err) {
       console.error('❌ Erreur mise à jour statut service:', err);
-      alert(t('agentServicesPage.errors.updateStatus'));
+      notify(t('agentServicesPage.errors.updateStatus'));
     } finally {
       setActingId(null);
     }
@@ -310,4 +311,5 @@ export default function AgentServicesPage() {
     </div>
   );
 }
+
 

@@ -26,6 +26,7 @@ const PROPERTY_TYPES = {
   house: 'Maison',
   apartment: 'Appartement',
   land: 'Terrain',
+  automobile: 'Automobile',
   commercial: 'Local commercial',
 };
 

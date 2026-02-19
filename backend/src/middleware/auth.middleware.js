@@ -2,10 +2,10 @@
 
 const jwt = require('jsonwebtoken');
 const db = require('../../models');
+const logger = require('../utils/logger');
 
 const COOKIE_ACCESS = 'teranga_access';
 const COOKIE_CSRF = 'teranga_csrf';
-
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 module.exports = async function auth(req, res, next) {
@@ -15,54 +15,51 @@ module.exports = async function auth(req, res, next) {
   const token = headerToken || cookieToken;
 
   if (!token) {
-    console.warn('🔒 Auth: token manquant', {
-      hasAuthHeader: Boolean(req.headers?.authorization),
-      hasCookie: Boolean(cookieToken),
-      path: req.originalUrl,
-      method: req.method,
-    });
+    logger.warn(
+      {
+        hasAuthHeader: Boolean(req.headers?.authorization),
+        hasCookie: Boolean(cookieToken),
+        path: req.originalUrl,
+        method: req.method,
+      },
+      'auth.token.missing'
+    );
     return res.status(401).json({ error: 'Token manquant' });
   }
 
   try {
-    // 1️⃣ Vérification JWT
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.authTokenPayload = payload;
     req.authToken = token;
 
     if (payload?.jti) {
       const blocked = await db.TokenBlacklist.findOne({ where: { jti: payload.jti } });
-      if (blocked) {
-        return res.status(401).json({ error: 'Token révoqué' });
-      }
+      if (blocked) return res.status(401).json({ error: 'Token revoque' });
     }
 
-    // 2️⃣ Source de vérité : DB
     const user = await db.User.findByPk(payload.id);
+    if (!user) return res.status(401).json({ error: 'Utilisateur introuvable' });
 
-    if (!user) {
-      return res.status(401).json({ error: 'Utilisateur introuvable' });
-    }
-
-    // 3️⃣ Injection normalisée (toujours les mêmes clés)
     req.user = {
       id: user.id,
-      role: user.role, // 'client' | 'agent' | 'admin'
-      // Legacy ISO (utile pour les fallbacks geo)
+      role: user.role,
       country: user.country ?? null,
       countryId: user.countryId ?? null,
       regionId: user.regionId ?? null,
     };
 
     if ((process.env.NODE_ENV || 'development') !== 'production') {
-      console.info('🔓 Auth OK', {
-        userId: user.id,
-        role: user.role,
-        countryId: user.countryId ?? null,
-        regionId: user.regionId ?? null,
-        path: req.originalUrl,
-        method: req.method,
-      });
+      logger.info(
+        {
+          userId: user.id,
+          role: user.role,
+          countryId: user.countryId ?? null,
+          regionId: user.regionId ?? null,
+          path: req.originalUrl,
+          method: req.method,
+        },
+        'auth.token.validated'
+      );
     }
 
     const usingCookie = Boolean(cookieToken && !headerToken);
@@ -76,14 +73,17 @@ module.exports = async function auth(req, res, next) {
 
     next();
   } catch (err) {
-    console.warn('🔒 JWT invalide ou expiré:', {
-      message: err.message,
-      name: err.name,
-      path: req.originalUrl,
-      method: req.method,
-      hasSecret: Boolean(process.env.JWT_SECRET),
-      tokenPrefix: typeof token === 'string' ? token.slice(0, 12) : null,
-    });
-    return res.status(401).json({ error: 'Token invalide ou expiré' });
+    logger.warn(
+      {
+        name: err.name,
+        message: err.message,
+        path: req.originalUrl,
+        method: req.method,
+        hasSecret: Boolean(process.env.JWT_SECRET),
+        tokenPrefix: typeof token === 'string' ? token.slice(0, 12) : null,
+      },
+      'auth.token.invalid_or_expired'
+    );
+    return res.status(401).json({ error: 'Token invalide ou expire' });
   }
 };

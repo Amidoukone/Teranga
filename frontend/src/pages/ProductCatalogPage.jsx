@@ -15,6 +15,7 @@ import { formatCurrency } from '../utils/labels';
 import PaginationBar from '../components/PaginationBar';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
+import { notify } from '../utils/notify';
 
 /* ============================================================
    🌍 PRODUCTION CONFIG — FILE_BASE / toAbsUrl()
@@ -276,12 +277,12 @@ export default function ProductCatalogPage() {
   ============================================================ */
   function handleOrder(product) {
     if (!user) {
-      alert(t('productCatalogPage.alerts.loginRequired'));
+      notify(t('productCatalogPage.alerts.loginRequired'));
       return;
     }
 
     if (user.role === 'admin') {
-      alert(t('productCatalogPage.alerts.adminBlocked'));
+      notify(t('productCatalogPage.alerts.adminBlocked'));
       return;
     }
 
@@ -297,19 +298,19 @@ export default function ProductCatalogPage() {
     const requestedQty = Number(quantity);
 
     if (!Number.isFinite(requestedQty) || requestedQty <= 0) {
-      alert(t('productCatalogPage.alerts.invalidQuantity'));
+      notify(t('productCatalogPage.alerts.invalidQuantity'));
       return;
     }
 
     // Si stock connu et la demande dépasse le stock → message personnalisé
     if (typeof selectedProduct.stock === 'number') {
       if (selectedProduct.stock <= 0) {
-        alert(t('productCatalogPage.alerts.outOfStock'));
+        notify(t('productCatalogPage.alerts.outOfStock'));
         return;
       }
 
       if (requestedQty > selectedProduct.stock) {
-        alert(
+        notify(
           t('productCatalogPage.alerts.overStock', {
             requested: requestedQty,
             available: selectedProduct.stock,
@@ -338,7 +339,7 @@ export default function ProductCatalogPage() {
 
       const newOrder = await createOrder(payload);
 
-      alert(
+      notify(
         t('productCatalogPage.alerts.orderSuccess', {
           quantity: requestedQty,
           name: selectedProduct.name,
@@ -354,7 +355,7 @@ export default function ProductCatalogPage() {
       else navigate('/orders');
     } catch (err) {
       console.error('❌ Erreur création commande:', err);
-      alert(t('productCatalogPage.alerts.orderError'));
+      notify(t('productCatalogPage.alerts.orderError'));
     }
   }
 
@@ -900,5 +901,6 @@ export default function ProductCatalogPage() {
     </div>
   );
 }
+
 
 

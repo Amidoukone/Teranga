@@ -4,6 +4,8 @@ const logger = require('../utils/logger');
 
 const MAX_RECENT_ERRORS = 20;
 const MAX_SLOW_REQUESTS = 20;
+const MAX_FRONTEND_ERRORS = 50;
+const LATENCY_BUCKETS_MS = [100, 300, 500, 800, 1200, 2000];
 
 const metricsStore = {
   totals: {
@@ -18,8 +20,21 @@ const metricsStore = {
     total: 0,
     max: 0,
   },
+  latencyBuckets: {
+    'lte_100': 0,
+    'lte_300': 0,
+    'lte_500': 0,
+    'lte_800': 0,
+    'lte_1200': 0,
+    'lte_2000': 0,
+    gt_2000: 0,
+  },
   recentErrors: [],
   slowRequests: [],
+  frontendErrors: {
+    total: 0,
+    recent: [],
+  },
   startedAt: new Date().toISOString(),
 };
 
@@ -36,6 +51,69 @@ function recordDuration(durationMs) {
   if (durationMs > metricsStore.durationsMs.max) {
     metricsStore.durationsMs.max = durationMs;
   }
+}
+
+function recordLatencyBucket(durationMs) {
+  if (!Number.isFinite(durationMs)) return;
+
+  let bucketMatched = false;
+  for (const bucket of LATENCY_BUCKETS_MS) {
+    if (durationMs <= bucket) {
+      metricsStore.latencyBuckets[`lte_${bucket}`] += 1;
+      bucketMatched = true;
+      break;
+    }
+  }
+
+  if (!bucketMatched) {
+    metricsStore.latencyBuckets.gt_2000 += 1;
+  }
+}
+
+function toSloSummary() {
+  const targetLatencyMs = Number(process.env.SLO_TARGET_LATENCY_MS || 800);
+  const targetCompliancePct = Number(process.env.SLO_TARGET_COMPLIANCE_PCT || 95);
+  const slowThreshold = Number(process.env.SLOW_REQUEST_THRESHOLD_MS || 1500);
+
+  const totalRequests = metricsStore.durationsMs.count;
+  if (totalRequests <= 0) {
+    return {
+      latency: {
+        targetMs: targetLatencyMs,
+        targetCompliancePct,
+        currentCompliancePct: 100,
+        isMet: true,
+      },
+      slowRequests: {
+        thresholdMs: slowThreshold,
+        count: 0,
+      },
+    };
+  }
+
+  let compliantCount = 0;
+  for (const bucket of LATENCY_BUCKETS_MS) {
+    if (bucket <= targetLatencyMs) {
+      compliantCount += metricsStore.latencyBuckets[`lte_${bucket}`] || 0;
+    }
+  }
+
+  const currentCompliancePct = Number(
+    ((compliantCount / totalRequests) * 100).toFixed(2)
+  );
+
+  return {
+    latency: {
+      targetMs: targetLatencyMs,
+      targetCompliancePct,
+      currentCompliancePct,
+      isMet: currentCompliancePct >= targetCompliancePct,
+    },
+    slowRequests: {
+      thresholdMs: slowThreshold,
+      count: metricsStore.slowRequests.length,
+    },
+  };
 }
 
 function metricsMiddleware(req, res, next) {
@@ -64,6 +142,7 @@ function metricsMiddleware(req, res, next) {
       (metricsStore.byRoute[resolvedPath] || 0) + 1;
 
     recordDuration(Number(durationMs.toFixed(2)));
+    recordLatencyBucket(durationMs);
 
     if (statusCode >= 500) {
       const errorEntry = {
@@ -99,7 +178,7 @@ function metricsMiddleware(req, res, next) {
       );
       logger.warn(
         slowEntry,
-        '🐢 Requête lente détectée'
+        'metrics.request.slow'
       );
     }
   });
@@ -107,8 +186,56 @@ function metricsMiddleware(req, res, next) {
   next();
 }
 
+function frontendErrorHandler(req, res) {
+  const observabilityToken = (process.env.FRONTEND_ERROR_TOKEN || '').trim();
+
+  if (observabilityToken) {
+    const headerToken = req.headers['x-observability-token'];
+    if (!headerToken || headerToken !== observabilityToken) {
+      return res.status(403).json({ error: 'Acces interdit' });
+    }
+  }
+
+  const body = req.body || {};
+  const message = String(body.message || '').trim();
+  if (!message) {
+    return res.status(400).json({ error: 'message requis' });
+  }
+
+  const entry = {
+    requestId: req.requestId,
+    message,
+    stack: String(body.stack || '').slice(0, 4000),
+    name: String(body.name || '').slice(0, 120),
+    componentStack: String(body.componentStack || '').slice(0, 4000),
+    path: String(body.path || '').slice(0, 512),
+    userAgent: String(body.userAgent || '').slice(0, 512),
+    language: String(body.language || '').slice(0, 64),
+    release: String(body.release || '').slice(0, 120),
+    timestamp: new Date().toISOString(),
+  };
+
+  metricsStore.frontendErrors.total += 1;
+  metricsStore.frontendErrors.recent.unshift(entry);
+  metricsStore.frontendErrors.recent = metricsStore.frontendErrors.recent.slice(
+    0,
+    MAX_FRONTEND_ERRORS
+  );
+
+  logger.error({ frontendError: entry }, 'frontend.error.captured');
+
+  return res.status(202).json({ accepted: true });
+}
+
 function metricsHandler(req, res) {
   const token = process.env.METRICS_TOKEN;
+  const isProd = (process.env.NODE_ENV || 'development') === 'production';
+
+  if (isProd && !token) {
+    return res
+      .status(503)
+      .json({ error: 'METRICS_TOKEN requis en production' });
+  }
   if (token) {
     const headerToken = req.headers['x-metrics-token'];
     if (!headerToken || headerToken !== token) {
@@ -123,6 +250,7 @@ function metricsHandler(req, res) {
 
   return res.json({
     ...metricsStore,
+    slo: toSloSummary(),
     durationsMs: {
       ...metricsStore.durationsMs,
       avg: Number(avgDuration.toFixed(2)),
@@ -133,4 +261,7 @@ function metricsHandler(req, res) {
 module.exports = {
   metricsMiddleware,
   metricsHandler,
+  frontendErrorHandler,
 };
+
+

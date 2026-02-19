@@ -20,6 +20,7 @@ const isGlobalAdmin =
   geo.isGlobalAdmin ||
   ((u) => u?.role === 'admin' && !(u?.countryId || u?.regionId));
 const { getPagination } = require('../utils/pagination');
+const logger = require('../utils/logger');
 
 /* ============================================================
    🔧 Helpers utilitaires
@@ -313,7 +314,7 @@ exports.create = async (req, res) => {
       order: withOrderLabels(orderWithLabels || updatedOrder),
     });
   } catch (e) {
-    console.error('❌ create orderItem:', e);
+    logger.error('❌ create orderItem:', e);
     const msg = e?.message || '';
     if (msg.toLowerCase().includes('stock insuffisant')) {
       return res.status(400).json({ error: msg });
@@ -357,7 +358,7 @@ exports.list = async (req, res) => {
       pagination: { page, limit, offset, count },
     });
   } catch (e) {
-    console.error('❌ list orderItems:', e);
+    logger.error('❌ list orderItems:', e);
     return res.status(500).json({ error: 'Erreur lors de la récupération des articles.' });
   }
 };
@@ -418,7 +419,7 @@ exports.update = async (req, res) => {
       order: withOrderLabels(orderWithLabels),
     });
   } catch (e) {
-    console.error('❌ update orderItem:', e);
+    logger.error('❌ update orderItem:', e);
     return res.status(500).json({ error: "Erreur lors de la mise à jour de l'article." });
   }
 };
@@ -468,7 +469,7 @@ exports.remove = async (req, res) => {
       order: withOrderLabels(orderWithLabels),
     });
   } catch (e) {
-    console.error('❌ remove orderItem:', e);
+    logger.error('❌ remove orderItem:', e);
     return res.status(500).json({ error: "Erreur lors de la suppression de l'article." });
   }
 };

@@ -20,6 +20,7 @@ const {
   computeProgress,
 } = require("../services/notification.service");
 const { emitEvent } = require("../services/activity.service");
+const logger = require('../utils/logger');
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
 
 function toIntOr(value, fallback) {
@@ -438,7 +439,7 @@ exports.create = async (req, res) => {
                 folder: "/teranga/evidences/",
               });
             } catch (err) {
-              console.warn("⚠️ ImageKit upload failed:", {
+              logger.warn("⚠️ ImageKit upload failed:", {
                 code: err?.code || err?.cause?.code,
                 message: err?.message,
               });
@@ -575,12 +576,12 @@ exports.create = async (req, res) => {
         });
       }
     } catch (err) {
-      console.warn("⚠️ Notification preuve (create) échouée:", err?.message || err);
+      logger.warn("⚠️ Notification preuve (create) échouée:", err?.message || err);
     }
 
     return res.status(createdIds.length ? 201 : 500).json(response);
   } catch (e) {
-    console.error("❌ Erreur create evidence:", e);
+    logger.error("❌ Erreur create evidence:", e);
     return res.status(500).json({ error: "Erreur lors de l'ajout des preuves" });
   }
 };
@@ -643,7 +644,7 @@ exports.list = async (req, res) => {
 
     return res.json({ evidences: evidences.map(addLabels) });
   } catch (e) {
-    console.error("❌ Erreur list evidences:", e);
+    logger.error("❌ Erreur list evidences:", e);
     return res.status(500).json({
       error: "Erreur lors de la récupération des preuves",
     });
@@ -693,7 +694,7 @@ exports.listByTask = async (req, res) => {
 
     return res.json({ evidences: evidences.map(addLabels) });
   } catch (e) {
-    console.error("❌ Erreur listByTask:", e);
+    logger.error("❌ Erreur listByTask:", e);
     return res.status(500).json({
       error: "Erreur lors de la récupération des preuves",
     });
@@ -743,7 +744,7 @@ exports.listByOrder = async (req, res) => {
 
     return res.json({ evidences: evidences.map(addLabels) });
   } catch (e) {
-    console.error("❌ Erreur listByOrder:", e);
+    logger.error("❌ Erreur listByOrder:", e);
     return res.status(500).json({
       error: "Erreur lors de la récupération des preuves",
     });
@@ -825,7 +826,7 @@ exports.remove = async (req, res) => {
       try {
         await imagekit.deleteFile(ev.fileId);
       } catch (e) {
-        console.warn(
+        logger.warn(
           "⚠️ Impossible de supprimer le fichier ImageKit:",
           e.message
         );
@@ -838,7 +839,7 @@ exports.remove = async (req, res) => {
       try {
         await fs.promises.unlink(absolutePath);
       } catch (e) {
-        console.warn("⚠️ Impossible de supprimer le fichier local:", e.message);
+        logger.warn("⚠️ Impossible de supprimer le fichier local:", e.message);
       }
     }
 
@@ -846,7 +847,7 @@ exports.remove = async (req, res) => {
 
     return res.json({ message: "Preuve supprimée avec succès" });
   } catch (e) {
-    console.error("❌ Erreur remove evidence:", e);
+    logger.error("❌ Erreur remove evidence:", e);
     return res.status(500).json({
       error: "Erreur lors de la suppression du fichier",
     });

@@ -10,6 +10,8 @@ import {
 } from "../services/categories";
 import { me } from "../services/auth";
 import { normalizeRole, isGlobalAdminUser, isMasterUser } from "../utils/role";
+import { notify } from '../utils/notify';
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 /*
 ============================================================================
@@ -41,6 +43,7 @@ function computeIsMaster(user) {
 
 export default function AdminCategoriesPage() {
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   const [user, setUser] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -107,7 +110,7 @@ export default function AdminCategoriesPage() {
     } catch (err) {
       console.error("❌ loadCategories:", err);
       setErrorMsg(t("adminCategoriesPage.errors.load"));
-      alert(t("adminCategoriesPage.errors.load"));
+      notify(t("adminCategoriesPage.errors.load"));
     } finally {
       setLoading(false);
     }
@@ -128,14 +131,14 @@ export default function AdminCategoriesPage() {
     e.preventDefault();
 
     if (!canWrite) {
-      alert(t("adminCategoriesPage.errors.forbidden"));
+      notify(t("adminCategoriesPage.errors.forbidden"));
       return;
     }
 
     if (saving) return; // 🔒 empêche double-clic si la requête est en cours
 
     if (!form.name.trim()) {
-      alert(t("adminCategoriesPage.errors.nameRequired"));
+      notify(t("adminCategoriesPage.errors.nameRequired"));
       return;
     }
 
@@ -145,10 +148,10 @@ export default function AdminCategoriesPage() {
 
       if (editing) {
         await updateCategory(editing.id, form);
-        alert(t("adminCategoriesPage.alerts.updated"));
+        notify(t("adminCategoriesPage.alerts.updated"));
       } else {
         await createCategory(form);
-        alert(t("adminCategoriesPage.alerts.created"));
+        notify(t("adminCategoriesPage.alerts.created"));
       }
 
       resetForm();
@@ -157,7 +160,7 @@ export default function AdminCategoriesPage() {
     } catch (err) {
       console.error("❌ handleSubmit:", err);
       setErrorMsg(t("adminCategoriesPage.errors.save"));
-      alert(t("adminCategoriesPage.errors.save"));
+      notify(t("adminCategoriesPage.errors.save"));
     } finally {
       setSaving(false);
     }
@@ -168,11 +171,12 @@ export default function AdminCategoriesPage() {
   ============================================================ */
   async function handleDelete(id) {
     if (!canWrite) {
-      alert(t("adminCategoriesPage.errors.forbidden"));
+      notify(t("adminCategoriesPage.errors.forbidden"));
       return;
     }
 
-    if (!window.confirm(t("adminCategoriesPage.alerts.deleteConfirm"))) return;
+    const ok = await confirmDelete("category");
+    if (!ok) return;
 
     try {
       setErrorMsg("");
@@ -181,7 +185,7 @@ export default function AdminCategoriesPage() {
     } catch (err) {
       console.error("❌ deleteCategory:", err);
       setErrorMsg(t("adminCategoriesPage.errors.delete"));
-      alert(t("adminCategoriesPage.errors.delete"));
+      notify(t("adminCategoriesPage.errors.delete"));
     }
   }
 
@@ -262,7 +266,7 @@ export default function AdminCategoriesPage() {
             <button
               onClick={() => {
                 if (!canWrite) {
-                  alert(t("adminCategoriesPage.errors.forbidden"));
+                  notify(t("adminCategoriesPage.errors.forbidden"));
                   return;
                 }
                 if (showForm) resetForm();
@@ -428,7 +432,7 @@ export default function AdminCategoriesPage() {
                   <button
                     onClick={() => {
                       if (!canWrite) {
-                        alert(t("adminCategoriesPage.errors.forbidden"));
+                        notify(t("adminCategoriesPage.errors.forbidden"));
                         return;
                       }
                       setForm({
@@ -468,3 +472,4 @@ export default function AdminCategoriesPage() {
     </div>
   );
 }
+

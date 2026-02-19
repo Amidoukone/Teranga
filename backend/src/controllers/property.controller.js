@@ -21,6 +21,7 @@ const {
   isGlobalAdmin,
 } = require('../utils/geoScope');
 const { getPagination } = require('../utils/pagination');
+const logger = require('../utils/logger');
 
 /* ============================================================
    Helpers utilitaires
@@ -127,7 +128,7 @@ async function uploadPhotosToImageKit(files = []) {
 
   // Si ImageKit n'est pas configuré, on log et on ignore l'upload
   if (!isImageKitEnabled()) {
-    console.warn(
+    logger.warn(
       "⚠️ ImageKit désactivé ou mal configuré. Les fichiers ne seront pas uploadés."
     );
     return results;
@@ -149,7 +150,7 @@ async function uploadPhotosToImageKit(files = []) {
         fileId: uploaded.fileId,
       });
     } catch (e) {
-      console.error(
+      logger.error(
         '❌ Échec upload ImageKit pour le fichier',
         f.originalname,
         e?.message || e
@@ -169,7 +170,7 @@ async function deleteImageKitFiles(photoObjects = []) {
 
   // Si ImageKit n'est pas configuré, inutile d'essayer de supprimer
   if (!isImageKitEnabled()) {
-    console.warn(
+    logger.warn(
       "⚠️ ImageKit désactivé ou mal configuré. Suppression distante ignorée."
     );
     return;
@@ -181,7 +182,7 @@ async function deleteImageKitFiles(photoObjects = []) {
       try {
         await imageKit.deleteFile(fileId);
       } catch (e) {
-        console.warn(
+        logger.warn(
           `⚠️ Impossible de supprimer ImageKit fileId=${fileId}`,
           e?.message || e
         );
@@ -267,7 +268,7 @@ exports.list = async (req, res) => {
       pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
-    console.error('❌ list properties:', e);
+    logger.error('❌ list properties:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la récupération des biens' });
@@ -317,7 +318,7 @@ exports.listByClient = async (req, res) => {
       pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
-    console.error('❌ listByClient:', e);
+    logger.error('❌ listByClient:', e);
     return res.status(500).json({
       error: 'Erreur lors de la récupération des biens du client',
     });
@@ -493,7 +494,7 @@ exports.create = async (req, res) => {
       property: addLabels(property),
     });
   } catch (e) {
-    console.error('❌ create property:', e);
+    logger.error('❌ create property:', e);
     return res.status(500).json({ error: 'Erreur lors de la création du bien' });
   }
 };
@@ -651,7 +652,7 @@ exports.update = async (req, res) => {
       property: addLabels(property),
     });
   } catch (e) {
-    console.error('❌ update property:', e);
+    logger.error('❌ update property:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la mise à jour' });
@@ -690,7 +691,7 @@ exports.remove = async (req, res) => {
 
     return res.json({ message: 'Bien supprimé' });
   } catch (e) {
-    console.error('❌ delete property:', e);
+    logger.error('❌ delete property:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la suppression' });

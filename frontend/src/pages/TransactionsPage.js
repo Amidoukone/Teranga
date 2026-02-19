@@ -16,6 +16,7 @@ import {
 } from '../services/services';
 import api from '../services/api';
 import { useLocale } from '../i18n/useLocale';
+import { notify } from '../utils/notify';
 
 import {
   applyLabels,
@@ -169,7 +170,7 @@ export default function TransactionsPage() {
       setTransactions(labeled);
     } catch (e) {
       console.error('❌ loadTransactions:', e);
-      alert(t('transactionsPage.alerts.loadError'));
+      notify(t('transactionsPage.alerts.loadError'));
     } finally {
       setLoading(false);
     }
@@ -265,11 +266,11 @@ export default function TransactionsPage() {
 
       setTransactions((prev) => [labeled, ...prev]);
 
-      alert(t('transactionsPage.alerts.createSuccess'));
+      notify(t('transactionsPage.alerts.createSuccess'));
       resetForm();
     } catch (e) {
       console.error('❌ createTransaction:', e);
-      alert(t('transactionsPage.alerts.createError'));
+      notify(t('transactionsPage.alerts.createError'));
     } finally {
       setCreating(false);
     }
@@ -1072,4 +1073,5 @@ function Pagination({
     </div>
   );
 }
+
 

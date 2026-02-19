@@ -58,6 +58,10 @@ const fr = {
       admin: "Administration",
     },
   },
+  footer: {
+    copyright:
+      "© {{year}} <brand>Teranga Diaspora</brand>. Tous droits réservés.",
+  },
   auth: {
     login: {
       kicker: "Espace securise",
@@ -98,6 +102,9 @@ const fr = {
       countryDetected: "Detecte :",
       regionInfo:
         "Compte regional ? Contactez l'admin ou le master de votre pays. L'inscription publique est reservee au pays uniquement.",
+      countriesLoading: "Vérification des pays disponibles...",
+      countriesHint: "Pays actuellement couverts : {{count}}",
+      countriesEmpty: "Aucun pays pris en charge pour le moment.",
       passwordLabel: "Mot de passe",
       passwordPlaceholder: "••••••••",
       passwordHide: "Masquer le mot de passe",
@@ -116,6 +123,11 @@ const fr = {
         password: "Le mot de passe doit contenir au moins 8 caracteres.",
         countryIso:
           "Veuillez renseigner un pays valide (format ISO2 : ML, SN, CI...).",
+        loadingCountries: "Vérification des pays en cours…",
+        countriesUnavailable:
+          "Impossible de confirmer la disponibilité des pays pour le moment.",
+        countryNoMaster:
+          "Nos services ne sont pas disponibles dans ce pays pour le moment.",
         generic: "Une erreur est survenue. Verifiez vos informations.",
       },
     },
@@ -134,6 +146,28 @@ const fr = {
     locationLabel: "Zone",
     countryLabel: "Pays",
     regionLabel: "Région",
+    confirmModal: {
+      title: "Confirmation",
+      message: "Voulez-vous continuer ?",
+      confirm: "Confirmer",
+      cancel: "Annuler",
+      delete: "Supprimer {{entity}} ?",
+      deleteNamed: "Supprimer {{entity}} « {{name}} » ?",
+      entities: {
+        service: "ce service",
+        category: "cette categorie",
+        evidence: "cette preuve",
+        property: "ce bien",
+        project: "ce projet",
+        projectDocument: "ce document",
+        projectPhase: "cette phase",
+        user: "cet utilisateur",
+        orderItem: "cet article",
+        product: "ce produit",
+        country: "ce pays",
+        region: "cette region",
+      },
+    },
   },
   dashboard: {
     loading: "Chargement du tableau de bord…",
@@ -323,7 +357,6 @@ const fr = {
       updateSuccess: "Service mis à jour avec succès !",
       updateError: "Erreur lors de la mise à jour du service.",
       deleteSuccess: "Service supprimé avec succès.",
-      deleteConfirm: "Confirmer la suppression de ce service ?",
       deleteError: "Erreur lors de la suppression du service ❌",
       noEditTarget: "Aucun service à modifier.",
     },
@@ -408,7 +441,6 @@ const fr = {
       createError: "Erreur lors de la création du projet.",
       updateSuccess: "Projet mis à jour avec succès.",
       updateError: "Erreur lors de la mise à jour du projet.",
-      deleteConfirm: "Supprimer ce projet ?",
       deleteSuccess: "Projet supprimé.",
       deleteError: "Erreur lors de la suppression.",
       assignSuccess: "Agent assigné avec succès.",
@@ -515,7 +547,6 @@ const fr = {
       },
       alerts: {
         saveError: "Erreur lors de la sauvegarde.",
-        deleteConfirm: "Supprimer cette phase ?",
         deleteError: "Erreur suppression phase.",
       },
     },
@@ -548,7 +579,6 @@ const fr = {
       },
       alerts: {
         uploadError: "Erreur upload documents.",
-        deleteConfirm: "Supprimer ce document ?",
         deleteError: "Erreur suppression.",
       },
     },
@@ -767,8 +797,6 @@ const fr = {
       evidenceAdded: "Preuves ajoutées.",
       evidenceUploadError: "Erreur upload fichiers.",
       evidenceDeleteError: "Erreur suppression preuve.",
-      confirmDeleteItem: "Supprimer cet article ?",
-      confirmDeleteEvidence: "Supprimer cette preuve ?",
     },
     evidences: {
       hintDeleteWindow:
@@ -1059,6 +1087,17 @@ const fr = {
         description:
           "Ajoutez des précisions : étage, vue, état général, équipements...",
       },
+      dynamic: {
+        landSurfaceLabel: "Surface du terrain (m²)",
+        landSurfacePlaceholder: "Ex : 600",
+        commercialSurfaceLabel: "Surface commerciale (m²)",
+        commercialRoomsLabel: "Nombre d'espaces/bureaux",
+        commercialRoomsPlaceholder: "Ex : 4",
+        automobileSurfaceLabel: "Kilométrage (km)",
+        automobileSurfacePlaceholder: "Ex : 45000",
+        automobileRoomsLabel: "Nombre de places",
+        automobileRoomsPlaceholder: "Ex : 5",
+      },
       filesLabel: "Photos / documents (jpg, png, pdf)",
       filesSelected: "{{count}} fichier sélectionné.",
       filesSelected_other: "{{count}} fichiers sélectionnés.",
@@ -1121,7 +1160,6 @@ const fr = {
       updateSuccess: "Bien mis à jour",
       updateError: "Erreur lors de la mise à jour.",
       deleteNotAllowed: "Suppression non autorisée (délai dépassé)",
-      deleteConfirm: "Confirmer la suppression ?",
       deleteError: "Erreur lors de la suppression.",
     },
   },
@@ -1137,6 +1175,7 @@ const fr = {
       cancel: "Annuler",
       update: "💾 Mettre à jour",
       create: "➕ Créer",
+      resetPassword: "🔐 Reset mot de passe",
     },
     badges: {
       master: "MASTER",
@@ -1215,7 +1254,13 @@ const fr = {
       submitError: "Erreur lors de la soumission",
       masterCannotEdit: "⛔ Impossible de modifier un admin en tant que MASTER.",
       masterCannotDelete: "⛔ Impossible de supprimer un admin en tant que MASTER.",
-      deleteConfirm: "Supprimer cet utilisateur ?",
+      masterCannotResetAdmin:
+        "⛔ Impossible de réinitialiser un admin en tant que MASTER.",
+      resetSuccess:
+        "✅ Mot de passe réinitialisé. Communiquez le nouveau mot de passe par canal sécurisé.",
+      resetPasswordMin: "Le mot de passe doit contenir au moins 8 caractères.",
+      resetPasswordMismatch: "Les mots de passe ne correspondent pas.",
+      resetAuditError: "Impossible de charger l'historique des réinitialisations.",
     },
     countUsers: "{{count}} utilisateur",
     countUsers_other: "{{count}} utilisateurs",
@@ -1231,10 +1276,24 @@ const fr = {
       emptyValue: "—",
       edit: "Modifier",
       delete: "Supprimer",
+      resetPassword: "Réinitialiser le mot de passe",
       lockedTitle: "Verrouillé pour MASTER",
       protected: "(admin protégé)",
       results: "{{count}} résultat",
       results_other: "{{count}} résultats",
+    },
+    resetPanel: {
+      title: "Reset manuel du mot de passe",
+      close: "Fermer",
+      newPassword: "Nouveau mot de passe temporaire (min 8)",
+      confirmPassword: "Confirmer le mot de passe temporaire",
+      reason: "Motif / ticket (optionnel)",
+      submit: "Valider le reset",
+      submitting: "Validation...",
+      auditTitle: "Historique des resets manuels",
+      auditEmpty: "Aucun reset manuel enregistré pour cet utilisateur.",
+      reasonLabel: "Motif:",
+      revokedSessions: "{{count}} session(s) révoquée(s)",
     },
   },
   adminAgentsPage: {
@@ -1396,7 +1455,6 @@ const fr = {
       createError: "Erreur lors de la création du bien.",
       updateSuccess: "Bien mis à jour avec succès.",
       updateError: "Erreur lors de la mise à jour.",
-      deleteConfirm: "Supprimer ce bien ?",
       deleteError: "Erreur lors de la suppression.",
     },
     client: {
@@ -1430,6 +1488,17 @@ const fr = {
         surface: "Surface",
         rooms: "Nombre de pièces",
         description: "Informations complémentaires sur le bien…",
+      },
+      dynamic: {
+        landSurfaceLabel: "Surface du terrain (m²)",
+        landSurfacePlaceholder: "Surface",
+        commercialSurfaceLabel: "Surface commerciale (m²)",
+        commercialRoomsLabel: "Nombre d'espaces/bureaux",
+        commercialRoomsPlaceholder: "Nombre d'espaces/bureaux",
+        automobileSurfaceLabel: "Kilométrage (km)",
+        automobileSurfacePlaceholder: "Kilométrage en km",
+        automobileRoomsLabel: "Nombre de places",
+        automobileRoomsPlaceholder: "Nombre de places",
       },
       filesLabel: "📁 Photos & documents (JPG, PNG, PDF)",
       previewAlt: "Aperçu {{index}}",
@@ -1501,7 +1570,6 @@ const fr = {
     alerts: {
       updated: "✅ Catégorie mise à jour.",
       created: "✅ Catégorie ajoutée.",
-      deleteConfirm: "Supprimer cette catégorie ?",
     },
   },
   adminMetricsPage: {
@@ -2127,7 +2195,6 @@ const fr = {
       updateSuccess: "Produit mis à jour",
       createSuccess: "Produit ajouté !",
       saveError: "Erreur sauvegarde",
-      deleteConfirm: "Supprimer ce produit ?",
       deleteSuccess: "Produit supprimé !",
       deleteError: "Erreur suppression",
     },
@@ -2473,7 +2540,6 @@ const fr = {
       upload: "Erreur lors de l'upload.",
       delete: "Erreur lors de la suppression.",
     },
-    confirmDelete: "Supprimer cette preuve ?",
     warnings: {
       deleteWindow:
         "Vous pouvez supprimer vos propres preuves pendant 1 heure après l’ajout.",
@@ -2791,6 +2857,7 @@ const fr = {
         house: "Maison",
         apartment: "Appartement",
         land: "Terrain",
+        automobile: "Automobile",
         commercial: "Local commercial",
       },
       statuses: {

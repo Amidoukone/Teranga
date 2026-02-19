@@ -1,6 +1,7 @@
 "use strict";
 
 const { Activity } = require("../../models");
+const logger = require('../utils/logger');
 const {
   createNotifications,
   updateNotificationsForEntity,
@@ -106,7 +107,7 @@ async function emitEvent({
       excludeRecipientId: null,
     });
   } catch (err) {
-    console.warn(
+    logger.warn(
       "⚠️ Activity create failed (notifications will continue):",
       err?.message || err
     );

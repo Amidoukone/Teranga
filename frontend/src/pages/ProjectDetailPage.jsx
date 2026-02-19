@@ -27,6 +27,8 @@ import { getTransactions, createTransaction } from "../services/transactions";
 import { normalizeRole, isMasterUser } from "../utils/role";
 import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
+import { notify } from '../utils/notify';
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 /* ============================================================
    🌐 FILE_BASE + Helpers
@@ -249,7 +251,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         userId: currentUser?.id,
       });
 
-      alert(t("projects.transaction.alerts.createSuccess"));
+      notify(t("projects.transaction.alerts.createSuccess"));
       setForm({
         type: "expense",
         amount: "",
@@ -262,7 +264,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       onSuccess?.();
     } catch (err) {
       console.error("❌ Transaction error:", err);
-      alert(
+      notify(
         err?.response?.data?.error ||
           t("projects.transaction.alerts.createError")
       );
@@ -398,6 +400,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
 export default function ProjectDetailPage() {
   const { formatNumber, formatDate, formatDateTime } = useLocale();
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   const { id } = useParams();
   const navigate = useNavigate();
   const isMounted = useRef(true);
@@ -532,10 +535,10 @@ export default function ProjectDetailPage() {
     try {
       await updateProject(project.id, { status: newStatus });
       await loadProject(project.id);
-      alert(t("projectDetail.alerts.statusUpdateSuccess"));
+      notify(t("projectDetail.alerts.statusUpdateSuccess"));
     } catch (err) {
       console.error("❌ update status:", err);
-      alert(t("projectDetail.alerts.statusUpdateError"));
+      notify(t("projectDetail.alerts.statusUpdateError"));
     }
   }
 
@@ -568,7 +571,7 @@ export default function ProjectDetailPage() {
       await loadProject(project.id);
     } catch (err) {
       console.error("❌ savePhase:", err);
-      alert(t("projectDetail.phases.alerts.saveError"));
+      notify(t("projectDetail.phases.alerts.saveError"));
     }
   }
 
@@ -603,18 +606,19 @@ export default function ProjectDetailPage() {
       await loadProject(project.id);
     } catch (err) {
       console.error("❌ upload docs:", err);
-      alert(t("projectDetail.documents.alerts.uploadError"));
+      notify(t("projectDetail.documents.alerts.uploadError"));
     }
   }
 
   async function handleDeleteDocument(docId) {
-    if (!window.confirm(t("projectDetail.documents.alerts.deleteConfirm"))) return;
+    const ok = await confirmDelete("projectDocument");
+    if (!ok) return;
     try {
       await deleteProjectDocument(docId);
       await loadProject(project.id);
     } catch (err) {
       console.error("❌ delete doc:", err);
-      alert(t("projectDetail.documents.alerts.deleteError"));
+      notify(t("projectDetail.documents.alerts.deleteError"));
     }
   }
 
@@ -1030,12 +1034,13 @@ export default function ProjectDetailPage() {
                                 variant="danger"
                                 size="xs"
                                 onClick={async () => {
-                                  if (!window.confirm(t("projectDetail.phases.alerts.deleteConfirm"))) return;
+                                  const ok = await confirmDelete("projectPhase");
+                                  if (!ok) return;
                                   try {
                                     await deleteProjectPhase(ph.id);
                                     await loadProject(project.id);
                                   } catch {
-                                    alert(t("projectDetail.phases.alerts.deleteError"));
+                                    notify(t("projectDetail.phases.alerts.deleteError"));
                                   }
                                 }}
                               >
@@ -1359,4 +1364,5 @@ export default function ProjectDetailPage() {
     </div>
   );
 }
+
 

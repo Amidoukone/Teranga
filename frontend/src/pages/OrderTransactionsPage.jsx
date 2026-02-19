@@ -24,6 +24,7 @@ import {
 import { isGlobalAdminUser } from '../utils/role';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
+import { notify } from '../utils/notify';
 
 /* ============================================================
    🌍 PRODUCTION CONFIG — FILE_BASE / normalizePath / toAbsUrl()
@@ -234,7 +235,7 @@ export default function OrderTransactionsPage() {
       setTransactions(labeled);
     } catch (err) {
       console.error('❌ Erreur chargement transactions commande:', err);
-      alert(t("orderTransactions.alerts.loadError"));
+      notify(t("orderTransactions.alerts.loadError"));
       setTransactions([]);
     } finally {
       setLoading(false);
@@ -311,7 +312,7 @@ export default function OrderTransactionsPage() {
     if (creating) return;
 
     if (!form.amount || isNaN(parseFloat(form.amount))) {
-      return alert(t("orderTransactions.alerts.invalidAmount"));
+      return notify(t("orderTransactions.alerts.invalidAmount"));
     }
 
     try {
@@ -325,12 +326,12 @@ export default function OrderTransactionsPage() {
 
       await createOrderTransaction(id, payload);
 
-      alert(t("orderTransactions.alerts.createSuccess"));
+      notify(t("orderTransactions.alerts.createSuccess"));
       resetForm();
       await loadTransactions();
     } catch (err) {
       console.error('❌ Erreur ajout transaction:', err);
-      alert(t("orderTransactions.alerts.createError"));
+      notify(t("orderTransactions.alerts.createError"));
     } finally {
       setCreating(false); // 🔓 Déverrouille l’envoi, même en cas d’erreur
     }
@@ -969,5 +970,6 @@ function TransactionList({
     </div>
   );
 }
+
 
 

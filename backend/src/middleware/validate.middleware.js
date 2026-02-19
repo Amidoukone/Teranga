@@ -18,8 +18,8 @@ function validateBody(schema, options = {}) {
 
   const baseOptions = {
     abortEarly: false,
-    allowUnknown: true,
-    stripUnknown: false,
+    allowUnknown: false,
+    stripUnknown: true,
   };
 
   return (req, res, next) => {

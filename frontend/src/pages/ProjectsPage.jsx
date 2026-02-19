@@ -17,6 +17,8 @@ import { useTranslation } from 'react-i18next';
 
 // ✅ MASTER-safe helpers (pas de rôle "master", seulement admin + scope)
 import { normalizeRole, isMasterUser } from '../utils/role';
+import { notify } from '../utils/notify';
+import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 /* ============================================================
    🔧 CONFIG UI — DESIGN SYSTEM PREMIUM (OPTION B)
@@ -187,12 +189,12 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
         projectId: Number(project.id),
       });
 
-      alert(t('projects.transaction.alerts.createSuccess'));
+      notify(t('projects.transaction.alerts.createSuccess'));
       onSuccess?.();
       onClose?.();
     } catch (err) {
       console.error('❌ Transaction error:', err);
-      alert(t('projects.transaction.alerts.createError'));
+      notify(t('projects.transaction.alerts.createError'));
     } finally {
       setSaving(false);
     }
@@ -342,6 +344,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
 export default function ProjectsPage() {
   const { formatDateTime, formatNumber } = useLocale();
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);
@@ -516,10 +519,10 @@ export default function ProjectsPage() {
 
       if (editId) {
         await updateProject(editId, payload);
-        alert(t('projects.alerts.updateSuccess'));
+        notify(t('projects.alerts.updateSuccess'));
       } else {
         await createProject(payload);
-        alert(t('projects.alerts.createSuccess'));
+        notify(t('projects.alerts.createSuccess'));
       }
 
       resetForm();
@@ -529,19 +532,20 @@ export default function ProjectsPage() {
       const fallback = editId
         ? t('projects.alerts.updateError')
         : t('projects.alerts.createError');
-      alert(err?.response?.data?.error || err?.message || fallback);
+      notify(err?.response?.data?.error || err?.message || fallback);
     }
   }
 
   async function handleDelete(id) {
-    if (!window.confirm(t('projects.alerts.deleteConfirm'))) return;
+    const ok = await confirmDelete("project");
+    if (!ok) return;
     try {
       await deleteProject(id);
-      alert(t('projects.alerts.deleteSuccess'));
+      notify(t('projects.alerts.deleteSuccess'));
       await loadForUser(user);
     } catch (err) {
       console.error('❌ Erreur suppression projet:', err);
-      alert(
+      notify(
         err?.response?.data?.error || t('projects.alerts.deleteError')
       );
     }
@@ -553,11 +557,11 @@ export default function ProjectsPage() {
         projectId,
         agentId ? Number(agentId) : null
       );
-      alert(t('projects.alerts.assignSuccess'));
+      notify(t('projects.alerts.assignSuccess'));
       await loadForUser(user);
     } catch (err) {
       console.error('❌ Erreur assignation agent:', err);
-      alert(t('projects.alerts.assignError'));
+      notify(t('projects.alerts.assignError'));
     }
   }
 
@@ -578,10 +582,10 @@ export default function ProjectsPage() {
 
       await updateProject(projectId, payload);
       await loadForUser(user);
-      alert(t('projects.alerts.statusUpdateSuccess'));
+      notify(t('projects.alerts.statusUpdateSuccess'));
     } catch (err) {
       console.error('❌ Erreur mise à jour du statut:', err);
-      alert(t('projects.alerts.statusUpdateError'));
+      notify(t('projects.alerts.statusUpdateError'));
     }
   }
 
@@ -601,7 +605,7 @@ export default function ProjectsPage() {
       });
       setShowForm(true);
     } else {
-      alert(`⏱️ ${t('projects.alerts.editWindowExpired')}`);
+      notify(`⏱️ ${t('projects.alerts.editWindowExpired')}`);
     }
   }
 
@@ -1137,4 +1141,5 @@ export default function ProjectsPage() {
     </div>
   );
 }
+
 

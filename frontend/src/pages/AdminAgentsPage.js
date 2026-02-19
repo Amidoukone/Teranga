@@ -10,6 +10,7 @@ import { mergeGeoPayload } from "../services/geo";
 import { useGeo } from "../contexts/GeoContext";
 import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
+import { notify } from '../utils/notify';
 
 /* ============================================================================
 // 🔐 CONSTANTES
@@ -228,7 +229,7 @@ export default function AdminAgentsPage() {
         })
       );
 
-      alert(t("adminAgentsPage.alerts.createSuccess"));
+      notify(t("adminAgentsPage.alerts.createSuccess"));
 
       setForm({
         email: "",
@@ -246,7 +247,7 @@ export default function AdminAgentsPage() {
       const msg =
         err?.response?.data?.error ||
         t("adminAgentsPage.alerts.createError");
-      alert(`❌ ${msg}`);
+      notify(`❌ ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -564,4 +565,5 @@ export default function AdminAgentsPage() {
   );
 }
   
+
 

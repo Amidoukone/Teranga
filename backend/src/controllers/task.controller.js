@@ -24,6 +24,7 @@ const {
   computeProgress,
 } = require("../services/notification.service");
 const { emitEvent } = require("../services/activity.service");
+const logger = require('../utils/logger');
 
 /* ============================================================
    🧩 Helpers généraux
@@ -257,7 +258,7 @@ exports.create = async (req, res) => {
         notificationMode: "create",
       });
     } catch (err) {
-      console.warn("⚠️ Notification tâche (create) échouée:", err?.message || err);
+      logger.warn("⚠️ Notification tâche (create) échouée:", err?.message || err);
     }
 
     return res.status(201).json({
@@ -265,7 +266,7 @@ exports.create = async (req, res) => {
       task: addLabels(full),
     });
   } catch (e) {
-    console.error("❌ Erreur création tâche:", e);
+    logger.error("❌ Erreur création tâche:", e);
     return res.status(500).json({
       error: e.message || "Erreur lors de la création de la tâche",
     });
@@ -324,7 +325,7 @@ exports.list = async (req, res) => {
       pagination: { page, limit, offset, count: tasks.length },
     });
   } catch (e) {
-    console.error("❌ Erreur list tasks:", e);
+    logger.error("❌ Erreur list tasks:", e);
     return res.status(500).json({
       error: "Erreur lors de la récupération des tâches",
     });
@@ -373,7 +374,7 @@ exports.listByService = async (req, res) => {
 
     return res.json({ tasks: tasks.map(addLabels) });
   } catch (e) {
-    console.error("❌ Erreur listByService:", e);
+    logger.error("❌ Erreur listByService:", e);
     return res.status(500).json({
       error: "Erreur lors de la récupération des tâches",
     });
@@ -464,7 +465,7 @@ exports.updateStatus = async (req, res) => {
         notificationMode: "update",
       });
     } catch (err) {
-      console.warn("⚠️ Notification tâche (status update) échouée:", err?.message || err);
+      logger.warn("⚠️ Notification tâche (status update) échouée:", err?.message || err);
     }
 
     const updated = await Task.findByPk(task.id, { include: BASE_INCLUDES });
@@ -474,7 +475,7 @@ exports.updateStatus = async (req, res) => {
       task: addLabels(updated),
     });
   } catch (e) {
-    console.error("❌ Erreur updateStatus:", e);
+    logger.error("❌ Erreur updateStatus:", e);
     return res.status(500).json({
       error: "Erreur lors de la mise à jour du statut",
     });
@@ -569,7 +570,7 @@ exports.assignAgent = async (req, res) => {
         notificationMode: "create",
       });
     } catch (err) {
-      console.warn("⚠️ Notification tâche (assign) échouée:", err?.message || err);
+      logger.warn("⚠️ Notification tâche (assign) échouée:", err?.message || err);
     }
 
     return res.json({
@@ -577,7 +578,7 @@ exports.assignAgent = async (req, res) => {
       task: addLabels(updated),
     });
   } catch (e) {
-    console.error("❌ Erreur assignAgent:", e);
+    logger.error("❌ Erreur assignAgent:", e);
     return res.status(500).json({
       error: "Erreur lors de l'assignation de la tâche",
     });

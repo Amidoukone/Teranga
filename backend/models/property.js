@@ -45,7 +45,7 @@ module.exports = (sequelize, DataTypes) => {
       description: { type: DataTypes.TEXT, allowNull: true },
 
       type: {
-        type: DataTypes.ENUM('house', 'apartment', 'land', 'commercial'),
+        type: DataTypes.ENUM('house', 'apartment', 'land', 'automobile', 'commercial'),
         allowNull: false,
       },
 

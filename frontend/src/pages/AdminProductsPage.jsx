@@ -15,6 +15,8 @@ import { formatCurrency } from "../utils/labels";
 import { normalizeRole, prettyRoleLabel, isGlobalAdminUser } from "../utils/roles";
 import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
+import { notify } from '../utils/notify';
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 /* ============================================================
    🌍 CONFIG PRODUCTION
@@ -86,6 +88,7 @@ function getProductImages(product) {
 export default function AdminProductsPage() {
   const { formatNumber } = useLocale();
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   const [user, setUser] = useState(null);
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -269,7 +272,7 @@ export default function AdminProductsPage() {
       setProducts(list || []);
     } catch (e) {
       console.error("❌ Erreur chargement produits:", e);
-      alert(t("adminProductsPage.alerts.loadProductsError"));
+      notify(t("adminProductsPage.alerts.loadProductsError"));
       setProducts([]);
     } finally {
       setLoading(false);
@@ -330,9 +333,9 @@ export default function AdminProductsPage() {
     e.preventDefault();
     try {
       if (!form.name.trim())
-        return alert(t("adminProductsPage.alerts.nameRequired"));
+        return notify(t("adminProductsPage.alerts.nameRequired"));
       if (form.price === "")
-        return alert(t("adminProductsPage.alerts.priceRequired"));
+        return notify(t("adminProductsPage.alerts.priceRequired"));
 
       const payload = {
         ...form,
@@ -343,10 +346,10 @@ export default function AdminProductsPage() {
 
       if (editing) {
         await updateProduct(editing.id, payload);
-        alert(t("adminProductsPage.alerts.updateSuccess"));
+        notify(t("adminProductsPage.alerts.updateSuccess"));
       } else {
         await createProduct(payload);
-        alert(t("adminProductsPage.alerts.createSuccess"));
+        notify(t("adminProductsPage.alerts.createSuccess"));
       }
 
       resetForm();
@@ -373,20 +376,21 @@ export default function AdminProductsPage() {
         .filter(Boolean)
         .map((msg) => `\n${msg}`)
         .join("");
-      alert(`${t("adminProductsPage.alerts.saveError")}${suffix}`);
+      notify(`${t("adminProductsPage.alerts.saveError")}${suffix}`);
     }
   }
 
   async function handleDelete(id) {
-    if (!window.confirm(t("adminProductsPage.alerts.deleteConfirm"))) return;
+    const ok = await confirmDelete("product");
+    if (!ok) return;
 
     try {
       await deleteProduct(`${id}?force=true`);
       await loadProducts();
-      alert(t("adminProductsPage.alerts.deleteSuccess"));
+      notify(t("adminProductsPage.alerts.deleteSuccess"));
     } catch (err) {
       console.error("❌ Erreur suppression :", err);
-      alert(t("adminProductsPage.alerts.deleteError"));
+      notify(t("adminProductsPage.alerts.deleteError"));
     }
   }
 
@@ -877,5 +881,6 @@ export default function AdminProductsPage() {
     </div>
   );
 }
+
 
 
