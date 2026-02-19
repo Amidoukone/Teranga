@@ -240,7 +240,7 @@ export default function App() {
           />
 
           <main className="flex-1 w-full">
-            <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+            <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
               <Routes>
             {/* ============================= */}
             {/* 🌐 PAGES PUBLIQUES           */}
@@ -742,11 +742,11 @@ export default function App() {
           </main>
 
           {/* FOOTER */}
-          <footer className="bg-gray-100 border-t border-gray-200 py-4 text-center text-sm text-gray-600">
+          <footer className="border-t border-border/80 bg-white/70 py-4 text-center text-sm text-text-secondary backdrop-blur">
             <Trans
               i18nKey="footer.copyright"
               values={{ year: new Date().getFullYear() }}
-              components={{ brand: <span className="font-semibold text-blue-600" /> }}
+              components={{ brand: <span className="font-semibold text-primary" /> }}
             />
           </footer>
             </div>

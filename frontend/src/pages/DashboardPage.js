@@ -306,8 +306,8 @@ export default function DashboardPage() {
   /* ---------------------------------------------------------------------- */
   if (loading || !user) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
-        <p className="text-gray-700 text-lg sm:text-xl font-medium animate-pulse text-center">
+      <div className="app-page-wrap flex min-h-screen items-center justify-center px-4">
+        <p className="text-lg font-medium animate-pulse text-center text-text-secondary sm:text-xl">
           {t("dashboard.loading")}
         </p>
       </div>
@@ -336,24 +336,24 @@ export default function DashboardPage() {
      UI PRINCIPALE — VERSION RÉORGANISÉE & PLUS LISIBLE / ÉLÉGANTE
   =========================================================================== */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50 to-slate-100 px-3 sm:px-4 lg:px-6 py-8 lg:py-10">
-      <div className="max-w-7xl mx-auto bg-white/90 shadow-2xl rounded-3xl border border-slate-200/80 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
+    <div className="app-page-wrap">
+      <div className="mx-auto max-w-7xl rounded-3xl border border-border/70 bg-white/92 px-4 py-6 shadow-2xl shadow-slate-300/25 sm:px-6 sm:py-8 lg:px-8 space-y-8">
 
         {/* ------------------------------------------------------------------ */}
         {/* HEADER PREMIUM                                                    */}
         {/* ------------------------------------------------------------------ */}
-        <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 pb-6 border-b border-slate-100">
+        <header className="flex flex-col gap-6 border-b border-border/70 pb-6 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <div className="relative flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white font-semibold text-xl shadow-md">
               {getInitials(user)}
               <span className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full h-3 w-3 border border-white shadow-sm" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-snug truncate">
+              <h1 className="text-2xl font-extrabold leading-snug text-text-primary truncate sm:text-3xl">
                 {t("dashboard.greeting", { name: user.firstName || user.email })}
               </h1>
               {/* ✅ Message EXACT, personnalisé par le prénom */}
-              <p className="text-sm sm:text-base text-slate-800 mt-2">
+              <p className="mt-2 text-sm text-text-secondary sm:text-base">
                 <span className="font-semibold text-blue-700">
                   {t("dashboard.careLine", { firstName: shortName })}
                 </span>
@@ -363,9 +363,9 @@ export default function DashboardPage() {
 
           {/* Solde global */}
           <div className="flex flex-col items-start md:items-end gap-3">
-            <div className="bg-white/80 border border-slate-200/80 rounded-2xl px-4 py-3 shadow-sm min-w-[200px]">
+            <div className="min-w-[200px] rounded-2xl border border-border/80 bg-white/80 px-4 py-3 shadow-sm">
               <div className="flex items-center justify-between gap-2">
-                <div className="text-xs sm:text-sm text-slate-600 font-medium">
+                <div className="text-xs font-medium text-text-secondary sm:text-sm">
                   {balanceLabel}
                 </div>
                 <span
@@ -387,7 +387,7 @@ export default function DashboardPage() {
               >
                 {formatNumber(stats.balance)} XOF
               </div>
-              <p className="text-[0.75rem] sm:text-xs text-slate-500 mt-2 leading-snug">
+              <p className="mt-2 text-[0.75rem] leading-snug text-text-muted sm:text-xs">
                 {balanceDescription}
               </p>
             </div>
@@ -400,10 +400,10 @@ export default function DashboardPage() {
         <section className="space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
-              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight">
+              <h2 className="text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
                 {t("dashboard.quickView.title")}
               </h2>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-text-secondary">
                 {t("dashboard.quickView.subtitle")}
               </p>
             </div>
@@ -429,14 +429,14 @@ export default function DashboardPage() {
           {/* Colonne gauche : finances détaillées + modules */}
           <div className="xl:col-span-2 space-y-6">
             {/* Finances détaillées */}
-            <div className="bg-white/90 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
+            <div className="rounded-2xl border border-border/70 bg-white/90 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h2 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
+                  <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
                     <Landmark size={18} className="text-slate-500" />
                     {t("dashboard.finance.title")}
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                  <p className="mt-1 text-xs text-text-secondary sm:text-sm">
                     {t("dashboard.finance.subtitle")}
                   </p>
                 </div>
@@ -445,14 +445,14 @@ export default function DashboardPage() {
             </div>
 
             {/* Vue globale des modules */}
-            <div className="bg-white/90 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
+            <div className="rounded-2xl border border-border/70 bg-white/90 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h2 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
+                  <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
                     <Layers size={18} className="text-slate-500" />
                     {t("dashboard.modules.title")}
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                  <p className="mt-1 text-xs text-text-secondary sm:text-sm">
                     {t("dashboard.modules.subtitle")}
                   </p>
                 </div>
@@ -561,12 +561,12 @@ export default function DashboardPage() {
           {/* Colonne droite : synthèse et accès rapides */}
           <div className="space-y-6">
             {/* Synthèse rapide finances */}
-            <div className="bg-white/90 border border-slate-200/80 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+            <div className="flex flex-col justify-between rounded-2xl border border-border/70 bg-white/90 p-5 shadow-sm">
               <div>
-                <h3 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight mb-4">
+                <h3 className="mb-4 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
                   {t("dashboard.summary.title")}
                 </h3>
-                <ul className="space-y-2 text-sm sm:text-base text-slate-800">
+                <ul className="space-y-2 text-sm text-text-secondary sm:text-base">
                   <li className="flex justify-between">
                     <span>{t("dashboard.summary.revenue")}</span>
                     <span className="font-semibold text-emerald-600">
@@ -591,18 +591,18 @@ export default function DashboardPage() {
                   </li>
                 </ul>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 border-t border-slate-100 mt-4 pt-4 leading-snug">
+              <p className="mt-4 border-t border-border/60 pt-4 text-xs leading-snug text-text-muted sm:text-sm">
                 {t("dashboard.summary.note")}
               </p>
             </div>
 
             {/* Accès rapides */}
-            <div className="bg-white/90 border border-slate-200/80 text-slate-900 rounded-2xl p-5 shadow-sm">
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight mb-3 flex items-center gap-2">
+            <div className="rounded-2xl border border-border/70 bg-white/90 p-5 text-text-primary shadow-sm">
+              <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
                 <Rocket size={18} className="text-slate-500" />
                 {t("dashboard.quickAccess.title")}
               </h3>
-              <p className="text-xs sm:text-sm text-slate-600 mb-4 leading-relaxed">
+              <p className="mb-4 text-xs leading-relaxed text-text-secondary sm:text-sm">
                 {t("dashboard.quickAccess.subtitle")}
               </p>
 
@@ -738,7 +738,7 @@ function StatCard({ label, value, highlight = false, icon: Icon }) {
     <div
       className="
         group relative overflow-hidden
-        rounded-2xl border border-slate-200/80
+        rounded-2xl border border-border/70
         bg-white/90 backdrop-blur
         px-4 py-4 sm:px-5 sm:py-5
         shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)]
@@ -751,12 +751,12 @@ function StatCard({ label, value, highlight = false, icon: Icon }) {
           <Icon size={20} className="text-slate-500" />
         </div>
       ) : null}
-      <div className="relative text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+      <div className="relative mb-1 text-[0.7rem] font-semibold uppercase tracking-wide text-text-muted sm:text-xs">
         {label}
       </div>
       <div
         className={`relative text-lg sm:text-xl font-bold tracking-tight ${
-          highlight ? 'text-emerald-700' : 'text-slate-800'
+          highlight ? 'text-emerald-700' : 'text-text-primary'
         }`}
       >
         {value}
@@ -772,8 +772,8 @@ function QuickLink({ to, label, icon: Icon }) {
       className="
         group flex items-center justify-between
         px-3 py-2.5 rounded-xl
-        border border-slate-200/80
-        bg-white/85 text-slate-900
+        border border-border/70
+        bg-white/85 text-text-primary
         shadow-[0_10px_25px_-22px_rgba(15,23,42,0.35)]
         hover:bg-slate-50 hover:border-slate-300
         transition-all duration-200 hover:-translate-y-0.5
@@ -784,14 +784,14 @@ function QuickLink({ to, label, icon: Icon }) {
           className="
             flex items-center justify-center h-9 w-9 rounded-full
             bg-slate-900/5 group-hover:bg-slate-900/10
-            text-slate-700 text-lg transition
+            text-text-secondary text-lg transition
           "
         >
-          {Icon ? <Icon size={18} className="text-slate-700" /> : null}
+          {Icon ? <Icon size={18} className="text-text-secondary" /> : null}
         </div>
-        <span className="text-sm font-semibold">{label}</span>
+        <span className="text-sm font-semibold text-text-primary">{label}</span>
       </div>
-      <span className="text-xs text-slate-500 group-hover:translate-x-0.5 transition-transform">
+      <span className="text-xs text-text-muted group-hover:translate-x-0.5 transition-transform">
         ↗
       </span>
     </Link>
@@ -804,7 +804,7 @@ function ModuleCard({ title, icon: Icon, main, items = [], link }) {
     <div
       className="
         h-full
-        bg-white/90 border border-slate-200/80 rounded-2xl
+        bg-white/90 border border-border/70 rounded-2xl
         px-4 py-4 sm:px-5 sm:py-5
         shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)]
         hover:shadow-[0_20px_40px_-24px_rgba(15,23,42,0.6)]
@@ -816,28 +816,28 @@ function ModuleCard({ title, icon: Icon, main, items = [], link }) {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center h-9 w-9 rounded-full bg-slate-900/5 text-lg">
-              {Icon ? <Icon size={18} className="text-slate-700" /> : null}
+              {Icon ? <Icon size={18} className="text-text-secondary" /> : null}
             </span>
-            <h3 className="text-sm sm:text-base font-semibold text-slate-900 tracking-tight">
+            <h3 className="text-sm sm:text-base font-semibold text-text-primary tracking-tight">
               {title}
             </h3>
           </div>
         </div>
-        <div className="text-lg sm:text-xl font-bold text-slate-900 mb-2">
+        <div className="text-lg sm:text-xl font-bold text-text-primary mb-2">
           {main}
         </div>
-        <ul className="space-y-1 text-xs sm:text-sm text-slate-700">
+        <ul className="space-y-1 text-xs sm:text-sm text-text-secondary">
           {items.map((it, idx) => (
             <li key={idx} className="flex justify-between">
               <span>{it.label}</span>
-              <span className="font-semibold text-slate-900">{it.value}</span>
+              <span className="font-semibold text-text-primary">{it.value}</span>
             </li>
           ))}
         </ul>
       </div>
       {link && (
-        <div className="mt-4 pt-2 border-t border-slate-100 text-right">
-          <span className="inline-flex items-center text-xs text-slate-600 font-medium">
+        <div className="mt-4 pt-2 border-t border-border/60 text-right">
+          <span className="inline-flex items-center text-xs text-text-secondary font-medium">
             {t("common.viewDetails")}
             <span className="ml-1">↗</span>
           </span>

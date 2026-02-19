@@ -226,29 +226,29 @@ export default function ActivityCenterPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#eef2ff,_#f8fafc_45%,_#f1f5f9_100%)] px-3 sm:px-4 lg:px-6 py-8">
-      <div className="max-w-6xl mx-auto bg-white/95 shadow-2xl rounded-3xl border border-gray-100 p-4 sm:p-8 lg:p-10 space-y-6">
+    <div className="app-page-wrap">
+      <div className="app-page-shell space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div>
-            <p className="text-[0.7rem] uppercase tracking-wide text-indigo-600 font-semibold">
+            <p className="page-kicker">
               {t("activities.kicker")}
             </p>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
+            <h1 className="app-page-headline">
               ✨ {t("activities.title")}
             </h1>
-            <p className="text-sm text-gray-600">
+            <p className="app-page-subtitle">
               {t("activities.subtitle")}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
+            <div className="app-toolbar-pill">
               {t("activities.filters.label")}
             </div>
             <select
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
-              className="px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-gray-50 border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="rounded-lg border border-border/80 bg-white px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
             >
               {ENTITY_OPTIONS.map((opt) => (
                 <option key={opt.value || "all"} value={opt.value}>
@@ -259,7 +259,7 @@ export default function ActivityCenterPage() {
             <select
               value={action}
               onChange={(e) => setAction(e.target.value)}
-              className="px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-gray-50 border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="rounded-lg border border-border/80 bg-white px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
             >
               {ACTION_OPTIONS.map((opt) => (
                 <option key={opt.value || "all"} value={opt.value}>
@@ -270,7 +270,7 @@ export default function ActivityCenterPage() {
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-gray-50 border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="rounded-lg border border-border/80 bg-white px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
             >
               {DATE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -280,23 +280,23 @@ export default function ActivityCenterPage() {
             </select>
             {dateRange === "custom" ? (
               <div className="flex flex-wrap items-center gap-2">
-                <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
+                <label className="app-toolbar-pill">
                   {t("activities.filters.from")}
                 </label>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-gray-50 border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="rounded-lg border border-border/80 bg-white px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
                 />
-                <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
+                <label className="app-toolbar-pill">
                   {t("activities.filters.to")}
                 </label>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-gray-50 border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="rounded-lg border border-border/80 bg-white px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
                 />
               </div>
             ) : null}
@@ -323,10 +323,8 @@ export default function ActivityCenterPage() {
                 key={tab.key}
                 onClick={() => setProgress(tab.key)}
                 className={[
-                  "px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border transition",
-                  active
-                    ? "bg-indigo-600 text-white border-indigo-600"
-                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50",
+                  "app-tab",
+                  active ? "app-tab-active" : "app-tab-idle",
                 ].join(" ")}
               >
                 {t(tab.labelKey)}
@@ -353,11 +351,11 @@ export default function ActivityCenterPage() {
           ].join(" ")}
         >
           {loading ? (
-            <div className="py-10 text-center text-sm text-gray-500">
+            <div className="rounded-2xl border border-border/70 bg-white/70 py-10 text-center text-sm text-text-secondary">
               {t("activities.loading")}
             </div>
           ) : items.length === 0 ? (
-            <div className="py-10 text-center text-sm text-gray-500">
+            <div className="rounded-2xl border border-border/70 bg-white/70 py-10 text-center text-sm text-text-secondary">
               {t("activities.empty")}
             </div>
           ) : (
@@ -415,16 +413,16 @@ export default function ActivityCenterPage() {
                 return (
                   <div
                     key={n.id}
-                    className="rounded-2xl border bg-white border-gray-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4"
+                    className="app-list-card app-list-card-read flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
                   >
                     <div className="flex gap-3">
                       <div className="text-2xl">{meta.icon}</div>
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                          <h3 className="text-sm font-semibold text-text-primary sm:text-base">
                             {title}
                           </h3>
-                          <span className="text-[0.65rem] uppercase tracking-wide text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5">
+                          <span className="rounded-full border border-border/80 bg-slate-100 px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-text-secondary">
                             {meta.label}
                           </span>
                           <span
@@ -436,15 +434,15 @@ export default function ActivityCenterPage() {
                             {t(`activities.progress.${n.progress || "new"}`)}
                           </span>
                           {actionLabel ? (
-                            <span className="text-[0.6rem] uppercase tracking-wide text-indigo-700 bg-indigo-100 border border-indigo-200 rounded-full px-2 py-0.5">
+                            <span className="rounded-full border border-indigo-200 bg-indigo-100 px-2 py-0.5 text-[0.6rem] uppercase tracking-wide text-indigo-700">
                               {actionLabel}
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                        <p className="mt-1 text-xs text-text-secondary sm:text-sm">
                           {message}
                         </p>
-                        <p className="text-[0.7rem] text-gray-400 mt-2">
+                        <p className="mt-2 text-[0.7rem] text-text-muted">
                           {createdLabel}
                           {actorName
                             ? ` • ${t("activities.by", { name: actorName })}`
@@ -454,7 +452,7 @@ export default function ActivityCenterPage() {
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                      <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-surface-main/60 px-3 py-2">
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 via-sky-500 to-emerald-500 text-white text-xs font-bold flex items-center justify-center shadow">
                           {actorInitials}
                         </div>
@@ -481,10 +479,10 @@ export default function ActivityCenterPage() {
                         onClick={() => navigate(resolveLink(n))}
                         disabled={isDateRangeInvalid}
                         className={[
-                          "px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg transition",
+                          "rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm",
                           isDateRangeInvalid
-                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                            : "bg-indigo-600 text-white hover:bg-indigo-700",
+                            ? "cursor-not-allowed bg-gray-200 text-gray-500"
+                            : "app-btn-primary",
                         ].join(" ")}
                       >
                         {t("activities.view")}

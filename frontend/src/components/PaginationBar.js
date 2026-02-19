@@ -49,9 +49,9 @@ export default function PaginationBar({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${className}`}
+      className={`flex flex-col gap-3 rounded-2xl border border-border/70 bg-white/80 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 ${className}`}
     >
-      <div className="text-xs sm:text-sm text-slate-500">
+      <div className="text-xs text-text-secondary sm:text-sm">
         {totalItems > 0 ? (
           <>{t("pagination.range", { start, end, total: totalItems })}</>
         ) : (
@@ -64,10 +64,11 @@ export default function PaginationBar({
           type="button"
           onClick={() => onPageChange?.(safePage - 1)}
           disabled={safePage <= 1}
+          aria-label={t("pagination.prev")}
           className={`px-3 py-1.5 rounded-full border text-xs sm:text-sm font-medium transition ${
             safePage <= 1
-              ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-              : "bg-white text-slate-800 border-slate-300 hover:bg-slate-50"
+              ? "cursor-not-allowed border-border/80 bg-slate-100 text-slate-400"
+              : "border-border/80 bg-white text-text-primary hover:bg-surface-main/70"
           }`}
         >
           {t("pagination.prev")}
@@ -84,10 +85,11 @@ export default function PaginationBar({
                 key={it}
                 type="button"
                 onClick={() => onPageChange?.(it)}
+                aria-label={`Page ${it}`}
                 className={`h-8 min-w-[2rem] px-2 rounded-full border text-xs sm:text-sm font-medium transition ${
                   it === safePage
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    ? "border-primary bg-primary text-white"
+                    : "border-border/80 bg-white text-text-secondary hover:bg-surface-main/70"
                 }`}
               >
                 {it}
@@ -100,10 +102,11 @@ export default function PaginationBar({
           type="button"
           onClick={() => onPageChange?.(safePage + 1)}
           disabled={safePage >= totalPages}
+          aria-label={t("pagination.next")}
           className={`px-3 py-1.5 rounded-full border text-xs sm:text-sm font-medium transition ${
             safePage >= totalPages
-              ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-              : "bg-white text-slate-800 border-slate-300 hover:bg-slate-50"
+              ? "cursor-not-allowed border-border/80 bg-slate-100 text-slate-400"
+              : "border-border/80 bg-white text-text-primary hover:bg-surface-main/70"
           }`}
         >
           {t("pagination.next")}
@@ -113,7 +116,7 @@ export default function PaginationBar({
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange?.(Number(e.target.value))}
-            className="ml-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm"
+            className="ml-1 rounded-full border border-border/80 bg-white px-3 py-1.5 text-xs text-text-secondary sm:text-sm"
           >
             {pageSizeOptions.map((n) => (
               <option key={n} value={n}>

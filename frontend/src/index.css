@@ -174,4 +174,79 @@
   .glass-panel {
     @apply rounded-3xl border border-white/60 bg-white/70 shadow-lg shadow-slate-200/40 backdrop-blur;
   }
+
+  .app-page-wrap {
+    @apply min-h-screen px-3 py-8 sm:px-4 lg:px-6;
+    background:
+      radial-gradient(1100px 420px at 50% -120px, rgba(59, 130, 246, 0.16), transparent 62%),
+      linear-gradient(180deg, rgba(248, 250, 252, 1), rgba(241, 245, 249, 0.78));
+  }
+
+  .app-page-shell {
+    @apply mx-auto max-w-6xl rounded-3xl border border-border/70 bg-surface-card/95 p-4 shadow-2xl shadow-slate-300/25 sm:p-8 lg:p-10;
+  }
+
+  .app-page-headline {
+    @apply text-2xl font-extrabold text-text-primary sm:text-3xl;
+  }
+
+  .app-page-subtitle {
+    @apply text-sm text-text-secondary;
+  }
+
+  .app-toolbar-pill {
+    @apply rounded-full border border-border/80 bg-surface-main/70 px-3 py-1 text-xs font-semibold text-text-secondary sm:text-sm;
+  }
+
+  .app-btn-primary {
+    @apply rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary/90 sm:text-sm;
+  }
+
+  .app-btn-neutral {
+    @apply rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 sm:text-sm;
+  }
+
+  .app-btn-soft {
+    @apply rounded-lg border border-border/80 bg-white px-3 py-2 text-xs font-semibold text-text-secondary transition hover:bg-surface-main/70 hover:text-text-primary sm:text-sm;
+  }
+
+  .app-tab {
+    @apply rounded-full border px-4 py-2 text-xs font-semibold transition sm:text-sm;
+  }
+
+  .app-tab-active {
+    @apply border-primary bg-primary text-white shadow-sm;
+  }
+
+  .app-tab-idle {
+    @apply border-border/80 bg-white text-text-secondary hover:bg-surface-main/70;
+  }
+
+  .app-tab-inner {
+    @apply inline-flex items-center gap-1.5;
+  }
+
+  .app-count-badge {
+    @apply inline-flex min-w-[1.3rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[0.65rem] leading-none;
+  }
+
+  .app-count-badge-active {
+    @apply bg-primary/70 text-blue-50;
+  }
+
+  .app-count-badge-idle {
+    @apply bg-slate-100 text-slate-500;
+  }
+
+  .app-list-card {
+    @apply min-w-0 rounded-2xl border p-4 sm:p-5;
+  }
+
+  .app-list-card-unread {
+    @apply border-blue-200 bg-blue-50/60;
+  }
+
+  .app-list-card-read {
+    @apply border-border/70 bg-white;
+  }
 }

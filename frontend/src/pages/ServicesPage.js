@@ -437,8 +437,8 @@ const roleVariant = useMemo(() => {
      UI principale
   ========================================== */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 lg:py-10">
-      <div className="max-w-6xl mx-auto bg-white/95 shadow-2xl rounded-3xl border border-gray-100 p-4 sm:p-8 lg:p-10 overflow-hidden space-y-8">
+    <div className="app-page-wrap">
+      <div className="app-page-shell overflow-hidden space-y-8">
         {/* HEADER */}
         <Header
           showForm={showForm}
@@ -492,11 +492,11 @@ const roleVariant = useMemo(() => {
         )}
 
         {/* LISTE DES SERVICES */}
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="text-lg sm:text-xl font-semibold text-text-primary break-words">
             📋 {t("services.listTitle")}
           </h2>
-          <span className="text-xs sm:text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-full px-3 py-1">
+          <span className="app-toolbar-pill">
             {t("services.listCount", { count: filtered.length })}
           </span>
         </div>
@@ -512,21 +512,21 @@ const roleVariant = useMemo(() => {
         />
 
         {filtered.length === 0 ? (
-          <div className="py-10 flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-border/70 bg-white/70 py-10 text-center">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50">
               <span className="text-xl">🗂️</span>
             </div>
-            <p className="text-sm font-semibold text-gray-800 mb-1">
+            <p className="mb-1 text-sm font-semibold text-text-primary">
               {emptyTitle}
             </p>
-            <p className="text-xs text-gray-500 max-w-sm">
+            <p className="max-w-sm text-xs text-text-secondary">
               {emptySubtitle}
             </p>
             <div className="mt-4 flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {hasActiveFilters && (
                 <button
                   onClick={resetFilters}
-                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300"
+                  className="app-btn-soft"
                 >
                   {t("services.filters.reset")}
                 </button>
@@ -534,7 +534,7 @@ const roleVariant = useMemo(() => {
               {!showForm && (
                 <button
                   onClick={() => setShowForm(true)}
-                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 transition"
+                  className="app-btn-primary"
                 >
                   ➕ {t("services.buttons.newService")}
                 </button>
@@ -574,20 +574,20 @@ function Header({ showForm, setShowForm, loading, loadServices, totalCount, role
   })();
 
   return (
-    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-4 border-b border-gray-100">
+    <div className="flex flex-col gap-4 border-b border-border/70 pb-4 md:flex-row md:items-end md:justify-between">
       <div className="space-y-1 min-w-0">
-        <p className="text-[0.7rem] uppercase tracking-wide text-blue-600 font-semibold">
+        <p className="page-kicker">
           {t("services.kicker")}
         </p>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 break-words">
+        <h1 className="app-page-headline break-words">
           🛠️ {t("services.title")}
         </h1>
-        <p className="text-sm sm:text-base text-gray-600">
+        <p className="app-page-subtitle">
           {t("services.subtitle")}
         </p>
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+          <span className="app-toolbar-pill inline-flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
             {t("services.totalCount", { count: totalCount })}
           </span>
@@ -607,7 +607,7 @@ function Header({ showForm, setShowForm, loading, loadServices, totalCount, role
           )}
 
           {!!scopeText && (
-            <span className="inline-flex items-center text-xs sm:text-sm px-3 py-1.5 rounded-full border bg-white text-gray-600 border-gray-200">
+            <span className="inline-flex items-center rounded-full border border-border/80 bg-white px-3 py-1.5 text-xs text-text-secondary sm:text-sm">
               🌍 {scopeText}
             </span>
           )}
@@ -617,7 +617,7 @@ function Header({ showForm, setShowForm, loading, loadServices, totalCount, role
       <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
+          className="app-btn-neutral w-full sm:w-auto"
         >
           {showForm ? `➖ ${t("services.buttons.hideForm")}` : `➕ ${t("services.buttons.newService")}`}
         </button>
@@ -625,10 +625,10 @@ function Header({ showForm, setShowForm, loading, loadServices, totalCount, role
         <button
           onClick={loadServices}
           disabled={loading}
-          className={`w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition ${
+          className={`w-full sm:w-auto rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
             loading
-              ? 'bg-blue-300 cursor-not-allowed text-white'
-              : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+              ? 'cursor-not-allowed bg-blue-300 text-white'
+              : 'app-btn-primary'
           }`}
         >
           {loading ? t("services.buttons.refreshLoading") : `🔄 ${t("services.buttons.refresh")}`}
@@ -644,30 +644,30 @@ function Header({ showForm, setShowForm, loading, loadServices, totalCount, role
 function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
   const { t } = useTranslation();
   return (
-    <div className="mb-6 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
+    <div className="mb-6 rounded-2xl border border-border/70 bg-surface-main/55 p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         {/* Recherche */}
         <div className="col-span-1 sm:col-span-2 lg:col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t("services.filters.searchLabel")}
           </label>
           <input
             placeholder={`🔎 ${t("services.filters.searchPlaceholder")}`}
             value={filters.q}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full"
+            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           />
         </div>
 
         {/* Type */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t("services.filters.typeLabel")}
           </label>
           <select
             value={filters.type}
             onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
+            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           >
             <option value="">{t("services.filters.typeAll")}</option>
             {Object.keys(SERVICE_TYPES).map((key) => (
@@ -680,13 +680,13 @@ function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
 
         {/* Statut */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t("services.filters.statusLabel")}
           </label>
           <select
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
+            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           >
             <option value="">{t("services.filters.statusAll")}</option>
             {Object.keys(SERVICE_STATUSES).map((key) => (
@@ -699,13 +699,13 @@ function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
 
         {/* Bien */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t("services.filters.propertyLabel")}
           </label>
           <select
             value={filters.property}
             onChange={(e) => setFilters({ ...filters, property: e.target.value })}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
+            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           >
             <option value="">{t("services.filters.propertyAll")}</option>
             {properties.map((p) => (
@@ -718,13 +718,13 @@ function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
 
         {/* Tri */}
         <div className="col-span-1 sm:col-span-2 lg:col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t("services.filters.sortLabel")}
           </label>
           <select
             value={filters.sort}
             onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full bg-white"
+            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           >
             <option value="-createdAt">{t("services.filters.sortNewest")}</option>
             <option value="createdAt">{t("services.filters.sortOldest")}</option>
@@ -735,12 +735,12 @@ function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
       </div>
 
       <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="text-xs sm:text-sm text-gray-500">
+        <div className="text-xs text-text-secondary sm:text-sm">
           {t("services.filters.filteredCount", { count: filteredCount })}
         </div>
         <button
           onClick={onReset}
-          className="text-xs sm:text-sm px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium transition w-full sm:w-auto text-center"
+          className="app-btn-soft w-full text-center sm:w-auto"
         >
           {t("services.filters.reset")}
         </button>
@@ -770,10 +770,10 @@ function ServiceForm({
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-3 gap-2">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">
+        <h2 className="text-lg sm:text-xl font-semibold text-text-primary break-words">
           {editingId ? `✏️ ${t("services.form.titleEdit")}` : `➕ ${t("services.form.titleCreate")}`}
         </h2>
-        <p className="text-xs sm:text-sm text-gray-500">
+        <p className="text-xs sm:text-sm text-text-secondary">
           {t("services.form.subtitle")}
         </p>
       </div>
@@ -782,23 +782,20 @@ function ServiceForm({
         onSubmit={(e) => (editingId ? handleUpdate(e) : handleSubmit(e))}
         className="
           grid grid-cols-1 sm:grid-cols-2 gap-4
-          bg-gray-50 p-4 sm:p-5 rounded-2xl border border-gray-200
+          bg-surface-main/55 p-4 sm:p-5 rounded-2xl border border-border/70
         "
       >
         {/* ADMIN/MASTER : sélection client */}
         {isAdminOrMaster && (
           <div className="col-span-1 sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-text-secondary mb-1">
               {t("services.form.clientLabel")} <span className="text-red-500">*</span>
             </label>
             <select
               value={form.clientId}
               onChange={(e) => setForm({ ...form, clientId: e.target.value })}
               required
-              className="
-                w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                focus:ring-2 focus:ring-blue-500 bg-white
-              "
+              className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
             >
               <option value="">{t("services.form.clientPlaceholder")}</option>
               {clients.map((c) => (
@@ -812,17 +809,14 @@ function ServiceForm({
 
         {/* Biens — optionnel */}
         <div className="col-span-1 sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-text-secondary mb-1">
             {t("services.form.propertyLabel")}
           </label>
           <select
             value={form.propertyId}
             onChange={(e) => setForm({ ...form, propertyId: e.target.value })}
             disabled={isAdminOrMaster && !form.clientId}
-            className="
-              w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-              focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 bg-white
-            "
+            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary disabled:bg-slate-100"
           >
             <option value="">
               {isAdminOrMaster && !form.clientId
@@ -847,10 +841,7 @@ function ServiceForm({
             <button
               type="button"
               onClick={resetForm}
-              className="
-                w-full sm:w-auto px-4 py-2 bg-gray-300 rounded-lg
-                text-sm font-semibold hover:bg-gray-400 transition
-              "
+              className="app-btn-soft w-full sm:w-auto"
             >
               {t("services.buttons.cancel")}
             </button>
@@ -859,14 +850,9 @@ function ServiceForm({
           <button
             type="submit"
             disabled={loading}
-            className={`
-              w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition
-              ${
-                loading
-                  ? 'bg-blue-300 cursor-not-allowed text-white'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-              }
-            `}
+            className={`w-full sm:w-auto rounded-lg px-5 py-2.5 text-sm font-semibold transition ${
+              loading ? 'cursor-not-allowed bg-blue-300 text-white' : 'app-btn-primary'
+            }`}
           >
             {editingId ? `💾 ${t("services.buttons.update")}` : t("services.buttons.create")}
           </button>
@@ -885,16 +871,13 @@ function ServiceFormFields({ form, setForm }) {
     <>
       {/* Type */}
       <div className="w-full">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.typeLabel")}
         </label>
         <select
           value={form.type}
           onChange={(e) => setForm({ ...form, type: e.target.value })}
-          className="
-            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500 bg-white
-          "
+          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
         >
           {Object.keys(SERVICE_TYPES).map((key) => (
             <option key={key} value={key}>
@@ -906,7 +889,7 @@ function ServiceFormFields({ form, setForm }) {
 
       {/* Titre */}
       <div className="w-full">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.titleLabel")} <span className="text-red-500">*</span>
         </label>
         <input
@@ -914,16 +897,13 @@ function ServiceFormFields({ form, setForm }) {
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           required
-          className="
-            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500
-          "
+          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
       {/* Description */}
       <div className="col-span-1 sm:col-span-2 w-full">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.descriptionLabel")}
         </label>
         <textarea
@@ -931,64 +911,52 @@ function ServiceFormFields({ form, setForm }) {
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           rows={3}
-          className="
-            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500
-          "
+          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
       {/* Personne de contact */}
       <div className="w-full">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.contactLabel")}
         </label>
         <input
           value={form.contactPerson}
           onChange={(e) => setForm({ ...form, contactPerson: e.target.value })}
           placeholder={t("services.form.contactPlaceholder")}
-          className="
-            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500
-          "
+          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
       {/* Téléphone */}
       <div className="w-full">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.phoneLabel")}
         </label>
         <input
           value={form.contactPhone}
           onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
           placeholder="+223 70 00 00 00"
-          className="
-            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500
-          "
+          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
       {/* Adresse */}
       <div className="col-span-1 sm:col-span-2 w-full">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.addressLabel")}
         </label>
         <input
           value={form.address}
           onChange={(e) => setForm({ ...form, address: e.target.value })}
           placeholder={t("services.form.addressPlaceholder")}
-          className="
-            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500
-          "
+          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
       {/* Budget */}
       <div className="w-full">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.budgetLabel")}
         </label>
         <input
@@ -997,10 +965,7 @@ function ServiceFormFields({ form, setForm }) {
           placeholder={t("services.form.budgetPlaceholder")}
           value={form.budget}
           onChange={(e) => setForm({ ...form, budget: e.target.value })}
-          className="
-            w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-            focus:ring-2 focus:ring-blue-500
-          "
+          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
         />
       </div>
     </>
@@ -1066,7 +1031,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
     <div
       className={`
         bg-gradient-to-br from-white via-white to-slate-50
-        border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-5
+        border border-border/70 rounded-2xl shadow-sm p-4 sm:p-5
         hover:shadow-md hover:border-blue-100 transition
         w-full max-w-full
         border-l-4 ${statusMeta.accent}
@@ -1076,7 +1041,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
       <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:items-start">
         <div className="min-w-0 break-words">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-semibold text-gray-900 break-words">
+            <h3 className="text-lg font-semibold text-text-primary break-words">
               {s.title}
             </h3>
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-semibold bg-white text-slate-700 border border-slate-200">
@@ -1084,7 +1049,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
             </span>
           </div>
 
-          <p className="text-sm text-gray-600 mt-1 whitespace-normal break-words">
+          <p className="mt-1 whitespace-normal break-words text-sm text-text-secondary">
             {s.description || t("services.card.noDescription")}
           </p>
         </div>
@@ -1101,57 +1066,57 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
       </div>
 
       {/* META */}
-      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-gray-700">
+      <div className="mt-4 grid grid-cols-1 gap-3 text-xs text-text-secondary sm:grid-cols-2 sm:text-sm">
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+          <div className="text-[11px] uppercase tracking-wide text-text-muted">
             {t("services.card.property")}
           </div>
-          <div className="text-sm text-gray-900 break-words">
+          <div className="text-sm text-text-primary break-words">
             {propertyLabel}
           </div>
         </div>
 
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+          <div className="text-[11px] uppercase tracking-wide text-text-muted">
             {t("services.card.contact")}
           </div>
-          <div className="text-sm text-gray-900 break-words">
-            {contactLabel} <span className="text-gray-500">({contactPhone})</span>
+          <div className="text-sm text-text-primary break-words">
+            {contactLabel} <span className="text-text-muted">({contactPhone})</span>
           </div>
         </div>
 
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+          <div className="text-[11px] uppercase tracking-wide text-text-muted">
             {t("services.card.address")}
           </div>
-          <div className="text-sm text-gray-900 break-words">
+          <div className="text-sm text-text-primary break-words">
             {addressLabel}
           </div>
         </div>
 
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+          <div className="text-[11px] uppercase tracking-wide text-text-muted">
             {t("services.card.budget")}
           </div>
-          <div className="text-sm text-gray-900 break-words">
+          <div className="text-sm text-text-primary break-words">
             {budgetValue}
           </div>
         </div>
 
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+          <div className="text-[11px] uppercase tracking-wide text-text-muted">
             {t("services.card.agent")}
           </div>
-          <div className="text-sm text-gray-900 break-words">
+          <div className="text-sm text-text-primary break-words">
             {agentLabel}
           </div>
         </div>
 
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+          <div className="text-[11px] uppercase tracking-wide text-text-muted">
             {t("services.card.createdAt")}
           </div>
-          <div className="text-sm text-gray-900 break-words">
+          <div className="text-sm text-text-primary break-words">
             {createdLabel}
           </div>
         </div>
@@ -1166,10 +1131,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
       >
         <button
           onClick={() => navigate(`/services/${s.id}/tasks`)}
-          className="
-            w-full sm:w-auto px-4 py-2 text-sm font-medium bg-blue-600 text-white
-            rounded-lg hover:bg-blue-700 transition
-          "
+          className="app-btn-primary w-full sm:w-auto"
         >
           📋 {t("services.buttons.viewTasks")}
         </button>
@@ -1178,20 +1140,14 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
           <>
             <button
               onClick={() => startEdit(s)}
-              className="
-                w-full sm:w-auto px-4 py-2 text-sm font-medium
-                bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition
-              "
+              className="w-full sm:w-auto rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-600"
             >
               ✏️ {t("services.buttons.edit")}
             </button>
 
             <button
               onClick={() => handleDelete(s.id)}
-              className="
-                w-full sm:w-auto px-4 py-2 text-sm font-medium
-                bg-red-600 text-white rounded-lg hover:bg-red-700 transition
-              "
+              className="w-full sm:w-auto rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
             >
               🗑 {t("services.buttons.delete")}
             </button>

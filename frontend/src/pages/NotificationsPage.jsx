@@ -183,34 +183,34 @@ export default function NotificationsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 px-3 sm:px-4 lg:px-6 py-8">
-      <div className="max-w-6xl mx-auto bg-white/95 shadow-2xl rounded-3xl border border-gray-100 p-4 sm:p-8 lg:p-10 space-y-6">
+    <div className="app-page-wrap">
+      <div className="app-page-shell space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
-            <p className="text-[0.7rem] uppercase tracking-wide text-blue-600 font-semibold">
+            <p className="page-kicker">
               {t("notifications.kicker")}
             </p>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
+            <h1 className="app-page-headline">
               🔔 {t("notifications.title")}
             </h1>
-            <p className="text-sm text-gray-600">
+            <p className="app-page-subtitle">
               {t("notifications.subtitle")}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs sm:text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-full px-3 py-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="app-toolbar-pill">
               {t("notifications.unreadCount", { count: summary.unread || 0 })}
             </span>
             <button
               onClick={() => navigate("/activities")}
-              className="px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+              className="app-btn-primary"
             >
               {t("activities.title")}
             </button>
             <button
               onClick={handleMarkAllRead}
-              className="px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition"
+              className="app-btn-neutral"
             >
               {t("notifications.markAllRead")}
             </button>
@@ -227,15 +227,20 @@ export default function NotificationsPage() {
                 key={tab.key}
                 onClick={() => setProgress(tab.key)}
                 className={[
-                  "px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border transition",
-                  active
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50",
+                  "app-tab",
+                  active ? "app-tab-active" : "app-tab-idle",
                 ].join(" ")}
               >
-                {t(tab.labelKey)}{" "}
-                <span className={active ? "text-blue-100" : "text-gray-400"}>
-                  {count}
+                <span className="app-tab-inner">
+                  <span>{t(tab.labelKey)}</span>
+                  <span
+                    className={[
+                      "app-count-badge",
+                      active ? "app-count-badge-active" : "app-count-badge-idle",
+                    ].join(" ")}
+                  >
+                    {count}
+                  </span>
                 </span>
               </button>
             );
@@ -254,11 +259,11 @@ export default function NotificationsPage() {
 
         {/* List */}
         {loading ? (
-          <div className="py-10 text-center text-sm text-gray-500">
+          <div className="rounded-2xl border border-border/70 bg-white/70 py-10 text-center text-sm text-text-secondary">
             {t("notifications.loading")}
           </div>
         ) : displayItems.length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-500">
+          <div className="rounded-2xl border border-border/70 bg-white/70 py-10 text-center text-sm text-text-secondary">
             {t("notifications.empty")}
           </div>
         ) : (
@@ -307,32 +312,32 @@ export default function NotificationsPage() {
                 <div
                   key={n.id}
                   className={[
-                    "rounded-2xl border p-4 sm:p-5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 min-w-0",
+                    "app-list-card flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
                     n.status === "unread"
-                      ? "bg-blue-50/60 border-blue-200"
-                      : "bg-white border-gray-200",
+                      ? "app-list-card-unread"
+                      : "app-list-card-read",
                   ].join(" ")}
                 >
                   <div className="flex gap-3 min-w-0 flex-1">
                     <div className="text-2xl shrink-0">{meta.icon}</div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2 min-w-0">
-                        <h3 className="text-sm sm:text-base font-semibold text-gray-900 break-words max-w-full line-clamp-2">
+                        <h3 className="max-w-full break-words text-sm font-semibold text-text-primary line-clamp-2 sm:text-base">
                           {title}
                         </h3>
-                        <span className="text-[0.65rem] uppercase tracking-wide text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5">
+                        <span className="rounded-full border border-border/80 bg-slate-100 px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-text-secondary">
                           {meta.label}
                         </span>
                         {n.status === "unread" && (
-                          <span className="text-[0.6rem] uppercase tracking-wide text-blue-700 bg-blue-100 border border-blue-200 rounded-full px-2 py-0.5">
+                          <span className="rounded-full border border-blue-200 bg-blue-100 px-2 py-0.5 text-[0.6rem] uppercase tracking-wide text-blue-700">
                             {t("notifications.unread")}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs sm:text-sm text-gray-600 mt-1 break-words line-clamp-3">
+                      <p className="mt-1 break-words text-xs text-text-secondary line-clamp-3 sm:text-sm">
                         {message}
                       </p>
-                      <p className="text-[0.7rem] text-gray-400 mt-2">
+                      <p className="mt-2 text-[0.7rem] text-text-muted">
                         {createdLabel}
                       </p>
                     </div>
@@ -341,14 +346,14 @@ export default function NotificationsPage() {
                   <div className="flex flex-col sm:flex-row gap-2">
                     <button
                       onClick={() => navigate(resolveLink(n))}
-                      className="px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+                      className="app-btn-primary"
                     >
                       {t("notifications.view")}
                     </button>
                     {n.status !== "read" && (
                       <button
                         onClick={() => handleMarkRead(n.id)}
-                        className="px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
+                        className="app-btn-soft"
                       >
                         {t("notifications.markRead")}
                       </button>
