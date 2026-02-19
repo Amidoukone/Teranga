@@ -395,8 +395,8 @@ export default function TransactionsPage() {
   // ========================================================================
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
-        <p className="text-gray-600 text-lg animate-pulse">
+      <div className="app-page-wrap flex min-h-screen items-center justify-center">
+        <p className="text-lg animate-pulse text-text-secondary">
           {t('transactionsPage.loading')}
         </p>
       </div>
@@ -407,19 +407,19 @@ export default function TransactionsPage() {
   // 🖥️ UI PRINCIPALE
   // ========================================================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 lg:py-10">
-      <div className="max-w-6xl mx-auto bg-white/95 shadow-2xl rounded-3xl border border-gray-100 p-5 sm:p-8 lg:p-10 space-y-8">
+    <div className="app-page-wrap">
+      <div className="app-page-shell max-w-6xl space-y-8 p-5 sm:p-8 lg:p-10">
 
         {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-4 border-b border-gray-100">
+        <div className="flex flex-col gap-4 border-b border-border/70 pb-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
+            <h1 className="app-page-headline flex items-center gap-2">
               💰 {t('transactionsPage.header.title')}
             </h1>
-            <p className="text-sm sm:text-base text-slate-600">
+            <p className="app-page-subtitle">
               {t('transactionsPage.header.subtitle')}
             </p>
-            <span className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 mt-2">
+            <span className="app-toolbar-pill mt-2 inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
               {t('transactionsPage.header.count', { count: transactions.length })}
             </span>
@@ -428,7 +428,7 @@ export default function TransactionsPage() {
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
+              className="app-btn-neutral w-full sm:w-auto"
             >
               {showForm
                 ? `➖ ${t('transactionsPage.buttons.hideForm')}`
@@ -438,10 +438,10 @@ export default function TransactionsPage() {
             <button
               onClick={loadTransactions}
               disabled={loading}
-              className={`w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition ${
+              className={`w-full sm:w-auto rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
                 loading
-                  ? 'bg-blue-300 cursor-not-allowed text-white'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? 'cursor-not-allowed bg-blue-300 text-white'
+                  : 'app-btn-primary'
               }`}
             >
               {loading
@@ -508,28 +508,28 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
   const { t } = useTranslation();
 
   return (
-    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
+    <div className="mb-8 rounded-2xl border border-border/70 bg-surface-main/55 p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         <div className="lg:col-span-2">
-          <label className="text-xs font-medium text-gray-600 mb-1 block">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t('transactionsPage.filters.searchLabel')}
           </label>
           <input
             value={filters.q}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
             placeholder={t('transactionsPage.filters.searchPlaceholder')}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full"
+            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-gray-600 mb-1 block">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t('transactionsPage.filters.typeLabel')}
           </label>
           <select
             value={filters.type}
             onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full"
+            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           >
             <option value="">{t('transactionsPage.filters.typeAll')}</option>
             {TRANSACTION_TYPE_VALUES.map((value) => (
@@ -541,25 +541,25 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
         </div>
 
         <div>
-          <label className="text-xs font-medium text-gray-600 mb-1 block">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t('transactionsPage.filters.paymentLabel')}
           </label>
           <input
             value={filters.payment}
             onChange={(e) => setFilters({ ...filters, payment: e.target.value })}
             placeholder={t('transactionsPage.filters.paymentPlaceholder')}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full"
+            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-gray-600 mb-1 block">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t('transactionsPage.filters.serviceLabel')}
           </label>
           <select
             value={filters.service}
             onChange={(e) => setFilters({ ...filters, service: e.target.value })}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full"
+            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           >
             <option value="">{t('transactionsPage.filters.serviceAll')}</option>
             {services.map((s) => (
@@ -569,13 +569,13 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
         </div>
 
         <div className="lg:col-span-2">
-          <label className="text-xs font-medium text-gray-600 mb-1 block">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t('transactionsPage.filters.sortLabel')}
           </label>
           <select
             value={filters.sort}
             onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full"
+            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           >
             <option value="-createdAt">
               {t('transactionsPage.filters.sortNewest')}
@@ -593,7 +593,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
         </div>
       </div>
 
-      <div className="mt-4 flex justify-between text-xs text-gray-500">
+      <div className="mt-4 flex justify-between text-xs text-text-secondary">
         <span>
           {t('transactionsPage.filters.results', { count: filteredCount })}
         </span>
@@ -609,7 +609,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
               sort: '-createdAt',
             })
           }
-          className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+          className="app-btn-soft"
         >
           {t('transactionsPage.filters.reset')}
         </button>
@@ -637,13 +637,13 @@ function TransactionForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-2xl border border-gray-200"
+      className="grid grid-cols-1 gap-4 rounded-2xl border border-border/70 bg-surface-main/55 p-5 sm:grid-cols-2"
     >
       {/* Type */}
       <select
         value={form.type}
         onChange={(e) => setForm({ ...form, type: e.target.value })}
-        className="border rounded px-3 py-2"
+        className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
       >
         {TRANSACTION_TYPE_VALUES.map((value) => (
           <option key={value} value={value}>
@@ -659,14 +659,14 @@ function TransactionForm({
         onChange={(e) => setForm({ ...form, amount: e.target.value })}
         placeholder={t('transactionsPage.form.amountPlaceholder')}
         required
-        className="border rounded px-3 py-2"
+        className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
       />
 
       {/* Devise */}
       <select
         value={form.currency}
         onChange={(e) => setForm({ ...form, currency: e.target.value })}
-        className="border rounded px-3 py-2"
+        className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
       >
         {CURRENCY_CODES.map((code) => (
           <option key={code} value={code}>
@@ -680,14 +680,14 @@ function TransactionForm({
         value={form.paymentMethod}
         onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
         placeholder={t('transactionsPage.form.paymentPlaceholder')}
-        className="border rounded px-3 py-2"
+        className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
       />
 
       {/* Service */}
       <select
         value={selectedService}
         onChange={handleServiceChange}
-        className="border rounded px-3 py-2 sm:col-span-2"
+        className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary sm:col-span-2"
       >
         <option value="">{t('transactionsPage.form.servicePlaceholder')}</option>
         {services.map((s) => (
@@ -700,7 +700,7 @@ function TransactionForm({
         <select
           value={form.taskId}
           onChange={(e) => setForm({ ...form, taskId: e.target.value })}
-          className="border rounded px-3 py-2 sm:col-span-2"
+          className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary sm:col-span-2"
         >
           <option value="">{t('transactionsPage.form.taskPlaceholder')}</option>
           {tasks.map((task) => (
@@ -720,14 +720,14 @@ function TransactionForm({
             placeholder={t('transactionsPage.form.projectIdPlaceholder')}
             value={form.projectId}
             onChange={(e) => setForm({ ...form, projectId: e.target.value })}
-            className="border rounded px-3 py-2"
+            className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
           />
           <input
             type="number"
             placeholder={t('transactionsPage.form.orderIdPlaceholder')}
             value={form.orderId}
             onChange={(e) => setForm({ ...form, orderId: e.target.value })}
-            className="border rounded px-3 py-2"
+            className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
           />
         </>
       )}
@@ -737,7 +737,7 @@ function TransactionForm({
         value={form.description}
         onChange={(e) => setForm({ ...form, description: e.target.value })}
         placeholder={t('transactionsPage.form.descriptionPlaceholder')}
-        className="border rounded px-3 py-2 sm:col-span-2"
+        className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary sm:col-span-2"
       />
 
       {/* File */}
@@ -746,14 +746,14 @@ function TransactionForm({
         onChange={(e) =>
           setForm({ ...form, proofFile: e.target.files?.[0] || null })
         }
-        className="sm:col-span-2"
+        className="sm:col-span-2 rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
       />
 
       <div className="sm:col-span-2 text-right">
         <button
           disabled={creating}
-          className={`px-5 py-2 rounded text-white ${
-            creating ? 'bg-blue-300' : 'bg-blue-600 hover:bg-blue-700'
+          className={`rounded-lg px-5 py-2 text-white ${
+            creating ? 'cursor-not-allowed bg-blue-300' : 'app-btn-primary'
           }`}
         >
           {creating
@@ -779,7 +779,7 @@ function TransactionList({
 
   if (loading) {
     return (
-      <p className="text-center text-gray-500">
+      <p className="rounded-2xl border border-border/70 bg-white/70 py-6 text-center text-text-secondary">
         {t('transactionsPage.list.loading')}
       </p>
     );
@@ -787,7 +787,7 @@ function TransactionList({
 
   if (!transactions.length) {
     return (
-      <p className="text-center text-gray-500">
+      <p className="rounded-2xl border border-border/70 bg-white/70 py-6 text-center text-text-secondary">
         {t('transactionsPage.list.empty')}
       </p>
     );
@@ -831,14 +831,14 @@ function TransactionList({
         return (
           <div
             key={trx.id}
-            className="mb-4 break-inside-avoid rounded-2xl border bg-white shadow-sm overflow-hidden min-w-0 flex flex-col"
+            className="mb-4 break-inside-avoid overflow-hidden rounded-2xl border border-border/70 bg-white shadow-sm min-w-0 flex flex-col"
           >
             {proof && (
               <a
                 href={proof}
                 target="_blank"
                 rel="noreferrer"
-                className="relative block aspect-[4/3] bg-gradient-to-br from-slate-50 via-white to-slate-100 border-b border-slate-200"
+                className="relative block aspect-[4/3] border-b border-border/70 bg-gradient-to-br from-slate-50 via-white to-slate-100"
               >
                 {proofKind === 'image' ? (
                   <img
@@ -851,7 +851,7 @@ function TransactionList({
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="text-center">
-                      <div className="text-xs font-semibold text-slate-700 bg-white/80 border border-slate-200 px-2 py-1 rounded-full inline-flex">
+                      <div className="inline-flex rounded-full border border-border/80 bg-white/80 px-2 py-1 text-xs font-semibold text-text-secondary">
                         {proofExt}
                       </div>
                     </div>
@@ -859,7 +859,7 @@ function TransactionList({
                 )}
 
                 <span
-                  className={`absolute top-3 left-3 text-[0.7rem] font-semibold px-2.5 py-1 rounded-full border ${
+                  className={`absolute top-3 left-3 text-[0.75rem] font-semibold px-2.5 py-1 rounded-full border ${
                     proofKind === 'image'
                       ? 'bg-blue-50 text-blue-700 border-blue-100'
                       : proofKind === 'pdf'
@@ -881,8 +881,8 @@ function TransactionList({
                 {formatNumber(trx.amount || 0)} {currencyLabel}
               </div>
 
-              <div className="text-xs text-gray-500 mt-1 break-words line-clamp-1">
-                {typeLabel} • {statusLabel}
+              <div className="mt-1 text-xs text-text-secondary break-words line-clamp-1">
+                {typeLabel} - {statusLabel}
               </div>
 
               <p className="text-sm mt-2 break-words line-clamp-3">
@@ -890,7 +890,7 @@ function TransactionList({
               </p>
 
               {trx.paymentMethod && (
-                <div className="text-xs text-slate-600 mt-2 break-words line-clamp-2">
+                <div className="mt-2 text-xs text-text-secondary break-words line-clamp-2">
                   {t('transactionsPage.list.paymentLabel')}: {trx.paymentMethod}
                 </div>
               )}
@@ -936,7 +936,7 @@ function TransactionList({
                 </a>
               )}
 
-              <div className="text-xs text-gray-400 mt-auto pt-3 break-words line-clamp-1">
+              <div className="mt-auto pt-3 text-xs text-text-muted break-words line-clamp-1">
                 {t('transactionsPage.list.byLine', {
                   name: getUserDisplayName(trx.user),
                   date: createdAtLabel,
@@ -999,8 +999,8 @@ function Pagination({
   const items = buildPageItems(page, totalPages);
 
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-2">
-      <div className="text-xs text-gray-500">
+    <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-white/80 px-3 py-3 pt-2 md:flex-row md:items-center md:justify-between sm:px-4">
+      <div className="text-xs text-text-secondary">
         {t('transactionsPage.pagination.showing', {
           from: totalItems === 0 ? 0 : startIndex + 1,
           to: endIndex,
@@ -1012,10 +1012,10 @@ function Pagination({
         <button
           onClick={() => onPageChange(Math.max(1, page - 1))}
           disabled={page <= 1}
-          className={`px-3 py-1.5 text-xs rounded-lg border ${
+          className={`rounded-lg border px-3 py-1.5 text-xs ${
             page <= 1
-              ? 'text-gray-400 border-gray-200 cursor-not-allowed'
-              : 'text-gray-700 border-gray-300 hover:bg-gray-50'
+              ? 'cursor-not-allowed border-border/80 text-gray-400'
+              : 'border-border/80 text-text-primary hover:bg-surface-main/70'
           }`}
         >
           {t('transactionsPage.pagination.prev')}
@@ -1023,17 +1023,17 @@ function Pagination({
 
         {items.map((item, idx) =>
           item === '…' ? (
-            <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">
+            <span key={`ellipsis-${idx}`} className="px-2 text-text-muted">
               …
             </span>
           ) : (
             <button
               key={`page-${item}`}
               onClick={() => onPageChange(item)}
-              className={`px-3 py-1.5 text-xs rounded-lg border ${
+              className={`rounded-lg border px-3 py-1.5 text-xs ${
                 item === page
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'text-gray-700 border-gray-300 hover:bg-gray-50'
+                  ? 'border-primary bg-primary text-white'
+                  : 'border-border/80 text-text-primary hover:bg-surface-main/70'
               }`}
             >
               {item}
@@ -1044,23 +1044,23 @@ function Pagination({
         <button
           onClick={() => onPageChange(Math.min(totalPages, page + 1))}
           disabled={page >= totalPages}
-          className={`px-3 py-1.5 text-xs rounded-lg border ${
+          className={`rounded-lg border px-3 py-1.5 text-xs ${
             page >= totalPages
-              ? 'text-gray-400 border-gray-200 cursor-not-allowed'
-              : 'text-gray-700 border-gray-300 hover:bg-gray-50'
+              ? 'cursor-not-allowed border-border/80 text-gray-400'
+              : 'border-border/80 text-text-primary hover:bg-surface-main/70'
           }`}
         >
           {t('transactionsPage.pagination.next')}
         </button>
 
-        <div className="flex items-center gap-2 ml-2">
-          <span className="text-xs text-gray-500">
+        <div className="ml-2 flex items-center gap-2">
+          <span className="text-xs text-text-secondary">
             {t('transactionsPage.pagination.perPage')}
           </span>
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="text-xs border border-gray-300 rounded-lg px-2 py-1"
+            className="rounded-lg border border-border/80 bg-white px-2 py-1 text-xs text-text-primary"
           >
             {[9, 12, 18, 24].map((size) => (
               <option key={size} value={size}>

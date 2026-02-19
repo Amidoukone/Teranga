@@ -4,40 +4,63 @@
 const multer = require('multer');
 const path = require('path');
 
-/* ============================================================
-   📌 Nouveau système basé sur MEMORY STORAGE (ImageKit-ready)
-   → On ne sauvegarde plus rien sur disque local
-   → Les fichiers sont envoyés en RAM : file.buffer
-============================================================ */
 const storage = multer.memoryStorage();
 
-/* ============================================================
-   🔒 Filtre des extensions autorisées (identique à ta version)
-============================================================ */
-const ALLOWED_EXTS = new Set(['.jpg', '.jpeg', '.png', '.pdf']);
+const ALLOWED_EXTS = new Set([
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.heic',
+  '.heif',
+  '.pdf',
+]);
 
-function fileFilter(req, file, cb) {
+const ALLOWED_MIMES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'application/pdf',
+  'application/x-pdf',
+]);
+
+function toInt(value, fallback) {
+  const parsed = Number.parseInt(String(value), 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+const MAX_FILE_SIZE_MB = toInt(process.env.PROPERTY_MAX_FILE_MB, 15);
+
+function fileFilter(_req, file, cb) {
   const ext = (path.extname(file.originalname) || '').toLowerCase();
-  if (!ALLOWED_EXTS.has(ext)) {
+  const mime = String(file.mimetype || '').toLowerCase();
+
+  const okExt = ALLOWED_EXTS.has(ext);
+  const okMime =
+    !mime ||
+    ALLOWED_MIMES.has(mime) ||
+    mime === 'application/octet-stream' ||
+    mime === 'binary/octet-stream';
+
+  if (!okExt || !okMime) {
     return cb(
-      new Error('Type de fichier non supporté (jpg, jpeg, png, pdf uniquement)'),
+      new Error(
+        'Type de fichier non supporte (jpg, jpeg, png, webp, heic, heif, pdf uniquement)'
+      ),
       false
     );
   }
+
   cb(null, true);
 }
 
-/* ============================================================
-   🚀 Configuration Multer
-============================================================ */
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: MAX_FILE_SIZE_MB * 1024 * 1024 },
 });
 
-/* ============================================================
-   🟢 EXPORT
-   → Les controllers continuent d’utiliser req.files normalement
-============================================================ */
 module.exports = upload;

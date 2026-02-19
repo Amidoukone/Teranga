@@ -124,7 +124,7 @@ export default function ProductListPage() {
       }
     }
     loadProducts();
-  }, []);
+  }, [t]);
 
   /* =========================================================
      🌀 États de chargement / erreur

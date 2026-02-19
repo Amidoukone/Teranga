@@ -363,13 +363,13 @@ export default function DashboardPage() {
 
           {/* Solde global */}
           <div className="flex flex-col items-start md:items-end gap-3">
-            <div className="min-w-[200px] rounded-2xl border border-border/80 bg-white/80 px-4 py-3 shadow-sm">
+            <div className="w-full sm:min-w-[200px] rounded-2xl border border-border/80 bg-white/80 px-4 py-3 shadow-sm">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs font-medium text-text-secondary sm:text-sm">
                   {balanceLabel}
                 </div>
                 <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[0.7rem] sm:text-xs font-semibold ${
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[0.75rem] sm:text-xs font-semibold ${
                     isPositiveBalance
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
                       : 'bg-red-50 text-red-600 border border-red-100'
@@ -751,7 +751,7 @@ function StatCard({ label, value, highlight = false, icon: Icon }) {
           <Icon size={20} className="text-slate-500" />
         </div>
       ) : null}
-      <div className="relative mb-1 text-[0.7rem] font-semibold uppercase tracking-wide text-text-muted sm:text-xs">
+      <div className="relative mb-1 text-[0.75rem] font-semibold uppercase tracking-wide text-text-muted sm:text-xs">
         {label}
       </div>
       <div

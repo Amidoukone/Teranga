@@ -32,28 +32,28 @@ export default function AnalyticsConsentBanner({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur px-6 py-4 shadow-xl">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/80 bg-surface-card/95 px-4 py-4 shadow-2xl backdrop-blur sm:px-6">
       <div className="mx-auto flex max-w-5xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="text-sm text-gray-700">
-          <p className="font-semibold text-gray-900">
+        <div className="text-sm text-text-secondary">
+          <p className="font-semibold text-text-primary">
             {t('analyticsConsent.title')}
           </p>
           <p>
             {t('analyticsConsent.description')}
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="button"
             onClick={handleDecline}
-            className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+            className="app-btn-soft rounded-full px-4 py-2"
           >
             {t('analyticsConsent.decline')}
           </button>
           <button
             type="button"
             onClick={handleAccept}
-            className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            className="app-btn-primary rounded-full px-4 py-2"
           >
             {t('analyticsConsent.accept')}
           </button>

@@ -39,6 +39,11 @@
 }
 
 @layer base {
+  :focus-visible {
+    outline: 2px solid rgba(var(--color-primary), 0.45);
+    outline-offset: 2px;
+  }
+
   html {
     @apply scroll-smooth;
   }
@@ -87,6 +92,20 @@
   button {
     @apply inline-flex items-center justify-center rounded-xl font-semibold text-sm transition
       focus:outline-none focus:ring-4 focus:ring-blue-100;
+  }
+
+  @media (pointer: coarse) {
+    button,
+    [role="button"],
+    a.inline-flex {
+      min-height: 40px;
+    }
+
+    input,
+    select,
+    textarea {
+      min-height: 42px;
+    }
   }
 
   button:disabled {

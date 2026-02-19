@@ -22,7 +22,7 @@ export default function GeoSelector() {
 
   if (loading) {
     return (
-      <div className="text-xs text-gray-400">{t('geo.loading')}</div>
+      <div className="text-xs text-text-muted">{t('geo.loading')}</div>
     );
   }
 
@@ -51,16 +51,16 @@ export default function GeoSelector() {
       : t('geo.regionId', { id: displayRegionId });
 
     return (
-      <div className="flex items-center gap-2 text-xs text-gray-400">
-        <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-cyan-300">
+      <div className="flex items-center gap-2 text-xs text-text-muted">
+        <span className="rounded-full border border-border/70 bg-surface-main/70 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-secondary">
           {t('geo.scope')}
         </span>
-        <span className="text-gray-400">
+        <span className="text-text-muted">
           {countryLabel}
         </span>
         {displayRegionId && (
-          <span className="text-gray-400">
-            • {regionLabel}
+          <span className="text-text-muted">
+            - {regionLabel}
           </span>
         )}
       </div>

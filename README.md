@@ -24,6 +24,7 @@ Mettre en place Teranga comme une franchise panafricaine pilotée par un siège 
 - `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` : configuration SMTP pour envoi des emails.
 - `SMTP_SECURE` : `true/false` (TLS), selon ton serveur SMTP.
 - `SMTP_FROM` : expéditeur par défaut (ex: `no-reply@teranga.app`).
+- `PROPERTY_MAX_FILE_MB` : taille max par fichier uploadé pour les biens (recommandé en prod mobile: `20`).
 
 ## Vision globale (franchise panafricaine)
 - **Plateforme centrale** : Teranga OS, développé et maintenu au siège.

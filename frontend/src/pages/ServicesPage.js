@@ -1044,7 +1044,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
             <h3 className="text-lg font-semibold text-text-primary break-words">
               {s.title}
             </h3>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-semibold bg-white text-slate-700 border border-slate-200">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.75rem] font-semibold bg-white text-slate-700 border border-slate-200">
               {typeLabel}
             </span>
           </div>
@@ -1057,7 +1057,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
         <div
           className={`
             mt-1 sm:mt-0 px-3 py-1 rounded-full text-xs font-semibold
-            whitespace-nowrap self-start border ${statusMeta.badge}
+            whitespace-normal leading-tight text-center self-start border ${statusMeta.badge}
           `}
         >
           <span className="mr-1">{statusMeta.icon}</span>

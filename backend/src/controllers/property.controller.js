@@ -26,8 +26,12 @@ const logger = require('../utils/logger');
 /* ============================================================
    Helpers utilitaires
 ============================================================ */
-const toNullableNumber = (v) =>
-  v === '' || v === null || v === undefined ? null : Number(v);
+const toNullableNumber = (v) => {
+  if (v === '' || v === null || v === undefined) return null;
+  const normalized = String(v).trim().replace(',', '.');
+  const num = Number(normalized);
+  return Number.isFinite(num) ? num : null;
+};
 
 const toTrimOrNull = (v) => {
   if (v === undefined || v === null) return null;

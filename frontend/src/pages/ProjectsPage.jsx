@@ -202,9 +202,9 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
 
   return (
     <div
-      className="mt-4 bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm w-full max-w-full min-w-0"
+      className="mt-4 w-full min-w-0 max-w-full rounded-2xl border border-border/70 bg-surface-main/55 p-4 shadow-sm"
     >
-      <h4 className="text-sm font-semibold text-slate-700 mb-3">
+      <h4 className="mb-3 text-sm font-semibold text-text-primary">
         💰 {t('projects.transaction.title')}
       </h4>
 
@@ -213,13 +213,13 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
         className="grid grid-cols-1 sm:grid-cols-2 gap-3"
       >
         <div>
-          <label className="text-xs text-slate-600 font-medium mb-1 block">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t('projects.transaction.typeLabel')}
           </label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
+            className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           >
             <option value="expense">{t('transactions.type.expense')}</option>
             <option value="revenue">{t('transactions.type.revenue')}</option>
@@ -233,7 +233,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
         </div>
 
         <div>
-          <label className="text-xs text-slate-600 font-medium mb-1 block">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t('projects.transaction.amountLabel')}
           </label>
           <input
@@ -242,19 +242,19 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
             placeholder={t('projects.transaction.amountPlaceholder')}
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
+            className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
             required
           />
         </div>
 
         <div>
-          <label className="text-xs text-slate-600 font-medium mb-1 block">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t('projects.transaction.currencyLabel')}
           </label>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
+            className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           >
             {currencyOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -265,7 +265,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
         </div>
 
         <div>
-          <label className="text-xs text-slate-600 font-medium mb-1 block">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t('projects.transaction.paymentMethodLabel')}
           </label>
           <input
@@ -273,14 +273,14 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
             onChange={(e) =>
               setForm({ ...form, paymentMethod: e.target.value })
             }
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
+            className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
             placeholder={t('projects.transaction.paymentMethodPlaceholder')}
           />
         </div>
 
         {canSeeOrder && (
           <div className="sm:col-span-2">
-            <label className="text-xs text-slate-600 font-medium mb-1 block">
+            <label className="mb-1 block text-xs font-medium text-text-secondary">
               {t('projects.transaction.orderIdLabel')}
             </label>
             <input
@@ -289,13 +289,13 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
               onChange={(e) =>
                 setForm({ ...form, orderId: e.target.value })
               }
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
+              className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
             />
           </div>
         )}
 
         <div className="sm:col-span-2">
-          <label className="text-xs text-slate-600 font-medium mb-1 block">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t('projects.transaction.descriptionLabel')}
           </label>
           <textarea
@@ -305,12 +305,12 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
             onChange={(e) =>
               setForm({ ...form, description: e.target.value })
             }
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
+            className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           />
         </div>
 
         <div className="sm:col-span-2">
-          <label className="text-xs text-slate-600 font-medium mb-1 block">
+          <label className="mb-1 block text-xs font-medium text-text-secondary">
             {t('projects.transaction.proofLabel')}
           </label>
           <input
@@ -319,7 +319,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
             onChange={(e) =>
               setForm({ ...form, proofFile: e.target.files?.[0] || null })
             }
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white min-w-0"
+            className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
           />
         </div>
 
@@ -670,8 +670,8 @@ export default function ProjectsPage() {
   ============================================================= */
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
-        <p className="text-blue-700 text-base sm:text-lg animate-pulse text-center px-4">
+      <div className="app-page-wrap flex min-h-screen items-center justify-center">
+        <p className="px-4 text-center text-base text-text-secondary animate-pulse sm:text-lg">
           ⏳ {t('projects.loading')}
         </p>
       </div>
@@ -682,16 +682,16 @@ export default function ProjectsPage() {
   const canCreate = Boolean(user?.role && role !== 'agent');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-6 sm:py-10 overflow-x-hidden">
-      <div className="max-w-6xl w-full mx-auto bg-white shadow-2xl rounded-3xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 border border-slate-100">
+    <div className="app-page-wrap overflow-x-hidden">
+      <div className="app-page-shell mx-auto w-full max-w-6xl border border-border/70 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
 
         {/* ================= HEADER ================= */}
         <div className="w-full flex flex-wrap items-start justify-between gap-4 mb-6">
           <div className="space-y-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
+            <h1 className="app-page-headline flex items-center gap-2">
               📁 {t('projects.title')}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500">
+            <p className="text-xs sm:text-sm text-text-secondary">
               {isAdmin
                 ? t('projects.subtitle.admin')
                 : role === 'agent'
@@ -701,7 +701,7 @@ export default function ProjectsPage() {
 
             {/* UX info MASTER (non bloquant, informatif) */}
             {isMaster && (
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="mt-1 text-[11px] text-text-muted">
                 {t('projects.masterInfo')}
               </p>
             )}
@@ -731,7 +731,7 @@ export default function ProjectsPage() {
         </div>
 
         {/* ================= FILTRES ================= */}
-        <div className="mb-6 bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="mb-6 rounded-2xl border border-border/70 bg-surface-main/55 p-3 shadow-sm sm:p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <input
               value={filters.q}
@@ -739,7 +739,7 @@ export default function ProjectsPage() {
                 setFilters((f) => ({ ...f, q: e.target.value }))
               }
               placeholder={t('projects.filters.searchPlaceholder')}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
             />
 
             <select
@@ -747,7 +747,7 @@ export default function ProjectsPage() {
               onChange={(e) =>
                 setFilters((f) => ({ ...f, status: e.target.value }))
               }
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
             >
               <option value="">{t('projects.filters.statusAll')}</option>
               {projectStatusOptions.map((s) => (
@@ -762,7 +762,7 @@ export default function ProjectsPage() {
               onChange={(e) =>
                 setFilters((f) => ({ ...f, sort: e.target.value }))
               }
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
             >
               <option value="-createdAt">
                 {t('projects.filters.sortNewest')}
@@ -797,12 +797,12 @@ export default function ProjectsPage() {
         {showForm && canCreate && (
           <form
             onSubmit={handleSubmit}
-            className="space-y-4 bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200 mb-8 shadow-sm"
+            className="mb-8 space-y-4 rounded-2xl border border-border/70 bg-surface-main/55 p-4 shadow-sm sm:p-6"
           >
             {isAdmin && (
               <FieldRow>
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1 block">
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
                     {t('projects.form.clientLabel')} *
                   </label>
                   <select
@@ -811,7 +811,7 @@ export default function ProjectsPage() {
                       setForm({ ...form, clientId: e.target.value })
                     }
                     required
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
                   >
                     <option value="">
                       {t('projects.form.clientPlaceholder')}
@@ -825,7 +825,7 @@ export default function ProjectsPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1 block">
+                  <label className="mb-1 block text-xs font-medium text-text-secondary">
                     {t('projects.form.agentLabel')}
                   </label>
                   <select
@@ -833,7 +833,7 @@ export default function ProjectsPage() {
                     onChange={(e) =>
                       setForm({ ...form, agentId: e.target.value })
                     }
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
                   >
                     <option value="">
                       {t('projects.form.agentPlaceholder')}
@@ -850,26 +850,26 @@ export default function ProjectsPage() {
 
             <FieldRow>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                <label className="mb-1 block text-xs font-medium text-text-secondary">
                   {t('projects.form.titleLabel')} *
                 </label>
                 <input
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   required
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
                   placeholder={t('projects.form.titlePlaceholder')}
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                <label className="mb-1 block text-xs font-medium text-text-secondary">
                   {t('projects.form.typeLabel')}
                 </label>
                 <select
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
                 >
                   {projectTypeOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -882,27 +882,27 @@ export default function ProjectsPage() {
 
             <FieldRow>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                <label className="mb-1 block text-xs font-medium text-text-secondary">
                   {t('projects.form.budgetLabel')}
                 </label>
                 <input
                   type="number"
                   value={form.budget}
                   onChange={(e) => setForm({ ...form, budget: e.target.value })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
                   placeholder="0"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">
+                <label className="mb-1 block text-xs font-medium text-text-secondary">
                   {t('projects.form.statusLabel')}
                 </label>
                 <select
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
                   disabled={!isAdmin}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm disabled:bg-slate-100"
+                  className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary disabled:bg-slate-100"
                 >
                   {projectStatusOptions.map((s) => (
                     <option key={s.value} value={s.value}>
@@ -914,7 +914,7 @@ export default function ProjectsPage() {
             </FieldRow>
 
             <div>
-              <label className="text-xs font-medium text-slate-600 mb-1 block">
+              <label className="mb-1 block text-xs font-medium text-text-secondary">
                 {t('projects.form.descriptionLabel')}
               </label>
               <textarea
@@ -923,7 +923,7 @@ export default function ProjectsPage() {
                   setForm({ ...form, description: e.target.value })
                 }
                 rows={4}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-y"
+                className="w-full resize-y rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
                 placeholder={t('projects.form.descriptionPlaceholder')}
               />
             </div>
@@ -942,7 +942,7 @@ export default function ProjectsPage() {
         )}
 {/* ================= LISTE DES PROJETS ================= */}
         {filtered.length === 0 ? (
-          <p className="text-slate-500 italic text-center py-6 text-sm">
+          <p className="rounded-2xl border border-border/70 bg-white/70 py-6 text-center text-sm italic text-text-secondary">
             {t('projects.list.empty')}
           </p>
         ) : (
@@ -958,7 +958,7 @@ export default function ProjectsPage() {
                   key={p.id}
                   className="
                     w-full min-w-0
-                    bg-white border border-slate-200 rounded-2xl shadow-sm
+                    bg-white border border-border/70 rounded-2xl shadow-sm
                     hover:shadow-lg transition-all duration-200
                     p-4 sm:p-5 flex flex-col h-full overflow-hidden
                   "
@@ -968,14 +968,14 @@ export default function ProjectsPage() {
                     <div className="flex-1 min-w-0">
                       <h3
                         className="
-                          text-base sm:text-lg font-semibold text-slate-900
+                          text-base sm:text-lg font-semibold text-text-primary
                           break-words whitespace-normal
                           w-full max-w-full
                         "
                       >
                         {p.title}
                       </h3>
-                      <p className="text-[11px] sm:text-xs text-slate-400 mt-1">
+                      <p className="mt-1 text-[11px] sm:text-xs text-text-muted">
                         {t('projects.card.createdAt')}{' '}
                         {p.createdAt
                           ? formatDateTime(p.createdAt)
@@ -990,7 +990,7 @@ export default function ProjectsPage() {
                           onChange={(e) =>
                             handleStatusChange(p.id, e.target.value)
                           }
-                          className="border border-slate-300 rounded-md px-2 py-1 text-xs sm:text-sm max-w-[140px]"
+                          className="max-w-[140px] rounded-md border border-border/80 bg-white px-2 py-1 text-xs text-text-primary sm:text-sm"
                         >
                           {projectStatusOptions.map((s) => (
                             <option key={s.value} value={s.value}>
@@ -1008,7 +1008,7 @@ export default function ProjectsPage() {
                   </div>
 
                   {/* Meta */}
-                  <div className="mt-2 space-y-1 text-xs sm:text-[13px] text-slate-700">
+                  <div className="mt-2 space-y-1 text-xs text-text-secondary sm:text-[13px]">
                     {p.client && (
                       <p className="truncate w-full max-w-full">
                         👤 {t('projects.card.client')}{' '}
@@ -1026,7 +1026,7 @@ export default function ProjectsPage() {
                       </p>
                     )}
                     {p.type && (
-                      <p className="text-slate-500 break-words w-full max-w-full">
+                      <p className="w-full max-w-full break-words text-text-muted">
                         🏷 {t('projects.card.type')}{' '}
                         <span className="font-medium">
                           {getProjectTypeLabel(p.type)}
@@ -1037,14 +1037,14 @@ export default function ProjectsPage() {
 
                   {/* Description */}
                   {p.description && (
-                    <p className="mt-3 text-sm text-slate-700 line-clamp-4 break-words">
+                    <p className="mt-3 line-clamp-4 break-words text-sm text-text-secondary">
                       {p.description}
                     </p>
                   )}
 
                   {/* Budget */}
                   {p.budget && (
-                    <p className="mt-2 text-sm text-slate-800 font-medium">
+                    <p className="mt-2 text-sm font-medium text-text-primary">
                       💰 {t('projects.card.budget')}{' '}
                       {formatNumber(p.budget)}{' '}
                       {t('projects.card.currency', { defaultValue: 'XOF' })}
@@ -1066,7 +1066,7 @@ export default function ProjectsPage() {
                         onChange={(e) =>
                           handleAssign(p.id, e.target.value)
                         }
-                        className="border border-slate-300 rounded-lg px-2 py-1 text-xs sm:text-sm max-w-full"
+                        className="max-w-full rounded-lg border border-border/80 bg-white px-2 py-1 text-xs text-text-primary sm:text-sm"
                       >
                         <option value="">
                           {t('projects.actions.assignAgentPlaceholder')}

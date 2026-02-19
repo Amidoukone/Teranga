@@ -785,7 +785,7 @@ function NavBar() {
               </div>
 
             {/* Role badge */}
-            <span className="hidden lg:inline rounded-full border border-border bg-surface-main/50 px-3 py-1 text-[0.7rem] uppercase tracking-wide text-text-secondary">
+            <span className="hidden lg:inline rounded-full border border-border bg-surface-main/50 px-3 py-1 text-[0.75rem] uppercase tracking-wide text-text-secondary">
               {roleLabel}
             </span>
 
@@ -901,7 +901,7 @@ function NavBar() {
                     key={item.key}
                     to={item.path}
                     className={[
-                      "flex-1 flex flex-col items-center py-1 rounded-xl text-[0.7rem] transition",
+                      "flex-1 flex flex-col items-center py-1.5 rounded-xl text-[0.75rem] transition",
                       "focus:outline-none focus:ring-4 focus:ring-primary/10",
                       active
                         ? "bg-primary/10 text-primary border border-border shadow-sm"
@@ -919,7 +919,7 @@ function NavBar() {
               <button
                 onClick={() => setOpenMore((v) => !v)}
                 className={[
-                  "flex-1 flex flex-col items-center py-1 rounded-xl text-[0.7rem] transition",
+                  "flex-1 flex flex-col items-center py-1.5 rounded-xl text-[0.75rem] transition",
                   "focus:outline-none focus:ring-4 focus:ring-primary/10",
                   openMore
                     ? "bg-primary/10 text-primary border border-border shadow-sm"
@@ -978,7 +978,7 @@ function NavBar() {
                       <div className="text-text-primary text-sm font-semibold tracking-wide truncate">
                         {userDisplay}
                       </div>
-                      <div className="text-text-muted text-[0.7rem] uppercase tracking-wide truncate">
+                      <div className="text-text-muted text-[0.75rem] uppercase tracking-wide truncate">
                         {roleLabel}
                       </div>
                     </div>
