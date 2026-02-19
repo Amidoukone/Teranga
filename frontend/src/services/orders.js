@@ -16,11 +16,14 @@ function isNumberLike(v) {
 }
 
 function toNumberOr(v, fallback = undefined) {
-  return isNumberLike(v) ? Number(v) : fallback;
+  if (v === undefined || v === null || v === '') return fallback;
+  const normalized = String(v).trim().replace(',', '.');
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 function toIntOr(v, fallback = undefined) {
-  const n = Number.parseInt(v, 10);
+  const n = Number.parseInt(String(v).trim(), 10);
   return Number.isNaN(n) ? fallback : n;
 }
 

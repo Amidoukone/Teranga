@@ -27,7 +27,8 @@ const logger = require('../utils/logger');
 ============================================================ */
 function toNullableNumber(v) {
   if (v === "" || v === undefined || v === null) return null;
-  const n = Number(v);
+  const normalized = String(v).trim().replace(",", ".");
+  const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
 }
 
@@ -152,12 +153,13 @@ exports.create = async (req, res) => {
     let targetClient = req.user;
 
     if (req.user.role === "admin") {
-      if (!clientId)
+      const parsedClientId = toSafeInt(clientId);
+      if (!parsedClientId)
         return res
           .status(400)
           .json({ error: "clientId requis pour un admin" });
 
-      const user = await User.findByPk(clientId);
+      const user = await User.findByPk(parsedClientId);
       if (!user || user.role !== "client")
         return res
           .status(400)
@@ -165,6 +167,12 @@ exports.create = async (req, res) => {
 
       targetClientId = user.id;
       targetClient = user;
+
+      if (property && String(property.ownerId) !== String(targetClientId)) {
+        return res.status(400).json({
+          error: "Le bien sélectionné n'appartient pas au client choisi",
+        });
+      }
     } else {
       if (property && String(property.ownerId) !== String(req.user.id))
         return res.status(403).json({

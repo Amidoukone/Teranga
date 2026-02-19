@@ -77,7 +77,8 @@ function withLabels(trx) {
 
 function parseAmount(val) {
   if (val === null || val === undefined || val === "") return null;
-  const n = Number(val);
+  const normalized = String(val).trim().replace(",", ".");
+  const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
 }
 

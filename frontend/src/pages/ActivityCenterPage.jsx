@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { getActivities } from "../services/activities";
+import { getLocalUser } from "../services/auth";
 import PaginationBar from "../components/PaginationBar";
 import { useLocale } from "../i18n/useLocale";
 import { formatStatus } from "../utils/labels";
+import { normalizeRole } from "../utils/role";
 
 const PROGRESS_TABS = [
   { key: "all", labelKey: "activities.tabs.all" },
@@ -79,6 +81,10 @@ export default function ActivityCenterPage() {
   const { t } = useTranslation();
   const { formatDate } = useLocale();
   const navigate = useNavigate();
+  const currentUserRole = useMemo(
+    () => normalizeRole(getLocalUser()?.role),
+    []
+  );
 
   const [progress, setProgress] = useState("all");
   const [entityType, setEntityType] = useState("");
@@ -210,20 +216,25 @@ export default function ActivityCenterPage() {
     }
   }, []);
 
-  const resolveLink = useCallback((n) => {
-    if (!n) return "/dashboard";
-    if (n.entityType === "order") return n.entityId ? `/orders/${n.entityId}` : "/orders";
-    if (n.entityType === "project") return n.entityId ? `/projects/${n.entityId}` : "/projects";
-    if (n.entityType === "task") return "/tasks";
-    if (n.entityType === "service") return "/services";
-    if (n.entityType === "evidence") {
-      const taskId = n?.metadata?.taskId;
-      const orderId = n?.metadata?.orderId;
-      if (taskId) return `/tasks/${taskId}/evidences`;
-      if (orderId) return `/orders/${orderId}`;
-    }
-    return "/dashboard";
-  }, []);
+  const resolveLink = useCallback(
+    (n) => {
+      if (!n) return "/dashboard";
+      if (n.entityType === "order") return n.entityId ? `/orders/${n.entityId}` : "/orders";
+      if (n.entityType === "project") return n.entityId ? `/projects/${n.entityId}` : "/projects";
+      if (n.entityType === "task") return "/tasks";
+      if (n.entityType === "service") {
+        return currentUserRole === "agent" ? "/agent/services" : "/services";
+      }
+      if (n.entityType === "evidence") {
+        const taskId = n?.metadata?.taskId;
+        const orderId = n?.metadata?.orderId;
+        if (taskId) return `/tasks/${taskId}/evidences`;
+        if (orderId) return `/orders/${orderId}`;
+      }
+      return "/dashboard";
+    },
+    [currentUserRole]
+  );
 
   return (
     <div className="app-page-wrap">

@@ -350,6 +350,8 @@ const en = {
       loadPropertiesError: "Error loading properties.",
       loadClientPropertiesError: "Error loading client properties.",
       selectClient: "Please select a client.",
+      propertyOutdated:
+        "The selected property is no longer available for this client. Please select it again.",
       createSuccess: "Service created successfully!",
       createError: "Error creating service.",
       updateSuccess: "Service updated successfully!",

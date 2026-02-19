@@ -45,16 +45,28 @@ export async function getAllServicesAdmin(params = {}) {
  * POST /api/services
  */
 export async function createService(form) {
+  const rawPropertyId =
+    form?.propertyId !== undefined && form?.propertyId !== ''
+      ? parseInt(String(form.propertyId).trim(), 10)
+      : undefined;
+  const normalizedPropertyId = Number.isFinite(rawPropertyId)
+    ? rawPropertyId
+    : undefined;
+
+  const normalizedBudgetRaw =
+    form?.budget === '' || form?.budget === undefined || form?.budget === null
+      ? undefined
+      : String(form.budget).trim().replace(',', '.');
+  const normalizedBudget =
+    normalizedBudgetRaw === undefined ? undefined : Number(normalizedBudgetRaw);
+
   const payload = mergeGeoPayload({
     ...form,
-    propertyId:
-      form?.propertyId !== undefined && form.propertyId !== ''
-        ? parseInt(form.propertyId, 10)
-        : undefined,
+    propertyId: normalizedPropertyId,
     budget:
-      form?.budget === '' || form?.budget === undefined
+      normalizedBudgetRaw === undefined || !Number.isFinite(normalizedBudget)
         ? undefined
-        : Number(form.budget),
+        : normalizedBudget,
   });
 
   const { data } = await api.post('/services', payload, {

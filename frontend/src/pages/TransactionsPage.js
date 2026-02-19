@@ -247,9 +247,37 @@ export default function TransactionsPage() {
     try {
       setCreating(true);
 
+      const normalizedAmount = form.amount
+        ? String(form.amount).trim().replace(',', '.')
+        : '';
+      const parsedAmount = normalizedAmount ? Number(normalizedAmount) : undefined;
+
+      if (!normalizedAmount || !Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+        notify(t('transactionsPage.alerts.invalidAmount'));
+        return;
+      }
+
+      if (form.serviceId) {
+        const serviceExists = services.some(
+          (s) => String(s.id) === String(form.serviceId)
+        );
+        if (!serviceExists) {
+          notify(t('transactionsPage.alerts.createError'));
+          return;
+        }
+      }
+
+      if (form.taskId) {
+        const taskExists = tasks.some((x) => String(x.id) === String(form.taskId));
+        if (!taskExists) {
+          notify(t('transactionsPage.alerts.createError'));
+          return;
+        }
+      }
+
       const payload = {
         ...form,
-        amount: form.amount ? Number(form.amount) : undefined,
+        amount: normalizedAmount,
         serviceId: form.serviceId ? Number(form.serviceId) : undefined,
         taskId: form.taskId ? Number(form.taskId) : undefined,
         orderId: form.orderId ? Number(form.orderId) : undefined,
@@ -270,7 +298,11 @@ export default function TransactionsPage() {
       resetForm();
     } catch (e) {
       console.error('❌ createTransaction:', e);
-      notify(t('transactionsPage.alerts.createError'));
+      notify(
+        e?.response?.data?.error ||
+          e?.message ||
+          t('transactionsPage.alerts.createError')
+      );
     } finally {
       setCreating(false);
     }

@@ -71,6 +71,13 @@ function normalizeListResponse(data, key) {
   return Array.isArray(arr) ? arr : [];
 }
 
+function toDecimal(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const normalized = String(value).trim().replace(',', '.');
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : null;
+}
+
 /* ============================================================
    ⭐ Page Commandes — Clean Shop Premium (Style B)
 ============================================================ */
@@ -298,16 +305,25 @@ export default function OrdersPage() {
 
       if (form.withItem && form.productId) {
         const prod = products.find((p) => String(p.id) === String(form.productId));
+        if (!prod) {
+          notify(t("orders.alerts.createError"));
+          return;
+        }
 
         const unit =
           form.unitPrice !== '' && form.unitPrice !== null
-            ? Number(form.unitPrice)
+            ? toDecimal(form.unitPrice)
             : Number(prod?.price || 0);
+
+        const quantityParsed = Number.parseInt(String(form.quantity).trim(), 10);
+        const quantity = Number.isFinite(quantityParsed) && quantityParsed > 0
+          ? quantityParsed
+          : 1;
 
         payload.items = [
           {
             productId: Number(form.productId),
-            quantity: Number(form.quantity) > 0 ? Number(form.quantity) : 1,
+            quantity,
             unitPrice: Number.isFinite(unit) ? unit : 0,
           },
         ];
@@ -335,7 +351,11 @@ export default function OrdersPage() {
       }
     } catch (err) {
       console.error('❌ Erreur création commande:', err);
-      notify(t("orders.alerts.createError"));
+      notify(
+        err?.response?.data?.error ||
+          err?.message ||
+          t("orders.alerts.createError")
+      );
     } finally {
       setCreating(false);
     }

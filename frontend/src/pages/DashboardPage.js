@@ -139,6 +139,7 @@ export default function DashboardPage() {
       let financialSummary = null;
 
       const role = normalizeRole(u.role);
+      const showPropertiesModule = role !== 'agent';
 
       // SERVICES selon rôle
       if (role === 'admin') {
@@ -160,12 +161,14 @@ export default function DashboardPage() {
       // ========= NOUVELLES DONNÉES : BIENS / TÂCHES / PROJETS / COMMANDES =========
       const geoParams = getGeoParams();
       const [propsRes, tasksRes, projectsRes, ordersRes] = await Promise.all([
-        api
-          .get('/properties', { params: geoParams })
-          .catch((err) => {
-            console.error('⚠️ Erreur chargement biens Dashboard:', err);
-            return { data: {} };
-          }),
+        showPropertiesModule
+          ? api
+              .get('/properties', { params: geoParams })
+              .catch((err) => {
+                console.error('⚠️ Erreur chargement biens Dashboard:', err);
+                return { data: {} };
+              })
+          : Promise.resolve({ data: { properties: [] } }),
         api
           .get('/tasks', { params: geoParams })
           .catch((err) => {
@@ -460,24 +463,26 @@ export default function DashboardPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* BIENS */}
-                <ModuleCard
-                  title={t("dashboard.modules.properties")}
-                  icon={Building2}
-                  main={t("dashboard.modules.counts.property", {
-                    count: detailStats.properties.total,
-                  })}
-                  items={[
-                    {
-                      label: t("dashboard.modules.items.active"),
-                      value: detailStats.properties.active,
-                    },
-                  ]}
-                  link={
-                    roleKey === 'client' || roleKey === 'admin'
-                      ? '/properties'
-                      : undefined
-                  }
-                />
+                {roleKey !== 'agent' && (
+                  <ModuleCard
+                    title={t("dashboard.modules.properties")}
+                    icon={Building2}
+                    main={t("dashboard.modules.counts.property", {
+                      count: detailStats.properties.total,
+                    })}
+                    items={[
+                      {
+                        label: t("dashboard.modules.items.active"),
+                        value: detailStats.properties.active,
+                      },
+                    ]}
+                    link={
+                      roleKey === 'client' || roleKey === 'admin'
+                        ? '/properties'
+                        : undefined
+                    }
+                  />
+                )}
 
                 {/* TÂCHES */}
                 <ModuleCard

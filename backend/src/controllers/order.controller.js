@@ -45,8 +45,9 @@ function toTrimOrNull(v) {
 
 function toNullableNumber(v) {
   if (v === null || v === undefined || v === '') return null;
-  const n = parseFloat(v);
-  return Number.isNaN(n) ? null : n;
+  const normalized = String(v).trim().replace(',', '.');
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : null;
 }
 
 function buildOrderOrder(sort) {

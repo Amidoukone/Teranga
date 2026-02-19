@@ -258,6 +258,17 @@ const roleVariant = useMemo(() => {
     }
   }, [form.clientId, user, loadClientProperties]);
 
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    if (!form.propertyId) return;
+    const exists = properties.some(
+      (p) => String(p.id) === String(form.propertyId)
+    );
+    if (!exists) {
+      setForm((prev) => ({ ...prev, propertyId: '' }));
+    }
+  }, [properties, form.propertyId, user]);
+
   // Persister l’état d’affichage du formulaire
   useEffect(() => {
     localStorage.setItem('teranga_services_showForm', showForm ? '1' : '0');
@@ -283,6 +294,19 @@ const roleVariant = useMemo(() => {
           message: t("services.alerts.selectClient"),
         });
         return;
+      }
+
+      if (payload.propertyId) {
+        const propertyExists = properties.some(
+          (p) => String(p.id) === String(payload.propertyId)
+        );
+        if (!propertyExists) {
+          setNotice({
+            type: 'error',
+            message: t("services.alerts.propertyOutdated"),
+          });
+          return;
+        }
       }
 
       await createService(payload);
@@ -793,7 +817,13 @@ function ServiceForm({
             </label>
             <select
               value={form.clientId}
-              onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  clientId: e.target.value,
+                  propertyId: '',
+                })
+              }
               required
               className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
             >

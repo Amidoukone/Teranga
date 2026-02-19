@@ -29,9 +29,14 @@ function cleanObj(obj = {}) {
 /** Sérialise proprement un nombre (string autorisée pour décimales exactes) */
 function asDecimalString(v) {
   if (v === '' || v === null || typeof v === 'undefined') return undefined;
-  if (typeof v === 'string') return v.trim();
+  if (typeof v === 'string') {
+    const normalized = v.trim().replace(',', '.');
+    const n = Number(normalized);
+    return Number.isFinite(n) ? normalized : undefined;
+  }
   if (typeof v === 'number' && Number.isFinite(v)) return String(v);
-  const n = Number(v);
+  const normalized = String(v).trim().replace(',', '.');
+  const n = Number(normalized);
   return Number.isFinite(n) ? String(n) : undefined;
 }
 

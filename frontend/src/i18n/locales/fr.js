@@ -202,7 +202,7 @@ const fr = {
     modules: {
       title: "Vue globale de vos opérations",
       subtitle: "Biens, tâches, projets et commandes en un coup d’œil.",
-      properties: "Biens immobiliers",
+      properties: "Biens",
       tasks: "Tâches",
       projects: "Projets",
       orders: "Commandes",
@@ -352,6 +352,8 @@ const fr = {
       loadPropertiesError: "Erreur lors du chargement des biens.",
       loadClientPropertiesError: "Erreur lors du chargement des biens du client.",
       selectClient: "Veuillez sélectionner un client.",
+      propertyOutdated:
+        "Le bien sélectionné n'est plus disponible pour ce client. Veuillez le sélectionner à nouveau.",
       createSuccess: "Service créé avec succès !",
       createError: "Erreur lors de la création du service.",
       updateSuccess: "Service mis à jour avec succès !",
