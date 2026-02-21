@@ -68,6 +68,7 @@ const ORIGINS = resolveOrigins();
 
 export const API_BASE_URL = ORIGINS.API_BASE_URL;
 export let FILE_BASE_URL = ORIGINS.FILE_BASE_URL;
+const CSRF_TOKEN_STORAGE_KEY = 'teranga_csrf_token';
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
   .toLowerCase()
   .trim();
@@ -112,7 +113,9 @@ api.interceptors.request.use((config) => {
 
   const method = (config.method || 'get').toUpperCase();
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-    const csrf = getCookieValue('teranga_csrf');
+    const csrf =
+      getCookieValue('teranga_csrf') ||
+      localStorage.getItem(CSRF_TOKEN_STORAGE_KEY);
     if (csrf) {
       config.headers = config.headers || {};
       config.headers['X-CSRF-Token'] = csrf;
@@ -229,6 +232,7 @@ api.interceptors.response.use(
       localStorage.removeItem('teranga_token');
       localStorage.removeItem('token');
       localStorage.removeItem('teranga_user');
+      localStorage.removeItem(CSRF_TOKEN_STORAGE_KEY);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('teranga_auth_changed'));
       }

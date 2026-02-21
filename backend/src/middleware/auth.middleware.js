@@ -7,6 +7,7 @@ const logger = require('../utils/logger');
 const COOKIE_ACCESS = 'teranga_access';
 const COOKIE_CSRF = 'teranga_csrf';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const CSRF_EXEMPT_PATHS = new Set(['/api/auth/logout', '/api/v1/auth/logout']);
 
 module.exports = async function auth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -63,7 +64,8 @@ module.exports = async function auth(req, res, next) {
     }
 
     const usingCookie = Boolean(cookieToken && !headerToken);
-    if (usingCookie && !SAFE_METHODS.has(req.method)) {
+    const csrfExempt = CSRF_EXEMPT_PATHS.has(req.originalUrl);
+    if (usingCookie && !SAFE_METHODS.has(req.method) && !csrfExempt) {
       const csrfHeader = req.headers['x-csrf-token'];
       const csrfCookie = req.cookies?.[COOKIE_CSRF];
       if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie) {

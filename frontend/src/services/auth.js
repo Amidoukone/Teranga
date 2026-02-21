@@ -16,6 +16,7 @@ import { setLanguage, normalizeLanguage } from '../i18n';
 const TOKEN_KEY = 'teranga_token';
 const LEGACY_TOKEN_KEYS = ['token']; // compat héritée
 const USER_KEY = 'teranga_user';
+const CSRF_TOKEN_KEY = 'teranga_csrf_token';
 const CSRF_COOKIE = 'teranga_csrf';
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
   .toLowerCase()
@@ -62,6 +63,15 @@ function writeTokenAll(token, { keepLegacy = true } = {}) {
 function removeTokenAll() {
   safeRemove(TOKEN_KEY);
   for (const k of LEGACY_TOKEN_KEYS) safeRemove(k);
+}
+
+function writeCsrfToken(token) {
+  if (!token) return;
+  safeSet(CSRF_TOKEN_KEY, token);
+}
+
+function clearCsrfToken() {
+  safeRemove(CSRF_TOKEN_KEY);
 }
 
 /** Accès localStorage safe (évite exceptions “quota”, “disabled”, SSR…) */
@@ -159,6 +169,7 @@ export async function login(payload) {
       // Mode cookie: évite tout token persistant côté client
       removeTokenAll();
     }
+    writeCsrfToken(data?.csrfToken);
 
     // ✅ Cache user pour UX immédiate
     if (data.user) {
@@ -191,6 +202,7 @@ export async function me() {
     } catch (error) {
       const status = error?.response?.status;
       if (status === 401) {
+        clearCsrfToken();
         writeCachedUser(null);
         return { user: null };
       }
@@ -250,6 +262,7 @@ export async function me() {
 
       if (status === 401) {
         clearCookie(CSRF_COOKIE);
+        clearCsrfToken();
         writeCachedUser(null);
         return { user: null };
       }
@@ -301,6 +314,7 @@ export async function me() {
     if (status === 401) {
       console.warn('⚠️ Token invalide ou expiré → suppression locale');
       removeTokenAll();
+      clearCsrfToken();
       writeCachedUser(null);
       return { user: null };
     }
@@ -385,6 +399,7 @@ export async function logout() {
 
   try {
     removeTokenAll();
+    clearCsrfToken();
     writeCachedUser(null);
   } catch (e) {
     console.warn('⚠️ Erreur suppression données locales:', e);
