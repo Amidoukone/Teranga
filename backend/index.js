@@ -7,6 +7,7 @@ dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 const logger = require('./src/utils/logger');
 const app = require('./src/app');
+const { validateProdConfig } = require('./src/utils/validateProdConfig');
 
 // Sequelize (models/index.js)
 const db = require('./models');
@@ -107,6 +108,17 @@ async function connectAndBootstrap({ exitOnFail }) {
 
 async function start() {
   try {
+    const configValidation = validateProdConfig(process.env);
+    if (configValidation.errors.length > 0) {
+      configValidation.errors.forEach((msg) => {
+        logger.error({ msg }, 'config.production.invalid');
+      });
+      throw new Error('Configuration production invalide');
+    }
+    configValidation.warnings.forEach((msg) => {
+      logger.warn({ msg }, 'config.production.warning');
+    });
+
     if (isProd) {
       // En production (ex: Render), demarrer le serveur sans bloquer sur la DB.
       // La DB peut etre en sleep (PlanetScale); on tente en boucle en background.

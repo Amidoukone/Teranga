@@ -5,6 +5,7 @@ Mettre en place Teranga comme une franchise panafricaine pilotée par un siège 
 
 ## Documentation de référence
 - [Plan d’exécution des améliorations](docs/PLAN_EXECUTION.md)
+- [Checklist Go-Live exécutable](docs/GO_LIVE_CHECKLIST.md)
 - [Règles multi-pays & franchise (backend)](backend/docs/multi-country-rules.md)
 
 ## Configuration rapide (env)

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon index.js",
     "lint": "node scripts/lint.js",
+    "validate:prod-config": "node scripts/validate-prod-config.js",
     "db:create": "sequelize-cli db:create",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",

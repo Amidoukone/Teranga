@@ -17,7 +17,7 @@ const TOKEN_KEY = 'teranga_token';
 const LEGACY_TOKEN_KEYS = ['token']; // compat héritée
 const USER_KEY = 'teranga_user';
 const CSRF_COOKIE = 'teranga_csrf';
-const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
+const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'cookie')
   .toLowerCase()
   .trim();
 

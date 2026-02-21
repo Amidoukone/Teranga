@@ -13,6 +13,9 @@ tmp/
 # --- Fichiers d'environnement (ne pas exposer les clés secrètes) ---
 .env
 .env.local
+.env.*
+!.env.example
+!.env.*.example
 
 # --- Fichiers système inutiles ---
 .DS_Store
