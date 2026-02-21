@@ -26,13 +26,21 @@ function joinUrl(base, path) {
 
 /* ---------- Détection ORIGIN & API ---------- */
 function resolveOrigins() {
-  // 1) Variable d'env (ex: http://localhost:5000)
-  const envOrigin = (process.env.REACT_APP_API_URL || '').trim();
-  if (envOrigin) {
-    const origin = stripTrailingSlash(envOrigin);
+  // 1) Variables d'env explicites
+  const envApiBase = (process.env.REACT_APP_API_BASE_URL || '').trim();
+  const envApiUrl = (process.env.REACT_APP_API_URL || '').trim();
+  const envFileBase = (process.env.REACT_APP_FILE_BASE_URL || '').trim();
+
+  if (envApiBase || envApiUrl || envFileBase) {
+    const apiBaseRaw = stripTrailingSlash(envApiBase || envApiUrl);
+    const apiBase = apiBaseRaw.endsWith('/api') ? apiBaseRaw : `${apiBaseRaw}/api`;
+    const fileBase =
+      stripTrailingSlash(envFileBase) ||
+      stripTrailingSlash(apiBase.replace(/\/api$/, ''));
+
     return {
-      FILE_BASE_URL: origin,          // sert /uploads
-      API_BASE_URL: origin + '/api',  // appels API
+      FILE_BASE_URL: fileBase, // sert /uploads
+      API_BASE_URL: apiBase, // appels API
     };
   }
 
@@ -41,7 +49,8 @@ function resolveOrigins() {
   const isLocalHost = host === 'localhost' || host === '127.0.0.1';
 
   if (isLocalHost) {
-    const origin = 'http://127.0.0.1:5000';
+    const backendHost = host === '127.0.0.1' ? '127.0.0.1' : 'localhost';
+    const origin = `http://${backendHost}:5000`;
     return {
       FILE_BASE_URL: origin,          // ex: http://127.0.0.1:5000/uploads/...
       API_BASE_URL: origin + '/api',  // ex: http://127.0.0.1:5000/api/...

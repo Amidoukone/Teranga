@@ -107,10 +107,14 @@ function parseDurationToMs(value) {
 
 function buildCookieOptions({ maxAge, httpOnly = true } = {}) {
   const isProd = (process.env.NODE_ENV || 'development') === 'production';
+  const explicitSameSite = String(process.env.COOKIE_SAME_SITE || '')
+    .trim()
+    .toLowerCase();
+  const sameSite = explicitSameSite || (isProd ? 'none' : 'lax');
   return {
     httpOnly,
     secure: isProd,
-    sameSite: 'lax',
+    sameSite,
     maxAge,
   };
 }
@@ -932,7 +936,6 @@ exports.changePassword = async (req, res) => {
       .json({ error: 'Erreur lors du changement de mot de passe' });
   }
 };
-
 
 
 
