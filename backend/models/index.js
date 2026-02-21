@@ -20,11 +20,63 @@ if (!config) {
 
 const db = {};
 
+function normalizeDatabaseUrl(urlValue, sequelizeConfig) {
+  const raw = String(urlValue || '').trim();
+  if (!raw) return { url: raw, extraDialectOptions: {} };
+
+  // mysql2 treats `ssl=<string>` as an SSL profile name.
+  // Some providers/docs suggest `ssl={"rejectUnauthorized":true}` in URL query,
+  // which arrives as string and breaks with:
+  // "Unknown SSL profile '{\"rejectUnauthorized\":true}'".
+  // We parse and lift it into dialectOptions.ssl object.
+  try {
+    const parsed = new URL(raw);
+    const sslParam = parsed.searchParams.get('ssl');
+
+    if (!sslParam) {
+      return { url: raw, extraDialectOptions: {} };
+    }
+
+    let sslObject = null;
+    try {
+      sslObject = JSON.parse(sslParam);
+    } catch (_err) {
+      sslObject = null;
+    }
+
+    if (sslObject && typeof sslObject === 'object' && !Array.isArray(sslObject)) {
+      parsed.searchParams.delete('ssl');
+      return {
+        url: parsed.toString(),
+        extraDialectOptions: {
+          ssl: {
+            ...(sequelizeConfig?.dialectOptions?.ssl || {}),
+            ...sslObject,
+          },
+        },
+      };
+    }
+  } catch (_err) {
+    // Keep original URL if parsing fails.
+  }
+
+  return { url: raw, extraDialectOptions: {} };
+}
+
 const sequelize = config.use_env_variable
-  ? new Sequelize(process.env[config.use_env_variable], {
-      ...config,
-      logging: isProd ? false : console.log,
-    })
+  ? (() => {
+      const rawUrl = process.env[config.use_env_variable];
+      const normalized = normalizeDatabaseUrl(rawUrl, config);
+
+      return new Sequelize(normalized.url, {
+        ...config,
+        dialectOptions: {
+          ...(config.dialectOptions || {}),
+          ...(normalized.extraDialectOptions || {}),
+        },
+        logging: isProd ? false : console.log,
+      });
+    })()
   : new Sequelize(config.database, config.username, config.password, {
       ...config,
       logging: isProd ? false : console.log,

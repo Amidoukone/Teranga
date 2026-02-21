@@ -51,6 +51,10 @@ import GeoSelector from "./GeoSelector";
 import LanguageSwitcher from "./LanguageSwitcher";
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || "localstorage")
+  .toLowerCase()
+  .trim();
+const USES_COOKIE_AUTH = AUTH_STORAGE_MODE === "cookie";
 
 /* ============================================================================ */
 /* LINKS */
@@ -283,12 +287,14 @@ function NavBar() {
   const location = useLocation();
 
   const [user, setUser] = useState(() => {
-    const token = getToken();
-    return token ? getLocalUser() : null;
+    const localUser = getLocalUser();
+    if (USES_COOKIE_AUTH) return localUser || null;
+    return getToken() ? localUser : null;
   });
   const [loading, setLoading] = useState(() => {
-    const token = getToken();
-    return token ? !getLocalUser() : false;
+    const localUser = getLocalUser();
+    if (USES_COOKIE_AUTH) return !localUser;
+    return getToken() ? !localUser : false;
   });
 
   // Mobile "Plus"
@@ -304,8 +310,7 @@ function NavBar() {
   const unreadCount = notificationSummary?.unread || 0;
 
   const loadNotificationSummary = useCallback(async () => {
-    const token = getToken();
-    if (!user || !token) return;
+    if (!user) return;
     try {
       const data = await getNotificationSummary();
       setNotificationSummary({
@@ -319,8 +324,7 @@ function NavBar() {
   }, [user]);
 
   const handleOpenNotifications = useCallback(async () => {
-    const token = getToken();
-    if (!unreadCount || !token) return;
+    if (!unreadCount) return;
     setNotificationSummary((prev) => ({
       ...(prev || {}),
       unread: 0,
@@ -342,7 +346,10 @@ function NavBar() {
 
     async function load() {
       const token = getToken();
-      if (!token) {
+      const localUser = getLocalUser();
+      const hasSession = USES_COOKIE_AUTH ? Boolean(localUser) : Boolean(token);
+
+      if (!hasSession) {
         if (active) {
           setUser(null);
           setLoading(false);
@@ -353,8 +360,11 @@ function NavBar() {
       try {
         const res = await me();
         if (!active) return;
-        const hasToken = Boolean(getToken());
-        if (res?.offline && !hasToken) {
+        const stillHasSession = USES_COOKIE_AUTH
+          ? Boolean(getLocalUser())
+          : Boolean(getToken());
+
+        if (res?.offline && !stillHasSession) {
           setUser(null);
         } else {
           setUser(res?.user || null);
@@ -371,6 +381,20 @@ function NavBar() {
       active = false;
     };
   }, [location.pathname]);
+
+  useEffect(() => {
+    function onAuthChanged() {
+      const localUser = getLocalUser();
+      const hasSession = USES_COOKIE_AUTH
+        ? Boolean(localUser)
+        : Boolean(getToken());
+      setUser(hasSession ? localUser || null : null);
+      setLoading(false);
+    }
+
+    window.addEventListener("teranga_auth_changed", onAuthChanged);
+    return () => window.removeEventListener("teranga_auth_changed", onAuthChanged);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
