@@ -37,7 +37,7 @@ afterEach(() => {
   delete process.env.REACT_APP_AUTH_STORAGE;
 });
 
-test('login does not persist token when default storage mode is cookie', async () => {
+test('login persists token when default storage mode is localstorage', async () => {
   const { auth, apiMock } = setupModule();
   apiMock.post.mockResolvedValue({
     data: {
@@ -49,8 +49,8 @@ test('login does not persist token when default storage mode is cookie', async (
   const result = await auth.login({ email: 'a@b.com', password: 'x' });
 
   expect(result.token).toBe('jwt-token');
-  expect(localStorage.getItem('teranga_token')).toBeNull();
-  expect(localStorage.getItem('token')).toBeNull();
+  expect(localStorage.getItem('teranga_token')).toBe('jwt-token');
+  expect(localStorage.getItem('token')).toBe('jwt-token');
   expect(localStorage.getItem('teranga_user')).toContain('"id":7');
 });
 
@@ -93,4 +93,19 @@ test('me in cookie mode caches backend user response', async () => {
   expect(result.user.id).toBe(15);
   expect(localStorage.getItem('teranga_user')).toContain('"id":15');
   expect(i18nMock.setLanguage).toHaveBeenCalledWith('fr');
+});
+
+test('logout calls backend endpoint and clears local session', async () => {
+  const { auth, apiMock } = setupModule('cookie');
+  localStorage.setItem('teranga_token', 'jwt-token');
+  localStorage.setItem('token', 'jwt-token');
+  localStorage.setItem('teranga_user', JSON.stringify({ id: 1 }));
+  apiMock.post.mockResolvedValue({ data: { message: 'ok' } });
+
+  await auth.logout();
+
+  expect(apiMock.post).toHaveBeenCalledWith('/auth/logout', {}, expect.any(Object));
+  expect(localStorage.getItem('teranga_token')).toBeNull();
+  expect(localStorage.getItem('token')).toBeNull();
+  expect(localStorage.getItem('teranga_user')).toBeNull();
 });

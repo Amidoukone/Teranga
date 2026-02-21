@@ -17,7 +17,7 @@ const TOKEN_KEY = 'teranga_token';
 const LEGACY_TOKEN_KEYS = ['token']; // compat héritée
 const USER_KEY = 'teranga_user';
 const CSRF_COOKIE = 'teranga_csrf';
-const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'cookie')
+const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
   .toLowerCase()
   .trim();
 
@@ -376,7 +376,13 @@ export async function regenerateRecoveryCodes(payload) {
    🔹 Déconnexion (logout)
    - Nettoie toutes les données locales (nouvelle + legacy key)
 ============================================================ */
-export function logout() {
+export async function logout() {
+  try {
+    await api.post('/auth/logout', {}, { skipAuthRedirect: true, silentAuth: true });
+  } catch (e) {
+    // Even if server-side logout fails, clear local state to avoid stale UI/session.
+  }
+
   try {
     removeTokenAll();
     writeCachedUser(null);

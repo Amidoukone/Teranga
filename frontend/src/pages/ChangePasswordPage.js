@@ -56,7 +56,7 @@ export default function ChangePasswordPage() {
         newPassword,
       });
       setSuccessMsg(res?.message || t("changePasswordPage.success.changed"));
-      logout();
+      await logout();
       navigate("/login", {
         state: {
           successMsg: t("changePasswordPage.success.changedLogin"),

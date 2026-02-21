@@ -442,8 +442,8 @@ function NavBar() {
     setOpenDesktopMore(false);
     setOpenUserMenu(false);
     await delay(100);
-    logout();
-    navigate("/login");
+    await logout();
+    navigate("/login", { replace: true });
   }, [navigate]);
 
   const PUBLIC = [
