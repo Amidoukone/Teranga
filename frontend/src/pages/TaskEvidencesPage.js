@@ -1,5 +1,5 @@
 // ============================================================================
-// TaskEvidencesPage.jsx — VERSION PREMIUM 2025 (MASTER SAFE — PARTIE 1 / 2)
+// TaskEvidencesPage.jsx ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION PREMIUM 2025 (MASTER SAFE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PARTIE 1 / 2)
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -16,7 +16,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 // ============================================================================
-// 🌍 URL BASE — robuste production (inchangé)
+// ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â URL BASE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â robuste production (inchangÃƒÆ’Ã‚Â©)
 // ============================================================================
 const FILE_BASE =
   (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
@@ -47,7 +47,7 @@ const DEFAULT_FILTERS = {
 };
 
 // ============================================================================
-// HELPERS (inchangés)
+// HELPERS (inchangÃƒÆ’Ã‚Â©s)
 // ============================================================================
 function inferKind(name = '', mime = '') {
   const lower = name.toLowerCase();
@@ -68,7 +68,7 @@ function isImageEvidence(ev) {
 
 function fixMojibake(value) {
   if (!value || typeof value !== 'string') return value;
-  if (!/[ÃÂ]/.test(value)) return value;
+  if (!/[ÃƒÆ’Ã†â€™ÃƒÆ’Ã¢â‚¬Å¡]/.test(value)) return value;
   try {
     return decodeURIComponent(escape(value));
   } catch {
@@ -228,7 +228,7 @@ export default function TaskEvidencesPage() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
   // ========================================================================
-  // 🔐 Permissions FRONTEND (MASTER SAFE)
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Permissions FRONTEND (MASTER SAFE)
   // ========================================================================
   const isAdmin = user?.role === 'admin';
   const resetFilters = useCallback(() => {
@@ -276,7 +276,7 @@ export default function TaskEvidencesPage() {
       const ev = await getEvidences(id);
       setEvidences(ev || []);
     } catch (err) {
-      console.error('❌ getEvidences:', err);
+      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ getEvidences:', err);
       setEvidences([]);
     } finally {
       setLoading(false);
@@ -301,7 +301,7 @@ export default function TaskEvidencesPage() {
         setUser(current);
         await fetchEvidences();
       } catch (err) {
-        console.error('❌ init evidence:', err);
+        console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ init evidence:', err);
       }
     }
 
@@ -382,7 +382,7 @@ export default function TaskEvidencesPage() {
 
       await fetchEvidences();
     } catch (err) {
-      console.error('❌ upload:', err);
+      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ upload:', err);
       const msg =
         err?.response?.data?.error ||
         t('taskEvidencesPage.errors.upload');
@@ -400,7 +400,7 @@ export default function TaskEvidencesPage() {
       await deleteEvidence(evidenceId);
       await fetchEvidences();
     } catch (err) {
-      console.error('❌ delete evidence:', err);
+      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ delete evidence:', err);
       const msg =
         err?.response?.data?.error || t('taskEvidencesPage.errors.delete');
       notify(msg);
@@ -494,21 +494,21 @@ export default function TaskEvidencesPage() {
   // UI
   // ========================================================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
-      <div className="max-w-5xl mx-auto bg-white/95 shadow-2xl rounded-3xl p-5 sm:p-8 border border-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
+      <div className="max-w-5xl mx-auto bg-surface-card/95 shadow-2xl rounded-3xl p-5 sm:p-8 border border-border/70">
         {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 pb-4 border-b border-gray-100">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 pb-4 border-b border-border/70">
           <div className="space-y-1">
             <p className="text-[0.7rem] uppercase tracking-wide text-blue-600 font-semibold">
               {t('taskEvidencesPage.header.kicker')}
             </p>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
-              📎 {t('taskEvidencesPage.header.title', { id })}
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary">
+              {t('taskEvidencesPage.header.title', { id })}
             </h1>
-            <p className="text-sm sm:text-base text-gray-600">
+            <p className="text-sm sm:text-base text-text-secondary">
               {t('taskEvidencesPage.header.subtitle')}
             </p>
-            <p className="mt-2 inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+            <p className="mt-2 inline-flex items-center gap-2 text-xs sm:text-sm text-text-muted bg-surface-main px-3 py-1.5 rounded-full border border-border">
               <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
               {t('taskEvidencesPage.header.count', { count: filtered.length })}
             </p>
@@ -517,17 +517,17 @@ export default function TaskEvidencesPage() {
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="w-full sm:w-auto px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-slate-800 transition"
+              className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
             >
               {showForm
-                ? `➖ ${t('taskEvidencesPage.buttons.hideForm')}`
-                : `➕ ${t('taskEvidencesPage.buttons.showForm')}`}
+                ? t('taskEvidencesPage.buttons.hideForm')
+                : t('taskEvidencesPage.buttons.showForm')}
             </button>
           </div>
         </div>
 
         {loading && (
-          <p className="text-gray-500 animate-pulse text-center mb-4 text-sm sm:text-base">
+          <p className="text-text-muted animate-pulse text-center mb-4 text-sm sm:text-base">
             {t('taskEvidencesPage.loading')}
           </p>
         )}
@@ -535,17 +535,17 @@ export default function TaskEvidencesPage() {
         {/* ==========================================================
            BARRE DE FILTRES
         ========================================================== */}
-        <div className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
+        <div className="mb-8 bg-surface-main border border-border rounded-2xl p-4 sm:p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
             {/* Recherche */}
             <input
-              placeholder={`🔎 ${t('taskEvidencesPage.filters.searchPlaceholder')}`}
+              placeholder={t('taskEvidencesPage.filters.searchPlaceholder')}
               value={filters.q}
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, q: e.target.value }))
               }
               className="
-                border border-gray-300 rounded-lg px-3 py-2.5 text-sm sm:text-base
+                border border-border rounded-lg px-3 py-2.5 text-sm sm:text-base bg-surface-card text-text-primary
                 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
                 col-span-1 sm:col-span-2 lg:col-span-4 break-words
               "
@@ -557,7 +557,7 @@ export default function TaskEvidencesPage() {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, kind: e.target.value }))
               }
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+              className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
             >
               <option value="">{t('taskEvidencesPage.filters.typeAll')}</option>
               <option value="image">{t('taskEvidencesPage.filters.typeImage')}</option>
@@ -576,24 +576,24 @@ export default function TaskEvidencesPage() {
                 flex items-center justify-center
                 ${
                   filters.withNotes
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-white text-gray-600 border-gray-300"
+                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                    : "bg-surface-card text-text-secondary border-border"
                 }
               `}
             >
               {filters.withNotes
-                ? `✅ ${t('taskEvidencesPage.filters.withNotesOn')}`
+                ? t('taskEvidencesPage.filters.withNotesOn')
                 : t('taskEvidencesPage.filters.withNotesOff')}
             </button>
 
-            {/* Date de début */}
+            {/* Date de dÃƒÆ’Ã‚Â©but */}
             <input
               type="date"
               value={filters.dateFrom}
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))
               }
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+              className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
             />
 
             {/* Date de fin */}
@@ -603,7 +603,7 @@ export default function TaskEvidencesPage() {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, dateTo: e.target.value }))
               }
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+              className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
             />
 
             {/* Tri */}
@@ -612,7 +612,7 @@ export default function TaskEvidencesPage() {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, sort: e.target.value }))
               }
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+              className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
             >
               <option value="-createdAt">{t('taskEvidencesPage.filters.sortNewest')}</option>
               <option value="createdAt">{t('taskEvidencesPage.filters.sortOldest')}</option>
@@ -622,15 +622,15 @@ export default function TaskEvidencesPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <p className="text-xs sm:text-sm text-gray-500">
+            <p className="text-xs sm:text-sm text-text-muted">
               {t('taskEvidencesPage.filters.foundCount', { count: filtered.length })}
             </p>
             <button
               type="button"
               onClick={resetFilters}
               className="
-                text-xs sm:text-sm px-3 py-1.5 bg-gray-200 rounded-md
-                hover:bg-gray-300 w-full sm:w-auto text-center
+                text-xs sm:text-sm px-3 py-1.5 bg-surface-main/80 text-text-secondary border border-border/70 rounded-md
+                hover:bg-surface-main w-full sm:w-auto text-center
               "
             >
               {t('taskEvidencesPage.filters.reset')}
@@ -644,18 +644,18 @@ export default function TaskEvidencesPage() {
         {showForm && (
           <form
             onSubmit={handleUpload}
-            className="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-8"
+            className="bg-surface-main p-5 rounded-2xl border border-border mb-8"
           >
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
-              ➕ {t('taskEvidencesPage.form.title')}
+            <h2 className="text-base sm:text-lg font-semibold text-text-primary mb-3">
+              {t('taskEvidencesPage.form.title')}
             </h2>
-            <p className="text-xs sm:text-sm text-gray-500 mb-4">
+            <p className="text-xs sm:text-sm text-text-muted mb-4">
               {t('taskEvidencesPage.form.subtitle')}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t('taskEvidencesPage.form.filesLabel')}{' '}
                   <span className="text-red-500">*</span>
                 </label>
@@ -665,18 +665,18 @@ export default function TaskEvidencesPage() {
                   onChange={handleFileChange}
                   accept="image/jpeg,image/png,.jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
                   className="
-                    w-full border border-gray-300 rounded-lg px-3 py-2
-                    text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+                    w-full border border-border rounded-lg px-3 py-2
+                    text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500
                   "
                 />
 
                 {files.length > 0 && (
-                  <p className="mt-2 text-xs sm:text-sm text-gray-500">
+                  <p className="mt-2 text-xs sm:text-sm text-text-muted">
                     {t('taskEvidencesPage.form.filesSelected', { count: files.length })}
                   </p>
                 )}
 
-                <p className="mt-2 text-xs sm:text-sm text-gray-500">
+                <p className="mt-2 text-xs sm:text-sm text-text-muted">
                   {t('taskEvidencesPage.form.existingSummary', {
                     existing: existingEvidenceCount,
                     max: MAX_EVIDENCES,
@@ -689,7 +689,7 @@ export default function TaskEvidencesPage() {
                   <span className="font-semibold">{evidenceLevel.label}</span>,{' '}
                   {evidenceLevel.message}
                 </p>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-text-muted">
                   {t('taskEvidencesPage.form.batchInfo', {
                     count: UPLOAD_BATCH_SIZE,
                   })}
@@ -710,8 +710,8 @@ export default function TaskEvidencesPage() {
                         <div
                           key={i}
                           className="
-                            w-24 h-24 sm:w-28 sm:h-28 border border-gray-200 rounded-lg
-                            overflow-hidden bg-white flex items-center justify-center
+                            w-24 h-24 sm:w-28 sm:h-28 border border-border rounded-lg
+                            overflow-hidden bg-surface-card flex items-center justify-center
                           "
                         >
                           {kind === "image" ? (
@@ -721,8 +721,8 @@ export default function TaskEvidencesPage() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <span className="text-[0.7rem] text-gray-600 px-2 break-words text-center">
-                              📄 {f?.name}
+                            <span className="text-[0.7rem] text-text-secondary px-2 break-words text-center">
+                              {f?.name}
                             </span>
                           )}
                         </div>
@@ -733,7 +733,7 @@ export default function TaskEvidencesPage() {
               </div>
 
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t('taskEvidencesPage.form.notesLabel')}
                 </label>
                 <textarea
@@ -741,8 +741,8 @@ export default function TaskEvidencesPage() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="
-                    w-full border border-gray-300 rounded-lg px-3 py-2
-                    text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+                    w-full border border-border rounded-lg px-3 py-2
+                    text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500
                   "
                   placeholder={t('taskEvidencesPage.form.notesPlaceholder')}
                 />
@@ -766,7 +766,7 @@ export default function TaskEvidencesPage() {
                   : t('taskEvidencesPage.form.submit')}
               </button>
               {uploadProgress && (
-                <p className="mt-2 text-xs text-gray-500">
+                <p className="mt-2 text-xs text-text-muted">
                   {uploadProgress.batches > 0
                     ? t('taskEvidencesPage.form.uploadProgressBatch', {
                         current: uploadProgress.current,
@@ -789,8 +789,8 @@ export default function TaskEvidencesPage() {
            - Admin + MASTER: pas d'avertissement
         ========================================================== */}
         {!isAdmin && (
-          <div className="mb-4 rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 text-xs sm:text-sm text-slate-600 flex gap-2 items-start">
-            <span className="mt-[1px]">🕒</span>
+          <div className="mb-4 rounded-2xl bg-surface-main border border-border px-4 py-3 text-xs sm:text-sm text-text-secondary flex gap-2 items-start">
+            <span className="mt-[1px]">!</span>
             <p className="break-words">
               {t('taskEvidencesPage.warnings.deleteWindow')}
             </p>
@@ -802,20 +802,20 @@ export default function TaskEvidencesPage() {
         ========================================================== */}
         {filtered.length === 0 ? (
           <div className="py-10 flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
-              <span className="text-xl">🗂️</span>
+            <div className="w-12 h-12 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 flex items-center justify-center mb-3">
+              <span className="text-xl">i</span>
             </div>
-            <p className="text-sm font-semibold text-gray-800 mb-1">
+            <p className="text-sm font-semibold text-text-primary mb-1">
               {emptyTitle}
             </p>
-            <p className="text-xs text-gray-500 max-w-sm">
+            <p className="text-xs text-text-muted max-w-sm">
               {emptySubtitle}
             </p>
             <div className="mt-4 flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {hasAnyEvidences && (
                 <button
                   onClick={resetFilters}
-                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300"
+                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-surface-main/80 hover:bg-surface-main"
                 >
                   {t('taskEvidencesPage.filters.reset')}
                 </button>
@@ -825,7 +825,7 @@ export default function TaskEvidencesPage() {
                   onClick={() => setShowForm(true)}
                   className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 transition"
                 >
-                  ➕ {t('taskEvidencesPage.buttons.showForm')}
+                  {t('taskEvidencesPage.buttons.showForm')}
                 </button>
               )}
             </div>
@@ -868,10 +868,10 @@ export default function TaskEvidencesPage() {
               return (
                 <div
                   key={ev.id}
-                  className="group bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-lg transition overflow-hidden"
+                  className="group bg-surface-card border border-border rounded-2xl shadow-sm hover:shadow-lg transition overflow-hidden"
                 >
                   {/* PREVIEW */}
-                  <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-50 via-white to-slate-100 border-b border-gray-200">
+                  <div className="relative aspect-[4/3] bg-gradient-to-br from-surface-main via-surface-card to-surface-main border-b border-border">
                     {isImage ? (
                       <button
                         type="button"
@@ -888,7 +888,7 @@ export default function TaskEvidencesPage() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <div className="text-center">
-                          <div className="text-xs font-semibold text-slate-700 bg-white/80 border border-slate-200 px-2 py-1 rounded-full inline-flex">
+                          <div className="text-xs font-semibold text-text-secondary bg-surface-card/80 border border-border px-2 py-1 rounded-full inline-flex">
                             {extLabel}
                           </div>
                         </div>
@@ -899,10 +899,10 @@ export default function TaskEvidencesPage() {
                       <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-semibold border ${
                           kind === "image"
-                            ? "bg-blue-50 text-blue-700 border-blue-100"
+                            ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30"
                             : kind === "pdf"
-                            ? "bg-red-50 text-red-700 border-red-100"
-                            : "bg-gray-50 text-gray-700 border-gray-200"
+                            ? "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30"
+                            : "bg-surface-main text-text-secondary border-border"
                         }`}
                       >
                         {kindLabel}
@@ -920,7 +920,7 @@ export default function TaskEvidencesPage() {
                         rel="noreferrer"
                         title={displayName}
                         className="
-                          text-blue-600 hover:underline text-sm sm:text-base
+                          text-blue-600 dark:text-blue-400 hover:underline text-sm sm:text-base
                           font-semibold break-words whitespace-normal
                           block w-full max-w-full
                         "
@@ -929,21 +929,21 @@ export default function TaskEvidencesPage() {
                       </a>
                     </div>
 
-                    <div className="mt-2 text-xs sm:text-sm text-gray-500 break-words whitespace-normal w-full max-w-full">
+                    <div className="mt-2 text-xs sm:text-sm text-text-muted break-words whitespace-normal w-full max-w-full">
                       {addedOnLabel}
                     </div>
 
                     {ev.notes && (
                       <div
                         className="
-                          mt-3 text-xs sm:text-sm text-gray-800
-                          bg-gray-50 border border-gray-200
+                          mt-3 text-xs sm:text-sm text-text-primary
+                          bg-surface-main border border-border
                           rounded-lg px-3 py-2
                           break-words whitespace-normal
                           w-full max-w-full
                         "
                       >
-                        <strong className="text-gray-700">
+                        <strong className="text-text-secondary">
                           {t('taskEvidencesPage.meta.notesLabel')}:
                         </strong>{' '}
                         {ev.notes}
@@ -955,7 +955,7 @@ export default function TaskEvidencesPage() {
                         <button
                           type="button"
                           onClick={() => openLightbox(fileUrl)}
-                          className="px-3 py-1.5 text-[0.7rem] sm:text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+                          className="px-3 py-1.5 text-[0.7rem] sm:text-xs font-semibold bg-surface-card border border-border rounded-lg hover:bg-surface-main"
                         >
                           {t('taskEvidencesPage.actions.preview')}
                         </button>
@@ -964,14 +964,14 @@ export default function TaskEvidencesPage() {
                         href={fileUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-3 py-1.5 text-[0.7rem] sm:text-xs font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800"
+                        className="px-3 py-1.5 text-[0.7rem] sm:text-xs font-semibold app-btn-neutral rounded-lg"
                       >
                         {t('taskEvidencesPage.actions.open')}
                       </a>
                       <a
                         href={fileUrl}
                         download={displayName}
-                        className="px-3 py-1.5 text-[0.7rem] sm:text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+                        className="px-3 py-1.5 text-[0.7rem] sm:text-xs font-semibold bg-surface-card border border-border rounded-lg hover:bg-surface-main"
                       >
                         {t('taskEvidencesPage.actions.download')}
                       </a>
@@ -988,14 +988,14 @@ export default function TaskEvidencesPage() {
                       </div>
                     )}
                     {!isAdmin && deleteInfo.allowed && deleteInfo.reason === 'within-window' && (
-                      <p className="mt-2 text-[0.7rem] text-gray-400">
+                      <p className="mt-2 text-[0.7rem] text-text-muted">
                         {t('taskEvidencesPage.delete.possible', {
                           time: formatRemainingMs(deleteInfo.remainingMs),
                         })}
                       </p>
                     )}
                     {!isAdmin && !deleteInfo.allowed && deleteInfo.reason === 'expired' && (
-                      <p className="mt-2 text-[0.7rem] text-gray-400">
+                      <p className="mt-2 text-[0.7rem] text-text-muted">
                         {t('taskEvidencesPage.delete.expired')}
                       </p>
                     )}
@@ -1025,6 +1025,8 @@ export default function TaskEvidencesPage() {
     </div>
   );
 }
+
+
 
 
 

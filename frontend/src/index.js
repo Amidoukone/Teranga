@@ -5,6 +5,7 @@ import './index.css';
 import './i18n';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { initTheme } from './utils/theme';
 
 /* ============================================================
    🚫 Patch PRO : Ignore ResizeObserver loop limit errors
@@ -21,6 +22,7 @@ const ignoreResizeObserverError = (event) => {
 window.addEventListener("error", ignoreResizeObserverError);
 window.addEventListener("unhandledrejection", ignoreResizeObserverError);
 /* ============================================================ */
+initTheme();
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

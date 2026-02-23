@@ -94,7 +94,7 @@ function getScopeLabel(user, t) {
   if (region) parts.push(region);
 
   if (!parts.length) return t('financeDashboardPage.scope.global');
-  return parts.join(' • ');
+  return parts.join(' - ');
 }
 
 export default function FinanceDashboardPage() {
@@ -118,14 +118,14 @@ export default function FinanceDashboardPage() {
     return [];
   }, [isGlobalAdmin, isMaster]);
 
-  // 🆕 Filtres & UI
+  // Ã°Å¸â€ â€¢ Filtres & UI
   const [filters, setFilters] = useState({
     q: '',
     type: '', // '', 'revenue', 'expense', 'commission', 'adjustment'
     role: '', // '', 'client', 'agent', 'admin'
     dateFrom: '',
     dateTo: '',
-    onlyLinked: false, // uniquement celles liées à un service/tâche
+    onlyLinked: false, // uniquement celles liÃƒÂ©es ÃƒÂ  un service/tÃƒÂ¢che
     sort: '-createdAt', // -createdAt, createdAt, amount, -amount
   });
 
@@ -134,7 +134,7 @@ export default function FinanceDashboardPage() {
     return saved === null ? true : saved === '1';
   });
 
-  // 🔄 Persistance de l’état du graphique
+  // Ã°Å¸â€â€ž Persistance de lÃ¢â‚¬â„¢ÃƒÂ©tat du graphique
   useEffect(() => {
     localStorage.setItem('teranga_finance_showChart', showChart ? '1' : '0');
   }, [showChart]);
@@ -145,7 +145,7 @@ export default function FinanceDashboardPage() {
     }
   }, [filters.role, roleFilterOptions]);
 
-  // 🚀 Initialisation
+  // Ã°Å¸Å¡â‚¬ Initialisation
   useEffect(() => {
     async function init() {
       try {
@@ -157,10 +157,10 @@ export default function FinanceDashboardPage() {
         }
         setUser(current);
 
-        const txs = await getTransactions(); // ACL côté backend
+        const txs = await getTransactions(); // ACL cÃƒÂ´tÃƒÂ© backend
         setTransactions(txs || []);
       } catch (err) {
-        console.error('❌ Erreur chargement FinanceDashboard:', err);
+        console.error('Erreur chargement FinanceDashboard:', err);
       } finally {
         setLoading(false);
       }
@@ -169,7 +169,7 @@ export default function FinanceDashboardPage() {
     init();
   }, []);
 
-  // 🧮 Transactions filtrées côté client (non destructif)
+  // Ã°Å¸Â§Â® Transactions filtrÃƒÂ©es cÃƒÂ´tÃƒÂ© client (non destructif)
   const filtered = useMemo(() => {
     let arr = [...(transactions || [])];
 
@@ -200,12 +200,12 @@ export default function FinanceDashboardPage() {
       arr = arr.filter((t) => t.type === filters.type);
     }
 
-    // Rôle (utile surtout pour admin)
+    // RÃƒÂ´le (utile surtout pour admin)
     if (filters.role && roleFilterOptions.includes(filters.role)) {
       arr = arr.filter((t) => (t.user?.role || '') === filters.role);
     }
 
-    // Période
+    // PÃƒÂ©riode
     if (filters.dateFrom) {
       const tsFrom = new Date(filters.dateFrom).setHours(0, 0, 0, 0);
       arr = arr.filter((t) => {
@@ -222,7 +222,7 @@ export default function FinanceDashboardPage() {
       });
     }
 
-    // Liées à un service/tâche
+    // LiÃƒÂ©es ÃƒÂ  un service/tÃƒÂ¢che
     if (filters.onlyLinked) {
       arr = arr.filter((t) => t.service || t.task);
     }
@@ -254,7 +254,7 @@ export default function FinanceDashboardPage() {
     return arr;
   }, [transactions, filters, roleFilterOptions]);
 
-  // 🔢 Calcul des totaux selon la vue filtrée
+  // Ã°Å¸â€Â¢ Calcul des totaux selon la vue filtrÃƒÂ©e
   const computedSummary = useMemo(() => {
     const totals = {
       revenues: 0,
@@ -276,7 +276,7 @@ export default function FinanceDashboardPage() {
     return { ...totals, balance };
   }, [filtered]);
 
-  // Conserver summary pour compatibilité (basé sur computedSummary)
+  // Conserver summary pour compatibilitÃƒÂ© (basÃƒÂ© sur computedSummary)
   useEffect(() => {
     setSummary(computedSummary);
   }, [computedSummary]);
@@ -367,7 +367,7 @@ export default function FinanceDashboardPage() {
       .slice(0, 6);
   }, [filtered]);
 
-  // Format monétaire local (XOF, etc.)
+  // Format monÃƒÂ©taire local (XOF, etc.)
   const formatCurrency = (v) =>
     new Intl.NumberFormat(locale, {
       minimumFractionDigits: 2,
@@ -398,7 +398,7 @@ export default function FinanceDashboardPage() {
     });
   }
 
-  // Export CSV simple de la vue filtrée
+  // Export CSV simple de la vue filtrÃƒÂ©e
   function exportCSV() {
     const headers = [
       'id',
@@ -446,11 +446,11 @@ export default function FinanceDashboardPage() {
     URL.revokeObjectURL(url);
   }
 
-  // États transitoires
+  // Ãƒâ€°tats transitoires
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
-        <p className="text-gray-600 text-lg animate-pulse">
+        <p className="text-text-secondary text-lg animate-pulse">
           {t('financeDashboardPage.loading.page')}
         </p>
       </div>
@@ -460,14 +460,14 @@ export default function FinanceDashboardPage() {
   if (!user || !summary) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
-        <p className="text-gray-600">
+        <p className="text-text-secondary">
           {t('financeDashboardPage.empty.noData')}
         </p>
       </div>
     );
   }
 
-  // 🎨 Données pour le graphique (vue filtrée)
+  // Ã°Å¸Å½Â¨ DonnÃƒÂ©es pour le graphique (vue filtrÃƒÂ©e)
   const COLORS = ['#34C759', '#FF3B30', '#0A84FF', '#AF52DE']; // Apple-like palette
   const chartData = [
     { name: t('financeDashboardPage.chart.revenues'), value: summary.revenues },
@@ -542,19 +542,18 @@ export default function FinanceDashboardPage() {
       ];
 
   // ============================================================
-  // 🖥️ UI principale — Apple Light, sobre & premium
+  // Ã°Å¸â€“Â¥Ã¯Â¸Â UI principale Ã¢â‚¬â€ Apple Light, sobre & premium
   // ============================================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f5f5f7] via-[#f5f5f7] to-[#e5e5ea] px-3 py-8 sm:px-4 sm:py-10">
-      <div className="max-w-6xl mx-auto bg-white/90 backdrop-blur-sm shadow-[0_18px_45px_rgba(0,0,0,0.06)] rounded-3xl border border-[#e5e5ea] px-4 py-5 sm:px-8 sm:py-7">
-        {/* 🧭 En-tête responsive */}
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 py-8 sm:px-4 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-surface-card/90 backdrop-blur-sm shadow-[0_18px_45px_rgba(0,0,0,0.06)] rounded-3xl border border-border px-4 py-5 sm:px-8 sm:py-7">
+        {/* Ã°Å¸Â§Â­ En-tÃƒÂªte responsive */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-semibold text-[#111827] tracking-tight break-words flex items-center gap-2">
-              <span className="text-xl">📊</span>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary tracking-tight break-words flex items-center gap-2">
               <span>{t('financeDashboardPage.title')}</span>
             </h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
+            <p className="text-xs sm:text-sm text-text-muted mt-1 break-words">
               {isGlobalAdmin
                 ? t('financeDashboardPage.descriptions.admin')
                 : isMaster
@@ -564,7 +563,7 @@ export default function FinanceDashboardPage() {
                 : t('financeDashboardPage.descriptions.client')}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full">
+              <span className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-text-secondary bg-surface-main/80 border border-border px-3 py-1 rounded-full">
                 {t('financeDashboardPage.badges.role', {
                   role: prettyRoleLabel(user),
                 })}
@@ -582,7 +581,7 @@ export default function FinanceDashboardPage() {
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:justify-end">
             <button
               onClick={() => setShowChart((s) => !s)}
-              className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium rounded-full shadow-sm bg-[#111827] text-white hover:bg-black transition-transform transform hover:-translate-y-0.5 active:translate-y-0"
+              className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium rounded-full shadow-sm app-btn-neutral transition-transform transform hover:-translate-y-0.5 active:translate-y-0"
             >
               {showChart
                 ? t('financeDashboardPage.buttons.hideChart')
@@ -590,43 +589,41 @@ export default function FinanceDashboardPage() {
             </button>
             <button
               onClick={exportCSV}
-              className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium rounded-full shadow-sm border border-[#d1d5db] bg-white text-gray-800 hover:bg-[#f5f5f7] transition-transform transform hover:-translate-y-0.5 active:translate-y-0"
+              className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium rounded-full shadow-sm border border-border bg-surface-card text-text-primary hover:bg-surface-main transition-transform transform hover:-translate-y-0.5 active:translate-y-0"
             >
               {t('financeDashboardPage.buttons.exportCsv')}
             </button>
           </div>
         </div>
 
-        {/* 🎛️ Filtres premium + responsive */}
-        <div className="mb-6 bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-4 sm:px-5 sm:py-5">
+        {/* Ã°Å¸Å½â€ºÃ¯Â¸Â Filtres premium + responsive */}
+        <div className="mb-6 bg-surface-main border border-border rounded-2xl px-4 py-4 sm:px-5 sm:py-5">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
             {/* Recherche texte */}
             <div className="lg:col-span-2">
-              <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
+              <label className="block text-[11px] font-medium text-text-muted mb-1 uppercase tracking-wide">
                 {t('financeDashboardPage.filters.searchLabel')}
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
-                  🔍
-                </span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-xs">/</span>
                 <input
                   placeholder={t('financeDashboardPage.filters.searchPlaceholder')}
                   value={filters.q}
                   onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-                  className="w-full border border-[#e5e7eb] rounded-2xl pl-8 pr-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
+                  className="w-full border border-border rounded-2xl pl-8 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-surface-card transition"
                 />
               </div>
             </div>
 
             {/* Type */}
             <div>
-              <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
+              <label className="block text-[11px] font-medium text-text-muted mb-1 uppercase tracking-wide">
                 {t('financeDashboardPage.filters.typeLabel')}
               </label>
               <select
                 value={filters.type}
                 onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-                className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
+                className="w-full border border-border rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-surface-card transition"
               >
                 <option value="">{t('financeDashboardPage.filters.allOption')}</option>
                 <option value="revenue">{t('transactions.type.revenue')}</option>
@@ -636,12 +633,12 @@ export default function FinanceDashboardPage() {
               </select>
             </div>
 
-            {/* Rôle (admin global / master) */}
+            {/* RÃƒÂ´le (admin global / master) */}
             {roleFilterOptions.length > 0 && (
               <div>
-                <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
+                <label className="block text-[11px] font-medium text-text-muted mb-1 uppercase tracking-wide">
                   {t('financeDashboardPage.filters.roleLabel')}
-                  <span className="text-[10px] font-normal text-gray-400 normal-case ml-1">
+                  <span className="text-[10px] font-normal text-text-muted normal-case ml-1">
                     {t('financeDashboardPage.filters.roleHint')}
                   </span>
                 </label>
@@ -650,7 +647,7 @@ export default function FinanceDashboardPage() {
                   onChange={(e) =>
                     setFilters({ ...filters, role: e.target.value })
                   }
-                  className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
+                  className="w-full border border-border rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-surface-card transition"
                 >
                   <option value="">{t('financeDashboardPage.filters.allOption')}</option>
                   {roleFilterOptions.includes('client') && (
@@ -668,7 +665,7 @@ export default function FinanceDashboardPage() {
 
             {/* Date du */}
             <div>
-              <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
+              <label className="block text-[11px] font-medium text-text-muted mb-1 uppercase tracking-wide">
                 {t('financeDashboardPage.filters.fromLabel')}
               </label>
               <input
@@ -677,32 +674,32 @@ export default function FinanceDashboardPage() {
                 onChange={(e) =>
                   setFilters({ ...filters, dateFrom: e.target.value })
                 }
-                className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
+                className="w-full border border-border rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-surface-card transition"
               />
             </div>
 
             {/* Date au */}
             <div>
-              <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
+              <label className="block text-[11px] font-medium text-text-muted mb-1 uppercase tracking-wide">
                 {t('financeDashboardPage.filters.toLabel')}
               </label>
               <input
                 type="date"
                 value={filters.dateTo}
                 onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-                className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
+                className="w-full border border-border rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-surface-card transition"
               />
             </div>
 
             {/* Tri */}
             <div>
-              <label className="block text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
+              <label className="block text-[11px] font-medium text-text-muted mb-1 uppercase tracking-wide">
                 {t('financeDashboardPage.filters.sortLabel')}
               </label>
               <select
                 value={filters.sort}
                 onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-                className="w-full border border-[#e5e7eb] rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] focus:border-[#0a84ff] bg-white transition"
+                className="w-full border border-border rounded-2xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-surface-card transition"
               >
                 <option value="-createdAt">
                   {t('financeDashboardPage.filters.sortOptions.newest')}
@@ -723,38 +720,38 @@ export default function FinanceDashboardPage() {
           {/* Ligne du bas filtres : options + reset */}
           <div className="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-              <label className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-700">
+              <label className="inline-flex items-center gap-2 text-xs sm:text-sm text-text-secondary">
                 <input
                   type="checkbox"
                   checked={filters.onlyLinked}
                   onChange={(e) =>
                     setFilters({ ...filters, onlyLinked: e.target.checked })
                   }
-                  className="h-4 w-4 rounded border-gray-300 text-[#0a84ff] focus:ring-[#0a84ff]"
+                  className="h-4 w-4 rounded border-border text-blue-600 focus:ring-blue-500"
                 />
                 <span>{t('financeDashboardPage.filters.onlyLinked')}</span>
               </label>
 
-              {/* Raccourcis de période */}
+              {/* Raccourcis de pÃƒÂ©riode */}
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => quickRange(7)}
-                  className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-[#e5e7eb] hover:bg-[#f3f4f6] font-medium transition"
+                  className="text-[11px] px-3 py-1.5 rounded-full bg-surface-card border border-border hover:bg-surface-main font-medium transition"
                 >
                   {t('financeDashboardPage.filters.quickRanges.last7')}
                 </button>
                 <button
                   type="button"
                   onClick={() => quickRange(30)}
-                  className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-[#e5e7eb] hover:bg-[#f3f4f6] font-medium transition"
+                  className="text-[11px] px-3 py-1.5 rounded-full bg-surface-card border border-border hover:bg-surface-main font-medium transition"
                 >
                   {t('financeDashboardPage.filters.quickRanges.last30')}
                 </button>
                 <button
                   type="button"
                   onClick={() => quickRange(90)}
-                  className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-[#e5e7eb] hover:bg-[#f3f4f6] font-medium transition"
+                  className="text-[11px] px-3 py-1.5 rounded-full bg-surface-card border border-border hover:bg-surface-main font-medium transition"
                 >
                   {t('financeDashboardPage.filters.quickRanges.last90')}
                 </button>
@@ -762,7 +759,7 @@ export default function FinanceDashboardPage() {
             </div>
 
             <div className="flex items-center justify-between sm:justify-end gap-2">
-              <div className="text-[11px] text-gray-500">
+              <div className="text-[11px] text-text-muted">
                 {t('financeDashboardPage.counts.transactions', {
                   count: filtered.length,
                 })}
@@ -770,7 +767,7 @@ export default function FinanceDashboardPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="text-[11px] px-3 py-1.5 rounded-full bg-white border border-[#e5e7eb] hover:bg-[#f3f4f6] font-medium transition"
+                className="text-[11px] px-3 py-1.5 rounded-full bg-surface-card border border-border hover:bg-surface-main font-medium transition"
               >
                 {t('financeDashboardPage.filters.reset')}
               </button>
@@ -794,7 +791,7 @@ export default function FinanceDashboardPage() {
 
         {/* Highlights */}
         <div className="mt-2">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
             {t('financeDashboardPage.sections.highlights')}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -829,7 +826,7 @@ export default function FinanceDashboardPage() {
         </div>
 
         {showChart && (
-          <div className="w-full h-72 sm:h-80 mt-6 mb-6 bg-white border border-[#e5e7eb] rounded-2xl shadow-sm px-2 sm:px-4 py-3 transition-transform transform hover:-translate-y-0.5">
+          <div className="w-full h-72 sm:h-80 mt-6 mb-6 bg-surface-card border border-border rounded-2xl shadow-sm px-2 sm:px-4 py-3 transition-transform transform hover:-translate-y-0.5">
             <ResponsiveContainer>
               <PieChart>
                 <Pie
@@ -853,7 +850,7 @@ export default function FinanceDashboardPage() {
 
         {/* Insights */}
         <div className="mt-2">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
             {t('financeDashboardPage.sections.insights')}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -900,10 +897,10 @@ export default function FinanceDashboardPage() {
           </div>
         </div>
 
-        {/* 👑 Admin : breakdown par rôle (vue filtrée) */}
+        {/* Ã°Å¸â€˜â€˜ Admin : breakdown par rÃƒÂ´le (vue filtrÃƒÂ©e) */}
         {isAdmin && (
           <div className="mt-6">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
               {t('financeDashboardPage.sections.roleDetails')}
             </h3>
             <RoleBreakdown
@@ -913,10 +910,10 @@ export default function FinanceDashboardPage() {
           </div>
         )}
 
-        {/* 🎯 Snapshot d'activité (agent / client) */}
+        {/* Ã°Å¸Å½Â¯ Snapshot d'activitÃƒÂ© (agent / client) */}
         {(isAgent || isClient) && (
           <div className="mt-6">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
               {t('financeDashboardPage.sections.activity')}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -948,9 +945,9 @@ export default function FinanceDashboardPage() {
           </div>
         )}
 
-        {/* 🧭 Top entités */}
+        {/* Ã°Å¸Â§Â­ Top entitÃƒÂ©s */}
         <div className="mt-6">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
             {t('financeDashboardPage.sections.topEntities')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -966,9 +963,9 @@ export default function FinanceDashboardPage() {
           </div>
         </div>
 
-        {/* 📘 Détails globaux (vue filtrée) */}
+        {/* Ã°Å¸â€œËœ DÃƒÂ©tails globaux (vue filtrÃƒÂ©e) */}
         <div className="mt-6">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
             {t('financeDashboardPage.sections.breakdown')}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1003,7 +1000,7 @@ export default function FinanceDashboardPage() {
           </div>
         </div>
 
-        {/* 🕘 Récents */}
+        {/* Ã°Å¸â€¢Ëœ RÃƒÂ©cents */}
         <div className="mt-6">
           <RecentTransactions
             items={recentTransactions}
@@ -1017,12 +1014,12 @@ export default function FinanceDashboardPage() {
   );
 }
 
-/** 📦 Petite carte statistique */
+/** Ã°Å¸â€œÂ¦ Petite carte statistique */
 function StatCard({ label, value }) {
   return (
-    <div className="bg-white border border-[#e5e7eb] rounded-2xl p-4 shadow-sm transition-transform transform hover:-translate-y-0.5 hover:shadow-md">
-      <div className="text-xs text-gray-500 break-words">{label}</div>
-      <div className="text-lg sm:text-xl font-semibold text-gray-900 mt-1 break-words">
+    <div className="bg-surface-card border border-border rounded-2xl p-4 shadow-sm transition-transform transform hover:-translate-y-0.5 hover:shadow-md">
+      <div className="text-xs text-text-muted break-words">{label}</div>
+      <div className="text-lg sm:text-xl font-semibold text-text-primary mt-1 break-words">
         {value}
       </div>
     </div>
@@ -1031,13 +1028,13 @@ function StatCard({ label, value }) {
 
 function InsightCard({ label, value, hint }) {
   return (
-    <div className="bg-white border border-[#e5e7eb] rounded-2xl p-4 shadow-sm">
-      <div className="text-xs text-gray-500 break-words">{label}</div>
-      <div className="text-base sm:text-lg font-semibold text-gray-900 mt-1 break-words">
+    <div className="bg-surface-card border border-border rounded-2xl p-4 shadow-sm">
+      <div className="text-xs text-text-muted break-words">{label}</div>
+      <div className="text-base sm:text-lg font-semibold text-text-primary mt-1 break-words">
         {value}
       </div>
       {hint && (
-        <div className="text-[11px] text-gray-400 mt-1 break-words">{hint}</div>
+        <div className="text-[11px] text-text-muted mt-1 break-words">{hint}</div>
       )}
     </div>
   );
@@ -1045,20 +1042,20 @@ function InsightCard({ label, value, hint }) {
 
 function TopEntitiesCard({ title, items, formatCurrency, emptyLabel }) {
   return (
-    <div className="bg-white border border-[#e5e7eb] rounded-2xl p-4 shadow-sm">
-      <h4 className="text-sm font-semibold text-gray-900 mb-2 break-words">
+    <div className="bg-surface-card border border-border rounded-2xl p-4 shadow-sm">
+      <h4 className="text-sm font-semibold text-text-primary mb-2 break-words">
         {title}
       </h4>
       {items.length === 0 ? (
-        <div className="text-xs text-gray-400">{emptyLabel}</div>
+        <div className="text-xs text-text-muted">{emptyLabel}</div>
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
             <div key={item.id} className="flex items-start justify-between gap-3">
-              <div className="text-xs sm:text-sm text-gray-700 break-words line-clamp-2">
+              <div className="text-xs sm:text-sm text-text-secondary break-words line-clamp-2">
                 {item.label}
               </div>
-              <div className="text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">
+              <div className="text-xs sm:text-sm font-semibold text-text-primary whitespace-nowrap">
                 {formatCurrency(item.total)} XOF
               </div>
             </div>
@@ -1071,12 +1068,12 @@ function TopEntitiesCard({ title, items, formatCurrency, emptyLabel }) {
 
 function RecentTransactions({ items, formatCurrency, formatDate, t }) {
   return (
-    <div className="bg-white border border-[#e5e7eb] rounded-2xl p-4 shadow-sm">
-      <h4 className="text-sm font-semibold text-gray-900 mb-3 break-words">
+    <div className="bg-surface-card border border-border rounded-2xl p-4 shadow-sm">
+      <h4 className="text-sm font-semibold text-text-primary mb-3 break-words">
         {t('financeDashboardPage.sections.recent')}
       </h4>
       {items.length === 0 ? (
-        <div className="text-xs text-gray-400">
+        <div className="text-xs text-text-muted">
           {t('financeDashboardPage.recent.empty')}
         </div>
       ) : (
@@ -1087,14 +1084,14 @@ function RecentTransactions({ items, formatCurrency, formatDate, t }) {
               className="flex items-start justify-between gap-3 border-b border-[#f1f5f9] pb-3 last:border-b-0 last:pb-0"
             >
               <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-semibold text-gray-900 break-words line-clamp-1">
+                <div className="text-xs sm:text-sm font-semibold text-text-primary break-words line-clamp-1">
                   {formatCurrency(trx.amount)} XOF
                 </div>
-                <div className="text-[11px] text-gray-500 break-words line-clamp-1">
+                <div className="text-[11px] text-text-muted break-words line-clamp-1">
                   {getTransactionEntityLabel(trx, t)}
                 </div>
               </div>
-              <div className="text-[11px] text-gray-400 whitespace-nowrap">
+              <div className="text-[11px] text-text-muted whitespace-nowrap">
                 {trx.createdAt ? formatDate(trx.createdAt) : t('common.dash')}
               </div>
             </div>
@@ -1106,8 +1103,8 @@ function RecentTransactions({ items, formatCurrency, formatDate, t }) {
 }
 
 /**
- * 👑 Composant pour l’admin — affiche les sous-totaux séparés par rôle
- * (reçoit déjà la liste filtrée)
+ * Ã°Å¸â€˜â€˜ Composant pour lÃ¢â‚¬â„¢admin Ã¢â‚¬â€ affiche les sous-totaux sÃƒÂ©parÃƒÂ©s par rÃƒÂ´le
+ * (reÃƒÂ§oit dÃƒÂ©jÃƒÂ  la liste filtrÃƒÂ©e)
  */
 function RoleBreakdown({ transactions, formatCurrency }) {
   const { t } = useTranslation();
@@ -1132,11 +1129,11 @@ function RoleBreakdown({ transactions, formatCurrency }) {
       .reduce((acc, t) => acc + Number(t.amount || 0), 0);
 
   const Block = ({ title, list, showAdjustments = false }) => (
-    <div className="border border-[#e5e7eb] rounded-2xl p-4 mb-3 bg-white shadow-sm">
-      <h4 className="font-semibold text-gray-900 mb-2 break-words text-sm sm:text-base">
+    <div className="border border-border rounded-2xl p-4 mb-3 bg-surface-card shadow-sm">
+      <h4 className="font-semibold text-text-primary mb-2 break-words text-sm sm:text-base">
         {title}
       </h4>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs sm:text-sm text-gray-700">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs sm:text-sm text-text-secondary">
         <div>
           {t('financeDashboardPage.roleBreakdown.revenues', {
             amount: formatCurrency(sum(list, 'revenue')),
@@ -1182,4 +1179,6 @@ function RoleBreakdown({ transactions, formatCurrency }) {
     </div>
   );
 }
+
+
 

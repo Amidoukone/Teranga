@@ -78,14 +78,14 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-sm p-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-12">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-surface-card shadow-sm p-8">
+        <h1 className="text-2xl font-bold text-text-primary mb-2">
           {t('auth.resetPassword.title', {
             defaultValue: 'Reinitialiser le mot de passe',
           })}
         </h1>
-        <p className="text-sm text-slate-600 mb-6">
+        <p className="text-sm text-text-secondary mb-6">
           {t('auth.resetPassword.subtitle', {
             defaultValue:
               'Saisissez le token et votre nouveau mot de passe.',
@@ -93,19 +93,19 @@ export default function ResetPasswordPage() {
         </p>
 
         {errorMsg ? (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/15 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
             {errorMsg}
           </div>
         ) : null}
         {successMsg ? (
-          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
             {successMsg}
           </div>
         ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-800 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               {t('auth.resetPassword.token', { defaultValue: 'Token' })}
             </label>
             <input
@@ -116,44 +116,44 @@ export default function ResetPasswordPage() {
               placeholder={t('auth.resetPassword.tokenPlaceholder', {
                 defaultValue: 'Collez votre token ici',
               })}
-              className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-800 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               {t('auth.resetPassword.newPassword', {
                 defaultValue: 'Nouveau mot de passe',
               })}
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
               <input
                 type="password"
                 required
                 minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-border rounded-xl pl-10 pr-3 py-2 text-sm bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-800 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               {t('auth.resetPassword.confirmPassword', {
                 defaultValue: 'Confirmer le mot de passe',
               })}
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
               <input
                 type="password"
                 required
                 minLength={8}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-border rounded-xl pl-10 pr-3 py-2 text-sm bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
@@ -181,7 +181,7 @@ export default function ResetPasswordPage() {
         </form>
 
         <div className="mt-6 text-center text-sm">
-          <Link to="/login" className="text-blue-600 font-medium hover:underline">
+          <Link to="/login" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
             {t('auth.resetPassword.backToLogin', { defaultValue: 'Retour a la connexion' })}
           </Link>
         </div>
@@ -189,3 +189,5 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
+
+

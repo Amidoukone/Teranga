@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // États
+  // Ãƒâ€°tats
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -27,7 +27,7 @@ export default function LoginPage() {
   const location = useLocation();
 
   /* ==========================================================
-     ✔ Affiche le message de réussite (depuis /register)
+     Ã¢Å“â€ Affiche le message de rÃƒÂ©ussite (depuis /register)
   ========================================================== */
   useEffect(() => {
     const msg = location.state?.successMsg;
@@ -44,7 +44,7 @@ export default function LoginPage() {
   }, [location.state]);
 
   /* ==========================================================
-     🔐 Redirection automatique si déjà connecté
+     Ã°Å¸â€Â Redirection automatique si dÃƒÂ©jÃƒÂ  connectÃƒÂ©
   ========================================================== */
   useEffect(() => {
     async function check() {
@@ -57,7 +57,7 @@ export default function LoginPage() {
   }, [navigate]);
 
   /* ==========================================================
-     🚀 Connexion
+     Ã°Å¸Å¡â‚¬ Connexion
   ========================================================== */
   async function handleLogin(e) {
     e.preventDefault();
@@ -76,10 +76,10 @@ export default function LoginPage() {
   }
 
   /* ==========================================================
-     🖥️ UI — Apple Light Premium A1
+     Ã°Å¸â€“Â¥Ã¯Â¸Â UI Ã¢â‚¬â€ Apple Light Premium A1
   ========================================================== */
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-12">
       <div className="page-shell w-full max-w-md p-8 relative">
 
         {/* ---------- LOGO + TITRE ---------- */}
@@ -91,24 +91,24 @@ export default function LoginPage() {
             className="w-16 h-16 mx-auto mb-3 drop-shadow-sm"
           />
 
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">
             {t("auth.login.title")}
           </h1>
 
           <p className="page-lead mt-1">{t("auth.login.subtitle")}</p>
         </div>
 
-        {/* ---------- MESSAGE DE SUCCÈS ---------- */}
+        {/* ---------- MESSAGE DE SUCCÃƒË†S ---------- */}
         {successMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm flex items-start gap-2 shadow-sm">
+          <div className="mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-sm flex items-start gap-2 shadow-sm">
             <CheckCircle2 className="w-5 h-5 mt-0.5" />
             <span>{successMsg}</span>
           </div>
         )}
 
-        {/* ---------- MESSAGE D’ERREUR ---------- */}
+        {/* ---------- MESSAGE DÃ¢â‚¬â„¢ERREUR ---------- */}
         {errorMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm shadow-sm">
+          <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-sm shadow-sm">
             {errorMsg}
           </div>
         )}
@@ -118,16 +118,16 @@ export default function LoginPage() {
 
           {/* EMAIL */}
           <div>
-            <label className="block text-sm font-medium text-slate-800 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               {t("auth.login.emailLabel")}
             </label>
 
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
 
               <input
                 type="email"
-                className="w-full border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-sm bg-white 
+                className="w-full border border-border rounded-xl pl-10 pr-3 py-2 text-sm bg-surface-card text-text-primary 
                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 placeholder={t("auth.login.emailPlaceholder")}
                 value={email}
@@ -140,16 +140,16 @@ export default function LoginPage() {
 
           {/* PASSWORD */}
           <div>
-            <label className="block text-sm font-medium text-slate-800 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               {t("auth.login.passwordLabel")}
             </label>
 
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
 
               <input
                 type={showPassword ? "text" : "password"}
-                className="w-full border border-slate-300 rounded-xl pl-10 pr-10 py-2 text-sm bg-white
+                className="w-full border border-border rounded-xl pl-10 pr-10 py-2 text-sm bg-surface-card text-text-primary
                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 placeholder={t("auth.login.passwordPlaceholder")}
                 value={password}
@@ -165,7 +165,7 @@ export default function LoginPage() {
                     : t("auth.login.passwordShow")
                 }
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-3 flex items-center text-slate-500 hover:text-blue-600"
+                className="absolute inset-y-0 right-3 flex items-center text-text-muted hover:text-blue-600"
               >
                 {showPassword ? (
                   <EyeOff className="w-5 h-5" />
@@ -176,7 +176,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          <div className="rounded-xl border border-border bg-surface-main px-3 py-2 text-sm text-text-secondary">
             {t("auth.login.forgotInfo", {
               defaultValue:
                 "Mot de passe oublie ? Contactez l'admin ou le master de votre pays/region pour reinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
@@ -205,18 +205,18 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* ---------- LIENS SUPPLÉMENTAIRES ---------- */}
-        <div className="mt-8 text-center text-sm text-slate-600">
+        {/* ---------- LIENS SUPPLÃƒâ€°MENTAIRES ---------- */}
+        <div className="mt-8 text-center text-sm text-text-secondary">
           <p className="mb-2">{t("auth.login.clientNoAccount")}</p>
 
           <Link
             to="/register"
-            className="text-blue-600 font-medium hover:underline"
+            className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
           >
             {t("auth.login.createAccount")}
           </Link>
 
-          <p className="mt-4 text-slate-500 text-xs">
+          <p className="mt-4 text-text-muted text-xs">
             {t("auth.login.supportInfo")}
           </p>
         </div>
@@ -224,4 +224,6 @@ export default function LoginPage() {
     </div>
   );
 }
+
+
 

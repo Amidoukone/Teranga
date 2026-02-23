@@ -1,6 +1,6 @@
 // ============================================================
-// ProductDetailPage.jsx — Teranga PRODUCTION READY (Style A 2025)
-// Design premium + responsive, 0 régression fonctionnelle
+// ProductDetailPage.jsx Ã¢â‚¬â€ Teranga PRODUCTION READY (Style A 2025)
+// Design premium + responsive, 0 rÃƒÂ©gression fonctionnelle
 // - Images robustes (allImageUrls + gallery + coverImage + imageUrl)
 // - FILE_BASE + toAbsUrl (Render/Netlify/Prod)
 // - Lightbox + navigation + miniatures
@@ -15,7 +15,7 @@ import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 
 /* ============================================================
-   🌍 CONFIG PRODUCTION — FILE_BASE / toAbsUrl()
+   Ã°Å¸Å’Â CONFIG PRODUCTION Ã¢â‚¬â€ FILE_BASE / toAbsUrl()
 ============================================================ */
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -43,9 +43,9 @@ function toAbsUrl(path = '') {
 }
 
 /* ============================================================
-   🖼 IMAGES — robuste & rétro-compatible backend
+   Ã°Å¸â€“Â¼ IMAGES Ã¢â‚¬â€ robuste & rÃƒÂ©tro-compatible backend
    Sources possibles:
-   - allImageUrls: array de strings (déjà prêt côté backend)
+   - allImageUrls: array de strings (dÃƒÂ©jÃƒÂ  prÃƒÂªt cÃƒÂ´tÃƒÂ© backend)
    - gallery: [{url}, "string", ...]
    - coverImage: "string" ou {url}
    - imageUrl: "string"
@@ -79,7 +79,7 @@ function getImagesForProduct(p) {
     urls.unshift(p.imageUrl);
   }
 
-  // Dédup + absolu
+  // DÃƒÂ©dup + absolu
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
@@ -87,7 +87,7 @@ function getImagesForProduct(p) {
 }
 
 /* ============================================================
-   ⭐ PAGE DÉTAIL PRODUIT — Style A
+   Ã¢Â­Â PAGE DÃƒâ€°TAIL PRODUIT Ã¢â‚¬â€ Style A
 ============================================================ */
 export default function ProductDetailPage() {
   const { formatNumber, formatDate } = useLocale();
@@ -102,7 +102,7 @@ export default function ProductDetailPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   /* ============================================================
-     🔄 Load product (master/multi-pays friendly)
+     Ã°Å¸â€â€ž Load product (master/multi-pays friendly)
      - Compat si API renvoie `product` ou l'objet direct
   ============================================================ */
   useEffect(() => {
@@ -114,7 +114,7 @@ export default function ProductDetailPage() {
 
         const res = await getProductById(id);
 
-        // ✅ compat: res peut être l'objet produit ou { product }
+        // Ã¢Å“â€¦ compat: res peut ÃƒÂªtre l'objet produit ou { product }
         const prod = res?.product ? res.product : res;
 
         if (!mounted) return;
@@ -124,7 +124,7 @@ export default function ProductDetailPage() {
         setLightboxOpen(false);
         setError('');
       } catch (e) {
-        console.error('❌ Erreur chargement produit:', e);
+        console.error("Erreur chargement produit:", e);
         const msg =
           e?.response?.data?.error ||
           t('productDetailPage.errors.load');
@@ -142,7 +142,7 @@ export default function ProductDetailPage() {
   }, [id, t]);
 
   /* ============================================================
-     🧮 Images dérivées (memo)
+     Ã°Å¸Â§Â® Images dÃƒÂ©rivÃƒÂ©es (memo)
   ============================================================ */
   const images = useMemo(() => {
     if (!product) return [];
@@ -154,12 +154,12 @@ export default function ProductDetailPage() {
   const currentImage = hasImages ? images[safeIndex] : null;
 
   /* ============================================================
-     🌀 Load / Error / Not found
+     Ã°Å¸Å’â‚¬ Load / Error / Not found
   ============================================================ */
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
-        <p className="text-gray-600 text-lg animate-pulse">
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main">
+        <p className="text-text-secondary text-lg animate-pulse">
           {t('productDetailPage.loading')}
         </p>
       </div>
@@ -168,15 +168,15 @@ export default function ProductDetailPage() {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
-        <div className="max-w-md w-full bg-white border border-red-100 rounded-2xl shadow-lg p-6 text-center">
-          <p className="text-red-600 text-base sm:text-lg mb-4 break-words">
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4">
+        <div className="max-w-md w-full bg-surface-card border border-rose-500/30 rounded-2xl shadow-lg p-6 text-center">
+          <p className="text-rose-700 dark:text-rose-300 text-base sm:text-lg mb-4 break-words">
             {error}
           </p>
 
           <Link
             to="/shop"
-            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold app-btn-neutral rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/20"
           >
             {t('productDetailPage.actions.backToCatalog')}
           </Link>
@@ -187,14 +187,14 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
-        <div className="max-w-md w-full bg-white border border-gray-100 rounded-2xl shadow-lg p-6 text-center">
-          <p className="text-gray-500 text-base sm:text-lg italic mb-4">
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4">
+        <div className="max-w-md w-full bg-surface-card border border-border/70 rounded-2xl shadow-lg p-6 text-center">
+          <p className="text-text-muted text-base sm:text-lg italic mb-4">
             {t('productDetailPage.notFound')}
           </p>
           <Link
             to="/shop"
-            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold app-btn-neutral rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/20"
           >
             {t('productDetailPage.actions.backToCatalog')}
           </Link>
@@ -204,7 +204,7 @@ export default function ProductDetailPage() {
   }
 
   /* ============================================================
-     🖼 Lightbox navigation
+     Ã°Å¸â€“Â¼ Lightbox navigation
   ============================================================ */
   function goPrev(e) {
     if (e) e.stopPropagation();
@@ -240,45 +240,45 @@ export default function ProductDetailPage() {
   } = product;
 
   /* ============================================================
-     🧱 UI PRINCIPALE — Style A premium
+     Ã°Å¸Â§Â± UI PRINCIPALE Ã¢â‚¬â€ Style A premium
   ============================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 sm:px-6 py-10">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 sm:px-6 py-10">
       <div className="max-w-5xl mx-auto">
 
         {/* HEADER / BREADCRUMB LIGHT */}
         <div className="flex items-center justify-between gap-3 mb-5">
           <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-2 text-xs text-slate-500 min-w-0">
+            <div className="flex items-center gap-2 text-xs text-text-muted min-w-0">
               <Link
                 to="/shop"
-                className="inline-flex items-center gap-1 hover:text-slate-700 flex-shrink-0"
+                className="inline-flex items-center gap-1 hover:text-text-secondary flex-shrink-0"
               >
                 <span>{t('productDetailPage.header.catalog')}</span>
                 <span aria-hidden="true">/</span>
               </Link>
-              <span className="font-medium text-slate-700 line-clamp-1">
+              <span className="font-medium text-text-secondary line-clamp-1">
                 {name}
               </span>
             </div>
-            <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900">
+            <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-text-primary">
               {t('productDetailPage.header.title')}
             </h1>
           </div>
 
           {product.id && (
-            <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full bg-white/80 border border-slate-200 text-[11px] text-slate-500 font-mono">
+            <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full bg-surface-card/80 border border-border text-[11px] text-text-muted font-mono">
               ID&nbsp;#{product.id}
             </span>
           )}
         </div>
 
         {/* CARD PRINCIPALE */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8">
+        <div className="bg-surface-card border border-border rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col md:flex-row gap-6 lg:gap-8">
 
             {/* ===========================
-                🖼 Bloc images
+                Ã°Å¸â€“Â¼ Bloc images
                =========================== */}
             <div className="w-full md:w-1/2">
               {hasImages ? (
@@ -302,7 +302,7 @@ export default function ProductDetailPage() {
                       alt={name}
                       className="
                         w-full h-80 sm:h-96 object-cover rounded-2xl
-                        border border-slate-200 shadow-sm
+                        border border-border shadow-sm
                         transition-transform duration-200
                         group-hover:scale-[1.01]
                       "
@@ -338,7 +338,7 @@ export default function ProductDetailPage() {
                             ${
                               idx === safeIndex
                                 ? 'border-blue-500 ring-2 ring-blue-400/70'
-                                : 'border-slate-200 hover:border-blue-300'
+                                : 'border-border hover:border-blue-300'
                             }
                           `}
                           aria-label={t('productDetailPage.images.thumbAria', {
@@ -359,24 +359,24 @@ export default function ProductDetailPage() {
                   )}
                 </>
               ) : (
-                <div className="w-full h-80 sm:h-96 flex items-center justify-center rounded-2xl border border-dashed border-slate-300 text-slate-400 text-sm bg-slate-50">
+                <div className="w-full h-80 sm:h-96 flex items-center justify-center rounded-2xl border border-dashed border-border text-text-muted text-sm bg-surface-main">
                   {t('productDetailPage.images.noImage')}
                 </div>
               )}
             </div>
             {/* ===========================
-                📄 Bloc infos
+                Ã°Å¸â€œâ€ž Bloc infos
                =========================== */}
             <div className="flex-1 flex flex-col">
-              {/* Catégorie + titre */}
+              {/* CatÃƒÂ©gorie + titre */}
               <div className="mb-3">
                 {category?.name && (
-                  <p className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full border border-blue-100 text-[11px] font-medium mb-2">
+                  <p className="inline-flex items-center px-2 py-0.5 bg-blue-500/15 text-blue-700 dark:text-blue-300 rounded-full border border-blue-500/30 text-[11px] font-medium mb-2">
                     {category.name}
                   </p>
                 )}
 
-                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 break-words">
+                <h2 className="text-2xl sm:text-3xl font-bold text-text-primary break-words">
                   {name}
                 </h2>
               </div>
@@ -384,10 +384,10 @@ export default function ProductDetailPage() {
               {/* Prix + stock */}
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 <div>
-                  <p className="text-[11px] uppercase text-slate-400">
+                  <p className="text-[11px] uppercase text-text-muted">
                     {t('productDetailPage.info.priceLabel')}
                   </p>
-                  <p className="text-2xl sm:text-3xl font-semibold text-blue-600">
+                  <p className="text-2xl sm:text-3xl font-semibold text-blue-600 dark:text-blue-400">
                     {formatCurrency(currency || 'XOF')}{' '}
                     {formatNumber(price || 0)}
                   </p>
@@ -395,7 +395,7 @@ export default function ProductDetailPage() {
 
                 {typeof stock === 'number' && (
                   <div>
-                    <p className="text-[11px] uppercase text-slate-400">
+                    <p className="text-[11px] uppercase text-text-muted">
                       {t('productDetailPage.info.stockLabel')}
                     </p>
                     <p
@@ -414,12 +414,12 @@ export default function ProductDetailPage() {
               </div>
 
               {/* Description */}
-              <div className="mb-4 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+              <div className="mb-4 text-sm text-text-secondary leading-relaxed whitespace-pre-line">
                 {description || t('productDetailPage.info.noDescription')}
               </div>
 
-              {/* Métadonnées */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-500 mb-6">
+              {/* MÃƒÂ©tadonnÃƒÂ©es */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-text-muted mb-6">
                 {createdAt && (
                   <div>
                     <span className="font-semibold">
@@ -442,7 +442,7 @@ export default function ProductDetailPage() {
               <div className="mt-auto flex flex-wrap gap-3">
                 <Link
                   to="/shop"
-                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
+                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold app-btn-neutral rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/20"
                 >
                   {t('productDetailPage.actions.backToCatalog')}
                 </Link>
@@ -453,7 +453,7 @@ export default function ProductDetailPage() {
       </div>
 
       {/* ============================================================
-          💡 LIGHTBOX PLEIN ÉCRAN — images uniquement
+          Ã°Å¸â€™Â¡ LIGHTBOX PLEIN Ãƒâ€°CRAN Ã¢â‚¬â€ images uniquement
       ============================================================ */}
       {lightboxOpen && hasImages && (
         <div
@@ -473,7 +473,7 @@ export default function ProductDetailPage() {
             className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white"
             aria-label={t('productDetailPage.lightbox.close')}
           >
-            ✕
+            x
           </button>
 
           {/* Navigation */}
@@ -485,7 +485,7 @@ export default function ProductDetailPage() {
                 className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
                 aria-label={t('productDetailPage.lightbox.prev')}
               >
-                ‹
+                {"<"}
               </button>
 
               <button
@@ -494,7 +494,7 @@ export default function ProductDetailPage() {
                 className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
                 aria-label={t('productDetailPage.lightbox.next')}
               >
-                ›
+                {">"}
               </button>
             </>
           )}
@@ -523,4 +523,6 @@ export default function ProductDetailPage() {
     </div>
   );
 }
+
+
 

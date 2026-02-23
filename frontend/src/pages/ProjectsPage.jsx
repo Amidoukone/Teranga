@@ -15,13 +15,13 @@ import { applyLabels, CURRENCY_LABELS } from '../utils/labels';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 
-// ✅ MASTER-safe helpers (pas de rôle "master", seulement admin + scope)
+// ? MASTER-safe helpers (pas de r�le "master", seulement admin + scope)
 import { normalizeRole, isMasterUser } from '../utils/role';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 /* ============================================================
-   🔧 CONFIG UI — DESIGN SYSTEM PREMIUM (OPTION B)
+   ?? CONFIG UI � DESIGN SYSTEM PREMIUM (OPTION B)
 ============================================================ */
 const CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 const PROJECT_TYPE_VALUES = ['immobilier', 'agricole', 'commerce', 'autre'];
@@ -34,7 +34,7 @@ const PROJECT_STATUS_VALUES = [
 ];
 
 const STATUS_STYLES = {
-  created: { bg: 'bg-slate-100', text: 'text-slate-700', ring: 'ring-slate-200' },
+  created: { bg: 'bg-surface-main/80', text: 'text-text-secondary', ring: 'ring-border' },
   in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', ring: 'ring-blue-200' },
   completed: { bg: 'bg-emerald-100', text: 'text-emerald-700', ring: 'ring-emerald-200' },
   validated: { bg: 'bg-indigo-100', text: 'text-indigo-700', ring: 'ring-indigo-200' },
@@ -42,8 +42,8 @@ const STATUS_STYLES = {
 };
 
 /* ============================================================
-   ⏱ Permissions
-   ✅ MASTER = admin côté backend -> normalizeRole garantit robustesse
+   ? Permissions
+   ? MASTER = admin c�t� backend -> normalizeRole garantit robustesse
 ============================================================ */
 function isWithinOneHour(date) {
   if (!date) return false;
@@ -75,7 +75,7 @@ function canCreateProjectTransaction(project, user) {
 }
 
 /* ============================================================
-   ⭐ Premium Button — Option B
+   ? Premium Button � Option B
 ============================================================ */
 function Btn({
   children,
@@ -99,9 +99,9 @@ function Btn({
     primary:
       'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white focus-visible:ring-blue-500',
     secondary:
-      'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 focus-visible:ring-slate-400',
+      'bg-surface-main/80 hover:bg-surface-main text-text-secondary border border-border focus-visible:ring-border',
     ghost:
-      'bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 focus-visible:ring-slate-400',
+      'bg-surface-card hover:bg-surface-main border border-border text-text-secondary focus-visible:ring-border',
     warning:
       'bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-600 hover:to-amber-500 text-white focus-visible:ring-amber-500',
     danger:
@@ -131,13 +131,13 @@ function StatusBadge({ value, label }) {
       className={`inline-flex items-center gap-1 ${s.bg} ${s.text} ${s.ring}
         ring-1 px-2.5 py-0.5 rounded-full text-xs font-medium`}
     >
-      ● {label || value}
+      ? {label || value}
     </span>
   );
 }
 
 /* ============================================================
-   Field Row — responsive premium
+   Field Row � responsive premium
 ============================================================ */
 function FieldRow({ children }) {
   return <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{children}</div>;
@@ -159,7 +159,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
     proofFile: null,
   });
 
-  // ✅ MASTER-safe: master logique = admin => normalizeRole couvre tout
+  // ? MASTER-safe: master logique = admin => normalizeRole couvre tout
   const canSeeOrder =
     normalizeRole(currentUser?.role) === 'admin' ||
     normalizeRole(currentUser?.role) === 'agent';
@@ -193,7 +193,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
       onSuccess?.();
       onClose?.();
     } catch (err) {
-      console.error('❌ Transaction error:', err);
+      console.error('? Transaction error:', err);
       notify(t('projects.transaction.alerts.createError'));
     } finally {
       setSaving(false);
@@ -205,7 +205,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
       className="mt-4 w-full min-w-0 max-w-full rounded-2xl border border-border/70 bg-surface-main/55 p-4 shadow-sm"
     >
       <h4 className="mb-3 text-sm font-semibold text-text-primary">
-        💰 {t('projects.transaction.title')}
+        {t('projects.transaction.title')}
       </h4>
 
       <form
@@ -219,7 +219,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+            className="min-w-0 w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
           >
             <option value="expense">{t('transactions.type.expense')}</option>
             <option value="revenue">{t('transactions.type.revenue')}</option>
@@ -242,7 +242,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
             placeholder={t('projects.transaction.amountPlaceholder')}
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+            className="min-w-0 w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
             required
           />
         </div>
@@ -254,7 +254,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+            className="min-w-0 w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
           >
             {currencyOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -273,7 +273,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
             onChange={(e) =>
               setForm({ ...form, paymentMethod: e.target.value })
             }
-            className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+            className="min-w-0 w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
             placeholder={t('projects.transaction.paymentMethodPlaceholder')}
           />
         </div>
@@ -289,7 +289,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
               onChange={(e) =>
                 setForm({ ...form, orderId: e.target.value })
               }
-              className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+              className="min-w-0 w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
             />
           </div>
         )}
@@ -305,7 +305,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
             onChange={(e) =>
               setForm({ ...form, description: e.target.value })
             }
-            className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+            className="min-w-0 w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
           />
         </div>
 
@@ -319,7 +319,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
             onChange={(e) =>
               setForm({ ...form, proofFile: e.target.files?.[0] || null })
             }
-            className="min-w-0 w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+            className="min-w-0 w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
           />
         </div>
 
@@ -330,7 +330,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
           <Btn variant="primary" size="sm" type="submit" disabled={saving}>
             {saving
               ? t('projects.transaction.saving')
-              : `💾 ${t('projects.transaction.save')}`}
+              : t('projects.transaction.save')}
           </Btn>
         </div>
       </form>
@@ -339,7 +339,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
 }
 
 /* ============================================================
-   🧠 PAGE PRINCIPALE — Début
+   ?? PAGE PRINCIPALE � D�but
 ============================================================ */
 export default function ProjectsPage() {
   const { formatDateTime, formatNumber } = useLocale();
@@ -381,7 +381,7 @@ export default function ProjectsPage() {
     []
   );
 
-  // ✅ MASTER-safe flags (UX only — pas de filtre frontend)
+  // ? MASTER-safe flags (UX only � pas de filtre frontend)
   const isAdmin = useMemo(() => normalizeRole(user?.role) === 'admin', [user]);
   const isMaster = useMemo(() => isMasterUser(user), [user]);
   const projectTypeOptions = useMemo(
@@ -416,14 +416,14 @@ export default function ProjectsPage() {
   );
 
   /* ============================================================
-     🔹 Chargement des données (clients, agents, projets)
+     ?? Chargement des donn�es (clients, agents, projets)
   ============================================================= */
   const loadClients = useCallback(async () => {
     try {
       const { data } = await api.get('/users?role=client');
       setClients(Array.isArray(data.users) ? data.users : []);
     } catch (e) {
-      console.error('❌ Erreur chargement clients:', e);
+      console.error('? Erreur chargement clients:', e);
       setClients([]);
     }
   }, []);
@@ -433,7 +433,7 @@ export default function ProjectsPage() {
       const { data } = await api.get('/users?role=agent');
       setAgents(Array.isArray(data.users) ? data.users : []);
     } catch (e) {
-      console.error('❌ Erreur chargement agents:', e);
+      console.error('? Erreur chargement agents:', e);
       setAgents([]);
     }
   }, []);
@@ -444,12 +444,12 @@ export default function ProjectsPage() {
     setErrorMsg('');
 
     try {
-      // ✅ IMPORTANT: aucun filtre geo côté frontend
+      // ? IMPORTANT: aucun filtre geo c�t� frontend
       const list = await getProjects({});
       const normalized = Array.isArray(list) ? list.map(applyLabels) : [];
       if (isMounted.current) setProjects(normalized);
     } catch (e) {
-      console.error('❌ Erreur chargement projets:', e);
+      console.error('? Erreur chargement projets:', e);
       setErrorMsg(
         e?.response?.data?.error ||
           e?.message ||
@@ -460,8 +460,8 @@ export default function ProjectsPage() {
     }
   }, [t]);
   /* ============================================================
-     🔹 Initialisation
-     - MASTER = admin backend + scope → ici traité comme admin
+     ?? Initialisation
+     - MASTER = admin backend + scope ? ici trait� comme admin
   ============================================================= */
   useEffect(() => {
     isMounted.current = true;
@@ -490,7 +490,7 @@ export default function ProjectsPage() {
           await Promise.all([loadClients(), loadAgents()]);
         }
       } catch (err) {
-        console.error('❌ Erreur chargement user:', err);
+        console.error('? Erreur chargement user:', err);
         setUser(null);
         setErrorMsg(t('projects.alerts.userLoadError'));
       } finally {
@@ -506,7 +506,7 @@ export default function ProjectsPage() {
   }, [getToken, loadForUser, loadClients, loadAgents, navigate, t]);
 
   /* ============================================================
-     🔹 Handlers CRUD
+     ?? Handlers CRUD
   ============================================================= */
   async function handleSubmit(e) {
     e.preventDefault();
@@ -528,7 +528,7 @@ export default function ProjectsPage() {
       resetForm();
       await loadForUser(user);
     } catch (err) {
-      console.error('❌ Erreur sauvegarde projet:', err);
+      console.error('? Erreur sauvegarde projet:', err);
       const fallback = editId
         ? t('projects.alerts.updateError')
         : t('projects.alerts.createError');
@@ -544,7 +544,7 @@ export default function ProjectsPage() {
       notify(t('projects.alerts.deleteSuccess'));
       await loadForUser(user);
     } catch (err) {
-      console.error('❌ Erreur suppression projet:', err);
+      console.error('? Erreur suppression projet:', err);
       notify(
         err?.response?.data?.error || t('projects.alerts.deleteError')
       );
@@ -560,7 +560,7 @@ export default function ProjectsPage() {
       notify(t('projects.alerts.assignSuccess'));
       await loadForUser(user);
     } catch (err) {
-      console.error('❌ Erreur assignation agent:', err);
+      console.error('? Erreur assignation agent:', err);
       notify(t('projects.alerts.assignError'));
     }
   }
@@ -584,7 +584,7 @@ export default function ProjectsPage() {
       await loadForUser(user);
       notify(t('projects.alerts.statusUpdateSuccess'));
     } catch (err) {
-      console.error('❌ Erreur mise à jour du statut:', err);
+      console.error('? Erreur mise � jour du statut:', err);
       notify(t('projects.alerts.statusUpdateError'));
     }
   }
@@ -605,7 +605,7 @@ export default function ProjectsPage() {
       });
       setShowForm(true);
     } else {
-      notify(`⏱️ ${t('projects.alerts.editWindowExpired')}`);
+      notify(t('projects.alerts.editWindowExpired'));
     }
   }
 
@@ -624,7 +624,7 @@ export default function ProjectsPage() {
   }
 
   /* ============================================================
-     🔹 Filtres & Tri (100% locaux, aucun filtre geo)
+     ?? Filtres & Tri (100% locaux, aucun filtre geo)
   ============================================================= */
   const filtered = useMemo(() => {
     let arr = [...projects];
@@ -666,13 +666,13 @@ export default function ProjectsPage() {
   }, [projects, filters]);
 
   /* ============================================================
-     🔹 Rendu
+     ?? Rendu
   ============================================================= */
   if (loading) {
     return (
       <div className="app-page-wrap flex min-h-screen items-center justify-center">
         <p className="px-4 text-center text-base text-text-secondary animate-pulse sm:text-lg">
-          ⏳ {t('projects.loading')}
+          {t('projects.loading')}
         </p>
       </div>
     );
@@ -689,7 +689,7 @@ export default function ProjectsPage() {
         <div className="w-full flex flex-wrap items-start justify-between gap-4 mb-6">
           <div className="space-y-1 min-w-0">
             <h1 className="app-page-headline flex items-center gap-2">
-              📁 {t('projects.title')}
+              {t('projects.title')}
             </h1>
             <p className="text-xs sm:text-sm text-text-secondary">
               {isAdmin
@@ -715,8 +715,8 @@ export default function ProjectsPage() {
                 size="sm"
               >
                 {showForm
-                  ? `➖ ${t('projects.buttons.hideForm')}`
-                  : `➕ ${t('projects.buttons.newProject')}`}
+                  ? t('projects.buttons.hideForm')
+                  : t('projects.buttons.newProject')}
               </Btn>
             )}
             <Btn
@@ -725,7 +725,7 @@ export default function ProjectsPage() {
               variant="primary"
               size="sm"
             >
-              🔄 {t('common.refresh')}
+              {t('common.refresh')}
             </Btn>
           </div>
         </div>
@@ -739,7 +739,7 @@ export default function ProjectsPage() {
                 setFilters((f) => ({ ...f, q: e.target.value }))
               }
               placeholder={t('projects.filters.searchPlaceholder')}
-              className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+              className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
             />
 
             <select
@@ -747,7 +747,7 @@ export default function ProjectsPage() {
               onChange={(e) =>
                 setFilters((f) => ({ ...f, status: e.target.value }))
               }
-              className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+              className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
             >
               <option value="">{t('projects.filters.statusAll')}</option>
               {projectStatusOptions.map((s) => (
@@ -762,7 +762,7 @@ export default function ProjectsPage() {
               onChange={(e) =>
                 setFilters((f) => ({ ...f, sort: e.target.value }))
               }
-              className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+              className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
             >
               <option value="-createdAt">
                 {t('projects.filters.sortNewest')}
@@ -811,7 +811,7 @@ export default function ProjectsPage() {
                       setForm({ ...form, clientId: e.target.value })
                     }
                     required
-                    className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+                    className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
                   >
                     <option value="">
                       {t('projects.form.clientPlaceholder')}
@@ -833,7 +833,7 @@ export default function ProjectsPage() {
                     onChange={(e) =>
                       setForm({ ...form, agentId: e.target.value })
                     }
-                    className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+                    className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
                   >
                     <option value="">
                       {t('projects.form.agentPlaceholder')}
@@ -857,7 +857,7 @@ export default function ProjectsPage() {
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   required
-                  className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+                  className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
                   placeholder={t('projects.form.titlePlaceholder')}
                 />
               </div>
@@ -869,7 +869,7 @@ export default function ProjectsPage() {
                 <select
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+                  className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
                 >
                   {projectTypeOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -889,7 +889,7 @@ export default function ProjectsPage() {
                   type="number"
                   value={form.budget}
                   onChange={(e) => setForm({ ...form, budget: e.target.value })}
-                  className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+                  className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
                   placeholder="0"
                 />
               </div>
@@ -902,7 +902,7 @@ export default function ProjectsPage() {
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
                   disabled={!isAdmin}
-                  className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary disabled:bg-slate-100"
+                  className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary disabled:bg-surface-main/80"
                 >
                   {projectStatusOptions.map((s) => (
                     <option key={s.value} value={s.value}>
@@ -923,7 +923,7 @@ export default function ProjectsPage() {
                   setForm({ ...form, description: e.target.value })
                 }
                 rows={4}
-                className="w-full resize-y rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+                className="w-full resize-y rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
                 placeholder={t('projects.form.descriptionPlaceholder')}
               />
             </div>
@@ -934,15 +934,15 @@ export default function ProjectsPage() {
               </Btn>
               <Btn variant="primary" size="sm" type="submit">
                 {editId
-                  ? `💾 ${t('projects.form.update')}`
-                  : `💾 ${t('projects.form.create')}`}
+                  ? t('projects.form.update')
+                  : t('projects.form.create')}
               </Btn>
             </div>
           </form>
         )}
 {/* ================= LISTE DES PROJETS ================= */}
         {filtered.length === 0 ? (
-          <p className="rounded-2xl border border-border/70 bg-white/70 py-6 text-center text-sm italic text-text-secondary">
+          <p className="rounded-2xl border border-border/70 bg-surface-card/70 py-6 text-center text-sm italic text-text-secondary">
             {t('projects.list.empty')}
           </p>
         ) : (
@@ -958,7 +958,7 @@ export default function ProjectsPage() {
                   key={p.id}
                   className="
                     w-full min-w-0
-                    bg-white border border-border/70 rounded-2xl shadow-sm
+                    bg-surface-card border border-border/70 rounded-2xl shadow-sm
                     hover:shadow-lg transition-all duration-200
                     p-4 sm:p-5 flex flex-col h-full overflow-hidden
                   "
@@ -990,7 +990,7 @@ export default function ProjectsPage() {
                           onChange={(e) =>
                             handleStatusChange(p.id, e.target.value)
                           }
-                          className="max-w-[140px] rounded-md border border-border/80 bg-white px-2 py-1 text-xs text-text-primary sm:text-sm"
+                          className="max-w-[140px] rounded-md border border-border/80 bg-surface-card px-2 py-1 text-xs text-text-primary sm:text-sm"
                         >
                           {projectStatusOptions.map((s) => (
                             <option key={s.value} value={s.value}>
@@ -1011,7 +1011,7 @@ export default function ProjectsPage() {
                   <div className="mt-2 space-y-1 text-xs text-text-secondary sm:text-[13px]">
                     {p.client && (
                       <p className="truncate w-full max-w-full">
-                        👤 {t('projects.card.client')}{' '}
+                        {t('projects.card.client')}{' '}
                         <span className="font-medium">
                           {p.client.firstName} {p.client.lastName}
                         </span>
@@ -1019,7 +1019,7 @@ export default function ProjectsPage() {
                     )}
                     {p.agent && (
                       <p className="truncate w-full max-w-full">
-                        🧑‍💼 {t('projects.card.agent')}{' '}
+                        {t('projects.card.agent')}{' '}
                         <span className="font-medium">
                           {p.agent.firstName} {p.agent.lastName}
                         </span>
@@ -1027,7 +1027,7 @@ export default function ProjectsPage() {
                     )}
                     {p.type && (
                       <p className="w-full max-w-full break-words text-text-muted">
-                        🏷 {t('projects.card.type')}{' '}
+                        {t('projects.card.type')}{' '}
                         <span className="font-medium">
                           {getProjectTypeLabel(p.type)}
                         </span>
@@ -1045,7 +1045,7 @@ export default function ProjectsPage() {
                   {/* Budget */}
                   {p.budget && (
                     <p className="mt-2 text-sm font-medium text-text-primary">
-                      💰 {t('projects.card.budget')}{' '}
+                      {t('projects.card.budget')}{' '}
                       {formatNumber(p.budget)}{' '}
                       {t('projects.card.currency', { defaultValue: 'XOF' })}
                     </p>
@@ -1066,7 +1066,7 @@ export default function ProjectsPage() {
                         onChange={(e) =>
                           handleAssign(p.id, e.target.value)
                         }
-                        className="max-w-full rounded-lg border border-border/80 bg-white px-2 py-1 text-xs text-text-primary sm:text-sm"
+                        className="max-w-full rounded-lg border border-border/80 bg-surface-card px-2 py-1 text-xs text-text-primary sm:text-sm"
                       >
                         <option value="">
                           {t('projects.actions.assignAgentPlaceholder')}
@@ -1085,7 +1085,7 @@ export default function ProjectsPage() {
                         variant="primary"
                         size="xs"
                       >
-                        📂 {t('projects.actions.details')}
+                        {t('projects.actions.details')}
                       </Btn>
 
                       {canCreateTrx && (
@@ -1109,14 +1109,14 @@ export default function ProjectsPage() {
                             variant="warning"
                             size="xs"
                           >
-                            ✏️ {t('projects.actions.edit')}
+                            {t('projects.actions.edit')}
                           </Btn>
                           <Btn
                             onClick={() => handleDelete(p.id)}
                             variant="danger"
                             size="xs"
                           >
-                            ❌ {t('projects.actions.delete')}
+                            {t('projects.actions.delete')}
                           </Btn>
                         </>
                       )}

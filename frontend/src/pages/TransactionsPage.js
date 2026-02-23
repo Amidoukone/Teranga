@@ -1,6 +1,6 @@
 // ============================================================================
-// TransactionsPage.jsx — VERSION PREMIUM 2025 (TERANGA)
-// Master / Multi-pays READY — ZERO régression
+// TransactionsPage.jsx ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION PREMIUM 2025 (TERANGA)
+// Master / Multi-pays READY ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ZERO rÃƒÆ’Ã‚Â©gression
 // ============================================================================
 
 import { useEffect, useState, useCallback } from 'react';
@@ -29,7 +29,7 @@ const TRANSACTION_TYPE_VALUES = ['expense', 'revenue', 'commission', 'adjustment
 const CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 
 // ============================================================================
-// 🌍 FILE_BASE — Standard Teranga (Render / Netlify / CDN safe)
+// ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â FILE_BASE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Standard Teranga (Render / Netlify / CDN safe)
 // ============================================================================
 const FILE_BASE =
   (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
@@ -75,7 +75,7 @@ function getProofExtLabel(pf, proofHref = '', fallback = 'FILE') {
   return ext || fallback;
 }
 
-// 📂 PAGE PRINCIPALE
+// ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¡ PAGE PRINCIPALE
 // ============================================================================
 export default function TransactionsPage() {
   const { formatNumber, formatDate } = useLocale();
@@ -138,7 +138,7 @@ export default function TransactionsPage() {
   }, [showForm]);
 
   // ========================================================================
-  // 🔹 SERVICES SELON RÔLE (client / agent / admin / master)
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ SERVICES SELON RÃƒÆ’Ã¢â‚¬ÂLE (client / agent / admin / master)
   // ========================================================================
   const loadServicesByRole = useCallback(async (u) => {
     try {
@@ -154,13 +154,13 @@ export default function TransactionsPage() {
 
       setServices(servs || []);
     } catch (e) {
-      console.error('❌ Erreur services:', e);
+      console.error('Erreur services:', e);
       setServices([]);
     }
   }, []);
 
   // ========================================================================
-  // 🔹 TRANSACTIONS
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ TRANSACTIONS
   // ========================================================================
   const loadTransactions = useCallback(async () => {
     setLoading(true);
@@ -169,14 +169,14 @@ export default function TransactionsPage() {
       const labeled = (data || []).map((t) => applyLabels(t, 'transaction'));
       setTransactions(labeled);
     } catch (e) {
-      console.error('❌ loadTransactions:', e);
+      console.error('Erreur loadTransactions:', e);
       notify(t('transactionsPage.alerts.loadError'));
     } finally {
       setLoading(false);
     }
   }, [t]);
   // ========================================================================
-  // 🔐 INIT USER + DATA
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â INIT USER + DATA
   // ========================================================================
   useEffect(() => {
     let active = true;
@@ -211,7 +211,7 @@ export default function TransactionsPage() {
   }, [loadServicesByRole, loadTransactions]);
 
   // ========================================================================
-  // 🔹 SERVICE → TASKS
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ SERVICE ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ TASKS
   // ========================================================================
   async function handleServiceChange(e) {
     const serviceId = e.target.value;
@@ -232,13 +232,13 @@ export default function TransactionsPage() {
       const { data } = await api.get(`/tasks/service/${serviceId}`);
       setTasks(data.tasks || []);
     } catch (e) {
-      console.error('❌ load tasks:', e);
+      console.error('Erreur load tasks:', e);
       setTasks([]);
     }
   }
 
   // ========================================================================
-  // 🔹 SUBMIT TRANSACTION (ANTI DOUBLE-SUBMIT)
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ SUBMIT TRANSACTION (ANTI DOUBLE-SUBMIT)
   // ========================================================================
   async function handleSubmit(e) {
     e.preventDefault();
@@ -284,7 +284,7 @@ export default function TransactionsPage() {
         projectId: form.projectId ? Number(form.projectId) : undefined,
       };
 
-      // Transaction indépendante → completed
+      // Transaction indÃƒÆ’Ã‚Â©pendante ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ completed
       if (!payload.orderId && !payload.projectId) {
         payload.status = 'completed';
       }
@@ -297,7 +297,7 @@ export default function TransactionsPage() {
       notify(t('transactionsPage.alerts.createSuccess'));
       resetForm();
     } catch (e) {
-      console.error('❌ createTransaction:', e);
+      console.error('Erreur createTransaction:', e);
       notify(
         e?.response?.data?.error ||
           e?.message ||
@@ -326,7 +326,7 @@ export default function TransactionsPage() {
   }
 
   // ========================================================================
-  // 🔹 USER DISPLAY
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ USER DISPLAY
   // ========================================================================
   const getUserDisplayName = useCallback((u) => {
     if (!u) return t('common.dash');
@@ -337,7 +337,7 @@ export default function TransactionsPage() {
   }, [t]);
 
   // ========================================================================
-  // 🔍 FILTERING & SORTING
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â FILTERING & SORTING
   // ========================================================================
   useEffect(() => {
     let arr = [...transactions];
@@ -423,7 +423,7 @@ export default function TransactionsPage() {
   const pagedTransactions = filtered.slice(startIndex, endIndex);
 
   // ========================================================================
-  // ⏳ LOADING
+  // ÃƒÂ¢Ã‚ÂÃ‚Â³ LOADING
   // ========================================================================
   if (!user) {
     return (
@@ -436,7 +436,7 @@ export default function TransactionsPage() {
   }
 
   // ========================================================================
-  // 🖥️ UI PRINCIPALE
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¥ÃƒÂ¯Ã‚Â¸Ã‚Â UI PRINCIPALE
   // ========================================================================
   return (
     <div className="app-page-wrap">
@@ -446,13 +446,13 @@ export default function TransactionsPage() {
         <div className="flex flex-col gap-4 border-b border-border/70 pb-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-1">
             <h1 className="app-page-headline flex items-center gap-2">
-              💰 {t('transactionsPage.header.title')}
+              {t('transactionsPage.header.title')}
             </h1>
             <p className="app-page-subtitle">
               {t('transactionsPage.header.subtitle')}
             </p>
             <span className="app-toolbar-pill mt-2 inline-flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+              <span className="app-status-dot-success" />
               {t('transactionsPage.header.count', { count: transactions.length })}
             </span>
           </div>
@@ -463,22 +463,18 @@ export default function TransactionsPage() {
               className="app-btn-neutral w-full sm:w-auto"
             >
               {showForm
-                ? `➖ ${t('transactionsPage.buttons.hideForm')}`
-                : `➕ ${t('transactionsPage.buttons.newTransaction')}`}
+                ? t('transactionsPage.buttons.hideForm')
+                : t('transactionsPage.buttons.newTransaction')}
             </button>
 
             <button
               onClick={loadTransactions}
               disabled={loading}
-              className={`w-full sm:w-auto rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
-                loading
-                  ? 'cursor-not-allowed bg-blue-300 text-white'
-                  : 'app-btn-primary'
-              }`}
+              className="app-btn-primary w-full sm:w-auto rounded-lg px-4 py-2.5 text-sm"
             >
               {loading
                 ? t('transactionsPage.buttons.refreshLoading')
-                : `🔄 ${t('transactionsPage.buttons.refresh')}`}
+                : t('transactionsPage.buttons.refresh')}
             </button>
           </div>
         </div>
@@ -534,7 +530,7 @@ export default function TransactionsPage() {
 }
 
 // ============================================================================
-// 🔍 FILTRES
+// ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â FILTRES
 // ============================================================================
 function TransactionFilters({ filters, setFilters, services, filteredCount }) {
   const { t } = useTranslation();
@@ -550,7 +546,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
             value={filters.q}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
             placeholder={t('transactionsPage.filters.searchPlaceholder')}
-            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+            className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
           />
         </div>
 
@@ -561,7 +557,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
           <select
             value={filters.type}
             onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+            className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
           >
             <option value="">{t('transactionsPage.filters.typeAll')}</option>
             {TRANSACTION_TYPE_VALUES.map((value) => (
@@ -580,7 +576,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
             value={filters.payment}
             onChange={(e) => setFilters({ ...filters, payment: e.target.value })}
             placeholder={t('transactionsPage.filters.paymentPlaceholder')}
-            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+            className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
           />
         </div>
 
@@ -591,7 +587,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
           <select
             value={filters.service}
             onChange={(e) => setFilters({ ...filters, service: e.target.value })}
-            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+            className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
           >
             <option value="">{t('transactionsPage.filters.serviceAll')}</option>
             {services.map((s) => (
@@ -607,7 +603,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
           <select
             value={filters.sort}
             onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+            className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
           >
             <option value="-createdAt">
               {t('transactionsPage.filters.sortNewest')}
@@ -651,7 +647,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
 }
 
 // ============================================================================
-// 🧾 FORMULAIRE
+// ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¾ FORMULAIRE
 // ============================================================================
 function TransactionForm({
   form,
@@ -675,7 +671,7 @@ function TransactionForm({
       <select
         value={form.type}
         onChange={(e) => setForm({ ...form, type: e.target.value })}
-        className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
+        className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary"
       >
         {TRANSACTION_TYPE_VALUES.map((value) => (
           <option key={value} value={value}>
@@ -691,14 +687,14 @@ function TransactionForm({
         onChange={(e) => setForm({ ...form, amount: e.target.value })}
         placeholder={t('transactionsPage.form.amountPlaceholder')}
         required
-        className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
+        className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary"
       />
 
       {/* Devise */}
       <select
         value={form.currency}
         onChange={(e) => setForm({ ...form, currency: e.target.value })}
-        className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
+        className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary"
       >
         {CURRENCY_CODES.map((code) => (
           <option key={code} value={code}>
@@ -712,14 +708,14 @@ function TransactionForm({
         value={form.paymentMethod}
         onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
         placeholder={t('transactionsPage.form.paymentPlaceholder')}
-        className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
+        className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary"
       />
 
       {/* Service */}
       <select
         value={selectedService}
         onChange={handleServiceChange}
-        className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary sm:col-span-2"
+        className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary sm:col-span-2"
       >
         <option value="">{t('transactionsPage.form.servicePlaceholder')}</option>
         {services.map((s) => (
@@ -732,7 +728,7 @@ function TransactionForm({
         <select
           value={form.taskId}
           onChange={(e) => setForm({ ...form, taskId: e.target.value })}
-          className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary sm:col-span-2"
+          className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary sm:col-span-2"
         >
           <option value="">{t('transactionsPage.form.taskPlaceholder')}</option>
           {tasks.map((task) => (
@@ -752,14 +748,14 @@ function TransactionForm({
             placeholder={t('transactionsPage.form.projectIdPlaceholder')}
             value={form.projectId}
             onChange={(e) => setForm({ ...form, projectId: e.target.value })}
-            className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
+            className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary"
           />
           <input
             type="number"
             placeholder={t('transactionsPage.form.orderIdPlaceholder')}
             value={form.orderId}
             onChange={(e) => setForm({ ...form, orderId: e.target.value })}
-            className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
+            className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary"
           />
         </>
       )}
@@ -769,7 +765,7 @@ function TransactionForm({
         value={form.description}
         onChange={(e) => setForm({ ...form, description: e.target.value })}
         placeholder={t('transactionsPage.form.descriptionPlaceholder')}
-        className="rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary sm:col-span-2"
+        className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary sm:col-span-2"
       />
 
       {/* File */}
@@ -778,19 +774,17 @@ function TransactionForm({
         onChange={(e) =>
           setForm({ ...form, proofFile: e.target.files?.[0] || null })
         }
-        className="sm:col-span-2 rounded-lg border border-border/80 bg-white px-3 py-2 text-text-primary"
+        className="sm:col-span-2 rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary"
       />
 
       <div className="sm:col-span-2 text-right">
         <button
           disabled={creating}
-          className={`rounded-lg px-5 py-2 text-white ${
-            creating ? 'cursor-not-allowed bg-blue-300' : 'app-btn-primary'
-          }`}
+          className="app-btn-primary rounded-lg px-5 py-2 text-white"
         >
           {creating
             ? t('transactionsPage.form.saving')
-            : `💾 ${t('transactionsPage.form.save')}`}
+            : t('transactionsPage.form.save')}
         </button>
       </div>
     </form>
@@ -798,7 +792,7 @@ function TransactionForm({
 }
 
 // ============================================================================
-// 📋 LISTE
+// ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ LISTE
 // ============================================================================
 function TransactionList({
   transactions,
@@ -811,7 +805,7 @@ function TransactionList({
 
   if (loading) {
     return (
-      <p className="rounded-2xl border border-border/70 bg-white/70 py-6 text-center text-text-secondary">
+      <p className="rounded-2xl border border-border/70 bg-surface-card/70 py-6 text-center text-text-secondary">
         {t('transactionsPage.list.loading')}
       </p>
     );
@@ -819,7 +813,7 @@ function TransactionList({
 
   if (!transactions.length) {
     return (
-      <p className="rounded-2xl border border-border/70 bg-white/70 py-6 text-center text-text-secondary">
+      <p className="rounded-2xl border border-border/70 bg-surface-card/70 py-6 text-center text-text-secondary">
         {t('transactionsPage.list.empty')}
       </p>
     );
@@ -863,14 +857,14 @@ function TransactionList({
         return (
           <div
             key={trx.id}
-            className="mb-4 break-inside-avoid overflow-hidden rounded-2xl border border-border/70 bg-white shadow-sm min-w-0 flex flex-col"
+            className="mb-4 break-inside-avoid overflow-hidden rounded-2xl border border-border/70 bg-surface-card shadow-sm min-w-0 flex flex-col"
           >
             {proof && (
               <a
                 href={proof}
                 target="_blank"
                 rel="noreferrer"
-                className="relative block aspect-[4/3] border-b border-border/70 bg-gradient-to-br from-slate-50 via-white to-slate-100"
+                className="relative block aspect-[4/3] border-b border-border/70 bg-gradient-to-br from-surface-main via-surface-card to-surface-main"
               >
                 {proofKind === 'image' ? (
                   <img
@@ -883,7 +877,7 @@ function TransactionList({
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="text-center">
-                      <div className="inline-flex rounded-full border border-border/80 bg-white/80 px-2 py-1 text-xs font-semibold text-text-secondary">
+                      <div className="inline-flex rounded-full border border-border/80 bg-surface-card/80 px-2 py-1 text-xs font-semibold text-text-secondary">
                         {proofExt}
                       </div>
                     </div>
@@ -893,10 +887,10 @@ function TransactionList({
                 <span
                   className={`absolute top-3 left-3 text-[0.75rem] font-semibold px-2.5 py-1 rounded-full border ${
                     proofKind === 'image'
-                      ? 'bg-blue-50 text-blue-700 border-blue-100'
+                      ? 'app-badge app-badge-info'
                       : proofKind === 'pdf'
-                      ? 'bg-red-50 text-red-700 border-red-100'
-                      : 'bg-gray-50 text-gray-700 border-gray-200'
+                      ? 'app-badge app-badge-error'
+                      : 'bg-surface-main text-text-secondary border-border'
                   }`}
                 >
                   {proofKind === 'image'
@@ -930,7 +924,7 @@ function TransactionList({
               {trx.order && (
                 <Link
                   to={`/orders/${trx.order.id}`}
-                  className="text-blue-600 text-sm break-words line-clamp-2"
+                  className="app-link-primary text-sm break-words line-clamp-2"
                 >
                   {t('transactionsPage.list.orderLabel', {
                     code:
@@ -945,7 +939,7 @@ function TransactionList({
               {trx.project && (
                 <Link
                   to={`/projects/${trx.project.id}`}
-                  className="text-blue-600 text-sm break-words line-clamp-2"
+                  className="app-link-primary text-sm break-words line-clamp-2"
                 >
                   {t('transactionsPage.list.projectLabel', {
                     title:
@@ -962,7 +956,7 @@ function TransactionList({
                   href={proof}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center text-sm font-semibold text-blue-600 hover:underline mt-2 break-words line-clamp-1"
+                  className="app-link-primary inline-flex items-center text-sm font-semibold mt-2 break-words line-clamp-1"
                 >
                   {proofLabel || t('transactionsPage.list.attachmentFallback')}
                 </a>
@@ -983,7 +977,7 @@ function TransactionList({
 }
 
 // ============================================================================
-// 🔢 PAGINATION
+// ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¢ PAGINATION
 // ============================================================================
 function buildPageItems(current, total) {
   if (total <= 7) {
@@ -1011,7 +1005,7 @@ function buildPageItems(current, total) {
   for (let i = 0; i < sorted.length; i += 1) {
     items.push(sorted[i]);
     if (i < sorted.length - 1 && sorted[i + 1] - sorted[i] > 1) {
-      items.push('…');
+      items.push('...');
     }
   }
   return items;
@@ -1031,7 +1025,7 @@ function Pagination({
   const items = buildPageItems(page, totalPages);
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-white/80 px-3 py-3 pt-2 md:flex-row md:items-center md:justify-between sm:px-4">
+    <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-surface-card/80 px-3 py-3 pt-2 md:flex-row md:items-center md:justify-between sm:px-4">
       <div className="text-xs text-text-secondary">
         {t('transactionsPage.pagination.showing', {
           from: totalItems === 0 ? 0 : startIndex + 1,
@@ -1046,7 +1040,7 @@ function Pagination({
           disabled={page <= 1}
           className={`rounded-lg border px-3 py-1.5 text-xs ${
             page <= 1
-              ? 'cursor-not-allowed border-border/80 text-gray-400'
+              ? 'cursor-not-allowed border-border/80 text-text-muted'
               : 'border-border/80 text-text-primary hover:bg-surface-main/70'
           }`}
         >
@@ -1054,9 +1048,9 @@ function Pagination({
         </button>
 
         {items.map((item, idx) =>
-          item === '…' ? (
+          item === '...' ? (
             <span key={`ellipsis-${idx}`} className="px-2 text-text-muted">
-              …
+              ...
             </span>
           ) : (
             <button
@@ -1078,7 +1072,7 @@ function Pagination({
           disabled={page >= totalPages}
           className={`rounded-lg border px-3 py-1.5 text-xs ${
             page >= totalPages
-              ? 'cursor-not-allowed border-border/80 text-gray-400'
+              ? 'cursor-not-allowed border-border/80 text-text-muted'
               : 'border-border/80 text-text-primary hover:bg-surface-main/70'
           }`}
         >
@@ -1092,7 +1086,7 @@ function Pagination({
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="rounded-lg border border-border/80 bg-white px-2 py-1 text-xs text-text-primary"
+            className="rounded-lg border border-border/80 bg-surface-card px-2 py-1 text-xs text-text-primary"
           >
             {[9, 12, 18, 24].map((size) => (
               <option key={size} value={size}>
@@ -1105,5 +1099,7 @@ function Pagination({
     </div>
   );
 }
+
+
 
 

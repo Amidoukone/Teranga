@@ -1,7 +1,7 @@
 const fr = {
   language: {
     label: "Langue",
-    fr: "Français",
+    fr: "Fran\u00E7ais",
     en: "Anglais",
   },
   roles: {
@@ -16,19 +16,24 @@ const fr = {
     products: "Produits",
     orders: "Commandes",
     master: "Master",
-    security: "Sécurité",
+    security: "Securite",
+    settings: "Parametres",
+    helpSupport: "Aide & Support",
+      privacy: "Confidentialit\u00E9",
+    terms: "Conditions d'utilisation",
+      legal: "Mentions l\u00E9gales",
     dashboard: "Dashboard",
     dashboardTitle: "Tableau de bord",
     notifications: "Notifications",
-    activities: "Centre d'activité",
+    activities: "Centre d'activite",
     projects: "Projets",
     properties: "Biens",
     services: "Services",
-    tasks: "Tâches",
+    tasks: "Taches",
     transactions: "Transactions",
     finance: "Finances",
-    assignedProjects: "Projets assignés",
-    assignedServices: "Services assignés",
+    assignedProjects: "Projets assignes",
+    assignedServices: "Services assignes",
     adminProjects: "Gestion projets",
     adminServices: "Gestion services",
     metrics: "Monitoring",
@@ -40,12 +45,12 @@ const fr = {
     flow: "Flux",
     more: "Plus",
     menuPlus: "Menu Plus",
-    perimeter: "Périmètre",
+    perimeter: "Perimetre",
     userMenu: "Menu utilisateur",
-    accountSecurity: "Sécurité du compte",
-    helpSupportSoon: "Aide & Support (bientôt)",
-    comingSoon: "Bientôt disponible",
-    logout: "Déconnexion",
+    accountSecurity: "Securite du compte",
+    helpSupportSoon: "Aide & Support (bientot)",
+    comingSoon: "Bientot disponible",
+    logout: "Deconnexion",
     userFallback: "Utilisateur",
     openMoreMenu: "Ouvrir le menu Plus",
     closeMenu: "Fermer le menu",
@@ -60,7 +65,13 @@ const fr = {
   },
   footer: {
     copyright:
-      "© {{year}} <brand>Teranga Diaspora</brand>. Tous droits réservés.",
+      "(c) {{year}} <brand>Teranga Diaspora</brand>. Tous droits r\u00E9serv\u00E9s.",
+    links: {
+      helpSupport: "Aide & Support",
+      privacy: "Confidentialit\u00E9",
+      terms: "Conditions",
+      legal: "Mentions l\u00E9gales",
+    },
   },
   auth: {
     login: {
@@ -170,24 +181,24 @@ const fr = {
     },
   },
   dashboard: {
-    loading: "Chargement du tableau de bord…",
+    loading: "Chargement du tableau de bord...",
     greeting: "Bonjour, {{name}}",
-    roleLabel: "Rôle :",
+    roleLabel: "Role :",
     careFallbackName: "Nous",
     careLine: "{{firstName}}, nous veillons sur tout ce qui compte pour vous.",
     balance: {
       global: "Solde global",
-      scope: "Solde de votre périmètre",
+      scope: "Solde de votre perimetre",
       positive: "Positif",
-      negative: "Négatif",
-      descScope: "Synthèse de vos revenus et dépenses sur votre pays ou région.",
+      negative: "Negatif",
+      descScope: "Synthese de vos revenus et depenses sur votre pays ou region.",
       descGlobal:
-        "Synthèse de vos revenus et dépenses sur l’ensemble de vos opérations.",
+        "Synthese de vos revenus et depenses sur l'ensemble de vos operations.",
     },
     quickView: {
       title: "Vue rapide",
       subtitle:
-        "Un aperçu clair de vos services, activités et flux financiers.",
+        "Un apercu clair de vos services, activites et flux financiers.",
     },
     stats: {
       totalServices: "Services totaux",
@@ -196,21 +207,21 @@ const fr = {
       currentBalance: "Solde actuel",
     },
     finance: {
-      title: "Vue détaillée des finances",
-      subtitle: "Basée sur vos transactions et opérations déclarées.",
+      title: "Vue detaillee des finances",
+      subtitle: "Basee sur vos transactions et operations declarees.",
     },
     modules: {
-      title: "Vue globale de vos opérations",
-      subtitle: "Biens, tâches, projets et commandes en un coup d’œil.",
+      title: "Vue globale de vos operations",
+      subtitle: "Biens, taches, projets et commandes en un coup d'oeil.",
       properties: "Biens",
-      tasks: "Tâches",
+      tasks: "Taches",
       projects: "Projets",
       orders: "Commandes",
       counts: {
         property: "{{count}} bien",
         property_other: "{{count}} biens",
-        task: "{{count}} tâche",
-        task_other: "{{count}} tâches",
+        task: "{{count}} tache",
+        task_other: "{{count}} taches",
         project: "{{count}} projet",
         project_other: "{{count}} projets",
         order: "{{count}} commande",
@@ -218,26 +229,26 @@ const fr = {
       },
       items: {
         active: "Actifs",
-        created: "Créées",
+        created: "Creees",
         inProgress: "En cours",
-        completed: "Terminées",
-        validated: "Validées",
+        completed: "Terminees",
+        validated: "Validees",
         open: "En cours",
-        paid: "Payées",
+        paid: "Payees",
       },
     },
     summary: {
-      title: "Synthèse financière rapide",
+      title: "Synthese financiere rapide",
       revenue: "Revenus",
-      expense: "Dépenses",
+      expense: "Depenses",
       net: "Solde net",
       note:
-        "Pour plus de détails, consultez le tableau financier complet dans la section Finances.",
+        "Pour plus de details, consultez le tableau financier complet dans la section Finances.",
     },
     quickAccess: {
-      title: "Accès rapides",
+      title: "Acces rapides",
       subtitle:
-        "Accédez en un clic aux sections clés de votre espace Teranga selon votre rôle.",
+        "Accedez en un clic aux sections cles de votre espace Teranga selon votre role.",
       admin: {
         services: "Services clients",
         adminServices: "Gestion services",
@@ -258,8 +269,8 @@ const fr = {
         finance: "Mes finances",
       },
       agent: {
-        assignedServices: "Services assignés",
-        tasks: "Mes tâches",
+        assignedServices: "Services assignes",
+        tasks: "Mes taches",
         transactions: "Mes transactions",
         finance: "Mes finances",
       },
@@ -1678,13 +1689,13 @@ const fr = {
     },
     hints: {
       noRegionsForMaster:
-        "⚠️ Aucune région créée. Ajoute au moins une région à l’étape 2, ou repasse en \"MASTER du pays\".",
+        "⚠️ Aucune région créée. Ajoute au moins une région à l’étape 2, ou repasse en \\\"MASTER du pays\\\".",
     },
     confirmations: {
       deleteCountry:
-        "Supprimer le pays \"{{name}}\" ? Cette action est définitive.",
+        "Supprimer le pays \\\"{{name}}\\\" ? Cette action est définitive.",
       deleteRegion:
-        "Supprimer la région \"{{name}}\" ? Cette action est définitive.",
+        "Supprimer la région \\\"{{name}}\\\" ? Cette action est définitive.",
     },
     errors: {
       countryEditValidation: "Nom et ISO2 (2 lettres) requis.",
@@ -1908,81 +1919,81 @@ const fr = {
   homePage: {
     hero: {
       badge: "Plateforme de confiance pour la diaspora africaine",
-      titleLine1: "La confiance à distance,",
-      titleLine2: "la sérénité à portée de main.",
+      titleLine1: "La confiance \u00E0 distance,",
+      titleLine2: "la s\u00E9r\u00E9nit\u00E9 \u00E0 port\u00E9e de main.",
       description:
-        "Avec <0>Teranga</0>, la diaspora africaine suit et gère ses biens, projets et démarches depuis l’étranger — avec transparence, fiabilité et une présence humaine sur le terrain.",
+        "Avec <0>Teranga</0>, la diaspora africaine suit et g\u00E8re ses biens, projets et d\u00E9marches depuis l'\u00E9tranger - avec transparence, fiabilit\u00E9 et une pr\u00E9sence humaine sur le terrain.",
       ctaLogin: "Se connecter",
-      ctaRegister: "Créer un compte",
+      ctaRegister: "Cr\u00E9er un compte",
       stats: {
         realTime: {
-          label: "Suivi en temps réel",
-          text: "Photos, preuves et rapports visibles à tout moment.",
+          label: "Suivi en temps r\u00E9el",
+          text: "Photos, preuves et rapports visibles \u00E0 tout moment.",
         },
         agents: {
           label: "Agents sur le terrain",
           text: "Des personnes de confiance, proches de vos projets.",
         },
         diaspora: {
-          label: "Pensé pour la diaspora",
-          text: "Une interface claire, utilisable depuis l’étranger.",
+          label: "Pens\u00E9e pour la diaspora",
+          text: "Une interface claire, utilisable depuis l'\u00E9tranger.",
         },
       },
       tagline:
-        "Parce que la distance ne devrait jamais vous éloigner de ce qui compte.",
+        "Parce que la distance ne devrait jamais vous \u00E9loigner de ce qui compte.",
     },
     services: {
-      title: "Nos services, votre tranquillité",
+      title: "Nos services, votre tranquillit\u00E9",
       subtitle:
-        "Des solutions conçues pour simplifier la vie de la diaspora tout en garantissant transparence et présence humaine sur place.",
+        "Des solutions con\u00E7ues pour simplifier la vie de la diaspora tout en garantissant transparence et pr\u00E9sence humaine sur place.",
       cards: {
         realEstate: {
-          title: "Gestion immobilière",
-          desc: "Suivi des biens, visites, états des lieux, rapport en images, gestion locative… Un agent dédié sur place.",
+          title: "Gestion immobili\u00E8re",
+          desc: "Suivi des biens, visites, \u00E9tats des lieux, rapports photo, gestion locative... Un agent d\u00E9di\u00E9 sur place.",
         },
         personal: {
-          title: "Services personnalisés",
-          desc: "Courses, démarches, chantiers, missions personnelles… Nous gérons pour vous, en toute confiance.",
+          title: "Services personnalis\u00E9s",
+          desc: "Courses, d\u00E9marches administratives, chantiers, missions personnelles... Nous g\u00E9rons pour vous, en toute confiance.",
         },
         transparency: {
-          title: "Transparence absolue",
-          desc: "Photos, preuves, documents, transactions : accès instantané à toutes vos informations, où que vous soyez.",
+          title: "Transparence totale",
+          desc: "Photos, preuves, documents, transactions : acc\u00E8s instantan\u00E9 \u00E0 toutes vos informations, o\u00F9 que vous soyez.",
         },
       },
     },
     why: {
       title: "Pourquoi choisir Teranga ?",
       subtitle:
-        "Parce qu’il ne s’agit pas seulement d’une application, mais d’un lien de confiance entre vous, vos proches et vos projets au pays.",
+        "Parce qu'il ne s'agit pas seulement d'une application, mais d'un lien de confiance entre vous, vos proches et vos projets au pays.",
       pillars: {
         clarity: {
-          title: "Clarté",
-          text: "Interface simple, lisible, pensée pour être utilisée sur mobile, même avec peu de temps.",
+          title: "Clart\u00E9",
+          text: "Une interface simple, lisible, pens\u00E9e pour le mobile, m\u00EAme avec peu de temps.",
         },
         credibility: {
-          title: "Crédibilité",
-          text: "Suivi documenté, preuves visuelles, historique clair : vous gardez toujours la main.",
+          title: "Cr\u00E9dibilit\u00E9",
+          text: "Suivi document\u00E9, preuves visuelles, historique clair : vous gardez toujours la main.",
         },
         support: {
           title: "Accompagnement",
-          text: "Une équipe à taille humaine, disponible et à l’écoute des réalités de la diaspora.",
+          text: "Une \u00E9quipe \u00E0 taille humaine, disponible et \u00E0 l'\u00E9coute des r\u00E9alit\u00E9s de la diaspora.",
         },
       },
     },
     about: {
-      title: "Teranga : bien plus qu’un service",
+      title: "Teranga : bien plus qu'un service",
       subtitle:
-        "Une plateforme inspirée de la confiance et de l'hospitalité, offrant un lien direct entre diaspora et projets au pays.",
+        "Une plateforme inspir\u00E9e par la confiance et l'hospitalit\u00E9, offrant un lien direct entre diaspora et projets au pays.",
       paragraphs: {
-        p1: "Le mot <0>“Teranga”</0> évoque chaleur humaine, confiance et respect. Notre plateforme reprend ces valeurs pour offrir une expérience moderne et rassurante.",
-        p2: "Vos projets méritent une visibilité totale : photos, preuves, rapports, transactions, progression… tout est accessible en temps réel, depuis n'importe où.",
-        p3: "Grâce à nos agents certifiés et à une interface claire, vous gardez toujours le contrôle, sans devoir être physiquement sur place.",
+        p1: "Le mot <0>Teranga</0> \u00E9voque chaleur humaine, confiance et respect. Notre plateforme reprend ces valeurs pour offrir une exp\u00E9rience moderne et rassurante.",
+        p2: "Vos projets m\u00E9ritent une visibilit\u00E9 totale : photos, preuves, rapports, transactions, progression... tout est accessible en temps r\u00E9el, depuis n'importe o\u00F9.",
+        p3: "Gr\u00E2ce \u00E0 nos agents certifi\u00E9s et \u00E0 une interface claire, vous gardez toujours le contr\u00F4le, sans devoir \u00EAtre physiquement sur place.",
       },
       cta: "Rejoindre Teranga",
     },
     contact: {
       title: "Contactez-nous",
-      subtitle: "Notre équipe vous répond avec attention sous 24h.",
+      subtitle: "Notre \u00E9quipe vous r\u00E9pond avec attention sous 24h.",
       form: {
         name: {
           label: "Nom complet",
@@ -1997,108 +2008,108 @@ const fr = {
           placeholder: "Votre message...",
         },
         submit: "Envoyer le message",
-        success: "Merci ! Votre message a bien été envoyé.",
+        success: "Merci ! Votre message a bien \u00E9t\u00E9 envoy\u00E9.",
       },
       info: {
         email: "contact@teranga-platform.com",
         phone: "+223 70 66 83 64 / +223 94 16 12 66",
-        address: "Hamdallaye ACI 200, Bamako — Mali",
+        address: "Hamdallaye ACI 200, Bamako - Mali",
       },
       note:
-        "Nous vous accompagnons avec écoute, respect et professionnalisme, pour que chaque échange soit simple et rassurant.",
+        "Nous vous accompagnons avec \u00E9coute, respect et professionnalisme, pour que chaque \u00E9change soit simple et rassurant.",
     },
     footer: {
       copyright:
-        "© {{year}} <0>Teranga</0> — Tous droits réservés.",
+        "\u00A9 {{year}} <0>Teranga</0> - Tous droits r\u00E9serv\u00E9s.",
       links: {
         home: "Accueil",
         services: "Services",
-        about: "À propos",
+        about: "\u00C0 propos",
         contact: "Contact",
       },
     },
   },
   legalPage: {
-    kicker: "Conformité légale",
-    title: "Mentions légales",
+    kicker: "Conformit\u00E9 l\u00E9gale",
+    title: "Mentions l\u00E9gales",
     intro:
-      "Conformément aux dispositions de la loi n°2004-575 du 21 juin 2004 pour la confiance dans l’économie numérique (LCEN), il est précisé aux utilisateurs de l’application Teranga l’identité des différents intervenants dans le cadre de sa réalisation et de son suivi.",
+      "Conform\u00E9ment aux dispositions de la loi n\u00B02004-575 du 21 juin 2004 pour la confiance dans l'\u00E9conomie num\u00E9rique (LCEN), il est pr\u00E9cis\u00E9 aux utilisateurs de l'application Teranga l'identit\u00E9 des diff\u00E9rents intervenants dans le cadre de sa r\u00E9alisation et de son suivi.",
     sections: {
       publisher: {
-        title: "1. Éditeur du site",
+        title: "1. \u00C9diteur du site",
         details:
-          "<strong>Teranga Diaspora</strong><br/>Service de gestion de biens, projets et services pour la diaspora africaine.<br/>Siège social : Hamdallaye ACI 200, Bamako – Mali<br/>Email : contact@teranga-platform.com",
+          "<strong>Teranga Diaspora</strong><br/>Service de gestion de biens, projets et services pour la diaspora africaine.<br/>Si\u00E8ge social : Hamdallaye ACI 200, Bamako - Mali<br/>Email : contact@teranga-platform.com",
       },
       editorial: {
-        title: "2. Responsabilité éditoriale",
+        title: "2. Responsabilit\u00E9 \u00E9ditoriale",
         details:
-          "Le responsable de la publication est joignable à l’adresse : contact@teranga-platform.com",
+          "Le responsable de la publication est joignable \u00E0 l'adresse : contact@teranga-platform.com",
       },
       hosting: {
-        title: "3. Hébergement",
+        title: "3. H\u00E9bergement",
         details:
-          "Application hébergée par : <strong>Netlify</strong><br/>https://www.netlify.com",
+          "Application h\u00E9berg\u00E9e par : <strong>Netlify</strong><br/>https://www.netlify.com",
       },
       ip: {
-        title: "4. Propriété intellectuelle",
+        title: "4. Propri\u00E9t\u00E9 intellectuelle",
         details:
-          "L’application Teranga, son contenu, sa marque et son logo sont protégés par la législation en vigueur. Toute reproduction sans autorisation est interdite.",
+          "L'application Teranga, son contenu, sa marque et son logo sont prot\u00E9g\u00E9s par la l\u00E9gislation en vigueur. Toute reproduction sans autorisation est interdite.",
       },
       contact: {
         title: "5. Contact",
         details:
-          "Pour toute question ou réclamation, vous pouvez nous écrire à :<br/><strong>contact@teranga-platform.com</strong>",
+          "Pour toute question ou r\u00E9clamation, vous pouvez nous \u00E9crire \u00E0 :<br/><strong>contact@teranga-platform.com</strong>",
       },
     },
   },
   privacyPage: {
     seo: {
-      title: "Politique de confidentialité",
+      title: "Politique de confidentialit\u00E9",
       description:
-        "Politique de confidentialité Teranga conforme au RGPD : données collectées, finalités, droits des utilisateurs, sécurité et durée de conservation.",
+        "Politique de confidentialit\u00E9 Teranga conforme au RGPD : donn\u00E9es collect\u00E9es, finalit\u00E9s, droits des utilisateurs, s\u00E9curit\u00E9 et dur\u00E9e de conservation.",
     },
-    kicker: "Protection des données",
-    title: "Politique de confidentialité (RGPD)",
+    kicker: "Protection des donn\u00E9es",
+    title: "Politique de confidentialit\u00E9 (RGPD)",
     intro:
-      "La présente politique explique comment Teranga collecte, utilise, stocke et protège vos données personnelles conformément au RGPD.",
+      "La pr\u00E9sente politique explique comment Teranga collecte, utilise, stocke et prot\u00E8ge vos donn\u00E9es personnelles conform\u00E9ment au RGPD.",
     sections: {
       collected: {
-        title: "1. Données collectées",
+        title: "1. Donn\u00E9es collect\u00E9es",
         items: {
-          identification: "Données d’identification : nom, prénom, email",
-          connection: "Données de connexion : token, adresse IP, appareil",
-          services: "Données liées aux services : biens, projets, transactions",
-          evidence: "Preuves envoyées : photos, vidéos, documents",
+          identification: "Donn\u00E9es d'identification : nom, pr\u00E9nom, email",
+          connection: "Donn\u00E9es de connexion : token, adresse IP, appareil",
+          services: "Donn\u00E9es li\u00E9es aux services : biens, projets, transactions",
+          evidence: "Preuves envoy\u00E9es : photos, vid\u00E9os, documents",
         },
       },
       purposes: {
-        title: "2. Finalités du traitement",
-        lead: "Les données sont utilisées pour :",
+        title: "2. Finalit\u00E9s du traitement",
+        lead: "Les donn\u00E9es sont utilis\u00E9es pour :",
         items: {
-          account: "Gérer votre compte",
-          execute: "Exécuter les services demandés",
-          security: "Assurer la sécurité de l’application",
+          account: "G\u00E9rer votre compte",
+          execute: "Ex\u00E9cuter les services demand\u00E9s",
+          security: "Assurer la s\u00E9curit\u00E9 de l'application",
           tracking: "Suivre les projets, biens et transactions",
         },
       },
       retention: {
-        title: "3. Conservation des données",
+        title: "3. Conservation des donn\u00E9es",
         details:
-          "Les données sont conservées aussi longtemps que nécessaire ou selon les obligations légales.",
+          "Les donn\u00E9es sont conserv\u00E9es aussi longtemps que n\u00E9cessaire ou selon les obligations l\u00E9gales.",
       },
       sharing: {
-        title: "4. Partage des données",
+        title: "4. Partage des donn\u00E9es",
         details:
-          "Teranga ne revend pas vos données. Elles peuvent être transmises aux prestataires habilités uniquement pour exécuter les services.",
+          "Teranga ne revend pas vos donn\u00E9es. Elles peuvent \u00EAtre transmises aux prestataires habilit\u00E9s uniquement pour ex\u00E9cuter les services.",
       },
       rights: {
         title: "5. Vos droits (RGPD)",
         items: {
-          access: "Droit d’accès",
+          access: "Droit d'acc\u00E8s",
           rectification: "Droit de rectification",
-          deletion: "Droit à la suppression",
-          objection: "Droit d’opposition",
-          portability: "Droit à la portabilité",
+          deletion: "Droit \u00E0 la suppression",
+          objection: "Droit d'opposition",
+          portability: "Droit \u00E0 la portabilit\u00E9",
         },
         contact:
           "Pour exercer vos droits : <br/><strong>contact@teranga-platform.com</strong>",
@@ -2109,43 +2120,110 @@ const fr = {
     seo: {
       title: "Conditions d'utilisation",
       description:
-        "Découvrez les conditions d'utilisation de Teranga : règles, responsabilités et fonctionnement de la plateforme dédiée à la diaspora.",
+        "D\u00E9couvrez les conditions d'utilisation de Teranga : r\u00E8gles, responsabilit\u00E9s et fonctionnement de la plateforme d\u00E9di\u00E9e \u00E0 la diaspora.",
     },
     kicker: "Cadre d'utilisation",
-    title: "Conditions générales d'utilisation",
+    title: "Conditions g\u00E9n\u00E9rales d'utilisation",
     intro:
-      "Les présentes Conditions Générales d’Utilisation (CGU) encadrent l’accès et l’utilisation de l’application Teranga par ses membres.",
+      "Les pr\u00E9sentes Conditions G\u00E9n\u00E9rales d'Utilisation (CGU) encadrent l'acc\u00E8s et l'utilisation de l'application Teranga par ses membres.",
     sections: {
       purpose: {
         title: "1. Objet",
         details:
-          "Teranga permet aux membres de la diaspora de suivre leurs biens, projets, services et transactions à distance en toute transparence.",
+          "Teranga permet aux membres de la diaspora de suivre leurs biens, projets, services et transactions \u00E0 distance en toute transparence.",
       },
       usage: {
-        title: "2. Utilisation de l’application",
+        title: "2. Utilisation de l'application",
         items: {
           accurateInfo:
-            "L'utilisateur s’engage à fournir des informations exactes.",
+            "L'utilisateur s'engage \u00E0 fournir des informations exactes.",
           accountSecurity:
-            "Il est responsable de la confidentialité de son compte.",
-          fraud: "Tout usage frauduleux entraîne la suspension du compte.",
+            "Il est responsable de la confidentialit\u00E9 de son compte.",
+          fraud: "Tout usage frauduleux entra\u00EEne la suspension du compte.",
         },
       },
       agents: {
-        title: "3. Agents & responsabilités",
+        title: "3. Agents & responsabilit\u00E9s",
         details:
-          "Les agents effectuent les services sur la base des demandes des clients et rendent compte via l’application (preuves, documents, rapports).",
+          "Les agents effectuent les services sur la base des demandes des clients et rendent compte via l'application (preuves, documents, rapports).",
       },
       suspension: {
         title: "4. Suspension / Suppression",
         details:
-          "Teranga peut suspendre un compte en cas d’abus, fraude ou violation des règles.",
+          "Teranga peut suspendre un compte en cas d'abus, fraude ou violation des r\u00E8gles.",
       },
       contact: {
         title: "5. Contact",
         details:
-          "Toute question peut être adressée à : <br/><strong>contact@teranga-platform.com</strong>",
+          "Toute question peut \u00EAtre adress\u00E9e \u00E0 : <br/><strong>contact@teranga-platform.com</strong>",
       },
+    },
+  },
+  settingsPage: {
+    kicker: "Configuration",
+    title: "Parametres du compte",
+    subtitle:
+      "Personnalisez votre experience et accedez rapidement aux ressources importantes.",
+    theme: {
+      title: "Apparence",
+      description:
+        "Choisissez le mode d'affichage de l'application. Le mode systeme suit les preferences de votre appareil.",
+      options: {
+        light: "Clair",
+        dark: "Sombre",
+        system: "Systeme",
+      },
+      help: {
+        light: "Toujours afficher le theme clair.",
+        dark: "Toujours afficher le theme sombre.",
+        system: "Suivre automatiquement le systeme.",
+      },
+      currentResolved: "Mode actif : {{mode}}",
+    },
+    quick: {
+      securityTitle: "Securite du compte",
+      securityDesc:
+        "Mettez a jour votre mot de passe et les parametres de protection.",
+      supportTitle: "Aide & Support",
+      supportDesc:
+        "Consultez la page support et les prochaines fonctionnalites d'assistance.",
+      privacyTitle: "Politique de confidentialite",
+      privacyDesc: "Consultez la gestion des donnees personnelles et vos droits.",
+      termsTitle: "Conditions d'utilisation",
+      termsDesc: "Relisez les regles et responsabilites de la plateforme.",
+    },
+  },
+  helpSupportPage: {
+    kicker: "Support utilisateur",
+    title: "Aide & Support",
+    subtitle:
+      "Un espace d'assistance dedie est en preparation. Vous pouvez deja acceder aux informations essentielles.",
+    comingSoon: {
+      title: "Centre d'assistance en cours de preparation",
+      description:
+        "Le module support (tickets, suivi, FAQ) sera bientot disponible dans une version professionnelle complete.",
+    },
+    cards: {
+      security: {
+        title: "Probleme de securite",
+        description:
+          "En cas de doute sur votre compte, changez rapidement votre mot de passe.",
+      },
+      privacy: {
+        title: "Confidentialite",
+        description:
+          "Consultez vos droits et la facon dont vos donnees sont traitees.",
+      },
+      terms: {
+        title: "Conditions",
+        description:
+          "Verifiez les regles d'utilisation et les engagements de la plateforme.",
+      },
+    },
+    contact: {
+      title: "Contact support",
+      description:
+        "Pour les demandes urgentes, contactez l'administration Teranga via les canaux de communication habituels.",
     },
   },
   adminProductsPage: {
@@ -2275,7 +2353,7 @@ const fr = {
       outOfStock:
         "Ce produit est actuellement en rupture de stock. Merci de contacter le service client pour plus d'informations.",
       overStock:
-        "La quantité demandée ({{requested}}) dépasse le stock disponible ({{available}}).\n\nMerci de contacter le service client pour ajuster votre commande ou organiser une commande spéciale.",
+        "La quantité demandée ({{requested}}) dépasse le stock disponible ({{available}}).\\n\\nMerci de contacter le service client pour ajuster votre commande ou organiser une commande spéciale.",
       orderSuccess: "✅ Commande créée pour {{quantity}} × {{name}}",
       orderError: "Erreur lors de la création de la commande.",
     },
@@ -2614,15 +2692,15 @@ const fr = {
     perPage: "{{count}} / page",
   },
   geo: {
-    loading: "Chargement zones…",
-    scope: "Périmètre",
+    loading: "Chargement des zones...",
+    scope: "P\u00E9rim\u00E8tre",
     countryLabel: "Pays",
-    regionLabel: "Région",
+    regionLabel: "R\u00E9gion",
     allCountries: "Tous les pays",
-    allRegions: "Toutes les régions",
+    allRegions: "Toutes les r\u00E9gions",
     countryId: "Pays #{{id}}",
-    regionId: "Région #{{id}}",
-    countryUnknown: "Pays non défini",
+    regionId: "R\u00E9gion #{{id}}",
+    countryUnknown: "Pays non d\u00E9fini",
   },
   analyticsConsent: {
     title: "Votre confidentialité compte",
@@ -2646,23 +2724,23 @@ const fr = {
     titleWithRole: "Aperçu financier ({{role}})",
   },
   seo: {
-    defaultTitle: "Teranga – Diaspora & Services",
+    defaultTitle: "Teranga \u2013 Diaspora & Services",
     defaultDescription:
-      "Teranga — La plateforme qui rapproche la diaspora de son pays. Gérez vos biens et services même quand vous êtes loin.",
+      "Teranga \u2013 La plateforme qui rapproche la diaspora de son pays. G\u00E9rez vos biens et services m\u00EAme quand vous \u00EAtes loin.",
     pages: {
       home: {
-        title: "Teranga – Gestion de biens & services pour la diaspora",
+        title: "Teranga \u2013 Gestion de biens & services pour la diaspora",
         description:
-          "Teranga est la plateforme moderne qui permet à la diaspora africaine de gérer biens, projets et services à distance, avec transparence et preuves à chaque étape.",
+          "Teranga est la plateforme moderne qui permet \u00E0 la diaspora africaine de g\u00E9rer biens, projets et services \u00E0 distance, avec transparence et preuves \u00E0 chaque \u00E9tape.",
       },
       shop: {
         title: "Produits & Services",
       },
       productDetail: {
-        title: "Détail produit",
+        title: "D\u00E9tail produit",
       },
       legal: {
-        title: "Mentions légales",
+        title: "Mentions l\u00E9gales",
       },
       login: {
         title: "Connexion",
@@ -2671,10 +2749,10 @@ const fr = {
         title: "Inscription",
       },
       forgotPassword: {
-        title: "Mot de passe oublié",
+        title: "Mot de passe oubli\u00E9",
       },
       resetPassword: {
-        title: "Réinitialiser le mot de passe",
+        title: "R\u00E9initialiser le mot de passe",
       },
       dashboard: {
         title: "Tableau de bord",
@@ -2686,16 +2764,16 @@ const fr = {
         title: "Mes projets",
       },
       projectDetail: {
-        title: "Détail projet",
+        title: "D\u00E9tail projet",
       },
       services: {
         title: "Services",
       },
       serviceTasks: {
-        title: "Tâches du service",
+        title: "T\u00E2ches du service",
       },
       tasks: {
-        title: "Tâches",
+        title: "T\u00E2ches",
       },
       taskEvidences: {
         title: "Preuves",
@@ -2704,7 +2782,13 @@ const fr = {
         title: "Transactions",
       },
       accountSecurity: {
-        title: "Sécurité du compte",
+        title: "S\u00E9curit\u00E9 du compte",
+      },
+      settings: {
+        title: "Param\u00E8tres",
+      },
+      helpSupport: {
+        title: "Aide & Support",
       },
       finance: {
         title: "Finances",
@@ -2713,13 +2797,13 @@ const fr = {
         title: "Commandes",
       },
       orderDetail: {
-        title: "Détail commande",
+        title: "D\u00E9tail commande",
       },
       orderTransactions: {
         title: "Transactions commande",
       },
       agentServices: {
-        title: "Services assignés",
+        title: "Services assign\u00E9s",
       },
       adminOnboarding: {
         title: "Onboarding Pays & MASTER",
@@ -2743,7 +2827,7 @@ const fr = {
         title: "Biens clients",
       },
       adminCategories: {
-        title: "Catégories",
+        title: "Cat\u00E9gories",
       },
       adminProducts: {
         title: "Produits (admin)",
@@ -2752,7 +2836,7 @@ const fr = {
         title: "Notifications",
       },
       activities: {
-        title: "Centre d'activité",
+        title: "Centre d'activit\u00E9",
       },
       fallback: {
         title: "Accueil",
@@ -2760,59 +2844,64 @@ const fr = {
     },
   },
   notifications: {
-    kicker: "Centre d'activité",
+    kicker: "Centre d'activite",
     title: "Notifications",
     subtitle:
-      "Suivez les nouvelles demandes, celles en cours et celles terminées en un seul endroit.",
+      "Suivez les nouvelles demandes, celles en cours et celles terminees en un seul endroit.",
     unreadCount: "{{count}} non lue",
     unreadCount_other: "{{count}} non lues",
     filterUnread: "Filtrer non lues",
-    resetUnreadFilter: "Réinitialiser filtre",
+    resetUnreadFilter: "Reinitialiser filtre",
     markAllRead: "Tout marquer comme lu",
+    markReadSuccess: "Notification marquee comme lue.",
+    markReadError: "Impossible de marquer cette notification comme lue.",
+    nothingToMark: "Aucune notification non lue a marquer.",
+    markAllReadSuccess: "Toutes les notifications sont maintenant lues.",
+    markAllReadError: "Erreur lors du marquage global des notifications.",
     tabs: {
       new: "Nouvelles",
       inProgress: "En cours",
-      done: "Terminées",
+      done: "Terminees",
     },
     entities: {
       service: "Service",
-      task: "Tâche",
+      task: "Tache",
       order: "Commande",
       evidence: "Preuve",
       project: "Projet",
-      other: "Activité",
+      other: "Activite",
     },
     actions: {
-      created: "Créé",
-      assigned: "Assigné",
-      status_updated: "Statut mis à jour",
+      created: "Cree",
+      assigned: "Assigne",
+      status_updated: "Statut mis a jour",
     },
     messages: {
       action: "{{entity}} : {{action}}",
       status: "Statut : {{status}}",
-      evidenceCount: "{{count}} preuve ajoutée",
-      evidenceCount_other: "{{count}} preuves ajoutées",
+      evidenceCount: "{{count}} preuve ajoutee",
+      evidenceCount_other: "{{count}} preuves ajoutees",
     },
     unread: "Non lue",
     view: "Voir",
     markRead: "Marquer lu",
     loading: "Chargement des notifications...",
     empty: "Aucune notification pour le moment.",
-    genericMessage: "Nouvelle activité détectée.",
+    genericMessage: "Nouvelle activite detectee.",
   },
   activities: {
-    kicker: "Centre d'activité",
-    title: "Centre d'activité",
+    kicker: "Centre d'activite",
+    title: "Centre d'activite",
     subtitle:
-      "Parcourez la chronologie complète des actions dans votre espace.",
+      "Parcourez la chronologie complete des actions dans votre espace.",
     filters: {
       label: "Filtres",
-      allEntities: "Toutes les entités",
+      allEntities: "Toutes les entites",
       allActions: "Toutes les actions",
       allDates: "Toutes les dates",
       last7Days: "7 derniers jours",
       last30Days: "30 derniers jours",
-      customRange: "Période personnalisée",
+      customRange: "Periode personnalisee",
       from: "Du",
       to: "Au",
     },
@@ -2820,44 +2909,44 @@ const fr = {
       all: "Tout",
       new: "Nouvelles",
       inProgress: "En cours",
-      done: "Terminées",
+      done: "Terminees",
     },
     progress: {
       new: "Nouvelles",
       in_progress: "En cours",
-      done: "Terminées",
+      done: "Terminees",
     },
     entities: {
       service: "Service",
-      task: "Tâche",
+      task: "Tache",
       order: "Commande",
       evidence: "Preuve",
       project: "Projet",
-      other: "Activité",
+      other: "Activite",
     },
     actions: {
-      created: "Créé",
-      assigned: "Assigné",
-      status_updated: "Statut mis à jour",
+      created: "Cree",
+      assigned: "Assigne",
+      status_updated: "Statut mis a jour",
     },
     messages: {
       action: "{{entity}} : {{action}}",
       status: "Statut : {{status}}",
-      evidenceCount: "{{count}} preuve ajoutée",
-      evidenceCount_other: "{{count}} preuves ajoutées",
+      evidenceCount: "{{count}} preuve ajoutee",
+      evidenceCount_other: "{{count}} preuves ajoutees",
     },
     actor: {
       label: "Acteur",
-      unknown: "Système",
+      unknown: "Systeme",
     },
     validation: {
-      invalidDateRange: "La date de début doit être antérieure à la date de fin.",
+      invalidDateRange: "La date de debut doit etre anterieure a la date de fin.",
     },
     view: "Voir",
     by: "par {{name}}",
-    loading: "Chargement des activités...",
-    empty: "Aucune activité pour le moment.",
-    genericMessage: "Nouvelle activité détectée.",
+    loading: "Chargement des activites...",
+    empty: "Aucune activite pour le moment.",
+    genericMessage: "Nouvelle activite detectee.",
   },
   labels: {
     property: {
@@ -2930,7 +3019,3 @@ const fr = {
 };
 
 export default fr;
-
-
-
-

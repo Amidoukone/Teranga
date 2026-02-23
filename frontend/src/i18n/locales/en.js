@@ -17,6 +17,11 @@ const en = {
     orders: "Orders",
     master: "Master",
     security: "Security",
+    settings: "Settings",
+    helpSupport: "Help & Support",
+    privacy: "Privacy policy",
+    terms: "Terms of use",
+    legal: "Legal notice",
     dashboard: "Dashboard",
     dashboardTitle: "Dashboard",
     notifications: "Notifications",
@@ -61,6 +66,12 @@ const en = {
   footer: {
     copyright:
       "© {{year}} <brand>Teranga Diaspora</brand>. All rights reserved.",
+    links: {
+      helpSupport: "Help & Support",
+      privacy: "Privacy",
+      terms: "Terms",
+      legal: "Legal",
+    },
   },
   auth: {
     login: {
@@ -2138,6 +2149,71 @@ const en = {
       },
     },
   },
+  settingsPage: {
+    kicker: "Configuration",
+    title: "Account settings",
+    subtitle:
+      "Personalize your experience and access important resources quickly.",
+    theme: {
+      title: "Appearance",
+      description:
+        "Choose how the app is displayed. System mode follows your device preference.",
+      options: {
+        light: "Light",
+        dark: "Dark",
+        system: "System",
+      },
+      help: {
+        light: "Always use the light theme.",
+        dark: "Always use the dark theme.",
+        system: "Automatically follow your system.",
+      },
+      currentResolved: "Active mode: {{mode}}",
+    },
+    quick: {
+      securityTitle: "Account security",
+      securityDesc: "Update your password and protection settings.",
+      supportTitle: "Help & Support",
+      supportDesc: "Open support resources and upcoming assistance features.",
+      privacyTitle: "Privacy policy",
+      privacyDesc: "Review personal data handling and your rights.",
+      termsTitle: "Terms of use",
+      termsDesc: "Review platform rules and responsibilities.",
+    },
+  },
+  helpSupportPage: {
+    kicker: "User support",
+    title: "Help & Support",
+    subtitle:
+      "A dedicated support area is being prepared. You can already access key resources.",
+    comingSoon: {
+      title: "Support center in preparation",
+      description:
+        "The full support module (tickets, tracking, FAQ) will be available soon.",
+    },
+    cards: {
+      security: {
+        title: "Security issue",
+        description:
+          "If you suspect account risk, change your password immediately.",
+      },
+      privacy: {
+        title: "Privacy",
+        description:
+          "Review your rights and how your data is processed.",
+      },
+      terms: {
+        title: "Terms",
+        description:
+          "Check usage rules and platform commitments.",
+      },
+    },
+    contact: {
+      title: "Support contact",
+      description:
+        "For urgent requests, contact Teranga administration through your usual communication channels.",
+    },
+  },
   adminProductsPage: {
     loading: "Loading…",
     header: {
@@ -2693,6 +2769,12 @@ const en = {
       },
       accountSecurity: {
         title: "Account security",
+      },
+      settings: {
+        title: "Settings",
+      },
+      helpSupport: {
+        title: "Help & Support",
       },
       finance: {
         title: "Finance",

@@ -1,7 +1,7 @@
 // frontend/src/pages/DashboardPage.jsx
 // ============================================================================
-// DashboardPage — Version Premium Évoluée 2025
-// (Responsive + UI moderne + rôle normalisé + typographies optimisées)
+// DashboardPage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Version Premium ÃƒÆ’Ã¢â‚¬Â°voluÃƒÆ’Ã‚Â©e 2025
+// (Responsive + UI moderne + rÃƒÆ’Ã‚Â´le normalisÃƒÆ’Ã‚Â© + typographies optimisÃƒÆ’Ã‚Â©es)
 // ============================================================================
 
 import { useEffect, useState } from 'react';
@@ -77,7 +77,7 @@ export default function DashboardPage() {
     balance: 0,
   });
 
-  // Stats détaillées modules
+  // Stats dÃƒÆ’Ã‚Â©taillÃƒÆ’Ã‚Â©es modules
   const [detailStats, setDetailStats] = useState({
     properties: {
       total: 0,
@@ -121,7 +121,7 @@ export default function DashboardPage() {
         setUser(u);
         await loadStats(u);
       } catch (err) {
-        console.error('❌ Erreur Dashboard init:', err);
+        console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur Dashboard init:', err);
       } finally {
         setLoading(false);
       }
@@ -141,7 +141,7 @@ export default function DashboardPage() {
       const role = normalizeRole(u.role);
       const showPropertiesModule = role !== 'agent';
 
-      // SERVICES selon rôle
+      // SERVICES selon rÃƒÆ’Ã‚Â´le
       if (role === 'admin') {
         services = await getAllServicesAdmin();
       } else if (role === 'agent') {
@@ -153,38 +153,38 @@ export default function DashboardPage() {
       // TRANSACTIONS
       transactions = await getTransactions();
 
-      // Résumé financier (admin only)
+      // RÃƒÆ’Ã‚Â©sumÃƒÆ’Ã‚Â© financier (admin only)
       if (role === 'admin') {
         financialSummary = await getFinancialSummary();
       }
 
-      // ========= NOUVELLES DONNÉES : BIENS / TÂCHES / PROJETS / COMMANDES =========
+      // ========= NOUVELLES DONNÃƒÆ’Ã¢â‚¬Â°ES : BIENS / TÃƒÆ’Ã¢â‚¬Å¡CHES / PROJETS / COMMANDES =========
       const geoParams = getGeoParams();
       const [propsRes, tasksRes, projectsRes, ordersRes] = await Promise.all([
         showPropertiesModule
           ? api
               .get('/properties', { params: geoParams })
               .catch((err) => {
-                console.error('⚠️ Erreur chargement biens Dashboard:', err);
+                console.error('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Erreur chargement biens Dashboard:', err);
                 return { data: {} };
               })
           : Promise.resolve({ data: { properties: [] } }),
         api
           .get('/tasks', { params: geoParams })
           .catch((err) => {
-            console.error('⚠️ Erreur chargement tâches Dashboard:', err);
+            console.error('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Erreur chargement tÃƒÆ’Ã‚Â¢ches Dashboard:', err);
             return { data: {} };
           }),
         api
           .get('/projects', { params: geoParams })
           .catch((err) => {
-            console.error('⚠️ Erreur chargement projets Dashboard:', err);
+            console.error('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Erreur chargement projets Dashboard:', err);
             return { data: {} };
           }),
         api
           .get('/orders', { params: geoParams })
           .catch((err) => {
-            console.error('⚠️ Erreur chargement commandes Dashboard:', err);
+            console.error('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Erreur chargement commandes Dashboard:', err);
             return { data: {} };
           }),
       ]);
@@ -225,7 +225,7 @@ export default function DashboardPage() {
         balance,
       });
 
-      // ========= NOUVEAUX CALCULS DÉTAILLÉS =========
+      // ========= NOUVEAUX CALCULS DÃƒÆ’Ã¢â‚¬Â°TAILLÃƒÆ’Ã¢â‚¬Â°S =========
 
       // Biens
       const propertiesTotal = properties.length;
@@ -233,7 +233,7 @@ export default function DashboardPage() {
         (p) => p.status === 'active'
       ).length;
 
-      // Tâches
+      // TÃƒÆ’Ã‚Â¢ches
       const tasksTotal = tasks.length;
       const tasksCreated = tasks.filter((t) => t.status === 'created').length;
       const tasksInProgress = tasks.filter(
@@ -266,7 +266,7 @@ export default function DashboardPage() {
       const ordersPaid = orders.filter(
         (o) => o.paymentStatus === 'paid'
       ).length;
-      // "open" = non livrées / non annulées
+      // "open" = non livrÃƒÆ’Ã‚Â©es / non annulÃƒÆ’Ã‚Â©es
       const ordersOpen = orders.filter(
         (o) =>
           !['delivered', 'cancelled', 'refunded'].includes(
@@ -300,12 +300,12 @@ export default function DashboardPage() {
         },
       });
     } catch (err) {
-      console.error('❌ Erreur chargement stats Dashboard:', err);
+      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur chargement stats Dashboard:', err);
     }
   }
 
   /* ---------------------------------------------------------------------- */
-  /* ÉTAT CHARGEMENT                                                       */
+  /* ÃƒÆ’Ã¢â‚¬Â°TAT CHARGEMENT                                                       */
   /* ---------------------------------------------------------------------- */
   if (loading || !user) {
     return (
@@ -336,11 +336,11 @@ export default function DashboardPage() {
   const shortName =
     (firstName.split(' ')[0] || '').trim() || t("dashboard.careFallbackName");
   /* ============================================================================
-     UI PRINCIPALE — VERSION RÉORGANISÉE & PLUS LISIBLE / ÉLÉGANTE
+     UI PRINCIPALE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION RÃƒÆ’Ã¢â‚¬Â°ORGANISÃƒÆ’Ã¢â‚¬Â°E & PLUS LISIBLE / ÃƒÆ’Ã¢â‚¬Â°LÃƒÆ’Ã¢â‚¬Â°GANTE
   =========================================================================== */
   return (
     <div className="app-page-wrap">
-      <div className="mx-auto max-w-7xl rounded-3xl border border-border/70 bg-white/92 px-4 py-6 shadow-2xl shadow-slate-300/25 sm:px-6 sm:py-8 lg:px-8 space-y-8">
+      <div className="mx-auto max-w-7xl rounded-3xl border border-border/70 bg-surface-card/92 px-4 py-6 shadow-2xl shadow-slate-300/20 dark:shadow-black/30 sm:px-6 sm:py-8 lg:px-8 space-y-8">
 
         {/* ------------------------------------------------------------------ */}
         {/* HEADER PREMIUM                                                    */}
@@ -349,15 +349,15 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4">
             <div className="relative flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white font-semibold text-xl shadow-md">
               {getInitials(user)}
-              <span className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full h-3 w-3 border border-white shadow-sm" />
+              <span className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full h-3 w-3 border border-surface-card shadow-sm" />
             </div>
             <div className="min-w-0">
               <h1 className="text-2xl font-extrabold leading-snug text-text-primary truncate sm:text-3xl">
                 {t("dashboard.greeting", { name: user.firstName || user.email })}
               </h1>
-              {/* ✅ Message EXACT, personnalisé par le prénom */}
+              {/* ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Message EXACT, personnalisÃƒÆ’Ã‚Â© par le prÃƒÆ’Ã‚Â©nom */}
               <p className="mt-2 text-sm text-text-secondary sm:text-base">
-                <span className="font-semibold text-blue-700">
+                <span className="font-semibold text-blue-700 dark:text-blue-300">
                   {t("dashboard.careLine", { firstName: shortName })}
                 </span>
               </p>
@@ -366,7 +366,7 @@ export default function DashboardPage() {
 
           {/* Solde global */}
           <div className="flex flex-col items-start md:items-end gap-3">
-            <div className="w-full sm:min-w-[200px] rounded-2xl border border-border/80 bg-white/80 px-4 py-3 shadow-sm">
+            <div className="w-full sm:min-w-[200px] rounded-2xl border border-border/80 bg-surface-card/80 px-4 py-3 shadow-sm">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs font-medium text-text-secondary sm:text-sm">
                   {balanceLabel}
@@ -374,8 +374,8 @@ export default function DashboardPage() {
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-[0.75rem] sm:text-xs font-semibold ${
                     isPositiveBalance
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                      : 'bg-red-50 text-red-600 border border-red-100'
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                      : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30'
                   }`}
                 >
                   {isPositiveBalance
@@ -385,7 +385,9 @@ export default function DashboardPage() {
               </div>
               <div
                 className={`mt-1 text-xl sm:text-2xl font-bold tracking-tight ${
-                  isPositiveBalance ? 'text-emerald-600' : 'text-red-600'
+                  isPositiveBalance
+                    ? 'text-emerald-600 dark:text-emerald-300'
+                    : 'text-red-600 dark:text-rose-300'
                 }`}
               >
                 {formatNumber(stats.balance)} XOF
@@ -398,7 +400,7 @@ export default function DashboardPage() {
         </header>
 
         {/* ------------------------------------------------------------------ */}
-        {/* VUE RAPIDE — STATISTIQUES GÉNÉRALES                               */}
+        {/* VUE RAPIDE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â STATISTIQUES GÃƒÆ’Ã¢â‚¬Â°NÃƒÆ’Ã¢â‚¬Â°RALES                               */}
         {/* ------------------------------------------------------------------ */}
         <section className="space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -426,17 +428,17 @@ export default function DashboardPage() {
         </section>
 
         {/* ------------------------------------------------------------------ */}
-        {/* BLOC CENTRAL — FINANCES & VUE GLOBALE DES MODULES                 */}
+        {/* BLOC CENTRAL ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FINANCES & VUE GLOBALE DES MODULES                 */}
         {/* ------------------------------------------------------------------ */}
         <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 xl:items-start">
-          {/* Colonne gauche : finances détaillées + modules */}
+          {/* Colonne gauche : finances dÃƒÆ’Ã‚Â©taillÃƒÆ’Ã‚Â©es + modules */}
           <div className="xl:col-span-2 space-y-6">
-            {/* Finances détaillées */}
-            <div className="rounded-2xl border border-border/70 bg-white/90 p-5 shadow-sm">
+            {/* Finances dÃƒÆ’Ã‚Â©taillÃƒÆ’Ã‚Â©es */}
+            <div className="rounded-2xl border border-border/70 bg-surface-card/90 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
-                    <Landmark size={18} className="text-slate-500" />
+                    <Landmark size={18} className="text-text-muted" />
                     {t("dashboard.finance.title")}
                   </h2>
                   <p className="mt-1 text-xs text-text-secondary sm:text-sm">
@@ -448,11 +450,11 @@ export default function DashboardPage() {
             </div>
 
             {/* Vue globale des modules */}
-            <div className="rounded-2xl border border-border/70 bg-white/90 p-5 shadow-sm">
+            <div className="rounded-2xl border border-border/70 bg-surface-card/90 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
-                    <Layers size={18} className="text-slate-500" />
+                    <Layers size={18} className="text-text-muted" />
                     {t("dashboard.modules.title")}
                   </h2>
                   <p className="mt-1 text-xs text-text-secondary sm:text-sm">
@@ -484,7 +486,7 @@ export default function DashboardPage() {
                   />
                 )}
 
-                {/* TÂCHES */}
+                {/* TÃƒÆ’Ã¢â‚¬Å¡CHES */}
                 <ModuleCard
                   title={t("dashboard.modules.tasks")}
                   icon={ClipboardList}
@@ -563,10 +565,10 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Colonne droite : synthèse et accès rapides */}
+          {/* Colonne droite : synthÃƒÆ’Ã‚Â¨se et accÃƒÆ’Ã‚Â¨s rapides */}
           <div className="space-y-6">
-            {/* Synthèse rapide finances */}
-            <div className="flex flex-col justify-between rounded-2xl border border-border/70 bg-white/90 p-5 shadow-sm">
+            {/* SynthÃƒÆ’Ã‚Â¨se rapide finances */}
+            <div className="flex flex-col justify-between rounded-2xl border border-border/70 bg-surface-card/90 p-5 shadow-sm">
               <div>
                 <h3 className="mb-4 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
                   {t("dashboard.summary.title")}
@@ -574,21 +576,23 @@ export default function DashboardPage() {
                 <ul className="space-y-2 text-sm text-text-secondary sm:text-base">
                   <li className="flex justify-between">
                     <span>{t("dashboard.summary.revenue")}</span>
-                    <span className="font-semibold text-emerald-600">
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-300">
                       {formatNumber(stats.totalRevenue)} XOF
                     </span>
                   </li>
                   <li className="flex justify-between">
                     <span>{t("dashboard.summary.expense")}</span>
-                    <span className="font-semibold text-red-600">
+                    <span className="font-semibold text-red-600 dark:text-rose-300">
                       {formatNumber(stats.totalExpense)} XOF
                     </span>
                   </li>
-                  <li className="flex justify-between border-t border-dashed border-slate-200 pt-3 mt-2">
+                  <li className="flex justify-between border-t border-dashed border-border pt-3 mt-2">
                     <span>{t("dashboard.summary.net")}</span>
                     <span
                       className={`font-bold ${
-                        isPositiveBalance ? 'text-emerald-600' : 'text-red-600'
+                        isPositiveBalance
+                          ? 'text-emerald-600 dark:text-emerald-300'
+                          : 'text-red-600 dark:text-rose-300'
                       }`}
                     >
                       {formatNumber(stats.balance)} XOF
@@ -601,10 +605,10 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            {/* Accès rapides */}
-            <div className="rounded-2xl border border-border/70 bg-white/90 p-5 text-text-primary shadow-sm">
+            {/* AccÃƒÆ’Ã‚Â¨s rapides */}
+            <div className="rounded-2xl border border-border/70 bg-surface-card/90 p-5 text-text-primary shadow-sm">
               <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
-                <Rocket size={18} className="text-slate-500" />
+                <Rocket size={18} className="text-text-muted" />
                 {t("dashboard.quickAccess.title")}
               </h3>
               <p className="mb-4 text-xs leading-relaxed text-text-secondary sm:text-sm">
@@ -735,7 +739,7 @@ export default function DashboardPage() {
 }
 
 /* ============================================================================
-   COMPOSANTS RÉUTILISABLES PREMIUM
+   COMPOSANTS RÃƒÆ’Ã¢â‚¬Â°UTILISABLES PREMIUM
 =========================================================================== */
 
 function StatCard({ label, value, highlight = false, icon: Icon }) {
@@ -744,16 +748,16 @@ function StatCard({ label, value, highlight = false, icon: Icon }) {
       className="
         group relative overflow-hidden
         rounded-2xl border border-border/70
-        bg-white/90 backdrop-blur
+        bg-surface-card/90 backdrop-blur
         px-4 py-4 sm:px-5 sm:py-5
         shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)]
         transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-24px_rgba(15,23,42,0.6)]
       "
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/70 via-white/30 to-cyan-50/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-surface-card/30 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
       {Icon ? (
         <div className="absolute top-2 right-2 text-2xl opacity-20 pointer-events-none">
-          <Icon size={20} className="text-slate-500" />
+          <Icon size={20} className="text-text-muted" />
         </div>
       ) : null}
       <div className="relative mb-1 text-[0.75rem] font-semibold uppercase tracking-wide text-text-muted sm:text-xs">
@@ -761,7 +765,7 @@ function StatCard({ label, value, highlight = false, icon: Icon }) {
       </div>
       <div
         className={`relative text-lg sm:text-xl font-bold tracking-tight ${
-          highlight ? 'text-emerald-700' : 'text-text-primary'
+          highlight ? 'text-emerald-700 dark:text-emerald-300' : 'text-text-primary'
         }`}
       >
         {value}
@@ -778,9 +782,9 @@ function QuickLink({ to, label, icon: Icon }) {
         group flex items-center justify-between
         px-3 py-2.5 rounded-xl
         border border-border/70
-        bg-white/85 text-text-primary
+        bg-surface-card/85 text-text-primary
         shadow-[0_10px_25px_-22px_rgba(15,23,42,0.35)]
-        hover:bg-slate-50 hover:border-slate-300
+        hover:bg-surface-main hover:border-border dark:hover:border-blue-400/30 dark:hover:bg-blue-500/5
         transition-all duration-200 hover:-translate-y-0.5
       "
     >
@@ -788,7 +792,7 @@ function QuickLink({ to, label, icon: Icon }) {
         <div
           className="
             flex items-center justify-center h-9 w-9 rounded-full
-            bg-slate-900/5 group-hover:bg-slate-900/10
+            bg-surface-main/80 group-hover:bg-surface-main
             text-text-secondary text-lg transition
           "
         >
@@ -797,7 +801,7 @@ function QuickLink({ to, label, icon: Icon }) {
         <span className="text-sm font-semibold text-text-primary">{label}</span>
       </div>
       <span className="text-xs text-text-muted group-hover:translate-x-0.5 transition-transform">
-        ↗
+        {">"}
       </span>
     </Link>
   );
@@ -809,7 +813,7 @@ function ModuleCard({ title, icon: Icon, main, items = [], link }) {
     <div
       className="
         h-full
-        bg-white/90 border border-border/70 rounded-2xl
+        bg-surface-card/90 border border-border/70 rounded-2xl
         px-4 py-4 sm:px-5 sm:py-5
         shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)]
         hover:shadow-[0_20px_40px_-24px_rgba(15,23,42,0.6)]
@@ -820,7 +824,7 @@ function ModuleCard({ title, icon: Icon, main, items = [], link }) {
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center h-9 w-9 rounded-full bg-slate-900/5 text-lg">
+            <span className="flex items-center justify-center h-9 w-9 rounded-full bg-surface-main/80 text-lg">
               {Icon ? <Icon size={18} className="text-text-secondary" /> : null}
             </span>
             <h3 className="text-sm sm:text-base font-semibold text-text-primary tracking-tight">
@@ -844,7 +848,7 @@ function ModuleCard({ title, icon: Icon, main, items = [], link }) {
         <div className="mt-4 pt-2 border-t border-border/60 text-right">
           <span className="inline-flex items-center text-xs text-text-secondary font-medium">
             {t("common.viewDetails")}
-            <span className="ml-1">↗</span>
+            <span className="ml-1">{">"}</span>
           </span>
         </div>
       )}
@@ -853,4 +857,7 @@ function ModuleCard({ title, icon: Icon, main, items = [], link }) {
 
   return link ? <Link to={link}>{cardContent}</Link> : cardContent;
 }
+
+
+
 

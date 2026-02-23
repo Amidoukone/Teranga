@@ -1,6 +1,6 @@
 // ============================================================
-// OrdersPage.jsx — Teranga PRODUCTION READY (Option B Premium)
-// Clean Shop, filtres, tri, formulaires, responsivité mobile
+// OrdersPage.jsx ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Teranga PRODUCTION READY (Option B Premium)
+// Clean Shop, filtres, tri, formulaires, responsivitÃƒÆ’Ã‚Â© mobile
 // Design B : Style marketplace / SaaS Pro 2025
 // ============================================================
 
@@ -22,26 +22,26 @@ import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 
 /* ============================================================
-   🎨 Helpers de style pour les statuts (Badges / Timeline)
+   ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¨ Helpers de style pour les statuts (Badges / Timeline)
 ============================================================ */
 function getOrderStatusStyle(status) {
   const canon = canonicalizeOrderStatus(status);
 
   switch (canon) {
     case 'created':
-      return 'bg-slate-100 text-slate-700 border border-slate-200';
+      return 'bg-surface-main/80 text-text-secondary border border-border';
     case 'processing':
-      return 'bg-blue-50 text-blue-700 border border-blue-100';
+      return 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30';
     case 'shipped':
-      return 'bg-indigo-50 text-indigo-700 border border-indigo-100';
+      return 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30';
     case 'delivered':
-      return 'bg-emerald-50 text-emerald-700 border border-emerald-100';
+      return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30';
     case 'cancelled':
-      return 'bg-rose-50 text-rose-700 border border-rose-100';
+      return 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30';
     case 'refunded':
-      return 'bg-amber-50 text-amber-700 border border-amber-100';
+      return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30';
     default:
-      return 'bg-slate-50 text-slate-600 border border-slate-100';
+      return 'bg-surface-main text-text-secondary border border-border/70';
   }
 }
 
@@ -50,20 +50,20 @@ function getPaymentStatusStyle(status) {
 
   switch (canon) {
     case 'paid':
-      return 'bg-emerald-50 text-emerald-700 border border-emerald-100';
+      return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30';
     case 'partial':
-      return 'bg-amber-50 text-amber-700 border border-amber-100';
+      return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30';
     case 'unpaid':
-      return 'bg-slate-100 text-slate-700 border border-slate-200';
+      return 'bg-surface-main/80 text-text-secondary border border-border';
     case 'refunded':
-      return 'bg-rose-50 text-rose-700 border border-rose-100';
+      return 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30';
     default:
-      return 'bg-slate-50 text-slate-600 border border-slate-100';
+      return 'bg-surface-main text-text-secondary border border-border/70';
   }
 }
 
 /* ============================================================
-   ✅ Helpers API (compat array OU { orders/products })
+   ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Helpers API (compat array OU { orders/products })
 ============================================================ */
 function normalizeListResponse(data, key) {
   if (Array.isArray(data)) return data;
@@ -79,7 +79,7 @@ function toDecimal(value) {
 }
 
 /* ============================================================
-   ⭐ Page Commandes — Clean Shop Premium (Style B)
+   ÃƒÂ¢Ã‚Â­Ã‚Â Page Commandes ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Clean Shop Premium (Style B)
 ============================================================ */
 export default function OrdersPage() {
   const { formatNumber, formatDateTime } = useLocale();
@@ -94,7 +94,7 @@ export default function OrdersPage() {
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
 
-  // Produits pour création rapide de commande
+  // Produits pour crÃƒÆ’Ã‚Â©ation rapide de commande
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
@@ -159,14 +159,14 @@ export default function OrdersPage() {
         regionName ||
         (regionId ? `${t('common.regionLabel')} #${regionId}` : '');
 
-      if (countryLabel && regionLabel) return `${countryLabel} • ${regionLabel}`;
+      if (countryLabel && regionLabel) return `${countryLabel} - ${regionLabel}`;
       return countryLabel || regionLabel || '';
     },
     [countriesById, regionsById, t]
   );
 
   /* ============================================================
-     🔄 Loaders (useCallback pour éviter les recréations)
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Loaders (useCallback pour ÃƒÆ’Ã‚Â©viter les recrÃƒÆ’Ã‚Â©ations)
   ============================================================ */
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -199,7 +199,7 @@ export default function OrdersPage() {
           : { page, limit: pageSize, total: items.length }
       );
     } catch (e) {
-      console.error('? Erreur chargement commandes:', e);
+      console.error('Erreur chargement commandes:', e);
       notify(t("orders.alerts.loadError"));
       setOrders([]);
       setPagination({ page, limit: pageSize, total: 0 });
@@ -214,7 +214,7 @@ export default function OrdersPage() {
       const data = await getProducts({ limit: 200 });
       setProducts(normalizeListResponse(data, 'products'));
     } catch (e) {
-      console.error('❌ Erreur chargement produits:', e);
+      console.error('Erreur chargement produits:', e);
       setProducts([]);
     } finally {
       setLoadingProducts(false);
@@ -239,7 +239,7 @@ export default function OrdersPage() {
         setUser(current);
         await loadProducts();
       } catch (e) {
-        console.error('? Erreur init OrdersPage:', e);
+        console.error('Erreur init OrdersPage:', e);
         if (e?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
@@ -267,7 +267,7 @@ export default function OrdersPage() {
         setCountries(Array.isArray(cList) ? cList : []);
         setRegions(Array.isArray(rList) ? rList : []);
       } catch (e) {
-        console.error('❌ Erreur chargement pays/régions:', e);
+        console.error('Erreur chargement pays/regions:', e);
         if (mounted) {
           setCountries([]);
           setRegions([]);
@@ -284,13 +284,13 @@ export default function OrdersPage() {
     loadOrders();
   }, [user, loadOrders]);
 
-  // Persistance de l’affichage du formulaire
+  // Persistance de lÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢affichage du formulaire
   useEffect(() => {
     localStorage.setItem('teranga_orders_showForm', showForm ? '1' : '0');
   }, [showForm]);
 
   /* ============================================================
-     ➕ Création commande (avec protection anti double-submit)
+     ÃƒÂ¢Ã…Â¾Ã¢â‚¬Â¢ CrÃƒÆ’Ã‚Â©ation commande (avec protection anti double-submit)
   ============================================================ */
   async function handleCreate(e) {
     e.preventDefault();
@@ -350,7 +350,7 @@ export default function OrdersPage() {
         await loadOrders();
       }
     } catch (err) {
-      console.error('❌ Erreur création commande:', err);
+      console.error('Erreur creation commande:', err);
       notify(
         err?.response?.data?.error ||
           err?.message ||
@@ -362,7 +362,7 @@ export default function OrdersPage() {
   }
 
   /* ============================================================
-     🎛️ Filtres + tri (mémoïsés) — canon robustes
+     ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬ÂºÃƒÂ¯Ã‚Â¸Ã‚Â Filtres + tri (mÃƒÆ’Ã‚Â©moÃƒÆ’Ã‚Â¯sÃƒÆ’Ã‚Â©s) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â canon robustes
   ============================================================ */
   const totalOrders = useMemo(
     () => pagination?.total ?? pagination?.count ?? orders.length,
@@ -418,12 +418,12 @@ export default function OrdersPage() {
       <div className="app-page-shell p-4 sm:p-8">
 
         {/* ===================================================== */}
-        {/* 🧭 Header Premium Responsive (Style B) */}
+        {/* ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â­ Header Premium Responsive (Style B) */}
         {/* ===================================================== */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-full break-words">
             <h1 className="app-page-headline flex items-center gap-2">
-              🧾 <span>{t("orders.title")}</span>
+              <span>{t("orders.title")}</span>
             </h1>
             <p className="app-page-subtitle mt-1">
               {t("orders.subtitle")}
@@ -435,7 +435,7 @@ export default function OrdersPage() {
               to="/shop"
               className="app-btn-primary w-full text-center sm:w-auto"
             >
-              🛍️ {t("orders.buttons.viewCatalog")}
+              {t("orders.buttons.viewCatalog")}
             </Link>
 
             <button
@@ -444,8 +444,8 @@ export default function OrdersPage() {
               className="app-btn-neutral w-full text-center sm:w-auto"
             >
               {showForm
-                ? `➖ ${t("orders.buttons.hideForm")}`
-                : `➕ ${t("orders.buttons.newOrder")}`}
+                ? t("orders.buttons.hideForm")
+                : t("orders.buttons.newOrder")}
             </button>
 
             <button
@@ -460,13 +460,13 @@ export default function OrdersPage() {
             >
               {loading
                 ? t("orders.buttons.refreshLoading")
-                : `🔄 ${t("orders.buttons.refresh")}`}
+                : t("orders.buttons.refresh")}
             </button>
           </div>
         </div>
 
         {/* ===================================================== */}
-        {/* 🎛️ Filtres Premium Responsive (Style SaaS) */}
+        {/* ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬ÂºÃƒÂ¯Ã‚Â¸Ã‚Â Filtres Premium Responsive (Style SaaS) */}
         {/* ===================================================== */}
         <div className="mb-6 rounded-2xl border border-border/70 bg-surface-main/55 p-4 sm:p-5">
           {/* Recherche */}
@@ -477,20 +477,20 @@ export default function OrdersPage() {
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">
-                  🔍
+                  /
                 </span>
                 <input
                   value={filters.q}
                   onChange={(e) => setFilters({ ...filters, q: e.target.value })}
                   placeholder={t("orders.filters.searchPlaceholder")}
-                  className="w-full rounded-xl border border-border/80 bg-white py-2 pl-8 pr-3 text-sm text-text-primary shadow-sm break-words"
+                  className="w-full rounded-xl border border-border/80 bg-surface-card py-2 pl-8 pr-3 text-sm text-text-primary shadow-sm break-words"
                 />
               </div>
             </div>
 
             <div className="w-full lg:w-1/3 flex items-end justify-end">
               <div className="flex w-full flex-col items-start gap-1 text-xs text-text-secondary lg:items-end">
-                <span className="inline-flex items-center rounded-full border border-border/80 bg-white px-3 py-1 shadow-sm">
+                <span className="inline-flex items-center rounded-full border border-border/80 bg-surface-card px-3 py-1 shadow-sm">
                   {t("orders.filters.displayedCount", {
                     count: orders.length,
                     total: totalOrders,
@@ -500,7 +500,7 @@ export default function OrdersPage() {
             </div>
           </div>
 
-          {/* Sélecteurs */}
+          {/* SÃƒÆ’Ã‚Â©lecteurs */}
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {/* Statut commande */}
             <div>
@@ -510,7 +510,7 @@ export default function OrdersPage() {
               <select
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                className="w-full rounded-xl border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+                className="w-full rounded-xl border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
               >
                 <option value="">{t("orders.filters.all")}</option>
                 <option value="created">{t("orders.status.created")}</option>
@@ -530,7 +530,7 @@ export default function OrdersPage() {
               <select
                 value={filters.payment}
                 onChange={(e) => setFilters({ ...filters, payment: e.target.value })}
-                className="w-full rounded-xl border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+                className="w-full rounded-xl border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
               >
                 <option value="">{t("orders.filters.all")}</option>
                 <option value="unpaid">{t("orders.payment.unpaid")}</option>
@@ -548,7 +548,7 @@ export default function OrdersPage() {
               <select
                 value={filters.sort}
                 onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-                className="w-full rounded-xl border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+                className="w-full rounded-xl border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
               >
                 <option value="-createdAt">{t("orders.filters.sortNewest")}</option>
                 <option value="createdAt">{t("orders.filters.sortOldest")}</option>
@@ -562,7 +562,7 @@ export default function OrdersPage() {
           <div className="mt-4 flex flex-col gap-2 text-xs text-text-secondary sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <span>{t("orders.filters.activeLabel")}</span>
-              <span className="inline-flex items-center rounded-full border border-border/80 bg-white px-2 py-0.5">
+              <span className="inline-flex items-center rounded-full border border-border/80 bg-surface-card px-2 py-0.5">
                 {activeFiltersCount
                   ? activeFiltersCount
                   : t("orders.filters.activeNone")}
@@ -579,7 +579,7 @@ export default function OrdersPage() {
           </div>
         </div>
         {/* ===================================================== */}
-        {/* ➕ Formulaire création commande (Premium Responsive) */}
+        {/* ÃƒÂ¢Ã…Â¾Ã¢â‚¬Â¢ Formulaire crÃƒÆ’Ã‚Â©ation commande (Premium Responsive) */}
         {/* ===================================================== */}
         {showForm && (
           <form
@@ -587,7 +587,7 @@ export default function OrdersPage() {
             className="mb-8 rounded-2xl border border-border/70 bg-surface-main/55 p-4 sm:p-6"
           >
             <h2 className="mb-3 text-lg font-semibold text-text-primary">
-              ➕ {t("orders.form.title")}
+              {t("orders.form.title")}
             </h2>
 
             {/* Note client */}
@@ -601,7 +601,7 @@ export default function OrdersPage() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, customerNote: e.target.value }))
                 }
-                className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary break-words"
+                className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary break-words"
                 placeholder={t("orders.form.customerNotePlaceholder")}
               />
             </div>
@@ -644,7 +644,7 @@ export default function OrdersPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, productId: e.target.value }))
                     }
-                    className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+                    className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
                   >
                     <option value="">{t("orders.form.productPlaceholder")}</option>
                     {products.map((p) => (
@@ -655,7 +655,7 @@ export default function OrdersPage() {
                   </select>
                 </div>
 
-                {/* Quantité */}
+                {/* QuantitÃƒÆ’Ã‚Â© */}
                 <div>
                   <label className="mb-1 block text-sm font-medium text-text-secondary">
                     {t("orders.form.quantityLabel")}
@@ -667,7 +667,7 @@ export default function OrdersPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, quantity: e.target.value }))
                     }
-                    className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+                    className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
                   />
                 </div>
 
@@ -683,7 +683,7 @@ export default function OrdersPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, unitPrice: e.target.value }))
                     }
-                    className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary"
+                    className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
                     placeholder={t("orders.form.unitPricePlaceholder")}
                   />
                 </div>
@@ -701,7 +701,7 @@ export default function OrdersPage() {
                     : 'app-btn-primary'
                 }`}
               >
-                {creating ? t("orders.form.submitting") : `➕ ${t("orders.form.submit")}`}
+                {creating ? t("orders.form.submitting") : t("orders.form.submit")}
               </button>
             </div>
           </form>
@@ -718,14 +718,14 @@ export default function OrdersPage() {
           className="mb-4"
         />
 
-        {/* 📄 LISTE Commandes — Cards marketplace style B */}
+        {/* ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¾ LISTE Commandes ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Cards marketplace style B */}
         {/* ===================================================== */}
         {loading ? (
-          <p className="rounded-2xl border border-border/70 bg-white/70 py-6 text-center italic text-text-secondary">
+          <p className="rounded-2xl border border-border/70 bg-surface-card/70 py-6 text-center italic text-text-secondary">
             {t("orders.list.loading")}
           </p>
         ) : orders.length === 0 ? (
-          <p className="rounded-2xl border border-border/70 bg-white/70 py-6 text-center italic text-text-secondary">
+          <p className="rounded-2xl border border-border/70 bg-surface-card/70 py-6 text-center italic text-text-secondary">
             {t("orders.list.empty")}
           </p>
         ) : (
@@ -743,9 +743,9 @@ export default function OrdersPage() {
               return (
                 <div
                   key={o.id}
-                  className="w-full overflow-hidden rounded-2xl border border-border/70 bg-white shadow-sm transition hover:shadow-md break-words"
+                  className="w-full overflow-hidden rounded-2xl border border-border/70 bg-surface-card shadow-sm transition hover:shadow-md break-words"
                 >
-                  {/* Bandeau supérieur */}
+                  {/* Bandeau supÃƒÆ’Ã‚Â©rieur */}
                   <div className="flex flex-col gap-3 border-b border-border/70 bg-surface-main/60 px-4 pb-3 pt-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                     <div className="min-w-0">
                       <h3 className="text-base sm:text-lg font-semibold text-text-primary break-words">
@@ -803,7 +803,7 @@ export default function OrdersPage() {
                         <p className="text-[11px] uppercase text-text-muted">
                           {t("orders.list.amountLabel")}
                         </p>
-                        <p className="text-lg font-bold text-blue-600">
+                        <p className="text-lg font-bold text-blue-600 dark:text-blue-300">
                           {formatNumber(total)}{' '}
                           {getCurrencyLabel(currency)}
                         </p>
@@ -833,14 +833,14 @@ export default function OrdersPage() {
                         to={`/orders/${o.id}`}
                         className="app-btn-primary w-full text-center sm:w-auto"
                       >
-                        📄 {t("orders.buttons.openOrder")}
+                        {t("orders.buttons.openOrder")}
                       </Link>
 
                       <Link
                         to={`/orders/${o.id}/transactions`}
                         className="app-btn-neutral w-full text-center sm:w-auto"
                       >
-                        💰 {t("orders.buttons.viewTransactions")}
+                        {t("orders.buttons.viewTransactions")}
                       </Link>
                     </div>
                   </div>
@@ -853,5 +853,7 @@ export default function OrdersPage() {
     </div>
   );
 }
+
+
 
 

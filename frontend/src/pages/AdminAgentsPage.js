@@ -1,7 +1,7 @@
 // frontend/src/pages/AdminAgentsPage.jsx
 // ============================================================================
-// AdminAgentsPage — VERSION PROD 2025
-// Admin / Master (multi-pays) READY — ZERO RÉGRESSION
+// AdminAgentsPage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION PROD 2025
+// Admin / Master (multi-pays) READY ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ZERO RÃƒÆ’Ã¢â‚¬Â°GRESSION
 // ============================================================================
 
 import { useEffect, useState, useCallback } from "react";
@@ -13,12 +13,12 @@ import { useTranslation } from "react-i18next";
 import { notify } from '../utils/notify';
 
 /* ============================================================================
-// 🔐 CONSTANTES
+// ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â CONSTANTES
 ============================================================================ */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /* ============================================================================
-// 🧩 PAGE PRINCIPALE
+// ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© PAGE PRINCIPALE
 ============================================================================ */
 export default function AdminAgentsPage() {
   const { t } = useTranslation();
@@ -114,16 +114,16 @@ export default function AdminAgentsPage() {
   }
 
   /* ========================================================================
-   * LOAD AGENTS (ADMIN / MASTER — scope backend)
+   * LOAD AGENTS (ADMIN / MASTER ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â scope backend)
    * ====================================================================== */
   const loadAgents = useCallback(async () => {
     setLoadingAgents(true);
     try {
-      // 🔒 Le backend applique déjà le scope multi-pays pour MASTER
+      // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢ Le backend applique dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  le scope multi-pays pour MASTER
       const { data } = await api.get("/users?role=agent");
       setAgents(data?.users || []);
     } catch (err) {
-      console.error("❌ Erreur chargement agents:", err);
+      console.error("Erreur chargement agents:", err);
       setAgents([]);
     } finally {
       setLoadingAgents(false);
@@ -142,7 +142,7 @@ export default function AdminAgentsPage() {
   }, [showForm]);
 
   /* ========================================================================
-   * FILTERING & SORTING — CLIENT SIDE (SAFE)
+   * FILTERING & SORTING ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â CLIENT SIDE (SAFE)
    * ====================================================================== */
   useEffect(() => {
     let arr = [...agents];
@@ -179,7 +179,7 @@ export default function AdminAgentsPage() {
       );
     }
 
-    // Avec téléphone uniquement
+    // Avec tÃƒÆ’Ã‚Â©lÃƒÆ’Ã‚Â©phone uniquement
     if (filters.onlyPhone) {
       arr = arr.filter((a) => !!a.phone);
     }
@@ -243,31 +243,31 @@ export default function AdminAgentsPage() {
       setErrors({});
       await loadAgents();
     } catch (err) {
-      console.error("❌ Erreur création agent:", err);
+      console.error("Erreur creation agent:", err);
       const msg =
         err?.response?.data?.error ||
         t("adminAgentsPage.alerts.createError");
-      notify(`❌ ${msg}`);
+      notify(msg);
     } finally {
       setLoading(false);
     }
   }
 
   /* ========================================================================
-   * UI RENDER — PREMIUM PROD (APPLE LIGHT A1)
+   * UI RENDER ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PREMIUM PROD (APPLE LIGHT A1)
    * ====================================================================== */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/40 to-white px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-lg shadow-slate-200/40 rounded-3xl p-8 border border-slate-200">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-10">
+      <div className="max-w-6xl mx-auto bg-surface-card shadow-lg shadow-slate-200/40 rounded-3xl p-8 border border-border">
 
         {/* ================= HEADER ================= */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">
+            <h1 className="text-3xl font-semibold text-text-primary tracking-tight">
               {t("adminAgentsPage.title")}
             </h1>
             {geoCountryId && !isScopedRole && (
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-text-muted mt-1">
                 {t("adminAgentsPage.labels.filter")}{" "}
                 {geoCountry?.name ||
                   t("adminAgentsPage.labels.countryId", { id: geoCountryId })}
@@ -285,7 +285,7 @@ export default function AdminAgentsPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition"
+              className="px-4 py-2 rounded-xl app-btn-neutral transition"
             >
               {showForm
                 ? t("adminAgentsPage.buttons.hideForm")
@@ -309,12 +309,12 @@ export default function AdminAgentsPage() {
         </div>
 
         {/* ================= FILTRES ================= */}
-        <div className="mb-8 bg-slate-50 border border-slate-200 rounded-2xl p-5">
+        <div className="mb-8 bg-surface-main border border-border rounded-2xl p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
             {/* Recherche */}
             <div className="lg:col-span-2">
-              <label className="text-xs font-medium text-slate-600 mb-1">
+              <label className="text-xs font-medium text-text-secondary mb-1">
                 {t("adminAgentsPage.filters.search")}
               </label>
               <input
@@ -323,13 +323,13 @@ export default function AdminAgentsPage() {
                   setFilters({ ...filters, q: e.target.value })
                 }
                 placeholder={t("adminAgentsPage.placeholders.search")}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-xl border border-border bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             {/* Pays */}
             <div>
-              <label className="text-xs font-medium text-slate-600 mb-1">
+              <label className="text-xs font-medium text-text-secondary mb-1">
                 {t("adminAgentsPage.filters.country")}
               </label>
               <input
@@ -341,13 +341,13 @@ export default function AdminAgentsPage() {
                   })
                 }
                 placeholder={t("adminAgentsPage.placeholders.country")}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-xl border border-border bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-            {/* Téléphone */}
+            {/* TÃƒÆ’Ã‚Â©lÃƒÆ’Ã‚Â©phone */}
             <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
                 <input
                   type="checkbox"
                   checked={filters.onlyPhone}
@@ -365,7 +365,7 @@ export default function AdminAgentsPage() {
 
             {/* Tri */}
             <div>
-              <label className="text-xs font-medium text-slate-600 mb-1">
+              <label className="text-xs font-medium text-text-secondary mb-1">
                 {t("adminAgentsPage.filters.sort")}
               </label>
               <select
@@ -373,7 +373,7 @@ export default function AdminAgentsPage() {
                 onChange={(e) =>
                   setFilters({ ...filters, sort: e.target.value })
                 }
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-xl border border-border bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
               >
                 <option value="-createdAt">{t("adminAgentsPage.filters.sortOptions.newest")}</option>
                 <option value="createdAt">{t("adminAgentsPage.filters.sortOptions.oldest")}</option>
@@ -386,7 +386,7 @@ export default function AdminAgentsPage() {
           </div>
 
           <div className="mt-4 flex items-center justify-between text-xs">
-            <span className="text-slate-500">
+            <span className="text-text-muted">
               {t("adminAgentsPage.count", { count: filtered.length })}
             </span>
             <button
@@ -398,7 +398,7 @@ export default function AdminAgentsPage() {
                   sort: "-createdAt",
                 })
               }
-              className="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 transition"
+              className="px-3 py-1.5 rounded-lg bg-surface-main/80 hover:bg-surface-main transition"
             >
               {t("adminAgentsPage.buttons.reset")}
             </button>
@@ -409,7 +409,7 @@ export default function AdminAgentsPage() {
         {showForm && (
           <form
             onSubmit={handleSubmit}
-            className="mb-10 bg-slate-50 border border-slate-200 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-5 shadow-sm"
+            className="mb-10 bg-surface-main border border-border rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-5 shadow-sm"
           >
             {[
               { field: "firstName", label: t("adminAgentsPage.form.firstNameLabel"), type: "text" },
@@ -422,7 +422,7 @@ export default function AdminAgentsPage() {
               },
             ].map(({ field, label, type }) => (
               <div key={field}>
-                <label className="text-xs font-medium text-slate-700">
+                <label className="text-xs font-medium text-text-secondary">
                   {label}
                 </label>
                 <input
@@ -431,19 +431,19 @@ export default function AdminAgentsPage() {
                   onChange={(e) =>
                     handleChange(field, e.target.value)
                   }
-                  className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full mt-1 px-3 py-2 rounded-xl border border-border bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
                 />
                 {errors[field] && (
-                  <p className="text-xs text-red-600 mt-1">
+                  <p className="text-xs text-rose-700 dark:text-rose-300 mt-1">
                     {errors[field]}
                   </p>
                 )}
               </div>
             ))}
 
-            {/* Téléphone */}
+            {/* TÃƒÆ’Ã‚Â©lÃƒÆ’Ã‚Â©phone */}
             <div>
-              <label className="text-xs font-medium text-slate-700">
+              <label className="text-xs font-medium text-text-secondary">
                 {t("adminAgentsPage.form.phoneLabel")}
               </label>
               <input
@@ -451,13 +451,13 @@ export default function AdminAgentsPage() {
                 onChange={(e) =>
                   handleChange("phone", e.target.value)
                 }
-                className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
+                className="w-full mt-1 px-3 py-2 rounded-xl border border-border bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             {/* Pays */}
             <div>
-              <label className="text-xs font-medium text-slate-700">
+              <label className="text-xs font-medium text-text-secondary">
                 {t("adminAgentsPage.form.countryLabel")}
               </label>
               <input
@@ -466,10 +466,10 @@ export default function AdminAgentsPage() {
                 onChange={(e) =>
                   handleChange("country", e.target.value)
                 }
-                className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
+                className="w-full mt-1 px-3 py-2 rounded-xl border border-border bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
               />
               {errors.country && (
-                <p className="text-xs text-red-600 mt-1">
+                <p className="text-xs text-rose-700 dark:text-rose-300 mt-1">
                   {errors.country}
                 </p>
               )}
@@ -494,22 +494,22 @@ export default function AdminAgentsPage() {
         )}
 
         {/* ================= TABLEAU ================= */}
-        <h2 className="text-xl font-semibold text-slate-900 mb-4">
+        <h2 className="text-xl font-semibold text-text-primary mb-4">
           {t("adminAgentsPage.table.title")}
         </h2>
 
         {loadingAgents ? (
-          <p className="text-center text-slate-500 italic py-6">
+          <p className="text-center text-text-muted italic py-6">
             {t("adminAgentsPage.loadingAgents")}
           </p>
         ) : filtered.length === 0 ? (
-          <p className="text-center text-slate-500 italic py-6">
+          <p className="text-center text-text-muted italic py-6">
             {t("adminAgentsPage.table.empty")}
           </p>
         ) : (
-          <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm">
+          <div className="overflow-x-auto border border-border rounded-2xl shadow-sm">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-100/60 text-slate-700 border-b border-slate-200">
+              <thead className="bg-surface-main/80/60 text-text-secondary border-b border-border">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">
                     {t("adminAgentsPage.table.headers.name")}
@@ -533,7 +533,7 @@ export default function AdminAgentsPage() {
                 {filtered.map((a) => (
                   <tr
                     key={a.id}
-                    className="hover:bg-slate-50 border-b border-slate-100 transition"
+                    className="hover:bg-surface-main border-b border-border/70 transition"
                   >
                     <td className="px-4 py-3">
                       {[a.firstName, a.lastName]
@@ -555,7 +555,7 @@ export default function AdminAgentsPage() {
               </tbody>
             </table>
 
-            <div className="px-4 py-2 text-xs text-slate-500">
+            <div className="px-4 py-2 text-xs text-text-muted">
               {t("adminAgentsPage.table.results", { count: filtered.length })}
             </div>
           </div>
@@ -565,5 +565,7 @@ export default function AdminAgentsPage() {
   );
 }
   
+
+
 
 

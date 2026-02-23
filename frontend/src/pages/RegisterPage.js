@@ -302,7 +302,7 @@ export default function RegisterPage() {
      UI - Apple Light Premium A1
   ========================================================== */
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-12">
       <div className="page-shell w-full max-w-md p-8">
         {/* HEADER */}
         <div className="text-center mb-8">
@@ -312,20 +312,20 @@ export default function RegisterPage() {
             alt="Logo Teranga"
             className="w-16 h-16 mx-auto mb-3 drop-shadow-sm"
           />
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">
             {t("auth.register.title")}
           </h1>
           <p className="page-lead">
             {t("auth.register.subtitle")}
           </p>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-text-muted mt-1">
             {t("auth.register.subline")}
           </p>
         </div>
 
         {/* MESSAGE ERREUR */}
         {errorMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm shadow-sm">
+          <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-sm shadow-sm">
             {errorMsg}
           </div>
         )}
@@ -374,18 +374,18 @@ export default function RegisterPage() {
               required,
             }) => (
               <div key={field}>
-                <label className="block text-sm font-medium text-slate-800 mb-1">
+                <label className="block text-sm font-medium text-text-primary mb-1">
                   {label}
                 </label>
                 <div className="relative">
-                  <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
                   <input
                     type={type}
                     value={form[field]}
                     placeholder={placeholder}
                     onChange={(e) => updateField(field, e.target.value)}
                     required={required}
-                    className="w-full border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-border rounded-xl pl-10 pr-3 py-2 text-sm bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -394,22 +394,22 @@ export default function RegisterPage() {
 
           {/* PAYS */}
           <div>
-            <label className="block text-sm font-medium text-slate-800 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               {t("auth.register.countryLabel")}
             </label>
 
             <div className="relative">
-              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
               <input
                 type="text"
                 value={form.country}
                 placeholder={t("auth.register.countryPlaceholder")}
                 onChange={(e) => updateField("country", e.target.value)}
-                className="w-full border border-slate-300 rounded-xl pl-10 pr-3 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-border rounded-xl pl-10 pr-3 py-2 bg-surface-card text-sm focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-text-muted mt-1">
               {t("auth.register.countryExample")}{" "}
               {countryISO2 && /^[A-Z]{2}$/.test(countryISO2) ? (
                 <>
@@ -421,14 +421,14 @@ export default function RegisterPage() {
             {/* SUGGESTED PAYS COUVERTS */}
             <div className="mt-3">
               {masterLoading ? (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-text-muted">
                   {t("auth.register.countriesLoading")}
                 </p>
               ) : masterError ? (
-                <p className="text-xs text-red-600">{masterError}</p>
+                <p className="text-xs text-rose-700 dark:text-rose-300">{masterError}</p>
               ) : masterOptions.length ? (
                 <>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-text-muted">
                     {t("auth.register.countriesHint", {
                       count: masterOptions.length,
                     })}
@@ -442,7 +442,7 @@ export default function RegisterPage() {
                         className={`px-3 py-1.5 rounded-full text-xs border transition ${
                           countryISO2 === c.code
                             ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                            : "bg-surface-main text-text-secondary border-border hover:bg-surface-main/80"
                         }`}
                       >
                         {c.name}
@@ -451,29 +451,29 @@ export default function RegisterPage() {
                   </div>
                 </>
               ) : (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-text-muted">
                   {t("auth.register.countriesEmpty")}
                 </p>
               )}
               {!masterLoading && !masterError && countryISO2 && !countrySupported && (
-                <p className="text-xs text-red-600 mt-2">
+                <p className="text-xs text-rose-700 dark:text-rose-300 mt-2">
                   {t("auth.register.errors.countryNoMaster")}
                 </p>
               )}
             </div>
 
-            <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+            <div className="mt-3 rounded-xl border border-blue-500/30 bg-blue-500/15 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
               {t("auth.register.regionInfo")}
             </div>
           </div>
 
           {/* {t("auth.register.passwordLabel")} */}
           <div>
-            <label className="block text-sm font-medium text-slate-800 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               {t("auth.register.passwordLabel")}
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
               <input
                 type={showPassword ? "text" : "password"}
                 required
@@ -481,12 +481,12 @@ export default function RegisterPage() {
                 value={form.password}
                 placeholder={t("auth.register.passwordPlaceholder")}
                 onChange={(e) => updateField("password", e.target.value)}
-                className="w-full border border-slate-300 rounded-xl pl-10 pr-10 py-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-border rounded-xl pl-10 pr-10 py-2 bg-surface-card text-text-primary text-sm focus:ring-2 focus:ring-blue-500"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute inset-y-0 right-3 flex items-center text-slate-500 hover:text-blue-600"
+                className="absolute inset-y-0 right-3 flex items-center text-text-muted hover:text-blue-600"
                 aria-label={
                   showPassword
                     ? t("auth.register.passwordHide")
@@ -500,7 +500,7 @@ export default function RegisterPage() {
                 )}
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-text-muted mt-1">
               {t("auth.register.passwordMin")}
             </p>
           </div>
@@ -527,11 +527,11 @@ export default function RegisterPage() {
         </form>
 
         {/* FOOTER */}
-        <div className="mt-8 text-center text-sm text-slate-600">
+        <div className="mt-8 text-center text-sm text-text-secondary">
           {t("auth.register.haveAccount")}{" "}
           <Link
             to="/login"
-            className="text-blue-600 font-medium hover:underline"
+            className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
           >
             {t("auth.register.loginLink")}
           </Link>
@@ -540,6 +540,8 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+
 
 
 

@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { notify } from '../utils/notify';
 
 /* ============================================================================
-   🌍 FILE_BASE + normalizePath + toAbsUrl — PRODUCTION READY (SSR safe)
+   ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â FILE_BASE + normalizePath + toAbsUrl ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PRODUCTION READY (SSR safe)
 ============================================================================ */
 const RAW_API =
   (typeof window !== "undefined" &&
@@ -44,17 +44,17 @@ function toAbsUrl(path = "") {
 }
 
 /* ============================================================================
-   🎨 STYLE INPUTS (remplace "form-input" cassé + évite window.formInputStyle)
+   ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¨ STYLE INPUTS (remplace "form-input" cassÃƒÆ’Ã‚Â© + ÃƒÆ’Ã‚Â©vite window.formInputStyle)
 ============================================================================ */
 const FORM_INPUT =
-  "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white " +
+  "w-full border border-border rounded-lg px-3 py-2 text-sm bg-surface-card text-text-primary " +
   "focus:outline-none focus:ring-2 focus:ring-blue-600 transition";
 
 const TRANSACTION_TYPE_VALUES = ["revenue", "expense", "commission", "adjustment"];
 const SERVICE_CURRENCY_CODES = ["XOF", "XAF", "EUR", "USD", "GBP"];
 
 /* ============================================================================
-   🔗 Proof resolver (ImageKit + legacy)
+   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â€ Proof resolver (ImageKit + legacy)
    - backend peut renvoyer: proofFile.url, proofFile.path, proofFile.filePath
    - ou proofFile string, ou proofFile = { url, fileId, ... }
 ============================================================================ */
@@ -109,9 +109,9 @@ function getProofExtLabel(pf, proofHref = "", fallback = "FILE") {
 
 
 /* ============================================================================
-   🧾 Payload builder (FormData si fichier)
-   - évite régressions: createTransaction(payload) support JSON sans fichier
-   - et support multipart si proofFile présent (upload.any() côté backend)
+   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¾ Payload builder (FormData si fichier)
+   - ÃƒÆ’Ã‚Â©vite rÃƒÆ’Ã‚Â©gressions: createTransaction(payload) support JSON sans fichier
+   - et support multipart si proofFile prÃƒÆ’Ã‚Â©sent (upload.any() cÃƒÆ’Ã‚Â´tÃƒÆ’Ã‚Â© backend)
 ============================================================================ */
 function buildCreateTransactionPayload(payload) {
   const hasFile = payload?.proofFile instanceof File;
@@ -130,7 +130,7 @@ function buildCreateTransactionPayload(payload) {
     if (v === undefined || v === null || v === "") return;
 
     if (k === "proofFile") {
-      // ✅ backend tolère plusieurs noms, mais on envoie "proofFile"
+      // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ backend tolÃƒÆ’Ã‚Â¨re plusieurs noms, mais on envoie "proofFile"
       fd.append("proofFile", v);
       return;
     }
@@ -142,7 +142,7 @@ function buildCreateTransactionPayload(payload) {
 }
 
 /* ============================================================================
-   📄 PAGE : ServiceTransactionsPage — VERSION PREMIUM STYLE A 2025
+   ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¾ PAGE : ServiceTransactionsPage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION PREMIUM STYLE A 2025
 ============================================================================ */
 export default function ServiceTransactionsPage() {
   const { t } = useTranslation();
@@ -159,7 +159,7 @@ export default function ServiceTransactionsPage() {
   const [form, setForm] = useState({
     type: "expense",
     amount: "",
-    // ✅ multi-pays : laisse backend normaliser (fallback XOF)
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ multi-pays : laisse backend normaliser (fallback XOF)
     currency: "XOF",
     description: "",
     taskId: "",
@@ -167,7 +167,7 @@ export default function ServiceTransactionsPage() {
   });
 
   /* ============================================================================
-     🔐 Auth headers
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Auth headers
   ============================================================================ */
   const authHeaders = useMemo(() => {
     const token =
@@ -180,7 +180,7 @@ export default function ServiceTransactionsPage() {
   }, []);
 
   /* ============================================================================
-     📥 Charger transactions (robuste: array ou {transactions})
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ Charger transactions (robuste: array ou {transactions})
   ============================================================================ */
   const fetchTransactions = useCallback(async () => {
     try {
@@ -196,13 +196,13 @@ export default function ServiceTransactionsPage() {
 
       setTransactions(enriched);
     } catch (err) {
-      console.error("❌ Erreur fetchTransactions:", err);
+      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur fetchTransactions:", err);
       setTransactions([]);
     }
   }, [id]);
 
   /* ============================================================================
-     📥 Charger tâches
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ Charger tÃƒÆ’Ã‚Â¢ches
   ============================================================================ */
   const fetchTasks = useCallback(async () => {
     try {
@@ -211,13 +211,13 @@ export default function ServiceTransactionsPage() {
       });
       setTasks(data?.tasks || []);
     } catch (err) {
-      console.error("❌ Erreur fetchTasks:", err);
+      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur fetchTasks:", err);
       setTasks([]);
     }
   }, [id, authHeaders]);
 
   /* ============================================================================
-     🚀 Initialisation
+     ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ Initialisation
   ============================================================================ */
   useEffect(() => {
     let active = true;
@@ -236,7 +236,7 @@ export default function ServiceTransactionsPage() {
 
         await Promise.all([fetchTransactions(), fetchTasks()]);
       } catch (err) {
-        console.error("❌ Erreur init:", err);
+        console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur init:", err);
 
         if (typeof window !== "undefined") {
           localStorage.removeItem("teranga_token");
@@ -255,10 +255,10 @@ export default function ServiceTransactionsPage() {
   }, [fetchTransactions, fetchTasks]);
 
   /* ============================================================================
-     ➕ Création transaction (admin/agent/master)
-     - ✅ anti double submit
-     - ✅ payload FormData si fichier
-     - ✅ currency inclus (multi-pays)
+     ÃƒÂ¢Ã…Â¾Ã¢â‚¬Â¢ CrÃƒÆ’Ã‚Â©ation transaction (admin/agent/master)
+     - ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ anti double submit
+     - ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ payload FormData si fichier
+     - ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ currency inclus (multi-pays)
   ============================================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
@@ -301,7 +301,7 @@ export default function ServiceTransactionsPage() {
 
       await fetchTransactions();
     } catch (err) {
-      console.error("❌ Erreur ajout transaction:", err);
+      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur ajout transaction:", err);
       notify(t("serviceTransactions.alerts.createError"));
     } finally {
       setSubmitting(false);
@@ -309,12 +309,12 @@ export default function ServiceTransactionsPage() {
   }
 
   /* ============================================================================
-     ⏳ Loading
+     ÃƒÂ¢Ã‚ÂÃ‚Â³ Loading
   ============================================================================ */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
-        <p className="text-gray-600 text-lg animate-pulse text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main">
+        <p className="text-text-secondary text-lg animate-pulse text-center">
           {t("serviceTransactions.loading")}
         </p>
       </div>
@@ -323,7 +323,7 @@ export default function ServiceTransactionsPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-surface-main">
         <p className="text-red-600 text-lg font-semibold">
           {t("serviceTransactions.unauthenticated")}
         </p>
@@ -331,41 +331,41 @@ export default function ServiceTransactionsPage() {
     );
   }
 
-  // ✅ master inclus (multi-pays / ACL backend)
+  // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ master inclus (multi-pays / ACL backend)
   const canCreate =
     user?.role === "admin" || user?.role === "agent" || user?.role === "master";
 
   /* ============================================================================
-     🎨 UI principale — STYLE A PREMIUM
+     ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¨ UI principale ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â STYLE A PREMIUM
   ============================================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
-      <div className="max-w-5xl mx-auto bg-white shadow-2xl rounded-3xl border border-gray-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-10">
-        {/* 🧭 HEADER PREMIUM */}
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 py-8 sm:px-4 sm:py-10">
+      <div className="max-w-5xl mx-auto bg-surface-card shadow-2xl rounded-3xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-10">
+        {/* ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â­ HEADER PREMIUM */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[0.7rem] uppercase tracking-wide font-semibold text-blue-600 mb-1">
               {t("serviceTransactions.header.kicker", { id })}
             </p>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 break-words">
-              💼 {t("serviceTransactions.header.title")}
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary break-words">
+              {t("serviceTransactions.header.title")}
             </h1>
 
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">
+            <p className="text-xs sm:text-sm text-text-secondary mt-1">
               {t("serviceTransactions.header.subtitle")}
             </p>
           </div>
 
           <button
             onClick={() => navigate(`/services/${id}/tasks`)}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
           >
-            📋 {t("serviceTransactions.header.viewTasks")}
+            {t("serviceTransactions.header.viewTasks")}
           </button>
         </div>
 
-        {/* ➕ FORMULAIRE PREMIUM (si autorisé) */}
+        {/* ÃƒÂ¢Ã…Â¾Ã¢â‚¬Â¢ FORMULAIRE PREMIUM (si autorisÃƒÆ’Ã‚Â©) */}
         {canCreate && (
           <TransactionForm
             form={form}
@@ -376,7 +376,7 @@ export default function ServiceTransactionsPage() {
           />
         )}
 
-        {/* 📜 HISTORIQUE PREMIUM */}
+        {/* ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…â€œ HISTORIQUE PREMIUM */}
         <TransactionHistory
           transactions={transactions}
           getProofHref={getProofHrefFromTransaction}
@@ -386,7 +386,7 @@ export default function ServiceTransactionsPage() {
   );
 }
 /* ============================================================================
-   🧩 FORMULAIRE — PREMIUM STYLE A
+   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© FORMULAIRE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PREMIUM STYLE A
 ============================================================================ */
 function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
   const { t } = useTranslation();
@@ -401,13 +401,13 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
 
   return (
     <div className="">
-      <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
-        ➕ {t("serviceTransactions.form.title")}
+      <h2 className="text-lg sm:text-xl font-bold text-text-primary mb-4">
+        {t("serviceTransactions.form.title")}
       </h2>
 
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-2xl border border-gray-200 shadow-sm"
+        className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface-main p-5 rounded-2xl border border-border shadow-sm"
       >
         {/* Type */}
         <FormGroup label={t("serviceTransactions.form.typeLabel")}>
@@ -452,7 +452,7 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
           </select>
         </FormGroup>
 
-        {/* Tâche liée */}
+        {/* TÃƒÆ’Ã‚Â¢che liÃƒÆ’Ã‚Â©e */}
         <FormGroup label={t("serviceTransactions.form.taskLabel")} full>
           <select
             value={form.taskId}
@@ -494,7 +494,7 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
             className={FORM_INPUT}
           />
           {form.proofFile && (
-            <p className="text-xs text-slate-500 mt-1 break-all">
+            <p className="text-xs text-text-muted mt-1 break-all">
               {t("serviceTransactions.form.proofSelectedLabel")}{" "}
               <strong>{form.proofFile.name}</strong>
             </p>
@@ -523,12 +523,12 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
 }
 
 /* ============================================================================
-   🧩 FormGroup — composant premium
+   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© FormGroup ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â composant premium
 ============================================================================ */
 function FormGroup({ label, children, full }) {
   return (
     <div className={full ? "col-span-1 sm:col-span-2" : ""}>
-      <label className="block text-sm font-medium text-gray-800 mb-1">
+      <label className="block text-sm font-medium text-text-primary mb-1">
         {label}
       </label>
       {children}
@@ -537,7 +537,7 @@ function FormGroup({ label, children, full }) {
 }
 
 /* ============================================================================
-   🧩 HISTORIQUE — Premium Style A (proofs ImageKit + legacy)
+   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© HISTORIQUE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Premium Style A (proofs ImageKit + legacy)
 ============================================================================ */
 function TransactionHistory({ transactions, getProofHref }) {
   const { t } = useTranslation();
@@ -545,12 +545,12 @@ function TransactionHistory({ transactions, getProofHref }) {
 
   return (
     <div>
-      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
-        📜 {t("serviceTransactions.history.title")}
+      <h2 className="text-xl sm:text-2xl font-bold text-text-primary mb-4">
+        {t("serviceTransactions.history.title")}
       </h2>
 
       {transactions.length === 0 ? (
-        <p className="text-gray-500 italic text-center py-6">
+        <p className="text-text-muted italic text-center py-6">
           {t("serviceTransactions.history.empty")}
         </p>
       ) : (
@@ -566,27 +566,27 @@ function TransactionHistory({ transactions, getProofHref }) {
             const typeMeta =
               trx.type === "revenue"
                 ? {
-                    icon: "⬆️",
-                    badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                    icon: "+",
+                    badge: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
                   }
                 : trx.type === "expense"
                 ? {
-                    icon: "⬇️",
+                    icon: "-",
                     badge: "bg-rose-50 text-rose-700 border-rose-200",
                   }
                 : trx.type === "commission"
                 ? {
-                    icon: "💼",
-                    badge: "bg-amber-50 text-amber-700 border-amber-200",
+                    icon: "$",
+                    badge: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
                   }
                 : trx.type === "adjustment"
                 ? {
-                    icon: "🧾",
-                    badge: "bg-blue-50 text-blue-700 border-blue-200",
+                    icon: "~",
+                    badge: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
                   }
                 : {
-                    icon: "💳",
-                    badge: "bg-slate-100 text-slate-700 border-slate-200",
+                    icon: "*",
+                    badge: "bg-surface-main/80 text-text-secondary border-border",
                   };
 
             const proofHref = getProofHref ? getProofHref(trx) : "";
@@ -616,7 +616,7 @@ function TransactionHistory({ transactions, getProofHref }) {
             return (
               <div
                 key={trx.id}
-                className="bg-gradient-to-br from-white via-slate-50 to-white border border-gray-200 rounded-2xl shadow-sm p-5 hover:shadow-md transition"
+                className="bg-gradient-to-br from-surface-main via-surface-card to-surface-main border border-border rounded-2xl shadow-sm p-5 hover:shadow-md transition"
               >
                 {/* HEADER */}
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -628,36 +628,36 @@ function TransactionHistory({ transactions, getProofHref }) {
                         <span>{typeMeta.icon}</span>
                         {typeLabel}
                       </span>
-                      <h3 className="text-lg font-semibold text-gray-900 break-words">
+                      <h3 className="text-lg font-semibold text-text-primary break-words">
                         {amount} {currencyLabel}
                       </h3>
                     </div>
-                    <p className="text-sm text-gray-600 break-words mt-1">
+                    <p className="text-sm text-text-secondary break-words mt-1">
                       {trx.description ||
                         t("serviceTransactions.history.descriptionFallback")}
                     </p>
                   </div>
 
-                  <div className="text-xs text-gray-500">{createdAtDisplay}</div>
+                  <div className="text-xs text-text-muted">{createdAtDisplay}</div>
                 </div>
 
                 {/* DETAILS */}
-                <div className="mt-4 text-sm text-gray-700 space-y-2">
+                <div className="mt-4 text-sm text-text-secondary space-y-2">
                   {trx.task && (
                     <p className="break-words">
-                      🔧 <strong>{t("serviceTransactions.history.taskLabel")}:</strong>{" "}
+                      <strong>{t("serviceTransactions.history.taskLabel")}:</strong>{" "}
                       {trx.task.title} ({t("serviceTransactions.history.taskIdLabel")}{" "}
                       {trx.task.id})
                     </p>
                   )}
 
                   {proofHref && (
-                    <div className="mt-2 flex flex-col sm:flex-row gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <div className="mt-2 flex flex-col sm:flex-row gap-3 bg-surface-main border border-border rounded-xl p-3">
                       <a
                         href={proofHref}
                         target="_blank"
                         rel="noreferrer"
-                        className="relative w-full sm:w-36 aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-white flex items-center justify-center"
+                        className="relative w-full sm:w-36 aspect-[4/3] rounded-lg overflow-hidden border border-border bg-surface-card flex items-center justify-center"
                       >
                         {proofKind === "image" ? (
                           <img
@@ -669,7 +669,7 @@ function TransactionHistory({ transactions, getProofHref }) {
                           />
                         ) : (
                           <div className="text-center">
-                            <div className="text-[0.65rem] font-semibold text-slate-700 bg-white/80 border border-slate-200 px-2 py-0.5 rounded-full inline-flex">
+                            <div className="text-[0.65rem] font-semibold text-text-secondary bg-surface-card/80 border border-border px-2 py-0.5 rounded-full inline-flex">
                               {proofExt}
                             </div>
                           </div>
@@ -678,10 +678,10 @@ function TransactionHistory({ transactions, getProofHref }) {
                         <span
                           className={`absolute top-2 left-2 text-[0.65rem] font-semibold px-2 py-0.5 rounded-full border ${
                             proofKind === "image"
-                              ? "bg-blue-50 text-blue-700 border-blue-100"
+                              ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30"
                               : proofKind === "pdf"
-                              ? "bg-red-50 text-red-700 border-red-100"
-                              : "bg-gray-50 text-gray-700 border-gray-200"
+                              ? "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30"
+                              : "bg-surface-main text-text-secondary border-border"
                           }`}
                         >
                           {proofKind === "image"
@@ -693,19 +693,19 @@ function TransactionHistory({ transactions, getProofHref }) {
                       </a>
 
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-text-muted">
                           {t("serviceTransactions.history.proofLabel")}
                         </div>
                         <a
                           href={proofHref}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-sm font-semibold text-blue-600 hover:underline break-all"
+                          className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline break-all"
                         >
                           {proofLabel ||
                             t("serviceTransactions.history.attachmentFallback")}
                         </a>
-                        <div className="text-[0.7rem] text-slate-500 mt-1">
+                        <div className="text-[0.7rem] text-text-muted mt-1">
                           {proofKind === "image"
                             ? t("serviceTransactions.history.previewAvailable")
                             : t("serviceTransactions.history.format", {
@@ -716,7 +716,7 @@ function TransactionHistory({ transactions, getProofHref }) {
                     </div>
                   )}
 
-                  <p className="text-xs text-gray-500 break-words">
+                  <p className="text-xs text-text-muted break-words">
                     {t("serviceTransactions.history.createdBy", { name: createdBy })}
                   </p>
                 </div>
@@ -728,5 +728,7 @@ function TransactionHistory({ transactions, getProofHref }) {
     </div>
   );
 }
+
+
 
 

@@ -1,13 +1,13 @@
 // frontend/src/pages/ProductListPage.jsx
 /* eslint-disable jsx-a11y/img-redundant-alt */
 /**
- * 🛍️ ProductListPage — Teranga PRODUCTION READY (Style A 2025)
+ * Ã°Å¸â€ºÂÃ¯Â¸Â ProductListPage Ã¢â‚¬â€ Teranga PRODUCTION READY (Style A 2025)
  * ----------------------------------------------------------------
  * - Liste des produits avec design premium & responsive
  * - Compatible multi-images (imageUrl + allImageUrls + coverImage + gallery)
  * - Utilise FILE_BASE + toAbsUrl pour les environnements de prod
- * - Compatible réponses API: array direct OU { products, pagination }
- * - Aucune régression de logique, uniquement alignement + robustesse
+ * - Compatible rÃƒÂ©ponses API: array direct OU { products, pagination }
+ * - Aucune rÃƒÂ©gression de logique, uniquement alignement + robustesse
  * ----------------------------------------------------------------
  */
 
@@ -19,8 +19,8 @@ import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
 
 /* =========================================================
-   🌍 FILE_BASE + normalizePath + toAbsUrl
-   (même logique que ProductCatalogPage, harmonisation)
+   Ã°Å¸Å’Â FILE_BASE + normalizePath + toAbsUrl
+   (mÃƒÂªme logique que ProductCatalogPage, harmonisation)
 ========================================================= */
 const FILE_BASE =
   (typeof window !== "undefined" &&
@@ -48,7 +48,7 @@ function toAbsUrl(path = "") {
 }
 
 /* =========================================================
-   🖼 Helpers images (robuste, rétro-compatible)
+   Ã°Å¸â€“Â¼ Helpers images (robuste, rÃƒÂ©tro-compatible)
    - backend withLabels => imageUrl, allImageUrls, coverImage, gallery
 ========================================================= */
 function getProductImages(product) {
@@ -83,7 +83,7 @@ function getProductImages(product) {
     });
   }
 
-  // Déduplication + normalisation en URL absolues
+  // DÃƒÂ©duplication + normalisation en URL absolues
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
@@ -91,7 +91,7 @@ function getProductImages(product) {
 }
 
 /* =========================================================
-   🛍️ Page Liste des produits
+   Ã°Å¸â€ºÂÃ¯Â¸Â Page Liste des produits
 ========================================================= */
 export default function ProductListPage() {
   const { formatNumber } = useLocale();
@@ -105,7 +105,7 @@ export default function ProductListPage() {
       try {
         setLoading(true);
 
-        // ✅ compat: getProducts peut renvoyer:
+        // Ã¢Å“â€¦ compat: getProducts peut renvoyer:
         // - un array directement
         // - ou { products, pagination }
         const res = await getProducts();
@@ -114,7 +114,7 @@ export default function ProductListPage() {
         setProducts(Array.isArray(prods) ? prods : []);
         setError("");
       } catch (e) {
-        console.error("❌ Erreur chargement produits:", e);
+        console.error("Erreur chargement produits:", e);
         const msg =
           e?.response?.data?.error ||
           t("productListPage.errors.load");
@@ -127,12 +127,12 @@ export default function ProductListPage() {
   }, [t]);
 
   /* =========================================================
-     🌀 États de chargement / erreur
+     Ã°Å¸Å’â‚¬ Ãƒâ€°tats de chargement / erreur
   ========================================================= */
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
-        <p className="text-gray-600 text-lg animate-pulse">
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main">
+        <p className="text-text-secondary text-lg animate-pulse">
           {t("productListPage.loading")}
         </p>
       </div>
@@ -141,14 +141,14 @@ export default function ProductListPage() {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
-        <div className="max-w-md w-full bg-white border border-red-100 rounded-2xl shadow-lg p-6 text-center">
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4">
+        <div className="max-w-md w-full bg-surface-card border border-red-100 rounded-2xl shadow-lg p-6 text-center">
           <p className="text-red-600 text-base sm:text-lg mb-4 break-words">
             {error}
           </p>
           <Link
             to="/"
-            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold app-btn-neutral rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/20"
           >
             {t("productListPage.actions.backHome")}
           </Link>
@@ -159,14 +159,14 @@ export default function ProductListPage() {
 
   if (products.length === 0) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
-        <div className="max-w-md w-full bg-white border border-gray-100 rounded-2xl shadow-lg p-6 text-center">
-          <p className="text-gray-500 text-base sm:text-lg italic mb-4">
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4">
+        <div className="max-w-md w-full bg-surface-card border border-border/70 rounded-2xl shadow-lg p-6 text-center">
+          <p className="text-text-muted text-base sm:text-lg italic mb-4">
             {t("productListPage.empty")}
           </p>
           <Link
             to="/"
-            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold app-btn-neutral rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/20"
           >
             {t("productListPage.actions.backHome")}
           </Link>
@@ -176,31 +176,31 @@ export default function ProductListPage() {
   }
 
   /* =========================================================
-     🧱 Affichage des produits — Design premium
+     Ã°Å¸Â§Â± Affichage des produits Ã¢â‚¬â€ Design premium
   ========================================================= */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4 sm:px-6 py-10">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 sm:px-6 py-10">
       <div className="max-w-6xl mx-auto">
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              🛍️ <span>{t("productListPage.header.title")}</span>
+            <h1 className="text-3xl font-extrabold text-text-primary flex items-center gap-2">
+              <span>{t("productListPage.header.title")}</span>
             </h1>
-            <p className="text-sm text-slate-600 mt-1">
+            <p className="text-sm text-text-secondary mt-1">
               {t("productListPage.header.subtitle")}
             </p>
           </div>
 
-          <div className="text-right text-xs text-slate-500">
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/80 border border-slate-200 shadow-sm">
+          <div className="text-right text-xs text-text-muted">
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-surface-card/80 border border-border shadow-sm">
               {t("productListPage.header.count", { count: products.length })}
             </span>
           </div>
         </div>
 
         {/* GRILLE PRODUITS */}
-        <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl shadow-sm p-4 sm:p-5">
+        <div className="bg-surface-card/80 backdrop-blur-sm border border-border rounded-2xl shadow-sm p-4 sm:p-5">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {products.map((p) => {
               const images = getProductImages(p);
@@ -223,7 +223,7 @@ export default function ProductListPage() {
                   key={p.id}
                   to={`/products/${p.id}`}
                   className="
-                    group bg-white border border-slate-200 rounded-2xl
+                    group bg-surface-card border border-border rounded-2xl
                     shadow-sm hover:shadow-lg hover:border-blue-200
                     transition overflow-hidden flex flex-col
                   "
@@ -252,34 +252,34 @@ export default function ProductListPage() {
                       )}
                     </div>
                   ) : (
-                    <div className="w-full h-44 flex items-center justify-center bg-slate-100 text-slate-400 text-sm mb-0">
+                    <div className="w-full h-44 flex items-center justify-center bg-surface-main/80 text-text-muted text-sm mb-0">
                       {t("productListPage.card.noImage")}
                     </div>
                   )}
 
                   {/* Contenu carte */}
                   <div className="flex-1 flex flex-col p-4">
-                    {/* Titre + réf */}
+                    {/* Titre + rÃƒÂ©f */}
                     <div className="flex items-start justify-between gap-2">
-                      <h2 className="text-base font-semibold text-slate-900 line-clamp-2">
+                      <h2 className="text-base font-semibold text-text-primary line-clamp-2">
                         {p.name || t("common.dash")}
                       </h2>
                       {p.id != null && (
-                        <span className="text-[10px] text-slate-400 font-mono bg-slate-50 border border-slate-200 rounded-full px-2 py-0.5">
+                        <span className="text-[10px] text-text-muted font-mono bg-surface-main border border-border rounded-full px-2 py-0.5">
                           #{p.id}
                         </span>
                       )}
                     </div>
 
                     {/* Description courte */}
-                    <p className="text-slate-600 flex-1 mt-1 text-sm line-clamp-3">
+                    <p className="text-text-secondary flex-1 mt-1 text-sm line-clamp-3">
                       {excerpt ? excerpt : t("productListPage.card.noDescription")}
                     </p>
 
                     {/* Prix */}
                     <div className="mt-3 flex items-end justify-between">
                       <div>
-                        <p className="text-[11px] uppercase text-slate-400">
+                        <p className="text-[11px] uppercase text-text-muted">
                           {t("productListPage.card.priceLabel")}
                         </p>
                         <p className="text-lg font-bold text-blue-600">
@@ -289,10 +289,10 @@ export default function ProductListPage() {
                     </div>
 
                     {/* Call-to-action subtil */}
-                    <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                    <div className="mt-3 flex items-center justify-between text-xs text-text-muted">
                       <span className="inline-flex items-center gap-1">
                         <span>{t("productListPage.card.viewDetails")}</span>
-                        <span aria-hidden="true">↗</span>
+                        <span aria-hidden="true">-&gt;</span>
                       </span>
                     </div>
                   </div>
@@ -305,4 +305,6 @@ export default function ProductListPage() {
     </div>
   );
 }
+
+
 

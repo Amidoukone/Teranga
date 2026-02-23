@@ -1,8 +1,8 @@
 // ============================================================================
 // AdminOnboardingPage.jsx
-// Onboarding Pays → Régions → MASTER
-// 🔒 ADMIN GLOBAL ONLY (redirection si MASTER)
-// ZÉRO RÉGRESSION • BACKEND SOURCE OF TRUTH
+// Onboarding Pays ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ RÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©gions ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ MASTER
+// ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ ADMIN GLOBAL ONLY (redirection si MASTER)
+// ZÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°RO RÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°GRESSION ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ BACKEND SOURCE OF TRUTH
 // ============================================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -21,30 +21,36 @@ import {
 import { getRegions, updateRegion, deleteRegion } from "../services/regions";
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
+import {
+  AdminActionsRow,
+  AdminPanelCard,
+  AdminRowActions,
+  AdminStepForm,
+} from "../components/admin/AdminFormUi";
 
 export default function AdminOnboardingPage() {
   const { t } = useTranslation();
   const { confirmDeleteNamed } = useDeleteConfirm();
   const [step, setStep] = useState(1);
 
-  // 🔐 Auth guard state
+  // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Auth guard state
   const [isAllowed, setIsAllowed] = useState(null);
 
-  // Étape 1 — Pays
+  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°tape 1 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â Pays
   const [countryForm, setCountryForm] = useState({
     name: "",
     isoCode: "",
   });
   const [createdCountry, setCreatedCountry] = useState(null);
 
-  // Étape 2 — Régions
+  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°tape 2 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â RÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©gions
   const [regionForm, setRegionForm] = useState({
     name: "",
     code: "",
   });
   const [regionsCreated, setRegionsCreated] = useState([]);
 
-  // Étape 3 — MASTER
+  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°tape 3 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â MASTER
   const [masterForm, setMasterForm] = useState({
     email: "",
     password: "",
@@ -52,7 +58,7 @@ export default function AdminOnboardingPage() {
     regionId: "",
   });
 
-  // ✅ Conserve GeoContext (cohérence globale)
+  // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Conserve GeoContext (cohÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©rence globale)
   useGeo();
 
   // Loading flags
@@ -79,9 +85,9 @@ export default function AdminOnboardingPage() {
   });
 
   // ========================================================================
-  // 🔐 AUTH CHECK — ADMIN GLOBAL ONLY
-  // - Autorisé : admin sans countryId/regionId
-  // - Refusé  : agent/client + MASTER (admin scopé)
+  // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â AUTH CHECK ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ADMIN GLOBAL ONLY
+  // - AutorisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© : admin sans countryId/regionId
+  // - RefusÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©  : agent/client + MASTER (admin scopÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©)
   // ========================================================================
   useEffect(() => {
     let alive = true;
@@ -101,16 +107,16 @@ export default function AdminOnboardingPage() {
         const isAdmin = role === "admin";
         const isMaster = Boolean(user?.countryId) || Boolean(user?.regionId);
 
-        // ❌ Pas admin ou admin scopé (MASTER) -> redirect
+        // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Pas admin ou admin scopÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© (MASTER) -> redirect
         if (!isAdmin || isMaster) {
           window.location.href = "/dashboard";
           return;
         }
 
-        // ✅ Admin global autorisé
+        // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Admin global autorisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©
         setIsAllowed(true);
       } catch (e) {
-        console.error("❌ /me error:", e);
+        console.error("/me error:", e);
         window.location.href = "/login";
       }
     }
@@ -174,7 +180,7 @@ export default function AdminOnboardingPage() {
       const list = await getCountries({ includeInactive: true });
       setCountries(list);
     } catch (e) {
-      console.error("❌ load countries:", e);
+      console.error("load countries:", e);
     } finally {
       setLoadingCountries(false);
     }
@@ -189,7 +195,7 @@ export default function AdminOnboardingPage() {
       });
       setRegions(list);
     } catch (e) {
-      console.error("❌ load regions:", e);
+      console.error("load regions:", e);
     } finally {
       setLoadingRegions(false);
     }
@@ -290,7 +296,7 @@ export default function AdminOnboardingPage() {
   }
 
   // ========================================================================
-  // Étape 1 — Créer pays
+  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°tape 1 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â CrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©er pays
   // ========================================================================
   async function createCountry(e) {
     e.preventDefault();
@@ -312,7 +318,7 @@ export default function AdminOnboardingPage() {
       setStep(2);
       await loadCountries();
 
-      // Reset régions/master quand on recrée un pays
+      // Reset rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©gions/master quand on recrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e un pays
       setRegionsCreated([]);
       setMasterForm((m) => ({
         ...m,
@@ -327,7 +333,7 @@ export default function AdminOnboardingPage() {
   }
 
   // ========================================================================
-  // Étape 2 — Ajouter région
+  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°tape 2 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â Ajouter rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©gion
   // ========================================================================
   async function addRegion(e) {
     e.preventDefault();
@@ -357,7 +363,7 @@ export default function AdminOnboardingPage() {
   }
 
   // ========================================================================
-  // Étape 3 — Créer MASTER
+  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°tape 3 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â CrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©er MASTER
   // ========================================================================
   async function createMaster(e) {
     e.preventDefault();
@@ -378,7 +384,7 @@ export default function AdminOnboardingPage() {
         role: "admin",
       };
 
-      // ✅ Backend existant: supporte countryId / regionId
+      // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Backend existant: supporte countryId / regionId
       if (masterForm.scope === "region") {
         const rid = Number(masterForm.regionId);
         payload.regionId = rid;
@@ -412,7 +418,7 @@ export default function AdminOnboardingPage() {
   if (isAllowed === null) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500 animate-pulse">
+        <p className="text-text-muted animate-pulse">
           {t("adminOnboardingPage.loading.page")}
         </p>
       </div>
@@ -423,26 +429,26 @@ export default function AdminOnboardingPage() {
   // UI
   // ========================================================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f5f5f7] via-white to-[#e5e5ea] p-10">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main p-10">
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl p-8 border border-gray-200"
+        className="max-w-3xl mx-auto bg-surface-card rounded-3xl shadow-xl p-8 border border-border"
       >
         <h1 className="text-3xl font-semibold mb-2">
           {t("adminOnboardingPage.title")}
         </h1>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-text-muted mb-6">
           {t("adminOnboardingPage.subtitle")}
         </p>
 
-        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-8">
+        <div className="bg-surface-main border border-border rounded-2xl p-4 mb-8">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-medium">
                 {t("adminOnboardingPage.management.title")}
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-text-muted">
                 {t("adminOnboardingPage.management.subtitle")}
               </p>
             </div>
@@ -452,7 +458,7 @@ export default function AdminOnboardingPage() {
                 loadCountries();
                 loadRegions();
               }}
-              className="px-3 py-1.5 rounded-full text-xs bg-white border border-gray-200 hover:border-gray-300"
+              className="px-3 py-1.5 rounded-full text-xs bg-surface-card border border-border hover:border-border"
             >
               {loadingCountries || loadingRegions
                 ? t("adminOnboardingPage.loading.refresh")
@@ -461,12 +467,12 @@ export default function AdminOnboardingPage() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-5 mt-4">
-            <div className="bg-white border border-gray-200 rounded-xl p-3">
+            <div className="bg-surface-card border border-border rounded-xl p-3">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium">
                   {t("adminOnboardingPage.lists.countries")}
                 </h3>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-text-muted">
                   {loadingCountries
                     ? t("adminOnboardingPage.loading.countries")
                     : t("adminOnboardingPage.counts.items", {
@@ -481,7 +487,7 @@ export default function AdminOnboardingPage() {
                   return (
                     <div
                       key={country.id}
-                      className="border border-gray-100 rounded-lg p-2"
+                      className="border border-border/70 rounded-lg p-2"
                     >
                       {isEditing ? (
                         <div className="space-y-2">
@@ -493,7 +499,7 @@ export default function AdminOnboardingPage() {
                                 name: e.target.value,
                               }))
                             }
-                            className="w-full border border-gray-200 rounded-lg p-2 text-xs"
+                            className="app-input-compact w-full p-2"
                           />
                           <input
                             value={countryDraft.isoCode}
@@ -503,9 +509,9 @@ export default function AdminOnboardingPage() {
                                 isoCode: e.target.value,
                               }))
                             }
-                            className="w-full border border-gray-200 rounded-lg p-2 text-xs"
+                            className="w-full border border-border rounded-lg p-2 text-xs bg-surface-card text-text-primary"
                           />
-                          <label className="flex items-center gap-2 text-xs text-gray-600">
+                          <label className="flex items-center gap-2 text-xs text-text-secondary">
                             <input
                               type="checkbox"
                               checked={countryDraft.isActive}
@@ -522,14 +528,14 @@ export default function AdminOnboardingPage() {
                             <button
                               type="button"
                               onClick={saveCountryEdit}
-                              className="px-3 py-1.5 rounded-full text-xs bg-[#0a84ff] text-white"
+                              className="app-btn-primary px-3 py-1.5 rounded-full text-xs"
                             >
                               {t("adminOnboardingPage.buttons.save")}
                             </button>
                             <button
                               type="button"
                               onClick={() => setEditingCountryId(null)}
-                              className="px-3 py-1.5 rounded-full text-xs bg-gray-100"
+                              className="px-3 py-1.5 rounded-full text-xs bg-surface-main/80"
                             >
                               {t("adminOnboardingPage.buttons.cancel")}
                             </button>
@@ -541,28 +547,28 @@ export default function AdminOnboardingPage() {
                             <div className="text-xs font-medium">
                               {country.name} ({country.isoCode})
                             </div>
-                            <div className="text-[11px] text-gray-400">
+                            <div className="text-[11px] text-text-muted">
                               {country.isActive
                                 ? t("adminOnboardingPage.status.active")
                                 : t("adminOnboardingPage.status.inactive")}
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => startEditCountry(country)}
-                              className="text-xs text-blue-600 hover:text-blue-800"
-                            >
-                              {t("adminOnboardingPage.buttons.edit")}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteCountry(country)}
-                              className="text-xs text-rose-600 hover:text-rose-800"
-                            >
-                              {t("adminOnboardingPage.buttons.delete")}
-                            </button>
-                          </div>
+                          <AdminRowActions
+                            actions={[
+                              {
+                                key: "edit-country",
+                                label: t("adminOnboardingPage.buttons.edit"),
+                                onClick: () => startEditCountry(country),
+                                buttonClassName: "app-link-primary text-xs",
+                              },
+                              {
+                                key: "delete-country",
+                                label: t("adminOnboardingPage.buttons.delete"),
+                                onClick: () => handleDeleteCountry(country),
+                                buttonClassName: "app-link-danger text-xs",
+                              },
+                            ]}
+                          />
                         </div>
                       )}
                     </div>
@@ -570,19 +576,19 @@ export default function AdminOnboardingPage() {
                 })}
 
                 {!countries.length && !loadingCountries && (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-text-muted">
                     {t("adminOnboardingPage.empty.countries")}
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="bg-white border border-gray-200 rounded-xl p-3">
+            <div className="bg-surface-card border border-border rounded-xl p-3">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium">
                   {t("adminOnboardingPage.lists.regions")}
                 </h3>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-text-muted">
                   {loadingRegions
                     ? t("adminOnboardingPage.loading.regions")
                     : t("adminOnboardingPage.counts.items", {
@@ -599,7 +605,7 @@ export default function AdminOnboardingPage() {
                   return (
                     <div
                       key={region.id}
-                      className="border border-gray-100 rounded-lg p-2"
+                      className="border border-border/70 rounded-lg p-2"
                     >
                       {isEditing ? (
                         <div className="space-y-2">
@@ -611,7 +617,7 @@ export default function AdminOnboardingPage() {
                                 name: e.target.value,
                               }))
                             }
-                            className="w-full border border-gray-200 rounded-lg p-2 text-xs"
+                            className="app-input-compact w-full p-2"
                           />
                           <input
                             value={regionDraft.code}
@@ -621,9 +627,9 @@ export default function AdminOnboardingPage() {
                                 code: e.target.value,
                               }))
                             }
-                            className="w-full border border-gray-200 rounded-lg p-2 text-xs"
+                            className="app-input-compact w-full p-2"
                           />
-                          <label className="flex items-center gap-2 text-xs text-gray-600">
+                          <label className="flex items-center gap-2 text-xs text-text-secondary">
                             <input
                               type="checkbox"
                               checked={regionDraft.isActive}
@@ -640,14 +646,14 @@ export default function AdminOnboardingPage() {
                             <button
                               type="button"
                               onClick={saveRegionEdit}
-                              className="px-3 py-1.5 rounded-full text-xs bg-[#0a84ff] text-white"
+                              className="app-btn-primary px-3 py-1.5 rounded-full text-xs"
                             >
                               {t("adminOnboardingPage.buttons.save")}
                             </button>
                             <button
                               type="button"
                               onClick={() => setEditingRegionId(null)}
-                              className="px-3 py-1.5 rounded-full text-xs bg-gray-100"
+                              className="px-3 py-1.5 rounded-full text-xs bg-surface-main/80"
                             >
                               {t("adminOnboardingPage.buttons.cancel")}
                             </button>
@@ -659,34 +665,34 @@ export default function AdminOnboardingPage() {
                             <div className="text-xs font-medium">
                               {region.name} {region.code ? `(${region.code})` : ""}
                             </div>
-                            <div className="text-[11px] text-gray-400">
+                            <div className="text-[11px] text-text-muted">
                               {country?.name
-                                ? `${country.name} (${country.isoCode || "—"})`
+                                ? `${country.name} (${country.isoCode || "-"})`
                                 : t("adminOnboardingPage.labels.countryFallback", {
-                                    id: region.countryId || "—",
+                                    id: region.countryId || "-",
                                   })}{" "}
-                              •{" "}
+                              {" - "}
                               {region.isActive
                                 ? t("adminOnboardingPage.status.active")
                                 : t("adminOnboardingPage.status.inactive")}
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => startEditRegion(region)}
-                              className="text-xs text-blue-600 hover:text-blue-800"
-                            >
-                              {t("adminOnboardingPage.buttons.edit")}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteRegion(region)}
-                              className="text-xs text-rose-600 hover:text-rose-800"
-                            >
-                              {t("adminOnboardingPage.buttons.delete")}
-                            </button>
-                          </div>
+                          <AdminRowActions
+                            actions={[
+                              {
+                                key: "edit-region",
+                                label: t("adminOnboardingPage.buttons.edit"),
+                                onClick: () => startEditRegion(region),
+                                buttonClassName: "app-link-primary text-xs",
+                              },
+                              {
+                                key: "delete-region",
+                                label: t("adminOnboardingPage.buttons.delete"),
+                                onClick: () => handleDeleteRegion(region),
+                                buttonClassName: "app-link-danger text-xs",
+                              },
+                            ]}
+                          />
                         </div>
                       )}
                     </div>
@@ -694,7 +700,7 @@ export default function AdminOnboardingPage() {
                 })}
 
                 {!regions.length && !loadingRegions && (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-text-muted">
                     {t("adminOnboardingPage.empty.regions")}
                   </p>
                 )}
@@ -709,7 +715,7 @@ export default function AdminOnboardingPage() {
             <div
               key={s}
               className={`flex-1 h-2 rounded-full ${
-                step >= s ? "bg-[#0a84ff]" : "bg-gray-200"
+                step >= s ? "bg-blue-600" : "bg-surface-main/80"
               }`}
             />
           ))}
@@ -717,10 +723,10 @@ export default function AdminOnboardingPage() {
 
         {/* STEP 1 */}
         {step === 1 && (
-          <form onSubmit={createCountry} className="space-y-4">
-            <h2 className="text-xl font-medium">
-              {t("adminOnboardingPage.steps.step1")}
-            </h2>
+          <AdminStepForm
+            onSubmit={createCountry}
+            title={t("adminOnboardingPage.steps.step1")}
+          >
 
             <input
               placeholder={t("adminOnboardingPage.placeholders.countryName")}
@@ -728,7 +734,7 @@ export default function AdminOnboardingPage() {
               onChange={(e) =>
                 setCountryForm({ ...countryForm, name: e.target.value })
               }
-              className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+              className="app-input"
             />
 
             <input
@@ -737,32 +743,28 @@ export default function AdminOnboardingPage() {
               onChange={(e) =>
                 setCountryForm({ ...countryForm, isoCode: e.target.value })
               }
-              className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+              className="app-input"
             />
 
             <button
               disabled={!isCountryFormValid || loadingCountry}
-              className={`px-6 py-2 rounded-full text-white text-sm font-medium transition ${
-                !isCountryFormValid || loadingCountry
-                  ? "bg-[#0a84ff]/40 cursor-not-allowed"
-                  : "bg-[#0a84ff] hover:bg-[#0066cc]"
-              }`}
+              className="app-btn-primary px-6 py-2 rounded-full text-sm font-medium"
             >
               {loadingCountry
                 ? t("adminOnboardingPage.loading.creatingCountry")
                 : t("adminOnboardingPage.buttons.createCountry")}
             </button>
-          </form>
+          </AdminStepForm>
         )}
 
         {/* STEP 2 */}
         {step === 2 && (
-          <form onSubmit={addRegion} className="space-y-4">
-            <h2 className="text-xl font-medium">
-              {t("adminOnboardingPage.steps.step2")}
-            </h2>
+          <AdminStepForm
+            onSubmit={addRegion}
+            title={t("adminOnboardingPage.steps.step2")}
+          >
 
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-text-secondary">
               {t("adminOnboardingPage.labels.countryCreated")}{" "}
               <span className="font-medium">
                 {createdCountry?.name} ({createdCountry?.isoCode})
@@ -770,16 +772,16 @@ export default function AdminOnboardingPage() {
             </div>
 
             {availableRegions.length > 0 && (
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-                <div className="text-xs text-gray-500 mb-2">
+              <AdminPanelCard className="bg-surface-main p-3">
+                <div className="text-xs text-text-muted mb-2">
                   {t("adminOnboardingPage.lists.addedRegions")}
                 </div>
                 {availableRegions.map((r) => (
-                  <div key={r.id} className="text-sm text-gray-700">
-                    ✓ {r.name} {r.code ? `(${r.code})` : ""}
+                  <div key={r.id} className="text-sm text-text-secondary">
+                    {r.name} {r.code ? `(${r.code})` : ""}
                   </div>
                 ))}
-              </div>
+              </AdminPanelCard>
             )}
 
             <input
@@ -788,7 +790,7 @@ export default function AdminOnboardingPage() {
               onChange={(e) =>
                 setRegionForm({ ...regionForm, name: e.target.value })
               }
-              className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+              className="app-input"
             />
 
             <input
@@ -797,16 +799,14 @@ export default function AdminOnboardingPage() {
               onChange={(e) =>
                 setRegionForm({ ...regionForm, code: e.target.value })
               }
-              className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+              className="app-input"
             />
 
-            <div className="flex gap-3 flex-wrap">
+            <AdminActionsRow className="gap-3">
               <button
                 disabled={!isRegionFormValid || loadingRegion}
                 className={`px-4 py-2 rounded-full text-sm transition ${
-                  !isRegionFormValid || loadingRegion
-                    ? "bg-gray-200/60 cursor-not-allowed text-gray-500"
-                    : "bg-gray-200 hover:bg-gray-300"
+                  !isRegionFormValid || loadingRegion ? "app-btn-disabled" : "app-btn-soft"
                 }`}
               >
                 {loadingRegion
@@ -818,26 +818,22 @@ export default function AdminOnboardingPage() {
                 type="button"
                 disabled={!canGoStep3}
                 onClick={() => setStep(3)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                  !canGoStep3
-                    ? "bg-[#0a84ff]/40 cursor-not-allowed text-white"
-                    : "bg-[#0a84ff] text-white hover:bg-[#0066cc]"
-                }`}
+                className="app-btn-primary px-4 py-2 rounded-full text-sm font-medium"
               >
                 {t("adminOnboardingPage.buttons.continue")}
               </button>
-            </div>
-          </form>
+            </AdminActionsRow>
+          </AdminStepForm>
         )}
 
         {/* STEP 3 */}
         {step === 3 && (
-          <form onSubmit={createMaster} className="space-y-4">
-            <h2 className="text-xl font-medium">
-              {t("adminOnboardingPage.steps.step3")}
-            </h2>
+          <AdminStepForm
+            onSubmit={createMaster}
+            title={t("adminOnboardingPage.steps.step3")}
+          >
 
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-text-secondary">
               {t("adminOnboardingPage.labels.targetCountry")}{" "}
               <span className="font-medium">
                 {createdCountry?.name} ({createdCountry?.isoCode})
@@ -851,7 +847,7 @@ export default function AdminOnboardingPage() {
               onChange={(e) =>
                 setMasterForm({ ...masterForm, email: e.target.value })
               }
-              className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+              className="app-input"
             />
 
             <input
@@ -861,7 +857,7 @@ export default function AdminOnboardingPage() {
               onChange={(e) =>
                 setMasterForm({ ...masterForm, password: e.target.value })
               }
-              className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+              className="app-input"
             />
 
             <select
@@ -873,7 +869,7 @@ export default function AdminOnboardingPage() {
                   regionId: "",
                 })
               }
-              className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+              className="app-input"
             >
               <option value="country">
                 {t("adminOnboardingPage.options.masterCountry")}
@@ -889,7 +885,7 @@ export default function AdminOnboardingPage() {
                 onChange={(e) =>
                   setMasterForm({ ...masterForm, regionId: e.target.value })
                 }
-                className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+                className="app-input"
               >
                 <option value="">
                   {t("adminOnboardingPage.options.selectRegion")}
@@ -903,18 +899,14 @@ export default function AdminOnboardingPage() {
             )}
 
             {masterForm.scope === "region" && availableRegions.length === 0 && (
-              <div className="text-xs text-amber-600">
+              <div className="app-badge app-badge-warning text-xs">
                 {t("adminOnboardingPage.hints.noRegionsForMaster")}
               </div>
             )}
 
             <button
               disabled={!isMasterFormValid || loadingMaster}
-              className={`px-6 py-2 rounded-full text-white text-sm font-medium transition ${
-                !isMasterFormValid || loadingMaster
-                  ? "bg-[#0a84ff]/40 cursor-not-allowed"
-                  : "bg-[#0a84ff] hover:bg-[#0066cc]"
-              }`}
+              className="app-btn-primary px-6 py-2 rounded-full text-sm font-medium"
             >
               {loadingMaster
                 ? t("adminOnboardingPage.loading.creatingMaster")
@@ -924,14 +916,16 @@ export default function AdminOnboardingPage() {
             <button
               type="button"
               onClick={() => setStep(2)}
-              className="text-sm text-gray-500 hover:text-gray-800 underline"
+              className="text-sm text-text-muted hover:text-text-primary underline"
             >
               {t("adminOnboardingPage.buttons.backToRegions")}
             </button>
-          </form>
+          </AdminStepForm>
         )}
       </motion.div>
     </div>
   );
 }
+
+
 

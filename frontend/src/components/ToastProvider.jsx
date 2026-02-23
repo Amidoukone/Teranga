@@ -7,7 +7,7 @@ function toneClasses(type) {
   if (type === "success") return "border-emerald-200 bg-emerald-50 text-emerald-900";
   if (type === "error") return "border-rose-200 bg-rose-50 text-rose-900";
   if (type === "warning") return "border-amber-200 bg-amber-50 text-amber-900";
-  return "border-slate-200 bg-white text-slate-900";
+  return "border-border bg-surface-card text-text-primary";
 }
 
 export default function ToastProvider({ children }) {
@@ -83,4 +83,6 @@ export default function ToastProvider({ children }) {
     </>
   );
 }
+
+
 

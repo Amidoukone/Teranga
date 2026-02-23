@@ -48,3 +48,5 @@ export default function LanguageSwitcher({ className = "", compact = false }) {
     </div>
   );
 }
+
+

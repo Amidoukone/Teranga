@@ -1,10 +1,10 @@
 // ============================================================================
-// AdminPropertiesPage.jsx — VERSION PRODUCTION READY (Apple Light Premium)
-// ✅ Master + multi-pays compatible (backend GeoScope)
-// ✅ FILE_BASE prod-safe (pas de localhost)
-// ✅ Photos: support string | {url,fileId} (ImageKit) | legacy
-// ✅ Lightbox + previews sans erreurs (revokeObjectURL safe)
-// 100% fonctionnel, aucune régression, même logique, design modernisé.
+// AdminPropertiesPage.jsx ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION PRODUCTION READY (Apple Light Premium)
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Master + multi-pays compatible (backend GeoScope)
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FILE_BASE prod-safe (pas de localhost)
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Photos: support string | {url,fileId} (ImageKit) | legacy
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Lightbox + previews sans erreurs (revokeObjectURL safe)
+// 100% fonctionnel, aucune rÃƒÆ’Ã‚Â©gression, mÃƒÆ’Ã‚Âªme logique, design modernisÃƒÆ’Ã‚Â©.
 // ============================================================================
 
 import { useEffect, useState, useMemo } from 'react';
@@ -22,10 +22,10 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 // ============================================================================
-// 🌍 FILE_BASE + normalizePath + toAbsUrl — Standard Teranga (PRODUCTION SAFE)
+// ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â FILE_BASE + normalizePath + toAbsUrl ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Standard Teranga (PRODUCTION SAFE)
 // - Compatible Render/Netlify
 // - SSR safe
-// - No localhost fallback (évite bugs prod multi-pays)
+// - No localhost fallback (ÃƒÆ’Ã‚Â©vite bugs prod multi-pays)
 // ============================================================================
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -99,8 +99,8 @@ function getPropertyTypeFieldConfig(type, t) {
 }
 
 // ============================================================================
-// 🧩 Normalisation Photos (ImageKit + legacy)
-// - backend peut renvoyer: ["https://..."] (déjà ok)
+// ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© Normalisation Photos (ImageKit + legacy)
+// - backend peut renvoyer: ["https://..."] (dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  ok)
 // - ou [{url,fileId}, ...]
 // - ou {photos:[{url}...]} (selon couches)
 // ============================================================================
@@ -114,7 +114,7 @@ function normalizePhotoValue(photo) {
 }
 
 // ============================================================================
-// 🧩 Safe revokeObjectURL (évite erreurs si url http)
+// ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© Safe revokeObjectURL (ÃƒÆ’Ã‚Â©vite erreurs si url http)
 // ============================================================================
 function safeRevoke(url) {
   try {
@@ -127,7 +127,7 @@ function safeRevoke(url) {
 }
 
 // ============================================================================
-// 🧩 PAGE PRINCIPALE — Apple Light Premium
+// ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© PAGE PRINCIPALE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Apple Light Premium
 // ============================================================================
 export default function AdminPropertiesPage() {
   const { t } = useTranslation();
@@ -154,7 +154,7 @@ export default function AdminPropertiesPage() {
     surfaceArea: '',
     roomCount: '',
     description: '',
-    // 🌍 Multi-pays (optionnel — backend gère scope)
+    // ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â Multi-pays (optionnel ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â backend gÃƒÆ’Ã‚Â¨re scope)
     // countryId: '',
     // regionId: '',
   });
@@ -163,7 +163,7 @@ export default function AdminPropertiesPage() {
   const [previewUrls, setPreviewUrls] = useState([]);
 
   // ==========================================================================
-  // 🖼️ LIGHTBOX (Agrandissement + Navigation)
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¼ÃƒÂ¯Ã‚Â¸Ã‚Â LIGHTBOX (Agrandissement + Navigation)
   // ==========================================================================
   const [lightbox, setLightbox] = useState({
     open: false,
@@ -186,7 +186,7 @@ export default function AdminPropertiesPage() {
   }, [lightbox.open, lightbox.index]);
 
   // ==========================================================================
-  // 🔹 Initialisation (auth + clients + biens)
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Initialisation (auth + clients + biens)
   // ==========================================================================
   useEffect(() => {
     (async () => {
@@ -204,7 +204,7 @@ export default function AdminPropertiesPage() {
         setUser(current);
         await Promise.all([loadClients(), loadProperties()]);
       } catch (e) {
-        console.error('❌ init AdminPropertiesPage:', e);
+        console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ init AdminPropertiesPage:', e);
         localStorage.removeItem('teranga_token');
         localStorage.removeItem('token');
         window.location.href = '/login';
@@ -214,7 +214,7 @@ export default function AdminPropertiesPage() {
   }, []);
 
   // ==========================================================================
-  // 🔹 Charger Clients (admin/master scoped: backend filtre via GeoScope si appliqué)
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Charger Clients (admin/master scoped: backend filtre via GeoScope si appliquÃƒÆ’Ã‚Â©)
   // ==========================================================================
   async function loadClients() {
     try {
@@ -223,12 +223,12 @@ export default function AdminPropertiesPage() {
       setClients(list);
       setFilteredClients(list);
     } catch (e) {
-      console.error('❌ Erreur clients:', e);
+      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur clients:', e);
     }
   }
 
   // ==========================================================================
-  // 🔹 Charger Propriétés
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Charger PropriÃƒÆ’Ã‚Â©tÃƒÆ’Ã‚Â©s
   // - master/admin scoped: backend filtre via GeoScope automatiquement
   // ==========================================================================
   async function loadProperties(clientId) {
@@ -249,14 +249,14 @@ export default function AdminPropertiesPage() {
 
       setProperties(normalized);
     } catch (e) {
-      console.error('❌ Erreur biens:', e);
+      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur biens:', e);
     } finally {
       setLoading(false);
     }
   }
 
   // ==========================================================================
-  // 🔹 Recherche Client
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Recherche Client
   // ==========================================================================
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -274,7 +274,7 @@ export default function AdminPropertiesPage() {
   }, [searchTerm, clients]);
 
   // ==========================================================================
-  // 🔹 Gestion Upload + previews
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Gestion Upload + previews
   // ==========================================================================
   function handleFileChange(e) {
     const selected = Array.from(e.target.files || []);
@@ -289,7 +289,7 @@ export default function AdminPropertiesPage() {
   }
 
   // ==========================================================================
-  // 🔹 Ajouter Bien
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Ajouter Bien
   // ==========================================================================
   async function handleCreate(e) {
     e.preventDefault();
@@ -308,7 +308,7 @@ export default function AdminPropertiesPage() {
       setIsCreating(false);
       await loadProperties(selectedClient);
     } catch (e2) {
-      console.error('❌ Erreur création:', e2);
+      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur crÃƒÆ’Ã‚Â©ation:', e2);
       notify(t('adminPropertiesPage.alerts.createError'));
     } finally {
       setIsSubmitting(false);
@@ -316,7 +316,7 @@ export default function AdminPropertiesPage() {
   }
 
   // ==========================================================================
-  // 🔹 Modifier Bien
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Modifier Bien
   // ==========================================================================
   function startEdit(p) {
     setEditId(p.id);
@@ -331,7 +331,7 @@ export default function AdminPropertiesPage() {
       surfaceArea: p.surfaceArea || '',
       roomCount: p.roomCount || '',
       description: p.description || '',
-      // 🌍 Multi-pays (optionnel) — si tu ajoutes plus tard les champs UI
+      // ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â Multi-pays (optionnel) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â si tu ajoutes plus tard les champs UI
       // countryId: p.countryId || '',
       // regionId: p.regionId || '',
     });
@@ -362,7 +362,7 @@ export default function AdminPropertiesPage() {
       resetForm();
       await loadProperties(selectedClient);
     } catch (e2) {
-      console.error('❌ Update:', e2);
+      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Update:', e2);
       notify(t('adminPropertiesPage.alerts.updateError'));
     } finally {
       setIsSubmitting(false);
@@ -370,7 +370,7 @@ export default function AdminPropertiesPage() {
   }
 
   // ==========================================================================
-  // 🔹 Supprimer Bien
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Supprimer Bien
   // ==========================================================================
   async function handleDelete(id) {
     const ok = await confirmDelete("property");
@@ -379,13 +379,13 @@ export default function AdminPropertiesPage() {
       await api.delete(`/properties/${id}`);
       await loadProperties(selectedClient);
     } catch (e) {
-      console.error('❌ delete property:', e);
+      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ delete property:', e);
       notify(t('adminPropertiesPage.alerts.deleteError'));
     }
   }
 
   // ==========================================================================
-  // 🔹 Reset Form
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Reset Form
   // ==========================================================================
   function resetForm() {
     setEditId(null);
@@ -409,7 +409,7 @@ export default function AdminPropertiesPage() {
   }
 
   // ==========================================================================
-  // 🔹 Lightbox Controls
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Lightbox Controls
   // ==========================================================================
   function openLightbox(images, index = 0) {
     if (!images || !images.length) return;
@@ -438,32 +438,32 @@ export default function AdminPropertiesPage() {
   const fieldConfig = getPropertyTypeFieldConfig(form.type, t);
 
   // ==========================================================================
-  // 🖥️ UI — Apple Light Premium (Cartes uniquement)
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¥ÃƒÂ¯Ã‚Â¸Ã‚Â UI ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Apple Light Premium (Cartes uniquement)
   // ==========================================================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
-      <div className="max-w-7xl mx-auto bg-white/90 backdrop-blur-xl shadow-[0_18px_45px_rgba(15,23,42,0.12)] rounded-3xl border border-slate-100 px-4 sm:px-8 py-6 sm:py-8 space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
+      <div className="max-w-7xl mx-auto bg-surface-card/90 backdrop-blur-xl shadow-[0_18px_45px_rgba(15,23,42,0.12)] rounded-3xl border border-border/70 px-4 sm:px-8 py-6 sm:py-8 space-y-8">
         {/* HEADER */}
         <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-text-primary">
               {t('adminPropertiesPage.title')}
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-text-muted mt-1">
               {t('adminPropertiesPage.subtitle')}
             </p>
 
             {selectedClientObj && (
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-text-muted mt-1">
                 {t('adminPropertiesPage.labels.selectedClient')}{' '}
-                <span className="font-medium text-slate-700">
+                <span className="font-medium text-text-secondary">
                   {selectedClientObj.firstName} {selectedClientObj.lastName} ({selectedClientObj.email})
                 </span>
               </p>
             )}
 
             {user?.role === 'master' && (
-              <p className="text-[11px] text-slate-500 mt-2">
+              <p className="text-[11px] text-text-muted mt-2">
                 {t('adminPropertiesPage.labels.masterNote')}
               </p>
             )}
@@ -472,7 +472,7 @@ export default function AdminPropertiesPage() {
           <div className="flex flex-wrap gap-2 justify-start md:justify-end">
             <button
               onClick={() => loadProperties(selectedClient)}
-              className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium rounded-full bg-slate-900 text-white shadow-sm hover:bg-black transition"
+              className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium rounded-full app-btn-neutral shadow-sm transition"
             >
               {t('adminPropertiesPage.buttons.refresh')}
             </button>
@@ -480,13 +480,13 @@ export default function AdminPropertiesPage() {
         </header>
 
         {/* CLIENT SELECTION */}
-        <section className="bg-slate-50/80 border border-slate-200 rounded-2xl px-4 sm:px-5 py-4 sm:py-5 shadow-sm">
+        <section className="bg-surface-main/80 border border-border rounded-2xl px-4 sm:px-5 py-4 sm:py-5 shadow-sm">
           <div className="flex items-center justify-between gap-3 mb-3">
-            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-text-primary flex items-center gap-2">
               {t('adminPropertiesPage.client.title')}
             </h2>
             {selectedClient && (
-              <span className="text-[11px] px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+              <span className="app-badge app-badge-info text-[11px] px-2 py-1">
                 {t('adminPropertiesPage.client.badge', { count: properties.length })}
               </span>
             )}
@@ -494,7 +494,7 @@ export default function AdminPropertiesPage() {
 
           <div className="flex flex-col lg:flex-row gap-3">
             <div className="flex-1">
-              <label className="block text-[11px] font-medium text-slate-500 mb-1">
+              <label className="block text-[11px] font-medium text-text-muted mb-1">
                 {t('adminPropertiesPage.client.searchLabel')}
               </label>
               <input
@@ -502,12 +502,12 @@ export default function AdminPropertiesPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={t('adminPropertiesPage.client.searchPlaceholder')}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                className="app-input-subtle"
               />
             </div>
 
             <div className="w-full lg:w-80">
-              <label className="block text-[11px] font-medium text-slate-500 mb-1">
+              <label className="block text-[11px] font-medium text-text-muted mb-1">
                 {t('adminPropertiesPage.client.selectLabel')}
               </label>
               <select
@@ -518,7 +518,7 @@ export default function AdminPropertiesPage() {
                   loadProperties(id);
                   resetForm();
                 }}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                className="app-input-subtle"
               >
                 <option value="">{t('adminPropertiesPage.client.selectPlaceholder')}</option>
                 {filteredClients.map((c) => (
@@ -537,7 +537,7 @@ export default function AdminPropertiesPage() {
                     resetForm();
                   }}
                   disabled={isSubmitting}
-                  className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium rounded-full bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition"
+                  className="app-btn-success inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium rounded-full"
                 >
                   {t('adminPropertiesPage.buttons.addProperty')}
                 </button>
@@ -546,16 +546,16 @@ export default function AdminPropertiesPage() {
           </div>
         </section>
 
-        {/* FORMULAIRE (création / édition) */}
+        {/* FORMULAIRE (crÃƒÆ’Ã‚Â©ation / ÃƒÆ’Ã‚Â©dition) */}
         {(isCreating || editId) && (
-          <section className="bg-slate-50/80 border border-slate-200 rounded-2xl px-4 sm:px-5 py-5 shadow-sm">
+          <section className="bg-surface-main/80 border border-border rounded-2xl px-4 sm:px-5 py-5 shadow-sm">
             <div className="flex items-center justify-between gap-2 mb-4">
-              <h2 className="text-base font-semibold text-slate-900">
+              <h2 className="text-base font-semibold text-text-primary">
                 {editId
                   ? t('adminPropertiesPage.form.titleEdit', { id: editId })
                   : t('adminPropertiesPage.form.titleCreate')}
               </h2>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-[11px] text-text-muted">
                 {t('adminPropertiesPage.form.requiredNote')}
               </span>
             </div>
@@ -566,7 +566,7 @@ export default function AdminPropertiesPage() {
             >
               {/* Titre */}
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-600">
+                <label className="text-[11px] font-medium text-text-secondary">
                   {t('adminPropertiesPage.form.labels.title')}
                 </label>
                 <input
@@ -574,13 +574,13 @@ export default function AdminPropertiesPage() {
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   required
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                  className="app-input-subtle"
                 />
               </div>
 
               {/* Type */}
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-600">
+                <label className="text-[11px] font-medium text-text-secondary">
                   {t('adminPropertiesPage.form.labels.type')}
                 </label>
                 <select
@@ -595,7 +595,7 @@ export default function AdminPropertiesPage() {
                       roomCount: nextConfig.showRooms ? prev.roomCount : '',
                     }));
                   }}
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                  className="app-input-subtle"
                 >
                   <option value="house">{t('labels.property.types.house')}</option>
                   <option value="apartment">{t('labels.property.types.apartment')}</option>
@@ -607,7 +607,7 @@ export default function AdminPropertiesPage() {
 
               {/* Adresse */}
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-600">
+                <label className="text-[11px] font-medium text-text-secondary">
                   {t('adminPropertiesPage.form.labels.address')}
                 </label>
                 <input
@@ -615,13 +615,13 @@ export default function AdminPropertiesPage() {
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
                   required
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                  className="app-input-subtle"
                 />
               </div>
 
               {/* Ville */}
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-600">
+                <label className="text-[11px] font-medium text-text-secondary">
                   {t('adminPropertiesPage.form.labels.city')}
                 </label>
                 <input
@@ -629,13 +629,13 @@ export default function AdminPropertiesPage() {
                   value={form.city}
                   onChange={(e) => setForm({ ...form, city: e.target.value })}
                   required
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                  className="app-input-subtle"
                 />
               </div>
 
               {/* Code postal */}
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-600">
+                <label className="text-[11px] font-medium text-text-secondary">
                   {t('adminPropertiesPage.form.labels.postalCode')}
                 </label>
                 <input
@@ -644,14 +644,14 @@ export default function AdminPropertiesPage() {
                   onChange={(e) =>
                     setForm({ ...form, postalCode: e.target.value })
                   }
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                  className="app-input-subtle"
                 />
               </div>
 
-              {/* Surface / Kilométrage */}
+              {/* Surface / KilomÃƒÆ’Ã‚Â©trage */}
               {fieldConfig.showSurface && (
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-medium text-slate-600">
+                  <label className="text-[11px] font-medium text-text-secondary">
                     {fieldConfig.surfaceLabel}
                   </label>
                   <input
@@ -661,14 +661,14 @@ export default function AdminPropertiesPage() {
                     onChange={(e) =>
                       setForm({ ...form, surfaceArea: e.target.value })
                     }
-                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                    className="app-input-subtle"
                   />
                 </div>
               )}
-              {/* Pièces / Espaces / Places */}
+              {/* PiÃƒÆ’Ã‚Â¨ces / Espaces / Places */}
               {fieldConfig.showRooms && (
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-medium text-slate-600">
+                  <label className="text-[11px] font-medium text-text-secondary">
                     {fieldConfig.roomsLabel}
                   </label>
                   <input
@@ -678,14 +678,14 @@ export default function AdminPropertiesPage() {
                     onChange={(e) =>
                       setForm({ ...form, roomCount: e.target.value })
                     }
-                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                    className="app-input-subtle"
                   />
                 </div>
               )}
 
               {/* Description */}
               <div className="sm:col-span-2 flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-600">
+                <label className="text-[11px] font-medium text-text-secondary">
                   {t('adminPropertiesPage.form.labels.description')}
                 </label>
                 <textarea
@@ -695,13 +695,13 @@ export default function AdminPropertiesPage() {
                     setForm({ ...form, description: e.target.value })
                   }
                   rows={3}
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500 resize-y"
+                  className="app-input-subtle resize-y"
                 />
               </div>
 
               {/* FILES */}
               <div className="sm:col-span-2 flex flex-col gap-2 mt-1">
-                <label className="text-[11px] font-medium text-slate-600">
+                <label className="text-[11px] font-medium text-text-secondary">
                   {t('adminPropertiesPage.form.filesLabel')}
                 </label>
                 <input
@@ -709,7 +709,7 @@ export default function AdminPropertiesPage() {
                   multiple
                   onChange={handleFileChange}
                   accept=".jpg,.jpeg,.png,.pdf"
-                  className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                  className="app-input-subtle"
                 />
 
                 {previewUrls.length > 0 && (
@@ -718,7 +718,7 @@ export default function AdminPropertiesPage() {
                       <img
                         key={i}
                         src={url}
-                        className="w-20 h-20 object-cover rounded-xl border border-slate-200 shadow-sm"
+                        className="w-20 h-20 object-cover rounded-xl border border-border shadow-sm"
                         alt={t('adminPropertiesPage.form.previewAlt', { index: i + 1 })}
                       />
                     ))}
@@ -735,14 +735,14 @@ export default function AdminPropertiesPage() {
                     setIsCreating(false);
                   }}
                   disabled={isSubmitting}
-                  className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
+                  className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm rounded-full bg-surface-main/80 text-text-secondary hover:bg-surface-main/80 transition"
                 >
                   {t('adminPropertiesPage.buttons.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center justify-center px-5 py-2 text-xs sm:text-sm font-medium rounded-full bg-blue-600 text-white shadow-sm hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition"
+                  className="app-btn-primary inline-flex items-center justify-center px-5 py-2 text-xs sm:text-sm font-medium rounded-full"
                 >
                   {editId
                     ? t('adminPropertiesPage.buttons.save')
@@ -753,19 +753,19 @@ export default function AdminPropertiesPage() {
           </section>
         )}
 
-        {/* LISTE DES BIENS — CARTES PREMIUM */}
+        {/* LISTE DES BIENS ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â CARTES PREMIUM */}
         <section className="space-y-4">
           {loading ? (
-            <p className="text-center text-slate-500 py-6 text-sm animate-pulse">
+            <p className="text-center text-text-muted py-6 text-sm animate-pulse">
               {t('adminPropertiesPage.loading')}
             </p>
           ) : properties.length === 0 ? (
-            <p className="text-center text-slate-500 italic py-6 text-sm">
+            <p className="text-center text-text-muted italic py-6 text-sm">
               {t('adminPropertiesPage.empty')}
             </p>
           ) : (
             <>
-              <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+              <div className="flex items-center justify-between text-xs text-text-muted px-1">
                 <span>{t('adminPropertiesPage.list.count', { count: properties.length })}</span>
               </div>
 
@@ -785,7 +785,7 @@ export default function AdminPropertiesPage() {
                   return (
                     <article
                       key={p.id}
-                      className="bg-white/90 border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full"
+                      className="bg-surface-card/90 border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full"
                     >
                       {/* Photos */}
                       {p.photos?.length > 0 && (
@@ -800,7 +800,7 @@ export default function AdminPropertiesPage() {
                                   href={abs}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="w-20 h-20 border border-slate-200 bg-slate-50 rounded-xl flex items-center justify-center text-xs text-slate-600 hover:bg-slate-100 transition"
+                                  className="w-20 h-20 border border-border bg-surface-main rounded-xl flex items-center justify-center text-xs text-text-secondary hover:bg-surface-main/80 transition"
                                 >
                                   {t('adminPropertiesPage.list.pdfLabel')}
                                 </a>
@@ -817,7 +817,7 @@ export default function AdminPropertiesPage() {
                                 onClick={() =>
                                   openLightbox(imageUrls, Math.max(idx, 0))
                                 }
-                                className="w-20 h-20 object-cover rounded-xl border border-slate-200 cursor-pointer hover:scale-[1.03] hover:shadow-sm transition-transform"
+                                className="w-20 h-20 object-cover rounded-xl border border-border cursor-pointer hover:scale-[1.03] hover:shadow-sm transition-transform"
                               />
                             );
                           })}
@@ -826,27 +826,27 @@ export default function AdminPropertiesPage() {
 
                       {/* Infos principales */}
                       <div className="flex-1 space-y-1.5">
-                        <h3 className="text-base font-semibold text-slate-900 line-clamp-2">
+                        <h3 className="text-base font-semibold text-text-primary line-clamp-2">
                           {p.title}
                         </h3>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-text-muted">
                           {p.city} • <span className="uppercase">{typeLabel}</span>
                         </p>
 
                         {p.description && (
-                          <p className="text-sm text-slate-600 mt-1 line-clamp-3">
+                          <p className="text-sm text-text-secondary mt-1 line-clamp-3">
                             {p.description}
                           </p>
                         )}
 
                         {p.surfaceArea && (
-                          <p className="text-sm text-slate-700 mt-2">
+                          <p className="text-sm text-text-secondary mt-2">
                             {surfaceRoomsLabel}
                           </p>
                         )}
 
                         {(p.countryId || p.regionId) && (
-                          <p className="text-[11px] text-slate-400 mt-1">
+                          <p className="text-[11px] text-text-muted mt-1">
                             {t('adminPropertiesPage.list.scopePrefix')}{' '}
                             {p.regionId
                               ? t('adminPropertiesPage.list.regionId', { id: p.regionId })
@@ -861,14 +861,14 @@ export default function AdminPropertiesPage() {
                       <div className="mt-4 flex justify-end gap-2">
                         <button
                           onClick={() => startEdit(p)}
-                          className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-full bg-amber-500 text-white hover:bg-amber-600 transition"
+                          className="app-btn-warning inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-full"
                         >
                           {t('adminPropertiesPage.buttons.edit')}
                         </button>
 
                         <button
                           onClick={() => handleDelete(p.id)}
-                          className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-full bg-red-600 text-white hover:bg-red-700 transition"
+                          className="app-btn-danger inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-full"
                         >
                           {t('adminPropertiesPage.buttons.delete')}
                         </button>
@@ -891,10 +891,10 @@ export default function AdminPropertiesPage() {
           >
             <button
               onClick={closeLightbox}
-              className="absolute top-6 right-6 bg-white/90 hover:bg-white text-slate-800 rounded-full p-2 text-xl shadow-md transition"
+              className="absolute top-6 right-6 bg-surface-card/90 hover:bg-surface-card text-text-primary rounded-full p-2 text-xl shadow-md transition"
               aria-label={t('adminPropertiesPage.lightbox.close')}
             >
-              ✕
+              x
             </button>
 
             <button
@@ -902,10 +902,10 @@ export default function AdminPropertiesPage() {
                 e.stopPropagation();
                 prevImage();
               }}
-              className="absolute left-6 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-800 rounded-full p-3 text-xl shadow-md transition"
+              className="absolute left-6 top-1/2 -translate-y-1/2 bg-surface-card/90 hover:bg-surface-card text-text-primary rounded-full p-3 text-xl shadow-md transition"
               aria-label={t('adminPropertiesPage.lightbox.prev')}
             >
-              ‹
+              {'<'}
             </button>
 
             <img
@@ -923,10 +923,10 @@ export default function AdminPropertiesPage() {
                 e.stopPropagation();
                 nextImage();
               }}
-              className="absolute right-6 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-800 rounded-full p-3 text-xl shadow-md transition"
+              className="absolute right-6 top-1/2 -translate-y-1/2 bg-surface-card/90 hover:bg-surface-card text-text-primary rounded-full p-3 text-xl shadow-md transition"
               aria-label={t('adminPropertiesPage.lightbox.next')}
             >
-              ›
+              {'>'}
             </button>
 
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white text-xs bg-black/40 px-4 py-1 rounded-full">
@@ -941,4 +941,6 @@ export default function AdminPropertiesPage() {
     </div>
   );
 }
+
+
 

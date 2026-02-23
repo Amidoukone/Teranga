@@ -1,6 +1,6 @@
 // ============================================================
-// OrderDetailPage.jsx — Teranga PRODUCTION READY (Option B2)
-// Clean Shop Premium — Responsive — FILE_BASE system (multi-pays)
+// OrderDetailPage.jsx Ã¢â‚¬â€ Teranga PRODUCTION READY (Option B2)
+// Clean Shop Premium Ã¢â‚¬â€ Responsive Ã¢â‚¬â€ FILE_BASE system (multi-pays)
 // ============================================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -37,7 +37,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 /* ============================================================
-   🌍 FILE_BASE + normalizePath + toAbsUrl (multi-pays / master)
+   Ã°Å¸Å’Â FILE_BASE + normalizePath + toAbsUrl (multi-pays / master)
 ============================================================ */
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -58,19 +58,19 @@ function toAbsUrl(path = '') {
   const norm = normalizePath(path);
   if (!norm) return '';
   if (/^https?:\/\//i.test(norm)) return norm;
-  // FILE_BASE déjà sans trailing slash dans la plupart des cas
+  // FILE_BASE dÃƒÂ©jÃƒÂ  sans trailing slash dans la plupart des cas
   return FILE_BASE.replace(/\/$/, '') + norm;
 }
 
 /* ============================================================
-   🧭 Timeline des statuts (visuelle + animée)
+   Ã°Å¸Â§Â­ Timeline des statuts (visuelle + animÃƒÂ©e)
 ============================================================ */
 const ORDER_STEP_DEFS = [
-  { key: 'created', labelKey: 'orderDetail.timeline.created', icon: '📝' },
-  { key: 'processing', labelKey: 'orderDetail.timeline.processing', icon: '⚙️' },
-  { key: 'paid', labelKey: 'orderDetail.timeline.paid', icon: '💳' },
-  { key: 'delivered', labelKey: 'orderDetail.timeline.delivered', icon: '📦' },
-  { key: 'closed', labelKey: 'orderDetail.timeline.closed', icon: '✅' },
+  { key: 'created', labelKey: 'orderDetail.timeline.created', icon: 'C' },
+  { key: 'processing', labelKey: 'orderDetail.timeline.processing', icon: 'P' },
+  { key: 'paid', labelKey: 'orderDetail.timeline.paid', icon: '$' },
+  { key: 'delivered', labelKey: 'orderDetail.timeline.delivered', icon: 'D' },
+  { key: 'closed', labelKey: 'orderDetail.timeline.closed', icon: 'OK' },
 ];
 
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
@@ -87,7 +87,7 @@ function mapStatusToStepKey(status = '') {
 }
 
 /* ============================================================
-   ⭐ Page Détail Commande
+   Ã¢Â­Â Page DÃƒÂ©tail Commande
 ============================================================ */
 export default function OrderDetailPage() {
   const { formatNumber, formatDateTime } = useLocale();
@@ -164,37 +164,37 @@ export default function OrderDetailPage() {
         regionName ||
         (regionId ? `${t('common.regionLabel')} #${regionId}` : '');
 
-      if (countryLabel && regionLabel) return `${countryLabel} • ${regionLabel}`;
+      if (countryLabel && regionLabel) return `${countryLabel} - ${regionLabel}`;
       return countryLabel || regionLabel || '';
     },
     [countriesById, regionsById, t]
   );
 
   /* ============================================================
-     👤 Affichage client
+     Ã°Å¸â€˜Â¤ Affichage client
   ============================================================ */
   const customerDisplay = useMemo(() => {
-    if (!order?.customer) return '—';
+    if (!order?.customer) return "-";
     const c = order.customer;
 
     const first = c.firstName ?? c.firstname ?? '';
     const last = c.lastName ?? c.lastname ?? '';
 
-    return `${first} ${last}`.trim() || c.name || c.email || '—';
+    return `${first} ${last}`.trim() || c.name || c.email || "-";
   }, [order]);
 
   /* ============================================================
-     👤 Affichage uploader (preuves)
+     Ã°Å¸â€˜Â¤ Affichage uploader (preuves)
   ============================================================ */
   function formatUploader(u) {
-    if (!u) return '—';
+    if (!u) return "-";
     const first = u.firstName ?? u.firstname ?? '';
     const last = u.lastName ?? u.lastname ?? '';
-    return `${first} ${last}`.trim() || u.name || u.email || '—';
+    return `${first} ${last}`.trim() || u.name || u.email || "-";
   }
 
   /* ============================================================
-     🔍 Helpers preuves
+     Ã°Å¸â€Â Helpers preuves
   ============================================================ */
   function isEvidenceImage(ev) {
     return (ev?.mimeType || '').toLowerCase().startsWith('image/');
@@ -257,7 +257,7 @@ export default function OrderDetailPage() {
     return (evidences || []).filter((ev) => inferEvidenceKind(ev) !== 'image');
   }, [evidences]);
 
-  // ✅ UTILISÉ dans la liste des preuves (vignettes)
+  // Ã¢Å“â€¦ UTILISÃƒâ€° dans la liste des preuves (vignettes)
   function openEvidenceLightbox(fromId) {
     const idx = imageEvidences.findIndex((e) => e.id === fromId);
     if (idx >= 0) setEvidenceLightbox({ open: true, index: idx });
@@ -284,7 +284,7 @@ export default function OrderDetailPage() {
   }
 
   /* ============================================================
-     🔄 Initialisation sécurisée (master / multi-pays)
+     Ã°Å¸â€â€ž Initialisation sÃƒÂ©curisÃƒÂ©e (master / multi-pays)
   ============================================================ */
   const init = useCallback(async () => {
     try {
@@ -320,7 +320,7 @@ export default function OrderDetailPage() {
         localStorage.removeItem('token');
         navigate('/login');
       } else {
-        console.error('❌ init OrderDetailPage:', e);
+        console.error("init OrderDetailPage:", e);
       }
     } finally {
       setLoading(false);
@@ -344,7 +344,7 @@ export default function OrderDetailPage() {
         setCountries(Array.isArray(cList) ? cList : []);
         setRegions(Array.isArray(rList) ? rList : []);
       } catch (e) {
-        console.error('❌ Erreur chargement pays/régions:', e);
+        console.error("Erreur chargement pays/regions:", e);
         if (mounted) {
           setCountries([]);
           setRegions([]);
@@ -368,7 +368,7 @@ export default function OrderDetailPage() {
   }, [id]);
 
   /* ============================================================
-     🔄 Mise à jour statut commande
+     Ã°Å¸â€â€ž Mise ÃƒÂ  jour statut commande
   ============================================================ */
   async function handleOrderUpdate(patch) {
     try {
@@ -385,13 +385,13 @@ export default function OrderDetailPage() {
       await refresh();
       notify(t("orderDetail.alerts.updateSuccess"));
     } catch (e) {
-      console.error('❌ update order:', e);
+      console.error("update order:", e);
       notify(t("orderDetail.alerts.updateError"));
     }
   }
 
   /* ============================================================
-     🧩 Gestion articles
+     Ã°Å¸Â§Â© Gestion articles
   ============================================================ */
   async function handleAddItem(e) {
     e.preventDefault();
@@ -416,7 +416,7 @@ export default function OrderDetailPage() {
       await refresh();
       notify(t("orderDetail.alerts.itemAdded"));
     } catch (e2) {
-      console.error('❌ add item:', e2);
+      console.error("add item:", e2);
       notify(t("orderDetail.alerts.itemAddError"));
     }
   }
@@ -426,7 +426,7 @@ export default function OrderDetailPage() {
       await updateOrderItem(id, itemId, patch);
       await refresh();
     } catch (e) {
-      console.error('❌ update item:', e);
+      console.error("update item:", e);
       notify(t("orderDetail.alerts.itemUpdateError"));
     }
   }
@@ -439,13 +439,13 @@ export default function OrderDetailPage() {
       await deleteOrderItem(id, itemId);
       await refresh();
     } catch (e) {
-      console.error('❌ delete item:', e);
+      console.error("delete item:", e);
       notify(t("orderDetail.alerts.itemDeleteError"));
     }
   }
 
   /* ============================================================
-     📎 Gestion preuves
+     Ã°Å¸â€œÅ½ Gestion preuves
   ============================================================ */
   function onFilesChange(ev) {
     const selected = Array.from(ev.target.files || []);
@@ -469,7 +469,7 @@ export default function OrderDetailPage() {
       await refreshEvidences();
       notify(t("orderDetail.alerts.evidenceAdded"));
     } catch (e2) {
-      console.error('❌ upload evidences:', e2);
+      console.error("upload evidences:", e2);
       notify(t("orderDetail.alerts.evidenceUploadError"));
     } finally {
       setUploading(false);
@@ -484,19 +484,19 @@ export default function OrderDetailPage() {
       await deleteOrderEvidence(evId);
       await refreshEvidences();
     } catch (e) {
-      console.error('❌ delete evidence:', e);
+      console.error("delete evidence:", e);
       const msg =
         e?.response?.data?.error || t("orderDetail.alerts.evidenceDeleteError");
       notify(msg);
     }
   }
   /* ============================================================
-     ⏳ Loading + commande introuvable
+     Ã¢ÂÂ³ Loading + commande introuvable
   ============================================================ */
   if (!user || loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <p className="text-lg text-gray-600 animate-pulse">
+      <div className="flex justify-center items-center min-h-screen bg-surface-main">
+        <p className="text-lg text-text-secondary animate-pulse">
           {t("orderDetail.loading")}
         </p>
       </div>
@@ -505,13 +505,13 @@ export default function OrderDetailPage() {
 
   if (!order) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <p className="text-gray-600 text-lg">{t("orderDetail.notFound")}</p>
+      <div className="flex justify-center items-center min-h-screen bg-surface-main">
+        <p className="text-text-secondary text-lg">{t("orderDetail.notFound")}</p>
       </div>
     );
   }
 
-  // ✅ Multi-pays / master: on autorise admin + master aux actions admin
+  // Ã¢Å“â€¦ Multi-pays / master: on autorise admin + master aux actions admin
   const canAdmin = user.role === 'admin' || user.role === 'master';
   const canUploadProofs = ['admin', 'agent', 'client', 'master'].includes(user.role);
 
@@ -533,18 +533,17 @@ export default function OrderDetailPage() {
   const activeStepIndex = ORDER_STEP_DEFS.findIndex((s) => s.key === statusStepKey);
 
   /* ============================================================
-     ⭐ UI PRINCIPALE
+     Ã¢Â­Â UI PRINCIPALE
   ============================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-5 sm:p-8 border border-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-10">
+      <div className="max-w-6xl mx-auto bg-surface-card shadow-xl rounded-2xl p-5 sm:p-8 border border-border/70">
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 break-words">
-              🧾 {order.code || t("orderDetail.title", { id: order.id })}
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary break-words">              {order.code || t("orderDetail.title", { id: order.id })}
             </h1>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-text-secondary">
               {t("orderDetail.subtitle")}
             </p>
           </div>
@@ -552,7 +551,7 @@ export default function OrderDetailPage() {
           <div className="flex flex-wrap gap-2">
             <Link
               to="/orders"
-              className="px-4 py-2 text-sm rounded-lg bg-slate-700 text-white hover:bg-slate-800 shadow-sm"
+              className="px-4 py-2 text-sm rounded-lg app-btn-neutral shadow-sm"
             >
               {t("orderDetail.actions.back")}
             </Link>
@@ -560,7 +559,7 @@ export default function OrderDetailPage() {
             {canAdmin && (
               <button
                 onClick={() => handleOrderUpdate({ orderStatus: 'cancelled' })}
-                className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 shadow-sm"
+                className="px-4 py-2 text-sm rounded-lg app-btn-danger shadow-sm"
               >
                 {t("orderDetail.actions.cancel")}
               </button>
@@ -568,22 +567,21 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* RÉSUMÉ */}
+        {/* RÃƒâ€°SUMÃƒâ€° */}
         <div className="grid lg:grid-cols-3 gap-4 mb-10">
           {/* CLIENT */}
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 p-4 rounded-xl shadow-sm">
-            <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-              👤 {t("orderDetail.sections.customer")}
+          <div className="bg-gradient-to-br from-surface-main to-surface-main border border-border p-4 rounded-xl shadow-sm">
+            <h3 className="font-semibold text-text-primary mb-2 flex items-center gap-2">              {t("orderDetail.sections.customer")}
             </h3>
-            <p className="font-medium text-slate-900 break-words">{customerDisplay}</p>
+            <p className="font-medium text-text-primary break-words">{customerDisplay}</p>
 
             {order.customer?.email && (
-              <p className="text-xs text-slate-500 mt-1 break-all">{order.customer.email}</p>
+              <p className="text-xs text-text-muted mt-1 break-all">{order.customer.email}</p>
             )}
 
             {isGlobalAdmin && (
-              <p className="text-xs text-slate-500 mt-2 break-words">
-                <span className="font-semibold text-slate-700">
+              <p className="text-xs text-text-muted mt-2 break-words">
+                <span className="font-semibold text-text-secondary">
                   {t("common.locationLabel")}:
                 </span>{' '}
                 {getGeoLabel(order) || t("common.dash")}
@@ -591,7 +589,7 @@ export default function OrderDetailPage() {
             )}
 
             {order.customerNote && (
-              <p className="text-sm text-slate-700 mt-3 break-words">
+              <p className="text-sm text-text-secondary mt-3 break-words">
                 <span className="font-semibold">
                   {t("orderDetail.labels.note")}
                 </span>{' '}
@@ -601,16 +599,15 @@ export default function OrderDetailPage() {
           </div>
 
           {/* STATUTS + TIMELINE */}
-          <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-slate-200 p-4 rounded-xl shadow-sm">
-            <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-              📌 {t("orderDetail.sections.statuses")}
+          <div className="bg-gradient-to-br from-surface-main via-surface-card to-surface-main border border-border p-4 rounded-xl shadow-sm">
+            <h3 className="font-semibold text-text-primary mb-2 flex items-center gap-2">              {t("orderDetail.sections.statuses")}
             </h3>
 
             <div className="flex flex-wrap gap-2 mb-3">
-              <span className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-xs font-semibold">
+              <span className="px-2.5 py-1 rounded-full bg-surface-card border border-border text-xs font-semibold">
                 {t("orderDetail.labels.orderStatus")} {orderStatusLabel}
               </span>
-              <span className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-xs font-semibold">
+              <span className="px-2.5 py-1 rounded-full bg-surface-card border border-border text-xs font-semibold">
                 {t("orderDetail.labels.paymentStatus")} {paymentStatusLabel}
               </span>
             </div>
@@ -622,7 +619,7 @@ export default function OrderDetailPage() {
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-xs border transition ${
                     i <= activeStepIndex
                       ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-slate-100 text-slate-400 border-slate-200'
+                      : 'bg-surface-main/80 text-text-muted border-border'
                   }`}
                   title={t(s.labelKey)}
                 >
@@ -634,7 +631,7 @@ export default function OrderDetailPage() {
             {canAdmin && (
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
-                  className="px-3 py-1 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  className="px-3 py-1 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600/90 dark:hover:bg-emerald-500"
                   onClick={() =>
                     handleOrderUpdate({
                       orderStatus: 'paid',
@@ -646,7 +643,7 @@ export default function OrderDetailPage() {
                 </button>
 
                 <button
-                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-3 py-1 text-xs rounded-lg app-btn-primary"
                   onClick={() =>
                     handleOrderUpdate({
                       orderStatus: 'delivered',
@@ -661,20 +658,19 @@ export default function OrderDetailPage() {
           </div>
 
           {/* MONTANT */}
-          <div className="bg-gradient-to-br from-emerald-50 via-white to-blue-50 border border-emerald-100 p-4 rounded-xl shadow-sm">
-            <h3 className="text-slate-800 font-semibold mb-2 flex items-center gap-2">
-              💰 {t("orderDetail.sections.summary")}
+          <div className="bg-gradient-to-br from-surface-main via-surface-card to-surface-main border border-border p-4 rounded-xl shadow-sm">
+            <h3 className="text-text-primary font-semibold mb-2 flex items-center gap-2">              {t("orderDetail.sections.summary")}
             </h3>
 
-            <p className="text-xs text-slate-500 uppercase">
+            <p className="text-xs text-text-muted uppercase">
               {t("orderDetail.labels.totalAmount")}
             </p>
-            <p className="text-2xl font-extrabold text-blue-600">
+            <p className="text-2xl font-extrabold text-blue-600 dark:text-blue-300">
               {formatNumber(total)} {currencyLabel}
             </p>
 
             {order.items?.length > 0 && (
-              <p className="text-xs text-slate-500 mt-3">
+              <p className="text-xs text-text-muted mt-3">
                 {t("orderDetail.summary.itemsCount", {
                   count: order.items.length,
                 })}
@@ -685,10 +681,9 @@ export default function OrderDetailPage() {
 
         {/* ===================== ARTICLES ===================== */}
         <section className="mb-10">
-          <h2 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
-            🧩 {t("orderDetail.items.title")}
+          <h2 className="text-lg font-semibold text-text-primary mb-3 flex items-center gap-2">            {t("orderDetail.items.title")}
             {order.items?.length ? (
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-text-muted">
                 ({t("orderDetail.items.count", { count: order.items.length })})
               </span>
             ) : null}
@@ -703,33 +698,33 @@ export default function OrderDetailPage() {
                 return (
                   <div
                     key={it.id}
-                    className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between gap-3"
+                    className="bg-surface-card border border-border p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between gap-3"
                   >
                     <div className="space-y-1 min-w-0">
-                      <p className="font-semibold text-slate-900 break-words">
+                      <p className="font-semibold text-text-primary break-words">
                         {it.product?.name ||
                           t("orderDetail.items.itemFallback", { id: it.id })}
                       </p>
 
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-text-muted">
                         {t("orderDetail.items.itemId", { id: it.id })}
                       </p>
 
-                      <p className="text-sm text-slate-700">
+                      <p className="text-sm text-text-secondary">
                         {t("orderDetail.items.quantity")}{" "}
                         <span className="font-semibold">{it.quantity}</span>
                       </p>
 
-                      <p className="text-sm text-slate-700">
+                      <p className="text-sm text-text-secondary">
                         {t("orderDetail.items.unitPrice")}{' '}
                         <span className="font-semibold">
                           {formatNumber(unit)} {getCurrencyLabel(currency)}
                         </span>
                       </p>
 
-                      <p className="text-sm text-slate-700">
+                      <p className="text-sm text-text-secondary">
                         {t("orderDetail.items.total")}{' '}
-                        <span className="font-semibold text-blue-700">
+                        <span className="font-semibold text-blue-700 dark:text-blue-300">
                           {formatNumber(lineTotal)} {getCurrencyLabel(currency)}
                         </span>
                       </p>
@@ -738,14 +733,14 @@ export default function OrderDetailPage() {
                     {canAdmin && (
                       <div className="flex flex-wrap gap-2 justify-end items-start">
                         <button
-                          className="px-3 py-1 bg-amber-500 text-white rounded-lg text-xs hover:bg-amber-600"
+                          className="px-3 py-1 text-xs rounded-lg app-btn-warning"
                           onClick={() => handleUpdateItem(it.id, { itemStatus: 'cancelled' })}
                         >
                           {t("orderDetail.items.cancel")}
                         </button>
 
                         <button
-                          className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700"
+                          className="px-3 py-1 text-xs rounded-lg app-btn-danger"
                           onClick={() => handleDeleteItem(it.id)}
                         >
                           {t("orderDetail.items.delete")}
@@ -757,31 +752,30 @@ export default function OrderDetailPage() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-slate-500 italic">
+            <p className="text-sm text-text-muted italic">
               {t("orderDetail.items.empty")}
             </p>
           )}
 
-          {/* Ajout d’article - Admin/Master */}
+          {/* Ajout dÃ¢â‚¬â„¢article - Admin/Master */}
           {canAdmin && (
             <form
               onSubmit={handleAddItem}
-              className="mt-5 bg-gray-50 border border-slate-200 p-4 rounded-xl shadow-sm"
+              className="mt-5 bg-surface-main border border-border p-4 rounded-xl shadow-sm"
             >
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                ➕ {t("orderDetail.items.addTitle")}
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">                {t("orderDetail.items.addTitle")}
               </h3>
 
               <div className="grid md:grid-cols-4 gap-3">
                 <select
                   value={itemForm.productId}
                   onChange={(e) => setItemForm({ ...itemForm, productId: e.target.value })}
-                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+                  className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card"
                 >
                   <option value="">{t("orderDetail.items.selectPlaceholder")}</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} — {formatNumber(p.price || 0)}{' '}
+                      {p.name} - {formatNumber(p.price || 0)}{" "}
                       {getCurrencyLabel(p.currency || currency)}
                     </option>
                   ))}
@@ -792,7 +786,7 @@ export default function OrderDetailPage() {
                   min={1}
                   value={itemForm.quantity}
                   onChange={(e) => setItemForm({ ...itemForm, quantity: e.target.value })}
-                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+                  className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card"
                   placeholder={t("orderDetail.items.quantityPlaceholder")}
                 />
 
@@ -801,13 +795,13 @@ export default function OrderDetailPage() {
                   step="0.01"
                   value={itemForm.unitPrice}
                   onChange={(e) => setItemForm({ ...itemForm, unitPrice: e.target.value })}
-                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+                  className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card"
                   placeholder={t("orderDetail.items.unitPricePlaceholder")}
                 />
 
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm"
+                  className="px-4 py-2 text-sm rounded-lg app-btn-primary shadow-sm"
                 >
                   {t("orderDetail.items.addButton")}
                 </button>
@@ -819,10 +813,9 @@ export default function OrderDetailPage() {
         {/* ===================== PREUVES ===================== */}
         {canUploadProofs && (
           <section className="mb-10">
-            <h2 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
-              📎 {t("orderDetail.sections.evidences")}
+            <h2 className="text-lg font-semibold text-text-primary mb-3 flex items-center gap-2">              {t("orderDetail.sections.evidences")}
               {evidences.length > 0 && (
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-text-muted">
                   ({t("orderDetail.evidences.count", {
                     count: evidences.length,
                   })})
@@ -830,19 +823,18 @@ export default function OrderDetailPage() {
               )}
             </h2>
             {!canAdmin && (
-              <p className="text-xs text-slate-500 italic mb-3">
-                🕒 {t("orderDetail.evidences.hintDeleteWindow")}
+              <p className="text-xs text-text-muted italic mb-3">                {t("orderDetail.evidences.hintDeleteWindow")}
               </p>
             )}
 
             {/* Upload */}
             <form
               onSubmit={handleUpload}
-              className="bg-gray-50 border border-slate-200 p-4 rounded-xl shadow-sm mb-5"
+              className="bg-surface-main border border-border p-4 rounded-xl shadow-sm mb-5"
             >
               <div className="grid md:grid-cols-3 gap-3">
                 <div className="md:col-span-2">
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  <label className="text-xs font-semibold text-text-secondary mb-1 block">
                     {t("orderDetail.labels.files")}
                   </label>
                   <input
@@ -852,29 +844,29 @@ export default function OrderDetailPage() {
                     multiple
                     accept=".jpg,.jpeg,.png,.pdf"
                     onChange={onFilesChange}
-                    className="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm bg-white"
+                    className="w-full border border-border px-3 py-2 rounded-lg text-sm bg-surface-card"
                   />
                   {files.length > 0 && (
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-text-muted mt-1">
                       {t("orderDetail.evidences.filesSelected", {
                         count: files.length,
                       })}
                     </p>
                   )}
-                  <p className="text-[0.7rem] text-slate-400 mt-1">
+                  <p className="text-[0.7rem] text-text-muted mt-1">
                     {t("orderDetail.evidences.addMoreLater")}
                   </p>
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  <label className="text-xs font-semibold text-text-secondary mb-1 block">
                     {t("orderDetail.labels.uploadNotes")}
                   </label>
                   <input
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder={t("orderDetail.evidences.notesPlaceholder")}
-                    className="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm bg-white"
+                    className="w-full border border-border px-3 py-2 rounded-lg text-sm bg-surface-card"
                   />
                 </div>
               </div>
@@ -886,7 +878,7 @@ export default function OrderDetailPage() {
                   className={`px-4 py-2 text-sm rounded-lg shadow-sm ${
                     uploading
                       ? 'bg-blue-300 cursor-not-allowed text-white'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'app-btn-primary'
                   }`}
                 >
                   {uploading
@@ -899,10 +891,10 @@ export default function OrderDetailPage() {
             {imageEvidences.length > 0 && (
               <div className="mb-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm sm:text-base font-semibold text-slate-900">
+                  <h3 className="text-sm sm:text-base font-semibold text-text-primary">
                     {t("orderDetail.sections.imagesGallery")}
                   </h3>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-text-muted">
                     {t("orderDetail.evidences.imagesCount", {
                       count: imageEvidences.length,
                     })}
@@ -917,7 +909,7 @@ export default function OrderDetailPage() {
                         key={`gallery-${ev.id}`}
                         type="button"
                         onClick={() => openEvidenceLightbox(ev.id)}
-                        className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-slate-200 bg-slate-50"
+                        className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-border bg-surface-main"
                         title={t("orderDetail.labels.preview")}
                       >
                         <img
@@ -941,10 +933,10 @@ export default function OrderDetailPage() {
             {nonImageEvidences.length > 0 && (
               <div className="mb-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm sm:text-base font-semibold text-slate-900">
+                  <h3 className="text-sm sm:text-base font-semibold text-text-primary">
                     {t("orderDetail.sections.docsGallery")}
                   </h3>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-text-muted">
                     {t("orderDetail.evidences.docsCount", {
                       count: nonImageEvidences.length,
                     })}
@@ -972,23 +964,23 @@ export default function OrderDetailPage() {
                         href={fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-slate-200 bg-white hover:shadow-md transition"
+                        className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-border bg-surface-card hover:shadow-md transition"
                       >
                         <div
                           className={`absolute top-2 left-2 text-[0.65rem] font-semibold px-2 py-0.5 rounded-full border ${
                             kind === 'pdf'
-                              ? 'bg-red-50 text-red-700 border-red-100'
-                              : 'bg-gray-50 text-gray-700 border-gray-200'
+                              ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                              : 'bg-surface-main text-text-secondary border-border'
                           }`}
                         >
                           {typeLabel}
                         </div>
 
                         <div className="h-full w-full flex flex-col items-center justify-center px-2 text-center">
-                          <div className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 px-2 py-1 rounded-full inline-flex">
+                          <div className="text-xs font-semibold text-text-secondary bg-surface-main border border-border px-2 py-1 rounded-full inline-flex">
                             {extLabel}
                           </div>
-                          <div className="mt-2 text-[0.7rem] text-slate-600 truncate w-full">
+                          <div className="mt-2 text-[0.7rem] text-text-secondary truncate w-full">
                             {ev.originalName || t("orderDetail.labels.document")}
                           </div>
                         </div>
@@ -1001,7 +993,7 @@ export default function OrderDetailPage() {
 
             {/* Liste des preuves */}
             {evidences.length === 0 ? (
-              <p className="text-sm text-slate-500 italic">
+              <p className="text-sm text-text-muted italic">
                 {t("orderDetail.evidences.noEvidence")}
               </p>
             ) : (
@@ -1021,10 +1013,10 @@ export default function OrderDetailPage() {
                   return (
                     <div
                       key={ev.id}
-                      className="group bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg transition overflow-hidden"
+                      className="group bg-surface-card border border-border rounded-2xl shadow-sm hover:shadow-lg transition overflow-hidden"
                     >
                       {/* PREVIEW */}
-                      <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-50 via-white to-slate-100 border-b border-slate-200">
+                      <div className="relative aspect-[4/3] bg-gradient-to-br from-surface-main via-surface-card to-surface-main border-b border-border">
                         {isImg ? (
                           <button
                             type="button"
@@ -1041,7 +1033,7 @@ export default function OrderDetailPage() {
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <div className="text-center">
-                              <div className="text-xs font-semibold text-slate-700 bg-white/80 border border-slate-200 px-2 py-1 rounded-full inline-flex">
+                              <div className="text-xs font-semibold text-text-secondary bg-surface-card/80 border border-border px-2 py-1 rounded-full inline-flex">
                                 {extLabel}
                               </div>
                             </div>
@@ -1052,10 +1044,10 @@ export default function OrderDetailPage() {
                           <span
                             className={`inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-semibold border ${
                               kind === 'image'
-                                ? 'bg-blue-50 text-blue-700 border-blue-100'
+                                ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30'
                                 : kind === 'pdf'
-                                ? 'bg-red-50 text-red-700 border-red-100'
-                                : 'bg-gray-50 text-gray-700 border-gray-200'
+                                ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                                : 'bg-surface-main text-text-secondary border-border'
                             }`}
                           >
                             {kind === 'image'
@@ -1071,7 +1063,7 @@ export default function OrderDetailPage() {
                             <button
                               type="button"
                               onClick={() => openEvidenceLightbox(ev.id)}
-                              className="px-2.5 py-1.5 text-[0.7rem] font-semibold bg-white/90 border border-slate-200 rounded-lg hover:bg-white"
+                              className="px-2.5 py-1.5 text-[0.7rem] font-semibold bg-surface-card/90 border border-border rounded-lg hover:bg-surface-card"
                             >
                               {t("orderDetail.labels.preview")}
                             </button>
@@ -1080,7 +1072,7 @@ export default function OrderDetailPage() {
                             href={fileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-2.5 py-1.5 text-[0.7rem] font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800"
+                            className="px-2.5 py-1.5 text-[0.7rem] font-semibold app-btn-neutral rounded-lg"
                           >
                             {t("orderDetail.labels.open")}
                           </a>
@@ -1093,12 +1085,12 @@ export default function OrderDetailPage() {
                           href={fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 font-semibold hover:underline break-words break-all text-sm block"
+                          className="text-blue-600 dark:text-blue-300 font-semibold hover:underline break-words break-all text-sm block"
                         >
                           {ev.originalName || ev.filePath}
                         </a>
 
-                        <p className="mt-2 text-xs text-slate-500">
+                        <p className="mt-2 text-xs text-text-muted">
                           {t("orderDetail.labels.addedOn")}{' '}
                           {ev.createdAt
                             ? formatDateTime(ev.createdAt)
@@ -1108,7 +1100,7 @@ export default function OrderDetailPage() {
                         </p>
 
                         {ev.notes && (
-                          <p className="mt-2 text-sm text-slate-700 break-words">
+                          <p className="mt-2 text-sm text-text-secondary break-words">
                             <span className="font-semibold">
                               {t("orderDetail.labels.notes")}
                             </span>{' '}
@@ -1121,21 +1113,21 @@ export default function OrderDetailPage() {
                             <button
                               type="button"
                               onClick={() => handleDeleteEvidence(ev.id)}
-                              className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700"
+                              className="px-3 py-1.5 text-xs rounded-lg app-btn-danger"
                             >
                               {t("orderDetail.evidences.delete")}
                             </button>
                           </div>
                         )}
                         {!canAdmin && deleteInfo.allowed && deleteInfo.reason === 'within-window' && (
-                          <p className="mt-2 text-[0.7rem] text-slate-400">
+                          <p className="mt-2 text-[0.7rem] text-text-muted">
                             {t("orderDetail.evidences.deletePossible", {
                               time: formatRemainingMs(deleteInfo.remainingMs),
                             })}
                           </p>
                         )}
                         {!canAdmin && !deleteInfo.allowed && deleteInfo.reason === 'expired' && (
-                          <p className="mt-2 text-[0.7rem] text-slate-400">
+                          <p className="mt-2 text-[0.7rem] text-text-muted">
                             {t("orderDetail.evidences.deleteExpired")}
                           </p>
                         )}
@@ -1152,14 +1144,13 @@ export default function OrderDetailPage() {
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             to={`/orders/${id}/transactions`}
-            className="px-4 py-2 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-900 shadow-sm"
-          >
-            💰 {t("orderDetail.actions.viewTransactions")}
+            className="px-4 py-2 text-sm app-btn-neutral rounded-lg shadow-sm"
+          >            {t("orderDetail.actions.viewTransactions")}
           </Link>
 
           <Link
             to="/orders"
-            className="px-4 py-2 text-sm bg-gray-200 text-slate-800 rounded-lg hover:bg-gray-300"
+            className="px-4 py-2 text-sm app-btn-soft rounded-lg"
           >
             {t("orderDetail.actions.backToOrders")}
           </Link>
@@ -1167,7 +1158,7 @@ export default function OrderDetailPage() {
       </div>
 
       {/* ============================================================
-          💡 LIGHTBOX PLEIN ÉCRAN POUR PREUVES (IMAGES)
+          Ã°Å¸â€™Â¡ LIGHTBOX PLEIN Ãƒâ€°CRAN POUR PREUVES (IMAGES)
       ============================================================ */}
       {evidenceLightbox.open && imageEvidences.length > 0 && (
         <div
@@ -1186,9 +1177,7 @@ export default function OrderDetailPage() {
             }}
             className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white"
             aria-label={t("orderDetail.lightbox.close")}
-          >
-            ✕
-          </button>
+          >x</button>
 
           {/* Navigation */}
           {imageEvidences.length > 1 && (
@@ -1201,9 +1190,7 @@ export default function OrderDetailPage() {
                 }}
                 className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
                 aria-label={t("orderDetail.lightbox.prev")}
-              >
-                ‹
-              </button>
+              >{"<"}</button>
 
               <button
                 type="button"
@@ -1213,19 +1200,17 @@ export default function OrderDetailPage() {
                 }}
                 className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white"
                 aria-label={t("orderDetail.lightbox.next")}
-              >
-                ›
-              </button>
+              >{">"}</button>
             </>
           )}
 
           {/* Contenu lightbox */}
           <div
-            className="bg-slate-900/95 border border-slate-700 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+            className="bg-slate-900/95 border border-border rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 text-slate-100 text-sm">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border text-white text-sm">
               <div className="truncate">
                 <span className="font-semibold">
                   {imageEvidences[evidenceLightbox.index].originalName ||
@@ -1234,7 +1219,7 @@ export default function OrderDetailPage() {
               </div>
 
               {imageEvidences.length > 1 && (
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-text-muted">
                   {evidenceLightbox.index + 1} / {imageEvidences.length}
                 </div>
               )}
@@ -1257,5 +1242,3 @@ export default function OrderDetailPage() {
     </div>
   );
 }
-
-

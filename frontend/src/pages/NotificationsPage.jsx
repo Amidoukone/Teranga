@@ -48,7 +48,7 @@ export default function NotificationsPage() {
         byProgress: data?.byProgress || {},
       });
     } catch (e) {
-      console.error("❌ load summary notifications:", e);
+      console.error("load summary notifications:", e);
     }
   }, []);
 
@@ -72,7 +72,7 @@ export default function NotificationsPage() {
           : { page, limit: pageSize, total: 0 }
       );
     } catch (e) {
-      console.error("❌ load notifications:", e);
+      console.error("load notifications:", e);
       setItems([]);
       setPagination({ page, limit: pageSize, total: 0 });
     } finally {
@@ -123,23 +123,23 @@ export default function NotificationsPage() {
   const entityMeta = useMemo(
     () => ({
       service: {
-        icon: "🛠️",
+        icon: "SV",
         label: t("notifications.entities.service"),
         statusCategory: "service",
       },
       task: {
-        icon: "📋",
+        icon: "TSK",
         label: t("notifications.entities.task"),
         statusCategory: "task",
       },
       order: {
-        icon: "🧾",
+        icon: "ORD",
         label: t("notifications.entities.order"),
         statusCategory: "order",
       },
-      evidence: { icon: "📎", label: t("notifications.entities.evidence") },
+      evidence: { icon: "DOC", label: t("notifications.entities.evidence") },
       project: {
-        icon: "📁",
+        icon: "PRJ",
         label: t("notifications.entities.project"),
         statusCategory: "project",
       },
@@ -159,7 +159,7 @@ export default function NotificationsPage() {
         await Promise.all([loadSummary(), loadItems()]);
         notify(
           t("notifications.markReadSuccess", {
-            defaultValue: "Notification marquée comme lue.",
+            defaultValue: "Notification marquee comme lue.",
           }),
           { type: "success" }
         );
@@ -167,7 +167,7 @@ export default function NotificationsPage() {
           window.dispatchEvent(new Event("notifications:refresh"));
         }
       } catch (e) {
-        console.error("❌ mark notification read:", e);
+        console.error("mark notification read:", e);
         notify(
           t("notifications.markReadError", {
             defaultValue: "Impossible de marquer cette notification comme lue.",
@@ -190,7 +190,7 @@ export default function NotificationsPage() {
     if ((summary.unread || 0) <= 0) {
       notify(
         t("notifications.nothingToMark", {
-          defaultValue: "Aucune notification non lue à marquer.",
+          defaultValue: "Aucune notification non lue a marquer.",
         }),
         { type: "info" }
       );
@@ -212,7 +212,7 @@ export default function NotificationsPage() {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
     } catch (e) {
-      console.error("❌ mark all notifications read:", e);
+      console.error("mark all notifications read:", e);
       notify(
         t("notifications.markAllReadError", {
           defaultValue: "Erreur lors du marquage global des notifications.",
@@ -252,9 +252,7 @@ export default function NotificationsPage() {
             <p className="page-kicker">
               {t("notifications.kicker")}
             </p>
-            <h1 className="app-page-headline">
-              🔔 {t("notifications.title")}
-            </h1>
+            <h1 className="app-page-headline">{t("notifications.title")}</h1>
             <p className="app-page-subtitle">
               {t("notifications.subtitle")}
             </p>
@@ -278,7 +276,7 @@ export default function NotificationsPage() {
                   : t("notifications.filterUnread")
               }
             >
-              {t("notifications.unreadCount", { count: summary.unread || 0 })} ·{" "}
+              {t("notifications.unreadCount", { count: summary.unread || 0 })} {" - "}
               {statusFilter === "unread"
                 ? t("notifications.resetUnreadFilter")
                 : t("notifications.filterUnread")}
@@ -348,18 +346,18 @@ export default function NotificationsPage() {
 
         {/* List */}
         {loading ? (
-          <div className="rounded-2xl border border-border/70 bg-white/70 py-10 text-center text-sm text-text-secondary">
+          <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
             {t("notifications.loading")}
           </div>
         ) : displayItems.length === 0 ? (
-          <div className="rounded-2xl border border-border/70 bg-white/70 py-10 text-center text-sm text-text-secondary">
+          <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
             {t("notifications.empty")}
           </div>
         ) : (
           <div className="grid gap-4">
             {displayItems.map((n) => {
               const meta = entityMeta[n.entityType] || {
-                icon: "🔔",
+                icon: "N",
                 label: t("notifications.entities.other"),
               };
               const createdLabel = n.createdAt ? formatDate(n.createdAt) : "-";
@@ -369,7 +367,7 @@ export default function NotificationsPage() {
               });
               const entityTitle = n?.metadata?.title || n?.metadata?.code || null;
               const title = entityTitle
-                ? `${meta.label} • ${entityTitle}`
+                ? `${meta.label} - ${entityTitle}`
                 : `${meta.label}`;
               const statusLabel =
                 n.entityStatus && meta.statusCategory
@@ -414,11 +412,11 @@ export default function NotificationsPage() {
                         <h3 className="max-w-full break-words text-sm font-semibold text-text-primary line-clamp-2 sm:text-base">
                           {title}
                         </h3>
-                        <span className="rounded-full border border-border/80 bg-slate-100 px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-text-secondary">
+                        <span className="rounded-full border border-border/80 bg-surface-main/80 px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-text-secondary">
                           {meta.label}
                         </span>
                         {n.status === "unread" && (
-                          <span className="rounded-full border border-blue-200 bg-blue-100 px-2 py-0.5 text-[0.6rem] uppercase tracking-wide text-blue-700">
+                          <span className="rounded-full border border-blue-500/30 bg-blue-500/15 px-2 py-0.5 text-[0.6rem] uppercase tracking-wide text-blue-700 dark:text-blue-300">
                             {t("notifications.unread")}
                           </span>
                         )}
@@ -461,3 +459,5 @@ export default function NotificationsPage() {
     </div>
   );
 }
+
+

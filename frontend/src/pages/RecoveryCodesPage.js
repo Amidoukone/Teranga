@@ -12,12 +12,12 @@ export default function RecoveryCodesPage() {
   const warning = String(location.state?.warning || '').trim();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-sm p-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-12">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-surface-card shadow-sm p-8">
+        <h1 className="text-2xl font-bold text-text-primary mb-2">
           {t('auth.recoveryCodes.title', { defaultValue: 'Codes de recuperation' })}
         </h1>
-        <p className="text-sm text-slate-600 mb-4">
+        <p className="text-sm text-text-secondary mb-4">
           {t('auth.recoveryCodes.subtitle', {
             defaultValue:
               'Conservez ces codes dans un endroit sur. Ils ne seront plus affiches.',
@@ -25,7 +25,7 @@ export default function RecoveryCodesPage() {
         </p>
 
         {warning ? (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/15 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
             {warning}
           </div>
         ) : null}
@@ -35,14 +35,14 @@ export default function RecoveryCodesPage() {
             {recoveryCodes.map((code) => (
               <code
                 key={code}
-                className="rounded-lg bg-slate-50 border border-slate-200 px-2 py-1.5 text-xs text-slate-800"
+                className="rounded-lg bg-surface-main border border-border px-2 py-1.5 text-xs text-text-primary"
               >
                 {code}
               </code>
             ))}
           </div>
         ) : (
-          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/15 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
             {t('auth.recoveryCodes.empty', {
               defaultValue:
                 "Aucun code disponible. Verifiez que la migration recovery_codes est appliquee.",
@@ -58,7 +58,7 @@ export default function RecoveryCodesPage() {
           >
             {t('auth.recoveryCodes.toLogin', { defaultValue: 'Aller a la connexion' })}
           </button>
-          <Link to="/login" className="text-sm text-blue-600 hover:underline">
+          <Link to="/login" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
             {t('auth.recoveryCodes.loginLink', { defaultValue: 'Connexion' })}
           </Link>
         </div>
@@ -66,3 +66,5 @@ export default function RecoveryCodesPage() {
     </div>
   );
 }
+
+

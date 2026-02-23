@@ -1,7 +1,7 @@
 // frontend/src/pages/PropertiesPage.js
 // ============================================================================
-// PropertiesPage — Version Premium 2025
-// Client / Admin / Master / Multi-pays READY — ZERO régression
+// PropertiesPage Ã¢â‚¬â€ Version Premium 2025
+// Client / Admin / Master / Multi-pays READY Ã¢â‚¬â€ ZERO rÃƒÂ©gression
 // ============================================================================
 
 import { useEffect, useMemo, useState } from 'react';
@@ -21,7 +21,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 // ============================================================================
-// 🌍 FILE_BASE — Standard Teranga (Render / Netlify / CDN / Multi-pays SAFE)
+// Ã°Å¸Å’Â FILE_BASE Ã¢â‚¬â€ Standard Teranga (Render / Netlify / CDN / Multi-pays SAFE)
 // ============================================================================
 const FILE_BASE =
   (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
@@ -121,7 +121,7 @@ function getPropertyTypeFieldConfig(type, t) {
 }
 
 // ============================================================================
-// 🧩 PAGE PRINCIPALE
+// Ã°Å¸Â§Â© PAGE PRINCIPALE
 // ============================================================================
 export default function PropertiesPage() {
   const { t } = useTranslation();
@@ -148,7 +148,7 @@ export default function PropertiesPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Affichage formulaire persisté
+  // Affichage formulaire persistÃƒÂ©
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_properties_showForm');
     return saved === null ? true : saved === '1';
@@ -212,7 +212,7 @@ export default function PropertiesPage() {
       const props = await getProperties();
       setProperties(props || []);
     } catch (e) {
-      console.error('❌ load properties:', e);
+      console.error('Ã¢ÂÅ’ load properties:', e);
       notify(t('propertiesPage.alerts.loadError'));
     }
   }
@@ -282,7 +282,7 @@ export default function PropertiesPage() {
       resetForm();
       await load();
     } catch (e) {
-      console.error('❌ create property:', e);
+      console.error('Ã¢ÂÅ’ create property:', e);
       notify(
         e?.response?.data?.error ||
           e?.message ||
@@ -315,7 +315,7 @@ export default function PropertiesPage() {
       resetForm();
       await load();
     } catch (e) {
-      console.error('❌ update property:', e);
+      console.error('Ã¢ÂÅ’ update property:', e);
       notify(t('propertiesPage.alerts.updateError'));
     } finally {
       setIsSubmitting(false);
@@ -323,7 +323,7 @@ export default function PropertiesPage() {
   }
 
   // --------------------------------------------------------------------------
-  // DELETE (≤ 1h)
+  // DELETE (Ã¢â€°Â¤ 1h)
   // --------------------------------------------------------------------------
   async function handleDelete(id, createdAt) {
     const created = new Date(createdAt).getTime();
@@ -339,7 +339,7 @@ export default function PropertiesPage() {
       await deleteProperty(id);
       load();
     } catch (e) {
-      console.error('❌ delete property:', e);
+      console.error('Ã¢ÂÅ’ delete property:', e);
       notify(t('propertiesPage.alerts.deleteError'));
     }
   }
@@ -500,7 +500,7 @@ export default function PropertiesPage() {
     return (
     <div className="app-page-wrap">
       <div className="app-page-shell relative space-y-8 p-5 sm:p-8 lg:p-10">
-        {/* 🧭 En-tête */}
+        {/* Ã°Å¸Â§Â­ En-tÃƒÂªte */}
         <Header
           showForm={showForm}
           setShowForm={setShowForm}
@@ -508,7 +508,7 @@ export default function PropertiesPage() {
           total={properties.length}
         />
 
-        {/* 🔍 Filtres */}
+        {/* Ã°Å¸â€Â Filtres */}
         <PropertyFilters
           filters={filters}
           setFilters={setFilters}
@@ -517,7 +517,7 @@ export default function PropertiesPage() {
           filteredCount={filtered.length}
         />
 
-        {/* 🏗️ Formulaire */}
+        {/* Ã°Å¸Ââ€”Ã¯Â¸Â Formulaire */}
         {showForm && (
           <PropertyForm
             form={form}
@@ -534,7 +534,7 @@ export default function PropertiesPage() {
           />
         )}
 
-        {/* 🏠 Liste */}
+        {/* Ã°Å¸ÂÂ  Liste */}
         <PropertyList
           filtered={filtered}
           now={now}
@@ -548,7 +548,7 @@ export default function PropertiesPage() {
           openLightbox={openLightbox}
         />
 
-        {/* 🖼️ Lightbox plein écran avec navigation */}
+        {/* Ã°Å¸â€“Â¼Ã¯Â¸Â Lightbox plein ÃƒÂ©cran avec navigation */}
         {lightbox.open && (
           <div
             className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm"
@@ -558,11 +558,11 @@ export default function PropertiesPage() {
           >
             <button
               onClick={closeLightbox}
-              className="absolute top-6 right-6 bg-white/90 hover:bg-white text-gray-900 rounded-full p-2 shadow-md text-xl"
+              className="absolute top-6 right-6 bg-surface-card/90 hover:bg-surface-card text-text-primary rounded-full p-2 shadow-md text-xl"
               aria-label={t('propertiesPage.lightbox.closeLabel')}
               title={t('propertiesPage.lightbox.closeTitle')}
             >
-              ✕
+              Ã¢Å“â€¢
             </button>
 
             <button
@@ -570,11 +570,11 @@ export default function PropertiesPage() {
                 e.stopPropagation();
                 prevImage();
               }}
-              className="absolute left-6 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 rounded-full p-3 shadow-lg text-xl"
+              className="absolute left-6 top-1/2 -translate-y-1/2 bg-surface-card/80 hover:bg-surface-card text-text-primary rounded-full p-3 shadow-lg text-xl"
               aria-label={t('propertiesPage.lightbox.prevLabel')}
               title={t('propertiesPage.lightbox.prevTitle')}
             >
-              ‹
+              Ã¢â‚¬Â¹
             </button>
 
             <img
@@ -591,11 +591,11 @@ export default function PropertiesPage() {
                 e.stopPropagation();
                 nextImage();
               }}
-              className="absolute right-6 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 rounded-full p-3 shadow-lg text-xl"
+              className="absolute right-6 top-1/2 -translate-y-1/2 bg-surface-card/80 hover:bg-surface-card text-text-primary rounded-full p-3 shadow-lg text-xl"
               aria-label={t('propertiesPage.lightbox.nextLabel')}
               title={t('propertiesPage.lightbox.nextTitle')}
             >
-              ›
+              Ã¢â‚¬Âº
             </button>
 
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/90 text-sm px-3 py-1 rounded-full bg-black/30">
@@ -609,7 +609,7 @@ export default function PropertiesPage() {
 }
 
 /* ============================================================================
-// ✅ SOUS-COMPOSANTS
+// Ã¢Å“â€¦ SOUS-COMPOSANTS
 ============================================================================ */
 
 function Header({ showForm, setShowForm, load, total }) {
@@ -619,7 +619,7 @@ function Header({ showForm, setShowForm, load, total }) {
     <div className="mb-4 flex flex-col gap-4 border-b border-border/70 pb-4 md:flex-row md:items-center md:justify-between">
       <div className="space-y-1">
         <h1 className="app-page-headline">
-          🏠 {t('propertiesPage.header.title')}
+          Ã°Å¸ÂÂ  {t('propertiesPage.header.title')}
         </h1>
         <p className="app-page-subtitle">
           {t('propertiesPage.header.subtitle')}
@@ -636,14 +636,14 @@ function Header({ showForm, setShowForm, load, total }) {
           className="app-btn-neutral w-full sm:w-auto"
         >
           {showForm
-            ? `➖ ${t('propertiesPage.buttons.hideForm')}`
-            : `➕ ${t('propertiesPage.buttons.newProperty')}`}
+            ? `Ã¢Å¾â€“ ${t('propertiesPage.buttons.hideForm')}`
+            : `Ã¢Å¾â€¢ ${t('propertiesPage.buttons.newProperty')}`}
         </button>
         <button
           onClick={load}
           className="app-btn-primary w-full sm:w-auto"
         >
-          🔄 {t('common.refresh')}
+          Ã°Å¸â€â€ž {t('common.refresh')}
         </button>
       </div>
     </div>
@@ -667,14 +667,14 @@ function PropertyFilters({
           placeholder={t('propertiesPage.filters.searchPlaceholder')}
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="col-span-1 w-full rounded-lg border border-border/80 bg-white px-3 py-2.5 text-sm text-text-primary sm:text-base lg:col-span-3"
+          className="col-span-1 w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2.5 text-sm text-text-primary sm:text-base lg:col-span-3"
         />
 
         {/* Type */}
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         >
           <option value="">{t('propertiesPage.filters.typeAll')}</option>
           {Object.entries(PROPERTY_TYPES).map(([key, label]) => (
@@ -695,7 +695,7 @@ function PropertyFilters({
         <select
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         >
           <option value="">{t('propertiesPage.filters.statusAll')}</option>
           {Object.entries(PROPERTY_STATUSES).map(([k, v]) => (
@@ -711,7 +711,7 @@ function PropertyFilters({
           placeholder={t('propertiesPage.filters.cityPlaceholder')}
           value={filters.city}
           onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         />
         <datalist id="cities">
           {cityOptions.map((c) => (
@@ -726,7 +726,7 @@ function PropertyFilters({
           placeholder={t('propertiesPage.filters.minSurfacePlaceholder')}
           value={filters.minSurface}
           onChange={(e) => setFilters({ ...filters, minSurface: e.target.value })}
-          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         />
 
         {/* Surface max */}
@@ -736,7 +736,7 @@ function PropertyFilters({
           placeholder={t('propertiesPage.filters.maxSurfacePlaceholder')}
           value={filters.maxSurface}
           onChange={(e) => setFilters({ ...filters, maxSurface: e.target.value })}
-          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         />
       </div>
 
@@ -753,7 +753,7 @@ function PropertyFilters({
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, sort: e.target.value }))
             }
-            className="rounded-lg border border-border/80 bg-white px-2.5 py-1.5 text-xs text-text-primary sm:text-sm"
+            className="rounded-lg border border-border/80 bg-surface-card px-2.5 py-1.5 text-xs text-text-primary sm:text-sm"
           >
             <option value="-createdAt">
               {t('propertiesPage.filters.sortNewest')}
@@ -818,8 +818,8 @@ function PropertyForm({
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg sm:text-xl font-semibold text-text-primary">
           {editId
-            ? `✏️ ${t('propertiesPage.form.titleEdit')}`
-            : `➕ ${t('propertiesPage.form.titleCreate')}`}
+            ? `Ã¢Å“ÂÃ¯Â¸Â ${t('propertiesPage.form.titleEdit')}`
+            : `Ã¢Å¾â€¢ ${t('propertiesPage.form.titleCreate')}`}
         </h2>
         {!editId && (
           <p className="text-xs sm:text-sm text-text-secondary">
@@ -932,14 +932,14 @@ function PropertyPreview({
           disabled={isSubmitting}
           className="app-btn-soft"
         >
-          🔙 {t('propertiesPage.preview.edit')}
+          Ã°Å¸â€â„¢ {t('propertiesPage.preview.edit')}
         </button>
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
           className="app-btn-primary disabled:cursor-not-allowed disabled:bg-blue-400"
         >
-          ✅ {t('propertiesPage.preview.create')}
+          Ã¢Å“â€¦ {t('propertiesPage.preview.create')}
         </button>
       </div>
     </div>
@@ -980,7 +980,7 @@ function PropertyEditor({
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           required
-          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         />
       </div>
 
@@ -1002,7 +1002,7 @@ function PropertyEditor({
             }));
           }}
           required
-          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         >
           {Object.entries(PROPERTY_TYPES).map(([key, label]) => (
             <option key={key} value={key}>
@@ -1023,7 +1023,7 @@ function PropertyEditor({
           value={form.address}
           onChange={(e) => setForm({ ...form, address: e.target.value })}
           required
-          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         />
       </div>
 
@@ -1038,7 +1038,7 @@ function PropertyEditor({
           value={form.city}
           onChange={(e) => setForm({ ...form, city: e.target.value })}
           required
-          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         />
       </div>
 
@@ -1051,11 +1051,11 @@ function PropertyEditor({
           placeholder={t('propertiesPage.form.placeholders.postalCode')}
           value={form.postalCode}
           onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
-          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         />
       </div>
 
-      {/* Surface / Kilométrage */}
+      {/* Surface / KilomÃƒÂ©trage */}
       {fieldConfig.showSurface && (
         <div className="w-full">
           <label className="mb-1 block text-xs sm:text-sm font-medium text-text-secondary">
@@ -1067,12 +1067,12 @@ function PropertyEditor({
             placeholder={fieldConfig.surfacePlaceholder}
             value={form.surfaceArea}
             onChange={(e) => setForm({ ...form, surfaceArea: e.target.value })}
-            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+            className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
           />
         </div>
       )}
 
-      {/* Pièces / Espaces / Places */}
+      {/* PiÃƒÂ¨ces / Espaces / Places */}
       {fieldConfig.showRooms && (
         <div className="w-full">
           <label className="mb-1 block text-xs sm:text-sm font-medium text-text-secondary">
@@ -1084,7 +1084,7 @@ function PropertyEditor({
             placeholder={fieldConfig.roomsPlaceholder}
             value={form.roomCount}
             onChange={(e) => setForm({ ...form, roomCount: e.target.value })}
-            className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+            className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
           />
         </div>
       )}
@@ -1098,7 +1098,7 @@ function PropertyEditor({
           placeholder={t('propertiesPage.form.placeholders.description')}
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
-          className="w-full rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
           rows={3}
         />
       </div>
@@ -1106,14 +1106,14 @@ function PropertyEditor({
       {/* Fichiers */}
       <div className="sm:col-span-2">
         <label className="mb-1 block text-xs sm:text-sm font-medium text-text-secondary">
-          📁 {t('propertiesPage.form.filesLabel')}
+          Ã°Å¸â€œÂ {t('propertiesPage.form.filesLabel')}
         </label>
         <input
           type="file"
           multiple
           accept="image/*,.pdf,.webp,.heic,.heif"
           onChange={handleFileChange}
-          className="w-full cursor-pointer rounded-lg border border-border/80 bg-white px-3 py-2 text-sm text-text-primary sm:text-base"
+          className="w-full cursor-pointer rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         />
         {previewUrls.length > 0 && (
           <p className="mt-1 text-xs text-text-secondary">
@@ -1130,7 +1130,7 @@ function PropertyEditor({
           {previewUrls.map((url, i) => (
             <div
               key={i}
-              className="h-24 w-24 overflow-hidden rounded-lg border border-border/80 bg-white shadow-sm sm:h-28 sm:w-28"
+              className="h-24 w-24 overflow-hidden rounded-lg border border-border/80 bg-surface-card shadow-sm sm:h-28 sm:w-28"
             >
               <img
                 src={url}
@@ -1160,8 +1160,8 @@ function PropertyEditor({
           className="app-btn-primary px-5 py-2.5 text-sm sm:text-base disabled:cursor-not-allowed disabled:bg-blue-400"
         >
           {editId
-            ? `💾 ${t('propertiesPage.form.save')}`
-            : `👁 ${t('propertiesPage.form.preview')}`}
+            ? `Ã°Å¸â€™Â¾ ${t('propertiesPage.form.save')}`
+            : `Ã°Å¸â€˜Â ${t('propertiesPage.form.preview')}`}
         </button>
       </div>
     </form>
@@ -1187,7 +1187,7 @@ function PropertyList({
     <>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg sm:text-xl font-semibold text-text-primary">
-          📋 {t('propertiesPage.list.title')}
+          Ã°Å¸â€œâ€¹ {t('propertiesPage.list.title')}
         </h2>
         <span className="app-toolbar-pill">
           {t('propertiesPage.list.results', { count: filtered.length })}
@@ -1195,7 +1195,7 @@ function PropertyList({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-2xl border border-border/70 bg-white/70 py-6 text-center text-sm italic text-text-secondary sm:text-base">
+        <p className="rounded-2xl border border-border/70 bg-surface-card/70 py-6 text-center text-sm italic text-text-secondary sm:text-base">
           {t('propertiesPage.list.empty')}
         </p>
       ) : (
@@ -1209,7 +1209,7 @@ function PropertyList({
               p.status ||
               t('common.dash');
             const surfaceLabel = p.surfaceArea
-              ? `${p.surfaceArea} m²`
+              ? `${p.surfaceArea} mÃ‚Â²`
               : t('common.dash');
             const roomCount = Number(p.roomCount || 0);
 
@@ -1221,7 +1221,7 @@ function PropertyList({
               <div
                 key={p.id}
                 className="
-                  bg-white border border-border/70 rounded-2xl shadow-sm
+                  bg-surface-card border border-border/70 rounded-2xl shadow-sm
                   hover:shadow-md transition p-4 sm:p-5
                   flex flex-col justify-between
                 "
@@ -1246,7 +1246,7 @@ function PropertyList({
                               "
                               title={t('propertiesPage.list.openPdf')}
                             >
-                              📄 {t('propertiesPage.list.pdfLabel')}
+                              Ã°Å¸â€œâ€ž {t('propertiesPage.list.pdfLabel')}
                             </a>
                           );
                         }
@@ -1326,14 +1326,14 @@ function PropertyList({
                         }}
                         className="w-full sm:w-auto rounded-lg bg-amber-500 px-4 py-2 text-xs font-medium text-white transition hover:bg-amber-600 sm:text-sm"
                       >
-                        ✏️ {t('propertiesPage.list.edit')}
+                        Ã¢Å“ÂÃ¯Â¸Â {t('propertiesPage.list.edit')}
                       </button>
 
                       <button
                         onClick={() => handleDelete(p.id, p.createdAt)}
                         className="w-full sm:w-auto rounded-lg bg-red-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-red-700 sm:text-sm"
                       >
-                        ❌ {t('propertiesPage.list.delete')}
+                        Ã¢ÂÅ’ {t('propertiesPage.list.delete')}
                       </button>
                     </>
                   ) : (
@@ -1350,6 +1350,8 @@ function PropertyList({
     </>
   );
 }
+
+
 
 
 

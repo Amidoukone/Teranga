@@ -1,6 +1,6 @@
 // ============================================================
 // frontend/src/pages/ServiceTasksPage.jsx
-// Version Premium 2025 — MASTER SAFE (multi-pays) — PARTIE 1 / 2
+// Version Premium 2025 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â MASTER SAFE (multi-pays) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PARTIE 1 / 2
 // ============================================================
 
 import { useEffect, useState, useMemo, useCallback } from "react";
@@ -20,13 +20,13 @@ import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
 
 /* ========================================================================
-   🔧 PAGE : ServiceTasksPage — Style A Premium 2025 (MASTER SAFE)
-   - Chargement des tâches d’un service
-   - Labels cohérents (statusLabel, typeLabel…)
+   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ PAGE : ServiceTasksPage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Style A Premium 2025 (MASTER SAFE)
+   - Chargement des tÃƒÆ’Ã‚Â¢ches dÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢un service
+   - Labels cohÃƒÆ’Ã‚Â©rents (statusLabel, typeLabelÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦)
    - UI responsive / mobile-first
-   - ✅ Aucune régression : même endpoint / même navigation preuves
-   - ✅ Multi-pays : envoie params geo (admin scoped/master) comme le reste de l’app
-   - ✅ Permissions : admin/master/agent/client (affichage) — backend reste source de vérité
+   - ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Aucune rÃƒÆ’Ã‚Â©gression : mÃƒÆ’Ã‚Âªme endpoint / mÃƒÆ’Ã‚Âªme navigation preuves
+   - ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Multi-pays : envoie params geo (admin scoped/master) comme le reste de lÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢app
+   - ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Permissions : admin/master/agent/client (affichage) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â backend reste source de vÃƒÆ’Ã‚Â©ritÃƒÆ’Ã‚Â©
 =========================================================================== */
 
 export default function ServiceTasksPage() {
@@ -59,7 +59,7 @@ export default function ServiceTasksPage() {
   });
 
   /* ============================================================
-     🔐 Auth headers (production-safe)
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Auth headers (production-safe)
   ============================================================ */
   const authHeaders = useMemo(() => {
     const token =
@@ -70,7 +70,7 @@ export default function ServiceTasksPage() {
   }, []);
 
   /* ============================================================
-     🔐 Rôles (UX uniquement) — backend = source de vérité
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â RÃƒÆ’Ã‚Â´les (UX uniquement) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â backend = source de vÃƒÆ’Ã‚Â©ritÃƒÆ’Ã‚Â©
   ============================================================ */
   const role = normalizeRole(user?.role);
   const isAdmin = role === "admin";
@@ -89,7 +89,7 @@ export default function ServiceTasksPage() {
     : t("serviceTasksPage.header.title", { id });
 
   /* ============================================================
-     📥 Chargement des tâches (MASTER SAFE + Geo Params)
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ Chargement des tÃƒÆ’Ã‚Â¢ches (MASTER SAFE + Geo Params)
   ============================================================ */
   const loadTasks = useCallback(async () => {
     if (!id) return;
@@ -100,17 +100,17 @@ export default function ServiceTasksPage() {
 
       const { data } = await api.get(`/tasks/service/${id}`, {
         headers: authHeaders,
-        params: getGeoParams(), // ✅ multi-pays : scope admin/master
+        params: getGeoParams(), // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ multi-pays : scope admin/master
       });
 
       const rawTasks = data?.tasks || [];
 
-      // Toujours recalculer les labels via i18n (évite les labels FR renvoyés par le backend)
+      // Toujours recalculer les labels via i18n (ÃƒÆ’Ã‚Â©vite les labels FR renvoyÃƒÆ’Ã‚Â©s par le backend)
       const withLabels = rawTasks.map((t) => applyLabels(t, "task"));
 
       setTasks(withLabels);
     } catch (err) {
-      console.error("❌ Erreur chargement tâches:", err);
+      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur chargement tÃƒÆ’Ã‚Â¢ches:", err);
       setErrorMsg(t("serviceTasksPage.errors.load"));
       setTasks([]);
     } finally {
@@ -119,7 +119,7 @@ export default function ServiceTasksPage() {
   }, [id, authHeaders, t]);
 
   /* ============================================================
-     🚀 Init : user + tasks
+     ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ Init : user + tasks
   ============================================================ */
   useEffect(() => {
     let active = true;
@@ -168,7 +168,7 @@ export default function ServiceTasksPage() {
                 setServiceInfo(found ? applyLabels(found, "service") : null);
               }
             } catch (err) {
-              console.error("❌ Erreur chargement service:", err);
+              console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur chargement service:", err);
               if (active) setServiceInfo(null);
             }
           }
@@ -182,13 +182,13 @@ export default function ServiceTasksPage() {
             });
             if (active) setAgents(agentsRes?.users || []);
           } catch (err) {
-            console.error("❌ Erreur chargement agents:", err);
+            console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur chargement agents:", err);
             if (active) setAgents([]);
           }
         }
       } catch (e) {
-        // si besoin, laisse l’app gérer ailleurs (middleware / router)
-        console.error("❌ me() ServiceTasksPage:", e);
+        // si besoin, laisse lÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢app gÃƒÆ’Ã‚Â©rer ailleurs (middleware / router)
+        console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ me() ServiceTasksPage:", e);
       } finally {
         if (active) {
           await loadTasks();
@@ -215,7 +215,7 @@ export default function ServiceTasksPage() {
   }, [serviceTitle]);
 
   /* ============================================================
-     ✨ Création d'une tâche (CLIENT + ADMIN)
+     ÃƒÂ¢Ã…â€œÃ‚Â¨ CrÃƒÆ’Ã‚Â©ation d'une tÃƒÆ’Ã‚Â¢che (CLIENT + ADMIN)
   ============================================================ */
   async function createTask(e) {
     e.preventDefault();
@@ -255,7 +255,7 @@ export default function ServiceTasksPage() {
 
       await loadTasks();
     } catch (err) {
-      console.error("❌ Erreur création tâche:", err);
+      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur crÃƒÆ’Ã‚Â©ation tÃƒÆ’Ã‚Â¢che:", err);
       setFormNotice({
         type: "error",
         message: err?.response?.data?.error || t("tasksPage.alerts.createError"),
@@ -266,16 +266,16 @@ export default function ServiceTasksPage() {
   }
 
   /* ============================================================
-     ⏳ Écran de chargement premium
+     ÃƒÂ¢Ã‚ÂÃ‚Â³ ÃƒÆ’Ã¢â‚¬Â°cran de chargement premium
   ============================================================ */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-4">
-        <div className="bg-white/90 border border-gray-100 rounded-2xl shadow-xl px-6 py-5 text-center max-w-md w-full">
-          <p className="text-sm font-semibold text-gray-900 mb-1">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4">
+        <div className="bg-surface-card/90 border border-border/70 rounded-2xl shadow-xl px-6 py-5 text-center max-w-md w-full">
+          <p className="text-sm font-semibold text-text-primary mb-1">
             {t("serviceTasksPage.loading.title")}
           </p>
-          <p className="text-xs text-gray-500 animate-pulse">
+          <p className="text-xs text-text-muted animate-pulse">
             {t("serviceTasksPage.loading.subtitle")}
           </p>
         </div>
@@ -284,55 +284,55 @@ export default function ServiceTasksPage() {
   }
 
   /* ============================================================
-     🎨 Rendu principal — responsive
+     ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¨ Rendu principal ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â responsive
   ============================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
-      <div className="max-w-5xl mx-auto bg-white shadow-2xl rounded-3xl border border-gray-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* 🧭 EN-TÊTE */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-4 border-b border-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 py-8 sm:px-4 sm:py-10">
+      <div className="max-w-5xl mx-auto bg-surface-card shadow-2xl rounded-3xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â­ EN-TÃƒÆ’Ã…Â TE */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-4 border-b border-border/70">
           <div className="break-words">
             <p className="text-[0.7rem] uppercase tracking-wide text-blue-600 font-semibold mb-1">
               {t("serviceTasksPage.header.kicker")}
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 break-words">
-                📋 {headerTitle}
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary break-words">
+                {headerTitle}
               </h1>
 
-              {/* Badge UX — sans impact backend */}
+              {/* Badge UX ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â sans impact backend */}
               {serviceTypeLabel && (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                   {serviceTypeLabel}
                 </span>
               )}
               {isMaster && (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                   {t("roles.master")}
                 </span>
               )}
               {isAdmin && !isMaster && (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-slate-50 text-slate-700 border border-slate-200">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-surface-main text-text-secondary border border-border">
                   {t("roles.admin")}
                 </span>
               )}
               {isAgent && (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                   {t("roles.agent")}
                 </span>
               )}
               {isClient && (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                   {t("roles.client")}
                 </span>
               )}
             </div>
 
-            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            <p className="text-xs sm:text-sm text-text-muted mt-1">
               {t("serviceTasksPage.header.subtitle")}
             </p>
-            <p className="mt-2 inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+            <p className="mt-2 inline-flex items-center gap-2 text-xs sm:text-sm text-text-muted bg-surface-main px-3 py-1.5 rounded-full border border-border">
               <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
               {t("serviceTasksPage.header.count", { count: headerTotal })}
             </p>
@@ -345,34 +345,34 @@ export default function ServiceTasksPage() {
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 transition"
               >
                 {showForm
-                  ? `➖ ${t("serviceTasksPage.buttons.hideForm")}`
-                  : `➕ ${t("serviceTasksPage.buttons.showForm")}`}
+                  ? t("serviceTasksPage.buttons.hideForm")
+                  : t("serviceTasksPage.buttons.showForm")}
               </button>
             )}
             <button
               onClick={() => navigate(-1)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
             >
-              <span>← {t("common.back")}</span>
+              <span>{t("common.back")}</span>
             </button>
           </div>
         </div>
 
         {/* Message d'erreur */}
         {errorMsg && (
-          <div className="mb-6 rounded-2xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700 flex gap-2 items-start">
-            <span className="mt-[2px]">⚠️</span>
+          <div className="mb-6 rounded-2xl bg-rose-500/15 border border-rose-500/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 flex gap-2 items-start">
+            <span className="mt-[2px]">!</span>
             <p className="break-words">{errorMsg}</p>
           </div>
         )}
 
-        {/* FORMULAIRE (création rapide) */}
+        {/* FORMULAIRE (crÃƒÆ’Ã‚Â©ation rapide) */}
         {canCreateTask && showForm && (
           <div className="mb-8">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
-              ➕ {t("serviceTasksPage.form.title")}
+            <h2 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
+              {t("serviceTasksPage.form.title")}
             </h2>
-            <p className="text-xs sm:text-sm text-gray-500 mb-4">
+            <p className="text-xs sm:text-sm text-text-muted mb-4">
               {t("serviceTasksPage.form.subtitle")}
             </p>
 
@@ -380,12 +380,12 @@ export default function ServiceTasksPage() {
               <div
                 className={`mb-4 rounded-xl border px-4 py-3 text-xs sm:text-sm flex gap-2 items-start ${
                   formNotice.type === "error"
-                    ? "bg-rose-50 border-rose-200 text-rose-700"
-                    : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                    ? "bg-rose-500/15 border-rose-500/30 text-rose-700 dark:text-rose-300"
+                    : "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
                 }`}
               >
                 <span className="mt-[1px]">
-                  {formNotice.type === "error" ? "⚠️" : "✅"}
+                  {formNotice.type === "error" ? "!" : "i"}
                 </span>
                 <p className="break-words">{formNotice.message}</p>
               </div>
@@ -395,12 +395,12 @@ export default function ServiceTasksPage() {
               onSubmit={createTask}
               className="
                 grid grid-cols-1 sm:grid-cols-2 gap-4
-                bg-gray-50 p-4 sm:p-5 rounded-2xl border border-gray-200
+                bg-surface-main p-4 sm:p-5 rounded-2xl border border-border
               "
             >
-              {/* Service (pré-sélectionné) */}
+              {/* Service (prÃƒÆ’Ã‚Â©-sÃƒÆ’Ã‚Â©lectionnÃƒÆ’Ã‚Â©) */}
               <div className="w-full sm:col-span-2">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("serviceTasksPage.form.serviceLabel")}
                 </label>
                 <input
@@ -410,18 +410,18 @@ export default function ServiceTasksPage() {
                   }
                   disabled
                   className="
-                    w-full border border-gray-300 rounded-lg px-3 py-2
-                    text-sm sm:text-base bg-gray-100 text-gray-700
+                    w-full border border-border rounded-lg px-3 py-2
+                    text-sm sm:text-base bg-surface-main/80 text-text-secondary
                   "
                 />
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-text-muted">
                   {t("serviceTasksPage.form.serviceHint")}
                 </p>
               </div>
 
-              {/* Type de tâche */}
+              {/* Type de tÃƒÆ’Ã‚Â¢che */}
               <div className="w-full">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.typeLabel")}
                 </label>
                 <select
@@ -429,8 +429,8 @@ export default function ServiceTasksPage() {
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
                   required
                   className="
-                    w-full border border-gray-300 rounded-lg px-3 py-2
-                    text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+                    w-full border border-border rounded-lg px-3 py-2
+                    text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500
                   "
                 >
                   {Object.entries(TASK_TYPES).map(([key, label]) => (
@@ -443,7 +443,7 @@ export default function ServiceTasksPage() {
 
               {/* Titre */}
               <div className="w-full sm:col-span-2">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.titleLabel")} <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -452,15 +452,15 @@ export default function ServiceTasksPage() {
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   required
                   className="
-                    w-full border border-gray-300 rounded-lg px-3 py-2
-                    text-sm sm:text-base focus:ring-2 focus:ring-blue-500 break-words
+                    w-full border border-border rounded-lg px-3 py-2
+                    text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500 break-words
                   "
                 />
               </div>
 
               {/* Description */}
               <div className="w-full sm:col-span-2">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.descriptionLabel")}
                 </label>
                 <textarea
@@ -471,15 +471,15 @@ export default function ServiceTasksPage() {
                   }
                   rows={3}
                   className="
-                    w-full border border-gray-300 rounded-lg px-3 py-2
-                    text-sm sm:text-base focus:ring-2 focus:ring-blue-500 break-words
+                    w-full border border-border rounded-lg px-3 py-2
+                    text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500 break-words
                   "
                 />
               </div>
 
-              {/* Priorité */}
+              {/* PrioritÃƒÆ’Ã‚Â© */}
               <div className="w-full">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.priorityLabel")}
                 </label>
                 <select
@@ -488,8 +488,8 @@ export default function ServiceTasksPage() {
                     setForm({ ...form, priority: e.target.value })
                   }
                   className="
-                    w-full border border-gray-300 rounded-lg px-3 py-2
-                    text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+                    w-full border border-border rounded-lg px-3 py-2
+                    text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500
                   "
                 >
                   {Object.entries(TASK_PRIORITIES).map(([key, label]) => (
@@ -500,9 +500,9 @@ export default function ServiceTasksPage() {
                 </select>
               </div>
 
-              {/* Date d’échéance */}
+              {/* Date dÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã‚Â©chÃƒÆ’Ã‚Â©ance */}
               <div className="w-full">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.dueDateLabel")}
                 </label>
                 <input
@@ -510,15 +510,15 @@ export default function ServiceTasksPage() {
                   value={form.dueDate}
                   onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
                   className="
-                    w-full border border-gray-300 rounded-lg px-3 py-2
-                    text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+                    w-full border border-border rounded-lg px-3 py-2
+                    text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500
                   "
                 />
               </div>
 
-              {/* Coût estimé */}
+              {/* CoÃƒÆ’Ã‚Â»t estimÃƒÆ’Ã‚Â© */}
               <div className="w-full">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.estimatedCostLabel")}
                 </label>
                 <input
@@ -530,8 +530,8 @@ export default function ServiceTasksPage() {
                     setForm({ ...form, estimatedCost: e.target.value })
                   }
                   className="
-                    w-full border border-gray-300 rounded-lg px-3 py-2
-                    text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+                    w-full border border-border rounded-lg px-3 py-2
+                    text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500
                   "
                 />
               </div>
@@ -539,7 +539,7 @@ export default function ServiceTasksPage() {
               {/* Assignation (admin/master uniquement) */}
               {isAdmin && (
                 <div className="w-full">
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                     {t("tasksPage.form.assignedLabel")}
                   </label>
                   <select
@@ -548,8 +548,8 @@ export default function ServiceTasksPage() {
                       setForm({ ...form, assignedTo: e.target.value })
                     }
                     className="
-                      w-full border border-gray-300 rounded-lg px-3 py-2
-                      text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+                      w-full border border-border rounded-lg px-3 py-2
+                      text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500
                     "
                   >
                     <option value="">
@@ -589,13 +589,13 @@ export default function ServiceTasksPage() {
         {/* Liste vide */}
         {tasks.length === 0 ? (
           <div className="py-10 flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
-              <span className="text-xl">🗂️</span>
+            <div className="w-12 h-12 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 flex items-center justify-center mb-3">
+              <span className="text-xl">i</span>
             </div>
-            <p className="text-sm font-semibold text-gray-800 mb-1">
+            <p className="text-sm font-semibold text-text-primary mb-1">
               {t("serviceTasksPage.empty.title")}
             </p>
-            <p className="text-xs text-gray-500 max-w-sm">
+            <p className="text-xs text-text-muted max-w-sm">
               {canCreateTask
                 ? t("serviceTasksPage.empty.subtitleCanCreate")
                 : t("serviceTasksPage.empty.subtitleReadOnly")}
@@ -605,7 +605,7 @@ export default function ServiceTasksPage() {
                 onClick={() => setShowForm(true)}
                 className="mt-4 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 transition"
               >
-                ➕ {t("serviceTasksPage.buttons.showForm")}
+                {t("serviceTasksPage.buttons.showForm")}
               </button>
             )}
           </div>
@@ -616,7 +616,7 @@ export default function ServiceTasksPage() {
                 key={t.id}
                 task={t}
                 navigate={navigate}
-                // UX only: donne le rôle courant (sans changer l’ACL backend)
+                // UX only: donne le rÃƒÆ’Ã‚Â´le courant (sans changer lÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ACL backend)
                 userRole={role}
                 isMaster={isMaster}
               />
@@ -629,9 +629,9 @@ export default function ServiceTasksPage() {
 }
 
 /* ========================================================================
-   🧩 TaskCard — carte responsive & premium (Style A)
-   ✅ Aucune régression : même navigation / mêmes infos
-   ✅ MASTER SAFE : aucun filtrage côté UI, backend gère le scope/ACL
+   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© TaskCard ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â carte responsive & premium (Style A)
+   ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Aucune rÃƒÆ’Ã‚Â©gression : mÃƒÆ’Ã‚Âªme navigation / mÃƒÆ’Ã‚Âªmes infos
+   ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ MASTER SAFE : aucun filtrage cÃƒÆ’Ã‚Â´tÃƒÆ’Ã‚Â© UI, backend gÃƒÆ’Ã‚Â¨re le scope/ACL
 =========================================================================== */
 function TaskCard({ task, navigate, userRole, isMaster }) {
   const { t } = useTranslation();
@@ -639,27 +639,27 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
   const statusMeta =
     task.status === "created"
       ? {
-          icon: "🆕",
-          badge: "bg-slate-100 text-slate-700 border-slate-200",
+          icon: "*",
+          badge: "bg-surface-main/80 text-text-secondary border-border",
         }
       : task.status === "in_progress"
       ? {
-          icon: "⏳",
-          badge: "bg-blue-50 text-blue-700 border-blue-100",
+          icon: "~",
+          badge: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
         }
       : task.status === "completed"
       ? {
-          icon: "✅",
-          badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
+          icon: "ok",
+          badge: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
         }
       : task.status === "validated"
       ? {
-          icon: "✔️",
-          badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
+          icon: "ok",
+          badge: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
         }
       : {
-          icon: "⏺",
-          badge: "bg-slate-100 text-slate-500 border-slate-200",
+          icon: "-",
+          badge: "bg-surface-main/80 text-text-muted border-border",
         };
 
   const creatorLabel =
@@ -681,9 +681,9 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
   return (
     <div
       className="
-        bg-gradient-to-br from-slate-50 via-white to-slate-50
-        border border-gray-200 rounded-2xl shadow-sm
-        p-4 sm:p-5 hover:shadow-md hover:border-blue-100 transition
+        bg-gradient-to-br from-surface-main via-surface-card to-surface-main
+        border border-border rounded-2xl shadow-sm
+        p-4 sm:p-5 hover:shadow-md hover:border-blue-500/40 transition
         w-full break-words
       "
     >
@@ -691,34 +691,34 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-base sm:text-lg font-bold text-gray-900 break-words">
+            <h3 className="text-base sm:text-lg font-bold text-text-primary break-words">
               {task.title || t("serviceTasksPage.taskFallback", { id: task.id })}
             </h3>
 
-            {/* Badge rôle (UX only) */}
+            {/* Badge rÃƒÆ’Ã‚Â´le (UX only) */}
             {isMaster && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                 {t("roles.master")}
               </span>
             )}
             {userRole === "admin" && !isMaster && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-slate-50 text-slate-700 border border-slate-200">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-surface-main text-text-secondary border border-border">
                 {t("roles.admin")}
               </span>
             )}
             {userRole === "agent" && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                 {t("roles.agent")}
               </span>
             )}
             {userRole === "client" && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 {t("roles.client")}
               </span>
             )}
           </div>
 
-          <p className="text-xs sm:text-sm text-gray-600 break-words mt-1">
+          <p className="text-xs sm:text-sm text-text-secondary break-words mt-1">
             {task.description || t("serviceTasksPage.details.noDescription")}
           </p>
         </div>
@@ -734,31 +734,31 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
         </div>
       </div>
 
-      {/* Détails */}
-      <div className="mt-4 sm:mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-gray-700">
+      {/* DÃƒÆ’Ã‚Â©tails */}
+      <div className="mt-4 sm:mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-text-secondary">
         <div className="break-words">
-          <span className="font-semibold text-gray-800">
+          <span className="font-semibold text-text-primary">
             {t("serviceTasksPage.details.type")}:
           </span>{" "}
           {TASK_TYPES[task.type] || task.type || t("common.dash")}
         </div>
 
         <div className="break-words">
-          <span className="font-semibold text-gray-800">
+          <span className="font-semibold text-text-primary">
             {t("serviceTasksPage.details.creator")}:
           </span>{" "}
           {creatorLabel}
         </div>
 
         <div className="break-words">
-          <span className="font-semibold text-gray-800">
+          <span className="font-semibold text-text-primary">
             {t("serviceTasksPage.details.assignee")}:
           </span>{" "}
           {assigneeLabel}
         </div>
 
         <div className="break-words">
-          <span className="font-semibold text-gray-800">
+          <span className="font-semibold text-text-primary">
             {t("serviceTasksPage.details.taskId")}:
           </span>{" "}
           {task.id}
@@ -766,7 +766,7 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
 
         {task.createdAt && (
           <div className="break-words">
-            <span className="font-semibold text-gray-800">
+            <span className="font-semibold text-text-primary">
               {t("serviceTasksPage.details.createdAt")}:
             </span>{" "}
             {formatDateTime(task.createdAt)}
@@ -775,7 +775,7 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
 
         {task.updatedAt && (
           <div className="break-words">
-            <span className="font-semibold text-gray-800">
+            <span className="font-semibold text-text-primary">
               {t("serviceTasksPage.details.updatedAt")}:
             </span>{" "}
             {formatDateTime(task.updatedAt)}
@@ -794,13 +794,15 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
             hover:bg-blue-700 active:bg-blue-800 transition
           "
         >
-          <span>📎</span>
           <span>{t("serviceTasksPage.actions.viewEvidences")}</span>
+
         </button>
       </div>
     </div>
   );
 }
+
+
 
 
 

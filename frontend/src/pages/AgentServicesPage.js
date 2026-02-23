@@ -8,11 +8,11 @@ import { notify } from '../utils/notify';
 const TOKEN_KEY = 'teranga_token';
 
 /**
- * 🧑‍🔧 AgentServicesPage — Version Apple Light Minimal Premium
+ * Ã°Å¸Â§â€˜Ã¢â‚¬ÂÃ°Å¸â€Â§ AgentServicesPage Ã¢â‚¬â€ Version Apple Light Minimal Premium
  * ------------------------------------------------------------
- * - Interface clean, douce, élégante
- * - Aucune logique métier modifiée
- * - ✅ Multi-pays / Master-safe : PAS de geo params côté frontend
+ * - Interface clean, douce, ÃƒÂ©lÃƒÂ©gante
+ * - Aucune logique mÃƒÂ©tier modifiÃƒÂ©e
+ * - Ã¢Å“â€¦ Multi-pays / Master-safe : PAS de geo params cÃƒÂ´tÃƒÂ© frontend
  *   (le backend applique le scope via req.user)
  */
 export default function AgentServicesPage() {
@@ -23,10 +23,10 @@ export default function AgentServicesPage() {
   const [actingId, setActingId] = useState(null);
 
   /* ============================================================
-     🔹 Chargement des services assignés
-     ⚠️ IMPORTANT :
+     Ã°Å¸â€Â¹ Chargement des services assignÃƒÂ©s
+     Ã¢Å¡Â Ã¯Â¸Â IMPORTANT :
      - Ne PAS injecter countryId/regionId en query params
-     - Le backend filtre déjà via applyGeoScope(where, req.user)
+     - Le backend filtre dÃƒÂ©jÃƒÂ  via applyGeoScope(where, req.user)
   ============================================================ */
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,7 +43,7 @@ export default function AgentServicesPage() {
       );
       setServices(enriched);
     } catch (err) {
-      console.error('❌ Erreur chargement services agent:', err);
+      console.error('Ã¢ÂÅ’ Erreur chargement services agent:', err);
       setServices([]);
       notify(t('agentServicesPage.errors.load'));
     } finally {
@@ -56,7 +56,7 @@ export default function AgentServicesPage() {
   }, [load]);
 
   /* ============================================================
-     🔹 Mise à jour du statut (start / complete)
+     Ã°Å¸â€Â¹ Mise ÃƒÂ  jour du statut (start / complete)
   ============================================================ */
   const updateStatus = async (id, action) => {
     try {
@@ -81,7 +81,7 @@ export default function AgentServicesPage() {
 
       await load();
     } catch (err) {
-      console.error('❌ Erreur mise à jour statut service:', err);
+      console.error('Ã¢ÂÅ’ Erreur mise ÃƒÂ  jour statut service:', err);
       notify(t('agentServicesPage.errors.updateStatus'));
     } finally {
       setActingId(null);
@@ -89,7 +89,7 @@ export default function AgentServicesPage() {
   };
 
   /* ============================================================
-     🔹 Formatage utilisateur
+     Ã°Å¸â€Â¹ Formatage utilisateur
   ============================================================ */
   const displayUser = (u) => {
     if (!u) return t('agentServicesPage.emptyValue');
@@ -97,20 +97,20 @@ export default function AgentServicesPage() {
   };
 
   /* ============================================================
-     🔹 UI Apple Light — Clean / Minimal / Premium
+     Ã°Å¸â€Â¹ UI Apple Light Ã¢â‚¬â€ Clean / Minimal / Premium
   ============================================================ */
   const emptyValue = t('agentServicesPage.emptyValue');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f5f5f7] via-white to-[#e5e5ea] px-4 py-10">
-      <div className="max-w-5xl mx-auto bg-white/90 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.06)] rounded-3xl border border-[#e5e5ea] p-8">
-        {/* 🧭 En-tête */}
+    <div className="min-h-screen bg-gradient-to-br from-[#f5f5f7] via-surface-card to-[#e5e5ea] px-4 py-10">
+      <div className="max-w-5xl mx-auto bg-surface-card/90 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.06)] rounded-3xl border border-[#e5e5ea] p-8">
+        {/* Ã°Å¸Â§Â­ En-tÃƒÂªte */}
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold text-[#111827] tracking-tight">
               {t('agentServicesPage.title')}
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-text-muted">
               {t('agentServicesPage.subtitle')}
             </p>
           </div>
@@ -133,13 +133,13 @@ export default function AgentServicesPage() {
           </button>
         </div>
 
-        {/* 📦 Liste des services */}
+        {/* Ã°Å¸â€œÂ¦ Liste des services */}
         {loading ? (
-          <div className="text-center py-10 text-gray-500 animate-pulse">
+          <div className="text-center py-10 text-text-muted animate-pulse">
             {t('agentServicesPage.loading.list')}
           </div>
         ) : services.length === 0 ? (
-          <p className="text-center text-gray-500 italic py-8">
+          <p className="text-center text-text-muted italic py-8">
             {t('agentServicesPage.empty')}
           </p>
         ) : (
@@ -148,7 +148,7 @@ export default function AgentServicesPage() {
               <div
                 key={s.id}
                 className="
-                  bg-white border border-[#e5e7eb] rounded-3xl
+                  bg-surface-card border border-[#e5e7eb] rounded-3xl
                   shadow-sm p-6 transition
                   hover:shadow-md hover:-translate-y-0.5
                   transform
@@ -159,13 +159,13 @@ export default function AgentServicesPage() {
                 {/* ===================== */}
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
                   <div className="min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1 break-words">
+                    <h3 className="text-lg font-semibold text-text-primary mb-1 break-words">
                       {s.title}
                     </h3>
 
-                    <p className="text-sm text-gray-600">
-                      {SERVICE_TYPES[s.type] || s.type} •{' '}
-                      <span className="font-medium text-gray-800">
+                    <p className="text-sm text-text-secondary">
+                      {SERVICE_TYPES[s.type] || s.type} Ã¢â‚¬Â¢{' '}
+                      <span className="font-medium text-text-primary">
                         {t('agentServicesPage.labels.budget', {
                           amount: s.budget ?? emptyValue,
                         })}
@@ -173,27 +173,27 @@ export default function AgentServicesPage() {
                     </p>
 
                     {s.description && (
-                      <p className="text-sm text-gray-600 mt-2 break-words">
+                      <p className="text-sm text-text-secondary mt-2 break-words">
                         {s.description}
                       </p>
                     )}
                   </div>
 
-                  {/* 🏷️ Badge statut */}
+                  {/* Ã°Å¸ÂÂ·Ã¯Â¸Â Badge statut */}
                   <div
                     className={`
                       mt-3 sm:mt-0 px-4 py-1 rounded-full text-xs font-semibold
                       whitespace-nowrap text-center
                       ${
                         s.status === 'created'
-                          ? 'bg-gray-100 text-gray-700'
+                          ? 'bg-surface-main/80 text-text-secondary'
                           : s.status === 'in_progress'
                           ? 'bg-[#cce4ff] text-[#0a84ff]'
                           : s.status === 'completed'
                           ? 'bg-green-100 text-green-600'
                           : s.status === 'validated'
                           ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-gray-100 text-gray-500'
+                          : 'bg-surface-main/80 text-text-muted'
                       }
                     `}
                   >
@@ -202,9 +202,9 @@ export default function AgentServicesPage() {
                 </div>
 
                 {/* ===================== */}
-                {/* Détails supplémentaires */}
+                {/* DÃƒÂ©tails supplÃƒÂ©mentaires */}
                 {/* ===================== */}
-                <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
+                <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-text-secondary">
                   <div>
                     <span className="font-medium">
                       {t('agentServicesPage.labels.client')}
@@ -292,7 +292,7 @@ export default function AgentServicesPage() {
                   )}
 
                   {s.status === 'completed' && (
-                    <span className="text-sm italic text-gray-500">
+                    <span className="text-sm italic text-text-muted">
                       {t('agentServicesPage.status.completed')}
                     </span>
                   )}
@@ -311,5 +311,7 @@ export default function AgentServicesPage() {
     </div>
   );
 }
+
+
 
 

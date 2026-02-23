@@ -1,9 +1,9 @@
 // ============================================================
-// OrderTransactionsPage.jsx — Teranga PRODUCTION READY (Option B2-A)
+// OrderTransactionsPage.jsx Ã¢â‚¬â€ Teranga PRODUCTION READY (Option B2-A)
 // Clean Shop Premium + FILE_BASE + toAbsUrl + Optimisations visuelles
-// ✅ MASTER + Multi-pays ready (aligné backend 2025)
-// ✅ Zéro régression : toutes fonctionnalités conservées
-// ✅ Robustesse: payloads API (array vs {transactions}), preuves ImageKit (url/path/filePath)
+// Ã¢Å“â€¦ MASTER + Multi-pays ready (alignÃƒÂ© backend 2025)
+// Ã¢Å“â€¦ ZÃƒÂ©ro rÃƒÂ©gression : toutes fonctionnalitÃƒÂ©s conservÃƒÂ©es
+// Ã¢Å“â€¦ Robustesse: payloads API (array vs {transactions}), preuves ImageKit (url/path/filePath)
 // ============================================================
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -27,9 +27,9 @@ import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 
 /* ============================================================
-   🌍 PRODUCTION CONFIG — FILE_BASE / normalizePath / toAbsUrl()
+   Ã°Å¸Å’Â PRODUCTION CONFIG Ã¢â‚¬â€ FILE_BASE / normalizePath / toAbsUrl()
    Compatible Render + Netlify, aucun localhost
-   ✅ Safe: support absolute URLs, slashes propres
+   Ã¢Å“â€¦ Safe: support absolute URLs, slashes propres
 ============================================================ */
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -57,19 +57,19 @@ function toAbsUrl(path = '') {
    Helpers (display + proof url)
 ============================================================ */
 function getUserDisplay(u) {
-  if (!u) return '—';
+  if (!u) return "-";
   const first = u.firstName ?? u.firstname ?? '';
   const last = u.lastName ?? u.lastname ?? '';
   const full = `${first} ${last}`.trim();
   if (full) return full;
   if (u.name) return u.name;
   if (u.email) return u.email;
-  return '—';
+  return '-';
 }
 
 /**
- * ✅ Preuve (ImageKit / legacy / file system)
- * Backend Transaction.proofFile peut être:
+ * Ã¢Å“â€¦ Preuve (ImageKit / legacy / file system)
+ * Backend Transaction.proofFile peut ÃƒÂªtre:
  * - { url, fileId, originalName, mimeType, size }
  * - { path } (legacy)
  * - { filePath } (legacy)
@@ -80,7 +80,7 @@ function getProofHref(t) {
   if (!pf) return '';
 
   if (typeof pf === 'string') {
-    // si c'est déjà une URL absolue => ok, sinon => FILE_BASE
+    // si c'est dÃƒÂ©jÃƒÂ  une URL absolue => ok, sinon => FILE_BASE
     return toAbsUrl(pf);
   }
 
@@ -128,7 +128,7 @@ function getProofExtLabel(pf, proofHref = '', fallback = 'FILE') {
 
 
 /* ============================================================
-   ⭐ PAGE PRINCIPALE
+   Ã¢Â­Â PAGE PRINCIPALE
 ============================================================ */
 export default function OrderTransactionsPage() {
   const { formatNumber, formatDate, formatTime } = useLocale();
@@ -143,7 +143,7 @@ export default function OrderTransactionsPage() {
   // Liste
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false); // chargement liste
-  const [creating, setCreating] = useState(false); // 🔐 création transaction
+  const [creating, setCreating] = useState(false); // Ã°Å¸â€Â crÃƒÂ©ation transaction
 
   // UI
   const [showForm, setShowForm] = useState(() => {
@@ -207,7 +207,7 @@ export default function OrderTransactionsPage() {
         regionName ||
         (regionId ? `${t('common.regionLabel')} #${regionId}` : '');
 
-      if (countryLabel && regionLabel) return `${countryLabel} • ${regionLabel}`;
+      if (countryLabel && regionLabel) return `${countryLabel} - ${regionLabel}`;
       return countryLabel || regionLabel || '';
     },
     [countriesById, regionsById, t]
@@ -228,13 +228,13 @@ export default function OrderTransactionsPage() {
     try {
       const data = await getOrderTransactions(id);
 
-      // ✅ backend peut renvoyer [] OU { transactions: [], pagination: {} }
+      // Ã¢Å“â€¦ backend peut renvoyer [] OU { transactions: [], pagination: {} }
       const arr = Array.isArray(data) ? data : data?.transactions || [];
 
       const labeled = (arr || []).map((t) => applyLabels(t, 'transaction'));
       setTransactions(labeled);
     } catch (err) {
-      console.error('❌ Erreur chargement transactions commande:', err);
+      console.error("Erreur chargement transactions commande:", err);
       notify(t("orderTransactions.alerts.loadError"));
       setTransactions([]);
     } finally {
@@ -257,7 +257,7 @@ export default function OrderTransactionsPage() {
         setUser(current);
         await loadTransactions();
       } catch (err) {
-        console.error('❌ Erreur init OrderTransactionsPage:', err);
+        console.error("Erreur init OrderTransactionsPage:", err);
         if (err?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
@@ -280,7 +280,7 @@ export default function OrderTransactionsPage() {
         setCountries(Array.isArray(cList) ? cList : []);
         setRegions(Array.isArray(rList) ? rList : []);
       } catch (e) {
-        console.error('❌ Erreur chargement pays/régions:', e);
+        console.error("Erreur chargement pays/regions:", e);
         if (mounted) {
           setCountries([]);
           setRegions([]);
@@ -301,14 +301,14 @@ export default function OrderTransactionsPage() {
   }, [showForm]);
 
   /* ============================================================
-      ➕ Création transaction (anti double-submit)
-      ✅ MASTER support (backend: requireRoles inclut master)
-      ✅ Preuve: service s’occupe du multipart; ici on garde la structure
+      Ã¢Å¾â€¢ CrÃƒÂ©ation transaction (anti double-submit)
+      Ã¢Å“â€¦ MASTER support (backend: requireRoles inclut master)
+      Ã¢Å“â€¦ Preuve: service sÃ¢â‚¬â„¢occupe du multipart; ici on garde la structure
   ============================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
 
-    // ⛔ Empêche un double clic si une création est déjà en cours
+    // Ã¢â€ºâ€ EmpÃƒÂªche un double clic si une crÃƒÂ©ation est dÃƒÂ©jÃƒÂ  en cours
     if (creating) return;
 
     if (!form.amount || isNaN(parseFloat(form.amount))) {
@@ -316,9 +316,9 @@ export default function OrderTransactionsPage() {
     }
 
     try {
-      setCreating(true); // 🔐 Verrouille le bouton d’envoi
+      setCreating(true); // Ã°Å¸â€Â Verrouille le bouton dÃ¢â‚¬â„¢envoi
 
-      // ✅ payload stable (service gère proofFile = File -> FormData si besoin)
+      // Ã¢Å“â€¦ payload stable (service gÃƒÂ¨re proofFile = File -> FormData si besoin)
       const payload = {
         ...form,
         amount: parseFloat(form.amount),
@@ -330,10 +330,10 @@ export default function OrderTransactionsPage() {
       resetForm();
       await loadTransactions();
     } catch (err) {
-      console.error('❌ Erreur ajout transaction:', err);
+      console.error("Erreur ajout transaction:", err);
       notify(t("orderTransactions.alerts.createError"));
     } finally {
-      setCreating(false); // 🔓 Déverrouille l’envoi, même en cas d’erreur
+      setCreating(false); // Ã°Å¸â€â€œ DÃƒÂ©verrouille lÃ¢â‚¬â„¢envoi, mÃƒÂªme en cas dÃ¢â‚¬â„¢erreur
     }
   }
 
@@ -349,7 +349,7 @@ export default function OrderTransactionsPage() {
   }
 
   /* ============================================================
-      🔍 Filtres et tri
+      Ã°Å¸â€Â Filtres et tri
   ============================================================ */
   const filteredTransactions = useMemo(() => {
     let arr = [...(transactions || [])];
@@ -410,41 +410,40 @@ export default function OrderTransactionsPage() {
   }, [transactions, filters]);
 
   /* ============================================================
-      UI — État initial
+      UI Ã¢â‚¬â€ Ãƒâ€°tat initial
   ============================================================ */
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-600 text-lg animate-pulse">
+      <div className="flex items-center justify-center min-h-screen bg-surface-main">
+        <p className="text-text-secondary text-lg animate-pulse">
           {t("common.loading")}
         </p>
       </div>
     );
   }
 
-  // ✅ Ajout master (sans retirer admin/agent)
+  // Ã¢Å“â€¦ Ajout master (sans retirer admin/agent)
   const canCreate = ['admin', 'agent', 'master'].includes(user.role);
 
   /* ============================================================
       Rendu principal
   ============================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
-      <div className="max-w-6xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl p-4 sm:p-8 border border-gray-100 transition-all duration-150 ease-out">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-surface-card/95 backdrop-blur-sm shadow-xl rounded-2xl p-4 sm:p-8 border border-border/70 transition-all duration-150 ease-out">
 
-        {/* HEADER — 100% responsive mobile / tablette / desktop */}
+        {/* HEADER Ã¢â‚¬â€ 100% responsive mobile / tablette / desktop */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 sm:mb-8">
           {/* Bloc titre */}
           <div className="max-w-full break-words">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              💰 <span>{t("orderTransactions.title", { id })}</span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary flex items-center gap-2">              <span>{t("orderTransactions.title", { id })}</span>
             </h1>
-            <p className="text-sm text-slate-600 mt-1 break-words">
+            <p className="text-sm text-text-secondary mt-1 break-words">
               {t("orderTransactions.subtitle")}
             </p>
             {isGlobalAdmin && (
-              <p className="text-xs text-slate-500 mt-1 break-words">
-                <span className="font-semibold text-slate-700">
+              <p className="text-xs text-text-muted mt-1 break-words">
+                <span className="font-semibold text-text-secondary">
                   {t("common.locationLabel")}:
                 </span>{' '}
                 {orderGeoLabel || t("common.dash")}
@@ -457,11 +456,11 @@ export default function OrderTransactionsPage() {
             {canCreate && (
               <button
                 onClick={() => setShowForm((v) => !v)}
-                className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-800 text-white hover:bg-slate-900 transition-all duration-150 text-center"
+                className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition-all duration-150 text-center"
               >
                 {showForm
-                  ? `➖ ${t("orderTransactions.buttons.hideForm")}`
-                  : `➕ ${t("orderTransactions.buttons.newTransaction")}`}
+                  ? `- ${t("orderTransactions.buttons.hideForm")}`
+                  : `+ ${t("orderTransactions.buttons.newTransaction")}`}
               </button>
             )}
 
@@ -476,19 +475,19 @@ export default function OrderTransactionsPage() {
             >
               {loading
                 ? t("orderTransactions.buttons.refreshLoading")
-                : `🔄 ${t("orderTransactions.buttons.refresh")}`}
+                : `${t("orderTransactions.buttons.refresh")}`}
             </button>
 
             <button
               onClick={() => navigate(`/orders/${id}`)}
-              className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300 text-center transition-all duration-150"
+              className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-surface-main/80 hover:bg-surface-main text-center transition-all duration-150"
             >
               {t("orderTransactions.buttons.back")}
             </button>
 
             <button
               onClick={() => navigate('/orders')}
-              className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-slate-200 hover:bg-slate-300 text-center transition-all duration-150"
+              className="w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-surface-main/80 hover:bg-surface-main text-center transition-all duration-150"
             >
               {t("common.backToOrders")}
             </button>
@@ -509,7 +508,7 @@ export default function OrderTransactionsPage() {
             setForm={setForm}
             handleSubmit={handleSubmit}
             loading={loading}
-            creating={creating} // 👈 état de création
+            creating={creating} // Ã°Å¸â€˜Ë† ÃƒÂ©tat de crÃƒÂ©ation
           />
         )}
 
@@ -528,20 +527,20 @@ export default function OrderTransactionsPage() {
 }
 
 /* ============================================================
-   🔹 Sous-composants — Filtres / Formulaire / Liste
+   Ã°Å¸â€Â¹ Sous-composants Ã¢â‚¬â€ Filtres / Formulaire / Liste
 ============================================================ */
 
 function TransactionFilters({ filters, setFilters, count }) {
   const { t } = useTranslation();
   return (
-    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm">
-      {/* Ligne recherche seule — pleine largeur, plus respirable */}
+    <div className="mb-8 bg-surface-main border border-border rounded-xl p-4 sm:p-5 shadow-sm">
+      {/* Ligne recherche seule Ã¢â‚¬â€ pleine largeur, plus respirable */}
       <div className="flex flex-col lg:flex-row gap-3 mb-4">
         <input
-          placeholder={`🔎 ${t("orderTransactions.filters.searchPlaceholder")}`}
+          placeholder={t("orderTransactions.filters.searchPlaceholder")}
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm break-words transition-all duration-150"
+          className="w-full border border-border rounded-lg px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-surface-card shadow-sm break-words transition-all duration-150"
         />
       </div>
 
@@ -551,7 +550,7 @@ function TransactionFilters({ filters, setFilters, count }) {
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
+          className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
         >
           <option value="">{t("orderTransactions.filters.typeAll")}</option>
           {Object.keys(TRANSACTION_TYPES).map((key) => (
@@ -561,19 +560,19 @@ function TransactionFilters({ filters, setFilters, count }) {
           ))}
         </select>
 
-        {/* Méthode paiement */}
+        {/* MÃƒÂ©thode paiement */}
         <input
           placeholder={t("orderTransactions.filters.paymentPlaceholder")}
           value={filters.payment}
           onChange={(e) => setFilters({ ...filters, payment: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
+          className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
         />
 
-        {/* Tri — prend plus de place sur les grands écrans */}
+        {/* Tri Ã¢â‚¬â€ prend plus de place sur les grands ÃƒÂ©crans */}
         <select
           value={filters.sort}
           onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-full sm:col-span-2 lg:col-span-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
+          className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card w-full sm:col-span-2 lg:col-span-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
         >
           <option value="-createdAt">
             {t("orderTransactions.filters.sortNewest")}
@@ -591,7 +590,7 @@ function TransactionFilters({ filters, setFilters, count }) {
       </div>
 
       {/* Bas de bloc : compteur + reset (stack sur mobile) */}
-      <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-500">
+      <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-text-muted">
         <div className="inline-flex items-center gap-1">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-400/80" />
           <span>{t("orderTransactions.filters.foundCount", { count })}</span>
@@ -599,7 +598,7 @@ function TransactionFilters({ filters, setFilters, count }) {
 
         <button
           onClick={() => setFilters({ q: '', type: '', payment: '', sort: '-createdAt' })}
-          className="w-full sm:w-auto px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium text-center transition-all duration-150"
+          className="w-full sm:w-auto px-3 py-1.5 bg-surface-main/80 rounded-md hover:bg-surface-main font-medium text-center transition-all duration-150"
         >
           {t("orderTransactions.filters.reset")}
         </button>
@@ -617,23 +616,22 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
 
   return (
     <div className="mb-10">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        ➕ <span>{t("orderTransactions.form.title")}</span>
+      <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">        <span>{t("orderTransactions.form.title")}</span>
       </h2>
 
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 sm:p-5 rounded-xl border border-gray-200 shadow-sm"
+        className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface-main p-4 sm:p-5 rounded-xl border border-border shadow-sm"
       >
         {/* Type */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-text-secondary mb-1">
             {t("orderTransactions.form.typeLabel")}
           </label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           >
             {Object.keys(TRANSACTION_TYPES).map((key) => (
               <option key={key} value={key}>
@@ -645,7 +643,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
 
         {/* Montant */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-text-secondary mb-1">
             {t("orderTransactions.form.amountLabel")}
           </label>
           <input
@@ -655,19 +653,19 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           />
         </div>
 
         {/* Devise */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-text-secondary mb-1">
             {t("orderTransactions.form.currencyLabel")}
           </label>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           >
             {Object.keys(CURRENCY_LABELS).map((key) => (
               <option key={key} value={key}>
@@ -679,20 +677,20 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
 
         {/* Payment Method */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-text-secondary mb-1">
             {t("orderTransactions.form.paymentMethodLabel")}
           </label>
           <input
             placeholder={t("orderTransactions.form.paymentMethodPlaceholder")}
             value={form.paymentMethod}
             onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           />
         </div>
 
         {/* Description */}
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-text-secondary mb-1">
             {t("orderTransactions.form.descriptionLabel")}
           </label>
           <textarea
@@ -700,20 +698,20 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
             placeholder={t("orderTransactions.form.descriptionPlaceholder")}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           />
         </div>
 
         {/* File */}
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-text-secondary mb-1">
             {t("orderTransactions.form.attachmentLabel")}
           </label>
           <input
             type="file"
             accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
             onChange={(e) => setForm({ ...form, proofFile: e.target.files?.[0] || null })}
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           />
         </div>
 
@@ -730,7 +728,7 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
           >
             {isSubmitting
               ? t("orderTransactions.form.submitting")
-              : `💾 ${t("orderTransactions.form.submit")}`}
+              : `${t("orderTransactions.form.submit")}`}
           </button>
         </div>
       </form>
@@ -739,11 +737,11 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
 }
 
 /* ============================================================
-   LISTE DES TRANSACTIONS — PARTIE 2 / 2
-   (à coller directement à la suite de la PARTIE 1)
-   ✅ Zéro régression
-   ✅ Support ImageKit / legacy proofs
-   ✅ UI premium + responsive
+   LISTE DES TRANSACTIONS Ã¢â‚¬â€ PARTIE 2 / 2
+   (ÃƒÂ  coller directement ÃƒÂ  la suite de la PARTIE 1)
+   Ã¢Å“â€¦ ZÃƒÂ©ro rÃƒÂ©gression
+   Ã¢Å“â€¦ Support ImageKit / legacy proofs
+   Ã¢Å“â€¦ UI premium + responsive
 ============================================================ */
 
 function TransactionList({
@@ -757,7 +755,7 @@ function TransactionList({
   const { t } = useTranslation();
   if (loading) {
     return (
-      <p className="text-gray-500 italic text-center py-6">
+      <p className="text-text-muted italic text-center py-6">
         {t("orderTransactions.list.loading")}
       </p>
     );
@@ -765,7 +763,7 @@ function TransactionList({
 
   if (!transactions || transactions.length === 0) {
     return (
-      <p className="text-gray-500 italic text-center py-6">
+      <p className="text-text-muted italic text-center py-6">
         {t("orderTransactions.list.empty")}
       </p>
     );
@@ -787,24 +785,24 @@ function TransactionList({
             tx.status
           : undefined;
 
-        // 🎨 Accent visuel par type
+        // Ã°Å¸Å½Â¨ Accent visuel par type
         let accentClass = 'border-l-4 border-l-slate-200';
         if (tx.type === 'revenue') accentClass = 'border-l-4 border-l-emerald-400/80';
         else if (tx.type === 'expense') accentClass = 'border-l-4 border-l-rose-400/80';
         else if (tx.type === 'commission') accentClass = 'border-l-4 border-l-amber-400/80';
         else if (tx.type === 'adjustment') accentClass = 'border-l-4 border-l-blue-400/80';
 
-        // 🏷 Badge type
+        // Ã°Å¸ÂÂ· Badge type
         let typeBadge =
-          'bg-slate-100 text-slate-700 border border-slate-200';
+          'bg-surface-main/80 text-text-secondary border border-border';
         if (tx.type === 'revenue')
-          typeBadge = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+          typeBadge = 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30';
         else if (tx.type === 'expense')
-          typeBadge = 'bg-rose-50 text-rose-700 border border-rose-200';
+          typeBadge = 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30';
         else if (tx.type === 'commission')
-          typeBadge = 'bg-amber-50 text-amber-700 border border-amber-200';
+          typeBadge = 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30';
         else if (tx.type === 'adjustment')
-          typeBadge = 'bg-blue-50 text-blue-700 border border-blue-200';
+          typeBadge = 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30';
 
         const proofHref = getProofHref ? getProofHref(tx) : '';
         const proofKind = inferProofKind(tx?.proofFile, proofHref);
@@ -825,7 +823,7 @@ function TransactionList({
         return (
           <div
             key={tx.id}
-            className={`bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:shadow-md hover:-translate-y-[1px] transition-all duration-150 ease-out ${accentClass}`}
+            className={`bg-surface-card border border-border rounded-xl shadow-sm p-5 hover:shadow-md hover:-translate-y-[1px] transition-all duration-150 ease-out ${accentClass}`}
           >
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
               {/* Bloc gauche */}
@@ -838,22 +836,22 @@ function TransactionList({
                   </span>
 
                   {statusLabel && (
-                    <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                       {statusLabel}
                     </span>
                   )}
                 </div>
 
-                <h3 className="text-lg font-semibold text-gray-900 mt-2 break-words">
+                <h3 className="text-lg font-semibold text-text-primary mt-2 break-words">
                   {formatNumber(tx.amount || 0)} {currencyLabel}
                 </h3>
 
-                <p className="text-sm text-gray-600 mt-1 break-words">
+                <p className="text-sm text-text-secondary mt-1 break-words">
                   {tx.description || t("orderTransactions.list.descriptionFallback")}
                 </p>
 
                 {tx.paymentMethod && (
-                  <p className="text-xs text-gray-500 mt-1 break-words">
+                  <p className="text-xs text-text-muted mt-1 break-words">
                     {t("orderTransactions.list.methodLabel")}{' '}
                     <span className="font-medium">{tx.paymentMethod}</span>
                   </p>
@@ -861,7 +859,7 @@ function TransactionList({
               </div>
 
               {/* Bloc droit */}
-              <div className="text-xs text-gray-500 text-right mt-1 sm:mt-0 whitespace-nowrap">
+              <div className="text-xs text-text-muted text-right mt-1 sm:mt-0 whitespace-nowrap">
                 <div>
                   {t("orderTransactions.list.createdAt")}{' '}
                   <strong>
@@ -882,12 +880,12 @@ function TransactionList({
             </div>
 
             {proofHref && (
-              <div className="mt-4 flex flex-col sm:flex-row gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3">
+              <div className="mt-4 flex flex-col sm:flex-row gap-3 bg-surface-main border border-border rounded-xl p-3">
                 <a
                   href={proofHref}
                   target="_blank"
                   rel="noreferrer"
-                  className="relative w-full sm:w-36 aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-white flex items-center justify-center"
+                  className="relative w-full sm:w-36 aspect-[4/3] rounded-lg overflow-hidden border border-border bg-surface-card flex items-center justify-center"
                 >
                   {proofKind === 'image' ? (
                     <img
@@ -899,7 +897,7 @@ function TransactionList({
                     />
                   ) : (
                     <div className="text-center">
-                      <div className="text-[0.65rem] font-semibold text-slate-700 bg-white/80 border border-slate-200 px-2 py-0.5 rounded-full inline-flex">
+                      <div className="text-[0.65rem] font-semibold text-text-secondary bg-surface-card/80 border border-border px-2 py-0.5 rounded-full inline-flex">
                         {proofExt}
                       </div>
                     </div>
@@ -908,10 +906,10 @@ function TransactionList({
                   <span
                     className={`absolute top-2 left-2 text-[0.65rem] font-semibold px-2 py-0.5 rounded-full border ${
                       proofKind === 'image'
-                        ? 'bg-blue-50 text-blue-700 border-blue-100'
+                        ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30'
                         : proofKind === 'pdf'
-                        ? 'bg-red-50 text-red-700 border-red-100'
-                        : 'bg-gray-50 text-gray-700 border-gray-200'
+                        ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                        : 'bg-surface-main text-text-secondary border-border'
                     }`}
                   >
                     {proofKind === 'image'
@@ -923,18 +921,18 @@ function TransactionList({
                 </a>
 
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-text-muted">
                     {t("orderTransactions.list.proofLabel")}
                   </div>
                   <a
                     href={proofHref}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-sm font-semibold text-blue-600 hover:underline break-all"
+                    className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline break-all"
                   >
                     {proofLabel || t("orderTransactions.list.proofAttachment")}
                   </a>
-                  <div className="text-[0.7rem] text-slate-500 mt-1">
+                  <div className="text-[0.7rem] text-text-muted mt-1">
                     {proofKind === 'image'
                       ? t("orderTransactions.list.proofPreview")
                       : t("orderTransactions.list.proofFormat", {
@@ -948,7 +946,7 @@ function TransactionList({
             {/* Footer carte */}
 
             <div className="mt-3 flex flex-col sm:flex-row justify-between text-sm gap-1 sm:gap-0">
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-text-muted">
                 {t("orderTransactions.list.enteredBy")}{' '}
                 <strong>{userDisplay}</strong>
               </div>
@@ -958,9 +956,8 @@ function TransactionList({
                   href={proofHref}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center text-xs font-medium text-blue-600 hover:underline"
-                >
-                  📎 {t("orderTransactions.list.viewAttachment")}
+                  className="inline-flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                >                  {t("orderTransactions.list.viewAttachment")}
                 </a>
               )}
             </div>
@@ -970,6 +967,8 @@ function TransactionList({
     </div>
   );
 }
+
+
 
 
 

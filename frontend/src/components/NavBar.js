@@ -1,15 +1,15 @@
 // ============================================================================
-// NavBar.jsx — Enterprise SaaS (Stripe/Revolut/Notion vibe)
-// - Même structure/logic routes/roles (zéro régression)
+// NavBar.jsx Ã¢â‚¬â€ Enterprise SaaS (Stripe/Revolut/Notion vibe)
+// - MÃƒÂªme structure/logic routes/roles (zÃƒÂ©ro rÃƒÂ©gression)
 // - Desktop: Tabs principaux + menu "Plus" + User menu (avatar dropdown)
-// - Mobile: Bottom nav compact + "Plus" panel (organisé par sections)
+// - Mobile: Bottom nav compact + "Plus" panel (organisÃƒÂ© par sections)
 // - Admin Onboarding visible uniquement ADMIN GLOBAL (pas Master)
 // ============================================================================
 //
-// ✅ Fix UI:
-// - Lisibilité renforcée dans tous les états (idle / hover / actif / focus)
-// - Suppression des couleurs hex hardcodées -> tokens (surface/text/border/primary)
-// - Aucune fonctionnalité supprimée
+// Ã¢Å“â€¦ Fix UI:
+// - LisibilitÃƒÂ© renforcÃƒÂ©e dans tous les ÃƒÂ©tats (idle / hover / actif / focus)
+// - Suppression des couleurs hex hardcodÃƒÂ©es -> tokens (surface/text/border/primary)
+// - Aucune fonctionnalitÃƒÂ© supprimÃƒÂ©e
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
@@ -41,6 +41,11 @@ import {
   ShoppingBag,
   Shapes,
   ShieldCheck,
+  LifeBuoy,
+  Settings,
+  FileText,
+  BookOpenCheck,
+  Lock,
   ChevronDown,
   Check,
   Bell,
@@ -65,7 +70,7 @@ const COMMON_COMMERCE = [
   { path: "/orders", labelKey: "nav.orders" },
 ];
 
-// ✅ Admin-only onboarding link (GLOBAL ADMIN ONLY)
+// Ã¢Å“â€¦ Admin-only onboarding link (GLOBAL ADMIN ONLY)
 const ADMIN_ONBOARDING_LINK = {
   path: "/admin/onboarding",
   labelKey: "nav.master",
@@ -74,6 +79,26 @@ const ADMIN_ONBOARDING_LINK = {
 const ACCOUNT_SECURITY_LINK = {
   path: "/account/security",
   labelKey: "nav.security",
+};
+const SETTINGS_LINK = {
+  path: "/settings",
+  labelKey: "nav.settings",
+};
+const HELP_SUPPORT_LINK = {
+  path: "/help-support",
+  labelKey: "nav.helpSupport",
+};
+const PRIVACY_LINK = {
+  path: "/privacy",
+  labelKey: "nav.privacy",
+};
+const TERMS_LINK = {
+  path: "/terms",
+  labelKey: "nav.terms",
+};
+const LEGAL_LINK = {
+  path: "/legal",
+  labelKey: "nav.legal",
 };
 
 const ROLE_LINKS = {
@@ -88,7 +113,12 @@ const ROLE_LINKS = {
     { path: "/transactions", labelKey: "nav.transactions" },
     { path: "/finance", labelKey: "nav.finance" },
     ...COMMON_COMMERCE,
+    SETTINGS_LINK,
     ACCOUNT_SECURITY_LINK,
+    HELP_SUPPORT_LINK,
+    PRIVACY_LINK,
+    TERMS_LINK,
+    LEGAL_LINK,
   ],
   agent: [
     { path: "/dashboard", labelKey: "nav.dashboard" },
@@ -100,7 +130,12 @@ const ROLE_LINKS = {
     { path: "/transactions", labelKey: "nav.transactions" },
     { path: "/finance", labelKey: "nav.finance" },
     ...COMMON_COMMERCE,
+    SETTINGS_LINK,
     ACCOUNT_SECURITY_LINK,
+    HELP_SUPPORT_LINK,
+    PRIVACY_LINK,
+    TERMS_LINK,
+    LEGAL_LINK,
   ],
   admin: [
     { path: "/dashboard", labelKey: "nav.dashboard" },
@@ -109,7 +144,7 @@ const ROLE_LINKS = {
     { path: "/projects", labelKey: "nav.projects" },
     { path: "/admin/projects", labelKey: "nav.adminProjects" },
 
-    // Onboarding injecté dynamiquement uniquement admin global
+    // Onboarding injectÃƒÂ© dynamiquement uniquement admin global
 
     { path: "/services", labelKey: "nav.services" },
     { path: "/tasks", labelKey: "nav.tasks" },
@@ -121,14 +156,19 @@ const ROLE_LINKS = {
     { path: "/transactions", labelKey: "nav.transactions" },
     { path: "/finance", labelKey: "nav.finance" },
     ...COMMON_COMMERCE,
+    SETTINGS_LINK,
     ACCOUNT_SECURITY_LINK,
+    HELP_SUPPORT_LINK,
+    PRIVACY_LINK,
+    TERMS_LINK,
+    LEGAL_LINK,
     { path: "/admin/catalog/categories", labelKey: "nav.categories" },
     { path: "/admin/catalog/products", labelKey: "nav.products" },
   ],
 };
 
 /* ============================================================================ */
-/* BOTTOM LINKS — MOBILE ONLY (COMPACT) */
+/* BOTTOM LINKS Ã¢â‚¬â€ MOBILE ONLY (COMPACT) */
 /* ============================================================================ */
 
 const BOTTOM_LINKS = {
@@ -164,7 +204,12 @@ const ICON_BY_PATH_PREFIX = [
   { prefix: "/tasks", icon: ClipboardList },
   { prefix: "/transactions", icon: ReceiptEuro },
   { prefix: "/finance", icon: CreditCard },
+  { prefix: "/settings", icon: Settings },
   { prefix: "/account/security", icon: ShieldCheck },
+  { prefix: "/help-support", icon: LifeBuoy },
+  { prefix: "/privacy", icon: Lock },
+  { prefix: "/terms", icon: BookOpenCheck },
+  { prefix: "/legal", icon: FileText },
 
   // Admin
   { prefix: "/admin/projects", icon: FolderKanban },
@@ -190,7 +235,7 @@ function iconForPath(path) {
 }
 
 /* ============================================================================ */
-/* GROUPING — Enterprise information architecture (UI only) */
+/* GROUPING Ã¢â‚¬â€ Enterprise information architecture (UI only) */
 /* ============================================================================ */
 
 function buildSections(role, links, t) {
@@ -222,7 +267,14 @@ function buildSections(role, links, t) {
 
   pushSection(t("nav.sections.shop"), [...byPrefix("/shop"), ...byPrefix("/orders")]);
 
-  pushSection(t("nav.sections.account"), [byPath("/account/security")]);
+  pushSection(t("nav.sections.account"), [
+    byPath("/settings"),
+    byPath("/account/security"),
+    byPath("/help-support"),
+    byPath("/privacy"),
+    byPath("/terms"),
+    byPath("/legal"),
+  ]);
 
   if (role === "admin") {
     pushSection(t("nav.sections.admin"), [
@@ -318,7 +370,7 @@ function NavBar() {
         byProgress: data?.byProgress || {},
       });
     } catch (e) {
-      console.error("❌ notifications summary:", e);
+      console.error("Ã¢ÂÅ’ notifications summary:", e);
       setNotificationSummary((prev) => prev || { unread: 0, byProgress: {} });
     }
   }, [user]);
@@ -332,7 +384,7 @@ function NavBar() {
     try {
       await markAllNotificationsRead();
     } catch (e) {
-      console.error("❌ mark all notifications read:", e);
+      console.error("Ã¢ÂÅ’ mark all notifications read:", e);
     } finally {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
@@ -457,7 +509,7 @@ function NavBar() {
 
   const role = normalizeRole(user?.role);
 
-  // ✅ Détection ADMIN GLOBAL vs MASTER (admin scopé)
+  // Ã¢Å“â€¦ DÃƒÂ©tection ADMIN GLOBAL vs MASTER (admin scopÃƒÂ©)
   const isAdmin = role === "admin";
   const isGlobalAdmin = useMemo(() => {
     if (!isAdmin) return false;
@@ -475,7 +527,7 @@ function NavBar() {
   }, [user, isAdmin, isGlobalAdmin, role, t]);
 
 
-  // ✅ Links de rôle (inject onboarding uniquement pour admin global)
+  // Ã¢Å“â€¦ Links de rÃƒÂ´le (inject onboarding uniquement pour admin global)
   const links = useMemo(() => {
     const base = ROLE_LINKS[role] || [];
     let out = base;
@@ -742,7 +794,7 @@ function NavBar() {
                           {t("nav.perimeter")}
                         </div>
 
-                        {/* Encapsulation “Enterprise control” */}
+                        {/* Encapsulation Ã¢â‚¬Å“Enterprise controlÃ¢â‚¬Â */}
                         <div className="rounded-xl border border-border bg-surface-card px-3 py-2">
                           <GeoSelector />
                         </div>
@@ -870,21 +922,26 @@ function NavBar() {
 
                       <div className="py-2">
                         <Link
+                          to="/settings"
+                          onClick={() => setOpenUserMenu(false)}
+                          className="block w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
+                        >
+                          {t("nav.settings")}
+                        </Link>
+                        <Link
                           to="/account/security"
                           onClick={() => setOpenUserMenu(false)}
                           className="block w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
                         >
                           {t("nav.accountSecurity")}
                         </Link>
-                        <button
-                          type="button"
-                          className="w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
-                          disabled
-                          aria-disabled="true"
-                          title={t("nav.comingSoon")}
+                        <Link
+                          to="/help-support"
+                          onClick={() => setOpenUserMenu(false)}
+                          className="block w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
                         >
                           {t("nav.helpSupportSoon")}
-                        </button>
+                        </Link>
                       </div>
 
                       <div className="border-t border-border" />
@@ -910,7 +967,7 @@ function NavBar() {
       </nav>
 
       {/* ======================================================================== */}
-      {/* BOTTOM NAV — MOBILE ONLY (COMPACT) */}
+      {/* BOTTOM NAV Ã¢â‚¬â€ MOBILE ONLY (COMPACT) */}
       {/* ======================================================================== */}
       <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent" aria-label="Navigation basse">
         <div className="mx-auto w-full flex justify-center">
@@ -962,7 +1019,7 @@ function NavBar() {
       </nav>
 
       {/* ======================================================================== */}
-      {/* PANEL PLUS — MOBILE (Organisé par sections) */}
+      {/* PANEL PLUS Ã¢â‚¬â€ MOBILE (OrganisÃƒÂ© par sections) */}
       {/* ======================================================================== */}
       <AnimatePresence>
         {openMore && (
@@ -1081,6 +1138,8 @@ function NavBar() {
 }
 
 export default memo(NavBar);
+
+
 
 
 

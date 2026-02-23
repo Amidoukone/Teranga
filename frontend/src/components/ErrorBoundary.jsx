@@ -45,22 +45,22 @@ class ErrorBoundary extends React.Component {
     const { t } = this.props;
 
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="max-w-xl w-full bg-white shadow-lg rounded-2xl border border-gray-200 p-6 sm:p-10 text-center">
+      <div className="min-h-screen bg-surface-main flex items-center justify-center px-4">
+        <div className="max-w-xl w-full bg-surface-card shadow-lg rounded-2xl border border-border p-6 sm:p-10 text-center">
           <p className="text-sm font-semibold uppercase tracking-wide text-red-500">
             {t('errorBoundary.kicker')}
           </p>
-          <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-gray-900">
+          <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-text-primary">
             {t('errorBoundary.title')}
           </h1>
-          <p className="mt-4 text-gray-600">
+          <p className="mt-4 text-text-secondary">
             {t('errorBoundary.description')}
           </p>
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               type="button"
               onClick={this.handleReset}
-              className="w-full sm:w-auto rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+              className="w-full sm:w-auto rounded-full border border-border px-5 py-2 text-sm font-semibold text-text-secondary transition hover:bg-surface-main/80"
             >
               {t('errorBoundary.retry')}
             </button>
@@ -74,8 +74,8 @@ class ErrorBoundary extends React.Component {
           </div>
 
           {isDev && this.state.error && (
-            <details className="mt-6 text-left text-xs text-gray-500">
-              <summary className="cursor-pointer font-semibold text-gray-700">
+            <details className="mt-6 text-left text-xs text-text-muted">
+              <summary className="cursor-pointer font-semibold text-text-secondary">
                 {t('errorBoundary.details')}
               </summary>
               <pre className="mt-2 whitespace-pre-wrap break-words">
@@ -92,3 +92,5 @@ class ErrorBoundary extends React.Component {
 }
 
 export default withTranslation()(ErrorBoundary);
+
+

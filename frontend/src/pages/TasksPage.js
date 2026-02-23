@@ -1,6 +1,6 @@
 // ============================================================================
-// TasksPage.jsx — VERSION PREMIUM 2025
-// MASTER SAFE — Multi-pays backend-driven — PARTIE 1 / 2
+// TasksPage.jsx ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION PREMIUM 2025
+// MASTER SAFE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Multi-pays backend-driven ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PARTIE 1 / 2
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -28,7 +28,7 @@ const DEFAULT_FILTERS = {
 };
 
 // ============================================================================
-// 🧩 PAGE PRINCIPALE
+// ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© PAGE PRINCIPALE
 // ============================================================================
 export default function TasksPage() {
   const { t } = useTranslation();
@@ -48,12 +48,12 @@ export default function TasksPage() {
   const navigate = useNavigate();
 
   // ========================================================================
-  // 🔐 Rôles (MASTER SAFE)
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â RÃƒÆ’Ã‚Â´les (MASTER SAFE)
   // =========================================================================
   const role = normalizeRole(user?.role);
   const isAdmin = role === 'admin';
   const isMaster = isMasterUser(user); // UX uniquement
-  const isAdminLike = isAdmin; // MASTER = admin côté UI
+  const isAdminLike = isAdmin; // MASTER = admin cÃƒÆ’Ã‚Â´tÃƒÆ’Ã‚Â© UI
   const canCreateTask = role === 'client' || isAdminLike;
 
   // ========================================================================
@@ -102,7 +102,7 @@ export default function TasksPage() {
   }, []);
 
   // ========================================================================
-  // Chargement des tâches (backend applique le scope geo)
+  // Chargement des tÃƒÆ’Ã‚Â¢ches (backend applique le scope geo)
   // =========================================================================
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -115,7 +115,7 @@ export default function TasksPage() {
 
       setTasks(enriched);
     } catch (err) {
-      console.error('❌ Erreur chargement tâches:', err);
+      console.error('Erreur chargement taches:', err);
       setNotice({
         type: 'error',
         message: t('tasksPage.alerts.loadError'),
@@ -164,10 +164,7 @@ export default function TasksPage() {
             setServices(enrichedServices);
             setAgents(agentsRes?.users || []);
           } catch (err) {
-            console.error(
-              '❌ Erreur chargement services/agents (admin/master):',
-              err
-            );
+            console.error('Erreur chargement services/agents (admin/master):', err);
           }
         }
 
@@ -189,7 +186,7 @@ export default function TasksPage() {
   }, [showForm]);
 
     // ========================================================================
-  // Création d'une tâche (CLIENT + ADMIN/MASTER)
+  // CrÃƒÆ’Ã‚Â©ation d'une tÃƒÆ’Ã‚Â¢che (CLIENT + ADMIN/MASTER)
   // =========================================================================
   async function createTask(e) {
     e.preventDefault();
@@ -228,7 +225,7 @@ export default function TasksPage() {
 
       await loadTasks();
     } catch (err) {
-      console.error('❌ Erreur création tâche:', err);
+      console.error('Erreur creation tache:', err);
       setNotice({
         type: 'error',
         message:
@@ -246,7 +243,7 @@ export default function TasksPage() {
       await api.put(`/tasks/${id}/status`, { status }, { headers: authHeader });
       await loadTasks();
     } catch (err) {
-      console.error('❌ Erreur maj statut:', err);
+      console.error('Erreur maj statut:', err);
       setNotice({
         type: 'error',
         message:
@@ -274,7 +271,7 @@ export default function TasksPage() {
       });
       await loadTasks();
     } catch (err) {
-      console.error('❌ Erreur assignation tâche:', err);
+      console.error('Erreur assignation tache:', err);
       setNotice({
         type: 'error',
         message: err?.response?.data?.error || t('tasksPage.alerts.assignError'),
@@ -332,8 +329,8 @@ export default function TasksPage() {
   // UI
   // =========================================================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 py-8 sm:px-4 sm:py-10">
-      <div className="max-w-6xl mx-auto bg-white/95 shadow-2xl rounded-3xl p-4 sm:p-8 border border-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 py-8 sm:px-4 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-surface-card/95 shadow-2xl rounded-3xl p-4 sm:p-8 border border-border/70">
         {/* HEADER */}
         <Header
           showForm={showForm}
@@ -348,12 +345,12 @@ export default function TasksPage() {
           <div
             className={`mb-6 rounded-2xl border px-4 py-3 text-xs sm:text-sm flex gap-2 items-start ${
               notice.type === 'error'
-                ? 'bg-rose-50 border-rose-200 text-rose-700'
-                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                ? 'app-alert app-alert-error'
+                : 'app-alert app-alert-success'
             }`}
           >
             <span className="mt-[1px]">
-              {notice.type === 'error' ? '⚠️' : '✅'}
+              {notice.type === 'error' ? '!' : 'i'}
             </span>
             <p className="break-words">{notice.message}</p>
           </div>
@@ -387,15 +384,15 @@ export default function TasksPage() {
         {/* LISTE */}
         {filtered.length === 0 ? (
           <div className="py-10 flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
-              <span className="text-xl">🗂️</span>
+            <div className="app-icon-badge-info">
+              <span className="text-xl">i</span>
             </div>
-            <p className="text-sm font-semibold text-gray-800 mb-1">
+            <p className="text-sm font-semibold text-text-primary mb-1">
               {hasActiveFilters
                 ? t('tasksPage.emptyFilteredTitle')
                 : t('tasksPage.emptyTitle')}
             </p>
-            <p className="text-xs text-gray-500 max-w-sm">
+            <p className="text-xs text-text-muted max-w-sm">
               {hasActiveFilters
                 ? t('tasksPage.emptyFilteredSubtitle')
                 : t('tasksPage.emptySubtitle')}
@@ -404,7 +401,7 @@ export default function TasksPage() {
               {hasActiveFilters && (
                 <button
                   onClick={resetFilters}
-                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-gray-200 hover:bg-gray-300"
+                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-surface-main/80 hover:bg-surface-main"
                 >
                   {t('tasksPage.filters.reset')}
                 </button>
@@ -412,9 +409,9 @@ export default function TasksPage() {
               {canCreateTask && !showForm && (
                 <button
                   onClick={() => setShowForm(true)}
-                  className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm bg-blue-600 text-white hover:bg-blue-700 transition"
+                  className="app-btn-primary px-4 py-2 text-xs sm:text-sm"
                 >
-                  ➕ {t('tasksPage.buttons.newTask')}
+                  {t('tasksPage.buttons.newTask')}
                 </button>
               )}
             </div>
@@ -438,33 +435,33 @@ export default function TasksPage() {
 }
 
 // ============================================================================
-// 🧩 SOUS-COMPOSANTS (UI premium & responsive)
+// ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© SOUS-COMPOSANTS (UI premium & responsive)
 // ============================================================================
 
 function Header({ showForm, setShowForm, loadTasks, loading, total, isMaster }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7 pb-4 border-b border-gray-100">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7 pb-4 border-b border-border/70">
       <div className="max-w-full break-words">
-        <p className="text-[0.7rem] uppercase tracking-wide text-blue-600 font-semibold">
+        <p className="page-kicker">
           {t('tasksPage.kicker')}
         </p>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
-          📋 {t('tasksPage.title')}
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary">
+          {t('tasksPage.title')}
         </h1>
-        <p className="text-sm sm:text-base text-gray-600 mt-1">
+        <p className="text-sm sm:text-base text-text-secondary mt-1">
           {t('tasksPage.subtitle')}
         </p>
 
         <div className="mt-2 flex flex-wrap gap-2 items-center">
-          <p className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+          <p className="inline-flex items-center gap-2 text-xs sm:text-sm text-text-muted bg-surface-main px-3 py-1.5 rounded-full border border-border">
+            <span className="app-status-dot-success" />
             {t('tasksPage.count', { count: total })}
           </p>
 
           {isMaster && (
-            <p className="inline-flex items-center gap-2 text-xs sm:text-sm text-amber-800 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200">
-              ⭐ {t('roles.master')}
+            <p className="app-badge app-badge-warning gap-2 px-3 py-1.5 text-xs sm:text-sm">
+              {t('roles.master')}
             </p>
           )}
         </div>
@@ -473,25 +470,21 @@ function Header({ showForm, setShowForm, loadTasks, loading, total, isMaster }) 
       <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm bg-slate-900 text-white hover:bg-slate-800 transition"
+          className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
         >
           {showForm
-            ? `➖ ${t('tasksPage.buttons.hideForm')}`
-            : `➕ ${t('tasksPage.buttons.newTask')}`}
+            ? t('tasksPage.buttons.hideForm')
+            : t('tasksPage.buttons.newTask')}
         </button>
 
         <button
           onClick={loadTasks}
           disabled={loading}
-          className={`w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition ${
-            loading
-              ? 'bg-blue-300 cursor-not-allowed text-white'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
+          className="app-btn-primary w-full sm:w-auto px-4 py-2.5 text-sm"
         >
           {loading
             ? t('tasksPage.buttons.refreshLoading')
-            : `🔄 ${t('tasksPage.buttons.refresh')}`}
+            : t('tasksPage.buttons.refresh')}
         </button>
       </div>
     </div>
@@ -510,15 +503,15 @@ function TaskFilters({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5">
+    <div className="mb-8 bg-surface-main border border-border rounded-2xl p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Recherche */}
         <input
-          placeholder={`🔎 ${t('tasksPage.filters.searchPlaceholder')}`}
+          placeholder={t('tasksPage.filters.searchPlaceholder')}
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
           className="
-            border border-gray-300 rounded-lg px-3 py-2.5 text-sm sm:text-base
+            border border-border rounded-lg px-3 py-2.5 text-sm sm:text-base bg-surface-card text-text-primary
             focus:ring-2 focus:ring-blue-500 focus:border-blue-500
             col-span-1 sm:col-span-2 lg:col-span-3 break-words
           "
@@ -528,7 +521,7 @@ function TaskFilters({
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+          className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
         >
           <option value="">{t('tasksPage.filters.typeAll')}</option>
           {Object.entries(TASK_TYPES).map(([key, label]) => (
@@ -542,7 +535,7 @@ function TaskFilters({
         <select
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+          className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
         >
           <option value="">{t('tasksPage.filters.statusAll')}</option>
           {Object.entries(TASK_STATUSES).map(([key, label]) => (
@@ -552,11 +545,11 @@ function TaskFilters({
           ))}
         </select>
 
-        {/* Priorité */}
+        {/* PrioritÃƒÆ’Ã‚Â© */}
         <select
           value={filters.priority}
           onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+          className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
         >
           <option value="">{t('tasksPage.filters.priorityAll')}</option>
           {Object.entries(TASK_PRIORITIES).map(([key, label]) => (
@@ -570,12 +563,12 @@ function TaskFilters({
         <select
           value={filters.service}
           onChange={(e) => setFilters({ ...filters, service: e.target.value })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+          className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
         >
           <option value="">{t('tasksPage.filters.serviceAll')}</option>
           {services.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.title} — {SERVICE_TYPES[s.type] || s.type || t('common.dash')}
+              {s.title} - {SERVICE_TYPES[s.type] || s.type || t('common.dash')}
             </option>
           ))}
         </select>
@@ -585,7 +578,7 @@ function TaskFilters({
           <select
             value={filters.agent}
             onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500"
+            className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
           >
             <option value="">{t('tasksPage.filters.agentAll')}</option>
             {agents.map((a) => (
@@ -598,14 +591,14 @@ function TaskFilters({
       </div>
 
       <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="text-xs sm:text-sm text-gray-500">
+        <div className="text-xs sm:text-sm text-text-muted">
           {t('tasksPage.filters.foundCount', { count: filteredCount })}
         </div>
         <button
           onClick={onReset}
           className="
-            text-xs sm:text-sm px-3 py-1.5 bg-gray-200 rounded-md
-            hover:bg-gray-300 w-full sm:w-auto text-center
+            text-xs sm:text-sm px-3 py-1.5 bg-surface-main/80 text-text-secondary rounded-md border border-border/70
+            hover:bg-surface-main w-full sm:w-auto text-center
           "
         >
           {t('tasksPage.filters.reset')}
@@ -619,10 +612,10 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
   const { t } = useTranslation();
   return (
     <div className="mb-10">
-      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">
-        ➕ {t('tasksPage.form.title')}
+      <h2 className="text-lg sm:text-xl font-semibold text-text-primary mb-3">
+        {t('tasksPage.form.title')}
       </h2>
-      <p className="text-xs sm:text-sm text-gray-500 mb-4">
+      <p className="text-xs sm:text-sm text-text-muted mb-4">
         {t('tasksPage.form.subtitle')}
       </p>
 
@@ -630,20 +623,20 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
         onSubmit={createTask}
         className="
           grid grid-cols-1 sm:grid-cols-2 gap-4
-          bg-gray-50 p-4 sm:p-5 rounded-2xl border border-gray-200
+          bg-surface-main p-4 sm:p-5 rounded-2xl border border-border
         "
       >
-        {/* Service lié */}
+        {/* Service liÃƒÆ’Ã‚Â© */}
         <div className="w-full">
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-            {t('tasksPage.form.serviceLabel')} <span className="text-red-500">*</span>
+          <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
+            {t('tasksPage.form.serviceLabel')} <span className="app-required">*</span>
           </label>
           <select
             value={form.serviceId}
             onChange={(e) => setForm({ ...form, serviceId: e.target.value })}
             required
             className="
-              w-full border border-gray-300 rounded-lg px-3 py-2
+              w-full border border-border rounded-lg px-3 py-2 bg-surface-card text-text-primary
               text-sm sm:text-base focus:ring-2 focus:ring-blue-500
             "
           >
@@ -656,9 +649,9 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
           </select>
         </div>
 
-        {/* Type de tâche */}
+        {/* Type de tÃƒÆ’Ã‚Â¢che */}
         <div className="w-full">
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
             {t('tasksPage.form.typeLabel')}
           </label>
           <select
@@ -666,7 +659,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
             onChange={(e) => setForm({ ...form, type: e.target.value })}
             required
             className="
-              w-full border border-gray-300 rounded-lg px-3 py-2
+              w-full border border-border rounded-lg px-3 py-2 bg-surface-card text-text-primary
               text-sm sm:text-base focus:ring-2 focus:ring-blue-500
             "
           >
@@ -680,8 +673,8 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
 
         {/* Titre */}
         <div className="w-full col-span-1 sm:col-span-2">
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-            {t('tasksPage.form.titleLabel')} <span className="text-red-500">*</span>
+          <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
+            {t('tasksPage.form.titleLabel')} <span className="app-required">*</span>
           </label>
           <input
             placeholder={t('tasksPage.form.titlePlaceholder')}
@@ -689,7 +682,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             required
             className="
-              w-full border border-gray-300 rounded-lg px-3 py-2
+              w-full border border-border rounded-lg px-3 py-2 bg-surface-card text-text-primary
               text-sm sm:text-base focus:ring-2 focus:ring-blue-500 break-words
             "
           />
@@ -697,7 +690,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
 
         {/* Description */}
         <div className="w-full col-span-1 sm:col-span-2">
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
             {t('tasksPage.form.descriptionLabel')}
           </label>
           <textarea
@@ -706,22 +699,22 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
             className="
-              w-full border border-gray-300 rounded-lg px-3 py-2
+              w-full border border-border rounded-lg px-3 py-2 bg-surface-card text-text-primary
               text-sm sm:text-base focus:ring-2 focus:ring-blue-500 break-words
             "
           />
         </div>
 
-        {/* Priorité */}
+        {/* PrioritÃƒÆ’Ã‚Â© */}
         <div className="w-full">
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
             {t('tasksPage.form.priorityLabel')}
           </label>
           <select
             value={form.priority}
             onChange={(e) => setForm({ ...form, priority: e.target.value })}
             className="
-              w-full border border-gray-300 rounded-lg px-3 py-2
+              w-full border border-border rounded-lg px-3 py-2 bg-surface-card text-text-primary
               text-sm sm:text-base focus:ring-2 focus:ring-blue-500
             "
           >
@@ -733,9 +726,9 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
           </select>
         </div>
 
-        {/* Date d’échéance */}
+        {/* Date dÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã‚Â©chÃƒÆ’Ã‚Â©ance */}
         <div className="w-full">
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
             {t('tasksPage.form.dueDateLabel')}
           </label>
           <input
@@ -743,15 +736,15 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
             value={form.dueDate}
             onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
             className="
-              w-full border border-gray-300 rounded-lg px-3 py-2
+              w-full border border-border rounded-lg px-3 py-2 bg-surface-card text-text-primary
               text-sm sm:text-base focus:ring-2 focus:ring-blue-500
             "
           />
         </div>
 
-        {/* Coût estimé */}
+        {/* CoÃƒÆ’Ã‚Â»t estimÃƒÆ’Ã‚Â© */}
         <div className="w-full">
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
             {t('tasksPage.form.estimatedCostLabel')}
           </label>
           <input
@@ -761,7 +754,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
             value={form.estimatedCost}
             onChange={(e) => setForm({ ...form, estimatedCost: e.target.value })}
             className="
-              w-full border border-gray-300 rounded-lg px-3 py-2
+              w-full border border-border rounded-lg px-3 py-2
               text-sm sm:text-base focus:ring-2 focus:ring-blue-500
             "
           />
@@ -770,14 +763,14 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
         {/* Assignation (admin/master uniquement) */}
         {isAdminLike && (
           <div className="w-full">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
               {t('tasksPage.form.assignedLabel')}
             </label>
             <select
               value={form.assignedTo}
               onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
               className="
-                w-full border border-gray-300 rounded-lg px-3 py-2
+                w-full border border-border rounded-lg px-3 py-2 bg-surface-card text-text-primary
                 text-sm sm:text-base focus:ring-2 focus:ring-blue-500
               "
             >
@@ -798,8 +791,8 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
           <button
             type="submit"
             className="
-              w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white rounded-lg
-              text-sm sm:text-base font-semibold hover:bg-blue-700 transition
+              app-btn-primary w-full sm:w-auto px-5 py-2.5
+              text-sm sm:text-base
             "
           >
             {t('tasksPage.form.submit')}
@@ -824,7 +817,7 @@ function TaskList({
   const { t } = useTranslation();
   if (!tasks || tasks.length === 0) {
     return (
-      <p className="text-gray-500 italic text-center py-8">
+      <p className="text-text-muted italic text-center py-8">
         {t('tasksPage.list.empty')}
       </p>
     );
@@ -836,17 +829,17 @@ function TaskList({
         <div
           key={task.id}
           className="
-            bg-white border border-gray-200 rounded-2xl shadow-sm
+            bg-surface-card border border-border rounded-2xl shadow-sm
             p-4 sm:p-5 hover:shadow-md transition
           "
         >
-          {/* En-tête : titre + statut */}
+          {/* En-tÃƒÆ’Ã‚Âªte : titre + statut */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
             <div className="min-w-0 break-words">
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">
+              <h3 className="text-lg sm:text-xl font-semibold text-text-primary break-words">
                 {task.title}
               </h3>
-              <p className="text-sm sm:text-base text-gray-600 mt-1 break-words">
+              <p className="text-sm sm:text-base text-text-secondary mt-1 break-words">
                 {task.description || t('tasksPage.list.noDescription')}
               </p>
             </div>
@@ -857,12 +850,12 @@ function TaskList({
                 whitespace-nowrap self-start
                 ${
                   task.status === 'created'
-                    ? 'bg-gray-100 text-gray-700'
+                    ? 'bg-surface-main/80 text-text-secondary'
                     : task.status === 'in_progress'
-                    ? 'bg-blue-100 text-blue-700'
+                    ? 'app-badge app-badge-info'
                     : task.status === 'completed'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-emerald-100 text-emerald-700'
+                    ? 'app-badge app-badge-success'
+                    : 'app-badge app-badge-success'
                 }
               `}
             >
@@ -871,7 +864,7 @@ function TaskList({
           </div>
 
           {/* Meta infos */}
-          <div className="mt-4 text-sm sm:text-base text-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="mt-4 text-sm sm:text-base text-text-secondary grid grid-cols-1 sm:grid-cols-2 gap-2">
             <p className="break-words">
               <strong>{t('tasksPage.list.typeLabel')}:</strong>{' '}
               {TASK_TYPES[task.type] || task.type || t('common.dash')}
@@ -896,11 +889,11 @@ function TaskList({
             <button
               onClick={() => navigate(`/tasks/${task.id}/evidences`)}
               className="
-                w-full sm:w-auto px-4 py-2 bg-blue-600 text-white text-sm sm:text-base
-                font-medium rounded-lg hover:bg-blue-700 transition
+                app-btn-primary w-full sm:w-auto px-4 py-2 text-sm sm:text-base
+                font-medium
               "
             >
-              📎 {t('tasksPage.list.viewEvidences')}
+              {t('tasksPage.list.viewEvidences')}
             </button>
 
             {/* Assignation (admin/master) */}
@@ -909,8 +902,8 @@ function TaskList({
                 onChange={(e) => updateAssignment(task.id, e.target.value)}
                 defaultValue=""
                 className="
-                  w-full sm:w-auto border border-gray-300 rounded-lg px-3 py-2
-                  text-sm sm:text-base
+                  w-full sm:w-auto border border-border rounded-lg px-3 py-2
+                  text-sm sm:text-base bg-surface-card text-text-primary
                 "
               >
                 <option value="">{t('tasksPage.list.assignPlaceholder')}</option>
@@ -922,42 +915,42 @@ function TaskList({
               </select>
             )}
 
-            {/* Agent → Démarrer */}
+            {/* Agent ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ DÃƒÆ’Ã‚Â©marrer */}
             {role === 'agent' && task.status === 'created' && (
               <button
                 onClick={() => updateStatus(task.id, 'in_progress')}
                 className="
-                  w-full sm:w-auto px-4 py-2 bg-yellow-500 text-white text-sm sm:text-base
-                  font-medium rounded-lg hover:bg-yellow-600 transition
+                  app-btn-warning w-full sm:w-auto px-4 py-2 text-sm sm:text-base
+                  font-medium
                 "
               >
-                ▶️ {t('tasksPage.list.start')}
+                {t('tasksPage.list.start')}
               </button>
             )}
 
-            {/* Agent → Terminer */}
+            {/* Agent ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Terminer */}
             {role === 'agent' && task.status === 'in_progress' && (
               <button
                 onClick={() => updateStatus(task.id, 'completed')}
                 className="
-                  w-full sm:w-auto px-4 py-2 bg-green-600 text-white text-sm sm:text-base
-                  font-medium rounded-lg hover:bg-green-700 transition
+                  app-btn-success w-full sm:w-auto px-4 py-2 text-sm sm:text-base
+                  font-medium
                 "
               >
-                ✅ {t('tasksPage.list.finish')}
+                {t('tasksPage.list.finish')}
               </button>
             )}
 
-            {/* Admin/master UI → Valider (backend reste la vérité : admin only) */}
+            {/* Admin/master UI ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Valider (backend reste la vÃƒÆ’Ã‚Â©ritÃƒÆ’Ã‚Â© : admin only) */}
             {isAdminLike && role === 'admin' && task.status === 'completed' && (
               <button
                 onClick={() => updateStatus(task.id, 'validated')}
                 className="
-                  w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white text-sm sm:text-base
-                  font-medium rounded-lg hover:bg-emerald-700 transition
+                  app-btn-success w-full sm:w-auto px-4 py-2 text-sm sm:text-base
+                  font-medium
                 "
               >
-                ✔️ {t('tasksPage.list.validate')}
+                {t('tasksPage.list.validate')}
               </button>
             )}
           </div>
@@ -966,3 +959,5 @@ function TaskList({
     </div>
   );
 }
+
+

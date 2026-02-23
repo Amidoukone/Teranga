@@ -5,6 +5,11 @@ import { me } from '../services/auth';
 import { normalizeRole, isMasterUser } from '../utils/role';
 import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
+import {
+  AdminField,
+  AdminFilterBar,
+  AdminPageHeader,
+} from '../components/admin/AdminFormUi';
 
 export default function AdminServicesPage() {
   const { t } = useTranslation();
@@ -51,7 +56,7 @@ export default function AdminServicesPage() {
   );
 
   /* ============================================================
-     🔐 Vérification ADMIN / MASTER
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â VÃƒÆ’Ã‚Â©rification ADMIN / MASTER
   ============================================================ */
   useEffect(() => {
     let active = true;
@@ -86,24 +91,24 @@ export default function AdminServicesPage() {
   }, [navigate]);
 
   /* ============================================================
-     👥 Chargement agents (admin/master)
-     ⚠️ Aucun filtrage frontend — backend scope only
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ‚Â¥ Chargement agents (admin/master)
+     ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Aucun filtrage frontend ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â backend scope only
   ============================================================ */
   const loadAgents = useCallback(async () => {
     try {
       const { data } = await api.get('/users?role=agent', authHeaders);
       setAgents(data?.users || []);
     } catch (err) {
-      console.error('❌ Erreur chargement agents:', err);
+      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur chargement agents:', err);
       setAgents([]);
     }
   }, [authHeaders]);
 
   /* ============================================================
-     📄 Chargement services
-     ⚠️ IMPORTANT :
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¾ Chargement services
+     ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â IMPORTANT :
      - PAS de countryId / regionId en query
-     - Le backend applique déjà le scope
+     - Le backend applique dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  le scope
   ============================================================ */
   const loadServices = useCallback(async () => {
     setLoading(true);
@@ -124,7 +129,7 @@ export default function AdminServicesPage() {
 
       setServices(data?.services || []);
     } catch (e) {
-      console.error('❌ Erreur chargement services:', e);
+      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur chargement services:', e);
       setServices([]);
     } finally {
       setLoading(false);
@@ -132,7 +137,7 @@ export default function AdminServicesPage() {
   }, [authHeaders, status, onlyUnassigned, q, limit, offset]);
 
   /* ============================================================
-     🔁 Initialisation
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Initialisation
   ============================================================ */
   useEffect(() => {
     if (isAdmin) {
@@ -147,7 +152,7 @@ export default function AdminServicesPage() {
   }, [isAdmin, loadServices]);
 
   /* ============================================================
-     🔄 Assignation agent
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Assignation agent
   ============================================================ */
   async function handleAssign(serviceId, agentId) {
     if (!agentId) return;
@@ -159,13 +164,13 @@ export default function AdminServicesPage() {
       );
       await loadServices();
     } catch (e) {
-      console.error('❌ Erreur assignation:', e);
+      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur assignation:', e);
       notify(t('adminServicesPage.alerts.assignError'));
     }
   }
 
   /* ============================================================
-     🧠 Helpers UI
+     ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â  Helpers UI
   ============================================================ */
   function displayUser(u) {
     if (!u) return t('adminServicesPage.table.emptyValue');
@@ -180,22 +185,22 @@ export default function AdminServicesPage() {
   function statusBadgeClass(st) {
     switch (st) {
       case 'created':
-        return 'bg-slate-100 text-slate-700 border border-slate-200';
+        return 'bg-surface-main/80 text-text-secondary border border-border';
       case 'in_progress':
-        return 'bg-blue-50 text-blue-700 border border-blue-100';
+        return 'app-badge app-badge-info';
       case 'completed':
-        return 'bg-emerald-50 text-emerald-700 border border-emerald-100';
+        return 'app-badge app-badge-success';
       case 'validated':
-        return 'bg-indigo-50 text-indigo-700 border border-indigo-100';
+        return 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30';
       default:
-        return 'bg-gray-50 text-gray-600 border border-gray-200';
+        return 'bg-surface-main text-text-secondary border border-border';
     }
   }
 
   if (isAdmin === null) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-500 text-lg animate-pulse">
+      <div className="flex items-center justify-center min-h-screen bg-surface-main">
+        <p className="text-text-muted text-lg animate-pulse">
           {t('adminServicesPage.loading')}
         </p>
       </div>
@@ -203,29 +208,24 @@ export default function AdminServicesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
-      <div className="max-w-6xl mx-auto bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* 🧭 En-tête Apple Light */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
-              {t('adminServicesPage.title')}
-            </h1>
-            <p className="text-sm text-slate-500 max-w-xl">
-              {t('adminServicesPage.subtitle')}
-            </p>
-
-            {/* ✅ Badge scope (UX only, backend = source de vérité) */}
-            {currentUser && (
-              <div className="pt-2 text-xs text-slate-500">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-surface-card/90 backdrop-blur-sm shadow-xl rounded-2xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â­ En-tÃƒÆ’Ã‚Âªte Apple Light */}
+        <AdminPageHeader
+          title={t('adminServicesPage.title')}
+          subtitle={t('adminServicesPage.subtitle')}
+          subtitleClassName="max-w-xl text-text-muted"
+          meta={
+            currentUser && (
+              <div className="pt-2 text-xs text-text-muted">
                 <span className="inline-flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-700">
+                  <span className="px-2 py-0.5 rounded-full border border-border bg-surface-card text-text-secondary">
                     {isMaster
                       ? t('adminServicesPage.badges.master')
                       : t('adminServicesPage.badges.admin')}
                   </span>
                   {isMaster ? (
-                    <span className="text-slate-500">
+                    <span className="text-text-muted">
                       {t('adminServicesPage.labels.perimeter')}
                       {currentUser?.countryId != null
                         ? ` ${t('adminServicesPage.labels.countryId', {
@@ -233,53 +233,49 @@ export default function AdminServicesPage() {
                           })}`
                         : ''}
                       {currentUser?.regionId != null
-                        ? ` · ${t('adminServicesPage.labels.regionId', {
+                        ? ` - ${t('adminServicesPage.labels.regionId', {
                             id: currentUser.regionId,
                           })}`
                         : ''}
                     </span>
                   ) : (
-                    <span className="text-slate-500">
+                    <span className="text-text-muted">
                       {t('adminServicesPage.labels.globalAccess')}
                     </span>
                   )}
                 </span>
               </div>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+            )
+          }
+          actionsClassName="justify-start sm:justify-end"
+          actions={
             <button
               onClick={loadServices}
               disabled={loading}
-              className={`inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-full shadow-sm transition ${
-                loading
-                  ? 'bg-blue-200 text-white cursor-not-allowed'
-                  : 'bg-slate-900 text-white hover:bg-black'
-              }`}
+              className="app-btn-primary inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-full shadow-sm"
             >
               {loading
                 ? t('adminServicesPage.loading')
                 : t('adminServicesPage.buttons.refresh')}
             </button>
-          </div>
-        </div>
+          }
+        />
 
-        {/* 🎛️ Filtres Apple-style */}
-        <section className="mb-8 bg-slate-50/80 border border-slate-200 rounded-2xl px-4 sm:px-5 py-4 sm:py-5">
+        {/* ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬ÂºÃƒÂ¯Ã‚Â¸Ã‚Â Filtres Apple-style */}
+        <AdminFilterBar className="mb-8 rounded-2xl px-4 sm:px-5 py-4 sm:py-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Statut */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">
-                {t('adminServicesPage.filters.statusLabel')}
-              </label>
+            <AdminField
+              label={t('adminServicesPage.filters.statusLabel')}
+              className="flex flex-col gap-1"
+            >
               <select
                 value={status}
                 onChange={(e) => {
                   setStatus(e.target.value);
                   setOffset(0);
                 }}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="app-input"
               >
                 {statusOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -287,11 +283,11 @@ export default function AdminServicesPage() {
                   </option>
                 ))}
               </select>
-            </div>
+            </AdminField>
 
-            {/* Non assignés */}
+            {/* Non assignÃƒÆ’Ã‚Â©s */}
             <div className="flex flex-col justify-end">
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
                 <input
                   type="checkbox"
                   checked={onlyUnassigned}
@@ -299,17 +295,17 @@ export default function AdminServicesPage() {
                     setOnlyUnassigned(e.target.checked);
                     setOffset(0);
                   }}
-                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="h-4 w-4 rounded border-border text-blue-600 focus:ring-blue-500"
                 />
                 <span>{t('adminServicesPage.filters.onlyUnassigned')}</span>
               </label>
             </div>
 
             {/* Recherche */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">
-                {t('adminServicesPage.filters.searchLabel')}
-              </label>
+            <AdminField
+              label={t('adminServicesPage.filters.searchLabel')}
+              className="flex flex-col gap-1"
+            >
               <input
                 placeholder={t('adminServicesPage.filters.searchPlaceholder')}
                 value={q}
@@ -317,22 +313,22 @@ export default function AdminServicesPage() {
                   setQ(e.target.value);
                   setOffset(0);
                 }}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="app-input"
               />
-            </div>
+            </AdminField>
 
             {/* Limite */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">
-                {t('adminServicesPage.filters.limitLabel')}
-              </label>
+            <AdminField
+              label={t('adminServicesPage.filters.limitLabel')}
+              className="flex flex-col gap-1"
+            >
               <select
                 value={limit}
                 onChange={(e) => {
                   setLimit(parseInt(e.target.value, 10));
                   setOffset(0);
                 }}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="app-input"
               >
                 {[10, 25, 50, 100].map((n) => (
                   <option key={n} value={n}>
@@ -340,10 +336,10 @@ export default function AdminServicesPage() {
                   </option>
                 ))}
               </select>
-            </div>
+            </AdminField>
           </div>
 
-          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-500">
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-text-muted">
             <span>
               {services.length === 0
                 ? t('adminServicesPage.empty')
@@ -358,17 +354,17 @@ export default function AdminServicesPage() {
                 setLimit(25);
                 setOffset(0);
               }}
-              className="self-start sm:self-auto inline-flex items-center px-3 py-1.5 rounded-full bg-slate-200 hover:bg-slate-300 text-[11px] font-medium transition"
+              className="self-start sm:self-auto inline-flex items-center px-3 py-1.5 rounded-full bg-surface-main/80 hover:bg-surface-main text-[11px] font-medium transition"
             >
               {t('adminServicesPage.buttons.resetFilters')}
             </button>
           </div>
-        </section>
+        </AdminFilterBar>
 
-        {/* 🧾 Tableau Services Apple Light */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {/* ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¾ Tableau Services Apple Light */}
+        <div className="overflow-x-auto rounded-2xl border border-border bg-surface-card shadow-sm">
           <table className="min-w-full text-sm">
-            <thead className="bg-slate-50/80 text-slate-600">
+            <thead className="bg-surface-main/80 text-text-secondary">
               <tr>
                 <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                   {t('adminServicesPage.table.headers.titleType')}
@@ -388,12 +384,13 @@ export default function AdminServicesPage() {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-100">
+
+            <tbody className="divide-y divide-border/60">
               {services.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
-                    className="text-center py-8 text-slate-400 text-sm italic"
+                    className="text-center py-8 text-text-muted text-sm italic"
                   >
                     {t('adminServicesPage.empty')}
                   </td>
@@ -402,23 +399,23 @@ export default function AdminServicesPage() {
                 services.map((s) => (
                   <tr
                     key={s.id}
-                    className="hover:bg-slate-50/70 transition-colors"
+                    className="hover:bg-surface-main/70 transition-colors"
                   >
                     {/* Titre / Type / Description */}
                     <td className="px-4 sm:px-5 py-3 align-top">
-                      <div className="font-medium text-slate-900 break-words">
+                      <div className="font-medium text-text-primary break-words">
                         {s.title ||
                           t('adminServicesPage.table.serviceFallback', { id: s.id })}
                       </div>
-                      <div className="mt-0.5 text-xs text-slate-500">
-                        {s.type || t('adminServicesPage.table.typeUnknown')} •{' '}
+                      <div className="mt-0.5 text-xs text-text-muted">
+                        {s.type || t('adminServicesPage.table.typeUnknown')} - {' '}
                         {t('adminServicesPage.table.budgetLabel')}{' '}
-                        <span className="font-medium text-slate-700">
+                        <span className="font-medium text-text-secondary">
                           {s.budget ?? t('adminServicesPage.table.emptyValue')}
                         </span>
                       </div>
                       {s.description && (
-                        <div className="mt-1 text-xs text-slate-400 line-clamp-2">
+                        <div className="mt-1 text-xs text-text-muted line-clamp-2">
                           {s.description}
                         </div>
                       )}
@@ -426,14 +423,14 @@ export default function AdminServicesPage() {
 
                     {/* Client */}
                     <td className="px-4 sm:px-5 py-3 align-top">
-                      <div className="text-sm text-slate-800 break-words">
+                      <div className="text-sm text-text-primary break-words">
                         {displayUser(s.client)}
                       </div>
                     </td>
 
                     {/* Agent */}
                     <td className="px-4 sm:px-5 py-3 align-top">
-                      <div className="text-sm text-slate-800 break-words">
+                      <div className="text-sm text-text-primary break-words">
                         {s.agent
                           ? displayUser(s.agent)
                           : t('adminServicesPage.table.unassigned')}
@@ -463,8 +460,8 @@ export default function AdminServicesPage() {
                         onChange={(e) => handleAssign(s.id, e.target.value)}
                         className={`w-full rounded-xl border px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                           !canReassign(s) || agents.length === 0
-                            ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'
-                            : 'bg-white border-slate-200'
+                            ? 'bg-surface-main text-text-muted border-border cursor-not-allowed'
+                            : 'bg-surface-card text-text-primary border-border'
                         }`}
                       >
                         <option value="">
@@ -477,7 +474,7 @@ export default function AdminServicesPage() {
                         ))}
                       </select>
                       {!canReassign(s) && (
-                        <p className="mt-1 text-[11px] text-slate-400">
+                        <p className="mt-1 text-[11px] text-text-muted">
                           {t('adminServicesPage.assign.locked')}
                         </p>
                       )}
@@ -489,23 +486,23 @@ export default function AdminServicesPage() {
           </table>
         </div>
 
-        {/* 📄 Pagination minimaliste */}
-        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-600">
+        {/* ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¾ Pagination minimaliste */}
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-text-secondary">
           <button
             onClick={() => setOffset(Math.max(0, offset - limit))}
             disabled={offset === 0 || loading}
             className={`inline-flex items-center justify-center px-4 py-2 rounded-full border text-sm font-medium transition ${
               offset === 0 || loading
-                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'
+                ? 'bg-surface-main/80 text-text-muted border-border cursor-not-allowed'
+                : 'bg-surface-card text-text-primary border-border hover:bg-surface-main'
             }`}
           >
             {t('adminServicesPage.pagination.prev')}
           </button>
 
-          <span className="text-xs sm:text-sm text-slate-500">
+          <span className="text-xs sm:text-sm text-text-muted">
             {t('adminServicesPage.pagination.offsetLabel')}{' '}
-            <span className="font-medium">{offset}</span> •{' '}
+            <span className="font-medium">{offset}</span> - {' '}
             {t('adminServicesPage.pagination.limitLabel')}{' '}
             <span className="font-medium">{limit}</span>
           </span>
@@ -515,8 +512,8 @@ export default function AdminServicesPage() {
             disabled={loading || services.length < limit}
             className={`inline-flex items-center justify-center px-4 py-2 rounded-full border text-sm font-medium transition ${
               loading || services.length < limit
-                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50'
+                ? 'bg-surface-main/80 text-text-muted border-border cursor-not-allowed'
+                : 'bg-surface-card text-text-primary border-border hover:bg-surface-main'
             }`}
           >
             {t('adminServicesPage.pagination.next')}
@@ -526,4 +523,7 @@ export default function AdminServicesPage() {
     </div>
   );
 }
+
+
+
 

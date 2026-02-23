@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/img-redundant-alt */
 // ============================================================
-// ProductCatalogPage.jsx — Teranga PRODUCTION READY (Style A 2025)
+// ProductCatalogPage.jsx Ã¢â‚¬â€ Teranga PRODUCTION READY (Style A 2025)
 // Clean Shop Premium + FILE_BASE + Lightbox + Optimisations
 // + compat multi-pays / master (backend-driven)
 // ============================================================
@@ -18,8 +18,8 @@ import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 
 /* ============================================================
-   🌍 PRODUCTION CONFIG — FILE_BASE / toAbsUrl()
-   Compatible Render + Netlify, aucun localhost forcé
+   Ã°Å¸Å’Â PRODUCTION CONFIG Ã¢â‚¬â€ FILE_BASE / toAbsUrl()
+   Compatible Render + Netlify, aucun localhost forcÃƒÂ©
 ============================================================ */
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -47,7 +47,7 @@ function toAbsUrl(path = '') {
 }
 
 /* ============================================================
-   🖼 Helper : récupérer toutes les images d’un produit
+   Ã°Å¸â€“Â¼ Helper : rÃƒÂ©cupÃƒÂ©rer toutes les images dÃ¢â‚¬â„¢un produit
    (allImageUrls, gallery, coverImage, imageUrl)
 ============================================================ */
 function getImagesForProduct(p) {
@@ -79,7 +79,7 @@ function getImagesForProduct(p) {
     urls.unshift(p.imageUrl);
   }
 
-  // Déduplication + normalisation en URL absolues
+  // DÃƒÂ©duplication + normalisation en URL absolues
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
@@ -87,7 +87,7 @@ function getImagesForProduct(p) {
 }
 
 /* ============================================================
-   💰 Helper : affichage PRO du prix (montant + devise)
+   Ã°Å¸â€™Â° Helper : affichage PRO du prix (montant + devise)
    Exemple : "12 500 Franc CFA (XOF)"
 ============================================================ */
 function formatProductPrice(amount, currency = 'XOF', locale = 'fr-FR') {
@@ -105,7 +105,7 @@ function formatProductPrice(amount, currency = 'XOF', locale = 'fr-FR') {
 }
 
 /* ============================================================
-   ⭐ PAGE CATALOGUE PRODUITS (CLEAN SHOP PREMIUM — STYLE A)
+   Ã¢Â­Â PAGE CATALOGUE PRODUITS (CLEAN SHOP PREMIUM Ã¢â‚¬â€ STYLE A)
 ============================================================ */
 export default function ProductCatalogPage() {
   const { locale } = useLocale();
@@ -217,7 +217,7 @@ export default function ProductCatalogPage() {
         );
         setError('');
       } catch (e) {
-        console.error('? Erreur chargement catalogue:', e);
+        console.error("Erreur chargement catalogue:", e);
         if (!mounted) return;
         setError(
           e?.response?.data?.error || t('productCatalogPage.errors.load')
@@ -236,7 +236,7 @@ export default function ProductCatalogPage() {
   }, [search, categoryFilter, priceMin, priceMax, sort, page, pageSize, t]);
 
   /* ============================================================
-     🖼️ Lightbox controls (utilisés => pas de warnings)
+     Ã°Å¸â€“Â¼Ã¯Â¸Â Lightbox controls (utilisÃƒÂ©s => pas de warnings)
   ============================================================ */
   function openPreview(product, startIndex = 0) {
     const imgs = getImagesForProduct(product);
@@ -273,7 +273,7 @@ export default function ProductCatalogPage() {
   }
 
   /* ============================================================
-     🛒 Création d'une commande rapide (logique existante conservée)
+     Ã°Å¸â€ºâ€™ CrÃƒÂ©ation d'une commande rapide (logique existante conservÃƒÂ©e)
   ============================================================ */
   function handleOrder(product) {
     if (!user) {
@@ -302,7 +302,7 @@ export default function ProductCatalogPage() {
       return;
     }
 
-    // Si stock connu et la demande dépasse le stock → message personnalisé
+    // Si stock connu et la demande dÃƒÂ©passe le stock Ã¢â€ â€™ message personnalisÃƒÂ©
     if (typeof selectedProduct.stock === 'number') {
       if (selectedProduct.stock <= 0) {
         notify(t('productCatalogPage.alerts.outOfStock'));
@@ -354,13 +354,13 @@ export default function ProductCatalogPage() {
       if (id) navigate(`/orders/${id}`);
       else navigate('/orders');
     } catch (err) {
-      console.error('❌ Erreur création commande:', err);
+      console.error('Erreur creation commande:', err);
       notify(t('productCatalogPage.alerts.orderError'));
     }
   }
 
   /* ============================================================
-     🧮 Catégories disponibles (dérivées)
+     Ã°Å¸Â§Â® CatÃƒÂ©gories disponibles (dÃƒÂ©rivÃƒÂ©es)
   ============================================================ */
   const availableCategories = useMemo(() => {
     if (Array.isArray(categories) && categories.length > 0) {
@@ -408,9 +408,9 @@ export default function ProductCatalogPage() {
   ============================================================ */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100">
-        <div className="bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl px-6 py-5 shadow-xl">
-          <p className="text-gray-600 text-sm sm:text-lg animate-pulse text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main">
+        <div className="bg-surface-card/80 backdrop-blur-md border border-border rounded-2xl px-6 py-5 shadow-xl">
+          <p className="text-text-secondary text-sm sm:text-lg animate-pulse text-center">
             {t('productCatalogPage.loading')}
           </p>
         </div>
@@ -420,13 +420,13 @@ export default function ProductCatalogPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-red-50 to-red-100 px-4">
-        <div className="max-w-md w-full bg-white border border-red-100 shadow-xl rounded-3xl px-6 py-6">
-          <h1 className="text-lg font-bold text-red-700 mb-2">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4">
+        <div className="max-w-md w-full bg-surface-card border border-rose-500/30 shadow-xl rounded-3xl px-6 py-6">
+          <h1 className="text-lg font-bold text-rose-700 dark:text-rose-300 mb-2">
             {t('productCatalogPage.error.title')}
           </h1>
-          <p className="text-sm text-red-600 mb-4 break-words">{error}</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm text-rose-700 dark:text-rose-300 mb-4 break-words">{error}</p>
+          <p className="text-xs text-text-muted">
             {t('productCatalogPage.error.subtitle')}
           </p>
         </div>
@@ -450,8 +450,8 @@ export default function ProductCatalogPage() {
       ? t('productCatalogPage.empty.noProducts')
       : t('productCatalogPage.empty.noResults');
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 lg:px-6 py-8 sm:py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-3xl border border-slate-100 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 lg:px-6 py-8 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-surface-card shadow-2xl rounded-3xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
 
         {/* ==== HEADER ==== */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -459,23 +459,23 @@ export default function ProductCatalogPage() {
             <p className="text-[0.7rem] uppercase tracking-[0.18em] font-semibold text-blue-600 mb-1">
               {t('productCatalogPage.header.kicker')}
             </p>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              🛍️ <span>{t('productCatalogPage.header.title')}</span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary flex items-center gap-2">
+              <span>{t('productCatalogPage.header.title')}</span>
             </h1>
-            <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-xl">
+            <p className="text-xs sm:text-sm text-text-secondary mt-1 max-w-xl">
               {t('productCatalogPage.header.subtitle')}
             </p>
           </div>
 
           <div className="flex items-end sm:items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
             <div className="flex flex-col items-end text-right">
-              <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-[11px] text-slate-600 shadow-sm">
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-surface-main border border-border text-[11px] text-text-secondary shadow-sm">
                 {t('productCatalogPage.header.count', {
                   count: products.length,
                   total: totalProducts,
                 })}
               </span>
-              <span className="mt-1 text-[11px] text-slate-400">
+              <span className="mt-1 text-[11px] text-text-muted">
                 {t('productCatalogPage.header.filtersHint')}
               </span>
             </div>
@@ -483,37 +483,35 @@ export default function ProductCatalogPage() {
         </div>
 
         {/* ==== BARRE DE FILTRES ==== */}
-        <div className="bg-slate-50/80 backdrop-blur-sm border border-slate-200 rounded-2xl shadow-sm px-4 py-4 sm:px-5 sm:py-4 space-y-3">
-          {/* Ligne 1 : recherche + catégorie */}
+        <div className="bg-surface-main/80 backdrop-blur-sm border border-border rounded-2xl shadow-sm px-4 py-4 sm:px-5 sm:py-4 space-y-3">
+          {/* Ligne 1 : recherche + catÃƒÂ©gorie */}
           <div className="grid gap-3 md:grid-cols-4 items-end">
             {/* Recherche */}
             <div className="md:col-span-2">
-              <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-1">
                 {t('productCatalogPage.filters.searchLabel')}
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                  🔍
-                </span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">/</span>
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t('productCatalogPage.filters.searchPlaceholder')}
-                  className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-surface-card text-text-primary"
                 />
               </div>
             </div>
 
-            {/* Catégorie */}
+            {/* CatÃƒÂ©gorie */}
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-1">
                 {t('productCatalogPage.filters.categoryLabel')}
               </label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full text-sm rounded-xl border border-border px-3 py-2 bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">{t('productCatalogPage.filters.categoryAll')}</option>
                 {availableCategories.map((c) => (
@@ -530,7 +528,7 @@ export default function ProductCatalogPage() {
             {/* Prix + reset */}
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                <label className="block text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-1">
                   {t('productCatalogPage.filters.priceMinLabel')}
                 </label>
                 <input
@@ -538,13 +536,13 @@ export default function ProductCatalogPage() {
                   min="0"
                   value={priceMin}
                   onChange={(e) => setPriceMin(e.target.value)}
-                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full text-sm rounded-xl border border-border px-3 py-2 bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder={t('productCatalogPage.filters.priceMinPlaceholder')}
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                <label className="block text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-1">
                   {t('productCatalogPage.filters.priceMaxLabel')}
                 </label>
                 <input
@@ -552,7 +550,7 @@ export default function ProductCatalogPage() {
                   min="0"
                   value={priceMax}
                   onChange={(e) => setPriceMax(e.target.value)}
-                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full text-sm rounded-xl border border-border px-3 py-2 bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder={t('productCatalogPage.filters.priceMaxPlaceholder')}
                 />
               </div>
@@ -567,7 +565,7 @@ export default function ProductCatalogPage() {
                     setPriceMax('');
                     setSort('default');
                   }}
-                  className="w-full text-xs font-semibold rounded-xl border border-slate-200 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700"
+                  className="w-full text-xs font-semibold rounded-xl border border-border px-3 py-2 bg-surface-card hover:bg-surface-main text-text-secondary"
                 >
                   {t('productCatalogPage.filters.reset')}
                 </button>
@@ -576,13 +574,13 @@ export default function ProductCatalogPage() {
 
             {/* Tri */}
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-1">
                 {t('productCatalogPage.filters.sortLabel')}
               </label>
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
-                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full text-sm rounded-xl border border-border px-3 py-2 bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="default">
                   {t('productCatalogPage.filters.sortDefault')}
@@ -618,8 +616,8 @@ export default function ProductCatalogPage() {
         />
 
         {products.length === 0 ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl shadow-sm py-10 flex items-center justify-center">
-            <p className="text-slate-500 text-sm">{emptyMessage}</p>
+          <div className="bg-surface-main border border-border rounded-2xl shadow-sm py-10 flex items-center justify-center">
+            <p className="text-text-muted text-sm">{emptyMessage}</p>
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -630,7 +628,7 @@ export default function ProductCatalogPage() {
               return (
                 <div
                   key={p.id}
-                  className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:border-blue-200 transition overflow-hidden flex flex-col"
+                  className="bg-surface-card border border-border rounded-2xl shadow-sm hover:shadow-lg hover:border-blue-500/30 transition overflow-hidden flex flex-col"
                 >
                   {/* Image */}
                   {mainImg ? (
@@ -663,7 +661,7 @@ export default function ProductCatalogPage() {
                       )}
                     </button>
                   ) : (
-                    <div className="w-full h-44 flex items-center justify-center bg-slate-100 text-slate-400 text-xs">
+                    <div className="w-full h-44 flex items-center justify-center bg-surface-main/80 text-text-muted text-xs">
                       {t('productCatalogPage.card.noImage')}
                     </div>
                   )}
@@ -671,40 +669,40 @@ export default function ProductCatalogPage() {
                   {/* Contenu carte */}
                   <div className="flex-1 flex flex-col px-4 py-4">
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <h2 className="text-base font-semibold text-slate-900 line-clamp-2">
+                      <h2 className="text-base font-semibold text-text-primary line-clamp-2">
                         {p.name}
                       </h2>
 
                       {p.category?.name && (
-                        <span className="px-2 py-0.5 rounded-full text-[11px] bg-blue-50 text-blue-700 border border-blue-100 whitespace-nowrap">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 whitespace-nowrap">
                           {p.category.name}
                         </span>
                       )}
                     </div>
 
-                    <p className="text-xs text-slate-500 mb-2">
+                    <p className="text-xs text-text-muted mb-2">
                       {t('productCatalogPage.card.refLabel')}{' '}
                       <span className="font-mono">#{p.id}</span>
                     </p>
 
-                    <p className="text-sm text-slate-600 flex-1 line-clamp-3">
+                    <p className="text-sm text-text-secondary flex-1 line-clamp-3">
                       {p.description || t('productCatalogPage.card.noDescription')}
                     </p>
 
                     {/* Prix + Stock */}
                     <div className="mt-3 flex items-center justify-between">
                       <div>
-                        <p className="text-[11px] uppercase text-slate-400">
+                        <p className="text-[11px] uppercase text-text-muted">
                           {t('productCatalogPage.card.priceLabel')}
                         </p>
-                        <p className="text-lg font-bold text-blue-600">
+                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
                           {formatProductPrice(p.price, p.currency, locale)}
                         </p>
                       </div>
 
                       {typeof p.stock === 'number' && (
                         <div className="text-right">
-                          <p className="text-[11px] uppercase text-slate-400">
+                          <p className="text-[11px] uppercase text-text-muted">
                             {t('productCatalogPage.card.stockLabel')}
                           </p>
                           <p
@@ -730,7 +728,7 @@ export default function ProductCatalogPage() {
                         onClick={() => handleOrder(p)}
                         className="mt-4 w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-xl shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
                       >
-                        🛒 {t('productCatalogPage.card.order')}
+                        {t('productCatalogPage.card.order')}
                       </button>
                     )}
                   </div>
@@ -741,26 +739,26 @@ export default function ProductCatalogPage() {
         )}
 
         {/* ============================================================
-            POPUP COMMANDE — UX PREMIUM
+            POPUP COMMANDE Ã¢â‚¬â€ UX PREMIUM
         ============================================================ */}
         {creating && selectedProduct && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 px-4">
-            <div className="relative w-full max-w-sm rounded-2xl border border-slate-300 bg-white shadow-2xl">
+            <div className="relative w-full max-w-sm rounded-2xl border border-border bg-surface-card shadow-2xl">
               <button
                 onClick={() => setCreating(false)}
-                className="absolute top-3 right-3 text-slate-500 hover:text-slate-800"
+                className="absolute top-3 right-3 text-text-muted hover:text-text-primary"
                 aria-label={t('productCatalogPage.order.close')}
               >
-                ✕
+                x
               </button>
 
               <div className="p-6">
-                <h2 className="text-xl font-bold text-slate-900 mb-1">
+                <h2 className="text-xl font-bold text-text-primary mb-1">
                   {t('productCatalogPage.order.title', {
                     name: selectedProduct.name,
                   })}
                 </h2>
-                <p className="text-xs text-slate-600 mb-4">
+                <p className="text-xs text-text-secondary mb-4">
                   {formatProductPrice(
                     selectedProduct.price,
                     selectedProduct.currency || 'XOF',
@@ -770,7 +768,7 @@ export default function ProductCatalogPage() {
                 </p>
 
                 <form onSubmit={handleConfirmOrder}>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-text-secondary mb-1">
                     {t('productCatalogPage.order.quantityLabel')}
                   </label>
                   <input
@@ -778,14 +776,14 @@ export default function ProductCatalogPage() {
                     min="1"
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
 
                   <div className="flex justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => setCreating(false)}
-                      className="px-4 py-2 text-sm bg-gray-100 text-slate-700 rounded-lg hover:bg-gray-200"
+                      className="px-4 py-2 text-sm bg-surface-main/80 text-text-secondary rounded-lg hover:bg-surface-main/80"
                     >
                       {t('productCatalogPage.order.cancel')}
                     </button>
@@ -803,7 +801,7 @@ export default function ProductCatalogPage() {
         )}
 
         {/* ============================================================
-            LIGHTBOX PLEIN ÉCRAN — IMAGES UNIQUEMENT
+            LIGHTBOX PLEIN Ãƒâ€°CRAN Ã¢â‚¬â€ IMAGES UNIQUEMENT
         ============================================================ */}
         {previewProduct && (() => {
           const images = getImagesForProduct(previewProduct);
@@ -829,7 +827,7 @@ export default function ProductCatalogPage() {
                 className="absolute top-4 right-4 text-white text-xl font-bold px-3 py-1 rounded-full bg-black/60 hover:bg-black/80"
                 aria-label={t('productCatalogPage.lightbox.close')}
               >
-                ✕
+                x
               </button>
 
               {/* Navigation */}
@@ -841,7 +839,7 @@ export default function ProductCatalogPage() {
                     className="absolute left-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70"
                     aria-label={t('productCatalogPage.lightbox.prev')}
                   >
-                    ‹
+                    {"<"}
                   </button>
 
                   <button
@@ -850,13 +848,13 @@ export default function ProductCatalogPage() {
                     className="absolute right-4 text-white text-3xl px-3 py-2 rounded-full bg-black/50 hover:bg-black/70"
                     aria-label={t('productCatalogPage.lightbox.next')}
                   >
-                    ›
+                    {">"}
                   </button>
                 </>
               )}
 
               <div
-                className="bg-black/95 border border-slate-700 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col overflow-hidden"
+                className="bg-black/95 border border-border rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex-1 flex items-center justify-center">
@@ -870,7 +868,7 @@ export default function ProductCatalogPage() {
                 </div>
 
                 {images.length > 1 && (
-                  <div className="px-4 py-3 bg-black/80 border-t border-slate-800 flex gap-2 overflow-x-auto">
+                  <div className="px-4 py-3 bg-black/80 border-t border-border flex gap-2 overflow-x-auto">
                     {images.map((img, idx) => (
                       <button
                         key={idx}
@@ -879,7 +877,7 @@ export default function ProductCatalogPage() {
                         className={`w-16 h-16 rounded-lg overflow-hidden border ${
                           idx === previewIndex
                             ? 'border-blue-400 ring-2 ring-blue-400/70'
-                            : 'border-slate-600 hover:border-slate-400'
+                            : 'border-border hover:border-border/70'
                         }`}
                       >
                         <img
@@ -901,6 +899,8 @@ export default function ProductCatalogPage() {
     </div>
   );
 }
+
+
 
 
 

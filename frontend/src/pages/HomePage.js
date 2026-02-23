@@ -1,7 +1,7 @@
 // ============================================================================
-// HomePage.jsx — Teranga Landing Page 2025
-// Option A — Apple Light Premium v2 (Ultra-clean, cohérente avec NavBar A1-C)
-// - Style : Apple Light minimal, typographie équilibrée, animations douces
+// HomePage.jsx Ã¢â‚¬â€ Teranga Landing Page 2025
+// Option A Ã¢â‚¬â€ Apple Light Premium v2 (Ultra-clean, cohÃƒÂ©rente avec NavBar A1-C)
+// - Style : Apple Light minimal, typographie ÃƒÂ©quilibrÃƒÂ©e, animations douces
 // - 100% compatible avec ta structure (routes /login, /register, ancres, etc.)
 // ============================================================================
 
@@ -88,10 +88,10 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900 scroll-smooth">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-surface-main via-surface-card to-surface-main text-text-primary scroll-smooth">
       <main className="flex-1">
         {/* ========================================================================= */}
-        {/* 🏆 HERO — Apple Light (grands espaces / typographie premium)             */}
+        {/* Ã°Å¸Ââ€  HERO Ã¢â‚¬â€ Apple Light (grands espaces / typographie premium)             */}
         {/* ========================================================================= */}
         <section
           id="accueil"
@@ -101,7 +101,7 @@ export default function HomePage() {
           "
         >
           {/* Halo premium */}
-          <div className="absolute -top-40 left-1/2 w-[860px] h-[860px] bg-blue-200/30 rounded-full blur-[140px] -translate-x-1/2 pointer-events-none" />
+          <div className="absolute -top-40 left-1/2 w-[860px] h-[860px] bg-blue-400/15 dark:bg-cyan-400/10 rounded-full blur-[140px] -translate-x-1/2 pointer-events-none" />
 
           {/* Badge au-dessus du titre */}
           <motion.div
@@ -113,8 +113,8 @@ export default function HomePage() {
             <span
               className="
                 inline-flex items-center gap-2 px-4 py-1.5 rounded-full
-                bg-white/80 shadow-sm border border-slate-200 text-xs sm:text-sm
-                text-slate-700
+                bg-surface-card/80 shadow-sm border border-border text-xs sm:text-sm
+                text-text-secondary
               "
             >
               <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
@@ -130,21 +130,21 @@ export default function HomePage() {
           >
             <h1
               className="
-                text-3xl sm:text-5xl md:text-6xl font-semibold text-slate-900
+                text-3xl sm:text-5xl md:text-6xl font-semibold text-text-primary
                 mb-6 leading-tight sm:leading-[1.15] tracking-tight
               "
             >
-              <span className="block text-blue-700">
+              <span className="block text-blue-700 dark:text-blue-300">
                 {t("homePage.hero.titleLine1")}
               </span>
-              <span className="block text-blue-700">
+              <span className="block text-blue-700 dark:text-blue-300">
                 {t("homePage.hero.titleLine2")}
               </span>
             </h1>
 
             <p
               className="
-                text-slate-600 text-base sm:text-lg md:text-xl leading-relaxed
+                text-text-secondary text-base sm:text-lg md:text-xl leading-relaxed
                 max-w-2xl mx-auto mb-10 sm:mb-12
               "
             >
@@ -172,30 +172,30 @@ export default function HomePage() {
             </div>
           </motion.div>
 
-          {/* Mini stats / bénéfices rapides */}
+          {/* Mini stats / bÃƒÂ©nÃƒÂ©fices rapides */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.35 }}
             className="
               mt-10 sm:mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6
-              max-w-3xl mx-auto text-slate-600 text-sm
+              max-w-3xl mx-auto text-text-secondary text-sm
             "
           >
             {heroStats.map((item) => (
               <div
                 key={item.label}
                 className="
-                  bg-white/80 border border-slate-200 rounded-2xl px-4 py-3
+                  bg-surface-card/80 border border-border rounded-2xl px-4 py-3
                   flex items-start gap-3 shadow-[0_4px_16px_rgba(15,23,42,0.06)]
                 "
               >
                 <CheckCircle2 className="mt-0.5 text-blue-600" size={18} />
                 <div className="text-left">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
                     {item.label}
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">{item.text}</p>
+                  <p className="text-xs text-text-muted mt-0.5">{item.text}</p>
                 </div>
               </div>
             ))}
@@ -203,7 +203,7 @@ export default function HomePage() {
 
           <p
             className="
-              mt-8 sm:mt-10 text-slate-500 text-xs sm:text-sm max-w-xl mx-auto
+              mt-8 sm:mt-10 text-text-muted text-xs sm:text-sm max-w-xl mx-auto
               leading-relaxed tracking-wide
             "
           >
@@ -212,17 +212,17 @@ export default function HomePage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* ⚙️ SERVICES — Apple Cards + Animations + Shadow douce                   */}
+        {/* Ã¢Å¡â„¢Ã¯Â¸Â SERVICES Ã¢â‚¬â€ Apple Cards + Animations + Shadow douce                   */}
         {/* ========================================================================= */}
         <section
           id="services"
-          className="py-16 sm:py-20 px-6 bg-white border-t border-slate-200/70"
+          className="py-16 sm:py-20 px-6 bg-surface-card border-t border-border/70"
         >
           <div className="max-w-5xl mx-auto text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-text-primary mb-4">
               {t("homePage.services.title")}
             </h2>
-            <p className="text-slate-600 text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
+            <p className="text-text-secondary text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
               {t("homePage.services.subtitle")}
             </p>
           </div>
@@ -234,7 +234,7 @@ export default function HomePage() {
                 whileHover={{ y: -4, scale: 1.015 }}
                 transition={{ type: "spring", stiffness: 180, damping: 20 }}
                 className="
-                  bg-slate-50 border border-slate-200/70 rounded-3xl p-8 sm:p-10
+                  bg-surface-main border border-border/70 rounded-3xl p-8 sm:p-10
                   shadow-[0_10px_30px_rgba(15,23,42,0.08)]
                   hover:shadow-[0_10px_35px_rgba(15,23,42,0.08)]
                   transition-all flex flex-col items-center text-center
@@ -242,16 +242,16 @@ export default function HomePage() {
               >
                 <div
                   className="
-                    w-14 h-14 rounded-2xl bg-blue-100/70 flex items-center justify-center
+                    w-14 h-14 rounded-2xl bg-blue-500/15 flex items-center justify-center
                     mb-5
                   "
                 >
                   <Icon size={32} className="text-blue-600" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-medium text-slate-900 mb-3">
+                <h3 className="text-lg sm:text-xl font-medium text-text-primary mb-3">
                   {title}
                 </h3>
-                <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+                <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
                   {desc}
                 </p>
               </motion.div>
@@ -260,17 +260,17 @@ export default function HomePage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* 💡 POURQUOI TERANGA — 3 piliers (section courte & convaincante)         */}
+        {/* Ã°Å¸â€™Â¡ POURQUOI TERANGA Ã¢â‚¬â€ 3 piliers (section courte & convaincante)         */}
         {/* ========================================================================= */}
         <section
           id="pourquoi"
-          className="py-16 sm:py-20 px-6 bg-gradient-to-br from-slate-50 via-white to-slate-100"
+          className="py-16 sm:py-20 px-6 bg-gradient-to-br from-surface-main via-surface-card to-surface-main"
         >
           <div className="max-w-5xl mx-auto text-center mb-10 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-text-primary mb-4">
               {t("homePage.why.title")}
             </h2>
-            <p className="text-slate-600 text-base sm:text-lg max-w-3xl mx-auto leading-relaxed">
+            <p className="text-text-secondary text-base sm:text-lg max-w-3xl mx-auto leading-relaxed">
               {t("homePage.why.subtitle")}
             </p>
           </div>
@@ -280,31 +280,31 @@ export default function HomePage() {
               <div
                 key={item.title}
                 className="
-                  bg-white/80 border border-slate-200 rounded-2xl px-5 py-4
+                  bg-surface-card/80 border border-border rounded-2xl px-5 py-4
                   shadow-[0_4px_16px_rgba(15,23,42,0.06)]
                 "
               >
-                <h3 className="text-slate-900 font-semibold mb-2">
+                <h3 className="text-text-primary font-semibold mb-2">
                   {item.title}
                 </h3>
-                <p className="text-slate-600 leading-relaxed">{item.text}</p>
+                <p className="text-text-secondary leading-relaxed">{item.text}</p>
               </div>
             ))}
           </div>
         </section>
 
         {/* ========================================================================= */}
-        {/* 💡 À PROPOS — Apple Storytelling                                         */}
+        {/* Ã°Å¸â€™Â¡ Ãƒâ‚¬ PROPOS Ã¢â‚¬â€ Apple Storytelling                                         */}
         {/* ========================================================================= */}
         <section
           id="apropos"
-          className="py-16 sm:py-20 px-6 bg-white border-t border-slate-200/70"
+          className="py-16 sm:py-20 px-6 bg-surface-card border-t border-border/70"
         >
           <div className="max-w-5xl mx-auto text-center mb-10 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-text-primary mb-4">
               {t("homePage.about.title")}
             </h2>
-            <p className="text-slate-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+            <p className="text-text-secondary text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
               {t("homePage.about.subtitle")}
             </p>
           </div>
@@ -315,7 +315,7 @@ export default function HomePage() {
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.6 }}
             className="
-              max-w-3xl mx-auto text-slate-700 leading-relaxed
+              max-w-3xl mx-auto text-text-secondary leading-relaxed
               text-[15px] sm:text-base space-y-5 sm:space-y-6
             "
           >
@@ -340,17 +340,17 @@ export default function HomePage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* 📞 CONTACT — Apple Form UI                                              */}
+        {/* Ã°Å¸â€œÅ¾ CONTACT Ã¢â‚¬â€ Apple Form UI                                              */}
         {/* ========================================================================= */}
         <section
           id="contact"
-          className="py-16 sm:py-20 px-6 bg-white border-t border-slate-200/70"
+          className="py-16 sm:py-20 px-6 bg-surface-card border-t border-border/70"
         >
           <div className="max-w-6xl mx-auto text-center mb-10 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-text-primary mb-4">
               {t("homePage.contact.title")}
             </h2>
-            <p className="text-slate-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+            <p className="text-text-secondary text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
               {t("homePage.contact.subtitle")}
             </p>
           </div>
@@ -360,17 +360,17 @@ export default function HomePage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                // Même comportement que ta version actuelle : simple alert côté client.
+                // MÃƒÂªme comportement que ta version actuelle : simple alert cÃƒÂ´tÃƒÂ© client.
                 notify(t("homePage.contact.form.success"));
               }}
               className="
-                bg-slate-50 border border-slate-200/70 rounded-3xl p-7 sm:p-8
+                bg-surface-main border border-border/70 rounded-3xl p-7 sm:p-8
                 shadow-sm flex flex-col gap-5
               "
             >
               {contactFields.map((input) => (
                 <div key={input.label} className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-slate-700">
+                  <label className="text-sm font-medium text-text-secondary">
                     {input.label}
                   </label>
                   <input
@@ -378,16 +378,16 @@ export default function HomePage() {
                     required
                     placeholder={input.placeholder}
                     className="
-                      w-full border border-slate-300 rounded-xl px-3 py-2 text-sm
+                      w-full border border-border rounded-xl px-3 py-2 text-sm
                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none
-                      bg-white
+                      bg-surface-card
                     "
                   />
                 </div>
               ))}
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-slate-700">
+                <label className="text-sm font-medium text-text-secondary">
                   {t("homePage.contact.form.message.label")}
                 </label>
                 <textarea
@@ -395,9 +395,9 @@ export default function HomePage() {
                   rows={4}
                   placeholder={t("homePage.contact.form.message.placeholder")}
                   className="
-                    w-full border border-slate-300 rounded-xl px-3 py-2 text-sm
+                    w-full border border-border rounded-xl px-3 py-2 text-sm
                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none
-                    bg-white
+                    bg-surface-card
                   "
                 />
               </div>
@@ -411,17 +411,17 @@ export default function HomePage() {
             </form>
 
             {/* Infos de contact */}
-            <div className="flex flex-col justify-center space-y-5 sm:space-y-6 text-slate-700">
+            <div className="flex flex-col justify-center space-y-5 sm:space-y-6 text-text-secondary">
               {contactInfos.map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-100/70 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center">
                     <Icon className="text-blue-600" size={18} />
                   </div>
                   <p className="text-sm sm:text-base">{text}</p>
                 </div>
               ))}
 
-              <p className="text-sm text-slate-500 leading-relaxed pt-2">
+              <p className="text-sm text-text-muted leading-relaxed pt-2">
                 {t("homePage.contact.note")}
               </p>
             </div>
@@ -430,23 +430,23 @@ export default function HomePage() {
       </main>
 
       {/* ========================================================================= */}
-      {/* ⚓ FOOTER — Apple Minimal                                                 */}
+      {/* Ã¢Å¡â€œ FOOTER Ã¢â‚¬â€ Apple Minimal                                                 */}
       {/* ========================================================================= */}
-      <footer className="bg-slate-900 text-slate-300 text-xs sm:text-sm py-6 px-6 mt-4">
+      <footer className="border-t border-border/70 bg-surface-card/95 text-text-muted text-xs sm:text-sm py-6 px-6 mt-4">
         <div
           className="
             max-w-6xl mx-auto flex flex-col sm:flex-row justify-between
             items-center gap-4 text-center sm:text-left
           "
         >
-          <p>
+          <p className="max-w-full whitespace-nowrap leading-none">
             <Trans
               i18nKey="homePage.footer.copyright"
               values={{ year: currentYear }}
               components={[
                 <span
                   key="footer-brand"
-                  className="text-blue-400 font-medium"
+                  className="text-blue-600 dark:text-blue-300 font-medium"
                 />,
               ]}
             />
@@ -455,25 +455,25 @@ export default function HomePage() {
           <div className="flex gap-5 sm:gap-6">
             <a
               href="#accueil"
-              className="hover:text-blue-300 transition-colors"
+              className="hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
             >
               {t("homePage.footer.links.home")}
             </a>
             <a
               href="#services"
-              className="hover:text-blue-300 transition-colors"
+              className="hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
             >
               {t("homePage.footer.links.services")}
             </a>
             <a
               href="#apropos"
-              className="hover:text-blue-300 transition-colors"
+              className="hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
             >
               {t("homePage.footer.links.about")}
             </a>
             <a
               href="#contact"
-              className="hover:text-blue-300 transition-colors"
+              className="hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
             >
               {t("homePage.footer.links.contact")}
             </a>
@@ -483,4 +483,6 @@ export default function HomePage() {
     </div>
   );
 }
+
+
 

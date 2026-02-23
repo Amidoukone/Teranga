@@ -19,7 +19,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 /* ============================================================
-   🌍 CONFIG PRODUCTION
+   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â CONFIG PRODUCTION
 ============================================================ */
 const FILE_BASE =
   (typeof window !== "undefined" &&
@@ -37,7 +37,7 @@ function toAbsUrl(path = "") {
 }
 
 /* ============================================================
-   🖼 Helper : récupérer toutes les images d’un produit
+   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“Ãƒâ€šÃ‚Â¼ Helper : rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©cupÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rer toutes les images dÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢un produit
    (allImageUrls, gallery, coverImage, imageUrl)
 ============================================================ */
 function getProductImages(product) {
@@ -75,7 +75,7 @@ function getProductImages(product) {
     urls.unshift(product.imageUrl);
   }
 
-  // Déduplication + normalisation en URL absolues
+  // DÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©duplication + normalisation en URL absolues
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
@@ -83,7 +83,7 @@ function getProductImages(product) {
 }
 
 /* ============================================================
-   ⭐ ADMIN PRODUITS — Apple Light Premium (Table + Miniature)
+   ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚Â­Ãƒâ€šÃ‚Â ADMIN PRODUITS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Apple Light Premium (Table + Miniature)
 ============================================================ */
 export default function AdminProductsPage() {
   const { formatNumber } = useLocale();
@@ -152,7 +152,7 @@ export default function AdminProductsPage() {
         regionName ||
         (regionId ? `${t("common.regionLabel")} #${regionId}` : "");
 
-      if (countryLabel && regionLabel) return `${countryLabel} • ${regionLabel}`;
+      if (countryLabel && regionLabel) return `${countryLabel} â€¢ ${regionLabel}`;
       return countryLabel || regionLabel || "";
     };
   }, [countriesById, regionsById, t]);
@@ -224,7 +224,7 @@ export default function AdminProductsPage() {
         setUser(current);
         await Promise.all([loadCategories(), loadProducts()]);
       } catch (err) {
-        console.error("❌ init AdminProductsPage:", err);
+        console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ init AdminProductsPage:", err);
         if (!mounted) return;
         window.location.href = "/login";
       }
@@ -249,7 +249,7 @@ export default function AdminProductsPage() {
         setCountries(Array.isArray(cList) ? cList : []);
         setRegions(Array.isArray(rList) ? rList : []);
       } catch (e) {
-        console.error("❌ Erreur chargement pays/régions:", e);
+        console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement pays/rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©gions:", e);
         if (mounted) {
           setCountries([]);
           setRegions([]);
@@ -271,7 +271,7 @@ export default function AdminProductsPage() {
 
       setProducts(list || []);
     } catch (e) {
-      console.error("❌ Erreur chargement produits:", e);
+      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement produits:", e);
       notify(t("adminProductsPage.alerts.loadProductsError"));
       setProducts([]);
     } finally {
@@ -288,7 +288,7 @@ export default function AdminProductsPage() {
 
       setCategories(list || []);
     } catch (e) {
-      console.error("❌ Erreur chargement catégories:", e);
+      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement catÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©gories:", e);
       setCategories([]);
     }
   }
@@ -356,7 +356,7 @@ export default function AdminProductsPage() {
       await loadProducts();
       setShowForm(false);
     } catch (err) {
-      console.error("❌ Erreur sauvegarde produit:", err);
+      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur sauvegarde produit:", err);
       const status = err?.response?.status;
       const apiMessage =
         err?.response?.data?.error || err?.response?.data?.message || "";
@@ -365,11 +365,11 @@ export default function AdminProductsPage() {
       const statusHint =
         status === 401
           ? t("common.sessionExpired", {
-              defaultValue: "Session expirée. Veuillez vous reconnecter.",
+              defaultValue: "Session expiree. Veuillez vous reconnecter.",
             })
           : status === 403
             ? t("common.accessDenied", {
-                defaultValue: "Accès interdit pour cette action.",
+                defaultValue: "Acces interdit pour cette action.",
               })
             : "";
       const suffix = [statusHint, detail]
@@ -389,7 +389,7 @@ export default function AdminProductsPage() {
       await loadProducts();
       notify(t("adminProductsPage.alerts.deleteSuccess"));
     } catch (err) {
-      console.error("❌ Erreur suppression :", err);
+      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur suppression :", err);
       notify(t("adminProductsPage.alerts.deleteError"));
     }
   }
@@ -432,8 +432,8 @@ export default function AdminProductsPage() {
   ============================================================ */
   if (!user) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <p className="text-gray-600 text-lg animate-pulse">
+      <div className="flex justify-center items-center min-h-screen bg-surface-main">
+        <p className="text-text-secondary text-lg animate-pulse">
           {t("adminProductsPage.loading")}
         </p>
       </div>
@@ -443,17 +443,17 @@ export default function AdminProductsPage() {
   const roleLabel = prettyRoleLabel(user);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 px-3 sm:px-4 py-8 sm:py-10">
-      <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-xl p-4 sm:p-6 md:p-8 border border-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-surface-card rounded-3xl shadow-xl p-4 sm:p-6 md:p-8 border border-border/70">
         {/* ============================================
             HEADER
         ============================================ */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-              📦 {t("adminProductsPage.header.title")}
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">
+              {t("adminProductsPage.header.title")}
             </h1>
-            <p className="text-sm text-slate-600 mt-1">
+            <p className="text-sm text-text-secondary mt-1">
               {t("adminProductsPage.header.connectedLabel")}{" "}
               <strong>{user.email}</strong> ({roleLabel})
             </p>
@@ -462,11 +462,11 @@ export default function AdminProductsPage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-semibold shadow-sm"
+              className="px-4 py-2 rounded-xl app-btn-neutral text-sm font-semibold shadow-sm"
             >
               {showForm
-                ? `➖ ${t("adminProductsPage.buttons.hideForm")}`
-                : `➕ ${t("adminProductsPage.buttons.newProduct")}`}
+                ? t("adminProductsPage.buttons.hideForm")
+                : t("adminProductsPage.buttons.newProduct")}
             </button>
 
             <button
@@ -480,7 +480,7 @@ export default function AdminProductsPage() {
             >
               {loading
                 ? t("adminProductsPage.buttons.refreshLoading")
-                : `🔄 ${t("adminProductsPage.buttons.refresh")}`}
+                : t("adminProductsPage.buttons.refresh")}
             </button>
           </div>
         </div>
@@ -490,17 +490,17 @@ export default function AdminProductsPage() {
         ============================================ */}
         <div className="mb-6">
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-              🔍
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">
+              /
             </span>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("adminProductsPage.search.placeholder")}
-              className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full pl-9 pr-3 py-2 rounded-xl border border-border bg-surface-main text-text-primary focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </div>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-text-muted">
             {t("adminProductsPage.search.count", {
               count: filteredProducts.length,
               total: products.length,
@@ -514,24 +514,24 @@ export default function AdminProductsPage() {
         {showForm && (
           <form
             onSubmit={handleSubmit}
-            className="mb-8 bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-5"
+            className="mb-8 bg-surface-main border border-border rounded-2xl p-5 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-5"
           >
             {/* NOM */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-text-secondary">
                 {t("adminProductsPage.form.nameLabel")} *
               </label>
               <input
                 value={form.name}
                 required
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             {/* PRIX */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-text-secondary">
                 {t("adminProductsPage.form.priceLabel")} *
               </label>
               <input
@@ -539,19 +539,19 @@ export default function AdminProductsPage() {
                 required
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: e.target.value })}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             {/* DEVISE */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-text-secondary">
                 {t("adminProductsPage.form.currencyLabel")}
               </label>
               <select
                 value={form.currency}
                 onChange={(e) => setForm({ ...form, currency: e.target.value })}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+                className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card text-text-primary"
               >
                 <option value="XOF">{t("currency.XOF")}</option>
                 <option value="EUR">{t("currency.EUR")}</option>
@@ -561,26 +561,26 @@ export default function AdminProductsPage() {
 
             {/* STOCK */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-text-secondary">
                 {t("adminProductsPage.form.stockLabel")}
               </label>
               <input
                 type="number"
                 value={form.stock}
                 onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+                className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card text-text-primary"
               />
             </div>
 
-            {/* CATÉGORIE */}
+            {/* CATÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°GORIE */}
             <div className="md:col-span-2 flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-text-secondary">
                 {t("adminProductsPage.form.categoryLabel")}
               </label>
               <select
                 value={form.categoryId}
                 onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+                className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card text-text-primary"
               >
                 <option value="">{t("adminProductsPage.form.categoryNone")}</option>
                 {categories.map((c) => (
@@ -593,7 +593,7 @@ export default function AdminProductsPage() {
 
             {/* DESCRIPTION */}
             <div className="md:col-span-2 flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-text-secondary">
                 {t("adminProductsPage.form.descriptionLabel")}
               </label>
               <textarea
@@ -602,20 +602,20 @@ export default function AdminProductsPage() {
                 onChange={(e) =>
                   setForm({ ...form, description: e.target.value })
                 }
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white min-h-[80px] resize-y"
+                className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card text-text-primary min-h-[80px] resize-y"
               ></textarea>
             </div>
 
             {/* IMAGE PRINCIPALE */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-text-secondary">
                 {t("adminProductsPage.form.coverLabel")}
               </label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleCoverChange(e.target.files?.[0] || null)}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+                className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card text-text-primary"
               />
             </div>
 
@@ -627,7 +627,7 @@ export default function AdminProductsPage() {
                   className="w-24 h-24 object-cover rounded-xl border"
                 />
               ) : (
-                <div className="w-24 h-24 border border-dashed rounded-xl flex items-center justify-center text-xs text-slate-400">
+                <div className="w-24 h-24 border border-dashed rounded-xl flex items-center justify-center text-xs text-text-muted">
                   {t("adminProductsPage.form.coverEmpty")}
                 </div>
               )}
@@ -635,7 +635,7 @@ export default function AdminProductsPage() {
 
             {/* GALERIE */}
             <div className="md:col-span-2 flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-text-secondary">
                 {t("adminProductsPage.form.galleryLabel")}
               </label>
               <input
@@ -643,7 +643,7 @@ export default function AdminProductsPage() {
                 multiple
                 accept="image/*"
                 onChange={(e) => handleGalleryChange(e.target.files)}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+                className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card text-text-primary"
               />
             </div>
 
@@ -663,7 +663,7 @@ export default function AdminProductsPage() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 hover:bg-slate-300 text-sm font-semibold"
+                className="px-4 py-2 rounded-xl bg-surface-main/80 text-text-secondary hover:bg-surface-main text-sm font-semibold"
               >
                 {t("adminProductsPage.form.reset")}
               </button>
@@ -673,20 +673,20 @@ export default function AdminProductsPage() {
                 className="px-5 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow-sm text-sm font-semibold"
               >
                 {editing
-                  ? `💾 ${t("adminProductsPage.form.update")}`
-                  : `➕ ${t("adminProductsPage.form.create")}`}
+                  ? t("adminProductsPage.form.update")
+                  : t("adminProductsPage.form.create")}
               </button>
             </div>
           </form>
         )}
 
          {/* ============================================================
-            TABLEAU DES PRODUITS — Option A1 (Miniature Apple Light)
+            TABLEAU DES PRODUITS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Option A1 (Miniature Apple Light)
         ============================================================ */}
         <div className="mt-4">
-          <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm bg-white">
+          <div className="overflow-x-auto border border-border rounded-2xl shadow-sm bg-surface-card">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+              <thead className="bg-surface-main text-text-secondary border-b border-border">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                     {t("adminProductsPage.table.product")}
@@ -716,7 +716,7 @@ export default function AdminProductsPage() {
                   <tr>
                     <td
                       colSpan={isGlobalAdmin ? 6 : 5}
-                      className="py-6 text-center text-slate-500 text-sm italic"
+                      className="py-6 text-center text-text-muted text-sm italic"
                     >
                       {t("adminProductsPage.table.empty")}
                     </td>
@@ -731,7 +731,7 @@ export default function AdminProductsPage() {
                     return (
                       <tr
                         key={p.id}
-                        className="border-t border-slate-100 hover:bg-slate-50 transition-colors"
+                        className="border-t border-border/70 hover:bg-surface-main transition-colors"
                       >
                         {/* PRODUIT */}
                         <td className="px-4 py-3 align-top">
@@ -739,7 +739,7 @@ export default function AdminProductsPage() {
                             <button
                               type="button"
                               onClick={() => openLightbox(p, 0)}
-                              className="w-14 h-14 rounded-xl border border-slate-200 overflow-hidden bg-slate-100 flex-shrink-0 hover:border-blue-400 transition"
+                              className="w-14 h-14 rounded-xl border border-border overflow-hidden bg-surface-main/80 flex-shrink-0 hover:border-blue-400 transition"
                             >
                               {mainImg ? (
                                 <img
@@ -748,17 +748,17 @@ export default function AdminProductsPage() {
                                   className="object-cover w-full h-full"
                                 />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">
+                                <div className="w-full h-full flex items-center justify-center text-[10px] text-text-muted">
                                   {t("adminProductsPage.table.noImage")}
                                 </div>
                               )}
                             </button>
 
                             <div className="min-w-0">
-                              <div className="font-semibold text-slate-900 truncate">
+                              <div className="font-semibold text-text-primary truncate">
                                 {p.name || t("common.dash")}
                               </div>
-                              <div className="text-[11px] text-slate-400 mt-1">
+                              <div className="text-[11px] text-text-muted mt-1">
                                 {t("adminProductsPage.table.id", { id: p.id })}
                               </div>
                             </div>
@@ -767,7 +767,7 @@ export default function AdminProductsPage() {
 
                         {/* PRIX */}
                         <td className="px-4 py-3 align-top whitespace-nowrap">
-                          <div className="font-semibold text-slate-900">
+                          <div className="font-semibold text-text-primary">
                             {formatNumber(p.price || 0)}{" "}
                             {formatCurrency(p.currency)}
                           </div>
@@ -775,21 +775,21 @@ export default function AdminProductsPage() {
 
                         {/* STOCK */}
                         <td className="px-4 py-3 align-top whitespace-nowrap">
-                          <span className="text-sm text-slate-800">
+                          <span className="text-sm text-text-primary">
                             {p.stock ?? 0}
                           </span>
                         </td>
 
-                        {/* CATÉGORIE */}
+                        {/* CATÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°GORIE */}
                         <td className="px-4 py-3 align-top">
-                          <span className="text-sm text-slate-800">
+                          <span className="text-sm text-text-primary">
                             {cat ? cat.name : t("common.dash")}
                           </span>
                         </td>
 
                         {isGlobalAdmin && (
                           <td className="px-4 py-3 align-top">
-                            <span className="text-xs text-slate-600 break-words line-clamp-2">
+                            <span className="text-xs text-text-secondary break-words line-clamp-2">
                               {getGeoLabel(p) || t("common.dash")}
                             </span>
                           </td>
@@ -803,14 +803,14 @@ export default function AdminProductsPage() {
                               onClick={() => handleEdit(p)}
                               className="px-3 py-1.5 text-xs rounded-xl bg-amber-500 text-white hover:bg-amber-600"
                             >
-                              ✏️ {t("adminProductsPage.table.edit")}
+                              {t("adminProductsPage.table.edit")}
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDelete(p.id)}
                               className="px-3 py-1.5 text-xs rounded-xl bg-red-600 text-white hover:bg-red-700"
                             >
-                              🗑 {t("adminProductsPage.table.delete")}
+                              {t("adminProductsPage.table.delete")}
                             </button>
                           </div>
                         </td>
@@ -830,27 +830,27 @@ export default function AdminProductsPage() {
       {lightbox.open && lightbox.product && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4 select-none">
           <div
-            className="relative bg-black rounded-2xl max-w-3xl w-full border border-slate-700 overflow-hidden"
+            className="relative bg-black rounded-2xl max-w-3xl w-full border border-border overflow-hidden"
             role="dialog"
             aria-label={t("adminProductsPage.lightbox.ariaLabel")}
           >
             {/* Bouton fermer */}
             <button
               onClick={closeLightbox}
-              className="absolute top-3 right-3 z-50 bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-full text-sm font-semibold backdrop-blur-md"
+              className="absolute top-3 right-3 z-50 bg-surface-card/20 hover:bg-surface-card/30 text-white px-3 py-1 rounded-full text-sm font-semibold backdrop-blur-md"
               aria-label={t("adminProductsPage.lightbox.close")}
             >
-              ✕
+              x
             </button>
 
             {/* Navigation gauche */}
             {lightbox.product._images.length > 1 && (
               <button
                 onClick={goPrev}
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-surface-card/20 hover:bg-surface-card/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
                 aria-label={t("adminProductsPage.lightbox.prev")}
               >
-                ◀
+                {"<"}
               </button>
             )}
 
@@ -869,10 +869,10 @@ export default function AdminProductsPage() {
             {lightbox.product._images.length > 1 && (
               <button
                 onClick={goNext}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-surface-card/20 hover:bg-surface-card/30 text-white px-3 py-2 rounded-full text-lg backdrop-blur-md"
                 aria-label={t("adminProductsPage.lightbox.next")}
               >
-                ▶
+                {">"}
               </button>
             )}
           </div>
@@ -881,6 +881,8 @@ export default function AdminProductsPage() {
     </div>
   );
 }
+
+
 
 
 

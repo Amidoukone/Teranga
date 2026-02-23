@@ -72,7 +72,7 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-12">
       <div className="page-shell w-full max-w-md p-8 relative">
         <div className="text-center mb-8">
           <p className="page-kicker mb-3">{t("changePasswordPage.kicker")}</p>
@@ -81,7 +81,7 @@ export default function ChangePasswordPage() {
             alt={t("changePasswordPage.logoAlt")}
             className="w-16 h-16 mx-auto mb-3 drop-shadow-sm"
           />
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">
             {t("changePasswordPage.title")}
           </h1>
           <p className="page-lead mt-1">{t("changePasswordPage.subtitle")}</p>
@@ -102,14 +102,14 @@ export default function ChangePasswordPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-800 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               {t("changePasswordPage.labels.currentPassword")}
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
               <input
                 type={showPassword ? "text" : "password"}
-                className="w-full border border-slate-300 rounded-xl pl-10 pr-10 py-2 text-sm bg-white
+                className="w-full border border-border rounded-xl pl-10 pr-10 py-2 text-sm bg-surface-card
                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 placeholder="********"
                 value={currentPassword}
@@ -124,7 +124,7 @@ export default function ChangePasswordPage() {
                     : t("changePasswordPage.actions.showPassword")
                 }
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-3 flex items-center text-slate-500 hover:text-blue-600"
+                className="absolute inset-y-0 right-3 flex items-center text-text-muted hover:text-blue-600"
               >
                 {showPassword ? (
                   <EyeOff className="w-5 h-5" />
@@ -136,14 +136,14 @@ export default function ChangePasswordPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-800 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               {t("changePasswordPage.labels.newPassword")}
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
               <input
                 type={showPassword ? "text" : "password"}
-                className="w-full border border-slate-300 rounded-xl pl-10 pr-10 py-2 text-sm bg-white
+                className="w-full border border-border rounded-xl pl-10 pr-10 py-2 text-sm bg-surface-card
                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 placeholder="********"
                 value={newPassword}
@@ -154,14 +154,14 @@ export default function ChangePasswordPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-800 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               {t("changePasswordPage.labels.confirmPassword")}
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
               <input
                 type={showPassword ? "text" : "password"}
-                className="w-full border border-slate-300 rounded-xl pl-10 pr-10 py-2 text-sm bg-white
+                className="w-full border border-border rounded-xl pl-10 pr-10 py-2 text-sm bg-surface-card
                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 placeholder="********"
                 value={confirm}
@@ -192,7 +192,7 @@ export default function ChangePasswordPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-slate-600">
+        <div className="mt-6 text-center text-sm text-text-secondary">
           <Link to="/dashboard" className="text-blue-600 font-medium hover:underline">
             {t("changePasswordPage.links.backToDashboard")}
           </Link>
@@ -201,3 +201,5 @@ export default function ChangePasswordPage() {
     </div>
   );
 }
+
+

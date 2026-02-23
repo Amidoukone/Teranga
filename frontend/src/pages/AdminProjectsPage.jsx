@@ -1,7 +1,7 @@
 // frontend/src/pages/AdminProjectsPage.jsx
 // ============================================================================
-// AdminProjectsPage.jsx — VERSION PRODUCTION READY (Apple Light PRO)
-// Admin GLOBAL + MASTER (admin + geo scope) — ZÉRO RÉGRESSION
+// AdminProjectsPage.jsx ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â VERSION PRODUCTION READY (Apple Light PRO)
+// Admin GLOBAL + MASTER (admin + geo scope) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ZÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°RO RÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°GRESSION
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -22,9 +22,15 @@ import {
   normalizeRole,
   isMasterUser,
 } from '../utils/role';
+import {
+  AdminActionsRow,
+  AdminField,
+  AdminFilterBar,
+  AdminPageHeader,
+} from '../components/admin/AdminFormUi';
 
 /* ============================================================
-   🔧 Typologies et statuts
+   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â§ Typologies et statuts
 ============================================================ */
 const CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 const PROJECT_TYPE_VALUES = ['immobilier', 'agricole', 'commerce', 'autre'];
@@ -37,7 +43,7 @@ const PROJECT_STATUS_VALUES = [
 ];
 
 /* ============================================================
-   💰 Formulaire transaction projet (inchangé)
+   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢Ãƒâ€šÃ‚Â° Formulaire transaction projet (inchangÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©)
 ============================================================ */
 function ProjectTransactionForm({ project, onClose, onSuccess }) {
   const { t } = useTranslation();
@@ -76,7 +82,7 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
       onSuccess?.();
       onClose?.();
     } catch (err) {
-      console.error('❌ Erreur création transaction projet:', err);
+      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ation transaction projet:', err);
       notify(
         err?.response?.data?.error ||
           err?.message ||
@@ -88,27 +94,21 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
   }
 
   return (
-    <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 mt-3 shadow-sm">
-      <h4 className="text-sm font-semibold text-gray-900 mb-2 break-words">
-        💰 {t('projects.transaction.titleFor')}{' '}
-        <span className="font-bold text-slate-900">
+    <div className="bg-surface-main/80 border border-border rounded-xl p-4 mt-3 shadow-sm">
+      <h4 className="text-sm font-semibold text-text-primary mb-2 break-words">
+        {t('projects.transaction.titleFor')}{' '}
+        <span className="font-bold text-text-primary">
           {project.title || t('projects.itemFallback', { id: project.id })}
         </span>
       </h4>
 
-      <form
-        onSubmit={handleSubmit}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-      >
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {/* Type */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            {t('projects.transaction.typeLabel')}
-          </label>
+        <AdminField label={t('projects.transaction.typeLabel')}>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+            className="app-input"
           >
             <option value="expense">{t('transactions.type.expense')}</option>
             <option value="revenue">{t('transactions.type.revenue')}</option>
@@ -119,54 +119,45 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
               {t('transactions.type.adjustment')}
             </option>
           </select>
-        </div>
+        </AdminField>
 
         {/* Montant */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            {t('projects.transaction.amountLabel')}
-          </label>
+        <AdminField label={t('projects.transaction.amountLabel')}>
           <input
             type="number"
             placeholder={t('projects.transaction.amountPlaceholder')}
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+            className="app-input"
           />
-        </div>
+        </AdminField>
 
         {/* Devise */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            {t('projects.transaction.currencyLabel')}
-          </label>
+        <AdminField label={t('projects.transaction.currencyLabel')}>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+            className="app-input"
           >
             {currencyOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
-            ))}
+              ))}
           </select>
-        </div>
+        </AdminField>
 
-        {/* Méthode paiement */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            {t('projects.transaction.paymentMethodLabelOptional')}
-          </label>
+        {/* MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©thode paiement */}
+        <AdminField label={t('projects.transaction.paymentMethodLabelOptional')}>
           <input
             value={form.paymentMethod}
             onChange={(e) =>
               setForm({ ...form, paymentMethod: e.target.value })
             }
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+            className="app-input"
           />
-        </div>
+        </AdminField>
 
         {/* Description */}
         <div className="sm:col-span-2">
@@ -177,40 +168,38 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
             onChange={(e) =>
               setForm({ ...form, description: e.target.value })
             }
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+            className="app-input"
           />
         </div>
 
         {/* Boutons */}
-        <div className="sm:col-span-2 flex justify-end gap-2 mt-1">
+        <AdminActionsRow className="sm:col-span-2 mt-1 justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-200"
+            className="px-4 py-2 text-xs font-semibold rounded-lg bg-surface-main/80"
           >
             {t('projects.transaction.cancel')}
           </button>
           <button
             type="submit"
             disabled={loading}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg text-white ${
-              loading ? 'bg-blue-300' : 'bg-blue-600 hover:bg-blue-700'
-            }`}
+            className="app-btn-primary px-4 py-2 text-xs"
           >
             {loading
               ? t('projects.transaction.saving')
-              : `💾 ${t('projects.transaction.save')}`}
+              : t('projects.transaction.save')}
           </button>
-        </div>
+        </AdminActionsRow>
       </form>
     </div>
   );
 }
 
 /* ============================================================
-   🧠 Page principale : Administration des projets (Admin only)
+   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Â  Page principale : Administration des projets (Admin only)
    - ADMIN GLOBAL et MASTER (admin + scope)
-   - AUCUN filtre geo côté frontend : le backend est source de vérité
+   - AUCUN filtre geo cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© frontend : le backend est source de vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ritÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©
 ============================================================ */
 export default function AdminProjectsPage() {
   const { formatNumber, formatDate } = useLocale();
@@ -223,7 +212,7 @@ export default function AdminProjectsPage() {
   const [loading, setLoading] = useState(false);
   const [openTrxProjectId, setOpenTrxProjectId] = useState(null);
 
-  // 🔎 Infos session (me)
+  // ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã‚Â½ Infos session (me)
   const [currentUser, setCurrentUser] = useState(null);
 
   // Filtres locaux
@@ -242,7 +231,7 @@ export default function AdminProjectsPage() {
       : { headers: {} };
   }, []);
 
-  // MASTER = admin + scope geo (déduction frontend)
+  // MASTER = admin + scope geo (dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©duction frontend)
   const isMaster = useMemo(() => isMasterUser(currentUser), [currentUser]);
   const projectTypeOptions = useMemo(
     () =>
@@ -269,7 +258,7 @@ export default function AdminProjectsPage() {
   );
 
   /* ============================================================
-     👮 Vérification admin via /auth/me
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“Ãƒâ€šÃ‚Â® VÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rification admin via /auth/me
      - MASTER passe comme admin (role backend = 'admin')
 ============================================================ */
   useEffect(() => {
@@ -297,7 +286,7 @@ export default function AdminProjectsPage() {
         setCurrentUser(user);
         setIsAdmin(true);
       } catch (err) {
-        console.error('❌ Erreur /auth/me (AdminProjectsPage):', err);
+        console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur /auth/me (AdminProjectsPage):', err);
         if (!active) return;
         navigate('/login');
       }
@@ -310,8 +299,8 @@ export default function AdminProjectsPage() {
   }, [navigate]);
 
   /* ============================================================
-     👥 Chargement des agents (admin)
-     - Aucune régression: même endpoint, même param role=agent
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“Ãƒâ€šÃ‚Â¥ Chargement des agents (admin)
+     - Aucune rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©gression: mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªme endpoint, mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªme param role=agent
      - IMPORTANT: le backend applique le scope automatiquement si MASTER
 ============================================================ */
   const loadAgents = useCallback(async () => {
@@ -322,14 +311,14 @@ export default function AdminProjectsPage() {
       });
       setAgents(data?.users || []);
     } catch (err) {
-      console.error('❌ Erreur chargement agents:', err);
+      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement agents:', err);
       setAgents([]);
     }
   }, [authHeaders]);
 
   /* ============================================================
-     📁 Chargement des projets
-     - Aucun filtre geo ajouté (backend applique scope)
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â Chargement des projets
+     - Aucun filtre geo ajoutÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© (backend applique scope)
 ============================================================ */
   const loadProjects = useCallback(async () => {
     setLoading(true);
@@ -337,7 +326,7 @@ export default function AdminProjectsPage() {
       const list = await getProjects();
       setProjects(Array.isArray(list) ? list : []);
     } catch (err) {
-      console.error('❌ Erreur chargement projets:', err);
+      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement projets:', err);
       setProjects([]);
     } finally {
       setLoading(false);
@@ -345,7 +334,7 @@ export default function AdminProjectsPage() {
   }, []);
 
   /* ============================================================
-     🔁 Initialisation quand on sait qu'on est admin
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â Initialisation quand on sait qu'on est admin
 ============================================================ */
   useEffect(() => {
     if (!isAdmin) return;
@@ -354,9 +343,9 @@ export default function AdminProjectsPage() {
   }, [isAdmin, loadProjects, loadAgents]);
 
   /* ============================================================
-     👤 Assignation agent au projet
-     - Pas de logique "master" en rôle
-     - Backend gère le scope (si MASTER, la liste d'agents est déjà scope)
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“Ãƒâ€šÃ‚Â¤ Assignation agent au projet
+     - Pas de logique "master" en rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´le
+     - Backend gÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨re le scope (si MASTER, la liste d'agents est dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  scope)
 ============================================================ */
   async function handleAssign(projectId, agentId) {
     try {
@@ -365,15 +354,15 @@ export default function AdminProjectsPage() {
       await loadProjects();
       notify(t('projects.alerts.assignSuccess'));
     } catch (err) {
-      console.error('❌ Erreur assignation agent:', err);
+      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur assignation agent:', err);
       notify(t('projects.alerts.assignError'));
     }
   }
 
   /* ============================================================
-     🔄 Changement de statut
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Changement de statut
      - Aucun changement de payload destructif
-     - NOTE: on conserve exactement les champs utilisés en prod
+     - NOTE: on conserve exactement les champs utilisÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©s en prod
 ============================================================ */
   async function handleStatusChange(projectId, newStatus) {
     try {
@@ -394,19 +383,19 @@ export default function AdminProjectsPage() {
       };
 
       // IMPORTANT: pas d'ajout countryId/regionId ici
-      // Le backend applique le scope et gère la sécurité.
+      // Le backend applique le scope et gÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨re la sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©curitÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©.
       await updateProject(projectId, payload);
 
       await loadProjects();
       notify(t('projects.alerts.statusUpdateSuccess'));
     } catch (err) {
-      console.error('❌ Erreur mise à jour statut:', err);
+      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur mise ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  jour statut:', err);
       notify(t('projects.alerts.statusUpdateError'));
     }
   }
 
   /* ============================================================
-     🧮 Application des filtres (locaux, sans geo)
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Â® Application des filtres (locaux, sans geo)
 ============================================================ */
   const filteredProjects = useMemo(() => {
     let arr = [...projects];
@@ -438,7 +427,7 @@ export default function AdminProjectsPage() {
       arr = arr.filter((p) => p.type === filters.type);
     }
 
-    // Tri du plus récent au plus ancien
+    // Tri du plus rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©cent au plus ancien
     arr.sort((a, b) => {
       const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
       const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -449,12 +438,12 @@ export default function AdminProjectsPage() {
   }, [projects, filters]);
 
   /* ============================================================
-     ⏳ Écran de chargement avant de savoir si admin
+     ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â³ ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°cran de chargement avant de savoir si admin
 ============================================================ */
   if (isAdmin === null) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-500 text-lg animate-pulse">
+      <div className="flex items-center justify-center min-h-screen bg-surface-main">
+        <p className="text-text-muted text-lg animate-pulse">
           {t('adminProjects.loading')}
         </p>
       </div>
@@ -462,32 +451,29 @@ export default function AdminProjectsPage() {
   }
 
   /* ============================================================
-     🎨 Rendu principal — Apple Light Premium
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¨ Rendu principal ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Apple Light Premium
 ============================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 px-3 sm:px-4 py-8 sm:py-10">
-      <div className="max-w-7xl mx-auto bg-white shadow-xl rounded-2xl border border-gray-100 px-4 sm:px-8 py-6 sm:py-8">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-blue-50 px-3 sm:px-4 py-8 sm:py-10">
+      <div className="max-w-7xl mx-auto bg-surface-card shadow-xl rounded-2xl border border-border/70 px-4 sm:px-8 py-6 sm:py-8">
         {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
-          <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 break-words">
-              🧩 {t('adminProjects.title')}
-            </h1>
-            <p className="text-sm text-gray-600 mt-1 break-words">
-              {t('adminProjects.subtitle')}
-            </p>
-
-            {/* ✅ Info scope (UX seulement, aucun filtre frontend) */}
-            {currentUser && (
-              <div className="mt-2 text-xs text-gray-500">
+        <AdminPageHeader
+          className="mb-6 md:items-end"
+          actionsClassName="w-full sm:w-auto flex-col sm:flex-row gap-2"
+          titleClassName="font-bold"
+          title={t('adminProjects.title')}
+          subtitle={t('adminProjects.subtitle')}
+          meta={
+            currentUser && (
+              <div className="mt-2 text-xs text-text-muted">
                 <span className="inline-flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-full border border-gray-200 bg-gray-50 text-gray-700">
+                  <span className="px-2 py-0.5 rounded-full border border-border bg-surface-main text-text-secondary">
                     {isMaster
                       ? t('adminProjects.scope.badge.master')
                       : t('adminProjects.scope.badge.admin')}
                   </span>
                   {isMaster && (
-                    <span className="text-gray-500">
+                    <span className="text-text-muted">
                       {t('adminProjects.scope.perimeter')}
                       {currentUser?.countryId != null
                         ? ` ${t('adminProjects.scope.country', {
@@ -495,7 +481,7 @@ export default function AdminProjectsPage() {
                           })}`
                         : ''}
                       {currentUser?.regionId != null
-                        ? ` · ${t('adminProjects.scope.region', {
+                        ? ` Ã‚Â· ${t('adminProjects.scope.region', {
                             id: currentUser.regionId,
                           })}`
                         : ''}
@@ -503,55 +489,44 @@ export default function AdminProjectsPage() {
                   )}
                 </span>
               </div>
-            )}
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            )
+          }
+          actions={
             <button
               onClick={loadProjects}
               disabled={loading}
-              className={`w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-lg shadow-sm text-center transition ${
-                loading
-                  ? 'bg-blue-300 text-white cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-              }`}
+              className="app-btn-primary w-full sm:w-auto px-4 py-2 text-sm shadow-sm text-center"
             >
               {loading
                 ? t('adminProjects.buttons.refreshLoading')
-                : `🔄 ${t('adminProjects.buttons.refresh')}`}
+                : t('adminProjects.buttons.refresh')}
             </button>
-          </div>
-        </div>
+          }
+        />
 
         {/* FILTRES */}
-        <div className="mb-6 bg-gray-50/80 border border-gray-200 rounded-xl p-4 sm:p-5">
+        <AdminFilterBar className="mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             {/* Recherche */}
-            <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                {t('adminProjects.filters.searchLabel')}
-              </label>
+            <AdminField label={t('adminProjects.filters.searchLabel')} className="md:col-span-2">
               <input
                 value={filters.q}
                 onChange={(e) =>
                   setFilters((f) => ({ ...f, q: e.target.value }))
                 }
                 placeholder={t('adminProjects.filters.searchPlaceholder')}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                className="app-input"
               />
-            </div>
+            </AdminField>
 
             {/* Statut */}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                {t('adminProjects.filters.statusLabel')}
-              </label>
+            <AdminField label={t('adminProjects.filters.statusLabel')}>
               <select
                 value={filters.status}
                 onChange={(e) =>
                   setFilters((f) => ({ ...f, status: e.target.value }))
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                className="app-input"
               >
                 <option value="all">
                   {t('adminProjects.filters.statusAll')}
@@ -562,19 +537,16 @@ export default function AdminProjectsPage() {
                   </option>
                 ))}
               </select>
-            </div>
+            </AdminField>
 
             {/* Type */}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                {t('adminProjects.filters.typeLabel')}
-              </label>
+            <AdminField label={t('adminProjects.filters.typeLabel')}>
               <select
                 value={filters.type}
                 onChange={(e) =>
                   setFilters((f) => ({ ...f, type: e.target.value }))
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                className="app-input"
               >
                 <option value="all">
                   {t('adminProjects.filters.typeAll')}
@@ -585,11 +557,11 @@ export default function AdminProjectsPage() {
                   </option>
                 ))}
               </select>
-            </div>
+            </AdminField>
           </div>
 
           {/* Bas des filtres */}
-          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-500">
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-text-muted">
             <div>
               {t('adminProjects.filters.count', {
                 count: filteredProjects.length,
@@ -598,17 +570,17 @@ export default function AdminProjectsPage() {
             </div>
             <button
               onClick={() => setFilters({ q: '', status: 'all', type: 'all' })}
-              className="w-full sm:w-auto px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300 font-medium text-gray-700 text-center transition"
+              className="w-full sm:w-auto px-3 py-1.5 bg-surface-main/80 rounded-md hover:bg-surface-main font-medium text-text-secondary text-center transition"
             >
               {t('adminProjects.filters.reset')}
             </button>
           </div>
-        </div>
+        </AdminFilterBar>
 
         {/* TABLEAU PROJETS */}
-        <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm bg-white">
+        <div className="overflow-x-auto border border-border rounded-xl shadow-sm bg-surface-card">
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
+            <thead className="bg-surface-main text-text-secondary border-b border-border">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                   {t('adminProjects.table.project')}
@@ -633,7 +605,7 @@ export default function AdminProjectsPage() {
                 <tr>
                   <td
                     colSpan={5}
-                    className="text-center py-8 text-gray-500 italic"
+                    className="text-center py-8 text-text-muted italic"
                   >
                     {t('adminProjects.list.empty')}
                   </td>
@@ -666,44 +638,44 @@ export default function AdminProjectsPage() {
                   return (
                     <tr
                       key={p.id}
-                      className="border-t border-gray-100 hover:bg-gray-50/80 transition-colors"
+                      className="border-t border-border/70 hover:bg-surface-main/80 transition-colors"
                     >
                       {/* Projet : titre / type / budget / description courte */}
                       <td className="px-4 py-3 align-top max-w-xs md:max-w-sm">
-                        <div className="font-semibold text-gray-900 break-words">
+                        <div className="font-semibold text-text-primary break-words">
                           {p.title || t('projects.itemFallback', { id: p.id })}
                         </div>
-                        <div className="mt-1 text-xs text-gray-500 flex flex-wrap gap-2 items-center">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                        <div className="mt-1 text-xs text-text-muted flex flex-wrap gap-2 items-center">
+                          <span className="app-badge app-badge-info">
                             {p.type
                               ? getProjectTypeLabel(p.type)
                               : t('projects.type.unknown')}
                           </span>
-                          <span className="text-[11px] text-gray-500">
+                          <span className="text-[11px] text-text-muted">
                             {t('adminProjects.list.budgetLabel')}{' '}
                             <strong>{budgetLabel}</strong>
                           </span>
                           {p.createdAt && (
-                            <span className="text-[11px] text-gray-400">
+                            <span className="text-[11px] text-text-muted">
                               {t('adminProjects.list.createdAt')}{' '}
                               {formatDate(p.createdAt)}
                             </span>
                           )}
                         </div>
                         {p.description && (
-                          <p className="mt-2 text-xs text-gray-600 break-words line-clamp-2">
+                          <p className="mt-2 text-xs text-text-secondary break-words line-clamp-2">
                             {p.description}
                           </p>
                         )}
                       </td>
 
                       {/* Client */}
-                      <td className="px-4 py-3 align-top max-w-[200px] break-words text-gray-800 text-sm">
+                      <td className="px-4 py-3 align-top max-w-[200px] break-words text-text-primary text-sm">
                         {clientName}
                       </td>
 
                       {/* Agent */}
-                      <td className="px-4 py-3 align-top max-w-[200px] break-words text-gray-800 text-sm">
+                      <td className="px-4 py-3 align-top max-w-[200px] break-words text-text-primary text-sm">
                         {agentName}
                       </td>
 
@@ -714,7 +686,7 @@ export default function AdminProjectsPage() {
                           onChange={(e) =>
                             handleStatusChange(p.id, e.target.value)
                           }
-                          className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                          className="app-input-compact w-full"
                         >
                           {projectStatusOptions.map((s) => (
                             <option key={s.value} value={s.value}>
@@ -731,7 +703,7 @@ export default function AdminProjectsPage() {
                           <select
                             value={p.agent?.id || ''}
                             onChange={(e) => handleAssign(p.id, e.target.value)}
-                            className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                            className="app-input-compact"
                           >
                             <option value="">
                               {t('projects.actions.assignAgentPlaceholder')}
@@ -744,15 +716,13 @@ export default function AdminProjectsPage() {
                             ))}
                           </select>
 
-                          {/* Transaction liée */}
+                          {/* Transaction liÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e */}
                           <button
                             onClick={() =>
                               setOpenTrxProjectId(trxOpen ? null : p.id)
                             }
-                            className={`text-xs sm:text-sm font-medium px-3 py-1.5 rounded-lg transition text-center ${
-                              trxOpen
-                                ? 'bg-rose-100 text-rose-700 hover:bg-rose-200'
-                                : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                            className={`text-xs sm:text-sm px-3 py-1.5 text-center ${
+                              trxOpen ? 'app-btn-tonal-danger' : 'app-btn-tonal-success'
                             }`}
                           >
                             {trxOpen
@@ -760,7 +730,7 @@ export default function AdminProjectsPage() {
                               : t('adminProjects.actions.addTransaction')}
                           </button>
 
-                          {/* Formulaire transaction liée */}
+                          {/* Formulaire transaction liÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e */}
                           {trxOpen && (
                             <ProjectTransactionForm
                               project={p}
@@ -781,5 +751,9 @@ export default function AdminProjectsPage() {
     </div>
   );
 }
+
+
+
+
 
 

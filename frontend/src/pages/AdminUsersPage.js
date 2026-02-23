@@ -1,13 +1,13 @@
 // ============================================================================
-// AdminUsersPage.jsx — Apple Light Premium B2 Minimal
-// Version 2025 — ADMIN GLOBAL & MASTER (admin + geo scope)
-// BACKEND SOURCE OF TRUTH • ZERO REGRESSION
+// AdminUsersPage.jsx ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Apple Light Premium B2 Minimal
+// Version 2025 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ADMIN GLOBAL & MASTER (admin + geo scope)
+// BACKEND SOURCE OF TRUTH ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ZERO REGRESSION
 //
-// 🔒 Sécurité ajoutée (2026):
-// - Un MASTER ne peut PAS créer ni promouvoir un admin
-// - Seul l'ADMIN GLOBAL peut créer admin / master
+// ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢ SÃƒÆ’Ã‚Â©curitÃƒÆ’Ã‚Â© ajoutÃƒÆ’Ã‚Â©e (2026):
+// - Un MASTER ne peut PAS crÃƒÆ’Ã‚Â©er ni promouvoir un admin
+// - Seul l'ADMIN GLOBAL peut crÃƒÆ’Ã‚Â©er admin / master
 // - Double verrou UI + payload (anti-DOM hack)
-// - Un MASTER ne peut pas éditer/supprimer un admin existant (UI + guard)
+// - Un MASTER ne peut pas ÃƒÆ’Ã‚Â©diter/supprimer un admin existant (UI + guard)
 // ============================================================================
 
 import { useEffect, useState, useCallback } from "react";
@@ -27,6 +27,14 @@ import { useGeo } from "../contexts/GeoContext";
 import { useTranslation } from "react-i18next";
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
+import {
+  AdminActionsRow,
+  AdminField,
+  AdminFilterBar,
+  AdminFormPanel,
+  AdminPageHeader,
+  AdminRowActions,
+} from "../components/admin/AdminFormUi";
 
 /* ============================================================
    Helpers locaux (safe, non cassants)
@@ -88,11 +96,11 @@ export default function AdminUsersPage() {
     country: "",
     role: "client",
 
-    // Legacy (présent, mais non utilisé par défaut)
+    // Legacy (prÃƒÆ’Ã‚Â©sent, mais non utilisÃƒÆ’Ã‚Â© par dÃƒÆ’Ã‚Â©faut)
     scopeCountry: "",
     scopeRegion: "",
 
-    // ✅ Sélection guidée (IDs) pour admins (GLOBAL uniquement)
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ SÃƒÆ’Ã‚Â©lection guidÃƒÆ’Ã‚Â©e (IDs) pour admins (GLOBAL uniquement)
     scopeCountryId: "",
     scopeRegionId: "",
   });
@@ -132,7 +140,7 @@ export default function AdminUsersPage() {
   const geoRegion = (regions || []).find((r) => String(r.id) === String(geoRegionId));
 
   // ============================================================
-  // 🔐 AUTH CHECK
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â AUTH CHECK
   // ============================================================
   useEffect(() => {
     let active = true;
@@ -155,7 +163,7 @@ export default function AdminUsersPage() {
         setCurrentUser(user);
         setIsAdmin(true);
       } catch (e) {
-        console.error("❌ /me error:", e);
+        console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ /me error:", e);
         window.location.href = "/login";
       }
     }
@@ -167,7 +175,7 @@ export default function AdminUsersPage() {
   }, []);
 
   // ============================================================
-  // 🔄 LOAD USERS
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ LOAD USERS
   // ============================================================
   const load = useCallback(async () => {
     setLoading(true);
@@ -177,7 +185,7 @@ export default function AdminUsersPage() {
       });
       setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("❌ Load users error:", err);
+      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Load users error:", err);
       setUsers([]);
     } finally {
       setLoading(false);
@@ -189,14 +197,14 @@ export default function AdminUsersPage() {
   }, [isAdmin, load]);
 
   // ============================================================
-  // 💾 Persist form visibility
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¾ Persist form visibility
   // ============================================================
   useEffect(() => {
     localStorage.setItem("teranga_admin_users_showForm", showForm ? "1" : "0");
   }, [showForm]);
 
   // ============================================================
-  // 🌍 Regions filtrées par le pays sélectionné (form)
+  // ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â Regions filtrÃƒÆ’Ã‚Â©es par le pays sÃƒÆ’Ã‚Â©lectionnÃƒÆ’Ã‚Â© (form)
   // ============================================================
   useEffect(() => {
     let active = true;
@@ -218,7 +226,7 @@ export default function AdminUsersPage() {
         });
         if (active) setFormRegions(Array.isArray(list) ? list : []);
       } catch (err) {
-        console.error("❌ load form regions:", err);
+        console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ load form regions:", err);
         if (active) setFormRegions([]);
       } finally {
         if (active) setLoadingFormRegions(false);
@@ -232,12 +240,12 @@ export default function AdminUsersPage() {
   }, [form.scopeCountryId, form.role, isGlobalAdmin]);
 
   // ============================================================
-  // 🔎 FILTERING (local) + tri
+  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ…Â½ FILTERING (local) + tri
   // ============================================================
   useEffect(() => {
     let arr = [...users];
 
-    // Filtre GeoContext (si présent)
+    // Filtre GeoContext (si prÃƒÆ’Ã‚Â©sent)
     if (geoRegionId) {
       arr = arr.filter((u) => String(u.regionId ?? "") === String(geoRegionId));
     } else if (geoCountryId) {
@@ -283,7 +291,7 @@ export default function AdminUsersPage() {
   }, [users, filters, geoCountryId, geoRegionId]);
 
   // ============================================================
-  // 🧠 PAYLOAD BUILDER — DOUBLE VERROU (UI + anti-DOM hack)
+  // ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â  PAYLOAD BUILDER ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â DOUBLE VERROU (UI + anti-DOM hack)
   // ============================================================
   function buildPayload() {
     const payload = {};
@@ -298,7 +306,7 @@ export default function AdminUsersPage() {
       if (toSafeStr(val).trim()) payload[k] = toSafeStr(val).trim();
     });
 
-    // 🔒 ROLE SECURITY (anti hack DOM)
+    // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢ ROLE SECURITY (anti hack DOM)
     const targetRole = normalizeRole(form.role);
 
     // MASTER => interdit admin
@@ -310,7 +318,7 @@ export default function AdminUsersPage() {
 
     payload.role = targetRole;
 
-    // Création : password requis
+    // CrÃƒÆ’Ã‚Â©ation : password requis
     if (!editing && !toSafeStr(form.password).trim()) {
       const err = new Error(t("adminUsersPage.alerts.passwordRequired"));
       err.status = 400;
@@ -322,7 +330,7 @@ export default function AdminUsersPage() {
       payload.password = toSafeStr(form.password);
     }
 
-    // Scope admin (IDs only) — seulement GLOBAL admin
+    // Scope admin (IDs only) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â seulement GLOBAL admin
     if (targetRole === "admin" && !isMaster) {
       const cid = toSafeIntOrEmpty(form.scopeCountryId);
       const rid = toSafeIntOrEmpty(form.scopeRegionId);
@@ -340,7 +348,7 @@ export default function AdminUsersPage() {
   }
 
   // ============================================================
-  // 🚀 SUBMIT
+  // ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ SUBMIT
   // ============================================================
   async function handleSubmit(e) {
     e.preventDefault();
@@ -359,7 +367,7 @@ export default function AdminUsersPage() {
       await load();
     } catch (err) {
       notify(extractApiError(err, t("adminUsersPage.alerts.submitError")));
-      console.error("❌ Submit error:", err);
+      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Submit error:", err);
     }
   }
 
@@ -381,7 +389,7 @@ export default function AdminUsersPage() {
   }
 
   function handleEdit(u) {
-    // 🔒 MASTER ne peut pas éditer un admin existant
+    // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢ MASTER ne peut pas ÃƒÆ’Ã‚Â©diter un admin existant
     if (isMaster && normalizeRole(u.role) === "admin") {
       notify(t("adminUsersPage.alerts.masterCannotEdit"));
       return;
@@ -408,7 +416,7 @@ export default function AdminUsersPage() {
   }
 
   async function handleDelete(u) {
-    // 🔒 MASTER ne peut pas supprimer un admin
+    // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢ MASTER ne peut pas supprimer un admin
     if (isMaster && normalizeRole(u.role) === "admin") {
       notify(t("adminUsersPage.alerts.masterCannotDelete"));
       return;
@@ -422,7 +430,7 @@ export default function AdminUsersPage() {
       await load();
     } catch (err) {
       notify(extractApiError(err, t("adminUsersPage.alerts.submitError")));
-      console.error("❌ Delete error:", err);
+      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Delete error:", err);
     }
   }
 
@@ -506,12 +514,12 @@ export default function AdminUsersPage() {
   }
 
   // ============================================================
-  // ⏳ LOADING GUARD
+  // ÃƒÂ¢Ã‚ÂÃ‚Â³ LOADING GUARD
   // ============================================================
   if (isAdmin === null) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500 animate-pulse">{t("adminUsersPage.loading")}</p>
+        <p className="text-text-muted animate-pulse">{t("adminUsersPage.loading")}</p>
       </div>
     );
   }
@@ -520,35 +528,31 @@ export default function AdminUsersPage() {
   // UI
   // ============================================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f5f5f7] via-white to-[#e5e5ea] px-4 py-10 font-[system-ui] text-[#1c1c1e]">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-10 font-[system-ui] text-text-primary">
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-6xl mx-auto bg-white shadow-xl rounded-3xl p-8 border border-gray-200"
+        className="max-w-6xl mx-auto bg-surface-card shadow-xl rounded-3xl p-8 border border-border"
       >
         {/* HEADER */}
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
-          <div className="min-w-0">
-            <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
-              {t("adminUsersPage.title")}
-            </h1>
-
-            {/* ✅ Info scope + badges */}
-            {currentUser && (
-              <div className="mt-2 text-xs text-gray-500">
+        <AdminPageHeader
+          className="items-center"
+          title={t("adminUsersPage.title")}
+          titleClassName="text-3xl"
+          meta={
+            currentUser && (
+              <div className="mt-2 text-xs text-text-muted">
                 <span className="inline-flex items-center gap-2 flex-wrap">
-                  {/* Badge rôle */}
-                  <span className="px-2 py-0.5 rounded-full border border-gray-200 bg-gray-50 text-gray-700">
+                  <span className="px-2 py-0.5 rounded-full border border-border bg-surface-main text-text-secondary">
                     {prettyRoleLabel(currentUser)}
                   </span>
 
-                  {/* Badge MASTER / GLOBAL */}
                   {normalizeRole(currentUser?.role) === "admin" && (
                     <span
                       className={`px-2 py-0.5 rounded-full border text-xs ${
                         isMaster
-                          ? "border-blue-200 bg-blue-50 text-blue-700"
-                          : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          ? "app-badge app-badge-info"
+                          : "app-badge app-badge-success"
                       }`}
                       title={
                         isMaster
@@ -562,9 +566,8 @@ export default function AdminUsersPage() {
                     </span>
                   )}
 
-                  {/* Périmètre */}
                   {isMaster && (
-                    <span className="text-gray-500">
+                    <span className="text-text-muted">
                       {t("adminUsersPage.labels.perimeter")}
                       {currentUser?.countryId != null
                         ? ` ${t("adminUsersPage.labels.countryId", {
@@ -572,7 +575,7 @@ export default function AdminUsersPage() {
                           })}`
                         : ""}
                       {currentUser?.regionId != null
-                        ? ` · ${t("adminUsersPage.labels.regionId", {
+                        ? ` Â· ${t("adminUsersPage.labels.regionId", {
                             id: currentUser.regionId,
                           })}`
                         : ""}
@@ -580,19 +583,18 @@ export default function AdminUsersPage() {
                   )}
 
                   {!isMaster && (
-                    <span className="text-gray-500">
+                    <span className="text-text-muted">
                       {t("adminUsersPage.labels.globalAccess")}
                     </span>
                   )}
 
-                  {/* Filtre GeoContext */}
                   {geoCountryId && !isScopedRole && (
-                    <span className="text-gray-500">
+                    <span className="text-text-muted">
                       {t("adminUsersPage.labels.filter")}{" "}
                       {geoCountry?.name ||
                         t("adminUsersPage.labels.countryId", { id: geoCountryId })}
                       {geoRegionId
-                        ? ` · ${
+                        ? ` Â· ${
                             geoRegion?.name ||
                             t("adminUsersPage.labels.regionId", { id: geoRegionId })
                           }`
@@ -602,41 +604,37 @@ export default function AdminUsersPage() {
                   )}
                 </span>
               </div>
-            )}
-          </div>
+            )
+          }
+          actionsClassName="gap-3"
+          actions={
+            <>
+              <button
+                onClick={() => setShowForm((v) => !v)}
+                className="px-5 py-2 rounded-full app-btn-neutral text-sm font-medium shadow transition"
+              >
+                {showForm
+                  ? t("adminUsersPage.buttons.hideForm")
+                  : t("adminUsersPage.buttons.showForm")}
+              </button>
 
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowForm((v) => !v)}
-              className="px-5 py-2 rounded-full bg-[#1c1c1e] text-white text-sm font-medium shadow hover:bg-black transition"
-            >
-              {showForm
-                ? t("adminUsersPage.buttons.hideForm")
-                : t("adminUsersPage.buttons.showForm")}
-            </button>
-
-            <button
-              onClick={load}
-              disabled={loading}
-              className={`px-5 py-2 rounded-full text-sm font-medium shadow transition ${
-                loading
-                  ? "bg-[#0a84ff]/40 cursor-not-allowed text-white"
-                  : "bg-[#0a84ff] text-white hover:bg-[#0066cc]"
-              }`}
-            >
-              {loading ? t("adminUsersPage.loading") : t("adminUsersPage.buttons.refresh")}
-            </button>
-          </div>
-        </div>
+              <button
+                onClick={load}
+                disabled={loading}
+                className="app-btn-primary px-5 py-2 rounded-full text-sm font-medium shadow"
+              >
+                {loading ? t("adminUsersPage.loading") : t("adminUsersPage.buttons.refresh")}
+              </button>
+            </>
+          }
+        />
 
         {/* FILTER BAR */}
-        <div className="mb-6 bg-[#f8f8fa] border border-gray-200 rounded-2xl p-5">
+
+        <AdminFilterBar className="mb-6 rounded-2xl p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
-            {/* Rôle */}
-            <div>
-              <label className="text-xs font-medium text-gray-600">
-                {t("adminUsersPage.filters.category")}
-              </label>
+            {/* RÃƒÆ’Ã‚Â´le */}
+            <AdminField label={t("adminUsersPage.filters.category")}>
               <select
                 value={role}
                 onChange={(e) => {
@@ -646,20 +644,17 @@ export default function AdminUsersPage() {
                     setFilters((prev) => ({ ...prev, adminType: "all" }));
                   }
                 }}
-                className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+                className="mt-1 app-input"
               >
                 <option value="client">{t("adminUsersPage.filters.roles.clients")}</option>
                 <option value="agent">{t("adminUsersPage.filters.roles.agents")}</option>
                 <option value="admin">{t("adminUsersPage.filters.roles.admins")}</option>
               </select>
-            </div>
+            </AdminField>
 
             {/* Type d'admin (GLOBAL uniquement) */}
             {role === "admin" && isGlobalAdmin && (
-              <div>
-                <label className="text-xs font-medium text-gray-600">
-                  {t("adminUsersPage.filters.adminType")}
-                </label>
+              <AdminField label={t("adminUsersPage.filters.adminType")}>
                 <select
                   value={filters.adminType}
                   onChange={(e) =>
@@ -668,33 +663,27 @@ export default function AdminUsersPage() {
                       adminType: e.target.value,
                     })
                   }
-                  className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+                  className="mt-1 app-input"
                 >
                   <option value="all">{t("adminUsersPage.filters.adminTypes.all")}</option>
                   <option value="master">{t("adminUsersPage.filters.adminTypes.master")}</option>
                   <option value="global">{t("adminUsersPage.filters.adminTypes.global")}</option>
                 </select>
-              </div>
+              </AdminField>
             )}
 
             {/* Recherche */}
-            <div className="lg:col-span-2">
-              <label className="text-xs font-medium text-gray-600">
-                {t("adminUsersPage.filters.search")}
-              </label>
+            <AdminField label={t("adminUsersPage.filters.search")} className="lg:col-span-2">
               <input
                 placeholder={t("adminUsersPage.placeholders.search")}
                 value={filters.q}
                 onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-                className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+                className="mt-1 app-input"
               />
-            </div>
+            </AdminField>
 
             {/* Pays */}
-            <div>
-              <label className="text-xs font-medium text-gray-600">
-                {t("adminUsersPage.filters.country")}
-              </label>
+            <AdminField label={t("adminUsersPage.filters.country")}>
               <input
                 placeholder={t("adminUsersPage.placeholders.country")}
                 value={filters.country}
@@ -704,13 +693,13 @@ export default function AdminUsersPage() {
                     country: e.target.value.toUpperCase().slice(0, 2),
                   })
                 }
-                className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+                className="mt-1 app-input"
               />
-            </div>
+            </AdminField>
 
             {/* Checkbox */}
             <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
                 <input
                   type="checkbox"
                   checked={filters.onlyPhone}
@@ -721,14 +710,11 @@ export default function AdminUsersPage() {
             </div>
 
             {/* Tri */}
-            <div>
-              <label className="text-xs font-medium text-gray-600">
-                {t("adminUsersPage.filters.sort")}
-              </label>
+            <AdminField label={t("adminUsersPage.filters.sort")}>
               <select
                 value={filters.sort}
                 onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-                className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
+                className="mt-1 app-input"
               >
                 <option value="-createdAt">{t("adminUsersPage.filters.sortOptions.newest")}</option>
                 <option value="createdAt">{t("adminUsersPage.filters.sortOptions.oldest")}</option>
@@ -737,10 +723,10 @@ export default function AdminUsersPage() {
                 <option value="email">{t("adminUsersPage.filters.sortOptions.emailAsc")}</option>
                 <option value="-email">{t("adminUsersPage.filters.sortOptions.emailDesc")}</option>
               </select>
-            </div>
+            </AdminField>
           </div>
 
-          <div className="mt-3 flex justify-between text-xs text-gray-500">
+          <div className="mt-3 flex justify-between text-xs text-text-muted">
             <span>{t("adminUsersPage.countUsers", { count: filtered.length })}</span>
             <button
               onClick={() =>
@@ -752,175 +738,180 @@ export default function AdminUsersPage() {
                   adminType: "all",
                 })
               }
-              className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300"
+              className="app-btn-soft px-3 py-1.5 rounded-md"
             >
               {t("adminUsersPage.buttons.reset")}
             </button>
           </div>
-        </div>
+        </AdminFilterBar>
 
         {/* FORMULAIRE */}
         {showForm && (
-          <motion.form
+          <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            onSubmit={handleSubmit}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#f8f8fa] p-6 rounded-2xl border border-gray-200 mb-10"
+            className="mb-10"
           >
-            {[
-              ["firstName", t("adminUsersPage.placeholders.firstName")],
-              ["lastName", t("adminUsersPage.placeholders.lastName")],
-              ["phone", t("adminUsersPage.placeholders.phone")],
-              ["country", t("adminUsersPage.placeholders.countryIso")],
-            ].map(([key, label]) => (
-              <input
-                key={key}
-                placeholder={label}
-                value={form[key]}
-                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
-              />
-            ))}
+            <AdminFormPanel onSubmit={handleSubmit} className="md:grid-cols-2 bg-surface-main/80">
+              {[
+                ["firstName", t("adminUsersPage.placeholders.firstName")],
+                ["lastName", t("adminUsersPage.placeholders.lastName")],
+                ["phone", t("adminUsersPage.placeholders.phone")],
+                ["country", t("adminUsersPage.placeholders.countryIso")],
+              ].map(([key, label]) => (
+                <AdminField key={key} label={label}>
+                  <input
+                    placeholder={label}
+                    value={form[key]}
+                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                    className="app-input"
+                  />
+                </AdminField>
+              ))}
 
-            <input
-              placeholder={t("adminUsersPage.placeholders.email")}
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
-            />
+              <AdminField label={t("adminUsersPage.placeholders.email")} className="md:col-span-2">
+                <input
+                  placeholder={t("adminUsersPage.placeholders.email")}
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="app-input"
+                />
+              </AdminField>
 
-            <input
-              placeholder={t("adminUsersPage.placeholders.password")}
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
-            />
+              <AdminField
+                label={t("adminUsersPage.placeholders.password")}
+                className="md:col-span-2"
+              >
+                <input
+                  placeholder={t("adminUsersPage.placeholders.password")}
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="app-input"
+                />
+              </AdminField>
 
-            {/* ✅ ROLE SELECT — MASTER: client/agent only */}
-            <select
-              value={form.role}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  role: e.target.value,
-                  scopeCountryId: "",
-                  scopeRegionId: "",
-                  scopeCountry: "",
-                  scopeRegion: "",
-                })
-              }
-              className="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
-            >
-              <option value="client">{t("adminUsersPage.roles.client")}</option>
-              <option value="agent">{t("adminUsersPage.roles.agent")}</option>
-              {isGlobalAdmin && <option value="admin">{t("adminUsersPage.roles.admin")}</option>}
-            </select>
-
-            {normalizeRole(form.role) === "client" && (
-              <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-                {t("adminUsersPage.info.clientScope")}
-              </div>
-            )}
-
-            {/* ✅ ADMIN: Sélection guidée pays/région (IDs) — uniquement GLOBAL */}
-            {isGlobalAdmin && normalizeRole(form.role) === "admin" && (
-              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-gray-600">
-                    {t("adminUsersPage.info.countryScopeLabel")}
-                  </label>
-                  <select
-                    value={form.scopeCountryId}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        scopeCountryId: e.target.value,
-                        scopeRegionId: "",
-                      })
-                    }
-                    className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
-                  >
-                    <option value="">{t("adminUsersPage.info.globalScopeOption")}</option>
-                    {(countries || []).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({c.isoCode})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-gray-600">
-                    {t("adminUsersPage.info.regionScopeLabel")}
-                  </label>
-                  <select
-                    value={form.scopeRegionId}
-                    disabled={
-                      !form.scopeCountryId || loadingFormRegions || formRegions.length === 0
-                    }
-                    onChange={(e) => setForm({ ...form, scopeRegionId: e.target.value })}
-                    className={`mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff] ${
-                      !form.scopeCountryId || loadingFormRegions || formRegions.length === 0
-                        ? "bg-gray-100 cursor-not-allowed"
-                        : ""
-                    }`}
-                  >
-                    <option value="">
-                      {!form.scopeCountryId
-                        ? t("adminUsersPage.info.chooseCountryFirst")
-                        : loadingFormRegions
-                          ? t("adminUsersPage.info.regionsLoading")
-                          : t("adminUsersPage.info.masterCountryOption")}
-                    </option>
-                    {formRegions.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name} {r.code ? `(${r.code})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <p className="md:col-span-2 text-xs text-gray-500">
-                  {t("adminUsersPage.info.masterHint")}
-                </p>
-              </div>
-            )}
-
-            <div className="md:col-span-2 flex justify-end gap-2 mt-2">
-              {editing && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-4 py-2 rounded-full bg-gray-300 hover:bg-gray-400 text-sm"
+              {/* ROLE SELECT MASTER: client/agent only */}
+              <AdminField label={t("adminUsersPage.table.headers.role")} className="md:col-span-2">
+                <select
+                  value={form.role}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      role: e.target.value,
+                      scopeCountryId: "",
+                      scopeRegionId: "",
+                      scopeCountry: "",
+                      scopeRegion: "",
+                    })
+                  }
+                  className="app-input"
                 >
-                  {t("adminUsersPage.buttons.cancel")}
-                </button>
+                  <option value="client">{t("adminUsersPage.roles.client")}</option>
+                  <option value="agent">{t("adminUsersPage.roles.agent")}</option>
+                  {isGlobalAdmin && <option value="admin">{t("adminUsersPage.roles.admin")}</option>}
+                </select>
+              </AdminField>
+
+              {normalizeRole(form.role) === "client" && (
+                <div className="md:col-span-2 app-alert app-alert-info rounded-xl px-3 py-2 text-xs">
+                  {t("adminUsersPage.info.clientScope")}
+                </div>
               )}
 
-              <button
-                type="submit"
-                className="px-6 py-2 rounded-full bg-[#0a84ff] text-white text-sm font-medium hover:bg-[#0066cc]"
-              >
-                {editing
-                  ? t("adminUsersPage.buttons.update")
-                  : t("adminUsersPage.buttons.create")}
-              </button>
-            </div>
-          </motion.form>
+              {/* ADMIN: guided country/region scope (IDs) - GLOBAL only */}
+              {isGlobalAdmin && normalizeRole(form.role) === "admin" && (
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <AdminField label={t("adminUsersPage.info.countryScopeLabel")}>
+                    <select
+                      value={form.scopeCountryId}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          scopeCountryId: e.target.value,
+                          scopeRegionId: "",
+                        })
+                      }
+                      className="app-input"
+                    >
+                      <option value="">{t("adminUsersPage.info.globalScopeOption")}</option>
+                      {(countries || []).map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.isoCode})
+                        </option>
+                      ))}
+                    </select>
+                  </AdminField>
+
+                  <AdminField label={t("adminUsersPage.info.regionScopeLabel")}>
+                    <select
+                      value={form.scopeRegionId}
+                      disabled={
+                        !form.scopeCountryId || loadingFormRegions || formRegions.length === 0
+                      }
+                      onChange={(e) => setForm({ ...form, scopeRegionId: e.target.value })}
+                      className={`app-input ${
+                        !form.scopeCountryId || loadingFormRegions || formRegions.length === 0
+                          ? "bg-surface-main/80 cursor-not-allowed"
+                          : ""
+                      }`}
+                    >
+                      <option value="">
+                        {!form.scopeCountryId
+                          ? t("adminUsersPage.info.chooseCountryFirst")
+                          : loadingFormRegions
+                            ? t("adminUsersPage.info.regionsLoading")
+                            : t("adminUsersPage.info.masterCountryOption")}
+                      </option>
+                      {formRegions.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name} {r.code ? `(${r.code})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </AdminField>
+
+                  <p className="md:col-span-2 text-xs text-text-muted">
+                    {t("adminUsersPage.info.masterHint")}
+                  </p>
+                </div>
+              )}
+
+              <AdminActionsRow className="md:col-span-2 justify-end mt-2">
+                {editing && (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="px-4 py-2 rounded-full app-btn-soft text-sm"
+                  >
+                    {t("adminUsersPage.buttons.cancel")}
+                  </button>
+                )}
+
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-full app-btn-primary text-sm font-medium"
+                >
+                  {editing
+                    ? t("adminUsersPage.buttons.update")
+                    : t("adminUsersPage.buttons.create")}
+                </button>
+              </AdminActionsRow>
+            </AdminFormPanel>
+          </motion.div>
         )}
 
         {/* TABLE */}
         {loading ? (
-          <p className="text-center text-gray-500 py-6">{t("adminUsersPage.loading")}</p>
+          <p className="text-center text-text-muted py-6">{t("adminUsersPage.loading")}</p>
         ) : filtered.length === 0 ? (
-          <p className="text-center text-gray-500 py-6">{t("adminUsersPage.empty")}</p>
+          <p className="text-center text-text-muted py-6">{t("adminUsersPage.empty")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-separate border-spacing-y-2 text-sm">
               <thead>
-                <tr className="bg-gray-100 text-gray-700">
+                <tr className="bg-surface-main/80 text-text-secondary">
                   <th className="text-left px-4 py-2 font-medium">
                     {t("adminUsersPage.table.headers.name")}
                   </th>
@@ -951,7 +942,7 @@ export default function AdminUsersPage() {
                   return (
                     <tr
                       key={u.id}
-                      className="bg-white hover:bg-gray-50 transition border border-gray-200 rounded-xl"
+                      className="bg-surface-card hover:bg-surface-main transition border border-border rounded-xl"
                     >
                       <td className="px-4 py-2">
                         {[u.firstName, u.lastName].filter(Boolean).join(" ") ||
@@ -966,60 +957,51 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="px-4 py-2 uppercase">{prettyRoleLabel(u)}</td>
 
-                      <td className="px-4 py-2 flex gap-3 items-center">
-                        <button
-                          onClick={() => handleEdit(u)}
-                          className={`${
-                            actionsLocked
-                              ? "text-gray-300 cursor-not-allowed"
-                              : "text-[#ca8a04] hover:text-[#b45309]"
-                          }`}
-                          title={
-                            actionsLocked
-                              ? t("adminUsersPage.table.lockedTitle")
-                              : t("adminUsersPage.table.edit")
-                          }
-                          disabled={actionsLocked}
-                        >
-                          ✏️
-                        </button>
-
-                        <button
-                          onClick={() => openResetPanel(u)}
-                          className={`${
-                            actionsLocked
-                              ? "text-gray-300 cursor-not-allowed"
-                              : "text-blue-600 hover:text-blue-800"
-                          }`}
-                          title={
-                            actionsLocked
-                              ? t("adminUsersPage.table.lockedTitle")
-                              : t("adminUsersPage.table.resetPassword")
-                          }
-                          disabled={actionsLocked}
-                        >
-                          🔐
-                        </button>
-
-                        <button
-                          onClick={() => handleDelete(u)}
-                          className={`${
-                            actionsLocked
-                              ? "text-gray-300 cursor-not-allowed"
-                              : "text-red-600 hover:text-red-800"
-                          }`}
-                          title={
-                            actionsLocked
-                              ? t("adminUsersPage.table.lockedTitle")
-                              : t("adminUsersPage.table.delete")
-                          }
-                          disabled={actionsLocked}
-                        >
-                          🗑️
-                        </button>
+                      <td className="px-4 py-2">
+                        <AdminRowActions
+                          className="gap-3"
+                          actions={[
+                            {
+                              key: "edit",
+                              label: t("adminUsersPage.table.edit"),
+                              onClick: () => handleEdit(u),
+                              disabled: actionsLocked,
+                              title: actionsLocked
+                                ? t("adminUsersPage.table.lockedTitle")
+                                : t("adminUsersPage.table.edit"),
+                              buttonClassName: actionsLocked
+                                ? "text-text-muted cursor-not-allowed"
+                                : "app-link-warning",
+                            },
+                            {
+                              key: "reset",
+                              label: t("adminUsersPage.table.resetPassword"),
+                              onClick: () => openResetPanel(u),
+                              disabled: actionsLocked,
+                              title: actionsLocked
+                                ? t("adminUsersPage.table.lockedTitle")
+                                : t("adminUsersPage.table.resetPassword"),
+                              buttonClassName: actionsLocked
+                                ? "text-text-muted cursor-not-allowed"
+                                : "app-link-primary",
+                            },
+                            {
+                              key: "delete",
+                              label: t("adminUsersPage.table.delete"),
+                              onClick: () => handleDelete(u),
+                              disabled: actionsLocked,
+                              title: actionsLocked
+                                ? t("adminUsersPage.table.lockedTitle")
+                                : t("adminUsersPage.table.delete"),
+                              buttonClassName: actionsLocked
+                                ? "text-text-muted cursor-not-allowed"
+                                : "app-link-danger",
+                            },
+                          ]}
+                        />
 
                         {actionsLocked && (
-                          <span className="text-[11px] text-gray-400">
+                          <span className="text-[11px] text-text-muted">
                             {t("adminUsersPage.table.protected")}
                           </span>
                         )}
@@ -1030,88 +1012,90 @@ export default function AdminUsersPage() {
               </tbody>
             </table>
 
-            <p className="text-xs text-gray-500 mt-4">
+            <p className="text-xs text-text-muted mt-4">
               {t("adminUsersPage.table.results", { count: filtered.length })}
             </p>
           </div>
         )}
 
         {resetTarget && (
-          <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50/40 p-5">
+          <div className="mt-8 rounded-2xl app-alert app-alert-info p-5">
             <div className="flex items-center justify-between gap-3 mb-4">
-              <h2 className="text-lg font-semibold text-slate-900">
+              <h2 className="text-lg font-semibold text-text-primary">
                 {t("adminUsersPage.resetPanel.title")}{" "}
-                <span className="text-sm font-normal text-slate-600">
+                <span className="text-sm font-normal text-text-secondary">
                   ({resetTarget.email})
                 </span>
               </h2>
               <button
                 type="button"
                 onClick={closeResetPanel}
-                className="px-3 py-1.5 rounded-full bg-slate-200 hover:bg-slate-300 text-sm"
+                className="px-3 py-1.5 rounded-full app-btn-soft text-sm"
               >
                 {t("adminUsersPage.resetPanel.close")}
               </button>
             </div>
 
-            <form onSubmit={submitManualReset} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input
-                type="password"
-                value={resetPasswordForm.newPassword}
-                onChange={(e) =>
-                  setResetPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
-                }
-                placeholder={t("adminUsersPage.resetPanel.newPassword")}
-                className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
-                minLength={8}
-                required
-              />
-              <input
-                type="password"
-                value={resetPasswordForm.confirmPassword}
-                onChange={(e) =>
-                  setResetPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
-                }
-                placeholder={t("adminUsersPage.resetPanel.confirmPassword")}
-                className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
-                minLength={8}
-                required
-              />
-              <input
-                type="text"
-                value={resetPasswordForm.reason}
-                onChange={(e) =>
-                  setResetPasswordForm((prev) => ({ ...prev, reason: e.target.value }))
-                }
-                placeholder={t("adminUsersPage.resetPanel.reason")}
-                className="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#0a84ff]"
-              />
-              <div className="md:col-span-2 flex justify-end">
+            <AdminFormPanel onSubmit={submitManualReset} className="md:grid-cols-2 gap-3 bg-transparent border-0 shadow-none p-0">
+              <AdminField label={t("adminUsersPage.resetPanel.newPassword")}>
+                <input
+                  type="password"
+                  value={resetPasswordForm.newPassword}
+                  onChange={(e) =>
+                    setResetPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
+                  }
+                  placeholder={t("adminUsersPage.resetPanel.newPassword")}
+                  className="app-input"
+                  minLength={8}
+                  required
+                />
+              </AdminField>
+              <AdminField label={t("adminUsersPage.resetPanel.confirmPassword")}>
+                <input
+                  type="password"
+                  value={resetPasswordForm.confirmPassword}
+                  onChange={(e) =>
+                    setResetPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                  }
+                  placeholder={t("adminUsersPage.resetPanel.confirmPassword")}
+                  className="app-input"
+                  minLength={8}
+                  required
+                />
+              </AdminField>
+              <AdminField label={t("adminUsersPage.resetPanel.reason")} className="md:col-span-2">
+                <input
+                  type="text"
+                  value={resetPasswordForm.reason}
+                  onChange={(e) =>
+                    setResetPasswordForm((prev) => ({ ...prev, reason: e.target.value }))
+                  }
+                  placeholder={t("adminUsersPage.resetPanel.reason")}
+                  className="app-input"
+                />
+              </AdminField>
+              <AdminActionsRow className="md:col-span-2 justify-end">
                 <button
                   type="submit"
                   disabled={resetLoading}
-                  className={`px-5 py-2 rounded-full text-sm font-medium text-white ${
-                    resetLoading
-                      ? "bg-blue-300 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  }`}
+                  className="app-btn-primary px-5 py-2 rounded-full text-sm font-medium text-white"
                 >
                   {resetLoading
                     ? t("adminUsersPage.resetPanel.submitting")
                     : t("adminUsersPage.resetPanel.submit")}
                 </button>
-              </div>
-            </form>
+              </AdminActionsRow>
+            </AdminFormPanel>
 
             <div className="mt-5">
-              <h3 className="text-sm font-semibold text-slate-800 mb-2">
+              <h3 className="text-sm font-semibold text-text-primary mb-2">
                 {t("adminUsersPage.resetPanel.auditTitle")}
               </h3>
 
               {resetAuditLoading ? (
-                <p className="text-xs text-slate-500">{t("adminUsersPage.loading")}</p>
+                <p className="text-xs text-text-muted">{t("adminUsersPage.loading")}</p>
               ) : resetAudit.length === 0 ? (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-text-muted">
                   {t("adminUsersPage.resetPanel.auditEmpty")}
                 </p>
               ) : (
@@ -1125,17 +1109,17 @@ export default function AdminUsersPage() {
                     return (
                       <div
                         key={item.id}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2"
+                        className="rounded-xl border border-border bg-surface-card px-3 py-2"
                       >
-                        <p className="text-xs text-slate-700">
+                        <p className="text-xs text-text-secondary">
                           <strong>{formatDateTime(item.createdAt)}</strong> · {actorLabel}
                         </p>
                         {item?.metadata?.reason ? (
-                          <p className="text-xs text-slate-600 mt-1">
+                          <p className="text-xs text-text-secondary mt-1">
                             {t("adminUsersPage.resetPanel.reasonLabel")} {item.metadata.reason}
                           </p>
                         ) : null}
-                        <p className="text-[11px] text-slate-500 mt-1">
+                        <p className="text-[11px] text-text-muted mt-1">
                           {t("adminUsersPage.resetPanel.revokedSessions", {
                             count: Number(item?.metadata?.revokedSessions || 0),
                           })}
@@ -1152,4 +1136,9 @@ export default function AdminUsersPage() {
     </div>
   );
 }
+
+
+
+
+
 

@@ -56,7 +56,7 @@ function getInitials(value) {
   if (!value) return "?";
   const base = String(value).split("@")[0];
   const cleaned = base.replace(/[^a-zA-ZÀ-ÿ0-9 ]/g, " ").trim();
-  if (!cleaned) return "?";
+
   const parts = cleaned.split(/\s+/).filter(Boolean);
   if (parts.length === 1) {
     return parts[0].slice(0, 2).toUpperCase();
@@ -67,13 +67,13 @@ function getInitials(value) {
 function roleBadgeClass(role) {
   switch (role) {
     case "admin":
-      return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30";
     case "agent":
-      return "bg-sky-100 text-sky-700 border-sky-200";
+      return "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30";
     case "client":
-      return "bg-amber-100 text-amber-700 border-amber-200";
+      return "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30";
     default:
-      return "bg-gray-100 text-gray-600 border-gray-200";
+      return "bg-surface-main/80 text-text-secondary border-border";
   }
 }
 
@@ -145,8 +145,8 @@ export default function ActivityCenterPage() {
           : { page, limit: pageSize, total: 0 }
       );
     } catch (e) {
-      console.error("❌ load activities:", e);
-      setItems([]);
+      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ load activities:", e);
+      console.error("Error load activities:", e);
       setPagination({ page, limit: pageSize, total: 0 });
     } finally {
       setLoading(false);
@@ -180,23 +180,23 @@ export default function ActivityCenterPage() {
   const entityMeta = useMemo(
     () => ({
       service: {
-        icon: "🛠️",
+        icon: "[S]",
         label: t("activities.entities.service"),
         statusCategory: "service",
       },
       task: {
-        icon: "📋",
+        icon: "[T]",
         label: t("activities.entities.task"),
         statusCategory: "task",
       },
       order: {
-        icon: "🧾",
+        icon: "[O]",
         label: t("activities.entities.order"),
         statusCategory: "order",
       },
-      evidence: { icon: "📎", label: t("activities.entities.evidence") },
+      evidence: { icon: "[E]", label: t("activities.entities.evidence") },
       project: {
-        icon: "📁",
+        icon: "[P]",
         label: t("activities.entities.project"),
         statusCategory: "project",
       },
@@ -207,12 +207,12 @@ export default function ActivityCenterPage() {
   const progressBadge = useCallback((value) => {
     switch (value) {
       case "done":
-        return "bg-emerald-100 text-emerald-700 border-emerald-200";
+        return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30";
       case "in_progress":
-        return "bg-amber-100 text-amber-700 border-amber-200";
+        return "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30";
       case "new":
       default:
-        return "bg-blue-100 text-blue-700 border-blue-200";
+        return "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30";
     }
   }, []);
 
@@ -245,7 +245,7 @@ export default function ActivityCenterPage() {
               {t("activities.kicker")}
             </p>
             <h1 className="app-page-headline">
-              ✨ {t("activities.title")}
+              {t("activities.title")}
             </h1>
             <p className="app-page-subtitle">
               {t("activities.subtitle")}
@@ -259,7 +259,7 @@ export default function ActivityCenterPage() {
             <select
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
-              className="rounded-lg border border-border/80 bg-white px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
+              className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
             >
               {ENTITY_OPTIONS.map((opt) => (
                 <option key={opt.value || "all"} value={opt.value}>
@@ -270,7 +270,7 @@ export default function ActivityCenterPage() {
             <select
               value={action}
               onChange={(e) => setAction(e.target.value)}
-              className="rounded-lg border border-border/80 bg-white px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
+              className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
             >
               {ACTION_OPTIONS.map((opt) => (
                 <option key={opt.value || "all"} value={opt.value}>
@@ -281,7 +281,7 @@ export default function ActivityCenterPage() {
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="rounded-lg border border-border/80 bg-white px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
+              className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
             >
               {DATE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -298,7 +298,7 @@ export default function ActivityCenterPage() {
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="rounded-lg border border-border/80 bg-white px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
+                  className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
                 />
                 <label className="app-toolbar-pill">
                   {t("activities.filters.to")}
@@ -307,7 +307,7 @@ export default function ActivityCenterPage() {
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="rounded-lg border border-border/80 bg-white px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
+                  className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
                 />
               </div>
             ) : null}
@@ -320,7 +320,7 @@ export default function ActivityCenterPage() {
         </div>
 
         {dateError ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 font-semibold">
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 font-semibold">
             {dateError}
           </div>
         ) : null}
@@ -362,18 +362,18 @@ export default function ActivityCenterPage() {
           ].join(" ")}
         >
           {loading ? (
-            <div className="rounded-2xl border border-border/70 bg-white/70 py-10 text-center text-sm text-text-secondary">
+            <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
               {t("activities.loading")}
             </div>
           ) : items.length === 0 ? (
-            <div className="rounded-2xl border border-border/70 bg-white/70 py-10 text-center text-sm text-text-secondary">
+            <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
               {t("activities.empty")}
             </div>
           ) : (
             <div className="grid gap-4">
               {items.map((n) => {
                 const meta = entityMeta[n.entityType] || {
-                  icon: "✨",
+                  icon: "[?]",
                   label: t("activities.entities.other"),
                 };
                 const createdLabel = n.createdAt ? formatDate(n.createdAt) : "-";
@@ -383,7 +383,7 @@ export default function ActivityCenterPage() {
                 });
                 const entityTitle = n?.metadata?.title || n?.metadata?.code || null;
                 const title = entityTitle
-                  ? `${meta.label} • ${entityTitle}`
+                  ? `${meta.label} - ${entityTitle}`
                   : `${meta.label}`;
                 const statusLabel =
                   n.entityStatus && meta.statusCategory
@@ -433,7 +433,7 @@ export default function ActivityCenterPage() {
                           <h3 className="text-sm font-semibold text-text-primary sm:text-base">
                             {title}
                           </h3>
-                          <span className="rounded-full border border-border/80 bg-slate-100 px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-text-secondary">
+                          <span className="rounded-full border border-border/80 bg-surface-main/80 px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-text-secondary">
                             {meta.label}
                           </span>
                           <span
@@ -445,7 +445,7 @@ export default function ActivityCenterPage() {
                             {t(`activities.progress.${n.progress || "new"}`)}
                           </span>
                           {actionLabel ? (
-                            <span className="rounded-full border border-indigo-200 bg-indigo-100 px-2 py-0.5 text-[0.6rem] uppercase tracking-wide text-indigo-700">
+                            <span className="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5 text-[0.6rem] uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
                               {actionLabel}
                             </span>
                           ) : null}
@@ -456,7 +456,7 @@ export default function ActivityCenterPage() {
                         <p className="mt-2 text-[0.7rem] text-text-muted">
                           {createdLabel}
                           {actorName
-                            ? ` • ${t("activities.by", { name: actorName })}`
+                            ? ` - ${t("activities.by", { name: actorName })}`
                             : ""}
                         </p>
                       </div>
@@ -468,10 +468,10 @@ export default function ActivityCenterPage() {
                           {actorInitials}
                         </div>
                         <div>
-                          <div className="text-[0.6rem] uppercase tracking-wide text-gray-500">
+                          <div className="text-[0.6rem] uppercase tracking-wide text-text-muted">
                             {t("activities.actor.label")}
                           </div>
-                          <div className="text-xs font-semibold text-gray-800 max-w-[160px] truncate">
+                          <div className="text-xs font-semibold text-text-primary max-w-[160px] truncate">
                             {actorLabel}
                           </div>
                           {actorRoleLabel ? (
@@ -492,7 +492,7 @@ export default function ActivityCenterPage() {
                         className={[
                           "rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm",
                           isDateRangeInvalid
-                            ? "cursor-not-allowed bg-gray-200 text-gray-500"
+                            ? "cursor-not-allowed bg-surface-main/80 text-text-muted"
                             : "app-btn-primary",
                         ].join(" ")}
                       >
@@ -509,3 +509,5 @@ export default function ActivityCenterPage() {
     </div>
   );
 }
+
+

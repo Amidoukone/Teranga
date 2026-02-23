@@ -39,9 +39,9 @@ export default function FinanceWidget({ role }) {
     : t('financeWidget.title');
 
   return (
-    <div className="bg-white/90 border border-slate-200/80 rounded-2xl shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] p-5 mb-8">
-      <h2 className="text-lg sm:text-xl font-semibold mb-4 text-slate-900 tracking-tight flex items-center gap-2">
-        <Landmark size={18} className="text-slate-500" />
+    <div className="bg-surface-card/90 border border-border/80 rounded-2xl shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] p-5 mb-8">
+      <h2 className="text-lg sm:text-xl font-semibold mb-4 text-text-primary tracking-tight flex items-center gap-2">
+        <Landmark size={18} className="text-text-muted" />
         {title}
       </h2>
       <div style={{ width: '100%', height: 280 }}>
@@ -66,3 +66,5 @@ export default function FinanceWidget({ role }) {
     </div>
   );
 }
+
+

@@ -12,17 +12,25 @@ import { me } from "../services/auth";
 import { normalizeRole, isGlobalAdminUser, isMasterUser } from "../utils/role";
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
+import {
+  AdminActionsRow,
+  AdminField,
+  AdminFormPanel,
+  AdminPageHeader,
+  AdminPanelCard,
+  AdminRowActions,
+} from "../components/admin/AdminFormUi";
 
 /*
 ============================================================================
-📂 AdminCategoriesPage — Apple Light Premium A1 (Multi-pays + MASTER safe)
+ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ AdminCategoriesPage ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â Apple Light Premium A1 (Multi-pays + MASTER safe)
 ============================================================================
-✅ Objectif:
-- Garder 100% des fonctionnalités existantes (CRUD + recherche + anti double-submit)
-- Ajouter une compatibilité "master" multi-pays sans casser la prod
+ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Objectif:
+- Garder 100% des fonctionnalitÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©s existantes (CRUD + recherche + anti double-submit)
+- Ajouter une compatibilitÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© "master" multi-pays sans casser la prod
   - master explicite: user.role === "master"
   - master implicite: user.role === "admin" + (countryId/regionId) => admin scoped
-- Ne rien imposer au backend (on reste rétro-compatible)
+- Ne rien imposer au backend (on reste rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©tro-compatible)
 - Ne pas casser tes services (getCategories/create/update/delete)
 ============================================================================
 */
@@ -49,9 +57,9 @@ export default function AdminCategoriesPage() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [saving, setSaving] = useState(false); // 🔒 anti double-submit
+  const [saving, setSaving] = useState(false); // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ anti double-submit
 
-  // ✅ Ajout: état d'erreur UI (n'enlève rien, remplace juste certains alert)
+  // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Ajout: ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©tat d'erreur UI (n'enlÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¨ve rien, remplace juste certains alert)
   const [errorMsg, setErrorMsg] = useState("");
 
   const [form, setForm] = useState({
@@ -61,12 +69,12 @@ export default function AdminCategoriesPage() {
 
   const [search, setSearch] = useState("");
 
-  // ✅ Flags: n’impacte pas le fonctionnement, juste l’UX/affichage
+  // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Flags: nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢impacte pas le fonctionnement, juste lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢UX/affichage
   const isMaster = useMemo(() => computeIsMaster(user), [user]);
   const canWrite = useMemo(() => isGlobalAdminUser(user), [user]);
 
   /* ============================================================
-     🔄 Initialisation (inchangé fonctionnellement)
+     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Initialisation (inchangÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© fonctionnellement)
   ============================================================ */
   useEffect(() => {
     let mounted = true;
@@ -87,7 +95,7 @@ export default function AdminCategoriesPage() {
         setUser(current);
         await loadCategories();
       } catch (err) {
-        console.error("❌ init AdminCategoriesPage:", err);
+        console.error("init AdminCategoriesPage:", err);
         if (!mounted) return;
         setErrorMsg(t("adminCategoriesPage.errors.sessionLoad"));
       }
@@ -108,7 +116,7 @@ export default function AdminCategoriesPage() {
       const cats = await getCategories();
       setCategories(cats || []);
     } catch (err) {
-      console.error("❌ loadCategories:", err);
+      console.error("loadCategories:", err);
       setErrorMsg(t("adminCategoriesPage.errors.load"));
       notify(t("adminCategoriesPage.errors.load"));
     } finally {
@@ -117,7 +125,7 @@ export default function AdminCategoriesPage() {
   }
 
   /* ============================================================
-     🧹 Reset form (inchangé)
+     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹ Reset form (inchangÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©)
   ============================================================ */
   function resetForm() {
     setForm({ name: "", description: "" });
@@ -125,7 +133,7 @@ export default function AdminCategoriesPage() {
   }
 
   /* ============================================================
-     💾 Submit — avec verrou 'saving' (inchangé + guard write)
+     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾ Submit ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â avec verrou 'saving' (inchangÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© + guard write)
   ============================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
@@ -135,7 +143,7 @@ export default function AdminCategoriesPage() {
       return;
     }
 
-    if (saving) return; // 🔒 empêche double-clic si la requête est en cours
+    if (saving) return; // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ empÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªche double-clic si la requÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªte est en cours
 
     if (!form.name.trim()) {
       notify(t("adminCategoriesPage.errors.nameRequired"));
@@ -158,7 +166,7 @@ export default function AdminCategoriesPage() {
       await loadCategories();
       setShowForm(false);
     } catch (err) {
-      console.error("❌ handleSubmit:", err);
+      console.error("handleSubmit:", err);
       setErrorMsg(t("adminCategoriesPage.errors.save"));
       notify(t("adminCategoriesPage.errors.save"));
     } finally {
@@ -167,7 +175,7 @@ export default function AdminCategoriesPage() {
   }
 
   /* ============================================================
-     🗑 Suppression (inchangé + guard write)
+     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¹Ã…â€œ Suppression (inchangÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© + guard write)
   ============================================================ */
   async function handleDelete(id) {
     if (!canWrite) {
@@ -183,14 +191,14 @@ export default function AdminCategoriesPage() {
       await deleteCategory(id);
       await loadCategories();
     } catch (err) {
-      console.error("❌ deleteCategory:", err);
+      console.error("deleteCategory:", err);
       setErrorMsg(t("adminCategoriesPage.errors.delete"));
       notify(t("adminCategoriesPage.errors.delete"));
     }
   }
 
   /* ============================================================
-     🔎 Filtrage simple par nom (inchangé)
+     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ Filtrage simple par nom (inchangÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©)
   ============================================================ */
   const filteredCategories = categories.filter((c) => {
     const term = search.trim().toLowerCase();
@@ -199,12 +207,12 @@ export default function AdminCategoriesPage() {
   });
 
   /* ============================================================
-     🧱 UI LOADING GLOBAL (user) (inchangé)
+     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± UI LOADING GLOBAL (user) (inchangÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©)
   ============================================================ */
   if (!user) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <p className="text-gray-600 text-lg animate-pulse">
+      <div className="flex justify-center items-center min-h-screen bg-surface-main">
+        <p className="text-text-secondary text-lg animate-pulse">
           {t("adminCategoriesPage.loading")}
         </p>
       </div>
@@ -216,19 +224,18 @@ export default function AdminCategoriesPage() {
 // (suite) frontend/src/pages/AdminCategoriesPage.jsx
 
   /* ============================================================
-     🧱 RENDER PRINCIPAL (conserve toute la structure + ajoute badges/guards)
+     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± RENDER PRINCIPAL (conserve toute la structure + ajoute badges/guards)
   ============================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/40 to-white px-4 py-10">
-      <div className="max-w-5xl mx-auto bg-white shadow-lg shadow-slate-200/40 rounded-3xl p-8 border border-slate-200">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-10">
+      <div className="max-w-5xl mx-auto bg-surface-card shadow-lg shadow-slate-200/40 rounded-3xl p-8 border border-border">
         {/* HEADER */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
-              📂 <span>{t("adminCategoriesPage.title")}</span>
-            </h1>
-
-            <p className="text-sm text-slate-600 mt-1 flex flex-wrap items-center gap-2">
+        <AdminPageHeader
+          className="items-center"
+          title={t("adminCategoriesPage.title")}
+          titleClassName="text-3xl"
+          subtitle={
+            <span className="flex flex-wrap items-center gap-2">
               <span>
                 {t("adminCategoriesPage.labels.connectedAs", {
                   email: user.email,
@@ -236,104 +243,100 @@ export default function AdminCategoriesPage() {
                 })}
               </span>
 
-              {/* ✅ Badge master/admin scoped (n'impacte pas les fonctions) */}
               {isMaster && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.7rem] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                <span className="app-badge app-badge-success text-[0.7rem]">
                   {t("adminCategoriesPage.badges.master")}
                 </span>
               )}
 
-              {/* ✅ Lecture seule si pas admin/master */}
               {!canWrite && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.7rem] font-semibold border bg-amber-50 text-amber-700 border-amber-200">
+                <span className="app-badge app-badge-warning text-[0.7rem]">
                   {t("adminCategoriesPage.badges.readOnly")}
                 </span>
               )}
-            </p>
-
-            {/* ✅ Optionnel: info scope si présent (safe) */}
-            {(isTruthyId(user.countryId) || isTruthyId(user.regionId)) && (
-              <p className="text-xs text-slate-500 mt-2">
+            </span>
+          }
+          subtitleClassName="mt-1 text-sm text-text-secondary"
+          meta={
+            (isTruthyId(user.countryId) || isTruthyId(user.regionId)) && (
+              <p className="text-xs text-text-muted mt-2">
                 {t("adminCategoriesPage.labels.scope")}{" "}
                 {isTruthyId(user.regionId)
                   ? t("adminCategoriesPage.labels.regionId", { id: user.regionId })
                   : t("adminCategoriesPage.labels.countryId", { id: user.countryId })}
               </p>
-            )}
-          </div>
+            )
+          }
+          actions={
+            <>
+              <button
+                onClick={() => {
+                  if (!canWrite) {
+                    notify(t("adminCategoriesPage.errors.forbidden"));
+                    return;
+                  }
+                  if (showForm) resetForm();
+                  setShowForm((v) => !v);
+                }}
+                disabled={!canWrite}
+                className={`px-4 py-2 text-sm font-semibold rounded-xl shadow-sm transition ${
+                  canWrite
+                    ? "app-btn-neutral"
+                    : "bg-surface-main/80 text-text-muted cursor-not-allowed"
+                }`}
+              >
+                {showForm
+                  ? t("adminCategoriesPage.buttons.hideForm")
+                  : t("adminCategoriesPage.buttons.showForm")}
+              </button>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => {
-                if (!canWrite) {
-                  notify(t("adminCategoriesPage.errors.forbidden"));
-                  return;
-                }
-                if (showForm) resetForm();
-                setShowForm((v) => !v);
-              }}
-              disabled={!canWrite}
-              className={`px-4 py-2 text-sm font-semibold rounded-xl shadow-sm transition ${
-                canWrite
-                  ? "bg-slate-900 text-white hover:bg-slate-800"
-                  : "bg-slate-200 text-slate-500 cursor-not-allowed"
-              }`}
-            >
-              {showForm
-                ? t("adminCategoriesPage.buttons.hideForm")
-                : t("adminCategoriesPage.buttons.showForm")}
-            </button>
+              <button
+                onClick={loadCategories}
+                disabled={loading}
+                className="app-btn-primary px-4 py-2 text-sm font-semibold rounded-xl shadow-sm"
+              >
+                {loading
+                  ? t("adminCategoriesPage.loading")
+                  : t("adminCategoriesPage.buttons.refresh")}
+              </button>
+            </>
+          }
+        />
 
-            <button
-              onClick={loadCategories}
-              disabled={loading}
-              className={`px-4 py-2 text-sm font-semibold rounded-xl shadow-sm text-white transition ${
-                loading
-                  ? "bg-blue-300 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-              }`}
-            >
-              {loading
-                ? t("adminCategoriesPage.loading")
-                : t("adminCategoriesPage.buttons.refresh")}
-            </button>
-          </div>
-        </div>
-
-        {/* ✅ Message d’erreur (nouveau, sans enlever les alert existants) */}
+        {/* ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Message dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢erreur (nouveau, sans enlever les alert existants) */}
         {errorMsg && (
-          <div className="mb-6 rounded-2xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700 flex gap-2 items-start">
-            <span className="mt-[2px]">⚠️</span>
+          <div className="app-alert app-alert-error mb-6 flex gap-2 items-start">
+            <span className="mt-[2px]">!</span>
             <p className="break-words">{errorMsg}</p>
           </div>
         )}
 
         {/* BARRE DE RECHERCHE */}
-        <div className="mb-6">
+        <AdminPanelCard className="mb-6 bg-surface-main/70 p-3">
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              🔍
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
+              /
             </span>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("adminCategoriesPage.searchPlaceholder")}
-              className="w-full pl-10 pr-3 py-2 rounded-xl border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-blue-500"
+              className="app-input w-full pl-10 pr-3 bg-surface-main"
             />
           </div>
-        </div>
+        </AdminPanelCard>
 
         {/* FORMULAIRE */}
         {showForm && (
-          <form
+          <AdminFormPanel
             onSubmit={handleSubmit}
-            className="mb-10 grid grid-cols-1 gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm animate-fadeIn"
+            className="mb-10 animate-fadeIn"
           >
             {/* Nom */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-slate-800">
-                {t("adminCategoriesPage.form.nameLabel")}
-              </label>
+            <AdminField
+              label={t("adminCategoriesPage.form.nameLabel")}
+              labelClassName="text-sm font-medium text-text-primary"
+            >
               <input
                 type="text"
                 placeholder={t("adminCategoriesPage.form.namePlaceholder")}
@@ -341,17 +344,15 @@ export default function AdminCategoriesPage() {
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
                 disabled={!canWrite}
-                className={`w-full border rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  canWrite ? "border-slate-300" : "border-slate-200 opacity-70"
-                }`}
+                className={`app-input ${canWrite ? "" : "opacity-70"}`}
               />
-            </div>
+            </AdminField>
 
             {/* Description */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-slate-800">
-                {t("adminCategoriesPage.form.descriptionLabel")}
-              </label>
+            <AdminField
+              label={t("adminCategoriesPage.form.descriptionLabel")}
+              labelClassName="text-sm font-medium text-text-primary"
+            >
               <textarea
                 placeholder={t("adminCategoriesPage.form.descriptionPlaceholder")}
                 rows={3}
@@ -360,14 +361,12 @@ export default function AdminCategoriesPage() {
                   setForm({ ...form, description: e.target.value })
                 }
                 disabled={!canWrite}
-                className={`w-full border rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y ${
-                  canWrite ? "border-slate-300" : "border-slate-200 opacity-70"
-                }`}
+                className={`app-input resize-y ${canWrite ? "" : "opacity-70"}`}
               ></textarea>
-            </div>
+            </AdminField>
 
             {/* Actions */}
-            <div className="text-right mt-2 flex flex-wrap justify-end gap-2">
+            <AdminActionsRow className="mt-2 justify-end text-right">
               {editing && (
                 <button
                   type="button"
@@ -375,7 +374,7 @@ export default function AdminCategoriesPage() {
                     resetForm();
                     setShowForm(false);
                   }}
-                  className="px-5 py-2.5 text-sm font-semibold rounded-xl shadow-sm bg-slate-200 text-slate-700 hover:bg-slate-300 transition"
+                  className="px-5 py-2.5 text-sm font-semibold rounded-xl shadow-sm bg-surface-main/80 text-text-secondary hover:bg-surface-main transition"
                 >
                   {t("adminCategoriesPage.buttons.cancel")}
                 </button>
@@ -384,12 +383,7 @@ export default function AdminCategoriesPage() {
               <button
                 type="submit"
                 disabled={saving || !canWrite}
-                className={`px-5 py-2.5 text-sm font-semibold rounded-xl shadow-sm text-white transition
-                  ${
-                    saving || !canWrite
-                      ? "bg-blue-300 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-                  }`}
+                className="app-btn-primary px-5 py-2.5 text-sm font-semibold rounded-xl shadow-sm"
               >
                 {saving
                   ? t("adminCategoriesPage.buttons.saving")
@@ -397,17 +391,17 @@ export default function AdminCategoriesPage() {
                   ? t("adminCategoriesPage.buttons.update")
                   : t("adminCategoriesPage.buttons.create")}
               </button>
-            </div>
-          </form>
+            </AdminActionsRow>
+          </AdminFormPanel>
         )}
 
-        {/* LISTE DES CATÉGORIES */}
+        {/* LISTE DES CATÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°GORIES */}
         {loading && categories.length === 0 ? (
-          <p className="text-slate-500 italic text-center py-8">
+          <p className="text-text-muted italic text-center py-8">
             {t("adminCategoriesPage.loadingCategories")}
           </p>
         ) : filteredCategories.length === 0 ? (
-          <p className="text-slate-500 italic text-center py-8">
+          <p className="text-text-muted italic text-center py-8">
             {t("adminCategoriesPage.empty")}
           </p>
         ) : (
@@ -415,55 +409,54 @@ export default function AdminCategoriesPage() {
             {filteredCategories.map((c) => (
               <div
                 key={c.id}
-                className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 hover:shadow-md transition"
+                className="bg-surface-card border border-border rounded-2xl shadow-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface-main hover:shadow-md transition"
               >
-                {/* Infos catégorie */}
+                {/* Infos catÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©gorie */}
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base sm:text-lg font-semibold text-slate-900 break-words">
+                  <h3 className="text-base sm:text-lg font-semibold text-text-primary break-words">
                     {c.name}
                   </h3>
-                  <p className="text-sm text-slate-600 mt-1 break-words">
+                  <p className="text-sm text-text-secondary mt-1 break-words">
                     {c.description || t("adminCategoriesPage.table.emptyValue")}
                   </p>
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-2 sm:flex-nowrap justify-end">
-                  <button
-                    onClick={() => {
-                      if (!canWrite) {
-                        notify(t("adminCategoriesPage.errors.forbidden"));
-                        return;
-                      }
-                      setForm({
-                        name: c.name || "",
-                        description: c.description || "",
-                      });
-                      setEditing(c);
-                      setShowForm(true);
-                    }}
-                    disabled={!canWrite}
-                    className={`px-3 py-1.5 text-xs sm:text-sm rounded-xl transition shadow-sm ${
-                      canWrite
-                        ? "bg-amber-500 text-white hover:bg-amber-600"
-                        : "bg-amber-200 text-amber-700 cursor-not-allowed"
-                    }`}
-                  >
-                    {t("adminCategoriesPage.table.edit")}
-                  </button>
-
-                  <button
-                    onClick={() => handleDelete(c.id)}
-                    disabled={!canWrite}
-                    className={`px-3 py-1.5 text-xs sm:text-sm rounded-xl transition shadow-sm ${
-                      canWrite
-                        ? "bg-red-600 text-white hover:bg-red-700"
-                        : "bg-red-200 text-red-700 cursor-not-allowed"
-                    }`}
-                  >
-                    {t("adminCategoriesPage.table.delete")}
-                  </button>
-                </div>
+                <AdminRowActions
+                  className="justify-end sm:flex-nowrap"
+                  itemClassName="px-3 py-1.5 text-xs sm:text-sm rounded-xl shadow-sm"
+                  actions={[
+                    {
+                      key: "edit-category",
+                      label: t("adminCategoriesPage.table.edit"),
+                      onClick: () => {
+                        if (!canWrite) {
+                          notify(t("adminCategoriesPage.errors.forbidden"));
+                          return;
+                        }
+                        setForm({
+                          name: c.name || "",
+                          description: c.description || "",
+                        });
+                        setEditing(c);
+                        setShowForm(true);
+                      },
+                      disabled: !canWrite,
+                      buttonClassName: canWrite
+                        ? "app-btn-warning"
+                        : "app-btn-disabled-warning",
+                    },
+                    {
+                      key: "delete-category",
+                      label: t("adminCategoriesPage.table.delete"),
+                      onClick: () => handleDelete(c.id),
+                      disabled: !canWrite,
+                      buttonClassName: canWrite
+                        ? "app-btn-danger"
+                        : "app-btn-disabled-danger",
+                    },
+                  ]}
+                />
               </div>
             ))}
           </div>
@@ -472,4 +465,8 @@ export default function AdminCategoriesPage() {
     </div>
   );
 }
+
+
+
+
 

@@ -1,38 +1,40 @@
 // ============================================================================
-// App.js — Teranga Platform (Version Premium PRO 2025)
-// Navigation • Routage protégé • SEO dynamique • GA4 tracking
-// ✅ MASTER support (admin + geo scope) sans régression
-// ✅ 2026: AdminOnboardingPage (Pays → Régions → MASTER)
+// App.js Ã¢â‚¬â€ Teranga Platform (Version Premium PRO 2025)
+// Navigation Ã¢â‚¬Â¢ Routage protÃƒÂ©gÃƒÂ© Ã¢â‚¬Â¢ SEO dynamique Ã¢â‚¬Â¢ GA4 tracking
+// Ã¢Å“â€¦ MASTER support (admin + geo scope) sans rÃƒÂ©gression
+// Ã¢Å“â€¦ 2026: AdminOnboardingPage (Pays Ã¢â€ â€™ RÃƒÂ©gions Ã¢â€ â€™ MASTER)
 // ============================================================================
 
 import { useEffect, useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
 
 import NavBar from './components/NavBar';
 import Analytics from './components/Analytics';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import ErrorBoundary from './components/ErrorBoundary';
-import SetSeo from './components/SetSeo'; // ✅ Source unique SEO
+import SetSeo from './components/SetSeo'; // Ã¢Å“â€¦ Source unique SEO
 import ToastProvider from './components/ToastProvider';
 import ConfirmProvider from './components/ConfirmProvider';
 import { GeoProvider } from './contexts/GeoContext';
 import { getAnalyticsConsent, loadAnalytics } from './utils/analytics';
 import { installGlobalErrorHandlers } from './utils/errorReporter';
 
-// 🌐 Pages publiques
+// Ã°Å¸Å’Â Pages publiques
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProductCatalogPage from './pages/ProductCatalogPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 
-// 🧾 Pages légales
+// Ã°Å¸Â§Â¾ Pages lÃƒÂ©gales
 import LegalPage from './pages/LegalPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
+import SettingsPage from './pages/SettingsPage';
+import HelpSupportPage from './pages/HelpSupportPage';
 
-// 👥 Utilisateurs connectés
+// Ã°Å¸â€˜Â¥ Utilisateurs connectÃƒÂ©s
 import DashboardPage from './pages/DashboardPage';
 import PropertiesPage from './pages/PropertiesPage';
 import ServicesPage from './pages/ServicesPage';
@@ -45,14 +47,14 @@ import ChangePasswordPage from './pages/ChangePasswordPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ActivityCenterPage from './pages/ActivityCenterPage';
 
-// 🧱 Projets
+// Ã°Å¸Â§Â± Projets
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 
-// 👨‍💼 Agents
+// Ã°Å¸â€˜Â¨Ã¢â‚¬ÂÃ°Å¸â€™Â¼ Agents
 import AgentServicesPage from './pages/AgentServicesPage';
 
-// 👑 Admin
+// Ã°Å¸â€˜â€˜ Admin
 import AdminAgentsPage from './pages/AdminAgentsPage';
 import AdminServicesPage from './pages/AdminServicesPage';
 import AdminUsersPage from './pages/AdminUsersPage';
@@ -62,17 +64,17 @@ import AdminCategoriesPage from './pages/AdminCategoriesPage';
 import AdminProductsPage from './pages/AdminProductsPage';
 import AdminMetricsPage from './pages/AdminMetricsPage';
 
-// ✅ NEW: Onboarding Pays → Régions → MASTER
+// Ã¢Å“â€¦ NEW: Onboarding Pays Ã¢â€ â€™ RÃƒÂ©gions Ã¢â€ â€™ MASTER
 import AdminOnboardingPage from './pages/AdminOnboardingPage';
 
-// 🧾 Commerce
+// Ã°Å¸Â§Â¾ Commerce
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import OrderTransactionsPage from './pages/OrderTransactionsPage';
 
-// 🔐 Auth
+// Ã°Å¸â€Â Auth
 import { getToken, getLocalUser, me } from './services/auth';
-import { normalizeRole } from './utils/role'; // ✅ ensure roles are canonical (admin/agent/client)
+import { normalizeRole } from './utils/role'; // Ã¢Å“â€¦ ensure roles are canonical (admin/agent/client)
 
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
   .toLowerCase()
@@ -80,7 +82,7 @@ const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
 const USES_COOKIE_AUTH = AUTH_STORAGE_MODE === 'cookie';
 
 // ============================================================================
-// 🧭 Scroll automatique
+// Ã°Å¸Â§Â­ Scroll automatique
 // ============================================================================
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -97,16 +99,16 @@ function ScrollToTop() {
 }
 
 // ============================================================================
-// 🔐 Helpers Auth / Role (MASTER safe)
-// - IMPORTANT: "master" n'est pas un rôle backend.
+// Ã°Å¸â€Â Helpers Auth / Role (MASTER safe)
+// - IMPORTANT: "master" n'est pas un rÃƒÂ´le backend.
 //   Un MASTER = admin + (countryId || regionId)
-// - Donc côté routes : on garde allow=['admin'] pour les écrans admin.
+// - Donc cÃƒÂ´tÃƒÂ© routes : on garde allow=['admin'] pour les ÃƒÂ©crans admin.
 // ============================================================================
 function getSession() {
   const token = getToken();
   const user = getLocalUser();
 
-  // Rétro-compat: certains fronts stockent user mais pas token (ou inverse)
+  // RÃƒÂ©tro-compat: certains fronts stockent user mais pas token (ou inverse)
   const hasSession = USES_COOKIE_AUTH ? Boolean(user) : Boolean(token);
 
   const role = normalizeRole(user?.role);
@@ -120,7 +122,7 @@ function getSession() {
 }
 
 // ============================================================================
-// 🔐 Auth Guards
+// Ã°Å¸â€Â Auth Guards
 // ============================================================================
 function RequireAuth({ children }) {
   const location = useLocation();
@@ -134,7 +136,7 @@ function RequireAuth({ children }) {
 
 /**
  * RequireRole:
- * - compare avec role normalisé (admin/agent/client)
+ * - compare avec role normalisÃƒÂ© (admin/agent/client)
  * - IMPORTANT: un MASTER doit passer comme "admin"
  *   => allow=['admin'] reste correct
  */
@@ -146,7 +148,7 @@ function RequireRole({ allow = [], children }) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // Si allow vide => aucune restriction spécifique
+  // Si allow vide => aucune restriction spÃƒÂ©cifique
   if (allow.length === 0) return children;
 
   const normalizedAllow = Array.isArray(allow)
@@ -203,7 +205,7 @@ function PublicOnly({ children }) {
 }
 
 // ============================================================================
-// 🧩 App (Final)
+// Ã°Å¸Â§Â© App (Final)
 // ============================================================================
 export default function App() {
   const trackingId = 'G-5JVYGYHZ7Y';
@@ -231,7 +233,7 @@ export default function App() {
               <ScrollToTop />
               <NavBar />
 
-          {/* 📈 Google Analytics v4 — tracking automatique */}
+          {/* Ã°Å¸â€œË† Google Analytics v4 Ã¢â‚¬â€ tracking automatique */}
           <Analytics trackingId={trackingId} enabled={analyticsConsent === 'granted'} />
           <AnalyticsConsentBanner
             trackingId={trackingId}
@@ -243,7 +245,7 @@ export default function App() {
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
               <Routes>
             {/* ============================= */}
-            {/* 🌐 PAGES PUBLIQUES           */}
+            {/* Ã°Å¸Å’Â PAGES PUBLIQUES           */}
             {/* ============================= */}
             <Route
               path="/"
@@ -279,7 +281,7 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* 📄 PAGES LÉGALES             */}
+            {/* Ã°Å¸â€œâ€ž PAGES LÃƒâ€°GALES             */}
             {/* ============================= */}
             <Route
               path="/legal"
@@ -291,12 +293,16 @@ export default function App() {
               }
             />
 
-            {/* ❗ PrivacyPage et TermsPage gèrent déjà SetSeo en interne → pas ici */}
+            {/* Ã¢Ââ€” PrivacyPage et TermsPage gÃƒÂ¨rent dÃƒÂ©jÃƒÂ  SetSeo en interne Ã¢â€ â€™ pas ici */}
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
+            <Route
+              path="/help-support"
+              element={<HelpSupportPage />}
+            />
 
             {/* ============================= */}
-            {/* 🔐 AUTH PUBLIQUE             */}
+            {/* Ã°Å¸â€Â AUTH PUBLIQUE             */}
             {/* ============================= */}
             <Route
               path="/login"
@@ -380,7 +386,7 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* 👥 UTILISATEURS CONNECTÉS    */}
+            {/* Ã°Å¸â€˜Â¥ UTILISATEURS CONNECTÃƒâ€°S    */}
             {/* ============================= */}
             <Route
               path="/dashboard"
@@ -515,6 +521,18 @@ export default function App() {
             />
 
             <Route
+              path="/settings"
+              element={
+                <RequireAuth>
+                  <>
+                    <SetSeo title={t('seo.pages.settings.title')} />
+                    <SettingsPage />
+                  </>
+                </RequireAuth>
+              }
+            />
+
+            <Route
               path="/activities"
               element={
                 <RequireAuth>
@@ -539,7 +557,7 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* 🧾 COMMERCE — COMMANDES      */}
+            {/* Ã°Å¸Â§Â¾ COMMERCE Ã¢â‚¬â€ COMMANDES      */}
             {/* ============================= */}
             <Route
               path="/orders"
@@ -578,7 +596,7 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* ⚙️ AGENTS                   */}
+            {/* Ã¢Å¡â„¢Ã¯Â¸Â AGENTS                   */}
             {/* ============================= */}
             <Route
               path="/agent/services"
@@ -595,10 +613,10 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* 👑 ADMIN (inclut MASTER)     */}
+            {/* Ã°Å¸â€˜â€˜ ADMIN (inclut MASTER)     */}
             {/* ============================= */}
 
-            {/* ✅ NEW: Onboarding Pays → Régions → MASTER */}
+            {/* Ã¢Å“â€¦ NEW: Onboarding Pays Ã¢â€ â€™ RÃƒÂ©gions Ã¢â€ â€™ MASTER */}
             <Route
               path="/admin/onboarding"
               element={
@@ -726,7 +744,7 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* 🚧 ROUTE PAR DÉFAUT         */}
+            {/* Ã°Å¸Å¡Â§ ROUTE PAR DÃƒâ€°FAUT         */}
             {/* ============================= */}
             <Route
               path="*"
@@ -742,12 +760,30 @@ export default function App() {
           </main>
 
           {/* FOOTER */}
-          <footer className="border-t border-border/80 bg-white/70 py-4 text-center text-sm text-text-secondary backdrop-blur">
-            <Trans
-              i18nKey="footer.copyright"
-              values={{ year: new Date().getFullYear() }}
-              components={{ brand: <span className="font-semibold text-primary" /> }}
-            />
+          <footer className="border-t border-border/80 bg-surface-card/70 py-4 text-center text-sm text-text-secondary backdrop-blur">
+            <div className="mx-auto flex max-w-7xl flex-col items-center gap-2 px-4">
+              <div className="flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm">
+                <Link to="/help-support" className="text-text-secondary hover:text-text-primary">
+                  {t('footer.links.helpSupport')}
+                </Link>
+                <Link to="/privacy" className="text-text-secondary hover:text-text-primary">
+                  {t('footer.links.privacy')}
+                </Link>
+                <Link to="/terms" className="text-text-secondary hover:text-text-primary">
+                  {t('footer.links.terms')}
+                </Link>
+                <Link to="/legal" className="text-text-secondary hover:text-text-primary">
+                  {t('footer.links.legal')}
+                </Link>
+              </div>
+              <p className="max-w-full whitespace-nowrap text-xs sm:text-sm leading-none">
+                <Trans
+                  i18nKey="footer.copyright"
+                  values={{ year: new Date().getFullYear() }}
+                  components={{ brand: <span className="font-semibold text-primary" /> }}
+                />
+              </p>
+            </div>
           </footer>
             </div>
           </GeoProvider>
@@ -756,3 +792,5 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
+

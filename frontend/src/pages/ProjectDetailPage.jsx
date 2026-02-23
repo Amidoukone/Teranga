@@ -1,6 +1,6 @@
 // ============================================================
 // frontend/src/pages/ProjectDetailPage.jsx
-// Version Premium Responsive — MASTER SAFE — PARTIE 1 / 2
+// Version Premium Responsive ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â MASTER SAFE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PARTIE 1 / 2
 // ============================================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
@@ -31,7 +31,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 /* ============================================================
-   🌐 FILE_BASE + Helpers
+   ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â FILE_BASE + Helpers
 ============================================================ */
 const FILE_BASE =
   window.__TERANGA_FILE_BASE_URL || process.env.REACT_APP_FILE_BASE_URL || "";
@@ -140,7 +140,7 @@ function Badge({ color = "gray", children }) {
     green: "bg-emerald-100 text-emerald-800 ring-emerald-200",
     yellow: "bg-amber-100 text-amber-800 ring-amber-200",
     red: "bg-rose-100 text-rose-800 ring-rose-200",
-    gray: "bg-slate-100 text-slate-800 ring-slate-200",
+    gray: "bg-surface-main/80 text-text-primary ring-slate-200",
   };
   return (
     <span
@@ -154,11 +154,11 @@ function Badge({ color = "gray", children }) {
 function Btn({ variant = "primary", size = "md", children, className = "", ...props }) {
   const styles = {
     primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-400",
-    secondary: "bg-slate-100 text-slate-800 hover:bg-slate-200 focus:ring-slate-300",
+    secondary: "bg-surface-main/80 text-text-primary hover:bg-surface-main/80 focus:ring-primary/20",
     danger: "bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-400",
     warning: "bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-400",
     ghost:
-      "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 focus:ring-slate-400",
+      "bg-surface-card border border-border text-text-secondary hover:bg-surface-main focus:ring-primary/20",
   };
 
   const sizeClasses = {
@@ -184,10 +184,10 @@ function Btn({ variant = "primary", size = "md", children, className = "", ...pr
 }
 
 /* ============================================================
-   🧾 Auteur transaction
-   ✅ IMPORTANT : sera utilisé dans la table transactions (PARTIE 2)
+   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¾ Auteur transaction
+   ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ IMPORTANT : sera utilisÃƒÆ’Ã‚Â© dans la table transactions (PARTIE 2)
 ============================================================ */
-function getTransactionAuthorLabel(transaction, dashLabel = "—") {
+function getTransactionAuthorLabel(transaction, dashLabel = "-") {
   if (!transaction) return dashLabel;
 
   if (transaction.user) {
@@ -208,7 +208,7 @@ function getTransactionAuthorLabel(transaction, dashLabel = "—") {
 }
 
 /* ============================================================
-   💰 Formulaire transaction projet
+   ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Formulaire transaction projet
 ============================================================ */
 function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
   const { t } = useTranslation();
@@ -263,7 +263,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       });
       onSuccess?.();
     } catch (err) {
-      console.error("❌ Transaction error:", err);
+      console.error("Transaction error:", err);
       notify(
         err?.response?.data?.error ||
           t("projects.transaction.alerts.createError")
@@ -274,8 +274,8 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
   }
 
   return (
-    <div className="mb-6 bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm w-full max-w-full min-w-0">
-      <h4 className="text-sm font-semibold text-slate-700 mb-3">
+    <div className="mb-6 bg-surface-main border border-border rounded-2xl p-4 shadow-sm w-full max-w-full min-w-0">
+      <h4 className="text-sm font-semibold text-text-secondary mb-3">
         {t("projects.transaction.title")}
       </h4>
       <form
@@ -283,13 +283,13 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         className="grid grid-cols-1 sm:grid-cols-2 gap-3"
       >
         <div>
-          <label className="text-xs text-slate-600 font-medium mb-1 block">
+          <label className="text-xs text-text-secondary font-medium mb-1 block">
             {t("projects.transaction.typeLabel")}
           </label>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+            className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
           >
             <option value="expense">{t("transactions.type.expense")}</option>
             <option value="revenue">{t("transactions.type.revenue")}</option>
@@ -299,7 +299,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         </div>
 
         <div>
-          <label className="text-xs text-slate-600 font-medium mb-1 block">
+          <label className="text-xs text-text-secondary font-medium mb-1 block">
             {t("projects.transaction.amountLabel")}
           </label>
           <input
@@ -309,18 +309,18 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+            className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
           />
         </div>
 
         <div>
-          <label className="text-xs text-slate-600 font-medium mb-1 block">
+          <label className="text-xs text-text-secondary font-medium mb-1 block">
             {t("projects.transaction.currencyLabel")}
           </label>
           <select
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+            className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
           >
             {currencyOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -331,33 +331,33 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
         </div>
 
         <div>
-          <label className="text-xs text-slate-600 font-medium mb-1 block">
+          <label className="text-xs text-text-secondary font-medium mb-1 block">
             {t("projects.transaction.paymentMethodLabel")}
           </label>
           <input
             placeholder={t("projects.transaction.paymentMethodPlaceholder")}
             value={form.paymentMethod}
             onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+            className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
           />
         </div>
 
         {canSeeOrder && (
           <div className="sm:col-span-2">
-            <label className="text-xs text-slate-600 font-medium mb-1 block">
+            <label className="text-xs text-text-secondary font-medium mb-1 block">
               {t("projects.transaction.orderIdLabel")}
             </label>
             <input
               type="number"
               value={form.orderId}
               onChange={(e) => setForm({ ...form, orderId: e.target.value })}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-0"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm min-w-0"
             />
           </div>
         )}
 
         <div className="sm:col-span-2">
-          <label className="text-xs text-slate-600 font-medium mb-1 block">
+          <label className="text-xs text-text-secondary font-medium mb-1 block">
             {t("projects.transaction.descriptionLabel")}
           </label>
           <textarea
@@ -365,12 +365,12 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
             placeholder={t("projects.transaction.descriptionPlaceholder")}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+            className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
           />
         </div>
 
         <div className="sm:col-span-2">
-          <label className="text-xs text-slate-600 font-medium mb-1 block">
+          <label className="text-xs text-text-secondary font-medium mb-1 block">
             {t("projects.transaction.proofLabel")}
           </label>
           <input
@@ -379,7 +379,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
             onChange={(e) =>
               setForm({ ...form, proofFile: e.target.files?.[0] || null })
             }
-            className="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white w-full block min-w-0"
+            className="text-sm border border-border rounded-lg px-3 py-2 bg-surface-card w-full block min-w-0"
           />
         </div>
 
@@ -387,7 +387,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
           <Btn type="submit" variant="primary" disabled={saving}>
             {saving
             ? t("projects.transaction.saving")
-            : `💾 ${t("projects.transaction.save")}`}
+            : t("projects.transaction.save")}
           </Btn>
         </div>
       </form>
@@ -395,7 +395,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
   );
 }
 /* ============================================================
-   🧠 PAGE PRINCIPALE — ProjectDetailPage (PARTIE 2 / 2)
+   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â  PAGE PRINCIPALE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ProjectDetailPage (PARTIE 2 / 2)
 ============================================================ */
 export default function ProjectDetailPage() {
   const { formatNumber, formatDate, formatDateTime } = useLocale();
@@ -434,14 +434,14 @@ export default function ProjectDetailPage() {
 
   const [now, setNow] = useState(Date.now());
 
-  // refresh fenêtre client (1h)
+  // refresh fenÃƒÆ’Ã‚Âªtre client (1h)
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
 
   /* ============================================================
-     🔐 Roles & Permissions (MASTER SAFE)
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Roles & Permissions (MASTER SAFE)
   ============================================================ */
   const role = normalizeRole(user?.role);
   const isAdmin = role === "admin";
@@ -476,7 +476,7 @@ export default function ProjectDetailPage() {
   }, [clientCanModifyOrDelete, createdAtMs, now]);
 
   /* ============================================================
-     🔹 Load project (backend gère scope)
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Load project (backend gÃƒÆ’Ã‚Â¨re scope)
   ============================================================ */
   const loadProject = useCallback(async (pid) => {
     if (!pid) return;
@@ -495,7 +495,7 @@ export default function ProjectDetailPage() {
       setDocuments(docs || []);
       setTransactions((trxs || []).map((t) => applyLabels(t, "transaction")));
     } catch (e) {
-      console.error("❌ loadProject:", e);
+      console.error("loadProject:", e);
       setErrorMsg(t("projectDetail.alerts.loadError"));
       setProject(null);
     }
@@ -515,7 +515,7 @@ export default function ProjectDetailPage() {
         setUser(u);
         await loadProject(id);
       } catch (e) {
-        console.error("❌ init:", e);
+        console.error("init:", e);
         setErrorMsg(t("projectDetail.alerts.genericError"));
       } finally {
         if (isMounted.current) setLoading(false);
@@ -528,7 +528,7 @@ export default function ProjectDetailPage() {
   }, [id, loadProject, navigate, t]);
 
   /* ============================================================
-     🔹 Update status (admin/master = admin)
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Update status (admin/master = admin)
   ============================================================ */
   async function handleStatusChange(newStatus) {
     if (!isAdmin) return;
@@ -537,13 +537,13 @@ export default function ProjectDetailPage() {
       await loadProject(project.id);
       notify(t("projectDetail.alerts.statusUpdateSuccess"));
     } catch (err) {
-      console.error("❌ update status:", err);
+      console.error("update status:", err);
       notify(t("projectDetail.alerts.statusUpdateError"));
     }
   }
 
   /* ============================================================
-     💰 Totaux financiers
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Totaux financiers
   ============================================================ */
   const totals = useMemo(() => {
     const rev = transactions
@@ -558,7 +558,7 @@ export default function ProjectDetailPage() {
   }, [transactions]);
 
   /* ============================================================
-     🗂️ Phases
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã¢â‚¬Å¡ÃƒÂ¯Ã‚Â¸Ã‚Â Phases
   ============================================================ */
   async function handlePhaseSubmit(e) {
     e.preventDefault();
@@ -570,7 +570,7 @@ export default function ProjectDetailPage() {
       resetPhaseForm();
       await loadProject(project.id);
     } catch (err) {
-      console.error("❌ savePhase:", err);
+      console.error("savePhase:", err);
       notify(t("projectDetail.phases.alerts.saveError"));
     }
   }
@@ -581,7 +581,7 @@ export default function ProjectDetailPage() {
   }
 
   /* ============================================================
-     📎 Documents
+     ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â½ Documents
   ============================================================ */
   function handleFileChange(e) {
     setFiles(Array.from(e.target.files || []));
@@ -605,7 +605,7 @@ export default function ProjectDetailPage() {
 
       await loadProject(project.id);
     } catch (err) {
-      console.error("❌ upload docs:", err);
+      console.error("upload docs:", err);
       notify(t("projectDetail.documents.alerts.uploadError"));
     }
   }
@@ -617,7 +617,7 @@ export default function ProjectDetailPage() {
       await deleteProjectDocument(docId);
       await loadProject(project.id);
     } catch (err) {
-      console.error("❌ delete doc:", err);
+      console.error("delete doc:", err);
       notify(t("projectDetail.documents.alerts.deleteError"));
     }
   }
@@ -671,11 +671,11 @@ export default function ProjectDetailPage() {
   }, [documents, docFilters, t]);
 
   /* ============================================================
-     🎨 Rendu
+     ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¨ Rendu
   ============================================================ */
   if (loading)
     return (
-      <div className="flex justify-center items-center min-h-screen bg-slate-50">
+      <div className="flex justify-center items-center min-h-screen bg-surface-main">
         <p className="text-blue-700 text-lg animate-pulse font-medium">
           {t("projectDetail.loading")}
         </p>
@@ -684,18 +684,18 @@ export default function ProjectDetailPage() {
 
   if (errorMsg && !project)
     return (
-      <div className="flex flex-col justify-center items-center min-h-screen bg-slate-50 p-6">
+      <div className="flex flex-col justify-center items-center min-h-screen bg-surface-main p-6">
         <p className="text-rose-600 text-lg font-medium mb-4">{errorMsg}</p>
         <Btn onClick={() => navigate("/projects")} variant="primary">
-          ← {t("projectDetail.actions.backToProjects")}
+          {t("projectDetail.actions.backToProjects")}
         </Btn>
       </div>
     );
 
   if (!project)
     return (
-      <div className="flex justify-center items-center min-h-screen bg-slate-50">
-        <p className="text-slate-500 text-lg">{t("projectDetail.notFound")}</p>
+      <div className="flex justify-center items-center min-h-screen bg-surface-main">
+        <p className="text-text-muted text-lg">{t("projectDetail.notFound")}</p>
       </div>
     );
 
@@ -704,26 +704,26 @@ export default function ProjectDetailPage() {
     : t("common.dash");
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8">
+    <div className="min-h-screen bg-surface-main px-4 py-8">
       <div className="max-w-6xl mx-auto">
         {/* BACK */}
         <button
           onClick={() => navigate("/projects")}
-          className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 mb-4"
+          className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary mb-4"
         >
-          <span className="text-lg">←</span> {t("projectDetail.actions.backToProjects")}
+          <span className="text-lg">{"<"}</span> {t("projectDetail.actions.backToProjects")}
         </button>
 
         {/* CARD */}
-        <div className="bg-white shadow-lg rounded-3xl border border-slate-100 p-6 md:p-8 space-y-10">
+        <div className="bg-surface-card shadow-lg rounded-3xl border border-border/70 p-6 md:p-8 space-y-10">
           {/* HEADER */}
           <div className="flex flex-col md:flex-row md:justify-between gap-6">
             <div className="space-y-3 flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 break-words">
+              <h1 className="text-2xl md:text-3xl font-bold text-text-primary break-words">
                 {project.title}
               </h1>
 
-              <p className="text-sm text-slate-600 max-w-2xl break-words">
+              <p className="text-sm text-text-secondary max-w-2xl break-words">
                 {project.description || t("projectDetail.descriptionFallback")}
               </p>
 
@@ -732,7 +732,7 @@ export default function ProjectDetailPage() {
                   <select
                     value={project.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm"
+                    className="border border-border rounded-lg px-3 py-1.5 text-sm"
                   >
                     <option value="created">{t("projects.status.created")}</option>
                     <option value="in_progress">{t("projects.status.in_progress")}</option>
@@ -751,7 +751,7 @@ export default function ProjectDetailPage() {
                 )}
 
                 <Badge color="green">
-                  💰 {t("projectDetail.labels.budget")}{" "}
+                  {t("projectDetail.labels.budget")}{" "}
                   {formatNumber(project.budget || 0)}{" "}
                   {t("projects.card.currency", { defaultValue: "XOF" })}
                 </Badge>
@@ -769,8 +769,8 @@ export default function ProjectDetailPage() {
             </div>
 
             {/* FINANCES */}
-            <div className="w-full md:w-80 bg-slate-50 border border-slate-200 rounded-2xl p-4">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase">
+            <div className="w-full md:w-80 bg-surface-main border border-border rounded-2xl p-4">
+              <h3 className="text-xs font-semibold text-text-muted uppercase">
                 {t("projectDetail.finance.title")}
               </h3>
 
@@ -791,7 +791,7 @@ export default function ProjectDetailPage() {
                   </span>
                 </div>
 
-                <div className="flex justify-between border-t border-slate-200 pt-2">
+                <div className="flex justify-between border-t border-border pt-2">
                   <span className="font-medium">{t("projectDetail.finance.balance")}</span>
                   <span
                     className={`font-semibold ${
@@ -812,8 +812,8 @@ export default function ProjectDetailPage() {
             <div className="lg:col-span-2 space-y-8">
               {/* ---------------- TRANSACTIONS LIEES ---------------- */}
               <section>
-                <h2 className="text-lg font-semibold text-slate-900 mb-3">
-                  💰 {t("projectDetail.sections.transactions")}
+                <h2 className="text-lg font-semibold text-text-primary mb-3">
+                  {t("projectDetail.sections.transactions")}
                 </h2>
 
                 {(isAdmin || isAssignedAgent) && (
@@ -825,13 +825,13 @@ export default function ProjectDetailPage() {
                 )}
 
                 {transactions.length === 0 ? (
-                  <p className="text-slate-500 italic text-sm">
+                  <p className="text-text-muted italic text-sm">
                     {t("projectDetail.transactions.empty")}
                   </p>
                 ) : (
-                  <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm">
+                  <div className="overflow-x-auto border border-border rounded-2xl shadow-sm">
                     <table className="min-w-full text-xs md:text-sm table-fixed">
-                      <thead className="bg-slate-50 text-slate-600 font-semibold">
+                      <thead className="bg-surface-main text-text-secondary font-semibold">
                         <tr>
                           <th className="px-3 py-2 text-left w-28">
                             {t("projectDetail.transactions.headers.type")}
@@ -859,7 +859,7 @@ export default function ProjectDetailPage() {
 
                       <tbody>
                         {transactions.map((trx) => (
-                          <tr key={trx.id} className="border-t border-slate-100">
+                          <tr key={trx.id} className="border-t border-border/70">
                             <td className="px-3 py-2">
                               <div className="truncate">
                                 {trx.type
@@ -883,7 +883,7 @@ export default function ProjectDetailPage() {
                               </div>
                             </td>
 
-                            {/* ✅ UTILISATION = supprime l’erreur eslint/ts */}
+                            {/* ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ UTILISATION = supprime lÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢erreur eslint/ts */}
                             <td className="px-3 py-2">
                               <div className="max-w-[180px] break-words line-clamp-2">
                                 {getTransactionAuthorLabel(
@@ -914,21 +914,21 @@ export default function ProjectDetailPage() {
 
               {/* ---------------- PHASES DU PROJET ---------------- */}
               <section>
-                <h2 className="text-lg font-semibold text-slate-900 mb-3">
-                  🗂️ {t("projectDetail.sections.phases")}
+                <h2 className="text-lg font-semibold text-text-primary mb-3">
+                  {t("projectDetail.sections.phases")}
                 </h2>
 
                 {(isAdmin || (isClient && clientCanModifyOrDelete)) && (
                   <form
                     onSubmit={handlePhaseSubmit}
-                    className="bg-slate-50 border border-slate-200 p-5 rounded-2xl mb-5 grid gap-4 md:grid-cols-2"
+                    className="bg-surface-main border border-border p-5 rounded-2xl mb-5 grid gap-4 md:grid-cols-2"
                   >
                     <input
                       placeholder={t("projectDetail.phases.form.titlePlaceholder")}
                       value={phaseForm.title}
                       onChange={(e) => setPhaseForm({ ...phaseForm, title: e.target.value })}
                       required
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+                      className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
 
                     <input
@@ -937,7 +937,7 @@ export default function ProjectDetailPage() {
                       onChange={(e) =>
                         setPhaseForm({ ...phaseForm, description: e.target.value })
                       }
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+                      className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
 
                     <input
@@ -947,7 +947,7 @@ export default function ProjectDetailPage() {
                         setPhaseForm({ ...phaseForm, startDate: e.target.value })
                       }
                       aria-label={t("projectDetail.phases.form.startDateLabel")}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+                      className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
 
                     <input
@@ -957,7 +957,7 @@ export default function ProjectDetailPage() {
                         setPhaseForm({ ...phaseForm, endDate: e.target.value })
                       }
                       aria-label={t("projectDetail.phases.form.endDateLabel")}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full min-w-0"
+                      className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
 
                     <div className="md:col-span-2 flex justify-end gap-2">
@@ -969,15 +969,15 @@ export default function ProjectDetailPage() {
 
                       <Btn type="submit" variant="primary" size="sm">
                         {editPhaseId
-                          ? `💾 ${t("projectDetail.phases.form.save")}`
-                          : `➕ ${t("projectDetail.phases.form.add")}`}
+                          ? t("projectDetail.phases.form.save")
+                          : t("projectDetail.phases.form.add")}
                       </Btn>
                     </div>
                   </form>
                 )}
 
                 {phases.length === 0 ? (
-                  <p className="text-slate-500 italic text-sm">
+                  <p className="text-text-muted italic text-sm">
                     {t("projectDetail.phases.empty")}
                   </p>
                 ) : (
@@ -985,27 +985,27 @@ export default function ProjectDetailPage() {
                     {phases.map((ph) => (
                       <div
                         key={ph.id}
-                        className="border border-slate-200 rounded-2xl p-4 bg-white shadow-sm"
+                        className="border border-border rounded-2xl p-4 bg-surface-card shadow-sm"
                       >
                         <div className="flex justify-between">
                           <div className="min-w-0">
-                            <h3 className="text-sm font-semibold text-slate-900 break-words">
+                            <h3 className="text-sm font-semibold text-text-primary break-words">
                               {ph.title}
                             </h3>
 
                             {ph.description && (
-                              <p className="text-xs text-slate-600 mt-1 break-words">
+                              <p className="text-xs text-text-secondary mt-1 break-words">
                                 {ph.description}
                               </p>
                             )}
 
-                            <p className="text-[11px] text-slate-500 mt-1">
-                              {t("projectDetail.phases.labels.start")}{" "}
+                            <p className="text-[11px] text-text-muted mt-1">
+                              {t("projectDetail.phases.labels.start")}{" - "}
                               {ph.startDate
                                 ? formatDate(ph.startDate)
                                 : ` ${t("common.dash")}`}
-                              {" • "}
-                              {t("projectDetail.phases.labels.end")}{" "}
+                              {" - "}
+                              {t("projectDetail.phases.labels.end")}{" - "}
                               {ph.endDate
                                 ? formatDate(ph.endDate)
                                 : ` ${t("common.dash")}`}
@@ -1026,9 +1026,7 @@ export default function ProjectDetailPage() {
                                     endDate: ph.endDate ? ph.endDate.slice(0, 10) : "",
                                   });
                                 }}
-                              >
-                                ✏️
-                              </Btn>
+                              >Edit</Btn>
 
                               <Btn
                                 variant="danger"
@@ -1043,9 +1041,7 @@ export default function ProjectDetailPage() {
                                     notify(t("projectDetail.phases.alerts.deleteError"));
                                   }
                                 }}
-                              >
-                                ❌
-                              </Btn>
+                              >Del</Btn>
                             </div>
                           )}
                         </div>
@@ -1056,18 +1052,18 @@ export default function ProjectDetailPage() {
               </section>
             </div>
 
-            {/* ----------- RIGHT COLUMN — DOCUMENTS ----------- */}
+            {/* ----------- RIGHT COLUMN ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â DOCUMENTS ----------- */}
             <div className="space-y-6">
               <section>
-                <h2 className="text-lg font-semibold text-slate-900 mb-3">
-                  📎 {t("projectDetail.sections.documents")}
+                <h2 className="text-lg font-semibold text-text-primary mb-3">
+                  {t("projectDetail.sections.documents")}
                 </h2>
 
                 {(isAdmin || clientCanAddDocs || agentCanAddDocs) && (
                   <form
                     onSubmit={handleUploadDocuments}
                     className="
-                      bg-slate-50 border border-slate-200 rounded-2xl 
+                      bg-surface-main border border-border rounded-2xl 
                       p-4 mb-4 
                       grid grid-cols-1 sm:grid-cols-2 gap-4
                     "
@@ -1080,9 +1076,9 @@ export default function ProjectDetailPage() {
                         onChange={handleFileChange}
                         className="
                           w-full block 
-                          border border-slate-300 rounded-lg 
+                          border border-border rounded-lg 
                           px-3 py-2 text-xs 
-                          bg-white 
+                          bg-surface-card 
                           min-w-0
                         "
                       />
@@ -1091,7 +1087,7 @@ export default function ProjectDetailPage() {
                     <select
                       value={selectedPhaseId}
                       onChange={(e) => setSelectedPhaseId(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
+                      className="border border-border rounded-lg px-3 py-2 text-xs w-full min-w-0"
                     >
                       <option value="">
                         {t("projectDetail.documents.phasePlaceholder")}
@@ -1107,13 +1103,13 @@ export default function ProjectDetailPage() {
                       placeholder={t("projectDetail.documents.titlePlaceholder")}
                       value={docTitle}
                       onChange={(e) => setDocTitle(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
+                      className="border border-border rounded-lg px-3 py-2 text-xs w-full min-w-0"
                     />
 
                     <select
                       value={docKind}
                       onChange={(e) => setDocKind(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
+                      className="border border-border rounded-lg px-3 py-2 text-xs w-full min-w-0"
                     >
                       <option value="other">
                         {t("projectDetail.documents.kinds.other")}
@@ -1136,29 +1132,25 @@ export default function ProjectDetailPage() {
                       placeholder={t("projectDetail.documents.notesPlaceholder")}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
+                      className="border border-border rounded-lg px-3 py-2 text-xs w-full min-w-0"
                     />
 
                     <div className="sm:col-span-2 flex justify-end">
-                      <Btn type="submit" variant="primary" size="sm">
-                        📤 {t("projectDetail.documents.upload")}
-                      </Btn>
+                      <Btn type="submit" variant="primary" size="sm">{t("projectDetail.documents.upload")}</Btn>
                     </div>
                   </form>
                 )}
 
                 {documents.length === 0 ? (
-                  <p className="text-slate-500 italic text-sm">
+                  <p className="text-text-muted italic text-sm">
                     {t("projectDetail.documents.empty")}
                   </p>
                 ) : (
                   <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3">
+                    <div className="bg-surface-main border border-border rounded-2xl p-3">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <input
-                          placeholder={`🔎 ${t(
-                            "projectDetail.documents.filters.searchPlaceholder"
-                          )}`}
+                          placeholder={t("projectDetail.documents.filters.searchPlaceholder")}
                           value={docFilters.q}
                           onChange={(e) =>
                             setDocFilters((prev) => ({
@@ -1166,7 +1158,7 @@ export default function ProjectDetailPage() {
                               q: e.target.value,
                             }))
                           }
-                          className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
+                          className="border border-border rounded-lg px-3 py-2 text-xs w-full min-w-0"
                         />
 
                         <select
@@ -1177,7 +1169,7 @@ export default function ProjectDetailPage() {
                               kind: e.target.value,
                             }))
                           }
-                          className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
+                          className="border border-border rounded-lg px-3 py-2 text-xs w-full min-w-0"
                         >
                           <option value="">
                             {t("projectDetail.documents.filters.kindAll")}
@@ -1201,7 +1193,7 @@ export default function ProjectDetailPage() {
                               sort: e.target.value,
                             }))
                           }
-                          className="border border-slate-300 rounded-lg px-3 py-2 text-xs w-full min-w-0"
+                          className="border border-border rounded-lg px-3 py-2 text-xs w-full min-w-0"
                         >
                           <option value="-createdAt">
                             {t("projectDetail.documents.filters.sortNewest")}
@@ -1218,7 +1210,7 @@ export default function ProjectDetailPage() {
                           onClick={() =>
                             setDocFilters({ q: "", kind: "", sort: "-createdAt" })
                           }
-                          className="text-[11px] text-slate-600 hover:text-slate-900"
+                          className="text-[11px] text-text-secondary hover:text-text-primary"
                         >
                           {t("common.resetFilters")}
                         </button>
@@ -1249,7 +1241,7 @@ export default function ProjectDetailPage() {
                       const sizeLabel = formatBytes(doc.fileSize);
                       const metaLine = [doc.mimeType, sizeLabel]
                         .filter(Boolean)
-                        .join(" • ");
+                        .join(" - ");
                       const uploaderLabel = getDocUploaderLabel(
                         doc,
                         t("common.dash")
@@ -1265,10 +1257,10 @@ export default function ProjectDetailPage() {
                       return (
                         <div
                           key={doc.id}
-                          className="group border border-slate-200 rounded-2xl p-4 bg-white shadow-sm flex flex-col min-w-0"
+                          className="group border border-border rounded-2xl p-4 bg-surface-card shadow-sm flex flex-col min-w-0"
                         >
                           <div className="flex gap-3 min-w-0">
-                            <div className="w-16 h-16 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center shrink-0">
+                            <div className="w-16 h-16 rounded-xl border border-border bg-surface-main overflow-hidden flex items-center justify-center shrink-0">
                               {fileUrl && kind === "image" ? (
                                 <img
                                   src={fileUrl}
@@ -1278,7 +1270,7 @@ export default function ProjectDetailPage() {
                                   decoding="async"
                                 />
                               ) : (
-                                <span className="text-[0.65rem] font-semibold text-slate-600 bg-white/80 border border-slate-200 px-2 py-1 rounded-full">
+                                <span className="text-[0.65rem] font-semibold text-text-secondary bg-surface-card/80 border border-border px-2 py-1 rounded-full">
                                   {extLabel}
                                 </span>
                               )}
@@ -1286,39 +1278,39 @@ export default function ProjectDetailPage() {
 
                             <div className="min-w-0 flex-1 space-y-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-main/80 text-text-secondary border border-border">
                                   {kindLabel}
                                 </span>
                                 {phaseTitle && (
-                                  <span className="text-[10px] text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
-                                    🔗 {t("projectDetail.documents.phaseLabel")}{" "}
+                                  <span className="text-[10px] text-text-secondary bg-surface-card border border-border px-2 py-0.5 rounded-full">
+                                    {t("projectDetail.documents.phaseLabel")}{" "}
                                     {phaseTitle}
                                   </span>
                                 )}
                               </div>
 
-                              <p className="font-semibold text-sm text-slate-900 break-words">
+                              <p className="font-semibold text-sm text-text-primary break-words">
                                 {displayName}
                               </p>
 
                               {originalName && (
-                                <p className="text-[11px] text-slate-500 break-words">
+                                <p className="text-[11px] text-text-muted break-words">
                                   {originalName}
                                 </p>
                               )}
 
                               {metaLine && (
-                                <p className="text-[11px] text-slate-500">
+                                <p className="text-[11px] text-text-muted">
                                   {metaLine}
                                 </p>
                               )}
 
-                              <p className="text-[11px] text-slate-400">
+                              <p className="text-[11px] text-text-muted">
                                 {addedOnByLabel}
                               </p>
 
                               {doc.notes && (
-                                <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 break-words">
+                                <div className="text-xs text-text-secondary bg-surface-main border border-border rounded-lg px-3 py-2 break-words">
                                   {doc.notes}
                                 </div>
                               )}
@@ -1333,10 +1325,10 @@ export default function ProjectDetailPage() {
                                 rel="noopener noreferrer"
                                 className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline"
                               >
-                                📄 {t("projectDetail.documents.open")}
+                                {t("projectDetail.documents.open")}
                               </a>
                             ) : (
-                              <span className="text-xs text-slate-400">
+                              <span className="text-xs text-text-muted">
                                 {t("common.dash")}
                               </span>
                             )}
@@ -1346,9 +1338,7 @@ export default function ProjectDetailPage() {
                                 onClick={() => handleDeleteDocument(doc.id)}
                                 variant="danger"
                                 size="xs"
-                              >
-                                🗑️
-                              </Btn>
+                              >Del</Btn>
                             )}
                           </div>
                         </div>
@@ -1364,5 +1354,7 @@ export default function ProjectDetailPage() {
     </div>
   );
 }
+
+
 
 
