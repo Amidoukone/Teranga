@@ -1,13 +1,13 @@
 // ============================================================================
-// AdminUsersPage.jsx ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Apple Light Premium B2 Minimal
-// Version 2025 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ADMIN GLOBAL & MASTER (admin + geo scope)
-// BACKEND SOURCE OF TRUTH ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ZERO REGRESSION
+// AdminUsersPage.jsx AAAasAAaA Apple Light Premium B2 Minimal
+// Version 2025 AAAasAAaA ADMIN GLOBAL & MASTER (admin + geo scope)
+// BACKEND SOURCE OF TRUTH AAAasAAA ZERO REGRESSION
 //
-// ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢ SÃƒÆ’Ã‚Â©curitÃƒÆ’Ã‚Â© ajoutÃƒÆ’Ã‚Â©e (2026):
-// - Un MASTER ne peut PAS crÃƒÆ’Ã‚Â©er ni promouvoir un admin
-// - Seul l'ADMIN GLOBAL peut crÃƒÆ’Ã‚Â©er admin / master
+// AAA...A AaAAaa SAAAcuritAAA ajoutAAAe (2026):
+// - Un MASTER ne peut PAS crAAAer ni promouvoir un admin
+// - Seul l'ADMIN GLOBAL peut crAAAer admin / master
 // - Double verrou UI + payload (anti-DOM hack)
-// - Un MASTER ne peut pas ÃƒÆ’Ã‚Â©diter/supprimer un admin existant (UI + guard)
+// - Un MASTER ne peut pas AAAditer/supprimer un admin existant (UI + guard)
 // ============================================================================
 
 import { useEffect, useState, useCallback } from "react";
@@ -96,11 +96,11 @@ export default function AdminUsersPage() {
     country: "",
     role: "client",
 
-    // Legacy (prÃƒÆ’Ã‚Â©sent, mais non utilisÃƒÆ’Ã‚Â© par dÃƒÆ’Ã‚Â©faut)
+ // Legacy (prAAAsent, mais non utilisAAA par dAAAfaut)
     scopeCountry: "",
     scopeRegion: "",
 
-    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ SÃƒÆ’Ã‚Â©lection guidÃƒÆ’Ã‚Â©e (IDs) pour admins (GLOBAL uniquement)
+ // AAA...aAaA SAAAlection guidAAAe (IDs) pour admins (GLOBAL uniquement)
     scopeCountryId: "",
     scopeRegionId: "",
   });
@@ -140,7 +140,7 @@ export default function AdminUsersPage() {
   const geoRegion = (regions || []).find((r) => String(r.id) === String(geoRegionId));
 
   // ============================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â AUTH CHECK
+ // AAA...A AaAAA AUTH CHECK
   // ============================================================
   useEffect(() => {
     let active = true;
@@ -163,7 +163,7 @@ export default function AdminUsersPage() {
         setCurrentUser(user);
         setIsAdmin(true);
       } catch (e) {
-        console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ /me error:", e);
+        console.error("AAAAA...aTM /me error:", e);
         window.location.href = "/login";
       }
     }
@@ -175,7 +175,7 @@ export default function AdminUsersPage() {
   }, []);
 
   // ============================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ LOAD USERS
+ // AAA...A AaAAaA34 LOAD USERS
   // ============================================================
   const load = useCallback(async () => {
     setLoading(true);
@@ -185,7 +185,7 @@ export default function AdminUsersPage() {
       });
       setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Load users error:", err);
+      console.error("AAAAA...aTM Load users error:", err);
       setUsers([]);
     } finally {
       setLoading(false);
@@ -197,14 +197,14 @@ export default function AdminUsersPage() {
   }, [isAdmin, load]);
 
   // ============================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¾ Persist form visibility
+ // AAA...A AaaAA34 Persist form visibility
   // ============================================================
   useEffect(() => {
     localStorage.setItem("teranga_admin_users_showForm", showForm ? "1" : "0");
   }, [showForm]);
 
   // ============================================================
-  // ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â Regions filtrÃƒÆ’Ã‚Â©es par le pays sÃƒÆ’Ã‚Â©lectionnÃƒÆ’Ã‚Â© (form)
+ // AAA...A A...aTMAA Regions filtrAAAes par le pays sAAAlectionnAAA (form)
   // ============================================================
   useEffect(() => {
     let active = true;
@@ -226,7 +226,7 @@ export default function AdminUsersPage() {
         });
         if (active) setFormRegions(Array.isArray(list) ? list : []);
       } catch (err) {
-        console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ load form regions:", err);
+        console.error("AAAAA...aTM load form regions:", err);
         if (active) setFormRegions([]);
       } finally {
         if (active) setLoadingFormRegions(false);
@@ -240,12 +240,12 @@ export default function AdminUsersPage() {
   }, [form.scopeCountryId, form.role, isGlobalAdmin]);
 
   // ============================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ…Â½ FILTERING (local) + tri
+ // AAA...A AaAA...A12 FILTERING (local) + tri
   // ============================================================
   useEffect(() => {
     let arr = [...users];
 
-    // Filtre GeoContext (si prÃƒÆ’Ã‚Â©sent)
+ // Filtre GeoContext (si prAAAsent)
     if (geoRegionId) {
       arr = arr.filter((u) => String(u.regionId ?? "") === String(geoRegionId));
     } else if (geoCountryId) {
@@ -291,7 +291,7 @@ export default function AdminUsersPage() {
   }, [users, filters, geoCountryId, geoRegionId]);
 
   // ============================================================
-  // ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â  PAYLOAD BUILDER ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â DOUBLE VERROU (UI + anti-DOM hack)
+ // AAA...A AAAA PAYLOAD BUILDER AAAasAAaA DOUBLE VERROU (UI + anti-DOM hack)
   // ============================================================
   function buildPayload() {
     const payload = {};
@@ -306,7 +306,7 @@ export default function AdminUsersPage() {
       if (toSafeStr(val).trim()) payload[k] = toSafeStr(val).trim();
     });
 
-    // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢ ROLE SECURITY (anti hack DOM)
+ // AAA...A AaAAaa ROLE SECURITY (anti hack DOM)
     const targetRole = normalizeRole(form.role);
 
     // MASTER => interdit admin
@@ -318,7 +318,7 @@ export default function AdminUsersPage() {
 
     payload.role = targetRole;
 
-    // CrÃƒÆ’Ã‚Â©ation : password requis
+ // CrAAAation : password requis
     if (!editing && !toSafeStr(form.password).trim()) {
       const err = new Error(t("adminUsersPage.alerts.passwordRequired"));
       err.status = 400;
@@ -330,7 +330,7 @@ export default function AdminUsersPage() {
       payload.password = toSafeStr(form.password);
     }
 
-    // Scope admin (IDs only) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â seulement GLOBAL admin
+ // Scope admin (IDs only) AAAasAAaA seulement GLOBAL admin
     if (targetRole === "admin" && !isMaster) {
       const cid = toSafeIntOrEmpty(form.scopeCountryId);
       const rid = toSafeIntOrEmpty(form.scopeRegionId);
@@ -348,7 +348,7 @@ export default function AdminUsersPage() {
   }
 
   // ============================================================
-  // ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ SUBMIT
+ // AAA...A A...AAasA SUBMIT
   // ============================================================
   async function handleSubmit(e) {
     e.preventDefault();
@@ -367,7 +367,7 @@ export default function AdminUsersPage() {
       await load();
     } catch (err) {
       notify(extractApiError(err, t("adminUsersPage.alerts.submitError")));
-      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Submit error:", err);
+      console.error("AAAAA...aTM Submit error:", err);
     }
   }
 
@@ -389,7 +389,7 @@ export default function AdminUsersPage() {
   }
 
   function handleEdit(u) {
-    // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢ MASTER ne peut pas ÃƒÆ’Ã‚Â©diter un admin existant
+ // AAA...A AaAAaa MASTER ne peut pas AAAditer un admin existant
     if (isMaster && normalizeRole(u.role) === "admin") {
       notify(t("adminUsersPage.alerts.masterCannotEdit"));
       return;
@@ -416,7 +416,7 @@ export default function AdminUsersPage() {
   }
 
   async function handleDelete(u) {
-    // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢ MASTER ne peut pas supprimer un admin
+ // AAA...A AaAAaa MASTER ne peut pas supprimer un admin
     if (isMaster && normalizeRole(u.role) === "admin") {
       notify(t("adminUsersPage.alerts.masterCannotDelete"));
       return;
@@ -430,7 +430,7 @@ export default function AdminUsersPage() {
       await load();
     } catch (err) {
       notify(extractApiError(err, t("adminUsersPage.alerts.submitError")));
-      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Delete error:", err);
+      console.error("AAAAA...aTM Delete error:", err);
     }
   }
 
@@ -514,7 +514,7 @@ export default function AdminUsersPage() {
   }
 
   // ============================================================
-  // ÃƒÂ¢Ã‚ÂÃ‚Â³ LOADING GUARD
+ // AAAAAA3 LOADING GUARD
   // ============================================================
   if (isAdmin === null) {
     return (
@@ -633,7 +633,7 @@ export default function AdminUsersPage() {
 
         <AdminFilterBar className="mb-6 rounded-2xl p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
-            {/* RÃƒÆ’Ã‚Â´le */}
+ {/* RAAA le */}
             <AdminField label={t("adminUsersPage.filters.category")}>
               <select
                 value={role}

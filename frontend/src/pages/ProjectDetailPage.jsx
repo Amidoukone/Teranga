@@ -1,6 +1,6 @@
 // ============================================================
 // frontend/src/pages/ProjectDetailPage.jsx
-// Version Premium Responsive ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â MASTER SAFE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PARTIE 1 / 2
+// Version Premium Responsive AAAasAAaA MASTER SAFE AAAasAAaA PARTIE 1 / 2
 // ============================================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
@@ -434,7 +434,7 @@ export default function ProjectDetailPage() {
 
   const [now, setNow] = useState(Date.now());
 
-  // refresh fenÃƒÆ’Ã‚Âªtre client (1h)
+ // refresh fenAAAatre client (1h)
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
@@ -883,7 +883,7 @@ export default function ProjectDetailPage() {
                               </div>
                             </td>
 
-                            {/* ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ UTILISATION = supprime lÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢erreur eslint/ts */}
+ {/* AAA...aAaA UTILISATION = supprime lAAAasAAazAerreur eslint/ts */}
                             <td className="px-3 py-2">
                               <div className="max-w-[180px] break-words line-clamp-2">
                                 {getTransactionAuthorLabel(
@@ -1052,7 +1052,7 @@ export default function ProjectDetailPage() {
               </section>
             </div>
 
-            {/* ----------- RIGHT COLUMN ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â DOCUMENTS ----------- */}
+ {/* ----------- RIGHT COLUMN AAAasAAaA DOCUMENTS ----------- */}
             <div className="space-y-6">
               <section>
                 <h2 className="text-lg font-semibold text-text-primary mb-3">

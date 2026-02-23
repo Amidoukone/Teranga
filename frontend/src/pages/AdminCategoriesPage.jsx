@@ -59,7 +59,7 @@ export default function AdminCategoriesPage() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false); // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ anti double-submit
 
-  // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Ajout: ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©tat d'erreur UI (n'enlÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¨ve rien, remplace juste certains alert)
+ // AAaTMAasAAAAaAAAAasAA...aAAAAAAaAAAAasAA Ajout: AAaTMAa AaaAAaAAasAAtat d'erreur UI (n'enlAAaTMAa AaaAAaAAasAA ve rien, remplace juste certains alert)
   const [errorMsg, setErrorMsg] = useState("");
 
   const [form, setForm] = useState({
@@ -69,7 +69,7 @@ export default function AdminCategoriesPage() {
 
   const [search, setSearch] = useState("");
 
-  // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Flags: nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢impacte pas le fonctionnement, juste lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢UX/affichage
+ // AAaTMAasAAAAaAAAAasAA...aAAAAAAaAAAAasAA Flags: nAAaTMAasAAAAAAAAasAA...AAasAAAAAAAAasAA...A34AasAAimpacte pas le fonctionnement, juste lAAaTMAasAAAAAAAAasAA...AAasAAAAAAAAasAA...A34AasAAUX/affichage
   const isMaster = useMemo(() => computeIsMaster(user), [user]);
   const canWrite = useMemo(() => isGlobalAdminUser(user), [user]);
 
@@ -303,7 +303,7 @@ export default function AdminCategoriesPage() {
           }
         />
 
-        {/* ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Message dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢erreur (nouveau, sans enlever les alert existants) */}
+ {/* AAaTMAasAAAAaAAAAasAA...aAAAAAAaAAAAasAA Message dAAaTMAasAAAAAAAAasAA...AAasAAAAAAAAasAA...A34AasAAerreur (nouveau, sans enlever les alert existants) */}
         {errorMsg && (
           <div className="app-alert app-alert-error mb-6 flex gap-2 items-start">
             <span className="mt-[2px]">!</span>
@@ -395,7 +395,7 @@ export default function AdminCategoriesPage() {
           </AdminFormPanel>
         )}
 
-        {/* LISTE DES CATÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°GORIES */}
+ {/* LISTE DES CATAAaTMAa AaaAAAAAAaAAAAasAAGORIES */}
         {loading && categories.length === 0 ? (
           <p className="text-text-muted italic text-center py-8">
             {t("adminCategoriesPage.loadingCategories")}
@@ -411,7 +411,7 @@ export default function AdminCategoriesPage() {
                 key={c.id}
                 className="bg-surface-card border border-border rounded-2xl shadow-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface-main hover:shadow-md transition"
               >
-                {/* Infos catÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©gorie */}
+ {/* Infos catAAaTMAa AaaAAaAAasAAgorie */}
                 <div className="min-w-0 flex-1">
                   <h3 className="text-base sm:text-lg font-semibold text-text-primary break-words">
                     {c.name}

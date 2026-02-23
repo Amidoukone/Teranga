@@ -6,17 +6,17 @@ import { appendGeoFormData, mergeGeoParams } from './geo';
 /* -----------------------------------------------------------
  * 🧩 Normalisation produit
  * -----------------------------------------------------------
- * - Gère les URLs d’images (coverImage / gallery / imagePath)
+ * - Gere les URLs dimages (coverImage / gallery / imagePath)
  * - Convertit proprement les nombres et labels
  * - Expose des helpers pratiques :
- *     • imageUrl        → image principale (cover)
- *     • galleryUrls     → autres images (max 3 côté UI si on veut)
- *     • allImageUrls    → [imageUrl, ...galleryUrls]
+ * imageUrl image principale (cover)
+ * galleryUrls autres images (max 3 cote UI si on veut)
+ * allImageUrls [imageUrl, ...galleryUrls]
  * --------------------------------------------------------- */
 function normalizeProduct(raw = {}) {
   const p = { ...raw };
 
-  // 🔹 1) Détection des chemins bruts
+ // 1) Detection des chemins bruts
   // Compat :
   //  - anciens champs: image, imagePath
   //  - nouveaux champs: coverImage, gallery (JSON en DB)
@@ -30,7 +30,7 @@ function normalizeProduct(raw = {}) {
       ? p.images
       : [];
 
-  // 🔹 2) Construction de l’URL principale (imageUrl)
+ // 2) Construction de lURL principale (imageUrl)
   let imageUrl = '';
   if (coverPath && typeof coverPath === 'string') {
     if (coverPath.startsWith('/uploads')) {
@@ -51,12 +51,12 @@ function normalizeProduct(raw = {}) {
     // on évite de dupliquer la cover dans la galerie
     .filter((url) => url && url !== imageUrl);
 
-  // 🔹 4) Exposition des helpers d’images
+ // 4) Exposition des helpers dimages
   p.imageUrl = imageUrl || '';
   p.galleryUrls = galleryUrls;
   p.allImageUrls = imageUrl ? [imageUrl, ...galleryUrls] : [...galleryUrls];
 
-  // 🔹 Conversion numérique propre (comme avant)
+ // Conversion numerique propre (comme avant)
   if (p.price !== undefined && p.price !== null) {
     const n = Number(p.price);
     if (!Number.isNaN(n)) p.price = n;
@@ -74,9 +74,9 @@ function normalizeProduct(raw = {}) {
  * 🧾 Helpers FormData
  * -----------------------------------------------------------
  * - Gère fichier image principal + galerie (multi-images)
- * - Compatible avec multer côté backend:
- *     • imageFile / image  → champ "image"
- *     • imageFiles (File[]) → champ "images" (plusieurs fois)
+ * - Compatible avec multer cote backend:
+ * imageFile / image champ "image"
+ * imageFiles (File[]) champ "images" (plusieurs fois)
  * --------------------------------------------------------- */
 function toFormData(payload = {}) {
   const fd = new FormData();
@@ -84,7 +84,7 @@ function toFormData(payload = {}) {
   Object.entries(payload).forEach(([key, val]) => {
     if (val === undefined || val === null) return;
 
-    // 🔸 Gestion de l’image principale (compat existant)
+ // Gestion de limage principale (compat existant)
     // - Avant : imageFile (File) ou image (File) → champ "image"
     if ((key === 'imageFile' || key === 'image') && val instanceof File) {
       fd.append('image', val);
@@ -92,7 +92,7 @@ function toFormData(payload = {}) {
     }
 
     // 🔸 Gestion de la galerie (multi-images, nouveau)
-    // - imageFiles: tableau de File (max 3 idéalement côté UI)
+ // - imageFiles: tableau de File (max 3 idealement cote UI)
     //   → on envoie sous le champ "images" (multer any())
     if (key === 'imageFiles' && Array.isArray(val)) {
       val
@@ -104,7 +104,7 @@ function toFormData(payload = {}) {
       return;
     }
 
-    // 🔸 Cast propre pour les champs numériques
+ // Cast propre pour les champs numeriques
     if (['price', 'stock', 'categoryId'].includes(key)) {
       const num = Number(val);
       fd.append(key, Number.isNaN(num) ? val : num);
@@ -115,7 +115,7 @@ function toFormData(payload = {}) {
     fd.append(key, val);
   });
 
-  // ✅ Injecte countryId/regionId si sélectionnés (sans écraser si déjà présents)
+ // Injecte countryId/regionId si selectionnes (sans ecraser si deja presents)
   appendGeoFormData(fd);
 
   return fd;
@@ -139,7 +139,7 @@ export async function getProducts(params = {}, options = {}) {
 }
 
 /* -----------------------------------------------------------
- * GET /products/:id — détail d’un produit
+ * GET /products/:id detail dun produit
  * --------------------------------------------------------- */
 export async function getProductById(id) {
   const { data } = await api.get(`/products/${id}`);
@@ -148,7 +148,7 @@ export async function getProductById(id) {
 }
 
 /* -----------------------------------------------------------
- * POST /products — création
+ * POST /products creation
  * -----------------------------------------------------------
  * Supporte :
  *  - imageFile (File) → "image" (cover)
@@ -164,7 +164,7 @@ export async function createProduct(payload) {
 }
 
 /* -----------------------------------------------------------
- * PUT /products/:id — mise à jour
+ * PUT /products/:id mise a jour
  * -----------------------------------------------------------
  * Supporte les mêmes patterns que createProduct
  * --------------------------------------------------------- */
@@ -180,7 +180,7 @@ export async function updateProduct(id, payload) {
 /* -----------------------------------------------------------
  * DELETE /products/:id
  * -----------------------------------------------------------
- * Supporte le flag `?force=true` pour suppression définitive
+ * Supporte le flag `INFOforce=true` pour suppression definitive
  * --------------------------------------------------------- */
 export async function deleteProduct(idOrUrl) {
   const { data } = await api.delete(`/products/${idOrUrl}`);

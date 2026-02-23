@@ -1,7 +1,7 @@
 // frontend/src/pages/AdminAgentsPage.jsx
 // ============================================================================
-// AdminAgentsPage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION PROD 2025
-// Admin / Master (multi-pays) READY ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ZERO RÃƒÆ’Ã¢â‚¬Â°GRESSION
+// AdminAgentsPage AAAasAAaA VERSION PROD 2025
+// Admin / Master (multi-pays) READY AAAasAAaA ZERO RAAaAGRESSION
 // ============================================================================
 
 import { useEffect, useState, useCallback } from "react";
@@ -13,12 +13,12 @@ import { useTranslation } from "react-i18next";
 import { notify } from '../utils/notify';
 
 /* ============================================================================
-// ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â CONSTANTES
+// AAA...A AaAAA CONSTANTES
 ============================================================================ */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /* ============================================================================
-// ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© PAGE PRINCIPALE
+// AAA...A AAAA PAGE PRINCIPALE
 ============================================================================ */
 export default function AdminAgentsPage() {
   const { t } = useTranslation();
@@ -114,12 +114,12 @@ export default function AdminAgentsPage() {
   }
 
   /* ========================================================================
-   * LOAD AGENTS (ADMIN / MASTER ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â scope backend)
+ * LOAD AGENTS (ADMIN / MASTER AAAasAAaA scope backend)
    * ====================================================================== */
   const loadAgents = useCallback(async () => {
     setLoadingAgents(true);
     try {
-      // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢ Le backend applique dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  le scope multi-pays pour MASTER
+ // AAA...A AaAAaa Le backend applique dAAAjAAA le scope multi-pays pour MASTER
       const { data } = await api.get("/users?role=agent");
       setAgents(data?.users || []);
     } catch (err) {
@@ -142,7 +142,7 @@ export default function AdminAgentsPage() {
   }, [showForm]);
 
   /* ========================================================================
-   * FILTERING & SORTING ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â CLIENT SIDE (SAFE)
+ * FILTERING & SORTING AAAasAAaA CLIENT SIDE (SAFE)
    * ====================================================================== */
   useEffect(() => {
     let arr = [...agents];
@@ -179,7 +179,7 @@ export default function AdminAgentsPage() {
       );
     }
 
-    // Avec tÃƒÆ’Ã‚Â©lÃƒÆ’Ã‚Â©phone uniquement
+ // Avec tAAAlAAAphone uniquement
     if (filters.onlyPhone) {
       arr = arr.filter((a) => !!a.phone);
     }
@@ -254,7 +254,7 @@ export default function AdminAgentsPage() {
   }
 
   /* ========================================================================
-   * UI RENDER ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PREMIUM PROD (APPLE LIGHT A1)
+ * UI RENDER AAAasAAaA PREMIUM PROD (APPLE LIGHT A1)
    * ====================================================================== */
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-10">
@@ -345,7 +345,7 @@ export default function AdminAgentsPage() {
               />
             </div>
 
-            {/* TÃƒÆ’Ã‚Â©lÃƒÆ’Ã‚Â©phone */}
+ {/* TAAAlAAAphone */}
             <div className="flex items-end">
               <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
                 <input
@@ -441,7 +441,7 @@ export default function AdminAgentsPage() {
               </div>
             ))}
 
-            {/* TÃƒÆ’Ã‚Â©lÃƒÆ’Ã‚Â©phone */}
+ {/* TAAAlAAAphone */}
             <div>
               <label className="text-xs font-medium text-text-secondary">
                 {t("adminAgentsPage.form.phoneLabel")}

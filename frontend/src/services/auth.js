@@ -4,12 +4,12 @@ import { setLanguage, normalizeLanguage } from '../i18n';
 
 /**
  * ============================================================
- * 🧩 Module Authentification Teranga (Frontend) — Version robuste
+ * Module Authentification Teranga (Frontend) Version robuste
  * ============================================================
  * - Stockage tolérant (migration de l'ancien 'token' -> 'teranga_token')
- * - Résilience réseau : /auth/me ne casse pas l'app en cas d'indispo
- * - Fallback « offline » sur l'utilisateur en cache local
- * - API inchangée pour le reste de l'app (register/login/me/logout/…)
+ * - Resilience reseau : /auth/me ne casse pas l'app en cas d'indispo
+ * - Fallback offline sur l'utilisateur en cache local
+ * - API inchangee pour le reste de l'app (register/login/me/logout/...)
  * ============================================================
  */
 
@@ -33,7 +33,7 @@ function shouldUseLocalStorage() {
 /** Retourne le token depuis le nouveau key OU les anciens (puis migre). */
 function readTokenAny() {
   if (!shouldUseLocalStorage()) return null;
-  // 1) Nouveau nom (préféré)
+ // 1) Nouveau nom (prefere)
   const current = safeGet(TOKEN_KEY);
   if (current) return current;
 
@@ -50,7 +50,7 @@ function readTokenAny() {
   return null;
 }
 
-/** Écrit le token dans la nouvelle clé + (optionnel) legacy pour compat. */
+/** Ecrit le token dans la nouvelle cle + (optionnel) legacy pour compat. */
 function writeTokenAll(token, { keepLegacy = true } = {}) {
   if (!shouldUseLocalStorage()) return;
   safeSet(TOKEN_KEY, token);
@@ -74,7 +74,7 @@ function clearCsrfToken() {
   safeRemove(CSRF_TOKEN_KEY);
 }
 
-/** Accès localStorage safe (évite exceptions “quota”, “disabled”, SSR…) */
+/** Acces localStorage safe (evite exceptions quota, disabled, SSR...) */
 function safeGet(key) {
   try {
     return localStorage.getItem(key);
@@ -163,15 +163,15 @@ export async function login(payload) {
     }
 
     if (shouldUseLocalStorage()) {
-      // ✅ Sauvegarde cohérente du token (nouvelle + legacy pour compat)
+ // Sauvegarde coherente du token (nouvelle + legacy pour compat)
       writeTokenAll(data.token, { keepLegacy: true });
     } else {
-      // Mode cookie: évite tout token persistant côté client
+ // Mode cookie: evite tout token persistant cote client
       removeTokenAll();
     }
     writeCsrfToken(data?.csrfToken);
 
-    // ✅ Cache user pour UX immédiate
+ // Cache user pour UX immediate
     if (data.user) {
       writeCachedUser(data.user);
       syncLanguageFromUser(data.user);
@@ -215,14 +215,14 @@ export async function me() {
         const cached = readCachedUser();
         if (cached) {
           syncLanguageFromUser(cached);
-          console.warn('⚠️ Backend indisponible — utilisation du user en cache (mode “offline”).');
+          console.warn(' Backend indisponible utilisation du user en cache (mode offline).');
           return { user: cached, offline: true };
         }
-        console.warn('⚠️ Erreur connexion backend /auth/me:', error?.message || error);
+        console.warn(' Erreur connexion backend /auth/me:', error?.message || error);
         return { user: null };
       }
 
-      console.warn('⚠️ Erreur /auth/me:', {
+      console.warn(' Erreur /auth/me:', {
         status,
         data: error?.response?.data,
         msg: error?.message,
@@ -276,15 +276,15 @@ export async function me() {
         if (cached) {
           syncLanguageFromUser(cached);
           console.warn(
-            '⚠️ Backend indisponible — utilisation du user en cache (mode “offline”).'
+            ' Backend indisponible utilisation du user en cache (mode offline).'
           );
           return { user: cached, offline: true };
         }
-        console.warn('⚠️ Erreur connexion backend /auth/me:', error?.message || error);
+        console.warn(' Erreur connexion backend /auth/me:', error?.message || error);
         return { user: null };
       }
 
-      console.warn('⚠️ Erreur /auth/me sans token:', {
+      console.warn(' Erreur /auth/me sans token:', {
         status,
         data: error?.response?.data,
         msg: error?.message,
@@ -303,7 +303,7 @@ export async function me() {
 
 
   try {
-    // ✅ /auth/me — l’intercepteur axios injecte déjà Authorization
+ // /auth/me lintercepteur axios injecte deja Authorization
     const { data } = await api.get('/auth/me', {
       skipAuthRedirect: true,
       silentAuth: true,
@@ -316,30 +316,30 @@ export async function me() {
   } catch (error) {
     const status = error?.response?.status;
 
-    // 401 → token invalide/expiré : nettoyage total
+ // 401 token invalide/expire : nettoyage total
     if (status === 401) {
-      console.warn('⚠️ Token invalide ou expiré → suppression locale');
+      console.warn(' Token invalide ou expire suppression locale');
       removeTokenAll();
       clearCsrfToken();
       writeCachedUser(null);
       return { user: null };
     }
 
-    // ❌ Réseau down / backend indisponible : fallback cache
-    // axios n’a pas error.response pour les erreurs réseau
+ // Reseau down / backend indisponible : fallback cache
+ // axios na pas error.response pour les erreurs reseau
     const isNetworkError = !error?.response;
     if (isNetworkError) {
       const cached = readCachedUser();
       if (cached) {
-        console.warn('⚠️ Backend indisponible — utilisation du user en cache (mode “offline”).');
+        console.warn(' Backend indisponible utilisation du user en cache (mode offline).');
         return { user: cached, offline: true };
       }
-      console.warn('⚠️ Erreur connexion backend /auth/me:', error?.message || error);
+      console.warn(' Erreur connexion backend /auth/me:', error?.message || error);
       return { user: null };
     }
 
     // Autres erreurs (4xx, 5xx) — on journalise, on ne casse pas
-    console.warn('⚠️ Erreur /auth/me:', {
+    console.warn(' Erreur /auth/me:', {
       status,
       data: error?.response?.data,
       msg: error?.message,
@@ -408,7 +408,7 @@ export async function logout() {
     clearCsrfToken();
     writeCachedUser(null);
   } catch (e) {
-    console.warn('⚠️ Erreur suppression données locales:', e);
+    console.warn(' Erreur suppression donnees locales:', e);
   }
 }
 
@@ -428,7 +428,7 @@ export async function updateMyLanguage(language) {
    🔹 Utilitaires publics
 ============================================================ */
 
-/** Récupère l’utilisateur local (offline) sans requête réseau. */
+/** Recupere lutilisateur local (offline) sans requete reseau. */
 export function getLocalUser() {
   return readCachedUser();
 }
@@ -441,7 +441,7 @@ export function setLocalUser(patch) {
   return next;
 }
 
-/** Récupère le token (nouveau ou legacy). */
+/** Recupere le token (nouveau ou legacy). */
 export function getToken() {
   return readTokenAny();
 }

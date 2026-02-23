@@ -18,7 +18,7 @@ function authHeader() {
    🔧 Helpers locaux
    ============================================================ */
 
-/** Vérifie rapidement la liste de fichiers (évite un POST vide) */
+/** Verifie rapidement la liste de fichiers (evite un POST vide) */
 function assertFiles(files) {
   if (!Array.isArray(files) || files.length === 0) {
     throw new Error('Au moins un fichier est requis pour l’upload.');
@@ -47,15 +47,15 @@ function asEvidenceArray(data) {
    ============================================================ */
 
 /**
- * 📤 Upload de fichiers (preuves) liés à une tâche
- * Alias REST attendu côté backend: POST /api/tasks/:id/evidences
- * ⚠️ Important: ne PAS fixer manuellement 'Content-Type' pour laisser Axios
+ * Upload de fichiers (preuves) lies a une tache
+ * Alias REST attendu cote backend: POST /api/tasks/:id/evidences
+ * Important: ne PAS fixer manuellement 'Content-Type' pour laisser Axios
  *     injecter le boundary multipart automatiquement.
  *
  * @param {number|string} taskId
  * @param {File[]} files
  * @param {string} [notes]
- * @returns {Promise<Array>} Liste des preuves créées
+ * @returns {Promise<Array>} Liste des preuves creees
  */
 export async function uploadEvidences(taskId, files = [], notes = '') {
   if (!taskId) throw new Error('taskId requis pour upload');
@@ -64,11 +64,11 @@ export async function uploadEvidences(taskId, files = [], notes = '') {
   const formData = new FormData();
   if (notes) formData.append('notes', notes);
 
-  // ✅ Champ canonique: "files" (et backend tolérant via anyCompat())
+ // Champ canonique: "files" (et backend tolerant via anyCompat())
   appendFiles(formData, files, 'files');
 
   const { data } = await api.post(`/tasks/${taskId}/evidences`, formData, {
-    // Ne pas définir 'Content-Type' ici ! Axios le gère.
+ // Ne pas definir 'Content-Type' ici ! Axios le gere.
     headers: {
       ...authHeader(),
     },
@@ -80,7 +80,7 @@ export async function uploadEvidences(taskId, files = [], notes = '') {
 }
 
 /**
- * 📥 Récupérer toutes les preuves liées à une tâche
+ * Recuperer toutes les preuves liees a une tache
  * GET /api/tasks/:id/evidences
  *
  * @param {number|string} taskId
@@ -101,7 +101,7 @@ export async function getEvidences(taskId) {
 }
 
 /**
- * ❌ Supprimer une preuve (tâche ou commande)
+ * Supprimer une preuve (tache ou commande)
  * DELETE /api/evidences/:id
  *
  * @param {number|string} evidenceId
@@ -125,10 +125,10 @@ export async function deleteEvidence(evidenceId) {
    ============================================================ */
 
 /**
- * 📤 Upload de fichiers (preuves) liés à une commande
- * Cas d’usage: le client charge son reçu / preuve de virement
+ * Upload de fichiers (preuves) lies a une commande
+ * Cas dusage: le client charge son recu / preuve de virement
  * POST /api/orders/:orderId/evidences
- * ⚠️ Même remarque: laisser Axios gérer le header multipart.
+ * Meme remarque: laisser Axios gerer le header multipart.
  *
  * @param {number|string} orderId
  * @param {File[]} files
@@ -142,7 +142,7 @@ export async function uploadOrderEvidences(orderId, files = [], notes = '') {
   const formData = new FormData();
   if (notes) formData.append('notes', notes);
 
-  // ✅ Champ canonique: "files" (backend tolérant via anyCompat())
+ // Champ canonique: "files" (backend tolerant via anyCompat())
   appendFiles(formData, files, 'files');
 
   const { data } = await api.post(`/orders/${orderId}/evidences`, formData, {
@@ -158,7 +158,7 @@ export async function uploadOrderEvidences(orderId, files = [], notes = '') {
 }
 
 /**
- * 📥 Récupérer toutes les preuves liées à une commande
+ * Recuperer toutes les preuves liees a une commande
  * GET /api/orders/:orderId/evidences
  *
  * @param {number|string} orderId
@@ -179,7 +179,7 @@ export async function getOrderEvidences(orderId) {
 }
 
 /**
- * ❌ Supprimer une preuve liée à une commande (admin uniquement côté backend)
+ * Supprimer une preuve liee a une commande (admin uniquement cote backend)
  * DELETE /api/evidences/:id
  *
  * @param {number|string} evidenceId

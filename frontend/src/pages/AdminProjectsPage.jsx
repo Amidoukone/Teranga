@@ -1,7 +1,7 @@
 // frontend/src/pages/AdminProjectsPage.jsx
 // ============================================================================
-// AdminProjectsPage.jsx ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â VERSION PRODUCTION READY (Apple Light PRO)
-// Admin GLOBAL + MASTER (admin + geo scope) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ZÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°RO RÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°GRESSION
+// AdminProjectsPage.jsx AAAAAAaAAAAAAasAAA VERSION PRODUCTION READY (Apple Light PRO)
+// Admin GLOBAL + MASTER (admin + geo scope) AAAAAAaAAAAAAasAAA ZAAaTMAAAasAAARO RAAaTMAAAasAAAGRESSION
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -82,7 +82,7 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
       onSuccess?.();
       onClose?.();
     } catch (err) {
-      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ation transaction projet:', err);
+      console.error('AAAAasAAAaAaa Erreur crAAaTMAasAAation transaction projet:', err);
       notify(
         err?.response?.data?.error ||
           err?.message ||
@@ -148,7 +148,7 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
           </select>
         </AdminField>
 
-        {/* MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©thode paiement */}
+ {/* MAAaTMAasAAthode paiement */}
         <AdminField label={t('projects.transaction.paymentMethodLabelOptional')}>
           <input
             value={form.paymentMethod}
@@ -212,7 +212,7 @@ export default function AdminProjectsPage() {
   const [loading, setLoading] = useState(false);
   const [openTrxProjectId, setOpenTrxProjectId] = useState(null);
 
-  // ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã‚Â½ Infos session (me)
+ // AAAAaAA AAAasAAAAaAA12 Infos session (me)
   const [currentUser, setCurrentUser] = useState(null);
 
   // Filtres locaux
@@ -222,16 +222,7 @@ export default function AdminProjectsPage() {
     type: 'all',
   });
 
-  // Headers auth (compat teranga_token / token)
-  const authHeaders = useMemo(() => {
-    const token =
-      localStorage.getItem('teranga_token') || localStorage.getItem('token');
-    return token
-      ? { headers: { Authorization: `Bearer ${token}` } }
-      : { headers: {} };
-  }, []);
-
-  // MASTER = admin + scope geo (dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©duction frontend)
+ // MASTER = admin + scope geo (dAAaTMAasAAduction frontend)
   const isMaster = useMemo(() => isMasterUser(currentUser), [currentUser]);
   const projectTypeOptions = useMemo(
     () =>
@@ -286,7 +277,7 @@ export default function AdminProjectsPage() {
         setCurrentUser(user);
         setIsAdmin(true);
       } catch (err) {
-        console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur /auth/me (AdminProjectsPage):', err);
+        console.error('AAAAasAAAaAaa Erreur /auth/me (AdminProjectsPage):', err);
         if (!active) return;
         navigate('/login');
       }
@@ -306,15 +297,14 @@ export default function AdminProjectsPage() {
   const loadAgents = useCallback(async () => {
     try {
       const { data } = await api.get('/users', {
-        ...authHeaders,
         params: { role: 'agent' },
       });
       setAgents(data?.users || []);
     } catch (err) {
-      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement agents:', err);
+      console.error('AAAAasAAAaAaa Erreur chargement agents:', err);
       setAgents([]);
     }
-  }, [authHeaders]);
+  }, []);
 
   /* ============================================================
      ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â Chargement des projets
@@ -326,7 +316,7 @@ export default function AdminProjectsPage() {
       const list = await getProjects();
       setProjects(Array.isArray(list) ? list : []);
     } catch (err) {
-      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement projets:', err);
+      console.error('AAAAasAAAaAaa Erreur chargement projets:', err);
       setProjects([]);
     } finally {
       setLoading(false);
@@ -354,7 +344,7 @@ export default function AdminProjectsPage() {
       await loadProjects();
       notify(t('projects.alerts.assignSuccess'));
     } catch (err) {
-      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur assignation agent:', err);
+      console.error('AAAAasAAAaAaa Erreur assignation agent:', err);
       notify(t('projects.alerts.assignError'));
     }
   }
@@ -383,13 +373,13 @@ export default function AdminProjectsPage() {
       };
 
       // IMPORTANT: pas d'ajout countryId/regionId ici
-      // Le backend applique le scope et gÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨re la sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©curitÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©.
+ // Le backend applique le scope et gAAaTMAasAA re la sAAaTMAasAAcuritAAaTMAasAA.
       await updateProject(projectId, payload);
 
       await loadProjects();
       notify(t('projects.alerts.statusUpdateSuccess'));
     } catch (err) {
-      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur mise ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  jour statut:', err);
+      console.error('AAAAasAAAaAaa Erreur mise AAaTMAasAA jour statut:', err);
       notify(t('projects.alerts.statusUpdateError'));
     }
   }
@@ -427,7 +417,7 @@ export default function AdminProjectsPage() {
       arr = arr.filter((p) => p.type === filters.type);
     }
 
-    // Tri du plus rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©cent au plus ancien
+ // Tri du plus rAAaTMAasAAcent au plus ancien
     arr.sort((a, b) => {
       const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
       const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -716,7 +706,7 @@ export default function AdminProjectsPage() {
                             ))}
                           </select>
 
-                          {/* Transaction liÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e */}
+ {/* Transaction liAAaTMAasAAe */}
                           <button
                             onClick={() =>
                               setOpenTrxProjectId(trxOpen ? null : p.id)
@@ -730,7 +720,7 @@ export default function AdminProjectsPage() {
                               : t('adminProjects.actions.addTransaction')}
                           </button>
 
-                          {/* Formulaire transaction liÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e */}
+ {/* Formulaire transaction liAAaTMAasAAe */}
                           {trxOpen && (
                             <ProjectTransactionForm
                               project={p}
@@ -751,7 +741,6 @@ export default function AdminProjectsPage() {
     </div>
   );
 }
-
 
 
 

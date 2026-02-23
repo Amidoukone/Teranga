@@ -1,6 +1,6 @@
 // ============================================================
-// OrdersPage.jsx ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Teranga PRODUCTION READY (Option B Premium)
-// Clean Shop, filtres, tri, formulaires, responsivitÃƒÆ’Ã‚Â© mobile
+// OrdersPage.jsx AAAasAAaA Teranga PRODUCTION READY (Option B Premium)
+// Clean Shop, filtres, tri, formulaires, responsivitAAA mobile
 // Design B : Style marketplace / SaaS Pro 2025
 // ============================================================
 
@@ -94,7 +94,7 @@ export default function OrdersPage() {
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
 
-  // Produits pour crÃƒÆ’Ã‚Â©ation rapide de commande
+ // Produits pour crAAAation rapide de commande
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
@@ -284,7 +284,7 @@ export default function OrdersPage() {
     loadOrders();
   }, [user, loadOrders]);
 
-  // Persistance de lÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢affichage du formulaire
+ // Persistance de lAAAasAAazAaffichage du formulaire
   useEffect(() => {
     localStorage.setItem('teranga_orders_showForm', showForm ? '1' : '0');
   }, [showForm]);
@@ -418,7 +418,7 @@ export default function OrdersPage() {
       <div className="app-page-shell p-4 sm:p-8">
 
         {/* ===================================================== */}
-        {/* ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â­ Header Premium Responsive (Style B) */}
+ {/* AAA...A AAAA Header Premium Responsive (Style B) */}
         {/* ===================================================== */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-full break-words">
@@ -466,7 +466,7 @@ export default function OrdersPage() {
         </div>
 
         {/* ===================================================== */}
-        {/* ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬ÂºÃƒÂ¯Ã‚Â¸Ã‚Â Filtres Premium Responsive (Style SaaS) */}
+ {/* AAA...A A...A12AaAoAA AA AA Filtres Premium Responsive (Style SaaS) */}
         {/* ===================================================== */}
         <div className="mb-6 rounded-2xl border border-border/70 bg-surface-main/55 p-4 sm:p-5">
           {/* Recherche */}
@@ -500,7 +500,7 @@ export default function OrdersPage() {
             </div>
           </div>
 
-          {/* SÃƒÆ’Ã‚Â©lecteurs */}
+ {/* SAAAlecteurs */}
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {/* Statut commande */}
             <div>
@@ -579,7 +579,7 @@ export default function OrdersPage() {
           </div>
         </div>
         {/* ===================================================== */}
-        {/* ÃƒÂ¢Ã…Â¾Ã¢â‚¬Â¢ Formulaire crÃƒÆ’Ã‚Â©ation commande (Premium Responsive) */}
+ {/* AAA...A34AaA Formulaire crAAAation commande (Premium Responsive) */}
         {/* ===================================================== */}
         {showForm && (
           <form
@@ -655,7 +655,7 @@ export default function OrdersPage() {
                   </select>
                 </div>
 
-                {/* QuantitÃƒÆ’Ã‚Â© */}
+ {/* QuantitAAA */}
                 <div>
                   <label className="mb-1 block text-sm font-medium text-text-secondary">
                     {t("orders.form.quantityLabel")}
@@ -718,7 +718,7 @@ export default function OrdersPage() {
           className="mb-4"
         />
 
-        {/* ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¾ LISTE Commandes ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Cards marketplace style B */}
+ {/* AAA...A AaAAaA34 LISTE Commandes AAAasAAaA Cards marketplace style B */}
         {/* ===================================================== */}
         {loading ? (
           <p className="rounded-2xl border border-border/70 bg-surface-card/70 py-6 text-center italic text-text-secondary">
@@ -745,7 +745,7 @@ export default function OrdersPage() {
                   key={o.id}
                   className="w-full overflow-hidden rounded-2xl border border-border/70 bg-surface-card shadow-sm transition hover:shadow-md break-words"
                 >
-                  {/* Bandeau supÃƒÆ’Ã‚Â©rieur */}
+ {/* Bandeau supAAArieur */}
                   <div className="flex flex-col gap-3 border-b border-border/70 bg-surface-main/60 px-4 pb-3 pt-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                     <div className="min-w-0">
                       <h3 className="text-base sm:text-lg font-semibold text-text-primary break-words">

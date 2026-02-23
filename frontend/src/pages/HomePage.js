@@ -1,7 +1,7 @@
 // ============================================================================
-// HomePage.jsx Ã¢â‚¬â€ Teranga Landing Page 2025
-// Option A Ã¢â‚¬â€ Apple Light Premium v2 (Ultra-clean, cohÃƒÂ©rente avec NavBar A1-C)
-// - Style : Apple Light minimal, typographie ÃƒÂ©quilibrÃƒÂ©e, animations douces
+// HomePage.jsx Aaa Teranga Landing Page 2025
+// Option A Aaa Apple Light Premium v2 (Ultra-clean, cohAArente avec NavBar A1-C)
+// - Style : Apple Light minimal, typographie AAquilibrAAe, animations douces
 // - 100% compatible avec ta structure (routes /login, /register, ancres, etc.)
 // ============================================================================
 
@@ -91,7 +91,7 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-surface-main via-surface-card to-surface-main text-text-primary scroll-smooth">
       <main className="flex-1">
         {/* ========================================================================= */}
-        {/* Ã°Å¸Ââ€  HERO Ã¢â‚¬â€ Apple Light (grands espaces / typographie premium)             */}
+ {/* AA Aa HERO Aaa Apple Light (grands espaces / typographie premium) */}
         {/* ========================================================================= */}
         <section
           id="accueil"
@@ -172,7 +172,7 @@ export default function HomePage() {
             </div>
           </motion.div>
 
-          {/* Mini stats / bÃƒÂ©nÃƒÂ©fices rapides */}
+ {/* Mini stats / bAAnAAfices rapides */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -212,7 +212,7 @@ export default function HomePage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* Ã¢Å¡â„¢Ã¯Â¸Â SERVICES Ã¢â‚¬â€ Apple Cards + Animations + Shadow douce                   */}
+ {/* AAaA A A SERVICES Aaa Apple Cards + Animations + Shadow douce */}
         {/* ========================================================================= */}
         <section
           id="services"
@@ -260,7 +260,7 @@ export default function HomePage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* Ã°Å¸â€™Â¡ POURQUOI TERANGA Ã¢â‚¬â€ 3 piliers (section courte & convaincante)         */}
+ {/* AA aTMA POURQUOI TERANGA Aaa 3 piliers (section courte & convaincante) */}
         {/* ========================================================================= */}
         <section
           id="pourquoi"
@@ -294,7 +294,7 @@ export default function HomePage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* Ã°Å¸â€™Â¡ Ãƒâ‚¬ PROPOS Ã¢â‚¬â€ Apple Storytelling                                         */}
+ {/* AA aTMA Aa PROPOS Aaa Apple Storytelling */}
         {/* ========================================================================= */}
         <section
           id="apropos"
@@ -340,7 +340,7 @@ export default function HomePage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* Ã°Å¸â€œÅ¾ CONTACT Ã¢â‚¬â€ Apple Form UI                                              */}
+ {/* AA aA34 CONTACT Aaa Apple Form UI */}
         {/* ========================================================================= */}
         <section
           id="contact"
@@ -360,7 +360,7 @@ export default function HomePage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                // MÃƒÂªme comportement que ta version actuelle : simple alert cÃƒÂ´tÃƒÂ© client.
+ // MAAame comportement que ta version actuelle : simple alert cAA tAA client.
                 notify(t("homePage.contact.form.success"));
               }}
               className="
@@ -430,7 +430,7 @@ export default function HomePage() {
       </main>
 
       {/* ========================================================================= */}
-      {/* Ã¢Å¡â€œ FOOTER Ã¢â‚¬â€ Apple Minimal                                                 */}
+ {/* AAa FOOTER Aaa Apple Minimal */}
       {/* ========================================================================= */}
       <footer className="border-t border-border/70 bg-surface-card/95 text-text-muted text-xs sm:text-sm py-6 px-6 mt-4">
         <div

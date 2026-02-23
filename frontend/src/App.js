@@ -1,8 +1,8 @@
 // ============================================================================
-// App.js Ã¢â‚¬â€ Teranga Platform (Version Premium PRO 2025)
-// Navigation Ã¢â‚¬Â¢ Routage protÃƒÂ©gÃƒÂ© Ã¢â‚¬Â¢ SEO dynamique Ã¢â‚¬Â¢ GA4 tracking
-// Ã¢Å“â€¦ MASTER support (admin + geo scope) sans rÃƒÂ©gression
-// Ã¢Å“â€¦ 2026: AdminOnboardingPage (Pays Ã¢â€ â€™ RÃƒÂ©gions Ã¢â€ â€™ MASTER)
+// App.js Aaa Teranga Platform (Version Premium PRO 2025)
+// Navigation AaA Routage protAAgAA AaA SEO dynamique AaA GA4 tracking
+// AAa MASTER support (admin + geo scope) sans rAAgression
+// AAa 2026: AdminOnboardingPage (Pays Aa aTM RAAgions Aa aTM MASTER)
 // ============================================================================
 
 import { useEffect, useState } from 'react';
@@ -20,21 +20,21 @@ import { GeoProvider } from './contexts/GeoContext';
 import { getAnalyticsConsent, loadAnalytics } from './utils/analytics';
 import { installGlobalErrorHandlers } from './utils/errorReporter';
 
-// Ã°Å¸Å’Â Pages publiques
+// AA AA Pages publiques
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProductCatalogPage from './pages/ProductCatalogPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 
-// Ã°Å¸Â§Â¾ Pages lÃƒÂ©gales
+// AA AA34 Pages lAAgales
 import LegalPage from './pages/LegalPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import SettingsPage from './pages/SettingsPage';
 import HelpSupportPage from './pages/HelpSupportPage';
 
-// Ã°Å¸â€˜Â¥ Utilisateurs connectÃƒÂ©s
+// AA a A Utilisateurs connectAAs
 import DashboardPage from './pages/DashboardPage';
 import PropertiesPage from './pages/PropertiesPage';
 import ServicesPage from './pages/ServicesPage';
@@ -47,14 +47,14 @@ import ChangePasswordPage from './pages/ChangePasswordPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ActivityCenterPage from './pages/ActivityCenterPage';
 
-// Ã°Å¸Â§Â± Projets
+// AA AA Projets
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 
-// Ã°Å¸â€˜Â¨Ã¢â‚¬ÂÃ°Å¸â€™Â¼ Agents
+// AA a A AaAAA aTMA14 Agents
 import AgentServicesPage from './pages/AgentServicesPage';
 
-// Ã°Å¸â€˜â€˜ Admin
+// AA a a Admin
 import AdminAgentsPage from './pages/AdminAgentsPage';
 import AdminServicesPage from './pages/AdminServicesPage';
 import AdminUsersPage from './pages/AdminUsersPage';
@@ -64,15 +64,15 @@ import AdminCategoriesPage from './pages/AdminCategoriesPage';
 import AdminProductsPage from './pages/AdminProductsPage';
 import AdminMetricsPage from './pages/AdminMetricsPage';
 
-// Ã¢Å“â€¦ NEW: Onboarding Pays Ã¢â€ â€™ RÃƒÂ©gions Ã¢â€ â€™ MASTER
+// AAa NEW: Onboarding Pays Aa aTM RAAgions Aa aTM MASTER
 import AdminOnboardingPage from './pages/AdminOnboardingPage';
 
-// Ã°Å¸Â§Â¾ Commerce
+// AA AA34 Commerce
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import OrderTransactionsPage from './pages/OrderTransactionsPage';
 
-// Ã°Å¸â€Â Auth
+// AA aA Auth
 import { getToken, getLocalUser, me } from './services/auth';
 import { normalizeRole } from './utils/role'; // Ã¢Å“â€¦ ensure roles are canonical (admin/agent/client)
 
@@ -82,7 +82,7 @@ const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
 const USES_COOKIE_AUTH = AUTH_STORAGE_MODE === 'cookie';
 
 // ============================================================================
-// Ã°Å¸Â§Â­ Scroll automatique
+// AA AA Scroll automatique
 // ============================================================================
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -99,16 +99,16 @@ function ScrollToTop() {
 }
 
 // ============================================================================
-// Ã°Å¸â€Â Helpers Auth / Role (MASTER safe)
-// - IMPORTANT: "master" n'est pas un rÃƒÂ´le backend.
+// AA aA Helpers Auth / Role (MASTER safe)
+// - IMPORTANT: "master" n'est pas un rAA le backend.
 //   Un MASTER = admin + (countryId || regionId)
-// - Donc cÃƒÂ´tÃƒÂ© routes : on garde allow=['admin'] pour les ÃƒÂ©crans admin.
+// - Donc cAA tAA routes : on garde allow=['admin'] pour les AAcrans admin.
 // ============================================================================
 function getSession() {
   const token = getToken();
   const user = getLocalUser();
 
-  // RÃƒÂ©tro-compat: certains fronts stockent user mais pas token (ou inverse)
+ // RAAtro-compat: certains fronts stockent user mais pas token (ou inverse)
   const hasSession = USES_COOKIE_AUTH ? Boolean(user) : Boolean(token);
 
   const role = normalizeRole(user?.role);
@@ -122,7 +122,7 @@ function getSession() {
 }
 
 // ============================================================================
-// Ã°Å¸â€Â Auth Guards
+// AA aA Auth Guards
 // ============================================================================
 function RequireAuth({ children }) {
   const location = useLocation();
@@ -136,7 +136,7 @@ function RequireAuth({ children }) {
 
 /**
  * RequireRole:
- * - compare avec role normalisÃƒÂ© (admin/agent/client)
+ * - compare avec role normalisAA (admin/agent/client)
  * - IMPORTANT: un MASTER doit passer comme "admin"
  *   => allow=['admin'] reste correct
  */
@@ -148,7 +148,7 @@ function RequireRole({ allow = [], children }) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // Si allow vide => aucune restriction spÃƒÂ©cifique
+ // Si allow vide => aucune restriction spAAcifique
   if (allow.length === 0) return children;
 
   const normalizedAllow = Array.isArray(allow)
@@ -205,7 +205,7 @@ function PublicOnly({ children }) {
 }
 
 // ============================================================================
-// Ã°Å¸Â§Â© App (Final)
+// AA AA App (Final)
 // ============================================================================
 export default function App() {
   const trackingId = 'G-5JVYGYHZ7Y';
@@ -233,7 +233,7 @@ export default function App() {
               <ScrollToTop />
               <NavBar />
 
-          {/* Ã°Å¸â€œË† Google Analytics v4 Ã¢â‚¬â€ tracking automatique */}
+ {/* AA aE Google Analytics v4 Aaa tracking automatique */}
           <Analytics trackingId={trackingId} enabled={analyticsConsent === 'granted'} />
           <AnalyticsConsentBanner
             trackingId={trackingId}
@@ -245,7 +245,7 @@ export default function App() {
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
               <Routes>
             {/* ============================= */}
-            {/* Ã°Å¸Å’Â PAGES PUBLIQUES           */}
+ {/* AA AA PAGES PUBLIQUES */}
             {/* ============================= */}
             <Route
               path="/"
@@ -281,7 +281,7 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* Ã°Å¸â€œâ€ž PAGES LÃƒâ€°GALES             */}
+ {/* AA aaz PAGES LAaGALES */}
             {/* ============================= */}
             <Route
               path="/legal"
@@ -386,7 +386,7 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* Ã°Å¸â€˜Â¥ UTILISATEURS CONNECTÃƒâ€°S    */}
+ {/* AA a A UTILISATEURS CONNECTAaS */}
             {/* ============================= */}
             <Route
               path="/dashboard"
@@ -557,7 +557,7 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* Ã°Å¸Â§Â¾ COMMERCE Ã¢â‚¬â€ COMMANDES      */}
+ {/* AA AA34 COMMERCE Aaa COMMANDES */}
             {/* ============================= */}
             <Route
               path="/orders"
@@ -596,7 +596,7 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* Ã¢Å¡â„¢Ã¯Â¸Â AGENTS                   */}
+ {/* AAaA A A AGENTS */}
             {/* ============================= */}
             <Route
               path="/agent/services"
@@ -613,10 +613,10 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* Ã°Å¸â€˜â€˜ ADMIN (inclut MASTER)     */}
+ {/* AA a a ADMIN (inclut MASTER) */}
             {/* ============================= */}
 
-            {/* Ã¢Å“â€¦ NEW: Onboarding Pays Ã¢â€ â€™ RÃƒÂ©gions Ã¢â€ â€™ MASTER */}
+ {/* AAa NEW: Onboarding Pays Aa aTM RAAgions Aa aTM MASTER */}
             <Route
               path="/admin/onboarding"
               element={
@@ -744,7 +744,7 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* Ã°Å¸Å¡Â§ ROUTE PAR DÃƒâ€°FAUT         */}
+ {/* AA AA ROUTE PAR DAaFAUT */}
             {/* ============================= */}
             <Route
               path="*"

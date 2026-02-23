@@ -3,7 +3,7 @@ import api from './api';
 import { mergeGeoPayload } from './geo';
 
 /**
- * 🔹 Récupère les utilisateurs par rôle (client, agent, admin)
+ * Recupere les utilisateurs par role (client, agent, admin)
  */
 export async function getUsers(role, options = {}) {
   const params = { role };
@@ -15,7 +15,7 @@ export async function getUsers(role, options = {}) {
 }
 
 /**
- * 🔹 Récupère un utilisateur par ID
+ * Recupere un utilisateur par ID
  */
 export async function getUser(id) {
   const { data } = await api.get(`/users/${id}`);
@@ -23,7 +23,7 @@ export async function getUser(id) {
 }
 
 /**
- * 🔹 Crée un utilisateur (admin only)
+ * Cree un utilisateur (admin only)
  */
 export async function createUser(payload) {
   const { data } = await api.post('/users', mergeGeoPayload(payload));
@@ -31,7 +31,7 @@ export async function createUser(payload) {
 }
 
 /**
- * 🔹 Met à jour un utilisateur (admin only)
+ * Met a jour un utilisateur (admin only)
  */
 export async function updateUser(id, payload) {
   const { data } = await api.put(`/users/${id}`, payload);

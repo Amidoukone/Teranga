@@ -1,6 +1,6 @@
 // ============================================================
 // frontend/src/pages/ServiceTasksPage.jsx
-// Version Premium 2025 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â MASTER SAFE (multi-pays) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PARTIE 1 / 2
+// Version Premium 2025 AAAasAAaA MASTER SAFE (multi-pays) AAAasAAaA PARTIE 1 / 2
 // ============================================================
 
 import { useEffect, useState, useMemo, useCallback } from "react";
@@ -105,12 +105,12 @@ export default function ServiceTasksPage() {
 
       const rawTasks = data?.tasks || [];
 
-      // Toujours recalculer les labels via i18n (ÃƒÆ’Ã‚Â©vite les labels FR renvoyÃƒÆ’Ã‚Â©s par le backend)
+ // Toujours recalculer les labels via i18n (AAAvite les labels FR renvoyAAAs par le backend)
       const withLabels = rawTasks.map((t) => applyLabels(t, "task"));
 
       setTasks(withLabels);
     } catch (err) {
-      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur chargement tÃƒÆ’Ã‚Â¢ches:", err);
+      console.error("AAAAA...aTM Erreur chargement tAAAches:", err);
       setErrorMsg(t("serviceTasksPage.errors.load"));
       setTasks([]);
     } finally {
@@ -168,7 +168,7 @@ export default function ServiceTasksPage() {
                 setServiceInfo(found ? applyLabels(found, "service") : null);
               }
             } catch (err) {
-              console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur chargement service:", err);
+              console.error("AAAAA...aTM Erreur chargement service:", err);
               if (active) setServiceInfo(null);
             }
           }
@@ -182,13 +182,13 @@ export default function ServiceTasksPage() {
             });
             if (active) setAgents(agentsRes?.users || []);
           } catch (err) {
-            console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur chargement agents:", err);
+            console.error("AAAAA...aTM Erreur chargement agents:", err);
             if (active) setAgents([]);
           }
         }
       } catch (e) {
-        // si besoin, laisse lÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢app gÃƒÆ’Ã‚Â©rer ailleurs (middleware / router)
-        console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ me() ServiceTasksPage:", e);
+ // si besoin, laisse lAAAasAAazAapp gAAArer ailleurs (middleware / router)
+        console.error("AAAAA...aTM me() ServiceTasksPage:", e);
       } finally {
         if (active) {
           await loadTasks();
@@ -255,7 +255,7 @@ export default function ServiceTasksPage() {
 
       await loadTasks();
     } catch (err) {
-      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur crÃƒÆ’Ã‚Â©ation tÃƒÆ’Ã‚Â¢che:", err);
+      console.error("AAAAA...aTM Erreur crAAAation tAAAche:", err);
       setFormNotice({
         type: "error",
         message: err?.response?.data?.error || t("tasksPage.alerts.createError"),
@@ -289,7 +289,7 @@ export default function ServiceTasksPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 py-8 sm:px-4 sm:py-10">
       <div className="max-w-5xl mx-auto bg-surface-card shadow-2xl rounded-3xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â­ EN-TÃƒÆ’Ã…Â TE */}
+ {/* AAA...A AAAA EN-TAA...A TE */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-4 border-b border-border/70">
           <div className="break-words">
             <p className="text-[0.7rem] uppercase tracking-wide text-blue-600 font-semibold mb-1">
@@ -301,7 +301,7 @@ export default function ServiceTasksPage() {
                 {headerTitle}
               </h1>
 
-              {/* Badge UX ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â sans impact backend */}
+ {/* Badge UX AAAasAAaA sans impact backend */}
               {serviceTypeLabel && (
                 <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                   {serviceTypeLabel}
@@ -366,7 +366,7 @@ export default function ServiceTasksPage() {
           </div>
         )}
 
-        {/* FORMULAIRE (crÃƒÆ’Ã‚Â©ation rapide) */}
+ {/* FORMULAIRE (crAAAation rapide) */}
         {canCreateTask && showForm && (
           <div className="mb-8">
             <h2 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
@@ -398,7 +398,7 @@ export default function ServiceTasksPage() {
                 bg-surface-main p-4 sm:p-5 rounded-2xl border border-border
               "
             >
-              {/* Service (prÃƒÆ’Ã‚Â©-sÃƒÆ’Ã‚Â©lectionnÃƒÆ’Ã‚Â©) */}
+ {/* Service (prAAA-sAAAlectionnAAA) */}
               <div className="w-full sm:col-span-2">
                 <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("serviceTasksPage.form.serviceLabel")}
@@ -419,7 +419,7 @@ export default function ServiceTasksPage() {
                 </p>
               </div>
 
-              {/* Type de tÃƒÆ’Ã‚Â¢che */}
+ {/* Type de tAAAche */}
               <div className="w-full">
                 <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.typeLabel")}
@@ -477,7 +477,7 @@ export default function ServiceTasksPage() {
                 />
               </div>
 
-              {/* PrioritÃƒÆ’Ã‚Â© */}
+ {/* PrioritAAA */}
               <div className="w-full">
                 <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.priorityLabel")}
@@ -500,7 +500,7 @@ export default function ServiceTasksPage() {
                 </select>
               </div>
 
-              {/* Date dÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã‚Â©chÃƒÆ’Ã‚Â©ance */}
+ {/* Date dAAAasAAazAAAAchAAAance */}
               <div className="w-full">
                 <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.dueDateLabel")}
@@ -516,7 +516,7 @@ export default function ServiceTasksPage() {
                 />
               </div>
 
-              {/* CoÃƒÆ’Ã‚Â»t estimÃƒÆ’Ã‚Â© */}
+ {/* CoAAAt estimAAA */}
               <div className="w-full">
                 <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.estimatedCostLabel")}
@@ -616,7 +616,7 @@ export default function ServiceTasksPage() {
                 key={t.id}
                 task={t}
                 navigate={navigate}
-                // UX only: donne le rÃƒÆ’Ã‚Â´le courant (sans changer lÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ACL backend)
+ // UX only: donne le rAAA le courant (sans changer lAAAasAAazAACL backend)
                 userRole={role}
                 isMaster={isMaster}
               />
@@ -695,7 +695,7 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
               {task.title || t("serviceTasksPage.taskFallback", { id: task.id })}
             </h3>
 
-            {/* Badge rÃƒÆ’Ã‚Â´le (UX only) */}
+ {/* Badge rAAA le (UX only) */}
             {isMaster && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                 {t("roles.master")}
@@ -734,7 +734,7 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
         </div>
       </div>
 
-      {/* DÃƒÆ’Ã‚Â©tails */}
+ {/* DAAAtails */}
       <div className="mt-4 sm:mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-text-secondary">
         <div className="break-words">
           <span className="font-semibold text-text-primary">

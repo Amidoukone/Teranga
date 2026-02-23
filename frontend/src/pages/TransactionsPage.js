@@ -1,6 +1,6 @@
 // ============================================================================
-// TransactionsPage.jsx ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION PREMIUM 2025 (TERANGA)
-// Master / Multi-pays READY ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ZERO rÃƒÆ’Ã‚Â©gression
+// TransactionsPage.jsx AAAasAAaA VERSION PREMIUM 2025 (TERANGA)
+// Master / Multi-pays READY AAAasAAaA ZERO rAAAgression
 // ============================================================================
 
 import { useEffect, useState, useCallback } from 'react';
@@ -29,7 +29,7 @@ const TRANSACTION_TYPE_VALUES = ['expense', 'revenue', 'commission', 'adjustment
 const CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 
 // ============================================================================
-// ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â FILE_BASE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Standard Teranga (Render / Netlify / CDN safe)
+// AAA...A A...aTMAA FILE_BASE AAAasAAaA Standard Teranga (Render / Netlify / CDN safe)
 // ============================================================================
 const FILE_BASE =
   (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
@@ -75,7 +75,7 @@ function getProofExtLabel(pf, proofHref = '', fallback = 'FILE') {
   return ext || fallback;
 }
 
-// ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¡ PAGE PRINCIPALE
+// AAA...A AaAAaA PAGE PRINCIPALE
 // ============================================================================
 export default function TransactionsPage() {
   const { formatNumber, formatDate } = useLocale();
@@ -138,7 +138,7 @@ export default function TransactionsPage() {
   }, [showForm]);
 
   // ========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ SERVICES SELON RÃƒÆ’Ã¢â‚¬ÂLE (client / agent / admin / master)
+ // AAA...A AaAAA1 SERVICES SELON RAAaALE (client / agent / admin / master)
   // ========================================================================
   const loadServicesByRole = useCallback(async (u) => {
     try {
@@ -160,7 +160,7 @@ export default function TransactionsPage() {
   }, []);
 
   // ========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ TRANSACTIONS
+ // AAA...A AaAAA1 TRANSACTIONS
   // ========================================================================
   const loadTransactions = useCallback(async () => {
     setLoading(true);
@@ -176,7 +176,7 @@ export default function TransactionsPage() {
     }
   }, [t]);
   // ========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â INIT USER + DATA
+ // AAA...A AaAAA INIT USER + DATA
   // ========================================================================
   useEffect(() => {
     let active = true;
@@ -211,7 +211,7 @@ export default function TransactionsPage() {
   }, [loadServicesByRole, loadTransactions]);
 
   // ========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ SERVICE ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ TASKS
+ // AAA...A AaAAA1 SERVICE AAAaA Aaa TASKS
   // ========================================================================
   async function handleServiceChange(e) {
     const serviceId = e.target.value;
@@ -238,7 +238,7 @@ export default function TransactionsPage() {
   }
 
   // ========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ SUBMIT TRANSACTION (ANTI DOUBLE-SUBMIT)
+ // AAA...A AaAAA1 SUBMIT TRANSACTION (ANTI DOUBLE-SUBMIT)
   // ========================================================================
   async function handleSubmit(e) {
     e.preventDefault();
@@ -284,7 +284,7 @@ export default function TransactionsPage() {
         projectId: form.projectId ? Number(form.projectId) : undefined,
       };
 
-      // Transaction indÃƒÆ’Ã‚Â©pendante ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ completed
+ // Transaction indAAApendante AAAaA Aaa completed
       if (!payload.orderId && !payload.projectId) {
         payload.status = 'completed';
       }
@@ -326,7 +326,7 @@ export default function TransactionsPage() {
   }
 
   // ========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ USER DISPLAY
+ // AAA...A AaAAA1 USER DISPLAY
   // ========================================================================
   const getUserDisplayName = useCallback((u) => {
     if (!u) return t('common.dash');
@@ -337,7 +337,7 @@ export default function TransactionsPage() {
   }, [t]);
 
   // ========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â FILTERING & SORTING
+ // AAA...A AaAAA FILTERING & SORTING
   // ========================================================================
   useEffect(() => {
     let arr = [...transactions];
@@ -423,7 +423,7 @@ export default function TransactionsPage() {
   const pagedTransactions = filtered.slice(startIndex, endIndex);
 
   // ========================================================================
-  // ÃƒÂ¢Ã‚ÂÃ‚Â³ LOADING
+ // AAAAAA3 LOADING
   // ========================================================================
   if (!user) {
     return (
@@ -436,7 +436,7 @@ export default function TransactionsPage() {
   }
 
   // ========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¥ÃƒÂ¯Ã‚Â¸Ã‚Â UI PRINCIPALE
+ // AAA...A AaaAAAA AA AA UI PRINCIPALE
   // ========================================================================
   return (
     <div className="app-page-wrap">
@@ -530,7 +530,7 @@ export default function TransactionsPage() {
 }
 
 // ============================================================================
-// ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â FILTRES
+// AAA...A AaAAA FILTRES
 // ============================================================================
 function TransactionFilters({ filters, setFilters, services, filteredCount }) {
   const { t } = useTranslation();
@@ -647,7 +647,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
 }
 
 // ============================================================================
-// ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¾ FORMULAIRE
+// AAA...A AAAA34 FORMULAIRE
 // ============================================================================
 function TransactionForm({
   form,
@@ -792,7 +792,7 @@ function TransactionForm({
 }
 
 // ============================================================================
-// ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ LISTE
+// AAA...A AaAAaA1 LISTE
 // ============================================================================
 function TransactionList({
   transactions,
@@ -977,7 +977,7 @@ function TransactionList({
 }
 
 // ============================================================================
-// ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¢ PAGINATION
+// AAA...A AaAAA PAGINATION
 // ============================================================================
 function buildPageItems(current, total) {
   if (total <= 7) {

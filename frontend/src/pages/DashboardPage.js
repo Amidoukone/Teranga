@@ -1,7 +1,7 @@
 // frontend/src/pages/DashboardPage.jsx
 // ============================================================================
-// DashboardPage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Version Premium ÃƒÆ’Ã¢â‚¬Â°voluÃƒÆ’Ã‚Â©e 2025
-// (Responsive + UI moderne + rÃƒÆ’Ã‚Â´le normalisÃƒÆ’Ã‚Â© + typographies optimisÃƒÆ’Ã‚Â©es)
+// DashboardPage AAAasAAaA Version Premium AAaAvoluAAAe 2025
+// (Responsive + UI moderne + rAAA le normalisAAA + typographies optimisAAAes)
 // ============================================================================
 
 import { useEffect, useState } from 'react';
@@ -77,7 +77,7 @@ export default function DashboardPage() {
     balance: 0,
   });
 
-  // Stats dÃƒÆ’Ã‚Â©taillÃƒÆ’Ã‚Â©es modules
+ // Stats dAAAtaillAAAes modules
   const [detailStats, setDetailStats] = useState({
     properties: {
       total: 0,
@@ -121,7 +121,7 @@ export default function DashboardPage() {
         setUser(u);
         await loadStats(u);
       } catch (err) {
-        console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur Dashboard init:', err);
+        console.error('AAAAA...aTM Erreur Dashboard init:', err);
       } finally {
         setLoading(false);
       }
@@ -141,7 +141,7 @@ export default function DashboardPage() {
       const role = normalizeRole(u.role);
       const showPropertiesModule = role !== 'agent';
 
-      // SERVICES selon rÃƒÆ’Ã‚Â´le
+ // SERVICES selon rAAA le
       if (role === 'admin') {
         services = await getAllServicesAdmin();
       } else if (role === 'agent') {
@@ -153,38 +153,38 @@ export default function DashboardPage() {
       // TRANSACTIONS
       transactions = await getTransactions();
 
-      // RÃƒÆ’Ã‚Â©sumÃƒÆ’Ã‚Â© financier (admin only)
+ // RAAAsumAAA financier (admin only)
       if (role === 'admin') {
         financialSummary = await getFinancialSummary();
       }
 
-      // ========= NOUVELLES DONNÃƒÆ’Ã¢â‚¬Â°ES : BIENS / TÃƒÆ’Ã¢â‚¬Å¡CHES / PROJETS / COMMANDES =========
+ // ========= NOUVELLES DONNAAaAES : BIENS / TAAaACHES / PROJETS / COMMANDES =========
       const geoParams = getGeoParams();
       const [propsRes, tasksRes, projectsRes, ordersRes] = await Promise.all([
         showPropertiesModule
           ? api
               .get('/properties', { params: geoParams })
               .catch((err) => {
-                console.error('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Erreur chargement biens Dashboard:', err);
+                console.error('AAA...AAA AA AA AA Erreur chargement biens Dashboard:', err);
                 return { data: {} };
               })
           : Promise.resolve({ data: { properties: [] } }),
         api
           .get('/tasks', { params: geoParams })
           .catch((err) => {
-            console.error('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Erreur chargement tÃƒÆ’Ã‚Â¢ches Dashboard:', err);
+            console.error('AAA...AAA AA AA AA Erreur chargement tAAAches Dashboard:', err);
             return { data: {} };
           }),
         api
           .get('/projects', { params: geoParams })
           .catch((err) => {
-            console.error('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Erreur chargement projets Dashboard:', err);
+            console.error('AAA...AAA AA AA AA Erreur chargement projets Dashboard:', err);
             return { data: {} };
           }),
         api
           .get('/orders', { params: geoParams })
           .catch((err) => {
-            console.error('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Erreur chargement commandes Dashboard:', err);
+            console.error('AAA...AAA AA AA AA Erreur chargement commandes Dashboard:', err);
             return { data: {} };
           }),
       ]);
@@ -225,7 +225,7 @@ export default function DashboardPage() {
         balance,
       });
 
-      // ========= NOUVEAUX CALCULS DÃƒÆ’Ã¢â‚¬Â°TAILLÃƒÆ’Ã¢â‚¬Â°S =========
+ // ========= NOUVEAUX CALCULS DAAaATAILLAAaAS =========
 
       // Biens
       const propertiesTotal = properties.length;
@@ -233,7 +233,7 @@ export default function DashboardPage() {
         (p) => p.status === 'active'
       ).length;
 
-      // TÃƒÆ’Ã‚Â¢ches
+ // TAAAches
       const tasksTotal = tasks.length;
       const tasksCreated = tasks.filter((t) => t.status === 'created').length;
       const tasksInProgress = tasks.filter(
@@ -266,7 +266,7 @@ export default function DashboardPage() {
       const ordersPaid = orders.filter(
         (o) => o.paymentStatus === 'paid'
       ).length;
-      // "open" = non livrÃƒÆ’Ã‚Â©es / non annulÃƒÆ’Ã‚Â©es
+ // "open" = non livrAAAes / non annulAAAes
       const ordersOpen = orders.filter(
         (o) =>
           !['delivered', 'cancelled', 'refunded'].includes(
@@ -300,12 +300,12 @@ export default function DashboardPage() {
         },
       });
     } catch (err) {
-      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur chargement stats Dashboard:', err);
+      console.error('AAAAA...aTM Erreur chargement stats Dashboard:', err);
     }
   }
 
   /* ---------------------------------------------------------------------- */
-  /* ÃƒÆ’Ã¢â‚¬Â°TAT CHARGEMENT                                                       */
+ /* AAaATAT CHARGEMENT */
   /* ---------------------------------------------------------------------- */
   if (loading || !user) {
     return (
@@ -355,7 +355,7 @@ export default function DashboardPage() {
               <h1 className="text-2xl font-extrabold leading-snug text-text-primary truncate sm:text-3xl">
                 {t("dashboard.greeting", { name: user.firstName || user.email })}
               </h1>
-              {/* ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Message EXACT, personnalisÃƒÆ’Ã‚Â© par le prÃƒÆ’Ã‚Â©nom */}
+ {/* AAA...aAaA Message EXACT, personnalisAAA par le prAAAnom */}
               <p className="mt-2 text-sm text-text-secondary sm:text-base">
                 <span className="font-semibold text-blue-700 dark:text-blue-300">
                   {t("dashboard.careLine", { firstName: shortName })}
@@ -400,7 +400,7 @@ export default function DashboardPage() {
         </header>
 
         {/* ------------------------------------------------------------------ */}
-        {/* VUE RAPIDE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â STATISTIQUES GÃƒÆ’Ã¢â‚¬Â°NÃƒÆ’Ã¢â‚¬Â°RALES                               */}
+ {/* VUE RAPIDE AAAasAAaA STATISTIQUES GAAaANAAaARALES */}
         {/* ------------------------------------------------------------------ */}
         <section className="space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -428,12 +428,12 @@ export default function DashboardPage() {
         </section>
 
         {/* ------------------------------------------------------------------ */}
-        {/* BLOC CENTRAL ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FINANCES & VUE GLOBALE DES MODULES                 */}
+ {/* BLOC CENTRAL AAAasAAaA FINANCES & VUE GLOBALE DES MODULES */}
         {/* ------------------------------------------------------------------ */}
         <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 xl:items-start">
-          {/* Colonne gauche : finances dÃƒÆ’Ã‚Â©taillÃƒÆ’Ã‚Â©es + modules */}
+ {/* Colonne gauche : finances dAAAtaillAAAes + modules */}
           <div className="xl:col-span-2 space-y-6">
-            {/* Finances dÃƒÆ’Ã‚Â©taillÃƒÆ’Ã‚Â©es */}
+ {/* Finances dAAAtaillAAAes */}
             <div className="rounded-2xl border border-border/70 bg-surface-card/90 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-5">
                 <div>
@@ -486,7 +486,7 @@ export default function DashboardPage() {
                   />
                 )}
 
-                {/* TÃƒÆ’Ã¢â‚¬Å¡CHES */}
+ {/* TAAaACHES */}
                 <ModuleCard
                   title={t("dashboard.modules.tasks")}
                   icon={ClipboardList}
@@ -565,9 +565,9 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Colonne droite : synthÃƒÆ’Ã‚Â¨se et accÃƒÆ’Ã‚Â¨s rapides */}
+ {/* Colonne droite : synthAAA se et accAAA s rapides */}
           <div className="space-y-6">
-            {/* SynthÃƒÆ’Ã‚Â¨se rapide finances */}
+ {/* SynthAAA se rapide finances */}
             <div className="flex flex-col justify-between rounded-2xl border border-border/70 bg-surface-card/90 p-5 shadow-sm">
               <div>
                 <h3 className="mb-4 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
@@ -605,7 +605,7 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            {/* AccÃƒÆ’Ã‚Â¨s rapides */}
+ {/* AccAAA s rapides */}
             <div className="rounded-2xl border border-border/70 bg-surface-card/90 p-5 text-text-primary shadow-sm">
               <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
                 <Rocket size={18} className="text-text-muted" />

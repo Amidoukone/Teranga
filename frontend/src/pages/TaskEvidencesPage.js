@@ -16,7 +16,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 // ============================================================================
-// ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â URL BASE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â robuste production (inchangÃƒÆ’Ã‚Â©)
+// AAA...A A...aTMAA URL BASE AAAasAAaA robuste production (inchangAAA)
 // ============================================================================
 const FILE_BASE =
   (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
@@ -47,7 +47,7 @@ const DEFAULT_FILTERS = {
 };
 
 // ============================================================================
-// HELPERS (inchangÃƒÆ’Ã‚Â©s)
+// HELPERS (inchangAAAs)
 // ============================================================================
 function inferKind(name = '', mime = '') {
   const lower = name.toLowerCase();
@@ -228,7 +228,7 @@ export default function TaskEvidencesPage() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
   // ========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Permissions FRONTEND (MASTER SAFE)
+ // AAA...A AaAAA Permissions FRONTEND (MASTER SAFE)
   // ========================================================================
   const isAdmin = user?.role === 'admin';
   const resetFilters = useCallback(() => {
@@ -276,7 +276,7 @@ export default function TaskEvidencesPage() {
       const ev = await getEvidences(id);
       setEvidences(ev || []);
     } catch (err) {
-      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ getEvidences:', err);
+      console.error('AAAAA...aTM getEvidences:', err);
       setEvidences([]);
     } finally {
       setLoading(false);
@@ -301,7 +301,7 @@ export default function TaskEvidencesPage() {
         setUser(current);
         await fetchEvidences();
       } catch (err) {
-        console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ init evidence:', err);
+        console.error('AAAAA...aTM init evidence:', err);
       }
     }
 
@@ -382,7 +382,7 @@ export default function TaskEvidencesPage() {
 
       await fetchEvidences();
     } catch (err) {
-      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ upload:', err);
+      console.error('AAAAA...aTM upload:', err);
       const msg =
         err?.response?.data?.error ||
         t('taskEvidencesPage.errors.upload');
@@ -400,7 +400,7 @@ export default function TaskEvidencesPage() {
       await deleteEvidence(evidenceId);
       await fetchEvidences();
     } catch (err) {
-      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ delete evidence:', err);
+      console.error('AAAAA...aTM delete evidence:', err);
       const msg =
         err?.response?.data?.error || t('taskEvidencesPage.errors.delete');
       notify(msg);
@@ -586,7 +586,7 @@ export default function TaskEvidencesPage() {
                 : t('taskEvidencesPage.filters.withNotesOff')}
             </button>
 
-            {/* Date de dÃƒÆ’Ã‚Â©but */}
+ {/* Date de dAAAbut */}
             <input
               type="date"
               value={filters.dateFrom}

@@ -9,7 +9,7 @@ import { appendGeoFormData, mergeGeoParams } from './geo';
  * ============================================================
  * - Aligne les labels FR via applyLabels
  * - Tolérant au routing backend : essaie plusieurs endpoints
- * - Compatible Admin : création d’un bien pour un client (ownerId|clientId|ownerEmail)
+ * - Compatible Admin : creation dun bien pour un client (ownerId|clientId|ownerEmail)
  * - Ne casse pas l'existant et reste évolutif
  * ============================================================
  */
@@ -29,17 +29,17 @@ async function tryEndpoints(method, candidates, options = {}) {
     } catch (err) {
       lastErr = err;
       const status = err?.response?.status;
-      // On continue si "endpoint inexistant" / "méthode non supportée"
+ // On continue si "endpoint inexistant" / "methode non supportee"
       if (status === 404 || status === 405) continue;
-      // Sinon, inutile d’essayer d’autres chemins
+ // Sinon, inutile dessayer dautres chemins
       break;
     }
   }
-  console.error('❌ API properties fallback épuisé:', lastErr || 'Unknown error');
+  console.error(' API properties fallback epuise:', lastErr || 'Unknown error');
   throw lastErr || new Error('Properties service: all endpoints failed');
 }
 
-/** 🔧 Helper : construit un FormData à partir d’un objet + fichiers */
+/** Helper : construit un FormData a partir dun objet + fichiers */
 function buildFormData(form = {}, files = [], extra = {}) {
   const formData = new FormData();
 
@@ -60,15 +60,15 @@ function buildFormData(form = {}, files = [], extra = {}) {
   // Fichiers
   (files || []).forEach((file) => formData.append('files', file));
 
-  // ✅ Injecte countryId/regionId si sélectionnés (sans écraser si déjà présents)
+ // Injecte countryId/regionId si selectionnes (sans ecraser si deja presents)
   appendGeoFormData(formData);
 
   return formData;
 }
 
 /**
- * 🔹 Liste des biens du client connecté
- * Essaie plusieurs chemins possibles côté backend.
+ * Liste des biens du client connecte
+ * Essaie plusieurs chemins possibles cote backend.
  */
 export async function getProperties() {
   try {
@@ -83,13 +83,13 @@ export async function getProperties() {
     const list = data.properties || data.rows || data.list || [];
     return list.map((p) => applyLabels(p));
   } catch (err) {
-    console.error('❌ Erreur chargement propriétés:', err);
+    console.error(' Erreur chargement proprietes:', err);
     return []; // On garde l’UI fonctionnelle
   }
 }
 
 /**
- * 🔹 Liste des biens d’un client spécifique (admin)
+ * Liste des biens dun client specifique (admin)
  */
 export async function getClientProperties(clientId) {
   if (!clientId) return [];
@@ -130,19 +130,19 @@ export async function getAllProperties() {
 }
 
 /**
- * ➕ Créer un bien immobilier
+ * Creer un bien immobilier
  * - Client : pour lui-même (comme avant)
- * - Admin  : peut indiquer une cible (ownerId | clientId | ownerEmail) pour créer au nom d’un client
+ * - Admin : peut indiquer une cible (ownerId | clientId | ownerEmail) pour creer au nom dun client
  *
  * @param {Object} form - champs du bien (title, type, address, city, etc.)
  * @param {File[]} files - fichiers image/pdf
- * @param {Object} adminTarget - (optionnel) { ownerId?, clientId?, ownerEmail? }
+ * @param {Object} adminTarget - (optionnel) { ownerIdINFO, clientIdINFO, ownerEmailINFO }
  *    - ownerId : id du client cible
- *    - clientId : alias accepté (sera mappé vers ownerId si besoin)
- *    - ownerEmail : email d’un client existant (géré côté backend)
+ * - clientId : alias accepte (sera mappe vers ownerId si besoin)
+ * - ownerEmail : email dun client existant (gere cote backend)
  *
- * Le service va essayer, dans cet ordre, pour l’admin ciblé :
- *   1) POST /properties/client/:clientId (meilleur endpoint dédié)
+ * Le service va essayer, dans cet ordre, pour ladmin cible :
+ * 1) POST /properties/client/:clientId (meilleur endpoint dedie)
  *   2) POST /properties/admin (alias admin)
  *   3) POST /properties (classique, avec ownerId/clientId/ownerEmail dans le body)
  */
@@ -166,7 +166,7 @@ export async function createProperty(form, files = [], adminTarget = null) {
       const created = data.property || data.item || data.result;
       return applyLabels(created);
     } catch (err) {
-      console.error('❌ Erreur création bien (standard):', err);
+      console.error(' Erreur creation bien (standard):', err);
       throw err;
     }
   }
@@ -175,7 +175,7 @@ export async function createProperty(form, files = [], adminTarget = null) {
   const { ownerId, clientId, ownerEmail } = adminTarget;
   const targetId = clientId || ownerId || null;
 
-  // 1) Tente la route dédiée : /properties/client/:id
+ // 1) Tente la route dediee : /properties/client/:id
   if (targetId) {
     const formDataClientParam = buildFormData(form, files);
     try {
@@ -189,13 +189,13 @@ export async function createProperty(form, files = [], adminTarget = null) {
     } catch (e) {
       // On log puis on continue sur les fallbacks
       console.warn(
-        '⚠️ Fallback Admin create: /properties/client/:id non dispo, on tente alias/body…',
+        ' Fallback Admin create: /properties/client/:id non dispo, on tente alias/body...',
         e?.response?.status
       );
     }
   }
 
-  // 2) Alias admin générique : /properties/admin (body peut contenir ownerId|clientId|ownerEmail)
+ // 2) Alias admin generique : /properties/admin (body peut contenir ownerId|clientId|ownerEmail)
   const formDataAdminAlias = buildFormData(form, files, {
     ...(ownerId ? { ownerId } : {}),
     ...(clientId ? { clientId } : {}),
@@ -212,7 +212,7 @@ export async function createProperty(form, files = [], adminTarget = null) {
     return applyLabels(created);
   } catch (e) {
     console.warn(
-      '⚠️ Fallback Admin create: /properties/admin non dispo, on tente /properties avec body…',
+      ' Fallback Admin create: /properties/admin non dispo, on tente /properties avec body...',
       e?.response?.status
     );
   }
@@ -237,13 +237,13 @@ export async function createProperty(form, files = [], adminTarget = null) {
     const created = data.property || data.item || data.result;
     return applyLabels(created);
   } catch (err) {
-    console.error('❌ Erreur création bien (admin ciblé, tous fallbacks):', err);
+    console.error(' Erreur creation bien (admin cible, tous fallbacks):', err);
     throw err;
   }
 }
 
 /**
- * 🆕 Convenance : créer un bien pour un client (admin)
+ * Convenance : creer un bien pour un client (admin)
  * - Utilise d’abord POST /properties/client/:id, puis retombe sur les autres chemins
  */
 export async function createPropertyForClient(clientId, form, files = []) {
@@ -252,9 +252,9 @@ export async function createPropertyForClient(clientId, form, files = []) {
 }
 
 /**
- * ✏️ Mettre à jour un bien
+ * Mettre a jour un bien
  * - Vous pouvez passer replacePhotos = true dans `form` si vous voulez remplacer complètement
- *   les photos au lieu de les merger (le backend gère déjà ce flag).
+ * les photos au lieu de les merger (le backend gere deja ce flag).
  */
 export async function updateProperty(id, form, files = []) {
   // On laisse la liberté de passer replacePhotos dans form (optionnel)
@@ -274,7 +274,7 @@ export async function updateProperty(id, form, files = []) {
     const updated = data.property || data.item || data.result;
     return applyLabels(updated);
   } catch (err) {
-    console.error('❌ Erreur mise à jour bien:', err);
+    console.error(' Erreur mise a jour bien:', err);
     throw err;
   }
 }
@@ -297,7 +297,7 @@ export async function deleteProperty(id) {
 }
 
 /**
- * 🔍 Recherche filtrée (optionnel / back-office)
+ * Recherche filtree (optionnel / back-office)
  */
 export async function searchProperties(params = {}) {
   try {
@@ -309,13 +309,13 @@ export async function searchProperties(params = {}) {
     const list = data.properties || data.rows || data.list || [];
     return list.map((p) => applyLabels(p));
   } catch (err) {
-    console.error('❌ Erreur recherche propriétés:', err);
+    console.error(' Erreur recherche proprietes:', err);
     return [];
   }
 }
 
 /**
- * 📄 Détail d’un bien par ID
+ * Detail dun bien par ID
  */
 export async function getPropertyById(id) {
   try {
@@ -328,7 +328,7 @@ export async function getPropertyById(id) {
     const item = data.property || data.item || data.result;
     return item ? applyLabels(item) : null;
   } catch (err) {
-    console.error('❌ Erreur récupération bien:', err);
+    console.error(' Erreur recuperation bien:', err);
     return null;
   }
 }

@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/img-redundant-alt */
 // ============================================================
-// ProductCatalogPage.jsx Ã¢â‚¬â€ Teranga PRODUCTION READY (Style A 2025)
+// ProductCatalogPage.jsx Aaa Teranga PRODUCTION READY (Style A 2025)
 // Clean Shop Premium + FILE_BASE + Lightbox + Optimisations
 // + compat multi-pays / master (backend-driven)
 // ============================================================
@@ -79,7 +79,7 @@ function getImagesForProduct(p) {
     urls.unshift(p.imageUrl);
   }
 
-  // DÃƒÂ©duplication + normalisation en URL absolues
+ // DAAduplication + normalisation en URL absolues
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
@@ -302,7 +302,7 @@ export default function ProductCatalogPage() {
       return;
     }
 
-    // Si stock connu et la demande dÃƒÂ©passe le stock Ã¢â€ â€™ message personnalisÃƒÂ©
+ // Si stock connu et la demande dAApasse le stock Aa aTM message personnalisAA
     if (typeof selectedProduct.stock === 'number') {
       if (selectedProduct.stock <= 0) {
         notify(t('productCatalogPage.alerts.outOfStock'));
@@ -484,7 +484,7 @@ export default function ProductCatalogPage() {
 
         {/* ==== BARRE DE FILTRES ==== */}
         <div className="bg-surface-main/80 backdrop-blur-sm border border-border rounded-2xl shadow-sm px-4 py-4 sm:px-5 sm:py-4 space-y-3">
-          {/* Ligne 1 : recherche + catÃƒÂ©gorie */}
+ {/* Ligne 1 : recherche + catAAgorie */}
           <div className="grid gap-3 md:grid-cols-4 items-end">
             {/* Recherche */}
             <div className="md:col-span-2">
@@ -503,7 +503,7 @@ export default function ProductCatalogPage() {
               </div>
             </div>
 
-            {/* CatÃƒÂ©gorie */}
+ {/* CatAAgorie */}
             <div>
               <label className="block text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-1">
                 {t('productCatalogPage.filters.categoryLabel')}

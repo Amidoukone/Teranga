@@ -6,7 +6,11 @@ export async function getNotifications(params = {}) {
 }
 
 export async function getNotificationSummary() {
-  const { data } = await api.get("/notifications/summary");
+  const { data } = await api.get("/notifications/summary", {
+    timeout: 5000,
+    silentAuth: true,
+    skipAuthRedirect: true,
+  });
   return data;
 }
 

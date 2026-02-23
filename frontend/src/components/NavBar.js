@@ -1,15 +1,15 @@
 // ============================================================================
-// NavBar.jsx Ã¢â‚¬â€ Enterprise SaaS (Stripe/Revolut/Notion vibe)
-// - MÃƒÂªme structure/logic routes/roles (zÃƒÂ©ro rÃƒÂ©gression)
+// NavBar.jsx Aaa Enterprise SaaS (Stripe/Revolut/Notion vibe)
+// - MAAame structure/logic routes/roles (zAAro rAAgression)
 // - Desktop: Tabs principaux + menu "Plus" + User menu (avatar dropdown)
-// - Mobile: Bottom nav compact + "Plus" panel (organisÃƒÂ© par sections)
+// - Mobile: Bottom nav compact + "Plus" panel (organisAA par sections)
 // - Admin Onboarding visible uniquement ADMIN GLOBAL (pas Master)
 // ============================================================================
 //
-// Ã¢Å“â€¦ Fix UI:
-// - LisibilitÃƒÂ© renforcÃƒÂ©e dans tous les ÃƒÂ©tats (idle / hover / actif / focus)
-// - Suppression des couleurs hex hardcodÃƒÂ©es -> tokens (surface/text/border/primary)
-// - Aucune fonctionnalitÃƒÂ© supprimÃƒÂ©e
+// AAa Fix UI:
+// - LisibilitAA renforcAAe dans tous les AAtats (idle / hover / actif / focus)
+// - Suppression des couleurs hex hardcodAAes -> tokens (surface/text/border/primary)
+// - Aucune fonctionnalitAA supprimAAe
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
@@ -70,7 +70,7 @@ const COMMON_COMMERCE = [
   { path: "/orders", labelKey: "nav.orders" },
 ];
 
-// Ã¢Å“â€¦ Admin-only onboarding link (GLOBAL ADMIN ONLY)
+// AAa Admin-only onboarding link (GLOBAL ADMIN ONLY)
 const ADMIN_ONBOARDING_LINK = {
   path: "/admin/onboarding",
   labelKey: "nav.master",
@@ -144,7 +144,7 @@ const ROLE_LINKS = {
     { path: "/projects", labelKey: "nav.projects" },
     { path: "/admin/projects", labelKey: "nav.adminProjects" },
 
-    // Onboarding injectÃƒÂ© dynamiquement uniquement admin global
+ // Onboarding injectAA dynamiquement uniquement admin global
 
     { path: "/services", labelKey: "nav.services" },
     { path: "/tasks", labelKey: "nav.tasks" },
@@ -168,7 +168,7 @@ const ROLE_LINKS = {
 };
 
 /* ============================================================================ */
-/* BOTTOM LINKS Ã¢â‚¬â€ MOBILE ONLY (COMPACT) */
+/* BOTTOM LINKS Aaa MOBILE ONLY (COMPACT) */
 /* ============================================================================ */
 
 const BOTTOM_LINKS = {
@@ -235,7 +235,7 @@ function iconForPath(path) {
 }
 
 /* ============================================================================ */
-/* GROUPING Ã¢â‚¬â€ Enterprise information architecture (UI only) */
+/* GROUPING Aaa Enterprise information architecture (UI only) */
 /* ============================================================================ */
 
 function buildSections(role, links, t) {
@@ -370,7 +370,11 @@ function NavBar() {
         byProgress: data?.byProgress || {},
       });
     } catch (e) {
-      console.error("Ã¢ÂÅ’ notifications summary:", e);
+      const isTimeout = e?.code === "ECONNABORTED";
+      const isNetwork = !e?.response;
+      if (!isTimeout && !isNetwork) {
+        console.error("AAA notifications summary:", e);
+      }
       setNotificationSummary((prev) => prev || { unread: 0, byProgress: {} });
     }
   }, [user]);
@@ -384,7 +388,7 @@ function NavBar() {
     try {
       await markAllNotificationsRead();
     } catch (e) {
-      console.error("Ã¢ÂÅ’ mark all notifications read:", e);
+      console.error("AAA mark all notifications read:", e);
     } finally {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
@@ -509,7 +513,7 @@ function NavBar() {
 
   const role = normalizeRole(user?.role);
 
-  // Ã¢Å“â€¦ DÃƒÂ©tection ADMIN GLOBAL vs MASTER (admin scopÃƒÂ©)
+ // AAa DAAtection ADMIN GLOBAL vs MASTER (admin scopAA)
   const isAdmin = role === "admin";
   const isGlobalAdmin = useMemo(() => {
     if (!isAdmin) return false;
@@ -527,7 +531,7 @@ function NavBar() {
   }, [user, isAdmin, isGlobalAdmin, role, t]);
 
 
-  // Ã¢Å“â€¦ Links de rÃƒÂ´le (inject onboarding uniquement pour admin global)
+ // AAa Links de rAA le (inject onboarding uniquement pour admin global)
   const links = useMemo(() => {
     const base = ROLE_LINKS[role] || [];
     let out = base;
@@ -794,7 +798,7 @@ function NavBar() {
                           {t("nav.perimeter")}
                         </div>
 
-                        {/* Encapsulation Ã¢â‚¬Å“Enterprise controlÃ¢â‚¬Â */}
+ {/* Encapsulation AaAEnterprise controlAaA */}
                         <div className="rounded-xl border border-border bg-surface-card px-3 py-2">
                           <GeoSelector />
                         </div>
@@ -967,7 +971,7 @@ function NavBar() {
       </nav>
 
       {/* ======================================================================== */}
-      {/* BOTTOM NAV Ã¢â‚¬â€ MOBILE ONLY (COMPACT) */}
+ {/* BOTTOM NAV Aaa MOBILE ONLY (COMPACT) */}
       {/* ======================================================================== */}
       <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent" aria-label="Navigation basse">
         <div className="mx-auto w-full flex justify-center">
@@ -1019,7 +1023,7 @@ function NavBar() {
       </nav>
 
       {/* ======================================================================== */}
-      {/* PANEL PLUS Ã¢â‚¬â€ MOBILE (OrganisÃƒÂ© par sections) */}
+ {/* PANEL PLUS Aaa MOBILE (OrganisAA par sections) */}
       {/* ======================================================================== */}
       <AnimatePresence>
         {openMore && (
@@ -1138,7 +1142,6 @@ function NavBar() {
 }
 
 export default memo(NavBar);
-
 
 
 

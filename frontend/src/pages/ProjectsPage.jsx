@@ -1,7 +1,7 @@
 // frontend/src/pages/ProjectsPage.jsx
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { me } from '../services/auth';
+import { me, getLocalUser, getToken as getAuthToken } from '../services/auth';
 import {
   getProjects,
   createProject,
@@ -15,7 +15,7 @@ import { applyLabels, CURRENCY_LABELS } from '../utils/labels';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 
-// ? MASTER-safe helpers (pas de r�le "master", seulement admin + scope)
+// INFO MASTER-safe helpers (pas de rle "master", seulement admin + scope)
 import { normalizeRole, isMasterUser } from '../utils/role';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
@@ -159,7 +159,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
     proofFile: null,
   });
 
-  // ? MASTER-safe: master logique = admin => normalizeRole couvre tout
+  // INFO MASTER-safe: master logique = admin => normalizeRole couvre tout
   const canSeeOrder =
     normalizeRole(currentUser?.role) === 'admin' ||
     normalizeRole(currentUser?.role) === 'agent';
@@ -193,7 +193,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
       onSuccess?.();
       onClose?.();
     } catch (err) {
-      console.error('? Transaction error:', err);
+      console.error('INFO Transaction error:', err);
       notify(t('projects.transaction.alerts.createError'));
     } finally {
       setSaving(false);
@@ -376,12 +376,7 @@ export default function ProjectsPage() {
   const navigate = useNavigate();
   const isMounted = useRef(true);
 
-  const getToken = useCallback(
-    () => localStorage.getItem('teranga_token') || localStorage.getItem('token'),
-    []
-  );
-
-  // ? MASTER-safe flags (UX only � pas de filtre frontend)
+  // INFO MASTER-safe flags (UX only pas de filtre frontend)
   const isAdmin = useMemo(() => normalizeRole(user?.role) === 'admin', [user]);
   const isMaster = useMemo(() => isMasterUser(user), [user]);
   const projectTypeOptions = useMemo(
@@ -423,7 +418,7 @@ export default function ProjectsPage() {
       const { data } = await api.get('/users?role=client');
       setClients(Array.isArray(data.users) ? data.users : []);
     } catch (e) {
-      console.error('? Erreur chargement clients:', e);
+      console.error('INFO Erreur chargement clients:', e);
       setClients([]);
     }
   }, []);
@@ -433,7 +428,7 @@ export default function ProjectsPage() {
       const { data } = await api.get('/users?role=agent');
       setAgents(Array.isArray(data.users) ? data.users : []);
     } catch (e) {
-      console.error('? Erreur chargement agents:', e);
+      console.error('INFO Erreur chargement agents:', e);
       setAgents([]);
     }
   }, []);
@@ -444,12 +439,12 @@ export default function ProjectsPage() {
     setErrorMsg('');
 
     try {
-      // ? IMPORTANT: aucun filtre geo c�t� frontend
+      // INFO IMPORTANT: aucun filtre geo ct frontend
       const list = await getProjects({});
       const normalized = Array.isArray(list) ? list.map(applyLabels) : [];
       if (isMounted.current) setProjects(normalized);
     } catch (e) {
-      console.error('? Erreur chargement projets:', e);
+      console.error('INFO Erreur chargement projets:', e);
       setErrorMsg(
         e?.response?.data?.error ||
           e?.message ||
@@ -467,8 +462,8 @@ export default function ProjectsPage() {
     isMounted.current = true;
 
     const init = async () => {
-      const token = getToken();
-      if (!token) {
+      const hasSession = Boolean(getAuthToken() || getLocalUser());
+      if (!hasSession) {
         setLoading(false);
         navigate('/login');
         return;
@@ -490,7 +485,7 @@ export default function ProjectsPage() {
           await Promise.all([loadClients(), loadAgents()]);
         }
       } catch (err) {
-        console.error('? Erreur chargement user:', err);
+        console.error('INFO Erreur chargement user:', err);
         setUser(null);
         setErrorMsg(t('projects.alerts.userLoadError'));
       } finally {
@@ -503,7 +498,7 @@ export default function ProjectsPage() {
     return () => {
       isMounted.current = false;
     };
-  }, [getToken, loadForUser, loadClients, loadAgents, navigate, t]);
+  }, [loadForUser, loadClients, loadAgents, navigate, t]);
 
   /* ============================================================
      ?? Handlers CRUD
@@ -528,7 +523,7 @@ export default function ProjectsPage() {
       resetForm();
       await loadForUser(user);
     } catch (err) {
-      console.error('? Erreur sauvegarde projet:', err);
+      console.error('INFO Erreur sauvegarde projet:', err);
       const fallback = editId
         ? t('projects.alerts.updateError')
         : t('projects.alerts.createError');
@@ -544,7 +539,7 @@ export default function ProjectsPage() {
       notify(t('projects.alerts.deleteSuccess'));
       await loadForUser(user);
     } catch (err) {
-      console.error('? Erreur suppression projet:', err);
+      console.error('INFO Erreur suppression projet:', err);
       notify(
         err?.response?.data?.error || t('projects.alerts.deleteError')
       );
@@ -560,7 +555,7 @@ export default function ProjectsPage() {
       notify(t('projects.alerts.assignSuccess'));
       await loadForUser(user);
     } catch (err) {
-      console.error('? Erreur assignation agent:', err);
+      console.error('INFO Erreur assignation agent:', err);
       notify(t('projects.alerts.assignError'));
     }
   }
@@ -584,7 +579,7 @@ export default function ProjectsPage() {
       await loadForUser(user);
       notify(t('projects.alerts.statusUpdateSuccess'));
     } catch (err) {
-      console.error('? Erreur mise � jour du statut:', err);
+      console.error('INFO Erreur mise jour du statut:', err);
       notify(t('projects.alerts.statusUpdateError'));
     }
   }
@@ -1141,5 +1136,4 @@ export default function ProjectsPage() {
     </div>
   );
 }
-
 

@@ -1,6 +1,6 @@
 // ============================================================
-// OrderDetailPage.jsx Ã¢â‚¬â€ Teranga PRODUCTION READY (Option B2)
-// Clean Shop Premium Ã¢â‚¬â€ Responsive Ã¢â‚¬â€ FILE_BASE system (multi-pays)
+// OrderDetailPage.jsx Aaa Teranga PRODUCTION READY (Option B2)
+// Clean Shop Premium Aaa Responsive Aaa FILE_BASE system (multi-pays)
 // ============================================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -58,7 +58,7 @@ function toAbsUrl(path = '') {
   const norm = normalizePath(path);
   if (!norm) return '';
   if (/^https?:\/\//i.test(norm)) return norm;
-  // FILE_BASE dÃƒÂ©jÃƒÂ  sans trailing slash dans la plupart des cas
+ // FILE_BASE dAAjAA sans trailing slash dans la plupart des cas
   return FILE_BASE.replace(/\/$/, '') + norm;
 }
 
@@ -257,7 +257,7 @@ export default function OrderDetailPage() {
     return (evidences || []).filter((ev) => inferEvidenceKind(ev) !== 'image');
   }, [evidences]);
 
-  // Ã¢Å“â€¦ UTILISÃƒâ€° dans la liste des preuves (vignettes)
+ // AAa UTILISAa dans la liste des preuves (vignettes)
   function openEvidenceLightbox(fromId) {
     const idx = imageEvidences.findIndex((e) => e.id === fromId);
     if (idx >= 0) setEvidenceLightbox({ open: true, index: idx });
@@ -511,7 +511,7 @@ export default function OrderDetailPage() {
     );
   }
 
-  // Ã¢Å“â€¦ Multi-pays / master: on autorise admin + master aux actions admin
+ // AAa Multi-pays / master: on autorise admin + master aux actions admin
   const canAdmin = user.role === 'admin' || user.role === 'master';
   const canUploadProofs = ['admin', 'agent', 'client', 'master'].includes(user.role);
 
@@ -567,7 +567,7 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* RÃƒâ€°SUMÃƒâ€° */}
+ {/* RAaSUMAa */}
         <div className="grid lg:grid-cols-3 gap-4 mb-10">
           {/* CLIENT */}
           <div className="bg-gradient-to-br from-surface-main to-surface-main border border-border p-4 rounded-xl shadow-sm">
@@ -757,7 +757,7 @@ export default function OrderDetailPage() {
             </p>
           )}
 
-          {/* Ajout dÃ¢â‚¬â„¢article - Admin/Master */}
+ {/* Ajout dAaaarticle - Admin/Master */}
           {canAdmin && (
             <form
               onSubmit={handleAddItem}

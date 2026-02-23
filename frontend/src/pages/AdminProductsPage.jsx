@@ -75,7 +75,7 @@ function getProductImages(product) {
     urls.unshift(product.imageUrl);
   }
 
-  // DÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©duplication + normalisation en URL absolues
+ // DAAaTMAasAAduplication + normalisation en URL absolues
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
@@ -224,7 +224,7 @@ export default function AdminProductsPage() {
         setUser(current);
         await Promise.all([loadCategories(), loadProducts()]);
       } catch (err) {
-        console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ init AdminProductsPage:", err);
+        console.error("AAAAasAAAaAaa init AdminProductsPage:", err);
         if (!mounted) return;
         window.location.href = "/login";
       }
@@ -249,7 +249,7 @@ export default function AdminProductsPage() {
         setCountries(Array.isArray(cList) ? cList : []);
         setRegions(Array.isArray(rList) ? rList : []);
       } catch (e) {
-        console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement pays/rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©gions:", e);
+        console.error("AAAAasAAAaAaa Erreur chargement pays/rAAaTMAasAAgions:", e);
         if (mounted) {
           setCountries([]);
           setRegions([]);
@@ -271,7 +271,7 @@ export default function AdminProductsPage() {
 
       setProducts(list || []);
     } catch (e) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement produits:", e);
+      console.error("AAAAasAAAaAaa Erreur chargement produits:", e);
       notify(t("adminProductsPage.alerts.loadProductsError"));
       setProducts([]);
     } finally {
@@ -288,7 +288,7 @@ export default function AdminProductsPage() {
 
       setCategories(list || []);
     } catch (e) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement catÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©gories:", e);
+      console.error("AAAAasAAAaAaa Erreur chargement catAAaTMAasAAgories:", e);
       setCategories([]);
     }
   }
@@ -356,7 +356,7 @@ export default function AdminProductsPage() {
       await loadProducts();
       setShowForm(false);
     } catch (err) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur sauvegarde produit:", err);
+      console.error("AAAAasAAAaAaa Erreur sauvegarde produit:", err);
       const status = err?.response?.status;
       const apiMessage =
         err?.response?.data?.error || err?.response?.data?.message || "";
@@ -389,7 +389,7 @@ export default function AdminProductsPage() {
       await loadProducts();
       notify(t("adminProductsPage.alerts.deleteSuccess"));
     } catch (err) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur suppression :", err);
+      console.error("AAAAasAAAaAaa Erreur suppression :", err);
       notify(t("adminProductsPage.alerts.deleteError"));
     }
   }
@@ -572,7 +572,7 @@ export default function AdminProductsPage() {
               />
             </div>
 
-            {/* CATÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°GORIE */}
+ {/* CATAAaTMAAAasAAAGORIE */}
             <div className="md:col-span-2 flex flex-col gap-1">
               <label className="text-xs font-semibold text-text-secondary">
                 {t("adminProductsPage.form.categoryLabel")}
@@ -780,7 +780,7 @@ export default function AdminProductsPage() {
                           </span>
                         </td>
 
-                        {/* CATÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°GORIE */}
+ {/* CATAAaTMAAAasAAAGORIE */}
                         <td className="px-4 py-3 align-top">
                           <span className="text-sm text-text-primary">
                             {cat ? cat.name : t("common.dash")}

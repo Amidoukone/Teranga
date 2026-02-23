@@ -1,7 +1,7 @@
 // frontend/src/pages/AdminMetricsPage.jsx
 // ============================================================================
-// AdminMetricsPage.jsx ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Monitoring minimal (lecture seule)
-// Admin GLOBAL + MASTER (admin + geo scope) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ZÃƒÆ’Ã¢â‚¬Â°RO RÃƒÆ’Ã¢â‚¬Â°GRESSION
+// AdminMetricsPage.jsx AAAasAAaA Monitoring minimal (lecture seule)
+// Admin GLOBAL + MASTER (admin + geo scope) AAAasAAaA ZAAaARO RAAaAGRESSION
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useState } from 'react';

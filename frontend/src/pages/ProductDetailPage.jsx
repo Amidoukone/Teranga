@@ -1,6 +1,6 @@
 // ============================================================
-// ProductDetailPage.jsx Ã¢â‚¬â€ Teranga PRODUCTION READY (Style A 2025)
-// Design premium + responsive, 0 rÃƒÂ©gression fonctionnelle
+// ProductDetailPage.jsx Aaa Teranga PRODUCTION READY (Style A 2025)
+// Design premium + responsive, 0 rAAgression fonctionnelle
 // - Images robustes (allImageUrls + gallery + coverImage + imageUrl)
 // - FILE_BASE + toAbsUrl (Render/Netlify/Prod)
 // - Lightbox + navigation + miniatures
@@ -79,7 +79,7 @@ function getImagesForProduct(p) {
     urls.unshift(p.imageUrl);
   }
 
-  // DÃƒÂ©dup + absolu
+ // DAAdup + absolu
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
@@ -114,7 +114,7 @@ export default function ProductDetailPage() {
 
         const res = await getProductById(id);
 
-        // Ã¢Å“â€¦ compat: res peut ÃƒÂªtre l'objet produit ou { product }
+ // AAa compat: res peut AAatre l'objet produit ou { product }
         const prod = res?.product ? res.product : res;
 
         if (!mounted) return;
@@ -368,7 +368,7 @@ export default function ProductDetailPage() {
                 Ã°Å¸â€œâ€ž Bloc infos
                =========================== */}
             <div className="flex-1 flex flex-col">
-              {/* CatÃƒÂ©gorie + titre */}
+ {/* CatAAgorie + titre */}
               <div className="mb-3">
                 {category?.name && (
                   <p className="inline-flex items-center px-2 py-0.5 bg-blue-500/15 text-blue-700 dark:text-blue-300 rounded-full border border-blue-500/30 text-[11px] font-medium mb-2">
@@ -418,7 +418,7 @@ export default function ProductDetailPage() {
                 {description || t('productDetailPage.info.noDescription')}
               </div>
 
-              {/* MÃƒÂ©tadonnÃƒÂ©es */}
+ {/* MAAtadonnAAes */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-text-muted mb-6">
                 {createdAt && (
                   <div>

@@ -5,17 +5,17 @@ import { mergeGeoParams, mergeGeoPayload } from './geo';
 
 /**
  * ============================================================
- * 🧰 Service : Gestion des Tâches Teranga (Frontend)
+ * Service : Gestion des Taches Teranga (Frontend)
  * ============================================================
  * - Compatible avec la structure backend (/api/tasks)
  * - Utilise applyLabels() pour afficher les labels FR
- * - Gère toutes les opérations : CRUD, statut, assignation
+ * - Gere toutes les operations : CRUD, statut, assignation
  * ============================================================
  */
 
 /**
- * 📋 Liste toutes les tâches visibles par l’utilisateur connecté
- * (admin → toutes, agent → assignées, client → liées à ses services/propriétés)
+ * Liste toutes les taches visibles par lutilisateur connecte
+ * (admin toutes, agent assignees, client liees a ses services/proprietes)
  */
 export async function getTasks() {
   const { data } = await api.get('/tasks', { params: mergeGeoParams() });
@@ -24,7 +24,7 @@ export async function getTasks() {
 }
 
 /**
- * 📋 Liste les tâches liées à un service spécifique
+ * Liste les taches liees a un service specifique
  * @param {number|string} serviceId
  */
 export async function getTasksByService(serviceId) {
@@ -35,7 +35,7 @@ export async function getTasksByService(serviceId) {
 }
 
 /**
- * ➕ Créer une tâche
+ * Creer une tache
  * @param {object} form - Données du formulaire
  */
 export async function createTask(form) {
@@ -63,8 +63,8 @@ export async function createTask(form) {
 }
 
 /**
- * 🔄 Mettre à jour le statut d’une tâche
- * (agent → in_progress, completed / admin → validated)
+ * Mettre a jour le statut dune tache
+ * (agent in_progress, completed / admin validated)
  * @param {number} id - ID de la tâche
  * @param {string} status - Nouveau statut
  */
@@ -75,7 +75,7 @@ export async function updateTaskStatus(id, status) {
 }
 
 /**
- * 👔 Assigner une tâche à un agent (admin uniquement)
+ * Assigner une tache a un agent (admin uniquement)
  * @param {number} taskId - ID de la tâche
  * @param {number} agentId - ID de l’agent
  */
@@ -86,7 +86,7 @@ export async function assignTaskAgent(taskId, agentId) {
 }
 
 /**
- * 🧾 Supprimer une tâche (facultatif - si futur besoin)
+ * Supprimer une tache (facultatif - si futur besoin)
  * @param {number} id - ID de la tâche
  */
 export async function deleteTask(id) {

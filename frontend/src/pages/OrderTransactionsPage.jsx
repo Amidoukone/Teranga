@@ -1,9 +1,9 @@
 // ============================================================
-// OrderTransactionsPage.jsx Ã¢â‚¬â€ Teranga PRODUCTION READY (Option B2-A)
+// OrderTransactionsPage.jsx Aaa Teranga PRODUCTION READY (Option B2-A)
 // Clean Shop Premium + FILE_BASE + toAbsUrl + Optimisations visuelles
-// Ã¢Å“â€¦ MASTER + Multi-pays ready (alignÃƒÂ© backend 2025)
-// Ã¢Å“â€¦ ZÃƒÂ©ro rÃƒÂ©gression : toutes fonctionnalitÃƒÂ©s conservÃƒÂ©es
-// Ã¢Å“â€¦ Robustesse: payloads API (array vs {transactions}), preuves ImageKit (url/path/filePath)
+// AAa MASTER + Multi-pays ready (alignAA backend 2025)
+// AAa ZAAro rAAgression : toutes fonctionnalitAAs conservAAes
+// AAa Robustesse: payloads API (array vs {transactions}), preuves ImageKit (url/path/filePath)
 // ============================================================
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -68,8 +68,8 @@ function getUserDisplay(u) {
 }
 
 /**
- * Ã¢Å“â€¦ Preuve (ImageKit / legacy / file system)
- * Backend Transaction.proofFile peut ÃƒÂªtre:
+ * AAa Preuve (ImageKit / legacy / file system)
+ * Backend Transaction.proofFile peut AAatre:
  * - { url, fileId, originalName, mimeType, size }
  * - { path } (legacy)
  * - { filePath } (legacy)
@@ -80,7 +80,7 @@ function getProofHref(t) {
   if (!pf) return '';
 
   if (typeof pf === 'string') {
-    // si c'est dÃƒÂ©jÃƒÂ  une URL absolue => ok, sinon => FILE_BASE
+ // si c'est dAAjAA une URL absolue => ok, sinon => FILE_BASE
     return toAbsUrl(pf);
   }
 
@@ -228,7 +228,7 @@ export default function OrderTransactionsPage() {
     try {
       const data = await getOrderTransactions(id);
 
-      // Ã¢Å“â€¦ backend peut renvoyer [] OU { transactions: [], pagination: {} }
+ // AAa backend peut renvoyer [] OU { transactions: [], pagination: {} }
       const arr = Array.isArray(data) ? data : data?.transactions || [];
 
       const labeled = (arr || []).map((t) => applyLabels(t, 'transaction'));
@@ -308,7 +308,7 @@ export default function OrderTransactionsPage() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    // Ã¢â€ºâ€ EmpÃƒÂªche un double clic si une crÃƒÂ©ation est dÃƒÂ©jÃƒÂ  en cours
+ // Aaoa EmpAAache un double clic si une crAAation est dAAjAA en cours
     if (creating) return;
 
     if (!form.amount || isNaN(parseFloat(form.amount))) {
@@ -318,7 +318,7 @@ export default function OrderTransactionsPage() {
     try {
       setCreating(true); // Ã°Å¸â€Â Verrouille le bouton dÃ¢â‚¬â„¢envoi
 
-      // Ã¢Å“â€¦ payload stable (service gÃƒÂ¨re proofFile = File -> FormData si besoin)
+ // AAa payload stable (service gAA re proofFile = File -> FormData si besoin)
       const payload = {
         ...form,
         amount: parseFloat(form.amount),
@@ -422,7 +422,7 @@ export default function OrderTransactionsPage() {
     );
   }
 
-  // Ã¢Å“â€¦ Ajout master (sans retirer admin/agent)
+ // AAa Ajout master (sans retirer admin/agent)
   const canCreate = ['admin', 'agent', 'master'].includes(user.role);
 
   /* ============================================================
@@ -432,7 +432,7 @@ export default function OrderTransactionsPage() {
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-surface-card/95 backdrop-blur-sm shadow-xl rounded-2xl p-4 sm:p-8 border border-border/70 transition-all duration-150 ease-out">
 
-        {/* HEADER Ã¢â‚¬â€ 100% responsive mobile / tablette / desktop */}
+ {/* HEADER Aaa 100% responsive mobile / tablette / desktop */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 sm:mb-8">
           {/* Bloc titre */}
           <div className="max-w-full break-words">
@@ -534,7 +534,7 @@ function TransactionFilters({ filters, setFilters, count }) {
   const { t } = useTranslation();
   return (
     <div className="mb-8 bg-surface-main border border-border rounded-xl p-4 sm:p-5 shadow-sm">
-      {/* Ligne recherche seule Ã¢â‚¬â€ pleine largeur, plus respirable */}
+ {/* Ligne recherche seule Aaa pleine largeur, plus respirable */}
       <div className="flex flex-col lg:flex-row gap-3 mb-4">
         <input
           placeholder={t("orderTransactions.filters.searchPlaceholder")}
@@ -560,7 +560,7 @@ function TransactionFilters({ filters, setFilters, count }) {
           ))}
         </select>
 
-        {/* MÃƒÂ©thode paiement */}
+ {/* MAAthode paiement */}
         <input
           placeholder={t("orderTransactions.filters.paymentPlaceholder")}
           value={filters.payment}
@@ -568,7 +568,7 @@ function TransactionFilters({ filters, setFilters, count }) {
           className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
         />
 
-        {/* Tri Ã¢â‚¬â€ prend plus de place sur les grands ÃƒÂ©crans */}
+ {/* Tri Aaa prend plus de place sur les grands AAcrans */}
         <select
           value={filters.sort}
           onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
@@ -785,14 +785,14 @@ function TransactionList({
             tx.status
           : undefined;
 
-        // Ã°Å¸Å½Â¨ Accent visuel par type
+ // AA A12A Accent visuel par type
         let accentClass = 'border-l-4 border-l-slate-200';
         if (tx.type === 'revenue') accentClass = 'border-l-4 border-l-emerald-400/80';
         else if (tx.type === 'expense') accentClass = 'border-l-4 border-l-rose-400/80';
         else if (tx.type === 'commission') accentClass = 'border-l-4 border-l-amber-400/80';
         else if (tx.type === 'adjustment') accentClass = 'border-l-4 border-l-blue-400/80';
 
-        // Ã°Å¸ÂÂ· Badge type
+ // AA AA Badge type
         let typeBadge =
           'bg-surface-main/80 text-text-secondary border border-border';
         if (tx.type === 'revenue')

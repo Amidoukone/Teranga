@@ -130,7 +130,7 @@ function buildCreateTransactionPayload(payload) {
     if (v === undefined || v === null || v === "") return;
 
     if (k === "proofFile") {
-      // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ backend tolÃƒÆ’Ã‚Â¨re plusieurs noms, mais on envoie "proofFile"
+ // AAA...aAaA backend tolAAA re plusieurs noms, mais on envoie "proofFile"
       fd.append("proofFile", v);
       return;
     }
@@ -159,7 +159,7 @@ export default function ServiceTransactionsPage() {
   const [form, setForm] = useState({
     type: "expense",
     amount: "",
-    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ multi-pays : laisse backend normaliser (fallback XOF)
+ // AAA...aAaA multi-pays : laisse backend normaliser (fallback XOF)
     currency: "XOF",
     description: "",
     taskId: "",
@@ -196,7 +196,7 @@ export default function ServiceTransactionsPage() {
 
       setTransactions(enriched);
     } catch (err) {
-      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur fetchTransactions:", err);
+      console.error("AAAAA...aTM Erreur fetchTransactions:", err);
       setTransactions([]);
     }
   }, [id]);
@@ -211,7 +211,7 @@ export default function ServiceTransactionsPage() {
       });
       setTasks(data?.tasks || []);
     } catch (err) {
-      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur fetchTasks:", err);
+      console.error("AAAAA...aTM Erreur fetchTasks:", err);
       setTasks([]);
     }
   }, [id, authHeaders]);
@@ -236,7 +236,7 @@ export default function ServiceTransactionsPage() {
 
         await Promise.all([fetchTransactions(), fetchTasks()]);
       } catch (err) {
-        console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur init:", err);
+        console.error("AAAAA...aTM Erreur init:", err);
 
         if (typeof window !== "undefined") {
           localStorage.removeItem("teranga_token");
@@ -301,7 +301,7 @@ export default function ServiceTransactionsPage() {
 
       await fetchTransactions();
     } catch (err) {
-      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur ajout transaction:", err);
+      console.error("AAAAA...aTM Erreur ajout transaction:", err);
       notify(t("serviceTransactions.alerts.createError"));
     } finally {
       setSubmitting(false);
@@ -331,7 +331,7 @@ export default function ServiceTransactionsPage() {
     );
   }
 
-  // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ master inclus (multi-pays / ACL backend)
+ // AAA...aAaA master inclus (multi-pays / ACL backend)
   const canCreate =
     user?.role === "admin" || user?.role === "agent" || user?.role === "master";
 
@@ -341,7 +341,7 @@ export default function ServiceTransactionsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 py-8 sm:px-4 sm:py-10">
       <div className="max-w-5xl mx-auto bg-surface-card shadow-2xl rounded-3xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-10">
-        {/* ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â­ HEADER PREMIUM */}
+ {/* AAA...A AAAA HEADER PREMIUM */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[0.7rem] uppercase tracking-wide font-semibold text-blue-600 mb-1">
@@ -365,7 +365,7 @@ export default function ServiceTransactionsPage() {
           </button>
         </div>
 
-        {/* ÃƒÂ¢Ã…Â¾Ã¢â‚¬Â¢ FORMULAIRE PREMIUM (si autorisÃƒÆ’Ã‚Â©) */}
+ {/* AAA...A34AaA FORMULAIRE PREMIUM (si autorisAAA) */}
         {canCreate && (
           <TransactionForm
             form={form}
@@ -376,7 +376,7 @@ export default function ServiceTransactionsPage() {
           />
         )}
 
-        {/* ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…â€œ HISTORIQUE PREMIUM */}
+ {/* AAA...A AaAA...a HISTORIQUE PREMIUM */}
         <TransactionHistory
           transactions={transactions}
           getProofHref={getProofHrefFromTransaction}
@@ -452,7 +452,7 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
           </select>
         </FormGroup>
 
-        {/* TÃƒÆ’Ã‚Â¢che liÃƒÆ’Ã‚Â©e */}
+ {/* TAAAche liAAAe */}
         <FormGroup label={t("serviceTransactions.form.taskLabel")} full>
           <select
             value={form.taskId}

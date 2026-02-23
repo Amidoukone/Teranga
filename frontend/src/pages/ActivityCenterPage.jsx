@@ -145,7 +145,7 @@ export default function ActivityCenterPage() {
           : { page, limit: pageSize, total: 0 }
       );
     } catch (e) {
-      console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ load activities:", e);
+      console.error("AAAAA...aTM load activities:", e);
       console.error("Error load activities:", e);
       setPagination({ page, limit: pageSize, total: 0 });
     } finally {

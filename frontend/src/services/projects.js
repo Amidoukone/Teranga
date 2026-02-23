@@ -6,9 +6,9 @@ import { mergeGeoParams, mergeGeoPayload } from './geo';
 /**
  * ============================================================
  * 🚀 Service Frontend : Gestion des Projets (CRUD complet)
- * - Aligné avec le backend (règle des 1h, assignation agent, phases, documents)
+ * - Aligne avec le backend (regle des 1h, assignation agent, phases, documents)
  * - Upload de documents : supporte phaseId, title, kind, notes
- * - Idempotence côté assignation (le back gère déjà; ici on reste neutre)
+ * - Idempotence cote assignation (le back gere deja; ici on reste neutre)
  * - On conserve 100% des fonctionnalités existantes
  * ============================================================
  */
@@ -25,19 +25,19 @@ function toNumberOrNull(v) {
 ============================================================ */
 
 /**
- * 🔹 Récupérer tous les projets selon le rôle de l'utilisateur
- *    - le backend filtre déjà selon le rôle (client/agent/admin)
+ * Recuperer tous les projets selon le role de l'utilisateur
+ * - le backend filtre deja selon le role (client/agent/admin)
  * @param {object} params
  */
 export async function getProjects(params = {}) {
   const { data } = await api.get('/projects', { params: mergeGeoParams(params) });
   const list = data?.projects || [];
-  // ⚠️ On précise bien la catégorie 'project' pour éviter les effets de bord
+ // On precise bien la categorie 'project' pour eviter les effets de bord
   return list.map((p) => applyLabels(p, 'project'));
 }
 
 /**
- * 🔹 Détail d’un projet (+ labels)
+ * Detail dun projet (+ labels)
  * @param {number|string} id
  */
 export async function getProjectById(id) {
@@ -47,9 +47,9 @@ export async function getProjectById(id) {
 }
 
 /**
- * 🔹 Créer un projet
+ * Creer un projet
  *    - Admin: peut préciser clientId et agentId
- *    - Client: clientId ignoré côté back, pris depuis le token
+ * - Client: clientId ignore cote back, pris depuis le token
  * @param {object} form
  */
 export async function createProject(form = {}) {
@@ -78,9 +78,9 @@ export async function createProject(form = {}) {
 }
 
 /**
- * 🔹 Mettre à jour un projet
+ * Mettre a jour un projet
  *    ⚠ IMPORTANT :
- *    - On n’envoie au backend QUE les champs présents dans `form`
+ * - On nenvoie au backend QUE les champs presents dans `form`
  *      => pas de reset involontaire du budget / description / currency.
  * @param {number|string} id
  * @param {object} form
@@ -88,7 +88,7 @@ export async function createProject(form = {}) {
 export async function updateProject(id, form = {}) {
   const payload = {};
 
-  // Champs éditables génériques
+ // Champs editables generiques
   if ('title' in form) {
     payload.title = form.title;
   }
@@ -106,7 +106,7 @@ export async function updateProject(id, form = {}) {
     payload.currency = form.currency || 'XOF';
   }
 
-  // Champs réservés admin (le backend tranchera selon le rôle réel)
+ // Champs reserves admin (le backend tranchera selon le role reel)
   if ('status' in form) {
     payload.status = form.status;
   }
@@ -117,7 +117,7 @@ export async function updateProject(id, form = {}) {
         : Number(form.agentId);
   }
   if ('clientId' in form) {
-    // Généralement on ne change pas le client d’un projet, mais on garde la compatibilité
+ // Generalement on ne change pas le client dun projet, mais on garde la compatibilite
     payload.clientId =
       form.clientId === '' || form.clientId === null || form.clientId === undefined
         ? undefined
@@ -132,7 +132,7 @@ export async function updateProject(id, form = {}) {
 
 /**
  * 🔹 Supprimer un projet
- *    - Respecte la règle 1h côté backend (client) et droits admin
+ * - Respecte la regle 1h cote backend (client) et droits admin
  * @param {number|string} id
  */
 export async function deleteProject(id) {
@@ -141,7 +141,7 @@ export async function deleteProject(id) {
 }
 
 /**
- * 🔹 Assigner un agent à un projet (ADMIN uniquement)
+ * Assigner un agent a un projet (ADMIN uniquement)
  *    Route backend: POST /projects/assign
  * @param {number|string} projectId
  * @param {number|string|null} agentId - null pour désassigner
@@ -161,7 +161,7 @@ export async function assignAgentToProject(projectId, agentId) {
     headers: { 'Content-Type': 'application/json' },
   });
 
-  // on retourne le projet mis à jour pour rafraîchir l’UI avec labels
+ // on retourne le projet mis a jour pour rafraichir lUI avec labels
   return applyLabels(data.project, 'project');
 }
 
@@ -170,7 +170,7 @@ export async function assignAgentToProject(projectId, agentId) {
 ============================================================ */
 
 /**
- * 🔹 Liste des phases liées à un projet
+ * Liste des phases liees a un projet
  * @param {number|string} projectId
  */
 export async function getProjectPhases(projectId) {
@@ -181,9 +181,9 @@ export async function getProjectPhases(projectId) {
 }
 
 /**
- * 🔹 Ajouter ou mettre à jour une phase
+ * Ajouter ou mettre a jour une phase
  * @param {object} phase
- *   - create: { projectId, title, description?, startDate?, endDate? }
+ * - create: { projectId, title, descriptionINFO, startDateINFO, endDateINFO }
  *   - update: { id, ...mêmes champs }
  */
 export async function saveProjectPhase(phase) {
@@ -232,7 +232,7 @@ export async function getProjectDocuments(projectId) {
  * @param {File[]} files
  * @param {string} [notes='']
  * @param {number|string|null} [phaseId]
- * @param {{ title?: string, kind?: 'contract'|'plan'|'report'|'photo'|'other' }} [meta]
+ * @param {{ titleINFO: string, kindINFO: 'contract'|'plan'|'report'|'photo'|'other' }} [meta]
  */
 export async function uploadProjectDocuments(
   projectId,

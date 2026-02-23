@@ -1,7 +1,7 @@
 // frontend/src/pages/PropertiesPage.js
 // ============================================================================
-// PropertiesPage Ã¢â‚¬â€ Version Premium 2025
-// Client / Admin / Master / Multi-pays READY Ã¢â‚¬â€ ZERO rÃƒÂ©gression
+// PropertiesPage Aaa Version Premium 2025
+// Client / Admin / Master / Multi-pays READY Aaa ZERO rAAgression
 // ============================================================================
 
 import { useEffect, useMemo, useState } from 'react';
@@ -21,7 +21,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 // ============================================================================
-// Ã°Å¸Å’Â FILE_BASE Ã¢â‚¬â€ Standard Teranga (Render / Netlify / CDN / Multi-pays SAFE)
+// AA AA FILE_BASE Aaa Standard Teranga (Render / Netlify / CDN / Multi-pays SAFE)
 // ============================================================================
 const FILE_BASE =
   (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
@@ -121,7 +121,7 @@ function getPropertyTypeFieldConfig(type, t) {
 }
 
 // ============================================================================
-// Ã°Å¸Â§Â© PAGE PRINCIPALE
+// AA AA PAGE PRINCIPALE
 // ============================================================================
 export default function PropertiesPage() {
   const { t } = useTranslation();
@@ -148,7 +148,7 @@ export default function PropertiesPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Affichage formulaire persistÃƒÂ©
+ // Affichage formulaire persistAA
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_properties_showForm');
     return saved === null ? true : saved === '1';
@@ -212,7 +212,7 @@ export default function PropertiesPage() {
       const props = await getProperties();
       setProperties(props || []);
     } catch (e) {
-      console.error('Ã¢ÂÅ’ load properties:', e);
+      console.error('AAA load properties:', e);
       notify(t('propertiesPage.alerts.loadError'));
     }
   }
@@ -282,7 +282,7 @@ export default function PropertiesPage() {
       resetForm();
       await load();
     } catch (e) {
-      console.error('Ã¢ÂÅ’ create property:', e);
+      console.error('AAA create property:', e);
       notify(
         e?.response?.data?.error ||
           e?.message ||
@@ -315,7 +315,7 @@ export default function PropertiesPage() {
       resetForm();
       await load();
     } catch (e) {
-      console.error('Ã¢ÂÅ’ update property:', e);
+      console.error('AAA update property:', e);
       notify(t('propertiesPage.alerts.updateError'));
     } finally {
       setIsSubmitting(false);
@@ -323,7 +323,7 @@ export default function PropertiesPage() {
   }
 
   // --------------------------------------------------------------------------
-  // DELETE (Ã¢â€°Â¤ 1h)
+ // DELETE (AaA 1h)
   // --------------------------------------------------------------------------
   async function handleDelete(id, createdAt) {
     const created = new Date(createdAt).getTime();
@@ -339,7 +339,7 @@ export default function PropertiesPage() {
       await deleteProperty(id);
       load();
     } catch (e) {
-      console.error('Ã¢ÂÅ’ delete property:', e);
+      console.error('AAA delete property:', e);
       notify(t('propertiesPage.alerts.deleteError'));
     }
   }
@@ -500,7 +500,7 @@ export default function PropertiesPage() {
     return (
     <div className="app-page-wrap">
       <div className="app-page-shell relative space-y-8 p-5 sm:p-8 lg:p-10">
-        {/* Ã°Å¸Â§Â­ En-tÃƒÂªte */}
+ {/* AA AA En-tAAate */}
         <Header
           showForm={showForm}
           setShowForm={setShowForm}
@@ -508,7 +508,7 @@ export default function PropertiesPage() {
           total={properties.length}
         />
 
-        {/* Ã°Å¸â€Â Filtres */}
+ {/* AA aA Filtres */}
         <PropertyFilters
           filters={filters}
           setFilters={setFilters}
@@ -517,7 +517,7 @@ export default function PropertiesPage() {
           filteredCount={filtered.length}
         />
 
-        {/* Ã°Å¸Ââ€”Ã¯Â¸Â Formulaire */}
+ {/* AA AaA A A Formulaire */}
         {showForm && (
           <PropertyForm
             form={form}
@@ -534,7 +534,7 @@ export default function PropertiesPage() {
           />
         )}
 
-        {/* Ã°Å¸ÂÂ  Liste */}
+ {/* AA AA Liste */}
         <PropertyList
           filtered={filtered}
           now={now}
@@ -548,7 +548,7 @@ export default function PropertiesPage() {
           openLightbox={openLightbox}
         />
 
-        {/* Ã°Å¸â€“Â¼Ã¯Â¸Â Lightbox plein ÃƒÂ©cran avec navigation */}
+ {/* AA aA14A A A Lightbox plein AAcran avec navigation */}
         {lightbox.open && (
           <div
             className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm"
@@ -609,7 +609,7 @@ export default function PropertiesPage() {
 }
 
 /* ============================================================================
-// Ã¢Å“â€¦ SOUS-COMPOSANTS
+// AAa SOUS-COMPOSANTS
 ============================================================================ */
 
 function Header({ showForm, setShowForm, load, total }) {
@@ -1055,7 +1055,7 @@ function PropertyEditor({
         />
       </div>
 
-      {/* Surface / KilomÃƒÂ©trage */}
+ {/* Surface / KilomAAtrage */}
       {fieldConfig.showSurface && (
         <div className="w-full">
           <label className="mb-1 block text-xs sm:text-sm font-medium text-text-secondary">
@@ -1072,7 +1072,7 @@ function PropertyEditor({
         </div>
       )}
 
-      {/* PiÃƒÂ¨ces / Espaces / Places */}
+ {/* PiAA ces / Espaces / Places */}
       {fieldConfig.showRooms && (
         <div className="w-full">
           <label className="mb-1 block text-xs sm:text-sm font-medium text-text-secondary">

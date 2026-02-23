@@ -3,7 +3,7 @@ import api from './api';
 import { mergeGeoParams, mergeGeoPayload } from './geo';
 
 /**
- * 👤 Liste des services du client connecté
+ * Liste des services du client connecte
  * GET /api/services/me
  */
 export async function getMyServices(params = {}, options = {}) {
@@ -19,7 +19,7 @@ export async function getMyServices(params = {}, options = {}) {
 }
 
 /**
- * 🧑‍🔧 Liste des services assignés à l’agent
+ * Liste des services assignes a lagent
  * GET /api/services/agent/services
  */
 export async function getAgentServices() {
@@ -30,7 +30,7 @@ export async function getAgentServices() {
 }
 
 /**
- * 🛡️ Liste de tous les services (admin)
+ * Liste de tous les services (admin)
  * GET /api/services
  */
 export async function getAllServicesAdmin(params = {}) {
@@ -41,7 +41,7 @@ export async function getAllServicesAdmin(params = {}) {
 }
 
 /**
- * ➕ Créer un service (client ou admin)
+ * Creer un service (client ou admin)
  * POST /api/services
  */
 export async function createService(form) {
@@ -77,7 +77,7 @@ export async function createService(form) {
 }
 
 /**
- * ✏️ Mettre à jour un service
+ * Mettre a jour un service
  * PUT /api/services/:id
  */
 export async function updateService(id, form) {
@@ -97,7 +97,7 @@ export async function deleteService(id) {
 }
 
 /**
- * 🚀 Agent démarre un service
+ * Agent demarre un service
  * POST /api/services/agent/services/:id/start
  */
 export async function startService(id) {
@@ -106,7 +106,7 @@ export async function startService(id) {
 }
 
 /**
- * ✅ Agent marque un service comme terminé
+ * Agent marque un service comme termine
  * POST /api/services/agent/services/:id/complete
  */
 export async function completeService(id) {

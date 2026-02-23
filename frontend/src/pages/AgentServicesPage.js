@@ -8,11 +8,11 @@ import { notify } from '../utils/notify';
 const TOKEN_KEY = 'teranga_token';
 
 /**
- * Ã°Å¸Â§â€˜Ã¢â‚¬ÂÃ°Å¸â€Â§ AgentServicesPage Ã¢â‚¬â€ Version Apple Light Minimal Premium
+ * AA Aa AaAAA aA AgentServicesPage Aaa Version Apple Light Minimal Premium
  * ------------------------------------------------------------
- * - Interface clean, douce, ÃƒÂ©lÃƒÂ©gante
- * - Aucune logique mÃƒÂ©tier modifiÃƒÂ©e
- * - Ã¢Å“â€¦ Multi-pays / Master-safe : PAS de geo params cÃƒÂ´tÃƒÂ© frontend
+ * - Interface clean, douce, AAlAAgante
+ * - Aucune logique mAAtier modifiAAe
+ * - AAa Multi-pays / Master-safe : PAS de geo params cAA tAA frontend
  *   (le backend applique le scope via req.user)
  */
 export default function AgentServicesPage() {
@@ -43,7 +43,7 @@ export default function AgentServicesPage() {
       );
       setServices(enriched);
     } catch (err) {
-      console.error('Ã¢ÂÅ’ Erreur chargement services agent:', err);
+      console.error('AAA Erreur chargement services agent:', err);
       setServices([]);
       notify(t('agentServicesPage.errors.load'));
     } finally {
@@ -81,7 +81,7 @@ export default function AgentServicesPage() {
 
       await load();
     } catch (err) {
-      console.error('Ã¢ÂÅ’ Erreur mise ÃƒÂ  jour statut service:', err);
+      console.error('AAA Erreur mise AA jour statut service:', err);
       notify(t('agentServicesPage.errors.updateStatus'));
     } finally {
       setActingId(null);
@@ -104,7 +104,7 @@ export default function AgentServicesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5f5f7] via-surface-card to-[#e5e5ea] px-4 py-10">
       <div className="max-w-5xl mx-auto bg-surface-card/90 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.06)] rounded-3xl border border-[#e5e5ea] p-8">
-        {/* Ã°Å¸Â§Â­ En-tÃƒÂªte */}
+ {/* AA AA En-tAAate */}
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold text-[#111827] tracking-tight">
@@ -133,7 +133,7 @@ export default function AgentServicesPage() {
           </button>
         </div>
 
-        {/* Ã°Å¸â€œÂ¦ Liste des services */}
+ {/* AA aA Liste des services */}
         {loading ? (
           <div className="text-center py-10 text-text-muted animate-pulse">
             {t('agentServicesPage.loading.list')}
@@ -179,7 +179,7 @@ export default function AgentServicesPage() {
                     )}
                   </div>
 
-                  {/* Ã°Å¸ÂÂ·Ã¯Â¸Â Badge statut */}
+ {/* AA AAA A A Badge statut */}
                   <div
                     className={`
                       mt-3 sm:mt-0 px-4 py-1 rounded-full text-xs font-semibold
@@ -202,7 +202,7 @@ export default function AgentServicesPage() {
                 </div>
 
                 {/* ===================== */}
-                {/* DÃƒÂ©tails supplÃƒÂ©mentaires */}
+ {/* DAAtails supplAAmentaires */}
                 {/* ===================== */}
                 <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-text-secondary">
                   <div>

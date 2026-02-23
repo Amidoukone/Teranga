@@ -1,8 +1,8 @@
 // ============================================================================
 // AdminOnboardingPage.jsx
-// Onboarding Pays ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ RÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©gions ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ MASTER
-// ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ ADMIN GLOBAL ONLY (redirection si MASTER)
-// ZÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°RO RÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°GRESSION ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ BACKEND SOURCE OF TRUTH
+// Onboarding Pays AAaTMAasAAAAAAAAaAAAAasAA AAAAAAaAAAAAAaA34AA RAAaTMAa AaaAAaAAasAAgions AAaTMAasAAAAAAAAaAAAAasAA AAAAAAaAAAAAAaA34AA MASTER
+// AAaTMAasAAAAaAAasAA AAAAAAaAAAAasAAAAAAAAaAAAAAAaA34AA ADMIN GLOBAL ONLY (redirection si MASTER)
+// ZAAaTMAa AaaAAAAAAaAAAAasAARO RAAaTMAa AaaAAAAAAaAAAAasAAGRESSION AAaTMAasAAAAAAAAasAA...AAasAAAAaAAasAA BACKEND SOURCE OF TRUTH
 // ============================================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -33,24 +33,24 @@ export default function AdminOnboardingPage() {
   const { confirmDeleteNamed } = useDeleteConfirm();
   const [step, setStep] = useState(1);
 
-  // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Auth guard state
+ // AAaTMAasAAAAaAAasAA AAAAAAaAAAAasAAAAaAAasAA Auth guard state
   const [isAllowed, setIsAllowed] = useState(null);
 
-  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°tape 1 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â Pays
+ // AAaTMAa AaaAAAAAAaAAAAasAAtape 1 AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA Pays
   const [countryForm, setCountryForm] = useState({
     name: "",
     isoCode: "",
   });
   const [createdCountry, setCreatedCountry] = useState(null);
 
-  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°tape 2 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â RÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©gions
+ // AAaTMAa AaaAAAAAAaAAAAasAAtape 2 AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA RAAaTMAa AaaAAaAAasAAgions
   const [regionForm, setRegionForm] = useState({
     name: "",
     code: "",
   });
   const [regionsCreated, setRegionsCreated] = useState([]);
 
-  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°tape 3 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â MASTER
+ // AAaTMAa AaaAAAAAAaAAAAasAAtape 3 AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA MASTER
   const [masterForm, setMasterForm] = useState({
     email: "",
     password: "",
@@ -58,7 +58,7 @@ export default function AdminOnboardingPage() {
     regionId: "",
   });
 
-  // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Conserve GeoContext (cohÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©rence globale)
+ // AAaTMAasAAAAaAAAAasAA...aAAAAAAaAAAAasAA Conserve GeoContext (cohAAaTMAa AaaAAaAAasAArence globale)
   useGeo();
 
   // Loading flags
@@ -85,9 +85,9 @@ export default function AdminOnboardingPage() {
   });
 
   // ========================================================================
-  // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â AUTH CHECK ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ADMIN GLOBAL ONLY
-  // - AutorisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© : admin sans countryId/regionId
-  // - RefusÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©  : agent/client + MASTER (admin scopÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©)
+ // AAaTMAasAAAAaAAasAA AAAAAAaAAAAasAAAAaAAasAA AUTH CHECK AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA ADMIN GLOBAL ONLY
+ // - AutorisAAaTMAa AaaAAaAAasAA : admin sans countryId/regionId
+ // - RefusAAaTMAa AaaAAaAAasAA : agent/client + MASTER (admin scopAAaTMAa AaaAAaAAasAA)
   // ========================================================================
   useEffect(() => {
     let alive = true;
@@ -107,13 +107,13 @@ export default function AdminOnboardingPage() {
         const isAdmin = role === "admin";
         const isMaster = Boolean(user?.countryId) || Boolean(user?.regionId);
 
-        // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Pas admin ou admin scopÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© (MASTER) -> redirect
+ // AAaTMAasAAAAaAAasAAAAaAAAAasAAazA Pas admin ou admin scopAAaTMAa AaaAAaAAasAA (MASTER) -> redirect
         if (!isAdmin || isMaster) {
           window.location.href = "/dashboard";
           return;
         }
 
-        // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Admin global autorisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©
+ // AAaTMAasAAAAaAAAAasAA...aAAAAAAaAAAAasAA Admin global autorisAAaTMAa AaaAAaAAasAA
         setIsAllowed(true);
       } catch (e) {
         console.error("/me error:", e);
@@ -296,7 +296,7 @@ export default function AdminOnboardingPage() {
   }
 
   // ========================================================================
-  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°tape 1 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â CrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©er pays
+ // AAaTMAa AaaAAAAAAaAAAAasAAtape 1 AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA CrAAaTMAa AaaAAaAAasAAer pays
   // ========================================================================
   async function createCountry(e) {
     e.preventDefault();
@@ -318,7 +318,7 @@ export default function AdminOnboardingPage() {
       setStep(2);
       await loadCountries();
 
-      // Reset rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©gions/master quand on recrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e un pays
+ // Reset rAAaTMAa AaaAAaAAasAAgions/master quand on recrAAaTMAa AaaAAaAAasAAe un pays
       setRegionsCreated([]);
       setMasterForm((m) => ({
         ...m,
@@ -333,7 +333,7 @@ export default function AdminOnboardingPage() {
   }
 
   // ========================================================================
-  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°tape 2 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â Ajouter rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©gion
+ // AAaTMAa AaaAAAAAAaAAAAasAAtape 2 AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA Ajouter rAAaTMAa AaaAAaAAasAAgion
   // ========================================================================
   async function addRegion(e) {
     e.preventDefault();
@@ -363,7 +363,7 @@ export default function AdminOnboardingPage() {
   }
 
   // ========================================================================
-  // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°tape 3 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â CrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©er MASTER
+ // AAaTMAa AaaAAAAAAaAAAAasAAtape 3 AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA CrAAaTMAa AaaAAaAAasAAer MASTER
   // ========================================================================
   async function createMaster(e) {
     e.preventDefault();
@@ -384,7 +384,7 @@ export default function AdminOnboardingPage() {
         role: "admin",
       };
 
-      // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Backend existant: supporte countryId / regionId
+ // AAaTMAasAAAAaAAAAasAA...aAAAAAAaAAAAasAA Backend existant: supporte countryId / regionId
       if (masterForm.scope === "region") {
         const rid = Number(masterForm.regionId);
         payload.regionId = rid;

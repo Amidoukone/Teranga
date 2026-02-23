@@ -4,7 +4,7 @@ import i18n from '../i18n';
  * ============================================================
  * 🌍 Dictionnaire central des labels Teranga (Frontend)
  * ============================================================
- * - Aligné avec backend/src/utils/labels.js + modèles Sequelize.
+ * - Aligne avec backend/src/utils/labels.js + modeles Sequelize.
  * - Inclut des "alias" pour convertir les anciens statuts UI
  *   vers les statuts canoniques acceptés par la base.
  * - Objectif : cohérence totale backend <-> frontend.
@@ -191,16 +191,16 @@ export const TRANSACTION_STATUSES = createLabelMap(
 );
 
 /**
- * 🔁 Aliases transaction UI -> Canonique (afin d’absorber l’historique UI)
+ * Aliases transaction UI -> Canonique (afin dabsorber lhistorique UI)
  * DB accepte seulement: pending | completed | cancelled
  */
 export const TRANSACTION_STATUS_ALIASES = {
-  // états “en cours”
+ // etats en cours
   processing: 'pending',
   in_progress: 'pending',
   awaiting: 'pending',
 
-  // états “terminé / payé / effectué”
+ // etats termine / paye / effectue
   done: 'completed',
   success: 'completed',
   paid: 'completed',
@@ -246,7 +246,7 @@ export const PRODUCT_STATUSES = createLabelMap(
 );
 
 /**
- * ⚠️ IMPORTANT : Statuts de commande canoniques = EXACTEMENT ceux de la DB
+ * IMPORTANT : Statuts de commande canoniques = EXACTEMENT ceux de la DB
  * Backend (ENUM): 'created','paid','processing','shipped','delivered','cancelled','refunded'
  */
 const ORDER_STATUSES_BASE = {
@@ -264,7 +264,7 @@ export const ORDER_STATUSES = createLabelMap(
 );
 
 /**
- * 🔁 Aliases UI -> Canonique (pour absorber l’historique front)
+ * Aliases UI -> Canonique (pour absorber lhistorique front)
  */
 export const ORDER_STATUS_ALIASES = {
   draft: 'created',
@@ -318,7 +318,7 @@ export const ORDER_ITEM_STATUSES = createLabelMap(
 ============================================================ */
 
 /**
- * Retourne le label français correspondant à une clé technique.
+ * Retourne le label francais correspondant a une cle technique.
  * @param {string} key
  * @param {object} map
  * @returns {string}
@@ -364,7 +364,7 @@ export function canonicalizeTransactionStatus(key) {
 }
 
 /**
- * Canonicalise un statut générique
+ * Canonicalise un statut generique
  */
 export function canonicalizeStatus(category, key) {
   if (category === 'order') return canonicalizeOrderStatus(key);
@@ -374,8 +374,8 @@ export function canonicalizeStatus(category, key) {
 }
 
 /**
- * 🔍 Détection heuristique du type d’objet pour applyLabels
- * (pour rester rétro-compatible quand la catégorie n’est pas passée)
+ * Detection heuristique du type dobjet pour applyLabels
+ * (pour rester retro-compatible quand la categorie nest pas passee)
  */
 function inferCategory(item) {
   // Transaction : montant, type de transaction, orderId / projectId lié
@@ -416,8 +416,8 @@ function inferCategory(item) {
 }
 
 /**
- * Formate un statut générique selon sa catégorie
- * (service, tâche, transaction, commande, produit…)
+ * Formate un statut generique selon sa categorie
+ * (service, tache, transaction, commande, produit...)
  * @param {string} key - statut technique (peut être alias)
  * @param {string} category - "service" | "task" | "transaction" | "order" | "payment" | "project" | ...
  */
@@ -451,7 +451,7 @@ export function formatCurrency(code) {
 }
 
 /**
- * Enrichit un objet avec des labels prêts pour l’affichage
+ * Enrichit un objet avec des labels prets pour laffichage
  * @param {object} item
  * @param {string|null} category - optionnel ("project","transaction",...)
  */

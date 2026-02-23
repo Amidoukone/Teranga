@@ -6,10 +6,10 @@ import axios from 'axios';
  * 🌐 Instance Axios globale (Frontend Teranga)
  * ============================================================
  * - Base URL adaptative : env > détection host > fallback /api
- * - Sépare l'origin API (…/api) et l'origin FICHIERS (…/)
+ * - Separe l'origin API (.../api) et l'origin FICHIERS (.../)
  * - Injection du token Bearer
  * - Gestion fine des erreurs (réseau vs 401/403)
- * - Petit retry (1x) sur erreurs réseau + flip host 127⇄localhost en dev
+ * - Petit retry (1x) sur erreurs reseau + flip host 127localhost en dev
  * ============================================================
  */
 
@@ -44,7 +44,7 @@ function resolveOrigins() {
     };
   }
 
-  // 2) Heuristique dev locale (127.0.0.1 priorisé pour éviter DNS)
+ // 2) Heuristique dev locale (127.0.0.1 priorise pour eviter DNS)
   const host = (typeof window !== 'undefined' && window.location?.hostname) || '';
   const isLocalHost = host === 'localhost' || host === '127.0.0.1';
 
@@ -57,7 +57,7 @@ function resolveOrigins() {
     };
   }
 
-  // 3) Production / reverse proxy : API mappée sous /api, fichiers sous /uploads à la racine
+ // 3) Production / reverse proxy : API mappee sous /api, fichiers sous /uploads a la racine
   return {
     FILE_BASE_URL: '',     // même origin que le front (ex: https://app.mondomaine.com)
     API_BASE_URL: '/api',
@@ -107,6 +107,7 @@ api.interceptors.request.use((config) => {
   // Certains écrans envoient parfois "Bearer null"/"Bearer undefined":
   // on l'ignore pour laisser l'intercepteur injecter le vrai token (ou la session cookie).
   if (
+    normalizedExistingAuth === '' ||
     normalizedExistingAuth === 'bearer null' ||
     normalizedExistingAuth === 'bearer undefined' ||
     normalizedExistingAuth === 'bearer'
@@ -120,7 +121,7 @@ api.interceptors.request.use((config) => {
   const storedToken =
     localStorage.getItem('teranga_token') || localStorage.getItem('token');
   // Fallback: si un token existe, on l'envoie même en mode cookie
-  // (évite les 401 quand la config env est incohérente avec l'état client)
+ // (evite les 401 quand la config env est incoherente avec l'etat client)
   const token = shouldUseLocalStorage() ? storedToken : storedToken;
 
   if (
@@ -156,12 +157,12 @@ function getCookieValue(name) {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-/* ---------- Helper: retry réseau léger + flip host dev ---------- */
+/* ---------- Helper: retry reseau leger + flip host dev ---------- */
 function shouldRetryNetwork(error) {
-  // Pas de réponse = réseau (ERR_CONNECTION_REFUSED, offline, CORS dur)
+ // Pas de reponse = reseau (ERR_CONNECTION_REFUSED, offline, CORS dur)
   const cfg = error?.config;
   if (!error?.response && cfg && cfg.method === 'get') {
-    // On autorise uniquement 1 retry très léger
+ // On autorise uniquement 1 retry tres leger
     return (cfg.__retryCount || 0) < 1;
   }
   return false;
@@ -229,7 +230,7 @@ api.interceptors.response.use(
       }
     }
 
-    // 1) Erreurs réseau (pas de response) → pas de redirect/logout
+ // 1) Erreurs reseau (pas de response) pas de redirect/logout
     if (!error?.response) {
       // Petit retry GET (1x)
       if (shouldRetryNetwork(error)) {
@@ -248,7 +249,7 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // 2) 401 ? Token invalide/expire ? nettoyage + redirection unique vers /login
+    // 2) 401 INFO Token invalide/expire INFO nettoyage + redirection unique vers /login
     if (status === 401) {
       localStorage.removeItem('teranga_token');
       localStorage.removeItem('token');
@@ -277,13 +278,13 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // 3) 403 → ACL (autorisation insuffisante) → pas de logout
+ // 3) 403 ACL (autorisation insuffisante) pas de logout
     if (status === 403) {
-      console.warn('⚠️ Accès refusé (403) pour', method?.toUpperCase?.(), url);
+      console.warn(' Acces refuse (403) pour', method?.toUpperCase?.(), url);
       return Promise.reject(error);
     }
 
-    // 4) Autres erreurs (400, 404, 500, …) → on remonte
+ // 4) Autres erreurs (400, 404, 500, ...) on remonte
     return Promise.reject(error);
   }
 );
@@ -295,7 +296,7 @@ export function setApiBaseUrl(newBaseUrl) {
     const sanitized = stripTrailingSlash(newBaseUrl);
     api.defaults.baseURL = sanitized;
 
-    // Met à jour automatiquement FILE_BASE_URL en retirant un éventuel "/api"
+ // Met a jour automatiquement FILE_BASE_URL en retirant un eventuel "/api"
     FILE_BASE_URL = sanitized.replace(/\/api\/?$/, '');
     if (typeof window !== 'undefined') {
       window.__TERANGA_API_BASE_URL = api.defaults.baseURL;

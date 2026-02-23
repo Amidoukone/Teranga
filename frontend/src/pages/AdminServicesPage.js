@@ -86,7 +86,7 @@ export default function AdminServicesPage() {
       const { data } = await api.get('/users?role=agent');
       setAgents(data?.users || []);
     } catch (err) {
-      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement agents:', err);
+      console.error('AAAAasAAAaAaa Erreur chargement agents:', err);
       setAgents([]);
     }
   }, []);
@@ -113,7 +113,7 @@ export default function AdminServicesPage() {
 
       setServices(data?.services || []);
     } catch (e) {
-      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement services:', e);
+      console.error('AAAAasAAAaAaa Erreur chargement services:', e);
       setServices([]);
     } finally {
       setLoading(false);
@@ -147,7 +147,7 @@ export default function AdminServicesPage() {
       );
       await loadServices();
     } catch (e) {
-      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur assignation:', e);
+      console.error('AAAAasAAAaAaa Erreur assignation:', e);
       notify(
         e?.response?.data?.error ||
           t('adminServicesPage.alerts.assignError')
@@ -219,7 +219,7 @@ export default function AdminServicesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-surface-card/90 backdrop-blur-sm shadow-xl rounded-2xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Â­ En-tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªte Apple Light */}
+ {/* AAAAaAA AasAAAasAA En-tAAaTMAasAAate Apple Light */}
         <AdminPageHeader
           title={t('adminServicesPage.title')}
           subtitle={t('adminServicesPage.subtitle')}
@@ -270,7 +270,7 @@ export default function AdminServicesPage() {
           }
         />
 
-        {/* ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂºÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Filtres Apple-style */}
+ {/* AAAAaAA AaAA12AAAasAAAoAAA AasAA AasAA Filtres Apple-style */}
         <AdminFilterBar className="mb-8 rounded-2xl px-4 sm:px-5 py-4 sm:py-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Statut */}
@@ -294,7 +294,7 @@ export default function AdminServicesPage() {
               </select>
             </AdminField>
 
-            {/* Non assignÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©s */}
+ {/* Non assignAAaTMAasAAs */}
             <div className="flex flex-col justify-end">
               <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
                 <input
@@ -370,7 +370,7 @@ export default function AdminServicesPage() {
           </div>
         </AdminFilterBar>
 
-        {/* ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Â¾ Tableau Services Apple Light */}
+ {/* AAAAaAA AasAAAasAA34 Tableau Services Apple Light */}
         <div className="overflow-x-auto rounded-2xl border border-border bg-surface-card shadow-sm">
           <table className="min-w-full text-sm">
             <thead className="bg-surface-main/80 text-text-secondary">
@@ -495,7 +495,7 @@ export default function AdminServicesPage() {
           </table>
         </div>
 
-        {/* ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Pagination minimaliste */}
+ {/* AAAAaAA AAAasAA...aAAAasAA...A34 Pagination minimaliste */}
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-text-secondary">
           <button
             onClick={() => setOffset(Math.max(0, offset - limit))}

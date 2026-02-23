@@ -107,9 +107,9 @@ const roleVariant = useMemo(() => {
   const authHeaders = useMemo(() => {
     const token =
       localStorage.getItem('teranga_token') || localStorage.getItem('token');
-    return {
-      headers: { Authorization: token ? `Bearer ${token}` : '' },
-    };
+    return token
+      ? { headers: { Authorization: `Bearer ${token}` } }
+      : { headers: {} };
   }, []);
 
   /* ==========================================
@@ -134,7 +134,7 @@ const roleVariant = useMemo(() => {
         ? res
         : res?.services || [];
 
-      // Toujours recalculer les labels via i18n (ï¿½vite les labels FR renvoyï¿½s par le backend)
+ // Toujours recalculer les labels via i18n (i12vite les labels FR renvoyi12s par le backend)
       const enriched = list.map((s) => applyLabels(s, 'service'));
 
       setServices(enriched);
@@ -151,7 +151,7 @@ const roleVariant = useMemo(() => {
           : { page, limit: pageSize, total: enriched.length }
       );
     } catch (e) {
-      console.error('? Load services:', e);
+      console.error('INFO Load services:', e);
       setNotice({
         type: 'error',
         message: e?.response?.data?.error || t("services.alerts.loadError"),
@@ -175,7 +175,7 @@ const roleVariant = useMemo(() => {
         );
         setProperties(data.properties || []);
       } catch (e) {
-        console.error('? Erreur chargement biens client:', e);
+        console.error('INFO Erreur chargement biens client:', e);
         setNotice({
           type: 'error',
           message: t("services.alerts.loadClientPropertiesError"),
@@ -190,7 +190,7 @@ const roleVariant = useMemo(() => {
       const props = await getProperties();
       setProperties(Array.isArray(props) ? props : props?.properties || []);
     } catch (e) {
-      console.error('? Load properties (me):', e);
+      console.error('INFO Load properties (me):', e);
       setNotice({
         type: 'error',
         message: t("services.alerts.loadPropertiesError"),
@@ -200,11 +200,11 @@ const roleVariant = useMemo(() => {
 
   const loadClients = useCallback(async () => {
     try {
-      // ? backend filtre automatiquement via scope (admin global = tous, master = scope)
+      // INFO backend filtre automatiquement via scope (admin global = tous, master = scope)
       const { data } = await api.get('/users?role=client', authHeaders);
       setClients(data.users || []);
     } catch (e) {
-      console.error('? Erreur chargement clients:', e);
+      console.error('INFO Erreur chargement clients:', e);
       setClients([]);
     }
   }, [authHeaders]);
@@ -229,14 +229,14 @@ const roleVariant = useMemo(() => {
 
         setUser(u);
 
-        // ? admin global OU master (toujours role=admin, scope g?r? c?t? backend)
+        // INFO admin global OU master (toujours role=admin, scope gINFOrINFO cINFOtINFO backend)
         if (u.role === 'admin') {
           await loadClients();
         } else {
           await loadMyProperties();
         }
       } catch (err) {
-        console.error('? Erreur init ServicesPage:', err);
+        console.error('INFO Erreur init ServicesPage:', err);
         navigate('/login');
       }
     }
@@ -248,7 +248,7 @@ const roleVariant = useMemo(() => {
     loadServices();
   }, [user, loadServices]);
 
-  // Lorsquï¿½un admin/master choisit un client, charger ses biens
+ // Lorsqui12un admin/master choisit un client, charger ses biens
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
     if (form.clientId) {
@@ -269,7 +269,7 @@ const roleVariant = useMemo(() => {
     }
   }, [properties, form.propertyId, user]);
 
-  // Persister lï¿½ï¿½tat dï¿½affichage du formulaire
+ // Persister li12i12tat di12affichage du formulaire
   useEffect(() => {
     localStorage.setItem('teranga_services_showForm', showForm ? '1' : '0');
   }, [showForm]);
@@ -283,11 +283,11 @@ const roleVariant = useMemo(() => {
       setNotice(null);
       setLoading(true);
 
-      // ? IMPORTANT : ne pas injecter countryId/regionId ici
+      // INFO IMPORTANT: ne pas injecter countryId/regionId ici
       // Backend applique le scope sur base de req.user
       const payload = { ...form };
 
-      // ?? sï¿½curitï¿½ UI : admin/master => clientId obligatoire (backend lï¿½exige)
+      // INFOINFO si12curiti12 UI: admin/master => clientId obligatoire (backend li12exige)
       if (user?.role === 'admin' && !payload.clientId) {
         setNotice({
           type: 'error',
@@ -323,7 +323,7 @@ const roleVariant = useMemo(() => {
         await loadMyProperties();
       }
     } catch (e) {
-      console.error('? createService:', e);
+      console.error('INFO createService:', e);
       setNotice({
         type: 'error',
         message: e?.response?.data?.error || t("services.alerts.createError"),
@@ -358,7 +358,7 @@ const roleVariant = useMemo(() => {
         propertyId: form.propertyId ? parseInt(form.propertyId, 10) : null,
       };
 
-      // ? admin/master : clientId autorisï¿½ si renseignï¿½ (backend supporte)
+      // INFO admin/master: clientId autorisi12 si renseigni12 (backend supporte)
       if (user?.role === 'admin' && form.clientId) {
         payload.clientId = parseInt(form.clientId, 10);
       }
@@ -372,7 +372,7 @@ const roleVariant = useMemo(() => {
       setEditingId(null);
       await loadServices();
     } catch (e) {
-      console.error('? Erreur mise ï¿½ jour service:', e);
+      console.error('INFO Erreur mise i12 jour service:', e);
       setNotice({
         type: 'error',
         message: e?.response?.data?.error || t("services.alerts.updateError"),
@@ -393,7 +393,7 @@ const roleVariant = useMemo(() => {
         message: t("services.alerts.deleteSuccess"),
       });
     } catch (e) {
-      console.error('? Erreur suppression service:', e);
+      console.error('INFO Erreur suppression service:', e);
       setNotice({
         type: 'error',
         message: e?.response?.data?.error || t("services.alerts.deleteError"),
@@ -805,7 +805,7 @@ function ServiceForm({
           bg-surface-main/55 p-4 sm:p-5 rounded-2xl border border-border/70
         "
       >
-        {/* ADMIN/MASTER : sï¿½lection client */}
+ {/* ADMIN/MASTER : si12lection client */}
         {isAdminOrMaster && (
           <div className="col-span-1 sm:col-span-2">
             <label className="block text-sm font-medium text-text-secondary mb-1">
@@ -833,7 +833,7 @@ function ServiceForm({
           </div>
         )}
 
-        {/* Biens ï¿½ optionnel */}
+ {/* Biens i12 optionnel */}
         <div className="col-span-1 sm:col-span-2">
           <label className="block text-sm font-medium text-text-secondary mb-1">
             {t("services.form.propertyLabel")}
@@ -952,7 +952,7 @@ function ServiceFormFields({ form, setForm }) {
         />
       </div>
 
-      {/* Tï¿½lï¿½phone */}
+ {/* Ti12li12phone */}
       <div className="w-full">
         <label className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.phoneLabel")}
@@ -1061,7 +1061,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
         border-l-4 ${statusMeta.accent}
       `}
     >
-      {/* ENTï¿½TE (titre + statut) */}
+ {/* ENTi12TE (titre + statut) */}
       <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:items-start">
         <div className="min-w-0 break-words">
           <div className="flex flex-wrap items-center gap-2">
@@ -1181,4 +1181,3 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
     </div>
   );
 }
-

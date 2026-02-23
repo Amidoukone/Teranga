@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Ãƒâ€°tats
+ // Aatats
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -98,7 +98,7 @@ export default function LoginPage() {
           <p className="page-lead mt-1">{t("auth.login.subtitle")}</p>
         </div>
 
-        {/* ---------- MESSAGE DE SUCCÃƒË†S ---------- */}
+ {/* ---------- MESSAGE DE SUCCAES ---------- */}
         {successMsg && (
           <div className="mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-sm flex items-start gap-2 shadow-sm">
             <CheckCircle2 className="w-5 h-5 mt-0.5" />
@@ -106,7 +106,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* ---------- MESSAGE DÃ¢â‚¬â„¢ERREUR ---------- */}
+ {/* ---------- MESSAGE DAaaERREUR ---------- */}
         {errorMsg && (
           <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-sm shadow-sm">
             {errorMsg}
@@ -205,7 +205,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* ---------- LIENS SUPPLÃƒâ€°MENTAIRES ---------- */}
+ {/* ---------- LIENS SUPPLAaMENTAIRES ---------- */}
         <div className="mt-8 text-center text-sm text-text-secondary">
           <p className="mb-2">{t("auth.login.clientNoAccount")}</p>
 

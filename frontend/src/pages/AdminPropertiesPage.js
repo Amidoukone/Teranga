@@ -1,10 +1,10 @@
 // ============================================================================
-// AdminPropertiesPage.jsx ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION PRODUCTION READY (Apple Light Premium)
-// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Master + multi-pays compatible (backend GeoScope)
-// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FILE_BASE prod-safe (pas de localhost)
-// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Photos: support string | {url,fileId} (ImageKit) | legacy
-// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Lightbox + previews sans erreurs (revokeObjectURL safe)
-// 100% fonctionnel, aucune rÃƒÆ’Ã‚Â©gression, mÃƒÆ’Ã‚Âªme logique, design modernisÃƒÆ’Ã‚Â©.
+// AdminPropertiesPage.jsx AAAasAAaA VERSION PRODUCTION READY (Apple Light Premium)
+// AAA...aAaA Master + multi-pays compatible (backend GeoScope)
+// AAA...aAaA FILE_BASE prod-safe (pas de localhost)
+// AAA...aAaA Photos: support string | {url,fileId} (ImageKit) | legacy
+// AAA...aAaA Lightbox + previews sans erreurs (revokeObjectURL safe)
+// 100% fonctionnel, aucune rAAAgression, mAAAame logique, design modernisAAA.
 // ============================================================================
 
 import { useEffect, useState, useMemo } from 'react';
@@ -22,10 +22,10 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 // ============================================================================
-// ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â FILE_BASE + normalizePath + toAbsUrl ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Standard Teranga (PRODUCTION SAFE)
+// AAA...A A...aTMAA FILE_BASE + normalizePath + toAbsUrl AAAasAAaA Standard Teranga (PRODUCTION SAFE)
 // - Compatible Render/Netlify
 // - SSR safe
-// - No localhost fallback (ÃƒÆ’Ã‚Â©vite bugs prod multi-pays)
+// - No localhost fallback (AAAvite bugs prod multi-pays)
 // ============================================================================
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -99,8 +99,8 @@ function getPropertyTypeFieldConfig(type, t) {
 }
 
 // ============================================================================
-// ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© Normalisation Photos (ImageKit + legacy)
-// - backend peut renvoyer: ["https://..."] (dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  ok)
+// AAA...A AAAA Normalisation Photos (ImageKit + legacy)
+// - backend peut renvoyer: ["https://..."] (dAAAjAAA ok)
 // - ou [{url,fileId}, ...]
 // - ou {photos:[{url}...]} (selon couches)
 // ============================================================================
@@ -114,7 +114,7 @@ function normalizePhotoValue(photo) {
 }
 
 // ============================================================================
-// ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© Safe revokeObjectURL (ÃƒÆ’Ã‚Â©vite erreurs si url http)
+// AAA...A AAAA Safe revokeObjectURL (AAAvite erreurs si url http)
 // ============================================================================
 function safeRevoke(url) {
   try {
@@ -127,7 +127,7 @@ function safeRevoke(url) {
 }
 
 // ============================================================================
-// ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© PAGE PRINCIPALE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Apple Light Premium
+// AAA...A AAAA PAGE PRINCIPALE AAAasAAaA Apple Light Premium
 // ============================================================================
 export default function AdminPropertiesPage() {
   const { t } = useTranslation();
@@ -154,7 +154,7 @@ export default function AdminPropertiesPage() {
     surfaceArea: '',
     roomCount: '',
     description: '',
-    // ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â Multi-pays (optionnel ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â backend gÃƒÆ’Ã‚Â¨re scope)
+ // AAA...A A...aTMAA Multi-pays (optionnel AAAasAAaA backend gAAA re scope)
     // countryId: '',
     // regionId: '',
   });
@@ -163,7 +163,7 @@ export default function AdminPropertiesPage() {
   const [previewUrls, setPreviewUrls] = useState([]);
 
   // ==========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¼ÃƒÂ¯Ã‚Â¸Ã‚Â LIGHTBOX (Agrandissement + Navigation)
+ // AAA...A AaaAA14AA AA AA LIGHTBOX (Agrandissement + Navigation)
   // ==========================================================================
   const [lightbox, setLightbox] = useState({
     open: false,
@@ -186,7 +186,7 @@ export default function AdminPropertiesPage() {
   }, [lightbox.open, lightbox.index]);
 
   // ==========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Initialisation (auth + clients + biens)
+ // AAA...A AaAAA1 Initialisation (auth + clients + biens)
   // ==========================================================================
   useEffect(() => {
     (async () => {
@@ -204,7 +204,7 @@ export default function AdminPropertiesPage() {
         setUser(current);
         await Promise.all([loadClients(), loadProperties()]);
       } catch (e) {
-        console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ init AdminPropertiesPage:', e);
+        console.error('AAAAA...aTM init AdminPropertiesPage:', e);
         localStorage.removeItem('teranga_token');
         localStorage.removeItem('token');
         window.location.href = '/login';
@@ -214,7 +214,7 @@ export default function AdminPropertiesPage() {
   }, []);
 
   // ==========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Charger Clients (admin/master scoped: backend filtre via GeoScope si appliquÃƒÆ’Ã‚Â©)
+ // AAA...A AaAAA1 Charger Clients (admin/master scoped: backend filtre via GeoScope si appliquAAA)
   // ==========================================================================
   async function loadClients() {
     try {
@@ -223,12 +223,12 @@ export default function AdminPropertiesPage() {
       setClients(list);
       setFilteredClients(list);
     } catch (e) {
-      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur clients:', e);
+      console.error('AAAAA...aTM Erreur clients:', e);
     }
   }
 
   // ==========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Charger PropriÃƒÆ’Ã‚Â©tÃƒÆ’Ã‚Â©s
+ // AAA...A AaAAA1 Charger PropriAAAtAAAs
   // - master/admin scoped: backend filtre via GeoScope automatiquement
   // ==========================================================================
   async function loadProperties(clientId) {
@@ -249,14 +249,14 @@ export default function AdminPropertiesPage() {
 
       setProperties(normalized);
     } catch (e) {
-      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur biens:', e);
+      console.error('AAAAA...aTM Erreur biens:', e);
     } finally {
       setLoading(false);
     }
   }
 
   // ==========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Recherche Client
+ // AAA...A AaAAA1 Recherche Client
   // ==========================================================================
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -274,7 +274,7 @@ export default function AdminPropertiesPage() {
   }, [searchTerm, clients]);
 
   // ==========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Gestion Upload + previews
+ // AAA...A AaAAA1 Gestion Upload + previews
   // ==========================================================================
   function handleFileChange(e) {
     const selected = Array.from(e.target.files || []);
@@ -289,7 +289,7 @@ export default function AdminPropertiesPage() {
   }
 
   // ==========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Ajouter Bien
+ // AAA...A AaAAA1 Ajouter Bien
   // ==========================================================================
   async function handleCreate(e) {
     e.preventDefault();
@@ -308,7 +308,7 @@ export default function AdminPropertiesPage() {
       setIsCreating(false);
       await loadProperties(selectedClient);
     } catch (e2) {
-      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur crÃƒÆ’Ã‚Â©ation:', e2);
+      console.error('AAAAA...aTM Erreur crAAAation:', e2);
       notify(t('adminPropertiesPage.alerts.createError'));
     } finally {
       setIsSubmitting(false);
@@ -316,7 +316,7 @@ export default function AdminPropertiesPage() {
   }
 
   // ==========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Modifier Bien
+ // AAA...A AaAAA1 Modifier Bien
   // ==========================================================================
   function startEdit(p) {
     setEditId(p.id);
@@ -331,7 +331,7 @@ export default function AdminPropertiesPage() {
       surfaceArea: p.surfaceArea || '',
       roomCount: p.roomCount || '',
       description: p.description || '',
-      // ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â Multi-pays (optionnel) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â si tu ajoutes plus tard les champs UI
+ // AAA...A A...aTMAA Multi-pays (optionnel) AAAasAAaA si tu ajoutes plus tard les champs UI
       // countryId: p.countryId || '',
       // regionId: p.regionId || '',
     });
@@ -362,7 +362,7 @@ export default function AdminPropertiesPage() {
       resetForm();
       await loadProperties(selectedClient);
     } catch (e2) {
-      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Update:', e2);
+      console.error('AAAAA...aTM Update:', e2);
       notify(t('adminPropertiesPage.alerts.updateError'));
     } finally {
       setIsSubmitting(false);
@@ -370,7 +370,7 @@ export default function AdminPropertiesPage() {
   }
 
   // ==========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Supprimer Bien
+ // AAA...A AaAAA1 Supprimer Bien
   // ==========================================================================
   async function handleDelete(id) {
     const ok = await confirmDelete("property");
@@ -379,13 +379,13 @@ export default function AdminPropertiesPage() {
       await api.delete(`/properties/${id}`);
       await loadProperties(selectedClient);
     } catch (e) {
-      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ delete property:', e);
+      console.error('AAAAA...aTM delete property:', e);
       notify(t('adminPropertiesPage.alerts.deleteError'));
     }
   }
 
   // ==========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Reset Form
+ // AAA...A AaAAA1 Reset Form
   // ==========================================================================
   function resetForm() {
     setEditId(null);
@@ -409,7 +409,7 @@ export default function AdminPropertiesPage() {
   }
 
   // ==========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Lightbox Controls
+ // AAA...A AaAAA1 Lightbox Controls
   // ==========================================================================
   function openLightbox(images, index = 0) {
     if (!images || !images.length) return;
@@ -438,7 +438,7 @@ export default function AdminPropertiesPage() {
   const fieldConfig = getPropertyTypeFieldConfig(form.type, t);
 
   // ==========================================================================
-  // ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¥ÃƒÂ¯Ã‚Â¸Ã‚Â UI ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Apple Light Premium (Cartes uniquement)
+ // AAA...A AaaAAAA AA AA UI AAAasAAaA Apple Light Premium (Cartes uniquement)
   // ==========================================================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
@@ -546,7 +546,7 @@ export default function AdminPropertiesPage() {
           </div>
         </section>
 
-        {/* FORMULAIRE (crÃƒÆ’Ã‚Â©ation / ÃƒÆ’Ã‚Â©dition) */}
+ {/* FORMULAIRE (crAAAation / AAAdition) */}
         {(isCreating || editId) && (
           <section className="bg-surface-main/80 border border-border rounded-2xl px-4 sm:px-5 py-5 shadow-sm">
             <div className="flex items-center justify-between gap-2 mb-4">
@@ -648,7 +648,7 @@ export default function AdminPropertiesPage() {
                 />
               </div>
 
-              {/* Surface / KilomÃƒÆ’Ã‚Â©trage */}
+ {/* Surface / KilomAAAtrage */}
               {fieldConfig.showSurface && (
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] font-medium text-text-secondary">
@@ -665,7 +665,7 @@ export default function AdminPropertiesPage() {
                   />
                 </div>
               )}
-              {/* PiÃƒÆ’Ã‚Â¨ces / Espaces / Places */}
+ {/* PiAAA ces / Espaces / Places */}
               {fieldConfig.showRooms && (
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] font-medium text-text-secondary">
@@ -753,7 +753,7 @@ export default function AdminPropertiesPage() {
           </section>
         )}
 
-        {/* LISTE DES BIENS ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â CARTES PREMIUM */}
+ {/* LISTE DES BIENS AAAasAAaA CARTES PREMIUM */}
         <section className="space-y-4">
           {loading ? (
             <p className="text-center text-text-muted py-6 text-sm animate-pulse">

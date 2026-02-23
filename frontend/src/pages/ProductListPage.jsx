@@ -1,13 +1,13 @@
 // frontend/src/pages/ProductListPage.jsx
 /* eslint-disable jsx-a11y/img-redundant-alt */
 /**
- * Ã°Å¸â€ºÂÃ¯Â¸Â ProductListPage Ã¢â‚¬â€ Teranga PRODUCTION READY (Style A 2025)
+ * AA aoAA A A ProductListPage Aaa Teranga PRODUCTION READY (Style A 2025)
  * ----------------------------------------------------------------
  * - Liste des produits avec design premium & responsive
  * - Compatible multi-images (imageUrl + allImageUrls + coverImage + gallery)
  * - Utilise FILE_BASE + toAbsUrl pour les environnements de prod
- * - Compatible rÃƒÂ©ponses API: array direct OU { products, pagination }
- * - Aucune rÃƒÂ©gression de logique, uniquement alignement + robustesse
+ * - Compatible rAAponses API: array direct OU { products, pagination }
+ * - Aucune rAAgression de logique, uniquement alignement + robustesse
  * ----------------------------------------------------------------
  */
 
@@ -83,7 +83,7 @@ function getProductImages(product) {
     });
   }
 
-  // DÃƒÂ©duplication + normalisation en URL absolues
+ // DAAduplication + normalisation en URL absolues
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
@@ -105,7 +105,7 @@ export default function ProductListPage() {
       try {
         setLoading(true);
 
-        // Ã¢Å“â€¦ compat: getProducts peut renvoyer:
+ // AAa compat: getProducts peut renvoyer:
         // - un array directement
         // - ou { products, pagination }
         const res = await getProducts();
@@ -259,7 +259,7 @@ export default function ProductListPage() {
 
                   {/* Contenu carte */}
                   <div className="flex-1 flex flex-col p-4">
-                    {/* Titre + rÃƒÂ©f */}
+ {/* Titre + rAAf */}
                     <div className="flex items-start justify-between gap-2">
                       <h2 className="text-base font-semibold text-text-primary line-clamp-2">
                         {p.name || t("common.dash")}

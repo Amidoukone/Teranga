@@ -10,9 +10,9 @@ import { mergeGeoParams, mergeGeoPayload } from './geo';
  * - JSON si pas de fichier (évite 500 sur certaines routes backend)
  * - FormData si fichier, avec compat noms Multer ('proofFile' | 'proof' | 'file' | 'attachment')
  * - Applique automatiquement les labels
- * - Gère le statut par défaut "Effectuée" pour les transactions indépendantes
+ * - Gere le statut par defaut "Effectuee" pour les transactions independantes
  * - Supporte orderId pour rattacher à une commande
- * - 🆕 Supporte projectId pour rattacher à un projet
+ * - Supporte projectId pour rattacher a un projet
  * ============================================================
  */
 
@@ -26,7 +26,7 @@ function cleanObj(obj = {}) {
   return out;
 }
 
-/** Sérialise proprement un nombre (string autorisée pour décimales exactes) */
+/** Serialise proprement un nombre (string autorisee pour decimales exactes) */
 function asDecimalString(v) {
   if (v === '' || v === null || typeof v === 'undefined') return undefined;
   if (typeof v === 'string') {
@@ -74,7 +74,7 @@ async function postMultipartResilient(url, payloadFields = {}, file) {
       Object.entries(payloadFields).forEach(([k, v]) => {
         if (v !== undefined && v !== null) fd.append(k, v);
       });
-      // Fichier éventuel sous le nom testé
+ // Fichier eventuel sous le nom teste
       if (file) fd.append(fieldName, file);
 
       const { data } = await api.post(url, fd);
@@ -92,15 +92,15 @@ async function postMultipartResilient(url, payloadFields = {}, file) {
  * @param {object} data
  *  - type: 'revenue'|'expense'|'commission'|'adjustment' (obligatoire)
  *  - amount: number|string (obligatoire)
- *  - currency?: string
- *  - paymentMethod?: string
- *  - description?: string
- *  - serviceId?: number
- *  - taskId?: number
- *  - orderId?: number
- *  - projectId?: number   // 🆕
- *  - status?: string (optionnel; si fourni, sera canonicalisé)
- *  - proofFile?: File
+ * - currencyINFO: string
+ * - paymentMethodINFO: string
+ * - descriptionINFO: string
+ * - serviceIdINFO: number
+ * - taskIdINFO: number
+ * - orderIdINFO: number
+ * - projectIdINFO: number // 
+ * - statusINFO: string (optionnel; si fourni, sera canonicalise)
+ * - proofFileINFO: File
  */
 export async function createTransaction(data) {
   const payload = mergeGeoPayload({
@@ -116,25 +116,25 @@ export async function createTransaction(data) {
   });
 
   /**
-   * 💡 Logique d’harmonisation du statut (alignée avec backend) :
+ * Logique dharmonisation du statut (alignee avec backend) :
    * - Si un statut est explicitement fourni → on canonicalise et garde
-   * - Si transaction indépendante (aucune commande ET aucun projet) → "completed"
-   * - Sinon → on laisse le backend gérer (commande/projet)
+ * - Si transaction independante (aucune commande ET aucun projet) "completed"
+ * - Sinon on laisse le backend gerer (commande/projet)
    */
   if (typeof data.status !== 'undefined' && data.status !== null && data.status !== '') {
     payload.status = canonicalizeTransactionStatus(data.status);
   } else if (!payload.orderId && !payload.projectId) {
-    // 🟢 Transaction indépendante = statut "Effectuée"
+ // Transaction independante = statut "Effectuee"
     payload.status = canonicalizeTransactionStatus('completed');
   }
 
-  // 1️⃣ Pas de fichier => JSON simple (évite 500 si backend attend JSON)
+ // 1 Pas de fichier => JSON simple (evite 500 si backend attend JSON)
   if (!isFileLike(data.proofFile)) {
     const { data: res } = await api.post('/transactions', cleanObj(payload));
     return applyLabels(res.transaction || res);
   }
 
-  // 2️⃣ Avec fichier => multipart résilient (essaie plusieurs noms Multer)
+ // 2 Avec fichier => multipart resilient (essaie plusieurs noms Multer)
   const res = await postMultipartResilient('/transactions', cleanObj(payload), data.proofFile);
   return applyLabels(res.transaction || res);
 }
@@ -167,7 +167,7 @@ export async function getTransactionById(id) {
 /**
  * @param {number} id
  * @param {object} updates
- *  - description?, paymentMethod?, status?, currency?, serviceId?, taskId?, orderId?, projectId?, type?, amount?, proofFile?
+ * - descriptionINFO, paymentMethodINFO, statusINFO, currencyINFO, serviceIdINFO, taskIdINFO, orderIdINFO, projectIdINFO, typeINFO, amountINFO, proofFileINFO
  */
 export async function updateTransaction(id, updates) {
   const payload = {
@@ -218,7 +218,7 @@ export async function getTransactionReport(params = {}) {
 
 /* ------------------- Helpers e-commerce ------------------- */
 export async function createOrderTransaction(orderId, data = {}) {
-  // Lien vers commande : le backend rattache au client propriétaire et gère la logique de statut.
+ // Lien vers commande : le backend rattache au client proprietaire et gere la logique de statut.
   return createTransaction({ ...data, orderId: asNumeric(orderId) });
 }
 
@@ -234,14 +234,14 @@ export async function getOrderTransactionsWithMeta(orderId, filters = {}) {
 
 /* ------------------- Helpers projet 🆕 -------------------- */
 /**
- * Créer une transaction liée à un projet
+ * Creer une transaction liee a un projet
  */
 export async function createProjectTransaction(projectId, data = {}) {
   return createTransaction({ ...data, projectId: asNumeric(projectId) });
 }
 
 /**
- * Liste les transactions d’un projet (filtrage côté back via ?projectId=)
+ * Liste les transactions dun projet (filtrage cote back via INFOprojectId=)
  */
 export async function getProjectTransactions(projectId, filters = {}) {
   const params = cleanObj({ ...filters, projectId: asNumeric(projectId) });
