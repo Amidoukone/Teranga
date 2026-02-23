@@ -1,5 +1,5 @@
 // ============================================================================
-// TaskEvidencesPage.jsx ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION PREMIUM 2025 (MASTER SAFE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PARTIE 1 / 2)
+// TaskEvidencesPage.jsx - VERSION PREMIUM 2025 (MASTER SAFE - PARTIE 1 / 2)
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react';

@@ -27,7 +27,7 @@ export default function SetSeo({ title, description }) {
   useEffect(() => {
     const defaultTitle = t("seo.defaultTitle");
     const defaultDescription = t("seo.defaultDescription");
-    const finalTitle = title ? `${title} Ã¢â‚¬â€œ ${SITE_NAME}` : defaultTitle;
+    const finalTitle = title ? `${title} - ${SITE_NAME}` : defaultTitle;
     const finalDescription = description || defaultDescription;
 
     document.title = finalTitle;

@@ -1,5 +1,5 @@
 // ============================================================================
-// TermsPage.jsx Ã¢â‚¬â€ Conditions gÃƒÂ©nÃƒÂ©rales d'utilisation Ã¢â‚¬Â¢ Teranga 2025
+// TermsPage.jsx - Conditions generales d'utilisation - Teranga 2025
 // ============================================================================
 import SetSeo from "../components/SetSeo";
 import { useTranslation, Trans } from "react-i18next";

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-const ELLIPSIS = "Ã¢â‚¬Â¦";
+const ELLIPSIS = "...";
 
 function buildPageItems(current, total) {
   if (total <= 7) {

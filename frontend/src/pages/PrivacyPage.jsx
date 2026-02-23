@@ -1,5 +1,5 @@
 // ============================================================================
-// PrivacyPage.jsx Ã¢â‚¬â€ Politique de confidentialitÃƒÂ© RGPD Ã¢â‚¬Â¢ Teranga 2025
+// PrivacyPage.jsx - Politique de confidentialite RGPD - Teranga 2025
 // ============================================================================
 import SetSeo from "../components/SetSeo";
 import { useTranslation, Trans } from "react-i18next";

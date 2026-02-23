@@ -193,7 +193,10 @@ export async function login(payload) {
 export async function me() {
   if (!shouldUseLocalStorage()) {
     try {
-      const { data } = await api.get('/auth/me');
+      const { data } = await api.get('/auth/me', {
+        skipAuthRedirect: true,
+        silentAuth: true,
+      });
       if (data?.user) {
         writeCachedUser(data.user);
         syncLanguageFromUser(data.user);
@@ -301,7 +304,10 @@ export async function me() {
 
   try {
     // ✅ /auth/me — l’intercepteur axios injecte déjà Authorization
-    const { data } = await api.get('/auth/me');
+    const { data } = await api.get('/auth/me', {
+      skipAuthRedirect: true,
+      silentAuth: true,
+    });
 
     // Mise à jour du cache local
     if (data?.user) writeCachedUser(data.user);

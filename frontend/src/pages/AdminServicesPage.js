@@ -148,7 +148,10 @@ export default function AdminServicesPage() {
       await loadServices();
     } catch (e) {
       console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur assignation:', e);
-      notify(t('adminServicesPage.alerts.assignError'));
+      notify(
+        e?.response?.data?.error ||
+          t('adminServicesPage.alerts.assignError')
+      );
     }
   }
 
@@ -163,6 +166,29 @@ export default function AdminServicesPage() {
 
   function canReassign(s) {
     return s.status !== 'completed' && s.status !== 'validated';
+  }
+
+  function isAgentAssignableToService(service, agent) {
+    if (!service || !agent) return false;
+
+    const serviceRegionId = service.regionId ?? null;
+    const serviceCountryId = service.countryId ?? null;
+    const agentRegionId = agent.regionId ?? null;
+    const agentCountryId = agent.countryId ?? null;
+
+    if (serviceRegionId != null) {
+      return String(agentRegionId) === String(serviceRegionId);
+    }
+
+    if (serviceCountryId != null) {
+      return String(agentCountryId) === String(serviceCountryId);
+    }
+
+    return true;
+  }
+
+  function getAssignableAgents(service) {
+    return agents.filter((a) => isAgentAssignableToService(service, a));
   }
 
   function statusBadgeClass(st) {
@@ -438,11 +464,11 @@ export default function AdminServicesPage() {
                     {/* Select agent */}
                     <td className="px-4 sm:px-5 py-3 align-top">
                       <select
-                        disabled={!canReassign(s) || agents.length === 0}
+                        disabled={!canReassign(s) || getAssignableAgents(s).length === 0}
                         value={s.agent?.id || ''}
                         onChange={(e) => handleAssign(s.id, e.target.value)}
                         className={`w-full rounded-xl border px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          !canReassign(s) || agents.length === 0
+                          !canReassign(s) || getAssignableAgents(s).length === 0
                             ? 'bg-surface-main text-text-muted border-border cursor-not-allowed'
                             : 'bg-surface-card text-text-primary border-border'
                         }`}
@@ -450,7 +476,7 @@ export default function AdminServicesPage() {
                         <option value="">
                           {t('adminServicesPage.assign.placeholder')}
                         </option>
-                        {agents.map((a) => (
+                        {getAssignableAgents(s).map((a) => (
                           <option key={a.id} value={a.id}>
                             {a.firstName} {a.lastName} ({a.email})
                           </option>

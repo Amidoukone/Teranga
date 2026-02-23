@@ -293,7 +293,7 @@ export default function App() {
               }
             />
 
-            {/* Ã¢Ââ€” PrivacyPage et TermsPage gÃƒÂ¨rent dÃƒÂ©jÃƒÂ  SetSeo en interne Ã¢â€ â€™ pas ici */}
+            {/* PrivacyPage et TermsPage gerent deja SetSeo en interne: pas ici */}
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route
@@ -302,7 +302,7 @@ export default function App() {
             />
 
             {/* ============================= */}
-            {/* Ã°Å¸â€Â AUTH PUBLIQUE             */}
+            {/* AUTH PUBLIQUE */}
             {/* ============================= */}
             <Route
               path="/login"

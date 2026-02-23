@@ -18,6 +18,7 @@ const {
   applyGeoScopeForModel,
   canAccessGeoResource,
   getUserGeoScope,
+  getCountryIdByIso,
 } = require("../utils/geoScope");
 const { getPagination } = require("../utils/pagination");
 const logger = require('../utils/logger');
@@ -88,6 +89,28 @@ async function resolveCountryIdFromLegacy(countryValue) {
 
 function canAccessByGeoScope(user, resource) {
   return canAccessGeoResource(resource, user);
+}
+
+async function canAssignAgentByGeoScope(service, agent) {
+  if (!service || !agent) return false;
+
+  // Cas moderne (countryId/regionId renseignés)
+  if (canAccessGeoResource(service, agent)) return true;
+
+  // Compat legacy: certains agents n'ont pas encore countryId/regionId,
+  // mais ont un ISO dans `country` (ex: "SN").
+  const agentCountryIso = toTrimOrNull(agent?.country)?.toUpperCase() || null;
+  const serviceCountryId = toSafeInt(service?.countryId);
+  const serviceRegionId = toSafeInt(service?.regionId);
+
+  // Si le service est scoped à une région, on reste strict (pas d'inférence legacy fiable).
+  if (serviceRegionId) return false;
+  if (!serviceCountryId || !agentCountryIso) return false;
+
+  const agentCountryId = await getCountryIdByIso(agentCountryIso);
+  if (!agentCountryId) return false;
+
+  return String(agentCountryId) === String(serviceCountryId);
 }
 
 function applyServiceGeoScope(where = {}, user) {
@@ -475,7 +498,7 @@ exports.assignAgent = async (req, res) => {
         );
       }
 
-      if (!canAccessGeoResource(service, agent)) {
+      if (!(await canAssignAgentByGeoScope(service, agent))) {
         throw Object.assign(
           new Error("Agent hors scope géographique"),
           { status: 403 }
