@@ -529,11 +529,9 @@ export default function FinanceDashboardPage() {
  // Aatats transitoires
   if (booting || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
-        <p className="text-text-secondary text-lg animate-pulse">
-          {t('financeDashboardPage.loading.page')}
-        </p>
-      </div>
+      <FinanceDashboardSkeleton
+        loadingLabel={t('financeDashboardPage.loading.page')}
+      />
     );
   }
 
@@ -1127,6 +1125,97 @@ function StatCard({ label, value }) {
       <div className="text-xs text-text-muted break-words">{label}</div>
       <div className="text-lg sm:text-xl font-semibold text-text-primary mt-1 break-words">
         {value}
+      </div>
+    </div>
+  );
+}
+
+function FinanceDashboardSkeleton({ loadingLabel }) {
+  const Line = ({ className = '' }) => (
+    <div
+      className={`animate-pulse rounded-xl bg-surface-main border border-border/40 ${className}`}
+      aria-hidden="true"
+    />
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 py-8 sm:px-4 sm:py-10">
+      <div className="max-w-6xl mx-auto bg-surface-card/90 backdrop-blur-sm shadow-[0_18px_45px_rgba(0,0,0,0.06)] rounded-3xl border border-border px-4 py-5 sm:px-8 sm:py-7">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+          <div className="min-w-0 flex-1">
+            <Line className="h-8 w-64" />
+            <Line className="h-4 w-full max-w-md mt-3" />
+            <div className="mt-3 flex gap-2">
+              <Line className="h-7 w-28 rounded-full" />
+              <Line className="h-7 w-36 rounded-full" />
+            </div>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Line className="h-10 flex-1 sm:w-36 rounded-full" />
+            <Line className="h-10 flex-1 sm:w-36 rounded-full" />
+          </div>
+        </div>
+
+        <div className="mb-6 bg-surface-main border border-border rounded-2xl px-4 py-4 sm:px-5 sm:py-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i}>
+                <Line className="h-3 w-20 mb-2" />
+                <Line className="h-10 w-full" />
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+            <div className="flex gap-2 flex-wrap">
+              <Line className="h-6 w-28 rounded-full" />
+              <Line className="h-6 w-20 rounded-full" />
+              <Line className="h-6 w-20 rounded-full" />
+              <Line className="h-6 w-20 rounded-full" />
+            </div>
+            <Line className="h-6 w-36 rounded-full" />
+          </div>
+        </div>
+
+        <Line className="h-8 w-80 mb-4" />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={`stat-${i}`} className="bg-surface-card border border-border rounded-2xl p-4 shadow-sm">
+              <Line className="h-3 w-24" />
+              <Line className="h-6 w-32 mt-3" />
+            </div>
+          ))}
+        </div>
+
+        <div className="w-full h-72 sm:h-80 mb-6 bg-surface-card border border-border rounded-2xl shadow-sm px-4 py-3">
+          <div className="h-full rounded-2xl border border-dashed border-border flex items-center justify-center">
+            <p className="text-sm text-text-muted animate-pulse">{loadingLabel}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={`ins-${i}`} className="bg-surface-card border border-border rounded-2xl p-4 shadow-sm">
+              <Line className="h-3 w-24" />
+              <Line className="h-5 w-28 mt-3" />
+              <Line className="h-3 w-20 mt-2" />
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={`top-${i}`} className="bg-surface-card border border-border rounded-2xl p-4 shadow-sm">
+              <Line className="h-4 w-32 mb-3" />
+              {Array.from({ length: 3 }).map((__, j) => (
+                <div key={`row-${i}-${j}`} className="flex justify-between gap-3 mb-2 last:mb-0">
+                  <Line className="h-3 flex-1" />
+                  <Line className="h-3 w-20" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
