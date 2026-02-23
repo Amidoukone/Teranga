@@ -237,7 +237,7 @@ export default function TransactionsPage() {
       active = false;
       initStartedRef.current = false;
     };
-  }, [loadServicesByRole, loadTransactions]);
+  }, [loadServicesByRole, loadTransactions, t]);
 
   // ========================================================================
  // AAA...A AaAAA1 SERVICE AAAaA Aaa TASKS
