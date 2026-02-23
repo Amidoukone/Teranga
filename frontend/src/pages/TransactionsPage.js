@@ -235,6 +235,7 @@ export default function TransactionsPage() {
     init();
     return () => {
       active = false;
+      initStartedRef.current = false;
     };
   }, [loadServicesByRole, loadTransactions]);
 
@@ -1160,4 +1161,3 @@ function Pagination({
     </div>
   );
 }
-

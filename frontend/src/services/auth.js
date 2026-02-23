@@ -333,6 +333,27 @@ export async function me() {
 
  // 401 token invalide/expire : nettoyage total
     if (status === 401) {
+      // Cas mixte possible: cookie session valide + Bearer local expiré.
+      // Le backend priorise le header Authorization sur le cookie.
+      // On tente donc une seule fois /auth/me sans header si le cookie CSRF existe.
+      if (hasCookie(CSRF_COOKIE)) {
+        try {
+          const { data } = await api.get('/auth/me', {
+            skipAuthRedirect: true,
+            silentAuth: true,
+            skipAuthHeader: true,
+          });
+          if (data?.user) {
+            removeTokenAll(); // purge le Bearer obsolète pour éviter les 401 suivants
+            writeCachedUser(data.user);
+            syncLanguageFromUser(data.user);
+            return data;
+          }
+        } catch (fallbackError) {
+          // si le fallback cookie échoue aussi, on continue la purge standard
+        }
+      }
+
       console.warn(' Token invalide ou expire suppression locale');
       removeTokenAll();
       clearCsrfToken();

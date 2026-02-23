@@ -108,6 +108,14 @@ export function getFileUrl(filePath) {
 
 /* ---------- Intercepteur: injecter token ---------- */
 api.interceptors.request.use((config) => {
+  if (config?.skipAuthHeader) {
+    if (config?.headers) {
+      delete config.headers.Authorization;
+      delete config.headers.authorization;
+    }
+    return config;
+  }
+
   const existingAuth =
     config?.headers?.Authorization || config?.headers?.authorization || '';
   const normalizedExistingAuth = String(existingAuth).trim().toLowerCase();

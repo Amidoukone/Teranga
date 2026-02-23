@@ -228,6 +228,7 @@ export default function FinanceDashboardPage() {
     init();
     return () => {
       active = false;
+      initStartedRef.current = false;
     };
   }, [t]);
 
