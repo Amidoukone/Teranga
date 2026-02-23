@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getTransactions } from '../services/transactions';
-import { me } from '../services/auth';
+import { me, getLocalUser } from '../services/auth';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import {
@@ -179,9 +179,14 @@ export default function FinanceDashboardPage() {
           setBooting(true);
           setBootError('');
         }
+        const cachedUser = getLocalUser();
+        if (active && cachedUser) {
+          setUser((prev) => prev || cachedUser);
+        }
+
         const u = await me();
         if (!active) return;
-        const current = u?.user;
+        const current = u?.user || cachedUser;
         if (!current) {
           setBootError(
             t('financeDashboardPage.errors.authRequired', {

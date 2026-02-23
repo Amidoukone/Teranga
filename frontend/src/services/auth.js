@@ -181,8 +181,14 @@ export async function login(payload) {
  // Sauvegarde coherente du token (nouvelle + legacy pour compat)
       writeTokenAll(data.token, { keepLegacy: true });
     } else {
- // Mode cookie: evite tout token persistant cote client
-      removeTokenAll();
+ // Mode cookie: on conserve un fallback Bearer pour les navigateurs
+ // qui bloquent les cookies tiers (Netlify -> Render cross-site).
+ // Le backend accepte deja Authorization: Bearer.
+      if (data?.token) {
+        writeTokenAll(data.token, { keepLegacy: true });
+      } else {
+        removeTokenAll();
+      }
     }
     writeCsrfToken(data?.csrfToken);
 
