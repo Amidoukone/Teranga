@@ -31,19 +31,6 @@ export default function AdminServicesPage() {
   // Pagination
   const [limit, setLimit] = useState(25);
   const [offset, setOffset] = useState(0);
-
-  const authHeaders = useMemo(
-    () => ({
-      headers: {
-        Authorization: `Bearer ${
-          localStorage.getItem('teranga_token') ||
-          localStorage.getItem('token')
-        }`,
-      },
-    }),
-    []
-  );
-
   const statusOptions = useMemo(
     () => [
       { value: 'all', label: t('adminServicesPage.filters.statusAll') },
@@ -56,7 +43,7 @@ export default function AdminServicesPage() {
   );
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â VÃƒÆ’Ã‚Â©rification ADMIN / MASTER
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â VÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rification ADMIN / MASTER
   ============================================================ */
   useEffect(() => {
     let active = true;
@@ -91,24 +78,24 @@ export default function AdminServicesPage() {
   }, [navigate]);
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ‚Â¥ Chargement agents (admin/master)
-     ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Aucun filtrage frontend ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â backend scope only
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“Ãƒâ€šÃ‚Â¥ Chargement agents (admin/master)
+     ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Aucun filtrage frontend ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â backend scope only
   ============================================================ */
   const loadAgents = useCallback(async () => {
     try {
-      const { data } = await api.get('/users?role=agent', authHeaders);
+      const { data } = await api.get('/users?role=agent');
       setAgents(data?.users || []);
     } catch (err) {
-      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur chargement agents:', err);
+      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement agents:', err);
       setAgents([]);
     }
-  }, [authHeaders]);
+  }, []);
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¾ Chargement services
-     ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â IMPORTANT :
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Chargement services
+     ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â IMPORTANT :
      - PAS de countryId / regionId en query
-     - Le backend applique dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  le scope
+     - Le backend applique dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  le scope
   ============================================================ */
   const loadServices = useCallback(async () => {
     setLoading(true);
@@ -122,22 +109,19 @@ export default function AdminServicesPage() {
       params.set('limit', String(limit));
       params.set('offset', String(offset));
 
-      const { data } = await api.get(
-        `/services?${params.toString()}`,
-        authHeaders
-      );
+      const { data } = await api.get(`/services?${params.toString()}`);
 
       setServices(data?.services || []);
     } catch (e) {
-      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur chargement services:', e);
+      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur chargement services:', e);
       setServices([]);
     } finally {
       setLoading(false);
     }
-  }, [authHeaders, status, onlyUnassigned, q, limit, offset]);
+  }, [status, onlyUnassigned, q, limit, offset]);
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Initialisation
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â Initialisation
   ============================================================ */
   useEffect(() => {
     if (isAdmin) {
@@ -152,25 +136,24 @@ export default function AdminServicesPage() {
   }, [isAdmin, loadServices]);
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Assignation agent
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Assignation agent
   ============================================================ */
   async function handleAssign(serviceId, agentId) {
     if (!agentId) return;
     try {
       await api.post(
         '/services/assign',
-        { serviceId, agentId },
-        authHeaders
+        { serviceId, agentId }
       );
       await loadServices();
     } catch (e) {
-      console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur assignation:', e);
+      console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Erreur assignation:', e);
       notify(t('adminServicesPage.alerts.assignError'));
     }
   }
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â  Helpers UI
+     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Â  Helpers UI
   ============================================================ */
   function displayUser(u) {
     if (!u) return t('adminServicesPage.table.emptyValue');
@@ -210,7 +193,7 @@ export default function AdminServicesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-surface-card/90 backdrop-blur-sm shadow-xl rounded-2xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â­ En-tÃƒÆ’Ã‚Âªte Apple Light */}
+        {/* ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Â­ En-tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªte Apple Light */}
         <AdminPageHeader
           title={t('adminServicesPage.title')}
           subtitle={t('adminServicesPage.subtitle')}
@@ -261,7 +244,7 @@ export default function AdminServicesPage() {
           }
         />
 
-        {/* ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬ÂºÃƒÂ¯Ã‚Â¸Ã‚Â Filtres Apple-style */}
+        {/* ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂºÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Filtres Apple-style */}
         <AdminFilterBar className="mb-8 rounded-2xl px-4 sm:px-5 py-4 sm:py-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Statut */}
@@ -285,7 +268,7 @@ export default function AdminServicesPage() {
               </select>
             </AdminField>
 
-            {/* Non assignÃƒÆ’Ã‚Â©s */}
+            {/* Non assignÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©s */}
             <div className="flex flex-col justify-end">
               <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
                 <input
@@ -361,7 +344,7 @@ export default function AdminServicesPage() {
           </div>
         </AdminFilterBar>
 
-        {/* ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¾ Tableau Services Apple Light */}
+        {/* ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Â¾ Tableau Services Apple Light */}
         <div className="overflow-x-auto rounded-2xl border border-border bg-surface-card shadow-sm">
           <table className="min-w-full text-sm">
             <thead className="bg-surface-main/80 text-text-secondary">
@@ -486,7 +469,7 @@ export default function AdminServicesPage() {
           </table>
         </div>
 
-        {/* ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¾ Pagination minimaliste */}
+        {/* ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Pagination minimaliste */}
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-text-secondary">
           <button
             onClick={() => setOffset(Math.max(0, offset - limit))}
@@ -523,6 +506,7 @@ export default function AdminServicesPage() {
     </div>
   );
 }
+
 
 
 

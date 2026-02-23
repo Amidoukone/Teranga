@@ -100,13 +100,34 @@ export function getFileUrl(filePath) {
 
 /* ---------- Intercepteur: injecter token ---------- */
 api.interceptors.request.use((config) => {
+  const existingAuth =
+    config?.headers?.Authorization || config?.headers?.authorization || '';
+  const normalizedExistingAuth = String(existingAuth).trim().toLowerCase();
+
+  // Certains écrans envoient parfois "Bearer null"/"Bearer undefined":
+  // on l'ignore pour laisser l'intercepteur injecter le vrai token (ou la session cookie).
+  if (
+    normalizedExistingAuth === 'bearer null' ||
+    normalizedExistingAuth === 'bearer undefined' ||
+    normalizedExistingAuth === 'bearer'
+  ) {
+    if (config?.headers) {
+      delete config.headers.Authorization;
+      delete config.headers.authorization;
+    }
+  }
+
   const storedToken =
     localStorage.getItem('teranga_token') || localStorage.getItem('token');
   // Fallback: si un token existe, on l'envoie même en mode cookie
   // (évite les 401 quand la config env est incohérente avec l'état client)
   const token = shouldUseLocalStorage() ? storedToken : storedToken;
 
-  if (token && !config.headers?.Authorization) {
+  if (
+    token &&
+    !config.headers?.Authorization &&
+    !config.headers?.authorization
+  ) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   }
