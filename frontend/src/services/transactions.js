@@ -141,7 +141,8 @@ export async function createTransaction(data) {
 
 /* ------------------- API: List ---------------------------- */
 export async function getTransactions(filters = {}) {
-  const params = cleanObj(mergeGeoParams(filters));
+  const mergedFilters = { includeCount: false, ...filters };
+  const params = cleanObj(mergeGeoParams(mergedFilters));
   const { data } = await api.get('/transactions', { params });
   const transactions = data?.transactions || data?.items || [];
   return transactions.map((t) => applyLabels(t));

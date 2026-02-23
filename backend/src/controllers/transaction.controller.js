@@ -88,6 +88,15 @@ function normalizeCurrency(input, fallback = "XOF") {
   return KNOWN_CURRENCIES.has(cur) ? cur : fallback;
 }
 
+function parseBooleanQuery(value, defaultValue = false) {
+  if (value === undefined || value === null || value === "") return defaultValue;
+  if (typeof value === "boolean") return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "true", "yes", "y", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "n", "off"].includes(normalized)) return false;
+  return defaultValue;
+}
+
 /**
  * Extraction robuste du fichier uploadé (multer)
  */
@@ -475,25 +484,45 @@ exports.list = async (req, res) => {
     }
 
     const { limit, offset, page } = getPagination(req);
+    const includeCount = parseBooleanQuery(
+      req.query?.includeCount ?? req.query?.withCount,
+      true
+    );
 
     const sortKey = sort ? String(sort).replace(/^-/, "") : "createdAt";
     const sortDir = sort && String(sort).startsWith("-") ? "DESC" : "ASC";
-
-    const { rows, count } = await Transaction.findAndCountAll({
+    const include = COMMON_INCLUDE.concat([
+      { model: Order, as: "order" },
+      { model: Project, as: "project" },
+    ]);
+    const baseQuery = {
       where,
-      include: COMMON_INCLUDE.concat([
-        { model: Order, as: "order" },
-        { model: Project, as: "project" },
-      ]),
+      include,
       order: [[sortKey, sortDir]],
       limit,
       offset,
       distinct: true,
-    });
+    };
+
+    let rows = [];
+    let count = null;
+
+    if (includeCount) {
+      const result = await Transaction.findAndCountAll(baseQuery);
+      rows = result.rows;
+      count = result.count;
+    } else {
+      rows = await Transaction.findAll(baseQuery);
+    }
 
     return res.json({
       transactions: rows.map(withLabels),
-      pagination: { page, limit, offset, total: count },
+      pagination: {
+        page,
+        limit,
+        offset,
+        total: includeCount ? count : null,
+      },
     });
   } catch (e) {
     logger.error({ err: e }, "transaction.list.failed");

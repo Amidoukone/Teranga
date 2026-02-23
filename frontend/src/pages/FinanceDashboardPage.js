@@ -109,7 +109,6 @@ export default function FinanceDashboardPage() {
   const { t } = useTranslation();
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
-  const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [loading, setLoading] = useState(true);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const initStartedRef = useRef(false);
@@ -281,75 +280,87 @@ export default function FinanceDashboardPage() {
     return arr;
   }, [transactions, filters, roleFilterOptions]);
 
- // AA aA Calcul des totaux selon la vue filtrAAe
-  const computedSummary = useMemo(() => {
+  const derivedStats = useMemo(() => {
     const totals = {
       revenues: 0,
       expenses: 0,
       commissions: 0,
       adjustments: 0,
     };
-
-    for (const t of filtered) {
-      if (t.type === 'revenue') totals.revenues += Number(t.amount || 0);
-      if (t.type === 'expense') totals.expenses += Number(t.amount || 0);
-      if (t.type === 'commission') totals.commissions += Number(t.amount || 0);
-      if (t.type === 'adjustment') totals.adjustments += Number(t.amount || 0);
-    }
-
-    const balance =
-      totals.revenues - (totals.expenses + totals.commissions + totals.adjustments);
-
-    return { ...totals, balance };
-  }, [filtered]);
-
- // Conserver summary pour compatibilitAA (basAA sur computedSummary)
-  useEffect(() => {
-    setSummary(computedSummary);
-  }, [computedSummary]);
-
-  const totalIn = summary?.revenues || 0;
-  const totalOut =
-    (summary?.expenses || 0) +
-    (summary?.commissions || 0) +
-    (summary?.adjustments || 0);
-  const totalCount = filtered.length;
-  const totalVolume = filtered.reduce((acc, t) => acc + toNumber(t.amount), 0);
-  const avgAmount = totalCount > 0 ? totalVolume / totalCount : 0;
-  const linkedCount = filtered.filter(
-    (t) => t.service || t.task || t.order || t.project
-  ).length;
-
-  const largestTx = filtered.reduce((best, t) => {
-    if (!best) return t;
-    return toNumber(t.amount) > toNumber(best.amount) ? t : best;
-  }, null);
-
-  const lastActivity = filtered.reduce((latest, t) => {
-    const ts = t?.createdAt ? new Date(t.createdAt).getTime() : 0;
-    return ts > latest ? ts : latest;
-  }, 0);
-
-  const uniqueCounts = useMemo(() => {
     const services = new Set();
     const tasks = new Set();
     const projects = new Set();
     const orders = new Set();
+    let totalVolume = 0;
+    let linkedCount = 0;
+    let largestTx = null;
+    let lastActivity = 0;
 
-    for (const t of filtered) {
-      if (t.service?.id) services.add(t.service.id);
-      if (t.task?.id) tasks.add(t.task.id);
-      if (t.project?.id) projects.add(t.project.id);
-      if (t.order?.id) orders.add(t.order.id);
+    for (const trx of filtered) {
+      const amount = toNumber(trx.amount);
+      totalVolume += amount;
+
+      if (trx.type === 'revenue') totals.revenues += amount;
+      if (trx.type === 'expense') totals.expenses += amount;
+      if (trx.type === 'commission') totals.commissions += amount;
+      if (trx.type === 'adjustment') totals.adjustments += amount;
+
+      if (trx.service?.id) services.add(trx.service.id);
+      if (trx.task?.id) tasks.add(trx.task.id);
+      if (trx.project?.id) projects.add(trx.project.id);
+      if (trx.order?.id) orders.add(trx.order.id);
+
+      if (trx.service || trx.task || trx.order || trx.project) linkedCount += 1;
+      if (!largestTx || amount > toNumber(largestTx.amount)) largestTx = trx;
+
+      const createdTs = trx?.createdAt ? new Date(trx.createdAt).getTime() : 0;
+      if (createdTs > lastActivity) lastActivity = createdTs;
     }
 
+    const summary = {
+      ...totals,
+      balance:
+        totals.revenues -
+        (totals.expenses + totals.commissions + totals.adjustments),
+    };
+    const totalCount = filtered.length;
+
     return {
-      services: services.size,
-      tasks: tasks.size,
-      projects: projects.size,
-      orders: orders.size,
+      summary,
+      totalIn: summary.revenues || 0,
+      totalOut:
+        (summary.expenses || 0) +
+        (summary.commissions || 0) +
+        (summary.adjustments || 0),
+      totalCount,
+      totalVolume,
+      avgAmount: totalCount > 0 ? totalVolume / totalCount : 0,
+      linkedCount,
+      largestTx,
+      lastActivity,
+      uniqueCounts: {
+        services: services.size,
+        tasks: tasks.size,
+        projects: projects.size,
+        orders: orders.size,
+      },
     };
   }, [filtered]);
+
+  const summary = derivedStats.summary || EMPTY_SUMMARY;
+  const totalIn = derivedStats.totalIn || 0;
+  const totalOut = derivedStats.totalOut || 0;
+  const totalCount = derivedStats.totalCount || 0;
+  const avgAmount = derivedStats.avgAmount || 0;
+  const linkedCount = derivedStats.linkedCount || 0;
+  const largestTx = derivedStats.largestTx || null;
+  const lastActivity = derivedStats.lastActivity || 0;
+  const uniqueCounts = derivedStats.uniqueCounts || {
+    services: 0,
+    tasks: 0,
+    projects: 0,
+    orders: 0,
+  };
 
   const topEntities = useMemo(() => {
     return {
@@ -857,7 +868,7 @@ export default function FinanceDashboardPage() {
           </div>
         </div>
 
-        {showChart && (
+        {showChart && !loadingTransactions && (
           <div className="w-full h-72 sm:h-80 mt-6 mb-6 bg-surface-card border border-border rounded-2xl shadow-sm px-2 sm:px-4 py-3 transition-transform transform hover:-translate-y-0.5">
             <ResponsiveContainer>
               <PieChart>

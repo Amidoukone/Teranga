@@ -167,8 +167,7 @@ export default function TransactionsPage() {
     setLoading(true);
     try {
       const data = await getTransactions();
-      const labeled = (data || []).map((t) => applyLabels(t, 'transaction'));
-      setTransactions(labeled);
+      setTransactions(data || []);
     } catch (e) {
       console.error('Erreur loadTransactions:', e);
       notify(t('transactionsPage.alerts.loadError'));
@@ -1104,6 +1103,5 @@ function Pagination({
     </div>
   );
 }
-
 
 
