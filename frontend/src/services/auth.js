@@ -226,6 +226,27 @@ export async function me() {
     } catch (error) {
       const status = error?.response?.status;
       if (status === 401) {
+        // En mode cookie, un Bearer stale peut ecraser une session cookie valide.
+        // On tente une seule fois sans header si le cookie CSRF existe.
+        if (hasCookie(CSRF_COOKIE)) {
+          try {
+            const { data } = await api.get('/auth/me', {
+              skipAuthRedirect: true,
+              silentAuth: true,
+              skipAuthHeader: true,
+            });
+            if (data?.user) {
+              removeTokenAll(); // purge le Bearer obsolete
+              writeCachedUser(data.user);
+              syncLanguageFromUser(data.user);
+              return data;
+            }
+          } catch {
+            // fallback vers purge standard
+          }
+        }
+        // Nettoyage complet si token/cookie invalide
+        removeTokenAll();
         clearCsrfToken();
         writeCachedUser(null);
         return { user: null };
