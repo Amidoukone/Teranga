@@ -42,10 +42,17 @@ const fallbackOrigins = [
 ]
   .map((origin) => normalizeOrigin(origin))
   .filter(Boolean);
-const allowedOrigins = Array.from(
+const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+const defaultProdOrigins = [
+  'https://teranga-diaspora.com',
+  'https://www.teranga-diaspora.com',
+];
+let allowedOrigins = Array.from(
   new Set([...configuredOrigins, ...fallbackOrigins])
 );
-const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+if (!isDev && allowedOrigins.length === 0) {
+  allowedOrigins = defaultProdOrigins.map((o) => normalizeOrigin(o));
+}
 const allowAllOrigins =
   allowedOrigins.includes('*') || (isDev && allowedOrigins.length === 0);
 
