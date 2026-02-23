@@ -111,6 +111,8 @@ export default function FinanceDashboardPage() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [booting, setBooting] = useState(true);
+  const [bootError, setBootError] = useState('');
   const initStartedRef = useRef(false);
 
   const roleKey = normalizeRole(user?.role);
@@ -170,11 +172,22 @@ export default function FinanceDashboardPage() {
   useEffect(() => {
     if (initStartedRef.current) return;
     initStartedRef.current = true;
+    let active = true;
     async function init() {
       try {
+        if (active) {
+          setBooting(true);
+          setBootError('');
+        }
         const u = await me();
+        if (!active) return;
         const current = u?.user;
         if (!current) {
+          setBootError(
+            t('financeDashboardPage.errors.authRequired', {
+              defaultValue: 'Session expirée. Redirection vers la connexion...',
+            })
+          );
           window.location.href = '/login';
           return;
         }
@@ -182,13 +195,41 @@ export default function FinanceDashboardPage() {
 
       } catch (err) {
         console.error('Erreur chargement FinanceDashboard:', err);
+        if (err?.response?.status === 401) {
+          localStorage.removeItem('teranga_token');
+          localStorage.removeItem('token');
+          if (active) {
+            setBootError(
+              t('financeDashboardPage.errors.authRequired', {
+                defaultValue:
+                  'Session expirée. Redirection vers la connexion...',
+              })
+            );
+          }
+          window.location.href = '/login';
+          return;
+        }
+        if (active) {
+          setBootError(
+            t('financeDashboardPage.errors.initFailed', {
+              defaultValue:
+                "Impossible d'initialiser le dashboard financier. Rechargez la page.",
+            })
+          );
+        }
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+          setBooting(false);
+        }
       }
     }
 
     init();
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [t]);
 
   useEffect(() => {
     if (!user) return;
@@ -485,7 +526,7 @@ export default function FinanceDashboardPage() {
   }
 
  // Aatats transitoires
-  if (loading) {
+  if (booting || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
         <p className="text-text-secondary text-lg animate-pulse">
@@ -497,10 +538,31 @@ export default function FinanceDashboardPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
-        <p className="text-text-secondary">
-          {t('financeDashboardPage.empty.noData')}
-        </p>
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7] px-4">
+        <div className="w-full max-w-md rounded-2xl border border-border bg-surface-card p-5 text-center shadow-sm">
+          <p className="text-sm text-text-secondary">
+            {bootError ||
+              t('financeDashboardPage.empty.noData')}
+          </p>
+          <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="app-btn-neutral"
+            >
+              {t('common.retry', { defaultValue: 'Réessayer' })}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = '/login';
+              }}
+              className="app-btn-primary"
+            >
+              {t('common.login', { defaultValue: 'Connexion' })}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

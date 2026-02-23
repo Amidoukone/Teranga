@@ -94,6 +94,8 @@ export default function TransactionsPage() {
 
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [booting, setBooting] = useState(true);
+  const [bootError, setBootError] = useState('');
 
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_transactions_showForm');
@@ -185,11 +187,18 @@ export default function TransactionsPage() {
 
     async function init() {
       try {
+        if (active) {
+          setBooting(true);
+          setBootError('');
+        }
         const userData = await me();
         if (!active) return;
 
         const current = userData?.user;
         if (!current) {
+          setBootError(t('transactionsPage.alerts.authRequired', {
+            defaultValue: 'Session expirée. Redirection vers la connexion...',
+          }));
           window.location.href = '/login';
           return;
         }
@@ -200,11 +209,26 @@ export default function TransactionsPage() {
           loadTransactions(),
         ]);
       } catch (err) {
+        console.error('Erreur init TransactionsPage:', err);
         if (err?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
+          setBootError(t('transactionsPage.alerts.authRequired', {
+            defaultValue: 'Session expirée. Redirection vers la connexion...',
+          }));
           window.location.href = '/login';
+          return;
         }
+        if (active) {
+          setBootError(
+            t('transactionsPage.alerts.initError', {
+              defaultValue:
+                "Impossible d'initialiser la page Transactions. Rechargez la page.",
+            })
+          );
+        }
+      } finally {
+        if (active) setBooting(false);
       }
     }
 
@@ -429,12 +453,45 @@ export default function TransactionsPage() {
   // ========================================================================
  // AAAAAA3 LOADING
   // ========================================================================
-  if (!user) {
+  if (booting) {
     return (
       <div className="app-page-wrap flex min-h-screen items-center justify-center">
         <p className="text-lg animate-pulse text-text-secondary">
           {t('transactionsPage.loading')}
         </p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="app-page-wrap flex min-h-screen items-center justify-center px-4">
+        <div className="max-w-md rounded-2xl border border-border/70 bg-surface-card p-5 text-center">
+          <p className="text-sm text-text-secondary">
+            {bootError ||
+              t('transactionsPage.alerts.authRequired', {
+                defaultValue: 'Session invalide. Veuillez vous reconnecter.',
+              })}
+          </p>
+          <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="app-btn-neutral"
+            >
+              {t('common.retry', { defaultValue: 'Réessayer' })}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = '/login';
+              }}
+              className="app-btn-primary"
+            >
+              {t('common.login', { defaultValue: 'Connexion' })}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1103,5 +1160,4 @@ function Pagination({
     </div>
   );
 }
-
 
