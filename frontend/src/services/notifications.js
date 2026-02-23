@@ -6,12 +6,22 @@ export async function getNotifications(params = {}) {
 }
 
 export async function getNotificationSummary() {
-  const { data } = await api.get("/notifications/summary", {
-    timeout: 5000,
-    silentAuth: true,
-    skipAuthRedirect: true,
-  });
-  return data;
+  try {
+    const { data } = await api.get("/notifications/summary", {
+      timeout: 5000,
+      silentAuth: true,
+      skipAuthRedirect: true,
+    });
+    return data;
+  } catch (e) {
+    const status = e?.response?.status;
+    const isTimeout = e?.code === "ECONNABORTED";
+    const isNetworkLike = !e?.response; // inclut CORS/502 gateway sans headers
+    if (!isTimeout && !isNetworkLike && status !== 502 && status !== 503 && status !== 504) {
+      throw e;
+    }
+    return { unread: 0, byProgress: {} };
+  }
 }
 
 export async function markNotificationRead(id) {

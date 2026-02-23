@@ -204,10 +204,14 @@ export default function TransactionsPage() {
         }
         setUser(current);
 
-        await Promise.allSettled([
+        // Ne bloque pas le boot UI sur des requetes de donnees potentiellement lentes.
+        // Les etats `loading`/`services` gerent deja l'affichage interne.
+        Promise.allSettled([
           loadServicesByRole(current),
           loadTransactions(),
-        ]);
+        ]).catch(() => {
+          // no-op: chaque loader gere deja ses erreurs
+        });
       } catch (err) {
         console.error('Erreur init TransactionsPage:', err);
         if (err?.response?.status === 401) {
