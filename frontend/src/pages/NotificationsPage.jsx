@@ -48,7 +48,11 @@ export default function NotificationsPage() {
         byProgress: data?.byProgress || {},
       });
     } catch (e) {
-      console.error("load summary notifications:", e);
+      const isTimeout = e?.code === "ECONNABORTED";
+      const isNetwork = !e?.response;
+      if (!isTimeout && !isNetwork) {
+        console.error("load summary notifications:", e);
+      }
     }
   }, []);
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getTransactions } from '../services/transactions';
 import { me } from '../services/auth';
 import { useLocale } from '../i18n/useLocale';
@@ -19,6 +19,13 @@ import {
 } from 'recharts';
 
 const MAX_TOP_ENTITIES = 3;
+const EMPTY_SUMMARY = {
+  revenues: 0,
+  expenses: 0,
+  commissions: 0,
+  adjustments: 0,
+  balance: 0,
+};
 
 function toNumber(value) {
   const n = Number(value || 0);
@@ -102,8 +109,10 @@ export default function FinanceDashboardPage() {
   const { t } = useTranslation();
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
-  const [summary, setSummary] = useState(null);
+  const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [loading, setLoading] = useState(true);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const initStartedRef = useRef(false);
 
   const roleKey = normalizeRole(user?.role);
   const isAdmin = roleKey === 'admin';
@@ -145,8 +154,23 @@ export default function FinanceDashboardPage() {
     }
   }, [filters.role, roleFilterOptions]);
 
+  const loadTransactionsData = useCallback(async () => {
+    try {
+      setLoadingTransactions(true);
+      const txs = await getTransactions();
+      setTransactions(txs || []);
+    } catch (err) {
+      console.error('Erreur chargement FinanceDashboard:', err);
+      setTransactions([]);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  }, []);
+
  // AA Aa Initialisation
   useEffect(() => {
+    if (initStartedRef.current) return;
+    initStartedRef.current = true;
     async function init() {
       try {
         const u = await me();
@@ -157,8 +181,6 @@ export default function FinanceDashboardPage() {
         }
         setUser(current);
 
-        const txs = await getTransactions(); // ACL cÃƒÂ´tÃƒÂ© backend
-        setTransactions(txs || []);
       } catch (err) {
         console.error('Erreur chargement FinanceDashboard:', err);
       } finally {
@@ -168,6 +190,11 @@ export default function FinanceDashboardPage() {
 
     init();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    loadTransactionsData();
+  }, [user, loadTransactionsData]);
 
  // AA AA Transactions filtrAAes cAA tAA client (non destructif)
   const filtered = useMemo(() => {
@@ -457,7 +484,7 @@ export default function FinanceDashboardPage() {
     );
   }
 
-  if (!user || !summary) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
         <p className="text-text-secondary">
@@ -794,6 +821,11 @@ export default function FinanceDashboardPage() {
           <h3 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
             {t('financeDashboardPage.sections.highlights')}
           </h3>
+          {loadingTransactions && (
+            <p className="mb-2 text-xs text-text-muted">
+              {t('common.loading', { defaultValue: 'Chargement...' })}
+            </p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               label={t('financeDashboardPage.stats.totalIn')}
@@ -1179,6 +1211,3 @@ function RoleBreakdown({ transactions, formatCurrency }) {
     </div>
   );
 }
-
-
-

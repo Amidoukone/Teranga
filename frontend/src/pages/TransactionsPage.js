@@ -3,7 +3,7 @@
 // Master / Multi-pays READY AAAasAAaA ZERO rAAAgression
 // ============================================================================
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -128,6 +128,7 @@ export default function TransactionsPage() {
     project: '',
     sort: '-createdAt',
   });
+  const initStartedRef = useRef(false);
 
 
   useEffect(() => {
@@ -179,6 +180,8 @@ export default function TransactionsPage() {
  // AAA...A AaAAA INIT USER + DATA
   // ========================================================================
   useEffect(() => {
+    if (initStartedRef.current) return;
+    initStartedRef.current = true;
     let active = true;
 
     async function init() {
@@ -193,8 +196,10 @@ export default function TransactionsPage() {
         }
         setUser(current);
 
-        await loadServicesByRole(current);
-        await loadTransactions();
+        await Promise.allSettled([
+          loadServicesByRole(current),
+          loadTransactions(),
+        ]);
       } catch (err) {
         if (err?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
@@ -1099,7 +1104,6 @@ function Pagination({
     </div>
   );
 }
-
 
 
 

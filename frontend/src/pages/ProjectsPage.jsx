@@ -375,6 +375,7 @@ export default function ProjectsPage() {
 
   const navigate = useNavigate();
   const isMounted = useRef(true);
+  const initStartedRef = useRef(false);
 
   // INFO MASTER-safe flags (UX only pas de filtre frontend)
   const isAdmin = useMemo(() => normalizeRole(user?.role) === 'admin', [user]);
@@ -459,6 +460,8 @@ export default function ProjectsPage() {
      - MASTER = admin backend + scope ? ici trait� comme admin
   ============================================================= */
   useEffect(() => {
+    if (initStartedRef.current) return;
+    initStartedRef.current = true;
     isMounted.current = true;
 
     const init = async () => {
@@ -1136,4 +1139,3 @@ export default function ProjectsPage() {
     </div>
   );
 }
-
