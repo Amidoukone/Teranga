@@ -26,6 +26,14 @@ function shouldUseLocalStorage() {
   return AUTH_STORAGE_MODE !== 'cookie';
 }
 
+function normalizeTokenValue(value) {
+  const raw = typeof value === 'string' ? value.trim() : String(value || '').trim();
+  if (!raw) return null;
+  const lowered = raw.toLowerCase();
+  if (lowered === 'null' || lowered === 'undefined') return null;
+  return raw;
+}
+
 /* ============================================================
    🔧 Utilitaires internes (robustes)
 ============================================================ */
@@ -34,12 +42,12 @@ function shouldUseLocalStorage() {
 function readTokenAny() {
   if (!shouldUseLocalStorage()) return null;
  // 1) Nouveau nom (prefere)
-  const current = safeGet(TOKEN_KEY);
+  const current = normalizeTokenValue(safeGet(TOKEN_KEY));
   if (current) return current;
 
   // 2) Anciennes clés (migration)
   for (const k of LEGACY_TOKEN_KEYS) {
-    const legacy = safeGet(k);
+    const legacy = normalizeTokenValue(safeGet(k));
     if (legacy) {
       // migration silencieuse
       safeSet(TOKEN_KEY, legacy);
@@ -84,7 +92,14 @@ function safeGet(key) {
 }
 function safeSet(key, val) {
   try {
-    localStorage.setItem(key, val);
+    const normalized = key === TOKEN_KEY || LEGACY_TOKEN_KEYS.includes(key)
+      ? normalizeTokenValue(val)
+      : val;
+    if (normalized == null) {
+      localStorage.removeItem(key);
+      return;
+    }
+    localStorage.setItem(key, normalized);
   } catch {
     // noop
   }

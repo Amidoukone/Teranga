@@ -24,6 +24,14 @@ function joinUrl(base, path) {
   return stripTrailingSlash(base) + ensureLeadingSlash(path);
 }
 
+function normalizeStoredToken(value) {
+  const raw = typeof value === 'string' ? value.trim() : String(value || '').trim();
+  if (!raw) return null;
+  const lowered = raw.toLowerCase();
+  if (lowered === 'null' || lowered === 'undefined') return null;
+  return raw;
+}
+
 /* ---------- Détection ORIGIN & API ---------- */
 function resolveOrigins() {
   // 1) Variables d'env explicites
@@ -118,8 +126,9 @@ api.interceptors.request.use((config) => {
     }
   }
 
-  const storedToken =
-    localStorage.getItem('teranga_token') || localStorage.getItem('token');
+  const storedToken = normalizeStoredToken(
+    localStorage.getItem('teranga_token') || localStorage.getItem('token')
+  );
   // Fallback: si un token existe, on l'envoie même en mode cookie
  // (evite les 401 quand la config env est incoherente avec l'etat client)
   const token = shouldUseLocalStorage() ? storedToken : storedToken;
