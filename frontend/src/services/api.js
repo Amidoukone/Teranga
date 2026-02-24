@@ -81,10 +81,6 @@ const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
   .toLowerCase()
   .trim();
 
-function shouldUseLocalStorage() {
-  return AUTH_STORAGE_MODE !== 'cookie';
-}
-
 /* ---------- Création instance Axios ---------- */
 const api = axios.create({
   baseURL: API_BASE_URL,
