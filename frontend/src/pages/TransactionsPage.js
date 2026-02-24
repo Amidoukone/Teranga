@@ -167,7 +167,7 @@ export default function TransactionsPage() {
       setServices([]);
       if (debug) console.warn('[TransactionsPage] loadServicesByRole error', e);
     }
-  }, [debug]);
+  }, []);
 
   // ========================================================================
  // AAA...A AaAAA1 TRANSACTIONS
@@ -188,7 +188,7 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, debug]);
   // ========================================================================
  // AAA...A AaAAA INIT USER + DATA
   // ========================================================================
@@ -258,7 +258,7 @@ export default function TransactionsPage() {
       active = false;
       initStartedRef.current = false;
     };
-  }, [loadServicesByRole, loadTransactions, t]);
+  }, [loadServicesByRole, loadTransactions, t, debug]);
 
   // ========================================================================
  // AAA...A AaAAA1 SERVICE AAAaA Aaa TASKS
