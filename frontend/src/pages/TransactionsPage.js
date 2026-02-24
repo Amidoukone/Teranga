@@ -258,7 +258,12 @@ export default function TransactionsPage() {
       active = false;
       initStartedRef.current = false;
     };
-  }, [loadServicesByRole, loadTransactions, t, debug]);
+    // IMPORTANT:
+    // cette initialisation doit rester "run once" pour éviter une boucle de
+    // remount logique quand certaines dépendances (ex: `t`) changent de référence.
+    // Les loaders internes gèrent déjà leurs propres états.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ========================================================================
  // AAA...A AaAAA1 SERVICE AAAaA Aaa TASKS
