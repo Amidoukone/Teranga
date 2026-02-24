@@ -262,7 +262,7 @@ export default function TransactionsPage() {
       active = false;
       initStartedRef.current = false;
     };
-  }, [loadServicesByRole, loadTransactions, debug]);
+  }, [loadServicesByRole, loadTransactions, t, debug]);
 
   // ========================================================================
  // AAA...A AaAAA1 SERVICE AAAaA Aaa TASKS

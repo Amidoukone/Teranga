@@ -237,7 +237,7 @@ export default function FinanceDashboardPage() {
       active = false;
       initStartedRef.current = false;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!user) return;

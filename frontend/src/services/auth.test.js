@@ -89,7 +89,10 @@ test('me in cookie mode caches backend user response', async () => {
 
   const result = await auth.me();
 
-  expect(apiMock.get).toHaveBeenCalledWith('/auth/me');
+  expect(apiMock.get).toHaveBeenCalledWith('/auth/me', {
+    skipAuthRedirect: true,
+    silentAuth: true,
+  });
   expect(result.user.id).toBe(15);
   expect(localStorage.getItem('teranga_user')).toContain('"id":15');
   expect(i18nMock.setLanguage).toHaveBeenCalledWith('fr');

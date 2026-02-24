@@ -12,7 +12,7 @@
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
     "db:seed": "sequelize-cli db:seed:all",
     "db:reset": "npm run db:migrate:undo -- --all && npm run db:migrate && npm run db:seed",
-    "db:test:setup": "cross-env NODE_ENV=test sequelize-cli db:create && cross-env NODE_ENV=test sequelize-cli db:migrate && cross-env NODE_ENV=test sequelize-cli db:seed:all",
+    "db:test:setup": "NODE_ENV=test sequelize-cli db:create && NODE_ENV=test sequelize-cli db:migrate && NODE_ENV=test sequelize-cli db:seed:all",
     "test": "node scripts/run-tests.js --runInBand",
     "test:contract": "node scripts/run-tests.js tests/contract --runInBand"
   },
@@ -32,7 +32,6 @@
     "sequelize": "^6.37.7"
   },
   "devDependencies": {
-    "cross-env": "^7.0.3",
     "jest": "^29.7.0",
     "nodemon": "^3.1.10",
     "sequelize-cli": "^6.6.3",
