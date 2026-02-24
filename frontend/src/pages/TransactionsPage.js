@@ -80,6 +80,7 @@ function getProofExtLabel(pf, proofHref = '', fallback = 'FILE') {
 export default function TransactionsPage() {
   const { formatNumber, formatDate } = useLocale();
   const { t } = useTranslation();
+  const tRef = useRef(t);
   const [user, setUser] = useState(null);
   const debug =
     typeof window !== 'undefined' &&
@@ -136,6 +137,9 @@ export default function TransactionsPage() {
   });
   const initStartedRef = useRef(false);
 
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -182,13 +186,13 @@ export default function TransactionsPage() {
       if (debug) console.warn('[TransactionsPage] loadTransactions done', arr.length);
     } catch (e) {
       console.error('Erreur loadTransactions:', e);
-      notify(t('transactionsPage.alerts.loadError'));
+      notify(tRef.current('transactionsPage.alerts.loadError'));
       setTransactions([]);
       if (debug) console.warn('[TransactionsPage] loadTransactions error', e);
     } finally {
       setLoading(false);
     }
-  }, [t, debug]);
+  }, [debug]);
   // ========================================================================
  // AAA...A AaAAA INIT USER + DATA
   // ========================================================================
@@ -208,7 +212,7 @@ export default function TransactionsPage() {
         if (!active) return;
         const current = userData?.user;
         if (!current) {
-          setBootError(t('transactionsPage.alerts.authRequired', {
+          setBootError(tRef.current('transactionsPage.alerts.authRequired', {
             defaultValue: 'Session expirée. Redirection vers la connexion...',
           }));
           window.location.href = '/login';
@@ -233,7 +237,7 @@ export default function TransactionsPage() {
         if (err?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
-          setBootError(t('transactionsPage.alerts.authRequired', {
+          setBootError(tRef.current('transactionsPage.alerts.authRequired', {
             defaultValue: 'Session expirée. Redirection vers la connexion...',
           }));
           window.location.href = '/login';
@@ -241,7 +245,7 @@ export default function TransactionsPage() {
         }
         if (active) {
           setBootError(
-            t('transactionsPage.alerts.initError', {
+            tRef.current('transactionsPage.alerts.initError', {
               defaultValue:
                 "Impossible d'initialiser la page Transactions. Rechargez la page.",
             })
@@ -258,7 +262,7 @@ export default function TransactionsPage() {
       active = false;
       initStartedRef.current = false;
     };
-  }, [loadServicesByRole, loadTransactions, t, debug]);
+  }, [loadServicesByRole, loadTransactions, debug]);
 
   // ========================================================================
  // AAA...A AaAAA1 SERVICE AAAaA Aaa TASKS

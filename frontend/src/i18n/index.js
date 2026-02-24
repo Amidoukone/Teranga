@@ -70,6 +70,15 @@ i18n.on("languageChanged", (lng) => {
 export function setLanguage(lang) {
   const normalized = normalizeLanguage(lang);
   if (!normalized || !SUPPORTED_LANGS.includes(normalized)) return null;
+  const current = normalizeLanguage(i18n.resolvedLanguage || i18n.language);
+  if (current === normalized) {
+    try {
+      localStorage.setItem(LANGUAGE_KEY, normalized);
+    } catch {
+      // noop
+    }
+    return normalized;
+  }
   i18n.changeLanguage(normalized);
   try {
     localStorage.setItem(LANGUAGE_KEY, normalized);

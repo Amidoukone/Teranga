@@ -107,6 +107,7 @@ function getScopeLabel(user, t) {
 export default function FinanceDashboardPage() {
   const { locale, formatDate } = useLocale();
   const { t } = useTranslation();
+  const tRef = useRef(t);
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -143,6 +144,10 @@ export default function FinanceDashboardPage() {
     const saved = localStorage.getItem('teranga_finance_showChart');
     return saved === null ? true : saved === '1';
   });
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
  // AA aaz Persistance de lAaaAAtat du graphique
   useEffect(() => {
@@ -185,7 +190,7 @@ export default function FinanceDashboardPage() {
         const current = u?.user;
         if (!current) {
           setBootError(
-            t('financeDashboardPage.errors.authRequired', {
+            tRef.current('financeDashboardPage.errors.authRequired', {
               defaultValue: 'Session expirée. Redirection vers la connexion...',
             })
           );
@@ -202,7 +207,7 @@ export default function FinanceDashboardPage() {
           localStorage.removeItem('token');
           if (active) {
             setBootError(
-              t('financeDashboardPage.errors.authRequired', {
+              tRef.current('financeDashboardPage.errors.authRequired', {
                 defaultValue:
                   'Session expirée. Redirection vers la connexion...',
               })
@@ -213,7 +218,7 @@ export default function FinanceDashboardPage() {
         }
         if (active) {
           setBootError(
-            t('financeDashboardPage.errors.initFailed', {
+            tRef.current('financeDashboardPage.errors.initFailed', {
               defaultValue:
                 "Impossible d'initialiser le dashboard financier. Rechargez la page.",
             })
@@ -232,7 +237,7 @@ export default function FinanceDashboardPage() {
       active = false;
       initStartedRef.current = false;
     };
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
