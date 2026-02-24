@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { getTransactions, createTransaction } from '../services/transactions';
-import { me, getLocalUser } from '../services/auth';
+import { me } from '../services/auth';
 import {
   getMyServices,
   getAgentServices,
@@ -191,15 +191,9 @@ export default function TransactionsPage() {
           setBooting(true);
           setBootError('');
         }
-        const cachedUser = getLocalUser();
-        if (active && cachedUser) {
-          setUser((prev) => prev || cachedUser);
-        }
-
         const userData = await me();
         if (!active) return;
-
-        const current = userData?.user || cachedUser;
+        const current = userData?.user;
         if (!current) {
           setBootError(t('transactionsPage.alerts.authRequired', {
             defaultValue: 'Session expirée. Redirection vers la connexion...',
