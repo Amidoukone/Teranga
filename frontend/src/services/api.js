@@ -260,21 +260,25 @@ api.interceptors.response.use(
 
     // 2) 401 INFO Token invalide/expire INFO nettoyage + redirection unique vers /login
     if (status === 401) {
-      localStorage.removeItem('teranga_token');
-      localStorage.removeItem('token');
-      localStorage.removeItem('teranga_user');
-      localStorage.removeItem(CSRF_TOKEN_STORAGE_KEY);
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('teranga_auth_changed'));
-      }
-
       const path = typeof window !== 'undefined' ? window.location.pathname : '';
       const skipRedirect =
         cfg?.skipAuthRedirect ||
+        cfg?.silentAuth ||
         path === '/login' ||
         path === '/register' ||
         path === '/forgot-password' ||
         path === '/reset-password';
+
+      // Pour les appels "silencieux" (ex: notifications), ne pas purger la session.
+      if (!skipRedirect) {
+        localStorage.removeItem('teranga_token');
+        localStorage.removeItem('token');
+        localStorage.removeItem('teranga_user');
+        localStorage.removeItem(CSRF_TOKEN_STORAGE_KEY);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('teranga_auth_changed'));
+        }
+      }
 
       if (
         !skipRedirect &&
