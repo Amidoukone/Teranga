@@ -167,7 +167,7 @@ export default function TransactionsPage() {
       setServices([]);
       if (debug) console.warn('[TransactionsPage] loadServicesByRole error', e);
     }
-  }, []);
+  }, [debug]);
 
   // ========================================================================
  // AAA...A AaAAA1 TRANSACTIONS
