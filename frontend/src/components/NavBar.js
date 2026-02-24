@@ -362,7 +362,13 @@ function NavBar() {
   const unreadCount = notificationSummary?.unread || 0;
 
   const loadNotificationSummary = useCallback(async () => {
-    if (!user) return;
+    const hasSession = USES_COOKIE_AUTH
+      ? Boolean(getLocalUser())
+      : Boolean(getToken());
+    if (!user || !hasSession) {
+      setNotificationSummary({ unread: 0, byProgress: {} });
+      return;
+    }
     try {
       const data = await getNotificationSummary();
       setNotificationSummary({
@@ -370,9 +376,10 @@ function NavBar() {
         byProgress: data?.byProgress || {},
       });
     } catch (e) {
+      const status = e?.response?.status;
       const isTimeout = e?.code === "ECONNABORTED";
       const isNetwork = !e?.response;
-      if (!isTimeout && !isNetwork) {
+      if (status !== 401 && !isTimeout && !isNetwork) {
         console.error("AAA notifications summary:", e);
       }
       setNotificationSummary((prev) => prev || { unread: 0, byProgress: {} });
@@ -1142,7 +1149,6 @@ function NavBar() {
 }
 
 export default memo(NavBar);
-
 
 
 

@@ -17,7 +17,14 @@ export async function getNotificationSummary() {
     const status = e?.response?.status;
     const isTimeout = e?.code === "ECONNABORTED";
     const isNetworkLike = !e?.response; // inclut CORS/502 gateway sans headers
-    if (!isTimeout && !isNetworkLike && status !== 502 && status !== 503 && status !== 504) {
+    if (
+      status !== 401 &&
+      !isTimeout &&
+      !isNetworkLike &&
+      status !== 502 &&
+      status !== 503 &&
+      status !== 504
+    ) {
       throw e;
     }
     return { unread: 0, byProgress: {} };
