@@ -60,7 +60,7 @@ function readTokenAny() {
 
 /** Ecrit le token dans la nouvelle cle + (optionnel) legacy pour compat. */
 function writeTokenAll(token, { keepLegacy = true } = {}) {
-  if (!shouldUseLocalStorage()) return;
+  // On stocke aussi en mode cookie pour fallback Bearer (cookies tiers bloqués).
   safeSet(TOKEN_KEY, token);
   if (keepLegacy) {
     for (const k of LEGACY_TOKEN_KEYS) safeSet(k, token);
