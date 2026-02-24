@@ -232,7 +232,11 @@ export default function FinanceDashboardPage() {
       active = false;
       initStartedRef.current = false;
     };
-  }, [t]);
+    // IMPORTANT:
+    // éviter de redémarrer l'init à chaque variation de référence de `t`
+    // (i18n peut réémettre), sinon le `booting` peut repartir en boucle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!user) return;
