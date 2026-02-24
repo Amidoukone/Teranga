@@ -138,13 +138,9 @@ api.interceptors.request.use((config) => {
     localStorage.getItem('teranga_token') || localStorage.getItem('token')
   );
 
-  // En mode cookie, privilégier la session cookie si un CSRF cookie existe.
-  // Sinon (cookie bloqué), utiliser le Bearer en fallback.
-  const hasCsrfCookie = Boolean(getCookieValue('teranga_csrf'));
-  const shouldAttachBearer = shouldUseLocalStorage() || !hasCsrfCookie;
-
+  // Envoie le Bearer si disponible. En mode cookie, /auth/me gère le fallback
+  // sans header si le Bearer est stale mais le cookie est valide.
   if (
-    shouldAttachBearer &&
     storedToken &&
     !config.headers?.Authorization &&
     !config.headers?.authorization
