@@ -156,6 +156,7 @@ loadRouter('./routes/evidence.routes', '/evidences', apiRouter);
 loadRouter('./routes/transaction.routes', '/transactions', apiRouter);
 loadRouter('./routes/notification.routes', '/notifications', apiRouter);
 loadRouter('./routes/activity.routes', '/activities', apiRouter);
+loadRouter('./routes/dashboard.routes', '/dashboard', apiRouter);
 
 // ✅ Multi-pays / franchise
 loadRouter('./routes/country.routes', '/countries', apiRouter);

@@ -36,6 +36,7 @@ import {
   getTransactions,
   getFinancialSummary,
 } from '../services/transactions';
+import { getDashboardSummary } from '../services/dashboard';
 import FinanceWidget from '../components/FinanceWidget';
 import api from '../services/api';
 import { getGeoParams } from '../services/geo';
@@ -76,6 +77,12 @@ export default function DashboardPage() {
     totalExpense: 0,
     balance: 0,
   });
+  const [financeWidgetSummary, setFinanceWidgetSummary] = useState({
+    revenue: 0,
+    expense: 0,
+    commission: 0,
+    adjustment: 0,
+  });
 
  // Stats dAAAtaillAAAes modules
   const [detailStats, setDetailStats] = useState({
@@ -105,6 +112,7 @@ export default function DashboardPage() {
   });
 
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   /* ---------------------------------------------------------------------- */
   /* INITIALISATION                                                       */
@@ -119,10 +127,10 @@ export default function DashboardPage() {
           return;
         }
         setUser(u);
-        await loadStats(u);
+        setLoading(false);
+        loadStats(u);
       } catch (err) {
         console.error('AAAAA...aTM Erreur Dashboard init:', err);
-      } finally {
         setLoading(false);
       }
     }
@@ -133,34 +141,53 @@ export default function DashboardPage() {
   /* CHARGEMENT DES STATISTIQUES                                          */
   /* ---------------------------------------------------------------------- */
   async function loadStats(u) {
+    setStatsLoading(true);
     try {
+      const role = normalizeRole(u.role);
+      const showPropertiesModule = role !== 'agent';
+
+      try {
+        const summary = await getDashboardSummary();
+        if (summary?.stats && summary?.detailStats) {
+          setStats((prev) => ({ ...prev, ...(summary.stats || {}) }));
+          setDetailStats((prev) => ({
+            ...prev,
+            properties: { ...prev.properties, ...(summary.detailStats?.properties || {}) },
+            tasks: { ...prev.tasks, ...(summary.detailStats?.tasks || {}) },
+            projects: { ...prev.projects, ...(summary.detailStats?.projects || {}) },
+            orders: { ...prev.orders, ...(summary.detailStats?.orders || {}) },
+          }));
+          if (summary?.financeWidgetSummary) {
+            setFinanceWidgetSummary((prev) => ({
+              ...prev,
+              ...(summary.financeWidgetSummary || {}),
+            }));
+          }
+          return;
+        }
+      } catch (summaryErr) {
+        console.warn('Dashboard summary indisponible, fallback legacy:', summaryErr);
+      }
+
       let services = [];
       let transactions = [];
       let financialSummary = null;
 
-      const role = normalizeRole(u.role);
-      const showPropertiesModule = role !== 'agent';
-
- // SERVICES selon rAAA le
-      if (role === 'admin') {
-        services = await getAllServicesAdmin();
-      } else if (role === 'agent') {
-        services = await getAgentServices();
-      } else {
-        services = await getMyServices();
-      }
-
-      // TRANSACTIONS
-      transactions = await getTransactions();
-
- // RAAAsumAAA financier (admin only)
-      if (role === 'admin') {
-        financialSummary = await getFinancialSummary();
-      }
-
- // ========= NOUVELLES DONNAAaAES : BIENS / TAAaACHES / PROJETS / COMMANDES =========
+      // Fallback legacy (compatible) - parallellise pour reduire la latence.
       const geoParams = getGeoParams();
-      const [propsRes, tasksRes, projectsRes, ordersRes] = await Promise.all([
+
+      const servicesPromise =
+        role === 'admin'
+          ? getAllServicesAdmin()
+          : role === 'agent'
+          ? getAgentServices()
+          : getMyServices();
+
+      const transactionsPromise = getTransactions();
+      const financialSummaryPromise =
+        role === 'admin' ? getFinancialSummary() : Promise.resolve(null);
+
+      const modulesPromise = Promise.all([
         showPropertiesModule
           ? api
               .get('/properties', { params: geoParams })
@@ -189,12 +216,27 @@ export default function DashboardPage() {
           }),
       ]);
 
+      const [
+        servicesRes,
+        transactionsRes,
+        financialSummaryRes,
+        [propsRes, tasksRes, projectsRes, ordersRes],
+      ] = await Promise.all([
+        servicesPromise,
+        transactionsPromise,
+        financialSummaryPromise,
+        modulesPromise,
+      ]);
+
+      services = servicesRes || [];
+      transactions = transactionsRes || [];
+      financialSummary = financialSummaryRes || null;
+
       const properties = propsRes.data?.properties || [];
       const tasks = tasksRes.data?.tasks || [];
       const projects = projectsRes.data?.projects || [];
       const orders = ordersRes.data?.orders || ordersRes.data?.items || [];
 
-      // ========= Calculs existants =========
       const activeServices = (services || []).filter(
         (s) => s.status !== 'completed' && s.status !== 'validated'
       ).length;
@@ -204,6 +246,24 @@ export default function DashboardPage() {
         transactions
           .filter((t) => t.type === 'revenue')
           .reduce((n, t) => n + Number(t.amount || 0), 0);
+
+      const financeBreakdown = {
+        revenue: financialSummary?.revenues ?? 0,
+        expense: financialSummary?.expenses ?? 0,
+        commission: financialSummary?.commissions ?? 0,
+        adjustment: financialSummary?.adjustments ?? 0,
+      };
+
+      if (!financialSummary) {
+        for (const trx of transactions || []) {
+          const type = String(trx?.type || '');
+          const amount = Number(trx?.amount || 0);
+          if (!Number.isFinite(amount)) continue;
+          if (Object.prototype.hasOwnProperty.call(financeBreakdown, type)) {
+            financeBreakdown[type] += amount;
+          }
+        }
+      }
 
       const totalExpense =
         financialSummary?.expenses ??
@@ -224,16 +284,13 @@ export default function DashboardPage() {
         totalExpense,
         balance,
       });
+      setFinanceWidgetSummary(financeBreakdown);
 
- // ========= NOUVEAUX CALCULS DAAaATAILLAAaAS =========
-
-      // Biens
       const propertiesTotal = properties.length;
       const propertiesActive = properties.filter(
         (p) => p.status === 'active'
       ).length;
 
- // TAAAches
       const tasksTotal = tasks.length;
       const tasksCreated = tasks.filter((t) => t.status === 'created').length;
       const tasksInProgress = tasks.filter(
@@ -246,7 +303,6 @@ export default function DashboardPage() {
         (t) => t.status === 'validated'
       ).length;
 
-      // Projets
       const projectsTotal = projects.length;
       const projectsCreated = projects.filter(
         (p) => p.status === 'created'
@@ -261,12 +317,10 @@ export default function DashboardPage() {
         (p) => p.status === 'validated'
       ).length;
 
-      // Commandes
       const ordersTotal = orders.length;
       const ordersPaid = orders.filter(
         (o) => o.paymentStatus === 'paid'
       ).length;
- // "open" = non livrAAAes / non annulAAAes
       const ordersOpen = orders.filter(
         (o) =>
           !['delivered', 'cancelled', 'refunded'].includes(
@@ -301,6 +355,8 @@ export default function DashboardPage() {
       });
     } catch (err) {
       console.error('AAAAA...aTM Erreur chargement stats Dashboard:', err);
+    } finally {
+      setStatsLoading(false);
     }
   }
 
@@ -415,14 +471,15 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-            <StatCard label={t("dashboard.stats.totalServices")} value={stats.servicesCount} icon={Wrench} />
-            <StatCard label={t("dashboard.stats.activeServices")} value={stats.activeServices} icon={Zap} />
-            <StatCard label={t("dashboard.stats.transactions")} value={stats.transactionsCount} icon={Receipt} />
+            <StatCard label={t("dashboard.stats.totalServices")} value={stats.servicesCount} icon={Wrench} loading={statsLoading} />
+            <StatCard label={t("dashboard.stats.activeServices")} value={stats.activeServices} icon={Zap} loading={statsLoading} />
+            <StatCard label={t("dashboard.stats.transactions")} value={stats.transactionsCount} icon={Receipt} loading={statsLoading} />
             <StatCard
               label={t("dashboard.stats.currentBalance")}
               value={`${formatNumber(stats.balance)} XOF`}
               highlight={isPositiveBalance}
               icon={isPositiveBalance ? TrendingUp : TrendingDown}
+              loading={statsLoading}
             />
           </div>
         </section>
@@ -446,7 +503,11 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
-              <FinanceWidget role={roleKey} />
+              <FinanceWidget
+                role={roleKey}
+                summary={financeWidgetSummary}
+                loading={statsLoading}
+              />
             </div>
 
             {/* Vue globale des modules */}
@@ -469,6 +530,7 @@ export default function DashboardPage() {
                   <ModuleCard
                     title={t("dashboard.modules.properties")}
                     icon={Building2}
+                    loading={statsLoading}
                     main={t("dashboard.modules.counts.property", {
                       count: detailStats.properties.total,
                     })}
@@ -490,6 +552,7 @@ export default function DashboardPage() {
                 <ModuleCard
                   title={t("dashboard.modules.tasks")}
                   icon={ClipboardList}
+                  loading={statsLoading}
                   main={t("dashboard.modules.counts.task", {
                     count: detailStats.tasks.total,
                   })}
@@ -518,6 +581,7 @@ export default function DashboardPage() {
                 <ModuleCard
                   title={t("dashboard.modules.projects")}
                   icon={FolderKanban}
+                  loading={statsLoading}
                   main={t("dashboard.modules.counts.project", {
                     count: detailStats.projects.total,
                   })}
@@ -546,6 +610,7 @@ export default function DashboardPage() {
                 <ModuleCard
                   title={t("dashboard.modules.orders")}
                   icon={ShoppingBag}
+                  loading={statsLoading}
                   main={t("dashboard.modules.counts.order", {
                     count: detailStats.orders.total,
                   })}
@@ -742,7 +807,7 @@ export default function DashboardPage() {
    COMPOSANTS RÃƒÆ’Ã¢â‚¬Â°UTILISABLES PREMIUM
 =========================================================================== */
 
-function StatCard({ label, value, highlight = false, icon: Icon }) {
+function StatCard({ label, value, highlight = false, icon: Icon, loading = false }) {
   return (
     <div
       className="
@@ -768,7 +833,11 @@ function StatCard({ label, value, highlight = false, icon: Icon }) {
           highlight ? 'text-emerald-700 dark:text-emerald-300' : 'text-text-primary'
         }`}
       >
-        {value}
+        {loading ? (
+          <span className="inline-block h-6 w-20 animate-pulse rounded bg-surface-main" />
+        ) : (
+          value
+        )}
       </div>
     </div>
   );
@@ -807,7 +876,7 @@ function QuickLink({ to, label, icon: Icon }) {
   );
 }
 
-function ModuleCard({ title, icon: Icon, main, items = [], link }) {
+function ModuleCard({ title, icon: Icon, main, items = [], link, loading = false }) {
   const { t } = useTranslation();
   const cardContent = (
     <div
@@ -833,13 +902,23 @@ function ModuleCard({ title, icon: Icon, main, items = [], link }) {
           </div>
         </div>
         <div className="text-lg sm:text-xl font-bold text-text-primary mb-2">
-          {main}
+          {loading ? (
+            <span className="inline-block h-6 w-28 animate-pulse rounded bg-surface-main" />
+          ) : (
+            main
+          )}
         </div>
         <ul className="space-y-1 text-xs sm:text-sm text-text-secondary">
           {items.map((it, idx) => (
             <li key={idx} className="flex justify-between">
               <span>{it.label}</span>
-              <span className="font-semibold text-text-primary">{it.value}</span>
+              <span className="font-semibold text-text-primary">
+                {loading ? (
+                  <span className="inline-block h-4 w-8 animate-pulse rounded bg-surface-main align-middle" />
+                ) : (
+                  it.value
+                )}
+              </span>
             </li>
           ))}
         </ul>
@@ -857,7 +936,3 @@ function ModuleCard({ title, icon: Icon, main, items = [], link }) {
 
   return link ? <Link to={link}>{cardContent}</Link> : cardContent;
 }
-
-
-
-

@@ -4,27 +4,31 @@ import { Landmark } from 'lucide-react';
 import { getTransactions } from '../services/transactions';
 import { PieChart, Pie, Tooltip, Cell, ResponsiveContainer } from 'recharts';
 
-export default function FinanceWidget({ role }) {
+export default function FinanceWidget({ role, summary: providedSummary = null, loading = false }) {
   const { t } = useTranslation();
-  const [summary, setSummary] = useState(null);
+  const [fetchedSummary, setFetchedSummary] = useState(null);
 
   useEffect(() => {
+    if (providedSummary) return;
+
     async function init() {
       try {
         const txs = await getTransactions();
         const totals = { revenue: 0, expense: 0, commission: 0, adjustment: 0 };
-        txs.forEach((t) => {
-          if (totals[t.type] !== undefined) totals[t.type] += Number(t.amount);
+        txs.forEach((trx) => {
+          if (totals[trx.type] !== undefined) totals[trx.type] += Number(trx.amount);
         });
-        setSummary(totals);
+        setFetchedSummary(totals);
       } catch {
-        setSummary({ revenue: 0, expense: 0, commission: 0, adjustment: 0 });
+        setFetchedSummary({ revenue: 0, expense: 0, commission: 0, adjustment: 0 });
       }
     }
     init();
-  }, []);
+  }, [providedSummary]);
 
-  if (!summary) return <p>{t('financeWidget.loading')}</p>;
+  const summary = providedSummary || fetchedSummary;
+
+  if (loading || !summary) return <p>{t('financeWidget.loading')}</p>;
 
   const COLORS = ['#10b981', '#ef4444', '#0ea5e9', '#6366f1'];
   const data = [
