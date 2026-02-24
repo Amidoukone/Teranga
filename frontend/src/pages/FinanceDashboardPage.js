@@ -158,8 +158,9 @@ export default function FinanceDashboardPage() {
   const loadTransactionsData = useCallback(async () => {
     try {
       setLoadingTransactions(true);
-      const txs = await getTransactions();
-      setTransactions(txs || []);
+      const data = await getTransactions();
+      const txs = Array.isArray(data) ? data : data?.transactions || [];
+      setTransactions(txs);
     } catch (err) {
       console.error('Erreur chargement FinanceDashboard:', err);
       setTransactions([]);

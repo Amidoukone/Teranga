@@ -169,10 +169,12 @@ export default function TransactionsPage() {
     setLoading(true);
     try {
       const data = await getTransactions();
-      setTransactions(data || []);
+      const arr = Array.isArray(data) ? data : data?.transactions || [];
+      setTransactions(arr);
     } catch (e) {
       console.error('Erreur loadTransactions:', e);
       notify(t('transactionsPage.alerts.loadError'));
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
