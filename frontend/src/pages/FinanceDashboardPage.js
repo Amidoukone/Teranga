@@ -193,6 +193,7 @@ export default function FinanceDashboardPage() {
           return;
         }
         setUser(current);
+        if (active) setBooting(false);
 
       } catch (err) {
         console.error('Erreur chargement FinanceDashboard:', err);

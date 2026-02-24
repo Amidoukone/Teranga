@@ -204,8 +204,10 @@ export default function TransactionsPage() {
           return;
         }
         setUser(current);
+        // On sort du boot UI dès que l'auth est validée.
+        if (active) setBooting(false);
 
-        // Ne bloque pas le boot UI sur des requetes de donnees potentiellement lentes.
+        // Ne bloque pas le rendu UI sur des requetes potentiellement lentes.
         // Les etats `loading`/`services` gerent deja l'affichage interne.
         Promise.allSettled([
           loadServicesByRole(current),
