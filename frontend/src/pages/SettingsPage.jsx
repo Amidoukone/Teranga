@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Moon, Sun, Monitor, ShieldCheck, LifeBuoy, FileText, Lock } from 'lucide-react';
+import { Moon, Sun, Monitor, ShieldCheck, LifeBuoy, FileText, Lock, BookOpenCheck } from 'lucide-react';
 
 import SetSeo from '../components/SetSeo';
 import {
@@ -138,6 +138,17 @@ export default function SettingsPage() {
                 <h3 className="font-semibold">{t('settingsPage.quick.termsTitle')}</h3>
               </div>
               <p className="text-sm text-text-secondary">{t('settingsPage.quick.termsDesc')}</p>
+            </Link>
+
+            <Link
+              to="/legal"
+              className="rounded-2xl border border-border/80 bg-surface-card p-5 transition hover:bg-surface-main/70"
+            >
+              <div className="mb-2 flex items-center gap-2 text-text-primary">
+                <BookOpenCheck size={18} />
+                <h3 className="font-semibold">{t('settingsPage.quick.legalTitle')}</h3>
+              </div>
+              <p className="text-sm text-text-secondary">{t('settingsPage.quick.legalDesc')}</p>
             </Link>
           </section>
         </div>

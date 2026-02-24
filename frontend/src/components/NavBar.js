@@ -47,6 +47,7 @@ import {
   BookOpenCheck,
   Lock,
   ChevronDown,
+  ChevronRight,
   Check,
   Bell,
 } from "lucide-react";
@@ -100,6 +101,14 @@ const LEGAL_LINK = {
   path: "/legal",
   labelKey: "nav.legal",
 };
+const ACCOUNT_LINK_PATHS = new Set([
+  SETTINGS_LINK.path,
+  ACCOUNT_SECURITY_LINK.path,
+  HELP_SUPPORT_LINK.path,
+  PRIVACY_LINK.path,
+  TERMS_LINK.path,
+  LEGAL_LINK.path,
+]);
 
 const ROLE_LINKS = {
   client: [
@@ -267,15 +276,6 @@ function buildSections(role, links, t) {
 
   pushSection(t("nav.sections.shop"), [...byPrefix("/shop"), ...byPrefix("/orders")]);
 
-  pushSection(t("nav.sections.account"), [
-    byPath("/settings"),
-    byPath("/account/security"),
-    byPath("/help-support"),
-    byPath("/privacy"),
-    byPath("/terms"),
-    byPath("/legal"),
-  ]);
-
   if (role === "admin") {
     pushSection(t("nav.sections.admin"), [
       byPath("/admin/projects"),
@@ -321,13 +321,30 @@ const clsMenuSurface =
   "overflow-hidden rounded-2xl border border-border/70 bg-surface-card/95 backdrop-blur-2xl shadow-2xl";
 
 const clsMenuItemBase =
-  "mx-2 my-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition " +
+  "group mx-1.5 my-1 flex items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm transition-all duration-150 " +
   "focus:outline-none focus:ring-4 focus:ring-primary/10";
 
 const clsMenuItemInactive =
-  "text-text-secondary hover:bg-surface-main/70 hover:text-text-primary";
+  "text-text-secondary hover:bg-surface-main/70 hover:text-text-primary hover:border-border/60";
 
-const clsMenuItemActive = "bg-primary/10 text-primary font-semibold";
+const clsMenuItemActive =
+  "bg-primary/10 text-primary font-semibold border border-primary/15 shadow-sm";
+const clsPanelSectionCard =
+  "mx-2 my-1.5 rounded-2xl border border-border/60 bg-surface-main/25 p-1.5";
+const clsPanelSectionTitle =
+  "px-3 pt-1.5 pb-1 text-[0.62rem] uppercase tracking-[0.18em] text-text-muted";
+const clsPanelIconChip =
+  "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-surface-card/80 transition-colors duration-150";
+const clsSubSectionLabel =
+  "px-4 pb-1 text-[0.65rem] uppercase tracking-[0.18em] text-text-muted";
+const clsAccountCard =
+  "group flex items-start gap-3 rounded-xl border border-border/70 bg-surface-main/40 px-3 py-3 " +
+  "text-left transition-all duration-150 hover:bg-surface-main/70 hover:border-border " +
+  "hover:shadow-[0_10px_22px_-18px_rgba(15,23,42,0.45)]";
+const clsSessionRow =
+  "group flex w-full items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-2.5 " +
+  "text-left transition-all duration-150 hover:bg-red-500/10 hover:border-red-500/30 " +
+  "focus:outline-none focus:ring-4 focus:ring-red-500/10";
 
 /* ============================================================================ */
 /* COMPONENT */
@@ -599,6 +616,16 @@ function NavBar() {
   }, [links, isActive]);
 
   const sections = useMemo(() => buildSections(role, links, t), [role, links, t]);
+  const mobileSections = useMemo(
+    () =>
+      sections
+        .map((sec) => ({
+          ...sec,
+          items: sec.items.filter((it) => !ACCOUNT_LINK_PATHS.has(it.path)),
+        }))
+        .filter((sec) => sec.items.length > 0),
+    [sections]
+  );
 
   const servicePrimaryPath = useMemo(() => {
     if (role === "agent") return "/agent/services";
@@ -628,8 +655,20 @@ function NavBar() {
 
   const desktopMoreItems = useMemo(() => {
     const primaryPaths = new Set(desktopPrimaryTabs.map((x) => x.path));
-    return links.filter((l) => !primaryPaths.has(l.path));
+    return links.filter(
+      (l) => !primaryPaths.has(l.path) && !ACCOUNT_LINK_PATHS.has(l.path)
+    );
   }, [links, desktopPrimaryTabs]);
+
+  const desktopMoreSections = useMemo(() => {
+    const allowed = new Set(desktopMoreItems.map((x) => x.path));
+    return sections
+      .map((sec) => ({
+        ...sec,
+        items: sec.items.filter((it) => allowed.has(it.path)),
+      }))
+      .filter((sec) => sec.items.length > 0);
+  }, [sections, desktopMoreItems]);
 
   const Logo = (
     <img
@@ -791,66 +830,76 @@ function NavBar() {
                       initial={{ opacity: 0, y: 8, scale: 0.985 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.985 }}
-                      transition={{ duration: 0.16 }}
+                      transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
                       className={[
-                        "absolute right-0 mt-2 z-50 w-[340px]",
+                        "absolute right-0 mt-2 z-50 w-[356px]",
                         clsMenuSurface,
                       ].join(" ")}
                       role="menu"
                       aria-label={t("nav.menuPlus")}
                     >
                       {/* Quick Scope */}
-                      <div className="px-4 py-3 border-b border-border bg-surface-main/50">
-                        <div className="text-[0.72rem] text-text-muted mb-2">
-                          {t("nav.perimeter")}
+                      <div className="px-4 py-3 border-b border-border bg-gradient-to-r from-surface-main/60 to-surface-card/30">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div className="text-[0.68rem] uppercase tracking-[0.18em] text-text-muted">
+                            {t("nav.perimeter")}
+                          </div>
+                          <span className="text-[0.68rem] text-text-muted">
+                            {t("nav.menuPlus")}
+                          </span>
                         </div>
 
  {/* Encapsulation AaAEnterprise controlAaA */}
-                        <div className="rounded-xl border border-border bg-surface-card px-3 py-2">
+                        <div className="rounded-xl border border-border/70 bg-surface-card/85 px-3 py-2 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.4)]">
                           <GeoSelector />
                         </div>
                       </div>
 
                       <div className="max-h-[420px] overflow-y-auto py-2">
-                        {sections.map((sec) => (
-                          <div key={sec.title} className="py-1">
-                            <div className="px-4 py-1.5 text-[0.65rem] uppercase tracking-widest text-text-muted">
+                        {desktopMoreSections.map((sec) => (
+                          <div key={sec.title} className={clsPanelSectionCard}>
+                            <div className={clsPanelSectionTitle}>
                               {sec.title}
                             </div>
 
-                            {sec.items
-                              .filter(
-                                (it) =>
-                                  desktopMoreItems.some((x) => x.path === it.path) ||
-                                  !desktopPrimaryTabs.some((x) => x.path === it.path)
-                              )
-                              .map((l) => {
-                                if (desktopPrimaryTabs.some((t) => t.path === l.path))
-                                  return null;
+                            {sec.items.map((l) => {
+                              const active = isActive(l.path);
+                              const Icon = iconForPath(l.path);
 
-                                const active = isActive(l.path);
-                                const Icon = iconForPath(l.path);
-
-                                return (
-                                  <Link
-                                    key={l.path}
-                                    to={l.path}
-                                    onClick={() => setOpenDesktopMore(false)}
+                              return (
+                                <Link
+                                  key={l.path}
+                                  to={l.path}
+                                  onClick={() => setOpenDesktopMore(false)}
+                                  className={[
+                                    clsMenuItemBase,
+                                    active ? clsMenuItemActive : clsMenuItemInactive,
+                                  ].join(" ")}
+                                  aria-current={active ? "page" : undefined}
+                                  role="menuitem"
+                                >
+                                  <span
                                     className={[
-                                      clsMenuItemBase,
-                                      active ? clsMenuItemActive : clsMenuItemInactive,
+                                      clsPanelIconChip,
+                                      active
+                                        ? "border-primary/20 bg-primary/10 text-primary"
+                                        : "text-text-secondary group-hover:text-text-primary",
                                     ].join(" ")}
-                                    aria-current={active ? "page" : undefined}
-                                    role="menuitem"
                                   >
-                                    <span className={active ? "text-primary" : "text-text-secondary"}>
-                                      <Icon size={16} />
-                                    </span>
-                                    <span className="flex-1">{l.label}</span>
-                                    {active ? <Check size={16} className="text-primary" /> : null}
-                                  </Link>
-                                );
-                              })}
+                                    <Icon size={16} />
+                                  </span>
+                                  <span className="flex-1">{l.label}</span>
+                                  {active ? (
+                                    <Check size={16} className="text-primary" />
+                                  ) : (
+                                    <ChevronRight
+                                      size={15}
+                                      className="text-text-muted transition-transform duration-150 group-hover:translate-x-0.5"
+                                    />
+                                  )}
+                                </Link>
+                              );
+                            })}
                           </div>
                         ))}
                       </div>
@@ -917,54 +966,98 @@ function NavBar() {
                       initial={{ opacity: 0, y: 8, scale: 0.985 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.985 }}
-                      transition={{ duration: 0.16 }}
-                      className={["absolute right-0 mt-2 z-50 w-[280px]", clsMenuSurface].join(" ")}
+                      transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
+                      className={["absolute right-0 mt-2 z-50 w-[312px]", clsMenuSurface].join(" ")}
                       role="menu"
                       aria-label={t("nav.userMenu")}
                     >
-                      <div className="px-4 py-3 border-b border-border bg-surface-main/50">
-                        <div className="text-text-primary text-sm font-semibold tracking-wide truncate">
-                          {userDisplay}
-                        </div>
-                        <div className="text-text-muted text-[0.75rem] truncate">
-                          {roleLabel}
+                      <div className="px-4 py-3 border-b border-border bg-gradient-to-r from-surface-main/60 to-surface-card/30">
+                        <div className="flex items-start gap-3">
+                          <div className="relative shrink-0">
+                            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-semibold shadow-sm">
+                              {userInitial}
+                            </div>
+                            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-surface-card" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-text-primary text-sm font-semibold tracking-wide truncate">
+                              {userDisplay}
+                            </div>
+                            {user?.email && user?.email !== userDisplay ? (
+                              <div className="text-text-muted text-[0.72rem] truncate mt-0.5">
+                                {user.email}
+                              </div>
+                            ) : null}
+                            <div className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-surface-card/70 px-2 py-0.5 text-[0.68rem] uppercase tracking-wide text-text-muted">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              {roleLabel}
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="py-2">
-                        <Link
-                          to="/settings"
-                          onClick={() => setOpenUserMenu(false)}
-                          className="block w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
-                        >
-                          {t("nav.settings")}
-                        </Link>
-                        <Link
-                          to="/account/security"
-                          onClick={() => setOpenUserMenu(false)}
-                          className="block w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
-                        >
-                          {t("nav.accountSecurity")}
-                        </Link>
-                        <Link
-                          to="/help-support"
-                          onClick={() => setOpenUserMenu(false)}
-                          className="block w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/70 hover:text-text-primary transition"
-                        >
-                          {t("nav.helpSupportSoon")}
-                        </Link>
+                      <div className="px-3 py-3 space-y-3">
+                        <div>
+                          <div className={clsSubSectionLabel}>{t("nav.sections.account")}</div>
+                          <Link
+                            to="/settings"
+                            onClick={() => setOpenUserMenu(false)}
+                            className={clsAccountCard}
+                            role="menuitem"
+                          >
+                            <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors duration-150 group-hover:bg-primary/15">
+                              <Settings size={16} />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-semibold text-text-primary">
+                                {t("nav.settings")}
+                              </span>
+                              <span className="mt-0.5 block text-xs text-text-muted leading-relaxed">
+                                {t("nav.settingsMenuHint")}
+                              </span>
+                            </span>
+                            <span className="mt-1 text-text-muted transition-transform duration-150 group-hover:translate-x-0.5">
+                              <ChevronRight size={15} />
+                            </span>
+                          </Link>
+                        </div>
+
+                        <div>
+                          <div className={clsSubSectionLabel}>{t("nav.sections.session")}</div>
+                          <button
+                            onClick={handleLogout}
+                            className={clsSessionRow}
+                            aria-label={t("nav.logout")}
+                            role="menuitem"
+                          >
+                            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-300 transition-colors duration-150 group-hover:bg-red-500/15">
+                              <LogOut size={16} />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-semibold text-text-primary">
+                                {t("nav.logout")}
+                              </span>
+                              <span className="block text-xs text-text-muted">
+                                {t("nav.userMenu")}
+                              </span>
+                            </span>
+                            <span className="text-red-500/80 transition-transform duration-150 group-hover:translate-x-0.5">
+                              <ChevronRight size={15} />
+                            </span>
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="border-t border-border" />
+                      <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 text-white text-sm font-semibold transition-colors duration-200 hover:bg-red-700"
-                        aria-label={t("nav.logout")}
+                      <motion.div
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.14, delay: 0.02 }}
+                        className="px-4 py-2.5 text-[0.7rem] text-text-muted bg-surface-main/20"
                       >
-                        <LogOut size={16} />
-                        {t("nav.logout")}
-                      </button>
+                        {t("nav.settingsMenuHintShort")}
+                      </motion.div>
                     </motion.div>
                   </>
                 )}
@@ -1049,7 +1142,7 @@ function NavBar() {
               initial={{ opacity: 0, y: 80 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 80 }}
-              transition={{ duration: 0.24 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className="fixed bottom-24 inset-x-0 z-50 flex justify-center px-4"
               role="dialog"
               aria-modal="true"
@@ -1057,7 +1150,7 @@ function NavBar() {
             >
               <div className="w-full max-w-sm bg-surface-card/95 backdrop-blur-2xl border border-border/70 rounded-2xl shadow-2xl overflow-hidden">
                 {/* HEADER */}
-                <div className="px-4 py-3 border-b border-border flex justify-between items-center bg-surface-main/50">
+                <div className="px-4 py-3 border-b border-border flex justify-between items-center bg-gradient-to-r from-surface-main/60 to-surface-card/30">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="relative">
                       <div className="w-9 h-9 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
@@ -1070,7 +1163,8 @@ function NavBar() {
                       <div className="text-text-primary text-sm font-semibold tracking-wide truncate">
                         {userDisplay}
                       </div>
-                      <div className="text-text-muted text-[0.75rem] uppercase tracking-wide truncate">
+                      <div className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-surface-card/70 px-2 py-0.5 text-[0.68rem] uppercase tracking-wide text-text-muted">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
                         {roleLabel}
                       </div>
                     </div>
@@ -1078,7 +1172,7 @@ function NavBar() {
 
                   <button
                     onClick={() => setOpenMore(false)}
-                    className="p-2 rounded-full bg-surface-card text-text-secondary transition-colors duration-200 hover:bg-surface-main/70 focus:outline-none focus:ring-4 focus:ring-primary/10"
+                    className="p-2 rounded-xl border border-border/70 bg-surface-card/80 text-text-secondary transition-colors duration-150 hover:bg-surface-main/70 hover:text-text-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                     aria-label={t("nav.closeMenu")}
                   >
                     <X size={18} />
@@ -1086,20 +1180,20 @@ function NavBar() {
                 </div>
 
                 {/* GEO SELECTOR */}
-                <div className="px-4 py-3 border-b border-border">
-                  <div className="text-xs text-text-muted mb-2">
+                <div className="px-4 py-3 border-b border-border bg-surface-main/15">
+                  <div className="text-[0.68rem] uppercase tracking-[0.18em] text-text-muted mb-2">
                     {t("nav.perimeter")}
                   </div>
-                  <div className="rounded-xl border border-border bg-surface-main/50 px-3 py-2">
+                  <div className="rounded-xl border border-border/70 bg-surface-card/85 px-3 py-2 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.4)]">
                     <GeoSelector />
                   </div>
                 </div>
 
                 {/* LINKS (grouped) */}
                 <div className="max-h-72 overflow-y-auto py-2">
-                  {sections.map((sec) => (
-                    <div key={sec.title} className="py-1">
-                      <div className="px-4 py-2 text-[0.65rem] uppercase tracking-widest text-text-muted">
+                  {mobileSections.map((sec) => (
+                    <div key={sec.title} className={clsPanelSectionCard}>
+                      <div className={clsPanelSectionTitle}>
                         {sec.title}
                       </div>
 
@@ -1118,11 +1212,25 @@ function NavBar() {
                             ].join(" ")}
                             aria-current={active ? "page" : undefined}
                           >
-                            <span className={active ? "text-primary" : "text-text-secondary"}>
+                            <span
+                              className={[
+                                clsPanelIconChip,
+                                active
+                                  ? "border-primary/20 bg-primary/10 text-primary"
+                                  : "text-text-secondary group-hover:text-text-primary",
+                              ].join(" ")}
+                            >
                               <Icon size={16} />
                             </span>
                             <span className="flex-1">{l.label}</span>
-                            {active ? <Check size={16} className="text-primary" /> : null}
+                            {active ? (
+                              <Check size={16} className="text-primary" />
+                            ) : (
+                              <ChevronRight
+                                size={15}
+                                className="text-text-muted transition-transform duration-150 group-hover:translate-x-0.5"
+                              />
+                            )}
                           </Link>
                         );
                       })}
@@ -1130,15 +1238,55 @@ function NavBar() {
                   ))}
                 </div>
 
-                {/* LOGOUT */}
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex justify-center gap-2 py-3 bg-red-600 text-white text-sm font-semibold transition-colors duration-200 hover:bg-red-700"
-                  aria-label={t("nav.logout")}
-                >
-                  <LogOut size={14} />
-                  {t("nav.logout")}
-                </button>
+                <div className="border-t border-border bg-surface-main/30 px-4 py-3 space-y-3">
+                  <div>
+                    <div className={clsSubSectionLabel}>{t("nav.sections.account")}</div>
+                    <Link
+                      to="/settings"
+                      onClick={() => setOpenMore(false)}
+                      className={clsAccountCard}
+                    >
+                      <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors duration-150 group-hover:bg-primary/15">
+                        <Settings size={16} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-text-primary">
+                          {t("nav.settings")}
+                        </span>
+                        <span className="block text-xs text-text-muted leading-relaxed">
+                          {t("nav.settingsMenuHintShort")}
+                        </span>
+                      </span>
+                      <span className="mt-1 text-text-muted transition-transform duration-150 group-hover:translate-x-0.5">
+                        <ChevronRight size={15} />
+                      </span>
+                    </Link>
+                  </div>
+
+                  <div>
+                    <div className={clsSubSectionLabel}>{t("nav.sections.session")}</div>
+                    <button
+                      onClick={handleLogout}
+                      className={clsSessionRow}
+                      aria-label={t("nav.logout")}
+                    >
+                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-300 transition-colors duration-150 group-hover:bg-red-500/15">
+                        <LogOut size={15} />
+                      </span>
+                      <span className="min-w-0 flex-1 text-left">
+                        <span className="block text-sm font-semibold text-text-primary">
+                          {t("nav.logout")}
+                        </span>
+                        <span className="block text-xs text-text-muted">
+                          {roleLabel}
+                        </span>
+                      </span>
+                      <span className="text-red-500/80 transition-transform duration-150 group-hover:translate-x-0.5">
+                        <ChevronRight size={15} />
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </>
@@ -1149,6 +1297,3 @@ function NavBar() {
 }
 
 export default memo(NavBar);
-
-
-

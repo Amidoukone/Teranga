@@ -49,6 +49,10 @@ const en = {
     userMenu: "User menu",
     accountSecurity: "Account security",
     helpSupportSoon: "Help & Support (coming soon)",
+    settingsMenuHint:
+      "Security, help & support, privacy, terms of use and legal notice.",
+    settingsMenuHintShort:
+      "Group security, support and legal pages in Settings.",
     comingSoon: "Coming soon",
     logout: "Sign out",
     userFallback: "User",
@@ -60,6 +64,7 @@ const en = {
       finance: "Finance",
       shop: "Shop",
       account: "Account",
+      session: "Session",
       admin: "Administration",
     },
   },
@@ -2179,6 +2184,8 @@ const en = {
       privacyDesc: "Review personal data handling and your rights.",
       termsTitle: "Terms of use",
       termsDesc: "Review platform rules and responsibilities.",
+      legalTitle: "Legal notice",
+      legalDesc: "Review publisher and platform legal information.",
     },
   },
   helpSupportPage: {
