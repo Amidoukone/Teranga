@@ -77,9 +77,6 @@ const ORIGINS = resolveOrigins();
 export const API_BASE_URL = ORIGINS.API_BASE_URL;
 export let FILE_BASE_URL = ORIGINS.FILE_BASE_URL;
 const CSRF_TOKEN_STORAGE_KEY = 'teranga_csrf_token';
-const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
-  .toLowerCase()
-  .trim();
 
 /* ---------- Création instance Axios ---------- */
 const api = axios.create({
