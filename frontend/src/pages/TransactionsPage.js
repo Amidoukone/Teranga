@@ -81,6 +81,10 @@ export default function TransactionsPage() {
   const { formatNumber, formatDate } = useLocale();
   const { t } = useTranslation();
   const [user, setUser] = useState(null);
+  const debug =
+    typeof window !== 'undefined' &&
+    window.location &&
+    window.location.search.includes('debug=1');
 
   const [transactions, setTransactions] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -145,6 +149,7 @@ export default function TransactionsPage() {
   // ========================================================================
   const loadServicesByRole = useCallback(async (u) => {
     try {
+      if (debug) console.warn('[TransactionsPage] loadServicesByRole start', u?.role);
       let servs = [];
 
       if (u.role === 'client') {
@@ -156,11 +161,13 @@ export default function TransactionsPage() {
       }
 
       setServices(servs || []);
+      if (debug) console.warn('[TransactionsPage] loadServicesByRole done', (servs || []).length);
     } catch (e) {
       console.error('Erreur services:', e);
       setServices([]);
+      if (debug) console.warn('[TransactionsPage] loadServicesByRole error', e);
     }
-  }, []);
+  }, [debug]);
 
   // ========================================================================
  // AAA...A AaAAA1 TRANSACTIONS
@@ -168,13 +175,16 @@ export default function TransactionsPage() {
   const loadTransactions = useCallback(async () => {
     setLoading(true);
     try {
+      if (debug) console.warn('[TransactionsPage] loadTransactions start');
       const data = await getTransactions();
       const arr = Array.isArray(data) ? data : data?.transactions || [];
       setTransactions(arr);
+      if (debug) console.warn('[TransactionsPage] loadTransactions done', arr.length);
     } catch (e) {
       console.error('Erreur loadTransactions:', e);
       notify(t('transactionsPage.alerts.loadError'));
       setTransactions([]);
+      if (debug) console.warn('[TransactionsPage] loadTransactions error', e);
     } finally {
       setLoading(false);
     }
@@ -192,6 +202,7 @@ export default function TransactionsPage() {
         if (active) {
           setBooting(true);
           setBootError('');
+          if (debug) console.warn('[TransactionsPage] init start');
         }
         const userData = await me();
         if (!active) return;
@@ -206,6 +217,7 @@ export default function TransactionsPage() {
         setUser(current);
         // On sort du boot UI dès que l'auth est validée.
         if (active) setBooting(false);
+        if (debug) console.warn('[TransactionsPage] init user ok', current?.id);
 
         // Ne bloque pas le rendu UI sur des requetes potentiellement lentes.
         // Les etats `loading`/`services` gerent deja l'affichage interne.
@@ -217,6 +229,7 @@ export default function TransactionsPage() {
         });
       } catch (err) {
         console.error('Erreur init TransactionsPage:', err);
+        if (debug) console.warn('[TransactionsPage] init error', err);
         if (err?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
@@ -236,6 +249,7 @@ export default function TransactionsPage() {
         }
       } finally {
         if (active) setBooting(false);
+        if (debug) console.warn('[TransactionsPage] init finally booting=false');
       }
     }
 
@@ -464,9 +478,22 @@ export default function TransactionsPage() {
   if (booting) {
     return (
       <div className="app-page-wrap flex min-h-screen items-center justify-center">
-        <p className="text-lg animate-pulse text-text-secondary">
-          {t('transactionsPage.loading')}
-        </p>
+        <div className="text-center">
+          <p className="text-lg animate-pulse text-text-secondary">
+            {t('transactionsPage.loading')}
+          </p>
+          {debug && (
+            <div className="mt-4 text-left text-xs text-text-secondary">
+              <div>debug: booting=true</div>
+              <div>loading={String(loading)}</div>
+              <div>user={user ? 'yes' : 'no'}</div>
+              <div>transactions={transactions.length}</div>
+              <div>services={services.length}</div>
+              <div>tasks={tasks.length}</div>
+              <div>filters.q="{filters.q}"</div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -510,6 +537,18 @@ export default function TransactionsPage() {
   return (
     <div className="app-page-wrap">
       <div className="app-page-shell max-w-6xl space-y-8 p-5 sm:p-8 lg:p-10">
+        {debug && (
+          <div className="rounded-xl border border-border/70 bg-surface-card/80 px-4 py-3 text-xs text-text-secondary">
+            <div>debug: booting={String(booting)}</div>
+            <div>loading={String(loading)}</div>
+            <div>user={user ? 'yes' : 'no'}</div>
+            <div>transactions={transactions.length}</div>
+            <div>services={services.length}</div>
+            <div>tasks={tasks.length}</div>
+            <div>filtered={filtered.length}</div>
+            <div>page={page} pageSize={pageSize}</div>
+          </div>
+        )}
 
         {/* HEADER */}
         <div className="flex flex-col gap-4 border-b border-border/70 pb-4 md:flex-row md:items-end md:justify-between">
