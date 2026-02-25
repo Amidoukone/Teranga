@@ -5,7 +5,7 @@
 // AAa 2026: AdminOnboardingPage (Pays Aa aTM RAAgions Aa aTM MASTER)
 // ============================================================================
 
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
 
@@ -19,62 +19,62 @@ import ConfirmProvider from './components/ConfirmProvider';
 import { GeoProvider } from './contexts/GeoContext';
 import { getAnalyticsConsent, loadAnalytics } from './utils/analytics';
 import { installGlobalErrorHandlers } from './utils/errorReporter';
+import { getToken, getLocalUser, hasSessionHint, me } from './services/auth';
+import { normalizeRole } from './utils/role'; // ensure roles are canonical (admin/agent/client)
 
-// AA AA Pages publiques
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import ProductCatalogPage from './pages/ProductCatalogPage';
-import ProductDetailPage from './pages/ProductDetailPage';
+// AA AA Pages (lazy loaded route-level pour reduire le bundle initial)
+const HomePage = lazy(() => import('./pages/HomePage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const ProductCatalogPage = lazy(() => import('./pages/ProductCatalogPage'));
+const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
 
 // AA AA34 Pages lAAgales
-import LegalPage from './pages/LegalPage';
-import PrivacyPage from './pages/PrivacyPage';
-import TermsPage from './pages/TermsPage';
-import SettingsPage from './pages/SettingsPage';
-import HelpSupportPage from './pages/HelpSupportPage';
+const LegalPage = lazy(() => import('./pages/LegalPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const HelpSupportPage = lazy(() => import('./pages/HelpSupportPage'));
 
 // AA a A Utilisateurs connectAAs
-import DashboardPage from './pages/DashboardPage';
-import PropertiesPage from './pages/PropertiesPage';
-import ServicesPage from './pages/ServicesPage';
-import ServiceTasksPage from './pages/ServiceTasksPage';
-import TasksPage from './pages/TasksPage';
-import TaskEvidencesPage from './pages/TaskEvidencesPage';
-import TransactionsPage from './pages/TransactionsPage';
-import FinanceDashboardPage from './pages/FinanceDashboardPage';
-import ChangePasswordPage from './pages/ChangePasswordPage';
-import NotificationsPage from './pages/NotificationsPage';
-import ActivityCenterPage from './pages/ActivityCenterPage';
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const PropertiesPage = lazy(() => import('./pages/PropertiesPage'));
+const ServicesPage = lazy(() => import('./pages/ServicesPage'));
+const ServiceTasksPage = lazy(() => import('./pages/ServiceTasksPage'));
+const TasksPage = lazy(() => import('./pages/TasksPage'));
+const TaskEvidencesPage = lazy(() => import('./pages/TaskEvidencesPage'));
+const TransactionsPage = lazy(() => import('./pages/TransactionsPage'));
+const FinanceDashboardPage = lazy(() => import('./pages/FinanceDashboardPage'));
+const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const ActivityCenterPage = lazy(() => import('./pages/ActivityCenterPage'));
 
 // AA AA Projets
-import ProjectsPage from './pages/ProjectsPage';
-import ProjectDetailPage from './pages/ProjectDetailPage';
+const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
+const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage'));
 
 // AA a A AaAAA aTMA14 Agents
-import AgentServicesPage from './pages/AgentServicesPage';
+const AgentServicesPage = lazy(() => import('./pages/AgentServicesPage'));
 
 // AA a a Admin
-import AdminAgentsPage from './pages/AdminAgentsPage';
-import AdminServicesPage from './pages/AdminServicesPage';
-import AdminUsersPage from './pages/AdminUsersPage';
-import AdminPropertiesPage from './pages/AdminPropertiesPage';
-import AdminProjectsPage from './pages/AdminProjectsPage';
-import AdminCategoriesPage from './pages/AdminCategoriesPage';
-import AdminProductsPage from './pages/AdminProductsPage';
-import AdminMetricsPage from './pages/AdminMetricsPage';
+const AdminAgentsPage = lazy(() => import('./pages/AdminAgentsPage'));
+const AdminServicesPage = lazy(() => import('./pages/AdminServicesPage'));
+const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
+const AdminPropertiesPage = lazy(() => import('./pages/AdminPropertiesPage'));
+const AdminProjectsPage = lazy(() => import('./pages/AdminProjectsPage'));
+const AdminCategoriesPage = lazy(() => import('./pages/AdminCategoriesPage'));
+const AdminProductsPage = lazy(() => import('./pages/AdminProductsPage'));
+const AdminMetricsPage = lazy(() => import('./pages/AdminMetricsPage'));
 
 // AAa NEW: Onboarding Pays Aa aTM RAAgions Aa aTM MASTER
-import AdminOnboardingPage from './pages/AdminOnboardingPage';
+const AdminOnboardingPage = lazy(() => import('./pages/AdminOnboardingPage'));
 
 // AA AA34 Commerce
-import OrdersPage from './pages/OrdersPage';
-import OrderDetailPage from './pages/OrderDetailPage';
-import OrderTransactionsPage from './pages/OrderTransactionsPage';
+const OrdersPage = lazy(() => import('./pages/OrdersPage'));
+const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
+const OrderTransactionsPage = lazy(() => import('./pages/OrderTransactionsPage'));
 
 // AA aA Auth
-import { getToken, getLocalUser, hasSessionHint, me } from './services/auth';
-import { normalizeRole } from './utils/role'; // Ã¢Å“â€¦ ensure roles are canonical (admin/agent/client)
 
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
   .toLowerCase()
@@ -96,6 +96,14 @@ function ScrollToTop() {
   }, [pathname]);
 
   return null;
+}
+
+function RouteLoadingFallback() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center text-sm text-text-secondary">
+      Chargement...
+    </div>
+  );
 }
 
 // ============================================================================
@@ -245,7 +253,8 @@ export default function App() {
 
           <main className="flex-1 w-full">
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-              <Routes>
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <Routes>
             {/* ============================= */}
  {/* AA AA PAGES PUBLIQUES */}
             {/* ============================= */}
@@ -757,7 +766,8 @@ export default function App() {
                 </>
               }
             />
-              </Routes>
+                </Routes>
+              </Suspense>
             </div>
           </main>
 
@@ -794,4 +804,3 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-
