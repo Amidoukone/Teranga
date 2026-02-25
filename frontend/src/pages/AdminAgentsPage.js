@@ -1,4 +1,4 @@
-﻿// frontend/src/pages/AdminAgentsPage.jsx
+// frontend/src/pages/AdminAgentsPage.jsx
 // ============================================================================
 // AdminAgentsPage AAAasAAaA VERSION PROD 2025
 // Admin / Master (multi-pays) READY AAAasAAaA ZERO RAAaAGRESSION

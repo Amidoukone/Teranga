@@ -1,4 +1,4 @@
-﻿const fr = {
+const fr = {
   language: {
     label: "Langue",
     fr: "Fran\u00E7ais",

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
 import { getAuthHeader } from '../services/auth';
 import { applyLabels, SERVICE_STATUSES, SERVICE_TYPES } from '../utils/labels';
