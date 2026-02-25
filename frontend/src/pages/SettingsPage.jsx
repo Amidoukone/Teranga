@@ -71,14 +71,14 @@ export default function SettingsPage() {
                     type="button"
                     onClick={() => handleThemeChange(option.key)}
                     className={[
-                      'rounded-xl border px-4 py-3 text-left transition',
+                      'flex flex-col items-start justify-start gap-1 rounded-xl border px-4 py-3 text-left transition',
                       active
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-border/80 bg-surface-card text-text-secondary hover:bg-surface-main/70 hover:text-text-primary',
                     ].join(' ')}
                     aria-pressed={active}
                   >
-                    <div className="mb-1 flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <Icon size={16} />
                       <span className="font-semibold">{t(`settingsPage.theme.options.${option.key}`)}</span>
                     </div>

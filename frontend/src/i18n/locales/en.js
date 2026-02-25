@@ -1771,10 +1771,19 @@ const en = {
     links: {
       backToDashboard: "Back to dashboard",
     },
+    hints: {
+      title: "Password requirements",
+      minLength: "At least 8 characters",
+      matches: "Confirmation matches the new password",
+      differs: "New password differs from the current password",
+      logoutNotice:
+        "After updating your password, you will be signed out and asked to sign in again.",
+    },
     errors: {
       required: "All fields are required.",
       tooShort: "Password too short (minimum 8 characters).",
       mismatch: "Passwords do not match.",
+      sameAsCurrent: "The new password must be different from the current password.",
       update: "Update error.",
     },
     success: {

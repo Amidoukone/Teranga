@@ -1779,10 +1779,19 @@ const fr = {
     links: {
       backToDashboard: "Retour au tableau de bord",
     },
+    hints: {
+      title: "Exigences du mot de passe",
+      minLength: "Au moins 8 caracteres",
+      matches: "La confirmation correspond au nouveau mot de passe",
+      differs: "Le nouveau mot de passe est different de l'actuel",
+      logoutNotice:
+        "Apres la mise a jour du mot de passe, vous serez deconnecte puis invite a vous reconnecter.",
+    },
     errors: {
       required: "Tous les champs sont requis.",
       tooShort: "Mot de passe trop court (minimum 8 caractères).",
       mismatch: "Les mots de passe ne correspondent pas.",
+      sameAsCurrent: "Le nouveau mot de passe doit etre different de l'actuel.",
       update: "Erreur de modification.",
     },
     success: {
