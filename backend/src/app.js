@@ -15,6 +15,14 @@ const {
 } = require('./middleware/metrics.middleware');
 
 const app = express();
+app.locals.runtimeStatus = app.locals.runtimeStatus || {
+  db: {
+    ready: false,
+    checkedAt: null,
+    attempt: 0,
+    error: 'db_not_started',
+  },
+};
 
 /* ======================================================
    🧱 Middleware généraux
@@ -180,7 +188,40 @@ app.use('/api/v1', apiRouter);
 /* ======================================================
    🔍 Healthcheck + Racine
    ====================================================== */
-apiRouter.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
+function getDbReadiness(req) {
+  const db = req.app?.locals?.runtimeStatus?.db || {};
+  return {
+    ok: db.ready === true,
+    checkedAt: db.checkedAt || null,
+    attempt: Number.isFinite(db.attempt) ? db.attempt : null,
+    error: db.ready === true ? null : db.error || null,
+  };
+}
+
+apiRouter.get('/health', (req, res) => {
+  const db = getDbReadiness(req);
+  res.json({ ok: true, ts: Date.now(), dbReady: db.ok });
+});
+
+const readinessHandler = (req, res) => {
+  const db = getDbReadiness(req);
+  const payload = {
+    ok: db.ok,
+    ts: Date.now(),
+    checks: {
+      db: { ok: db.ok },
+    },
+  };
+
+  if (db.checkedAt) payload.checks.db.checkedAt = db.checkedAt;
+  if (db.attempt !== null) payload.checks.db.attempt = db.attempt;
+  if (!db.ok && db.error) payload.checks.db.error = db.error;
+
+  return res.status(db.ok ? 200 : 503).json(payload);
+};
+
+apiRouter.get('/ready', readinessHandler);
+apiRouter.get('/readiness', readinessHandler);
 apiRouter.get('/metrics', metricsHandler);
 apiRouter.post('/observability/frontend-errors', frontendErrorHandler);
 apiRouter.get('/openapi.json', (_req, res) => {

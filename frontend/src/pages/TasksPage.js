@@ -6,7 +6,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { me } from '../services/auth';
+import { me, getAuthHeader } from '../services/auth';
 import { getMyServices } from '../services/services';
 import {
   TASK_TYPES,
@@ -94,11 +94,7 @@ export default function TasksPage() {
   // Auth header
   // =========================================================================
   const authHeader = useMemo(() => {
-    const token =
-      localStorage.getItem('teranga_token') ||
-      localStorage.getItem('token');
-
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return getAuthHeader();
   }, []);
 
   // ========================================================================
@@ -959,5 +955,4 @@ function TaskList({
     </div>
   );
 }
-
 

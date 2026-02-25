@@ -13,7 +13,7 @@ import {
   TASK_PRIORITIES,
   SERVICE_TYPES,
 } from "../utils/labels";
-import { me } from "../services/auth";
+import { me, getAuthHeader } from "../services/auth";
 import { getGeoParams } from "../services/geo";
 import { normalizeRole, isMasterUser } from "../utils/role";
 import { useLocale } from "../i18n/useLocale";
@@ -62,11 +62,7 @@ export default function ServiceTasksPage() {
      ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Auth headers (production-safe)
   ============================================================ */
   const authHeaders = useMemo(() => {
-    const token =
-      localStorage.getItem("teranga_token") ||
-      localStorage.getItem("token");
-
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return getAuthHeader();
   }, []);
 
   /* ============================================================
@@ -801,7 +797,6 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
     </div>
   );
 }
-
 
 
 

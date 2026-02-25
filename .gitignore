@@ -20,3 +20,6 @@ tmp/
 # --- Fichiers système inutiles ---
 .DS_Store
 Thumbs.db
+
+# --- Fichiers uploades runtime (ne pas versionner) ---
+backend/uploads/

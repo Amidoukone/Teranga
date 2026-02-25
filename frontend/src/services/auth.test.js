@@ -35,6 +35,7 @@ afterEach(() => {
   localStorage.clear();
   document.cookie = 'teranga_csrf=; Max-Age=0; path=/';
   delete process.env.REACT_APP_AUTH_STORAGE;
+  delete process.env.REACT_APP_COOKIE_BEARER_FALLBACK;
 });
 
 test('login persists token when default storage mode is localstorage', async () => {
@@ -96,6 +97,26 @@ test('me in cookie mode caches backend user response', async () => {
   expect(result.user.id).toBe(15);
   expect(localStorage.getItem('teranga_user')).toContain('"id":15');
   expect(i18nMock.setLanguage).toHaveBeenCalledWith('fr');
+});
+
+test('login in cookie mode strict does not persist JWT in localStorage', async () => {
+  process.env.REACT_APP_COOKIE_BEARER_FALLBACK = 'false';
+  const { auth, apiMock } = setupModule('cookie');
+  apiMock.post.mockResolvedValue({
+    data: {
+      token: 'jwt-token',
+      csrfToken: 'csrf-123',
+      user: { id: 16, language: 'fr' },
+    },
+  });
+
+  const result = await auth.login({ email: 'a@b.com', password: 'x' });
+
+  expect(result.token).toBe('jwt-token');
+  expect(localStorage.getItem('teranga_token')).toBeNull();
+  expect(localStorage.getItem('token')).toBeNull();
+  expect(localStorage.getItem('teranga_csrf_token')).toBe('csrf-123');
+  expect(auth.getAuthHeader()).toEqual({});
 });
 
 test('logout calls backend endpoint and clears local session', async () => {

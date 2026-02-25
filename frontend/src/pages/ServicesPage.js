@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { me } from '../services/auth';
+import { me, getAuthHeader } from '../services/auth';
 import { getMyServices, createService } from '../services/services';
 import { getProperties } from '../services/properties';
 import { applyLabels, SERVICE_TYPES, SERVICE_STATUSES } from '../utils/labels';
@@ -105,11 +105,7 @@ const roleVariant = useMemo(() => {
      ? Auth headers
   ========================================== */
   const authHeaders = useMemo(() => {
-    const token =
-      localStorage.getItem('teranga_token') || localStorage.getItem('token');
-    return token
-      ? { headers: { Authorization: `Bearer ${token}` } }
-      : { headers: {} };
+    return { headers: getAuthHeader() };
   }, []);
 
   /* ==========================================

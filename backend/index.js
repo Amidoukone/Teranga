@@ -51,6 +51,34 @@ const retryTimeoutMs = getIntEnv('DB_RETRY_TIMEOUT_MS', isProd ? 0 : 60000);
 
 let serverStarted = false;
 
+app.locals.runtimeStatus = app.locals.runtimeStatus || {};
+app.locals.runtimeStatus.db = app.locals.runtimeStatus.db || {
+  ready: false,
+  checkedAt: null,
+  attempt: 0,
+  error: 'db_not_started',
+};
+
+function updateDbRuntimeStatus({ ready, attempt, error }) {
+  const prev = app.locals.runtimeStatus?.db || {};
+  const nextReady = ready === true;
+  const nextAttempt = Number.isFinite(attempt) ? attempt : prev.attempt || 0;
+
+  app.locals.runtimeStatus = app.locals.runtimeStatus || {};
+  app.locals.runtimeStatus.db = {
+    ...prev,
+    ready: nextReady,
+    checkedAt: Date.now(),
+    attempt: nextAttempt,
+    error: nextReady
+      ? null
+      : error?.message ||
+        (typeof error === 'string' && error) ||
+        prev.error ||
+        'db_unavailable',
+  };
+}
+
 const startServer = () => {
   if (serverStarted) return;
   serverStarted = true;
@@ -63,10 +91,16 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function connectAndBootstrap({ exitOnFail }) {
   if (!sequelize) {
+    updateDbRuntimeStatus({
+      ready: false,
+      error: "Sequelize n'est pas initialise",
+    });
     throw new Error(
       "Sequelize n'est pas initialise. Verifie ./models/index.js et la config DB."
     );
   }
+
+  updateDbRuntimeStatus({ ready: false, attempt: 0, error: 'db_connecting' });
 
   const startedAt = Date.now();
   let attempt = 0;
@@ -78,8 +112,10 @@ async function connectAndBootstrap({ exitOnFail }) {
       await sequelize.authenticate();
       logger.info('db.connection.authenticated');
       await bootstrapAdmin();
+      updateDbRuntimeStatus({ ready: true, attempt });
       return;
     } catch (err) {
+      updateDbRuntimeStatus({ ready: false, attempt, error: err });
       logger.warn({ err, attempt }, 'db.connection.retrying');
 
       const elapsed = Date.now() - startedAt;

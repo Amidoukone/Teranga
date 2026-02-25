@@ -32,6 +32,34 @@ function normalizeStoredToken(value) {
   return raw;
 }
 
+function safeStorageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeStorageSet(key, value) {
+  try {
+    if (value == null || value === '') {
+      localStorage.removeItem(key);
+      return;
+    }
+    localStorage.setItem(key, String(value));
+  } catch {
+    // ignore storage errors (quota, disabled storage, SSR)
+  }
+}
+
+function safeStorageRemove(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+}
+
 /* ---------- Détection ORIGIN & API ---------- */
 function resolveOrigins() {
   // 1) Variables d'env explicites
@@ -76,7 +104,40 @@ const ORIGINS = resolveOrigins();
 
 export const API_BASE_URL = ORIGINS.API_BASE_URL;
 export let FILE_BASE_URL = ORIGINS.FILE_BASE_URL;
+const AUTH_STORAGE_MODE = String(
+  process.env.REACT_APP_AUTH_STORAGE || 'localstorage'
+).toLowerCase().trim();
+const COOKIE_BEARER_FALLBACK_RAW = String(
+  process.env.REACT_APP_COOKIE_BEARER_FALLBACK || ''
+).toLowerCase().trim();
+const TOKEN_STORAGE_KEYS = ['teranga_token', 'token'];
+const USER_STORAGE_KEY = 'teranga_user';
 const CSRF_TOKEN_STORAGE_KEY = 'teranga_csrf_token';
+const CSRF_COOKIE_NAME = 'teranga_csrf';
+let refreshAccessPromise = null;
+
+function parseBooleanLike(value, fallback = false) {
+  if (['1', 'true', 'yes', 'on'].includes(value)) return true;
+  if (['0', 'false', 'no', 'off'].includes(value)) return false;
+  return fallback;
+}
+
+function usesCookieAuth() {
+  return AUTH_STORAGE_MODE === 'cookie';
+}
+
+function usesCookieBearerFallback() {
+  if (!usesCookieAuth()) return true;
+  return parseBooleanLike(COOKIE_BEARER_FALLBACK_RAW, true);
+}
+
+function canUseStoredBearer() {
+  return !usesCookieAuth() || usesCookieBearerFallback();
+}
+
+if (usesCookieAuth() && !usesCookieBearerFallback()) {
+  TOKEN_STORAGE_KEYS.forEach((key) => safeStorageRemove(key));
+}
 
 /* ---------- Création instance Axios ---------- */
 const api = axios.create({
@@ -101,12 +162,13 @@ export function getFileUrl(filePath) {
 
 /* ---------- Intercepteur: injecter token ---------- */
 api.interceptors.request.use((config) => {
-  if (config?.skipAuthHeader) {
+  const skipAuthHeader = Boolean(config?.skipAuthHeader);
+
+  if (skipAuthHeader) {
     if (config?.headers) {
       delete config.headers.Authorization;
       delete config.headers.authorization;
     }
-    return config;
   }
 
   const existingAuth =
@@ -127,13 +189,16 @@ api.interceptors.request.use((config) => {
     }
   }
 
-  const storedToken = normalizeStoredToken(
-    localStorage.getItem('teranga_token') || localStorage.getItem('token')
-  );
+  const storedToken = canUseStoredBearer()
+    ? normalizeStoredToken(
+        safeStorageGet('teranga_token') || safeStorageGet('token')
+      )
+    : null;
 
   // Envoie le Bearer si disponible. En mode cookie, /auth/me gère le fallback
   // sans header si le Bearer est stale mais le cookie est valide.
   if (
+    !skipAuthHeader &&
     storedToken &&
     !config.headers?.Authorization &&
     !config.headers?.authorization
@@ -146,7 +211,7 @@ api.interceptors.request.use((config) => {
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
     const csrf =
       getCookieValue('teranga_csrf') ||
-      localStorage.getItem(CSRF_TOKEN_STORAGE_KEY);
+      safeStorageGet(CSRF_TOKEN_STORAGE_KEY);
     if (csrf) {
       config.headers = config.headers || {};
       config.headers['X-CSRF-Token'] = csrf;
@@ -164,6 +229,104 @@ function getCookieValue(name) {
   if (typeof document === 'undefined') return null;
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
+}
+
+function getRequestPath(url) {
+  const raw = typeof url === 'string' ? url : '';
+  if (!raw) return '';
+  try {
+    return new URL(raw, 'http://localhost').pathname;
+  } catch {
+    return raw;
+  }
+}
+
+function isAuthRefreshRequest(url) {
+  return /\/auth\/refresh(?:\/|$)/.test(getRequestPath(url));
+}
+
+function isNonRefreshableAuth401Request(url) {
+  const path = getRequestPath(url);
+  if (!path) return false;
+  return [
+    /\/auth\/login(?:\/|$)/,
+    /\/auth\/register(?:\/|$)/,
+    /\/auth\/refresh(?:\/|$)/,
+    /\/auth\/forgot-password(?:\/|$)/,
+    /\/auth\/reset-password(?:\/|$)/,
+    /\/auth\/recover-with-code(?:\/|$)/,
+  ].some((rx) => rx.test(path));
+}
+
+function hasRefreshSessionHint() {
+  const storedToken = canUseStoredBearer()
+    ? normalizeStoredToken(
+        safeStorageGet('teranga_token') || safeStorageGet('token')
+      )
+    : null;
+  const csrfCookie = normalizeStoredToken(getCookieValue(CSRF_COOKIE_NAME));
+  const csrfStorage = normalizeStoredToken(safeStorageGet(CSRF_TOKEN_STORAGE_KEY));
+  return Boolean(storedToken || csrfCookie || csrfStorage);
+}
+
+function clearStoredAuthSession() {
+  TOKEN_STORAGE_KEYS.forEach((key) => safeStorageRemove(key));
+  safeStorageRemove(USER_STORAGE_KEY);
+  safeStorageRemove(CSRF_TOKEN_STORAGE_KEY);
+}
+
+function persistRefreshedSession(data) {
+  const refreshedToken = normalizeStoredToken(data?.token);
+  if (refreshedToken && canUseStoredBearer()) {
+    TOKEN_STORAGE_KEYS.forEach((key) => safeStorageSet(key, refreshedToken));
+  } else if (usesCookieAuth()) {
+    TOKEN_STORAGE_KEYS.forEach((key) => safeStorageRemove(key));
+  }
+
+  const csrfToken = normalizeStoredToken(data?.csrfToken);
+  if (csrfToken) {
+    safeStorageSet(CSRF_TOKEN_STORAGE_KEY, csrfToken);
+  }
+}
+
+function clearAuthorizationHeader(config) {
+  if (!config?.headers) return;
+  delete config.headers.Authorization;
+  delete config.headers.authorization;
+}
+
+function shouldAttemptAuthRefresh(status, config) {
+  if (status !== 401 || !config) return false;
+  if (config.skipAuthRefresh) return false;
+  if (config.__isRetryAfterRefresh) return false;
+  if (isNonRefreshableAuth401Request(config.url)) return false;
+  if (!hasRefreshSessionHint()) return false;
+  return true;
+}
+
+async function refreshAccessSession() {
+  if (refreshAccessPromise) return refreshAccessPromise;
+
+  refreshAccessPromise = (async () => {
+    const { data } = await api.post(
+      '/auth/refresh',
+      {},
+      {
+        skipAuthRedirect: true,
+        silentAuth: true,
+        skipAuthRefresh: true,
+        skipAuthHeader: true,
+      }
+    );
+    persistRefreshedSession(data);
+    return data;
+  })();
+
+  try {
+    return await refreshAccessPromise;
+  } finally {
+    refreshAccessPromise = null;
+  }
 }
 
 /* ---------- Helper: retry reseau leger + flip host dev ---------- */
@@ -207,7 +370,7 @@ api.interceptors.response.use(
       const url = response?.config?.url || '';
       if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
         // Evite la boucle sur les endpoints notifications
-        if (!/\/notifications(\/|$)/.test(url)) {
+        if (!/\/notifications(\/|$)/.test(url) && !isAuthRefreshRequest(url)) {
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new Event('notifications:refresh'));
           }
@@ -258,8 +421,28 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // 2) 401 INFO Token invalide/expire INFO nettoyage + redirection unique vers /login
+    // 2) 401: tentative de refresh (1x) puis fallback cleanup + redirection
     if (status === 401) {
+      if (shouldAttemptAuthRefresh(status, cfg)) {
+        try {
+          await refreshAccessSession();
+          cfg.__isRetryAfterRefresh = true;
+          clearAuthorizationHeader(cfg); // force re-injection du nouveau Bearer
+          return api.request(cfg);
+        } catch (refreshError) {
+          if (!silentAuth) {
+            try {
+              console.warn(' Refresh auto echoue, fallback sur gestion 401 standard', {
+                refreshStatus: refreshError?.response?.status,
+                refreshData: refreshError?.response?.data,
+              });
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+
       const path = typeof window !== 'undefined' ? window.location.pathname : '';
       const skipRedirect =
         cfg?.skipAuthRedirect ||
@@ -271,10 +454,7 @@ api.interceptors.response.use(
 
       // Pour les appels "silencieux" (ex: notifications), ne pas purger la session.
       if (!skipRedirect) {
-        localStorage.removeItem('teranga_token');
-        localStorage.removeItem('token');
-        localStorage.removeItem('teranga_user');
-        localStorage.removeItem(CSRF_TOKEN_STORAGE_KEY);
+        clearStoredAuthSession();
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new Event('teranga_auth_changed'));
         }

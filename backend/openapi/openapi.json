@@ -27,6 +27,33 @@
         }
       }
     },
+    "/ready": {
+      "get": {
+        "summary": "Readiness check",
+        "responses": {
+          "200": {
+            "description": "Service ready to serve traffic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/login": {
       "post": {
         "summary": "User login",
@@ -106,6 +133,27 @@
           },
           "ts": {
             "type": "number"
+          }
+        },
+        "additionalProperties": true
+      },
+      "ReadinessResponse": {
+        "type": "object",
+        "required": [
+          "ok",
+          "ts",
+          "checks"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "ts": {
+            "type": "number"
+          },
+          "checks": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
         "additionalProperties": true

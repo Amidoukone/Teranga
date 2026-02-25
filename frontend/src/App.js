@@ -73,7 +73,7 @@ import OrderDetailPage from './pages/OrderDetailPage';
 import OrderTransactionsPage from './pages/OrderTransactionsPage';
 
 // AA aA Auth
-import { getToken, getLocalUser, me } from './services/auth';
+import { getToken, getLocalUser, hasSessionHint, me } from './services/auth';
 import { normalizeRole } from './utils/role'; // Ã¢Å“â€¦ ensure roles are canonical (admin/agent/client)
 
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
@@ -109,7 +109,9 @@ function getSession() {
   const user = getLocalUser();
 
  // RAAtro-compat: certains fronts stockent user mais pas token (ou inverse)
-  const hasSession = USES_COOKIE_AUTH ? Boolean(user) : Boolean(token);
+  const hasSession = USES_COOKIE_AUTH
+    ? Boolean(user) || hasSessionHint()
+    : Boolean(token);
 
   const role = normalizeRole(user?.role);
   const isAdmin = role === 'admin';
@@ -792,5 +794,4 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-
 

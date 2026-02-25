@@ -1,11 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
+import { getAuthHeader } from '../services/auth';
 import { applyLabels, SERVICE_STATUSES, SERVICE_TYPES } from '../utils/labels';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
-
-const TOKEN_KEY = 'teranga_token';
 
 /**
  * AA Aa AaAAA aA AgentServicesPage Aaa Version Apple Light Minimal Premium
@@ -31,11 +30,8 @@ export default function AgentServicesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const token =
-        localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token');
-
       const { data } = await api.get('/services/agent/services', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeader(),
       });
 
       const enriched = (data?.services || []).map((s) =>
@@ -61,9 +57,6 @@ export default function AgentServicesPage() {
   const updateStatus = async (id, action) => {
     try {
       setActingId(id);
-      const token =
-        localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token');
-
       let endpoint = '';
       if (action === 'start') endpoint = `/services/agent/services/${id}/start`;
       if (action === 'complete')
@@ -75,7 +68,7 @@ export default function AgentServicesPage() {
         endpoint,
         {},
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: getAuthHeader(),
         }
       );
 
@@ -311,7 +304,6 @@ export default function AgentServicesPage() {
     </div>
   );
 }
-
 
 
 

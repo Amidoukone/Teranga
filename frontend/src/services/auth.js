@@ -21,9 +21,29 @@ const CSRF_COOKIE = 'teranga_csrf';
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
   .toLowerCase()
   .trim();
+const COOKIE_BEARER_FALLBACK_RAW = String(
+  process.env.REACT_APP_COOKIE_BEARER_FALLBACK || ''
+)
+  .toLowerCase()
+  .trim();
+
+function parseBooleanLike(value, fallback = false) {
+  if (['1', 'true', 'yes', 'on'].includes(value)) return true;
+  if (['0', 'false', 'no', 'off'].includes(value)) return false;
+  return fallback;
+}
+
+function isCookieAuthMode() {
+  return AUTH_STORAGE_MODE === 'cookie';
+}
+
+function isCookieBearerFallbackEnabled() {
+  if (!isCookieAuthMode()) return true;
+  return parseBooleanLike(COOKIE_BEARER_FALLBACK_RAW, true);
+}
 
 function shouldUseLocalStorage() {
-  return AUTH_STORAGE_MODE !== 'cookie';
+  return !isCookieAuthMode();
 }
 
 function normalizeTokenValue(value) {
@@ -41,6 +61,10 @@ function normalizeTokenValue(value) {
 /** Retourne le token depuis le nouveau key OU les anciens (puis migre). */
 function readTokenAny() {
   if (!shouldUseLocalStorage()) return null;
+  return readTokenFromStorage();
+}
+
+function readTokenFromStorage() {
  // 1) Nouveau nom (prefere)
   const current = normalizeTokenValue(safeGet(TOKEN_KEY));
   if (current) return current;
@@ -60,6 +84,10 @@ function readTokenAny() {
 
 /** Ecrit le token dans la nouvelle cle + (optionnel) legacy pour compat. */
 function writeTokenAll(token, { keepLegacy = true } = {}) {
+  if (isCookieAuthMode() && !isCookieBearerFallbackEnabled()) {
+    removeTokenAll();
+    return;
+  }
   // On stocke aussi en mode cookie pour fallback Bearer (cookies tiers bloqués).
   safeSet(TOKEN_KEY, token);
   if (keepLegacy) {
@@ -115,6 +143,10 @@ function safeRemove(key) {
 function hasCookie(name) {
   if (typeof document === 'undefined') return false;
   return document.cookie.split(';').some((c) => c.trim().startsWith(`${name}=`));
+}
+
+function hasCookieSessionHint() {
+  return hasCookie(CSRF_COOKIE) || Boolean(safeGet(CSRF_TOKEN_KEY));
 }
 
 function clearCookie(name) {
@@ -181,10 +213,10 @@ export async function login(payload) {
  // Sauvegarde coherente du token (nouvelle + legacy pour compat)
       writeTokenAll(data.token, { keepLegacy: true });
     } else {
- // Mode cookie: on conserve un fallback Bearer pour les navigateurs
- // qui bloquent les cookies tiers (Netlify -> Render cross-site).
- // Le backend accepte deja Authorization: Bearer.
-      if (data?.token) {
+ // Mode cookie:
+ // - strict (recommande en production): pas de JWT persiste en localStorage
+ // - fallback optionnel: Bearer local si active explicitement
+      if (isCookieBearerFallbackEnabled() && data?.token) {
         writeTokenAll(data.token, { keepLegacy: true });
       } else {
         removeTokenAll();
@@ -509,6 +541,27 @@ export function getToken() {
   return readTokenAny();
 }
 
+export function getAuthHeader() {
+  if (isCookieAuthMode() && !isCookieBearerFallbackEnabled()) return {};
+  const token = readTokenFromStorage();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export function hasSessionHint() {
+  if (isCookieAuthMode()) {
+    return Boolean(readCachedUser()) || hasCookieSessionHint();
+  }
+  return Boolean(readTokenAny());
+}
+
+export function usesCookieAuth() {
+  return isCookieAuthMode();
+}
+
+export function usesCookieBearerFallback() {
+  return isCookieBearerFallbackEnabled();
+}
+
 /* ============================================================
    🔹 Export par défaut groupé (interop + compat)
 ============================================================ */
@@ -526,6 +579,10 @@ const AuthService = {
   getLocalUser,
   setLocalUser,
   getToken,
+  getAuthHeader,
+  hasSessionHint,
+  usesCookieAuth,
+  usesCookieBearerFallback,
 };
 
 export default AuthService;

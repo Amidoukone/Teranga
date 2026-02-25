@@ -1,7 +1,7 @@
 // frontend/src/pages/ServiceTransactionsPage.jsx
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { me } from "../services/auth";
+import { me, getAuthHeader } from "../services/auth";
 import { getTransactions, createTransaction } from "../services/transactions";
 import api from "../services/api";
 import { applyLabels, CURRENCY_LABELS, TRANSACTION_TYPES } from "../utils/labels";
@@ -170,13 +170,7 @@ export default function ServiceTransactionsPage() {
      ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Auth headers
   ============================================================================ */
   const authHeaders = useMemo(() => {
-    const token =
-      (typeof window !== "undefined" &&
-        (localStorage.getItem("teranga_token") ||
-          localStorage.getItem("token"))) ||
-      null;
-
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return getAuthHeader();
   }, []);
 
   /* ============================================================================
@@ -728,7 +722,6 @@ function TransactionHistory({ transactions, getProofHref }) {
     </div>
   );
 }
-
 
 
 

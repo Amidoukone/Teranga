@@ -14,7 +14,7 @@
 
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { me, logout, getLocalUser, getToken } from "../services/auth";
+import { me, logout, getLocalUser, getToken, hasSessionHint } from "../services/auth";
 import { normalizeRole } from "../utils/roles";
 import { useTranslation } from "react-i18next";
 import {
@@ -362,7 +362,7 @@ function NavBar() {
   });
   const [loading, setLoading] = useState(() => {
     const localUser = getLocalUser();
-    if (USES_COOKIE_AUTH) return !localUser;
+    if (USES_COOKIE_AUTH) return !localUser && hasSessionHint();
     return getToken() ? !localUser : false;
   });
 
@@ -380,7 +380,7 @@ function NavBar() {
 
   const loadNotificationSummary = useCallback(async () => {
     const hasSession = USES_COOKIE_AUTH
-      ? Boolean(getLocalUser())
+      ? Boolean(getLocalUser()) || hasSessionHint()
       : Boolean(getToken());
     if (!user || !hasSession) {
       setNotificationSummary({ unread: 0, byProgress: {} });
@@ -427,7 +427,9 @@ function NavBar() {
     async function load() {
       const token = getToken();
       const localUser = getLocalUser();
-      const hasSession = USES_COOKIE_AUTH ? Boolean(localUser) : Boolean(token);
+      const hasSession = USES_COOKIE_AUTH
+        ? Boolean(localUser) || hasSessionHint()
+        : Boolean(token);
 
       if (!hasSession) {
         if (active) {
@@ -441,7 +443,7 @@ function NavBar() {
         const res = await me();
         if (!active) return;
         const stillHasSession = USES_COOKIE_AUTH
-          ? Boolean(getLocalUser())
+          ? Boolean(getLocalUser()) || hasSessionHint()
           : Boolean(getToken());
 
         if (res?.offline && !stillHasSession) {
@@ -466,7 +468,7 @@ function NavBar() {
     function onAuthChanged() {
       const localUser = getLocalUser();
       const hasSession = USES_COOKIE_AUTH
-        ? Boolean(localUser)
+        ? Boolean(localUser) || hasSessionHint()
         : Boolean(getToken());
       setUser(hasSession ? localUser || null : null);
       setLoading(false);

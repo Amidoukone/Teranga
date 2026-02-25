@@ -1,5 +1,6 @@
 // frontend/src/services/evidences.js
 import api from './api';
+import { getAuthHeader } from './auth';
 import { mergeGeoParams } from './geo';
 
 const UPLOAD_TIMEOUT_MS =
@@ -9,9 +10,7 @@ const UPLOAD_TIMEOUT_MS =
    🛡️ Auth helper — récupère le token actif (token ou teranga_token)
    ============================================================ */
 function authHeader() {
-  const token =
-    localStorage.getItem('token') || localStorage.getItem('teranga_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return getAuthHeader();
 }
 
 /* ============================================================
