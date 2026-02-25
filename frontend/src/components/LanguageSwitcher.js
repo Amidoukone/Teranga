@@ -16,7 +16,7 @@ export default function LanguageSwitcher({ className = "", compact = false }) {
       return undefined;
     }
 
-    const media = window.matchMedia("(max-width: 380px)");
+    const media = window.matchMedia("(max-width: 440px)");
     const sync = () => setUseShortLabels(media.matches);
     sync();
 
@@ -68,7 +68,7 @@ export default function LanguageSwitcher({ className = "", compact = false }) {
           compact ? "max-w-full" : "w-full max-w-full",
           compact
             ? useShortLabels
-              ? "w-[5.25rem] min-w-[5.25rem] px-2 py-1.5 pr-6 text-xs"
+              ? "w-[4.75rem] min-w-[4.75rem] px-2 py-1.5 pr-6 text-xs"
               : "w-[7.75rem] min-w-[7rem] px-2.5 py-1.5 pr-7 text-xs sm:w-auto"
             : "min-w-[8.5rem] px-3 py-2 pr-8 text-sm",
         ].join(" ")}

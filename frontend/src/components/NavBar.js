@@ -720,33 +720,29 @@ function NavBar() {
   if (!user && isPublic) {
     return (
       <nav className="sticky top-0 z-50 border-b border-border/70 bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl shadow-[0_10px_30px_-20px_rgba(15,23,42,0.45)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-5 py-3 sm:py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-3">
           <Link
             to="/"
-            className="flex items-center gap-2 text-primary font-semibold tracking-wide text-[1.05rem] self-start"
+            className="min-w-0 shrink flex items-center gap-2 text-primary font-semibold tracking-wide text-[1.05rem]"
           >
-            {Logo} Teranga
+            {Logo}
+            <span className="truncate max-[440px]:hidden">Teranga</span>
           </Link>
 
-          <div className="w-full sm:w-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-            <div className="flex justify-end sm:justify-start">
-              <LanguageSwitcher compact className="shrink-0" />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 sm:gap-3 text-xs sm:text-sm min-w-0">
-              <Link
-                to="/login"
-                className="whitespace-nowrap transition-colors duration-200 text-text-secondary hover:text-text-primary"
-              >
-                {t("nav.login")}
-              </Link>
-              <Link
-                to="/register"
-                className="whitespace-nowrap px-3 sm:px-4 py-2 bg-primary text-white rounded-xl font-semibold transition-colors duration-200 hover:bg-primary/90"
-              >
-                {t("nav.register")}
-              </Link>
-            </div>
+          <div className="shrink-0 flex items-center justify-end gap-1.5 sm:gap-3 text-xs sm:text-sm">
+            <LanguageSwitcher compact className="shrink-0" />
+            <Link
+              to="/login"
+              className="whitespace-nowrap transition-colors duration-200 text-text-secondary hover:text-text-primary"
+            >
+              {t("nav.login")}
+            </Link>
+            <Link
+              to="/register"
+              className="whitespace-nowrap px-2.5 py-1.5 sm:px-4 sm:py-2 bg-primary text-white rounded-lg sm:rounded-xl font-semibold transition-colors duration-200 hover:bg-primary/90"
+            >
+              {t("nav.register")}
+            </Link>
           </div>
         </div>
       </nav>
