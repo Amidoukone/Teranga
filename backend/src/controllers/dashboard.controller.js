@@ -19,6 +19,83 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+const DASHBOARD_DEFAULTS = Object.freeze({
+  serviceCounts: { total: 0, active: 0 },
+  transactionAgg: {
+    count: 0,
+    financeSummary: {
+      revenues: 0,
+      expenses: 0,
+      commissions: 0,
+      adjustments: 0,
+      balance: 0,
+    },
+    financeWidgetSummary: {
+      revenue: 0,
+      expense: 0,
+      commission: 0,
+      adjustment: 0,
+    },
+  },
+  propertyCounts: { total: 0, active: 0 },
+  taskCounts: {
+    total: 0,
+    created: 0,
+    inProgress: 0,
+    completed: 0,
+    validated: 0,
+  },
+  projectCounts: {
+    total: 0,
+    created: 0,
+    inProgress: 0,
+    completed: 0,
+    validated: 0,
+  },
+  orderCounts: { total: 0, paid: 0, open: 0 },
+});
+
+async function loadDashboardSections(req) {
+  const sectionLoaders = [
+    ['serviceCounts', () => countServices(req)],
+    ['transactionAgg', () => countTransactionsAndFinance(req)],
+    ['propertyCounts', () => countProperties(req)],
+    ['taskCounts', () => countTasks(req)],
+    ['projectCounts', () => countProjects(req)],
+    ['orderCounts', () => countOrders(req)],
+  ];
+
+  const settled = await Promise.allSettled(
+    sectionLoaders.map(([, run]) => run())
+  );
+
+  const sections = {};
+  const failedSections = [];
+
+  settled.forEach((result, index) => {
+    const [name] = sectionLoaders[index];
+    if (result.status === 'fulfilled') {
+      sections[name] = result.value;
+      return;
+    }
+
+    failedSections.push(name);
+    sections[name] = DASHBOARD_DEFAULTS[name];
+    logger.error(
+      {
+        section: name,
+        err: result.reason,
+        userId: req.user?.id ?? null,
+        role: req.user?.role ?? null,
+        query: req.query || {},
+      },
+      'dashboard.summary.section.failed'
+    );
+  });
+
+  return { sections, failedSections };
+}
+
 function readScopedGeo(req) {
   return {
     countryId: toSafeInt(req.query?.countryId ?? req.query?.country_id),
@@ -358,21 +435,13 @@ exports.summary = async (req, res) => {
 
     const role = String(req.user?.role || '').trim().toLowerCase();
 
-    const [
-      serviceCounts,
-      transactionAgg,
-      propertyCounts,
-      taskCounts,
-      projectCounts,
-      orderCounts,
-    ] = await Promise.all([
-      countServices(req),
-      countTransactionsAndFinance(req),
-      countProperties(req),
-      countTasks(req),
-      countProjects(req),
-      countOrders(req),
-    ]);
+    const { sections, failedSections } = await loadDashboardSections(req);
+    const serviceCounts = sections.serviceCounts || DASHBOARD_DEFAULTS.serviceCounts;
+    const transactionAgg = sections.transactionAgg || DASHBOARD_DEFAULTS.transactionAgg;
+    const propertyCounts = sections.propertyCounts || DASHBOARD_DEFAULTS.propertyCounts;
+    const taskCounts = sections.taskCounts || DASHBOARD_DEFAULTS.taskCounts;
+    const projectCounts = sections.projectCounts || DASHBOARD_DEFAULTS.projectCounts;
+    const orderCounts = sections.orderCounts || DASHBOARD_DEFAULTS.orderCounts;
 
     const { financeSummary, financeWidgetSummary } = transactionAgg;
     const dashboardTotalExpense =
@@ -406,6 +475,8 @@ exports.summary = async (req, res) => {
       meta: {
         role,
         generatedAt: new Date().toISOString(),
+        partial: failedSections.length > 0,
+        failedSections,
       },
     });
   } catch (e) {
