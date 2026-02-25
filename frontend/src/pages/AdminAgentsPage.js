@@ -1,4 +1,4 @@
-// frontend/src/pages/AdminAgentsPage.jsx
+﻿// frontend/src/pages/AdminAgentsPage.jsx
 // ============================================================================
 // AdminAgentsPage AAAasAAaA VERSION PROD 2025
 // Admin / Master (multi-pays) READY AAAasAAaA ZERO RAAaAGRESSION
@@ -272,7 +272,7 @@ export default function AdminAgentsPage() {
                 {geoCountry?.name ||
                   t("adminAgentsPage.labels.countryId", { id: geoCountryId })}
                 {geoRegionId
-                  ? ` · ${
+                  ? ` \u00B7 ${
                       geoRegion?.name ||
                       t("adminAgentsPage.labels.regionId", { id: geoRegionId })
                     }`

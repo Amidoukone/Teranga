@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
 import { getAuthHeader } from '../services/auth';
 import { applyLabels, SERVICE_STATUSES, SERVICE_TYPES } from '../utils/labels';
@@ -95,12 +95,12 @@ export default function AgentServicesPage() {
   const emptyValue = t('agentServicesPage.emptyValue');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f5f5f7] via-surface-card to-[#e5e5ea] px-4 py-10">
-      <div className="max-w-5xl mx-auto bg-surface-card/90 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.06)] rounded-3xl border border-[#e5e5ea] p-8">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-10">
+      <div className="max-w-5xl mx-auto bg-surface-card/95 backdrop-blur-sm shadow-2xl rounded-3xl border border-border/70 p-8">
  {/* AA AA En-tAAate */}
-        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+        <div className="flex items-center justify-between mb-8 flex-wrap gap-4 pb-4 border-b border-border/70">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-[#111827] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary tracking-tight">
               {t('agentServicesPage.title')}
             </h1>
             <p className="text-sm text-text-muted">
@@ -115,8 +115,8 @@ export default function AgentServicesPage() {
               px-5 py-2 text-sm font-medium rounded-full shadow-sm transition
               ${
                 loading
-                  ? 'bg-[#bfdcff] cursor-not-allowed text-white'
-                  : 'bg-[#0a84ff] text-white hover:bg-[#0066cc] active:bg-[#004fa3]'
+                  ? 'bg-blue-300 dark:bg-blue-900/50 cursor-not-allowed text-white dark:text-blue-100'
+                  : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
               }
             `}
           >
@@ -141,9 +141,9 @@ export default function AgentServicesPage() {
               <div
                 key={s.id}
                 className="
-                  bg-surface-card border border-[#e5e7eb] rounded-3xl
+                  bg-surface-main border border-border rounded-2xl
                   shadow-sm p-6 transition
-                  hover:shadow-md hover:-translate-y-0.5
+                  hover:shadow-md hover:border-blue-500/30 hover:-translate-y-0.5
                   transform
                 "
               >
@@ -157,7 +157,8 @@ export default function AgentServicesPage() {
                     </h3>
 
                     <p className="text-sm text-text-secondary">
-                      {SERVICE_TYPES[s.type] || s.type} Ã¢â‚¬Â¢{' '}
+                      {SERVICE_TYPES[s.type] || s.type}{' '}
+                      <span className="text-text-muted">&bull;</span>{' '}
                       <span className="font-medium text-text-primary">
                         {t('agentServicesPage.labels.budget', {
                           amount: s.budget ?? emptyValue,
@@ -175,18 +176,18 @@ export default function AgentServicesPage() {
  {/* AA AAA A A Badge statut */}
                   <div
                     className={`
-                      mt-3 sm:mt-0 px-4 py-1 rounded-full text-xs font-semibold
+                      mt-3 sm:mt-0 px-4 py-1 rounded-full text-xs font-semibold border
                       whitespace-nowrap text-center
                       ${
                         s.status === 'created'
-                          ? 'bg-surface-main/80 text-text-secondary'
+                          ? 'bg-surface-card/80 text-text-secondary border-border'
                           : s.status === 'in_progress'
-                          ? 'bg-[#cce4ff] text-[#0a84ff]'
+                          ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30'
                           : s.status === 'completed'
-                          ? 'bg-green-100 text-green-600'
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                           : s.status === 'validated'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-surface-main/80 text-text-muted'
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                          : 'bg-surface-card/80 text-text-muted border-border'
                       }
                     `}
                   >
@@ -258,8 +259,8 @@ export default function AgentServicesPage() {
                         px-5 py-2 rounded-full text-sm font-medium transition shadow-sm
                         ${
                           actingId === s.id
-                            ? 'bg-[#9fc9ff] cursor-not-allowed text-white'
-                            : 'bg-[#0a84ff] text-white hover:bg-[#0066cc] active:bg-[#004fa3]'
+                            ? 'bg-blue-300 dark:bg-blue-900/50 cursor-not-allowed text-white dark:text-blue-100'
+                            : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
                         }
                       `}
                     >
@@ -275,8 +276,8 @@ export default function AgentServicesPage() {
                         px-5 py-2 rounded-full text-sm font-medium transition shadow-sm
                         ${
                           actingId === s.id
-                            ? 'bg-green-300 cursor-not-allowed text-white'
-                            : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
+                            ? 'bg-emerald-300 dark:bg-emerald-900/50 cursor-not-allowed text-white dark:text-emerald-100'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800'
                         }
                       `}
                     >
@@ -291,7 +292,7 @@ export default function AgentServicesPage() {
                   )}
 
                   {s.status === 'validated' && (
-                    <span className="text-sm italic text-green-700">
+                    <span className="text-sm italic text-emerald-700 dark:text-emerald-300">
                       {t('agentServicesPage.status.validated')}
                     </span>
                   )}
@@ -304,6 +305,4 @@ export default function AgentServicesPage() {
     </div>
   );
 }
-
-
 
