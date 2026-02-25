@@ -9,6 +9,7 @@ import {
 } from "../services/notifications";
 import { getLocalUser } from "../services/auth";
 import PaginationBar from "../components/PaginationBar";
+import SettingsSubpageLayout from "../components/SettingsSubpageLayout";
 import { useLocale } from "../i18n/useLocale";
 import { formatStatus } from "../utils/labels";
 import { normalizeRole } from "../utils/role";
@@ -249,218 +250,211 @@ export default function NotificationsPage() {
   );
 
   return (
-    <div className="app-page-wrap">
-      <div className="app-page-shell space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-          <div>
-            <p className="page-kicker">
-              {t("notifications.kicker")}
-            </p>
-            <h1 className="app-page-headline">{t("notifications.title")}</h1>
-            <p className="app-page-subtitle">
-              {t("notifications.subtitle")}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                setStatusFilter((prev) => (prev === "unread" ? "all" : "unread"))
-              }
-              className={[
-                "app-toolbar-pill transition",
-                statusFilter === "unread"
-                  ? "ring-2 ring-primary/40 bg-primary/10 text-primary"
-                  : "",
-              ].join(" ")}
-              title={
-                statusFilter === "unread"
-                  ? t("notifications.resetUnreadFilter")
-                  : t("notifications.filterUnread")
-              }
-            >
-              {t("notifications.unreadCount", { count: summary.unread || 0 })} {" - "}
-              {statusFilter === "unread"
-                ? t("notifications.resetUnreadFilter")
-                : t("notifications.filterUnread")}
-            </button>
-            <button
-              onClick={() => navigate("/activities")}
-              className="app-btn-primary"
-            >
-              {t("activities.title")}
-            </button>
-            <button
-              onClick={handleMarkAllRead}
-              disabled={markingAll || (summary.unread || 0) <= 0}
-              className={[
-                "app-btn-neutral",
-                markingAll || (summary.unread || 0) <= 0
-                  ? "opacity-60 cursor-not-allowed"
-                  : "",
-              ].join(" ")}
-            >
-              {markingAll
-                ? t("common.loading", { defaultValue: "Chargement..." })
-                : t("notifications.markAllRead")}
-            </button>
-          </div>
-        </div>
-
-        {/* Tabs */}
+    <SettingsSubpageLayout
+      kicker={t("notifications.kicker")}
+      title={t("notifications.title")}
+      subtitle={t("notifications.subtitle")}
+      contentClassName="space-y-6"
+      headerActions={
         <div className="flex flex-wrap items-center gap-2">
-          {PROGRESS_TABS.map((tab) => {
-            const active = progress === tab.key;
-            const count = summary.byProgress?.[tab.key] || 0;
+          <button
+            type="button"
+            onClick={() =>
+              setStatusFilter((prev) => (prev === "unread" ? "all" : "unread"))
+            }
+            className={[
+              "app-toolbar-pill transition",
+              statusFilter === "unread"
+                ? "ring-2 ring-primary/40 bg-primary/10 text-primary"
+                : "",
+            ].join(" ")}
+            title={
+              statusFilter === "unread"
+                ? t("notifications.resetUnreadFilter")
+                : t("notifications.filterUnread")
+            }
+          >
+            {t("notifications.unreadCount", { count: summary.unread || 0 })} {" - "}
+            {statusFilter === "unread"
+              ? t("notifications.resetUnreadFilter")
+              : t("notifications.filterUnread")}
+          </button>
+          <button
+            onClick={() => navigate("/activities")}
+            className="app-btn-primary"
+          >
+            {t("activities.title")}
+          </button>
+          <button
+            onClick={handleMarkAllRead}
+            disabled={markingAll || (summary.unread || 0) <= 0}
+            className={[
+              "app-btn-neutral",
+              markingAll || (summary.unread || 0) <= 0
+                ? "opacity-60 cursor-not-allowed"
+                : "",
+            ].join(" ")}
+          >
+            {markingAll
+              ? t("common.loading", { defaultValue: "Chargement..." })
+              : t("notifications.markAllRead")}
+          </button>
+        </div>
+      }
+    >
+
+      {/* Tabs */}
+      <div className="flex flex-wrap items-center gap-2">
+        {PROGRESS_TABS.map((tab) => {
+          const active = progress === tab.key;
+          const count = summary.byProgress?.[tab.key] || 0;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setProgress(tab.key)}
+              className={[
+                "app-tab",
+                active ? "app-tab-active" : "app-tab-idle",
+              ].join(" ")}
+            >
+              <span className="app-tab-inner">
+                <span>{t(tab.labelKey)}</span>
+                <span
+                  className={[
+                    "app-count-badge",
+                    active ? "app-count-badge-active" : "app-count-badge-idle",
+                  ].join(" ")}
+                >
+                  {count}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <PaginationBar
+        page={page}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        pageSizeOptions={[6, 10, 20]}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        className="mb-2"
+      />
+
+      {/* List */}
+      {loading ? (
+        <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
+          {t("notifications.loading")}
+        </div>
+      ) : displayItems.length === 0 ? (
+        <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
+          {t("notifications.empty")}
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {displayItems.map((n) => {
+            const meta = entityMeta[n.entityType] || {
+              icon: "N",
+              label: t("notifications.entities.other"),
+            };
+            const createdLabel = n.createdAt ? formatDate(n.createdAt) : "-";
+            const actionKey = n.action || "created";
+            const actionLabel = t(`notifications.actions.${actionKey}`, {
+              defaultValue: actionKey,
+            });
+            const entityTitle = n?.metadata?.title || n?.metadata?.code || null;
+            const title = entityTitle
+              ? `${meta.label} - ${entityTitle}`
+              : `${meta.label}`;
+            const statusLabel =
+              n.entityStatus && meta.statusCategory
+                ? formatStatus(n.entityStatus, meta.statusCategory)
+                : null;
+
+            let message = t("notifications.genericMessage");
+            if (n.entityType === "evidence" && n?.metadata?.evidenceCount) {
+              message = t("notifications.messages.evidenceCount", {
+                count: n.metadata.evidenceCount,
+              });
+            } else if (
+              n.entityStatus &&
+              n.entityStatus !== "created" &&
+              statusLabel
+            ) {
+              message = t("notifications.messages.status", {
+                entity: meta.label,
+                status: statusLabel,
+              });
+            } else if (actionLabel) {
+              message = t("notifications.messages.action", {
+                entity: meta.label,
+                action: actionLabel,
+              });
+            }
+
             return (
-              <button
-                key={tab.key}
-                onClick={() => setProgress(tab.key)}
+              <div
+                key={n.id}
                 className={[
-                  "app-tab",
-                  active ? "app-tab-active" : "app-tab-idle",
+                  "app-list-card flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
+                  n.status === "unread"
+                    ? "app-list-card-unread"
+                    : "app-list-card-read",
                 ].join(" ")}
               >
-                <span className="app-tab-inner">
-                  <span>{t(tab.labelKey)}</span>
-                  <span
-                    className={[
-                      "app-count-badge",
-                      active ? "app-count-badge-active" : "app-count-badge-idle",
-                    ].join(" ")}
+                <div className="flex gap-3 min-w-0 flex-1">
+                  <div className="text-2xl shrink-0">{meta.icon}</div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                      <h3 className="max-w-full break-words text-sm font-semibold text-text-primary line-clamp-2 sm:text-base">
+                        {title}
+                      </h3>
+                      <span className="rounded-full border border-border/80 bg-surface-main/80 px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-text-secondary">
+                        {meta.label}
+                      </span>
+                      {n.status === "unread" && (
+                        <span className="rounded-full border border-blue-500/30 bg-blue-500/15 px-2 py-0.5 text-[0.6rem] uppercase tracking-wide text-blue-700 dark:text-blue-300">
+                          {t("notifications.unread")}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 break-words text-xs text-text-secondary line-clamp-3 sm:text-sm">
+                      {message}
+                    </p>
+                    <p className="mt-2 text-[0.7rem] text-text-muted">
+                      {createdLabel}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={() => navigate(resolveLink(n))}
+                    className="app-btn-primary"
                   >
-                    {count}
-                  </span>
-                </span>
-              </button>
+                    {t("notifications.view")}
+                  </button>
+                  {n.status !== "read" && (
+                    <button
+                      type="button"
+                      onClick={() => handleMarkRead(n.id)}
+                      disabled={Boolean(markingOneIds[n.id])}
+                      className="app-btn-soft"
+                    >
+                      {markingOneIds[n.id]
+                        ? t("common.loading", { defaultValue: "Chargement..." })
+                        : t("notifications.markRead")}
+                    </button>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
-
-        <PaginationBar
-          page={page}
-          pageSize={pageSize}
-          totalItems={totalItems}
-          pageSizeOptions={[6, 10, 20]}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          className="mb-2"
-        />
-
-        {/* List */}
-        {loading ? (
-          <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
-            {t("notifications.loading")}
-          </div>
-        ) : displayItems.length === 0 ? (
-          <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
-            {t("notifications.empty")}
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {displayItems.map((n) => {
-              const meta = entityMeta[n.entityType] || {
-                icon: "N",
-                label: t("notifications.entities.other"),
-              };
-              const createdLabel = n.createdAt ? formatDate(n.createdAt) : "-";
-              const actionKey = n.action || "created";
-              const actionLabel = t(`notifications.actions.${actionKey}`, {
-                defaultValue: actionKey,
-              });
-              const entityTitle = n?.metadata?.title || n?.metadata?.code || null;
-              const title = entityTitle
-                ? `${meta.label} - ${entityTitle}`
-                : `${meta.label}`;
-              const statusLabel =
-                n.entityStatus && meta.statusCategory
-                  ? formatStatus(n.entityStatus, meta.statusCategory)
-                  : null;
-
-              let message = t("notifications.genericMessage");
-              if (n.entityType === "evidence" && n?.metadata?.evidenceCount) {
-                message = t("notifications.messages.evidenceCount", {
-                  count: n.metadata.evidenceCount,
-                });
-              } else if (
-                n.entityStatus &&
-                n.entityStatus !== "created" &&
-                statusLabel
-              ) {
-                message = t("notifications.messages.status", {
-                  entity: meta.label,
-                  status: statusLabel,
-                });
-              } else if (actionLabel) {
-                message = t("notifications.messages.action", {
-                  entity: meta.label,
-                  action: actionLabel,
-                });
-              }
-
-              return (
-                <div
-                  key={n.id}
-                  className={[
-                    "app-list-card flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
-                    n.status === "unread"
-                      ? "app-list-card-unread"
-                      : "app-list-card-read",
-                  ].join(" ")}
-                >
-                  <div className="flex gap-3 min-w-0 flex-1">
-                    <div className="text-2xl shrink-0">{meta.icon}</div>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 min-w-0">
-                        <h3 className="max-w-full break-words text-sm font-semibold text-text-primary line-clamp-2 sm:text-base">
-                          {title}
-                        </h3>
-                        <span className="rounded-full border border-border/80 bg-surface-main/80 px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-text-secondary">
-                          {meta.label}
-                        </span>
-                        {n.status === "unread" && (
-                          <span className="rounded-full border border-blue-500/30 bg-blue-500/15 px-2 py-0.5 text-[0.6rem] uppercase tracking-wide text-blue-700 dark:text-blue-300">
-                            {t("notifications.unread")}
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-1 break-words text-xs text-text-secondary line-clamp-3 sm:text-sm">
-                        {message}
-                      </p>
-                      <p className="mt-2 text-[0.7rem] text-text-muted">
-                        {createdLabel}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <button
-                      onClick={() => navigate(resolveLink(n))}
-                      className="app-btn-primary"
-                    >
-                      {t("notifications.view")}
-                    </button>
-                    {n.status !== "read" && (
-                      <button
-                        type="button"
-                        onClick={() => handleMarkRead(n.id)}
-                        disabled={Boolean(markingOneIds[n.id])}
-                        className="app-btn-soft"
-                      >
-                        {markingOneIds[n.id]
-                          ? t("common.loading", { defaultValue: "Chargement..." })
-                          : t("notifications.markRead")}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
+      )}
+    </SettingsSubpageLayout>
   );
 }
 

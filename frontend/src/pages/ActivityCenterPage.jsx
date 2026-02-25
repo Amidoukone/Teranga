@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { getActivities } from "../services/activities";
 import { getLocalUser } from "../services/auth";
 import PaginationBar from "../components/PaginationBar";
+import SettingsSubpageLayout from "../components/SettingsSubpageLayout";
 import { useLocale } from "../i18n/useLocale";
 import { formatStatus } from "../utils/labels";
 import { normalizeRole } from "../utils/role";
@@ -237,277 +238,267 @@ export default function ActivityCenterPage() {
   );
 
   return (
-    <div className="app-page-wrap">
-      <div className="app-page-shell space-y-6">
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-          <div>
-            <p className="page-kicker">
-              {t("activities.kicker")}
-            </p>
-            <h1 className="app-page-headline">
-              {t("activities.title")}
-            </h1>
-            <p className="app-page-subtitle">
-              {t("activities.subtitle")}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="app-toolbar-pill">
-              {t("activities.filters.label")}
-            </div>
-            <select
-              value={entityType}
-              onChange={(e) => setEntityType(e.target.value)}
-              className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
-            >
-              {ENTITY_OPTIONS.map((opt) => (
-                <option key={opt.value || "all"} value={opt.value}>
-                  {t(opt.labelKey)}
-                </option>
-              ))}
-            </select>
-            <select
-              value={action}
-              onChange={(e) => setAction(e.target.value)}
-              className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
-            >
-              {ACTION_OPTIONS.map((opt) => (
-                <option key={opt.value || "all"} value={opt.value}>
-                  {t(opt.labelKey)}
-                </option>
-              ))}
-            </select>
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
-            >
-              {DATE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {t(opt.labelKey)}
-                </option>
-              ))}
-            </select>
-            {dateRange === "custom" ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="app-toolbar-pill">
-                  {t("activities.filters.from")}
-                </label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
-                />
-                <label className="app-toolbar-pill">
-                  {t("activities.filters.to")}
-                </label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
-                />
-              </div>
-            ) : null}
-            {dateError ? (
-              <p className="text-xs text-rose-600 font-semibold">
-                {dateError}
-              </p>
-            ) : null}
-          </div>
-        </div>
-
-        {dateError ? (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 font-semibold">
-            {dateError}
-          </div>
-        ) : null}
-
-        {/* Tabs */}
+    <SettingsSubpageLayout
+      kicker={t("activities.kicker")}
+      title={t("activities.title")}
+      subtitle={t("activities.subtitle")}
+      contentClassName="space-y-6"
+      headerActions={
         <div className="flex flex-wrap items-center gap-2">
-          {PROGRESS_TABS.map((tab) => {
-            const active = progress === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setProgress(tab.key)}
-                className={[
-                  "app-tab",
-                  active ? "app-tab-active" : "app-tab-idle",
-                ].join(" ")}
-              >
-                {t(tab.labelKey)}
-              </button>
-            );
-          })}
+          <div className="app-toolbar-pill">
+            {t("activities.filters.label")}
+          </div>
+          <select
+            value={entityType}
+            onChange={(e) => setEntityType(e.target.value)}
+            className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
+          >
+            {ENTITY_OPTIONS.map((opt) => (
+              <option key={opt.value || "all"} value={opt.value}>
+                {t(opt.labelKey)}
+              </option>
+            ))}
+          </select>
+          <select
+            value={action}
+            onChange={(e) => setAction(e.target.value)}
+            className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
+          >
+            {ACTION_OPTIONS.map((opt) => (
+              <option key={opt.value || "all"} value={opt.value}>
+                {t(opt.labelKey)}
+              </option>
+            ))}
+          </select>
+          <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value)}
+            className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
+          >
+            {DATE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {t(opt.labelKey)}
+              </option>
+            ))}
+          </select>
+          {dateRange === "custom" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="app-toolbar-pill">
+                {t("activities.filters.from")}
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
+              />
+              <label className="app-toolbar-pill">
+                {t("activities.filters.to")}
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-xs font-semibold text-text-secondary sm:text-sm"
+              />
+            </div>
+          ) : null}
+          {dateError ? (
+            <p className="text-xs text-rose-600 font-semibold">
+              {dateError}
+            </p>
+          ) : null}
         </div>
+      }
+    >
 
-        <PaginationBar
-          page={page}
-          pageSize={pageSize}
-          totalItems={totalItems}
-          pageSizeOptions={[6, 10, 20]}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          className="mb-2"
-        />
+      {dateError ? (
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 font-semibold">
+          {dateError}
+        </div>
+      ) : null}
 
-        {/* List */}
-        <div
-          className={[
-            "transition-opacity",
-            isDateRangeInvalid ? "opacity-50 pointer-events-none" : "opacity-100",
-          ].join(" ")}
-        >
-          {loading ? (
-            <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
-              {t("activities.loading")}
-            </div>
-          ) : items.length === 0 ? (
-            <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
-              {t("activities.empty")}
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {items.map((n) => {
-                const meta = entityMeta[n.entityType] || {
-                  icon: "[?]",
-                  label: t("activities.entities.other"),
-                };
-                const createdLabel = n.createdAt ? formatDate(n.createdAt) : "-";
-                const actionKey = n.action || "created";
-                const actionLabel = t(`activities.actions.${actionKey}`, {
-                  defaultValue: actionKey,
-                });
-                const entityTitle = n?.metadata?.title || n?.metadata?.code || null;
-                const title = entityTitle
-                  ? `${meta.label} - ${entityTitle}`
-                  : `${meta.label}`;
-                const statusLabel =
-                  n.entityStatus && meta.statusCategory
-                    ? formatStatus(n.entityStatus, meta.statusCategory)
-                    : null;
-                const actorName = [n?.actor?.firstName, n?.actor?.lastName]
-                  .filter(Boolean)
-                  .join(" ")
-                  .trim() || n?.actor?.email || null;
-                const actorLabel = actorName || t("activities.actor.unknown");
-                const actorInitials = getInitials(actorLabel);
-                const actorRole = n?.actor?.role || null;
-                const actorRoleLabel = actorRole
-                  ? t(`roles.${actorRole}`, { defaultValue: actorRole })
+      {/* Tabs */}
+      <div className="flex flex-wrap items-center gap-2">
+        {PROGRESS_TABS.map((tab) => {
+          const active = progress === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setProgress(tab.key)}
+              className={[
+                "app-tab",
+                active ? "app-tab-active" : "app-tab-idle",
+              ].join(" ")}
+            >
+              {t(tab.labelKey)}
+            </button>
+          );
+        })}
+      </div>
+
+      <PaginationBar
+        page={page}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        pageSizeOptions={[6, 10, 20]}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        className="mb-2"
+      />
+
+      {/* List */}
+      <div
+        className={[
+          "transition-opacity",
+          isDateRangeInvalid ? "opacity-50 pointer-events-none" : "opacity-100",
+        ].join(" ")}
+      >
+        {loading ? (
+          <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
+            {t("activities.loading")}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
+            {t("activities.empty")}
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {items.map((n) => {
+              const meta = entityMeta[n.entityType] || {
+                icon: "[?]",
+                label: t("activities.entities.other"),
+              };
+              const createdLabel = n.createdAt ? formatDate(n.createdAt) : "-";
+              const actionKey = n.action || "created";
+              const actionLabel = t(`activities.actions.${actionKey}`, {
+                defaultValue: actionKey,
+              });
+              const entityTitle = n?.metadata?.title || n?.metadata?.code || null;
+              const title = entityTitle
+                ? `${meta.label} - ${entityTitle}`
+                : `${meta.label}`;
+              const statusLabel =
+                n.entityStatus && meta.statusCategory
+                  ? formatStatus(n.entityStatus, meta.statusCategory)
                   : null;
+              const actorName = [n?.actor?.firstName, n?.actor?.lastName]
+                .filter(Boolean)
+                .join(" ")
+                .trim() || n?.actor?.email || null;
+              const actorLabel = actorName || t("activities.actor.unknown");
+              const actorInitials = getInitials(actorLabel);
+              const actorRole = n?.actor?.role || null;
+              const actorRoleLabel = actorRole
+                ? t(`roles.${actorRole}`, { defaultValue: actorRole })
+                : null;
 
-                let message = t("activities.genericMessage");
-                if (n.entityType === "evidence" && n?.metadata?.evidenceCount) {
-                  message = t("activities.messages.evidenceCount", {
-                    count: n.metadata.evidenceCount,
-                  });
-                } else if (
-                  n.entityStatus &&
-                  n.entityStatus !== "created" &&
-                  statusLabel
-                ) {
-                  message = t("activities.messages.status", {
-                    entity: meta.label,
-                    status: statusLabel,
-                  });
-                } else if (actionLabel) {
-                  message = t("activities.messages.action", {
-                    entity: meta.label,
-                    action: actionLabel,
-                  });
-                }
+              let message = t("activities.genericMessage");
+              if (n.entityType === "evidence" && n?.metadata?.evidenceCount) {
+                message = t("activities.messages.evidenceCount", {
+                  count: n.metadata.evidenceCount,
+                });
+              } else if (
+                n.entityStatus &&
+                n.entityStatus !== "created" &&
+                statusLabel
+              ) {
+                message = t("activities.messages.status", {
+                  entity: meta.label,
+                  status: statusLabel,
+                });
+              } else if (actionLabel) {
+                message = t("activities.messages.action", {
+                  entity: meta.label,
+                  action: actionLabel,
+                });
+              }
 
-                return (
-                  <div
-                    key={n.id}
-                    className="app-list-card app-list-card-read flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
-                  >
-                    <div className="flex gap-3">
-                      <div className="text-2xl">{meta.icon}</div>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-sm font-semibold text-text-primary sm:text-base">
-                            {title}
-                          </h3>
-                          <span className="rounded-full border border-border/80 bg-surface-main/80 px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-text-secondary">
-                            {meta.label}
+              return (
+                <div
+                  key={n.id}
+                  className="app-list-card app-list-card-read flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+                >
+                  <div className="flex gap-3">
+                    <div className="text-2xl">{meta.icon}</div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-sm font-semibold text-text-primary sm:text-base">
+                          {title}
+                        </h3>
+                        <span className="rounded-full border border-border/80 bg-surface-main/80 px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-text-secondary">
+                          {meta.label}
+                        </span>
+                        <span
+                          className={[
+                            "text-[0.6rem] uppercase tracking-wide rounded-full px-2 py-0.5 border",
+                            progressBadge(n.progress),
+                          ].join(" ")}
+                        >
+                          {t(`activities.progress.${n.progress || "new"}`)}
+                        </span>
+                        {actionLabel ? (
+                          <span className="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5 text-[0.6rem] uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                            {actionLabel}
                           </span>
-                          <span
-                            className={[
-                              "text-[0.6rem] uppercase tracking-wide rounded-full px-2 py-0.5 border",
-                              progressBadge(n.progress),
-                            ].join(" ")}
-                          >
-                            {t(`activities.progress.${n.progress || "new"}`)}
-                          </span>
-                          {actionLabel ? (
-                            <span className="rounded-full border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5 text-[0.6rem] uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
-                              {actionLabel}
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="mt-1 text-xs text-text-secondary sm:text-sm">
-                          {message}
-                        </p>
-                        <p className="mt-2 text-[0.7rem] text-text-muted">
-                          {createdLabel}
-                          {actorName
-                            ? ` - ${t("activities.by", { name: actorName })}`
-                            : ""}
-                        </p>
+                        ) : null}
                       </div>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                      <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-surface-main/60 px-3 py-2">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 via-sky-500 to-emerald-500 text-white text-xs font-bold flex items-center justify-center shadow">
-                          {actorInitials}
-                        </div>
-                        <div>
-                          <div className="text-[0.6rem] uppercase tracking-wide text-text-muted">
-                            {t("activities.actor.label")}
-                          </div>
-                          <div className="text-xs font-semibold text-text-primary max-w-[160px] truncate">
-                            {actorLabel}
-                          </div>
-                          {actorRoleLabel ? (
-                            <span
-                              className={[
-                                "mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[0.55rem] font-semibold uppercase tracking-wide",
-                                roleBadgeClass(actorRole),
-                              ].join(" ")}
-                            >
-                              {actorRoleLabel}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => navigate(resolveLink(n))}
-                        disabled={isDateRangeInvalid}
-                        className={[
-                          "rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm",
-                          isDateRangeInvalid
-                            ? "cursor-not-allowed bg-surface-main/80 text-text-muted"
-                            : "app-btn-primary",
-                        ].join(" ")}
-                      >
-                        {t("activities.view")}
-                      </button>
+                      <p className="mt-1 text-xs text-text-secondary sm:text-sm">
+                        {message}
+                      </p>
+                      <p className="mt-2 text-[0.7rem] text-text-muted">
+                        {createdLabel}
+                        {actorName
+                          ? ` - ${t("activities.by", { name: actorName })}`
+                          : ""}
+                      </p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                    <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-surface-main/60 px-3 py-2">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 via-sky-500 to-emerald-500 text-white text-xs font-bold flex items-center justify-center shadow">
+                        {actorInitials}
+                      </div>
+                      <div>
+                        <div className="text-[0.6rem] uppercase tracking-wide text-text-muted">
+                          {t("activities.actor.label")}
+                        </div>
+                        <div className="text-xs font-semibold text-text-primary max-w-[160px] truncate">
+                          {actorLabel}
+                        </div>
+                        {actorRoleLabel ? (
+                          <span
+                            className={[
+                              "mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[0.55rem] font-semibold uppercase tracking-wide",
+                              roleBadgeClass(actorRole),
+                            ].join(" ")}
+                          >
+                            {actorRoleLabel}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => navigate(resolveLink(n))}
+                      disabled={isDateRangeInvalid}
+                      className={[
+                        "rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm",
+                        isDateRangeInvalid
+                          ? "cursor-not-allowed bg-surface-main/80 text-text-muted"
+                          : "app-btn-primary",
+                      ].join(" ")}
+                    >
+                      {t("activities.view")}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-    </div>
+    </SettingsSubpageLayout>
   );
 }
-
 
