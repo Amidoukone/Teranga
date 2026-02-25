@@ -47,6 +47,13 @@ const passwordResetLimiter = buildRateLimiter({
   limiterName: 'password_reset',
 });
 
+const changePasswordLimiter = buildRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: 'Trop de tentatives de changement de mot de passe. Reessayez plus tard.',
+  limiterName: 'change_password',
+});
+
 const writeLimiter = buildRateLimiter({
   windowMs: 60 * 1000,
   max: 120,
@@ -58,5 +65,6 @@ module.exports = {
   authLimiter,
   refreshLimiter,
   passwordResetLimiter,
+  changePasswordLimiter,
   writeLimiter,
 };

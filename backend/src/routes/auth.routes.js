@@ -6,6 +6,7 @@ const {
   authLimiter,
   refreshLimiter,
   passwordResetLimiter,
+  changePasswordLimiter,
 } = require('../middleware/rateLimit.middleware');
 const {
   registerSchema,
@@ -52,6 +53,7 @@ router.post(
 router.post(
   '/change-password',
   auth,
+  changePasswordLimiter,
   validateBody(changePasswordSchema),
   ctrl.changePassword
 );
