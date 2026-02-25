@@ -289,28 +289,32 @@ async function countServices(req) {
 
 async function countTransactionsAndFinance(req) {
   const txWhere = buildWhereWithACL(req);
+  const aggregateInclude = COMMON_INCLUDE.map((inc) => ({
+    ...inc,
+    attributes: [],
+  }));
 
   const [count, revenues, expenses, commissions, adjustments] = await Promise.all([
     Transaction.count({
       where: txWhere,
-      include: COMMON_INCLUDE,
+      include: aggregateInclude,
       distinct: true,
     }),
     Transaction.sum('amount', {
       where: { ...txWhere, type: 'revenue' },
-      include: COMMON_INCLUDE,
+      include: aggregateInclude,
     }),
     Transaction.sum('amount', {
       where: { ...txWhere, type: 'expense' },
-      include: COMMON_INCLUDE,
+      include: aggregateInclude,
     }),
     Transaction.sum('amount', {
       where: { ...txWhere, type: 'commission' },
-      include: COMMON_INCLUDE,
+      include: aggregateInclude,
     }),
     Transaction.sum('amount', {
       where: { ...txWhere, type: 'adjustment' },
-      include: COMMON_INCLUDE,
+      include: aggregateInclude,
     }),
   ]);
 
