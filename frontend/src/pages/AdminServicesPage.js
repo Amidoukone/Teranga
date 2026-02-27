@@ -43,7 +43,7 @@ export default function AdminServicesPage() {
   );
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â VÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rification ADMIN / MASTER
+     Initialisation au montage.
   ============================================================ */
   useEffect(() => {
     let active = true;
@@ -78,8 +78,7 @@ export default function AdminServicesPage() {
   }, [navigate]);
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“Ãƒâ€šÃ‚Â¥ Chargement agents (admin/master)
-     ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Aucun filtrage frontend ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â backend scope only
+     Charge les agents assignables.
   ============================================================ */
   const loadAgents = useCallback(async () => {
     try {
@@ -92,10 +91,9 @@ export default function AdminServicesPage() {
   }, []);
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Chargement services
-     ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â IMPORTANT :
+     Contexte: gestion des services.
      - PAS de countryId / regionId en query
-     - Le backend applique dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  le scope
+     Charge la liste des services.
   ============================================================ */
   const loadServices = useCallback(async () => {
     setLoading(true);
@@ -121,7 +119,7 @@ export default function AdminServicesPage() {
   }, [status, onlyUnassigned, q, limit, offset]);
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â Initialisation
+     Initialisation au montage.
   ============================================================ */
   useEffect(() => {
     if (isAdmin) {
@@ -136,7 +134,7 @@ export default function AdminServicesPage() {
   }, [isAdmin, loadServices]);
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Assignation agent
+     Charge la liste des services.
   ============================================================ */
   async function handleAssign(serviceId, agentId) {
     if (!agentId) return;
@@ -156,7 +154,7 @@ export default function AdminServicesPage() {
   }
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Â  Helpers UI
+     Roles admin/master et perimetre d'acces.
   ============================================================ */
   function displayUser(u) {
     if (!u) return t('adminServicesPage.table.emptyValue');
@@ -219,7 +217,7 @@ export default function AdminServicesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-surface-card/90 backdrop-blur-sm shadow-xl rounded-2xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
- {/* AAAAaAA AasAAAasAA En-tAAaTMAasAAate Apple Light */}
+ {/* Contexte: administration des services. */}
         <AdminPageHeader
           title={t('adminServicesPage.title')}
           subtitle={t('adminServicesPage.subtitle')}
@@ -270,7 +268,7 @@ export default function AdminServicesPage() {
           }
         />
 
- {/* AAAAaAA AaAA12AAAasAAAoAAA AasAA AasAA Filtres Apple-style */}
+ {/* Contexte: administration des services. */}
         <AdminFilterBar className="mb-8 rounded-2xl px-4 sm:px-5 py-4 sm:py-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Statut */}
@@ -294,7 +292,7 @@ export default function AdminServicesPage() {
               </select>
             </AdminField>
 
- {/* Non assignAAaTMAasAAs */}
+ {/* Contexte: administration des services. */}
             <div className="flex flex-col justify-end">
               <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
                 <input
@@ -370,7 +368,7 @@ export default function AdminServicesPage() {
           </div>
         </AdminFilterBar>
 
- {/* AAAAaAA AasAAAasAA34 Tableau Services Apple Light */}
+ {/* Contexte: administration des services. */}
         <div className="overflow-x-auto rounded-2xl border border-border bg-surface-card shadow-sm">
           <table className="min-w-full text-sm">
             <thead className="bg-surface-main/80 text-text-secondary">
@@ -495,7 +493,7 @@ export default function AdminServicesPage() {
           </table>
         </div>
 
- {/* AAAAaAA AAAasAA...aAAAasAA...A34 Pagination minimaliste */}
+ {/* Contexte: administration des services. */}
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-text-secondary">
           <button
             onClick={() => setOffset(Math.max(0, offset - limit))}

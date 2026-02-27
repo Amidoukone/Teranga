@@ -1,6 +1,6 @@
 // ============================================================
-// OrdersPage.jsx AAAasAAaA Teranga PRODUCTION READY (Option B Premium)
-// Clean Shop, filtres, tri, formulaires, responsivitAAA mobile
+// Contexte: suivi des commandes.
+// Contexte: suivi des commandes.
 // Design B : Style marketplace / SaaS Pro 2025
 // ============================================================
 
@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 
 /* ============================================================
-   ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¨ Helpers de style pour les statuts (Badges / Timeline)
+   Module: suivi des commandes.
 ============================================================ */
 function getOrderStatusStyle(status) {
   const canon = canonicalizeOrderStatus(status);
@@ -63,7 +63,7 @@ function getPaymentStatusStyle(status) {
 }
 
 /* ============================================================
-   ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Helpers API (compat array OU { orders/products })
+   Sous-composant liste/historique.
 ============================================================ */
 function normalizeListResponse(data, key) {
   if (Array.isArray(data)) return data;
@@ -79,7 +79,7 @@ function toDecimal(value) {
 }
 
 /* ============================================================
-   ÃƒÂ¢Ã‚Â­Ã‚Â Page Commandes ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Clean Shop Premium (Style B)
+   Sous-composant formulaire.
 ============================================================ */
 export default function OrdersPage() {
   const { formatNumber, formatDateTime } = useLocale();
@@ -94,7 +94,7 @@ export default function OrdersPage() {
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
 
- // Produits pour crAAAation rapide de commande
+ // Contexte: suivi des commandes.
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
@@ -166,7 +166,7 @@ export default function OrdersPage() {
   );
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Loaders (useCallback pour ÃƒÆ’Ã‚Â©viter les recrÃƒÆ’Ã‚Â©ations)
+     Contexte: suivi des commandes.
   ============================================================ */
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -284,13 +284,13 @@ export default function OrdersPage() {
     loadOrders();
   }, [user, loadOrders]);
 
- // Persistance de lAAAasAAazAaffichage du formulaire
+ // Contexte: suivi des commandes.
   useEffect(() => {
     localStorage.setItem('teranga_orders_showForm', showForm ? '1' : '0');
   }, [showForm]);
 
   /* ============================================================
-     ÃƒÂ¢Ã…Â¾Ã¢â‚¬Â¢ CrÃƒÆ’Ã‚Â©ation commande (avec protection anti double-submit)
+     Contexte: suivi des commandes.
   ============================================================ */
   async function handleCreate(e) {
     e.preventDefault();
@@ -362,7 +362,7 @@ export default function OrdersPage() {
   }
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬ÂºÃƒÂ¯Ã‚Â¸Ã‚Â Filtres + tri (mÃƒÆ’Ã‚Â©moÃƒÆ’Ã‚Â¯sÃƒÆ’Ã‚Â©s) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â canon robustes
+     Filtrage et tri cote interface utilisateur.
   ============================================================ */
   const totalOrders = useMemo(
     () => pagination?.total ?? pagination?.count ?? orders.length,
@@ -418,7 +418,7 @@ export default function OrdersPage() {
       <div className="app-page-shell p-4 sm:p-8">
 
         {/* ===================================================== */}
- {/* AAA...A AAAA Header Premium Responsive (Style B) */}
+ {/* Contexte: suivi des commandes. */}
         {/* ===================================================== */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-full break-words">
@@ -466,7 +466,7 @@ export default function OrdersPage() {
         </div>
 
         {/* ===================================================== */}
- {/* AAA...A A...A12AaAoAA AA AA Filtres Premium Responsive (Style SaaS) */}
+ {/* Contexte: suivi des commandes. */}
         {/* ===================================================== */}
         <div className="mb-6 rounded-2xl border border-border/70 bg-surface-main/55 p-4 sm:p-5">
           {/* Recherche */}
@@ -500,7 +500,7 @@ export default function OrdersPage() {
             </div>
           </div>
 
- {/* SAAAlecteurs */}
+ {/* Contexte: suivi des commandes. */}
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {/* Statut commande */}
             <div>
@@ -579,7 +579,7 @@ export default function OrdersPage() {
           </div>
         </div>
         {/* ===================================================== */}
- {/* AAA...A34AaA Formulaire crAAAation commande (Premium Responsive) */}
+ {/* Contexte: suivi des commandes. */}
         {/* ===================================================== */}
         {showForm && (
           <form
@@ -655,7 +655,7 @@ export default function OrdersPage() {
                   </select>
                 </div>
 
- {/* QuantitAAA */}
+ {/* Contexte: suivi des commandes. */}
                 <div>
                   <label className="mb-1 block text-sm font-medium text-text-secondary">
                     {t("orders.form.quantityLabel")}
@@ -718,7 +718,7 @@ export default function OrdersPage() {
           className="mb-4"
         />
 
- {/* AAA...A AaAAaA34 LISTE Commandes AAAasAAaA Cards marketplace style B */}
+ {/* Contexte: suivi des commandes. */}
         {/* ===================================================== */}
         {loading ? (
           <p className="rounded-2xl border border-border/70 bg-surface-card/70 py-6 text-center italic text-text-secondary">
@@ -745,7 +745,7 @@ export default function OrdersPage() {
                   key={o.id}
                   className="w-full overflow-hidden rounded-2xl border border-border/70 bg-surface-card shadow-sm transition hover:shadow-md break-words"
                 >
- {/* Bandeau supAAArieur */}
+ {/* Contexte: suivi des commandes. */}
                   <div className="flex flex-col gap-3 border-b border-border/70 bg-surface-main/60 px-4 pb-3 pt-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                     <div className="min-w-0">
                       <h3 className="text-base sm:text-lg font-semibold text-text-primary break-words">

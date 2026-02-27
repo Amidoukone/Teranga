@@ -1,7 +1,7 @@
 // frontend/src/pages/PropertiesPage.js
 // ============================================================================
 // PropertiesPage Aaa Version Premium 2025
-// Client / Admin / Master / Multi-pays READY Aaa ZERO rAAgression
+// Contexte: gestion des biens.
 // ============================================================================
 
 import { useEffect, useMemo, useState } from 'react';
@@ -21,7 +21,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 // ============================================================================
-// AA AA FILE_BASE Aaa Standard Teranga (Render / Netlify / CDN / Multi-pays SAFE)
+// Contexte: gestion des biens.
 // ============================================================================
 const FILE_BASE =
   (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
@@ -121,7 +121,7 @@ function getPropertyTypeFieldConfig(type, t) {
 }
 
 // ============================================================================
-// AA AA PAGE PRINCIPALE
+// Contexte: gestion des biens.
 // ============================================================================
 export default function PropertiesPage() {
   const { t } = useTranslation();
@@ -148,7 +148,7 @@ export default function PropertiesPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
- // Affichage formulaire persistAA
+ // Contexte: gestion des biens.
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_properties_showForm');
     return saved === null ? true : saved === '1';
@@ -500,7 +500,7 @@ export default function PropertiesPage() {
     return (
     <div className="app-page-wrap">
       <div className="app-page-shell relative space-y-8 p-5 sm:p-8 lg:p-10">
- {/* AA AA En-tAAate */}
+ {/* Contexte: gestion des biens. */}
         <Header
           showForm={showForm}
           setShowForm={setShowForm}
@@ -508,7 +508,7 @@ export default function PropertiesPage() {
           total={properties.length}
         />
 
- {/* AA aA Filtres */}
+ {/* Contexte: gestion des biens. */}
         <PropertyFilters
           filters={filters}
           setFilters={setFilters}
@@ -517,7 +517,7 @@ export default function PropertiesPage() {
           filteredCount={filtered.length}
         />
 
- {/* AA AaA A A Formulaire */}
+ {/* Contexte: gestion des biens. */}
         {showForm && (
           <PropertyForm
             form={form}
@@ -534,7 +534,7 @@ export default function PropertiesPage() {
           />
         )}
 
- {/* AA AA Liste */}
+ {/* Contexte: gestion des biens. */}
         <PropertyList
           filtered={filtered}
           now={now}
@@ -548,7 +548,7 @@ export default function PropertiesPage() {
           openLightbox={openLightbox}
         />
 
- {/* AA aA14A A A Lightbox plein AAcran avec navigation */}
+ {/* Contexte: gestion des biens. */}
         {lightbox.open && (
           <div
             className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm"
@@ -562,7 +562,7 @@ export default function PropertiesPage() {
               aria-label={t('propertiesPage.lightbox.closeLabel')}
               title={t('propertiesPage.lightbox.closeTitle')}
             >
-              Ã¢Å“â€¢
+              {"\u00D7"}
             </button>
 
             <button
@@ -574,7 +574,7 @@ export default function PropertiesPage() {
               aria-label={t('propertiesPage.lightbox.prevLabel')}
               title={t('propertiesPage.lightbox.prevTitle')}
             >
-              Ã¢â‚¬Â¹
+              {"\u2039"}
             </button>
 
             <img
@@ -595,7 +595,7 @@ export default function PropertiesPage() {
               aria-label={t('propertiesPage.lightbox.nextLabel')}
               title={t('propertiesPage.lightbox.nextTitle')}
             >
-              Ã¢â‚¬Âº
+              {"\u203A"}
             </button>
 
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/90 text-sm px-3 py-1 rounded-full bg-black/30">
@@ -609,7 +609,7 @@ export default function PropertiesPage() {
 }
 
 /* ============================================================================
-// AAa SOUS-COMPOSANTS
+// Contexte: gestion des biens.
 ============================================================================ */
 
 function Header({ showForm, setShowForm, load, total }) {
@@ -619,7 +619,7 @@ function Header({ showForm, setShowForm, load, total }) {
     <div className="mb-4 flex flex-col gap-4 border-b border-border/70 pb-4 md:flex-row md:items-center md:justify-between">
       <div className="space-y-1">
         <h1 className="app-page-headline">
-          Ã°Å¸ÂÂ  {t('propertiesPage.header.title')}
+          {"\u{1F3E0}"} {t('propertiesPage.header.title')}
         </h1>
         <p className="app-page-subtitle">
           {t('propertiesPage.header.subtitle')}
@@ -636,14 +636,14 @@ function Header({ showForm, setShowForm, load, total }) {
           className="app-btn-neutral w-full sm:w-auto"
         >
           {showForm
-            ? `Ã¢Å¾â€“ ${t('propertiesPage.buttons.hideForm')}`
-            : `Ã¢Å¾â€¢ ${t('propertiesPage.buttons.newProperty')}`}
+            ? `\u2796 ${t('propertiesPage.buttons.hideForm')}`
+            : `\u2795 ${t('propertiesPage.buttons.newProperty')}`}
         </button>
         <button
           onClick={load}
           className="app-btn-primary w-full sm:w-auto"
         >
-          Ã°Å¸â€â€ž {t('common.refresh')}
+          {"\u{1F504}"} {t('common.refresh')}
         </button>
       </div>
     </div>
@@ -818,8 +818,8 @@ function PropertyForm({
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg sm:text-xl font-semibold text-text-primary">
           {editId
-            ? `Ã¢Å“ÂÃ¯Â¸Â ${t('propertiesPage.form.titleEdit')}`
-            : `Ã¢Å¾â€¢ ${t('propertiesPage.form.titleCreate')}`}
+            ? `\u270F\uFE0F ${t('propertiesPage.form.titleEdit')}`
+            : `\u2795 ${t('propertiesPage.form.titleCreate')}`}
         </h2>
         {!editId && (
           <p className="text-xs sm:text-sm text-text-secondary">
@@ -932,14 +932,14 @@ function PropertyPreview({
           disabled={isSubmitting}
           className="app-btn-soft"
         >
-          Ã°Å¸â€â„¢ {t('propertiesPage.preview.edit')}
+          {"\u{1F4DD}"} {t('propertiesPage.preview.edit')}
         </button>
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
           className="app-btn-primary disabled:cursor-not-allowed disabled:bg-blue-400"
         >
-          Ã¢Å“â€¦ {t('propertiesPage.preview.create')}
+          {"\u2705"} {t('propertiesPage.preview.create')}
         </button>
       </div>
     </div>
@@ -1055,7 +1055,7 @@ function PropertyEditor({
         />
       </div>
 
- {/* Surface / KilomAAtrage */}
+ {/* Contexte: gestion des biens. */}
       {fieldConfig.showSurface && (
         <div className="w-full">
           <label className="mb-1 block text-xs sm:text-sm font-medium text-text-secondary">
@@ -1072,7 +1072,7 @@ function PropertyEditor({
         </div>
       )}
 
- {/* PiAA ces / Espaces / Places */}
+ {/* Contexte: gestion des biens. */}
       {fieldConfig.showRooms && (
         <div className="w-full">
           <label className="mb-1 block text-xs sm:text-sm font-medium text-text-secondary">
@@ -1106,7 +1106,7 @@ function PropertyEditor({
       {/* Fichiers */}
       <div className="sm:col-span-2">
         <label className="mb-1 block text-xs sm:text-sm font-medium text-text-secondary">
-          Ã°Å¸â€œÂ {t('propertiesPage.form.filesLabel')}
+          {"\u{1F4C1}"} {t('propertiesPage.form.filesLabel')}
         </label>
         <input
           type="file"
@@ -1160,8 +1160,8 @@ function PropertyEditor({
           className="app-btn-primary px-5 py-2.5 text-sm sm:text-base disabled:cursor-not-allowed disabled:bg-blue-400"
         >
           {editId
-            ? `Ã°Å¸â€™Â¾ ${t('propertiesPage.form.save')}`
-            : `Ã°Å¸â€˜Â ${t('propertiesPage.form.preview')}`}
+            ? `\u{1F4BE} ${t('propertiesPage.form.save')}`
+            : `\u{1F441}\uFE0F ${t('propertiesPage.form.preview')}`}
         </button>
       </div>
     </form>
@@ -1187,7 +1187,7 @@ function PropertyList({
     <>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg sm:text-xl font-semibold text-text-primary">
-          Ã°Å¸â€œâ€¹ {t('propertiesPage.list.title')}
+          {"\u{1F4CB}"} {t('propertiesPage.list.title')}
         </h2>
         <span className="app-toolbar-pill">
           {t('propertiesPage.list.results', { count: filtered.length })}
@@ -1209,7 +1209,7 @@ function PropertyList({
               p.status ||
               t('common.dash');
             const surfaceLabel = p.surfaceArea
-              ? `${p.surfaceArea} mÃ‚Â²`
+              ? `${p.surfaceArea} m\u00B2`
               : t('common.dash');
             const roomCount = Number(p.roomCount || 0);
 
@@ -1246,7 +1246,7 @@ function PropertyList({
                               "
                               title={t('propertiesPage.list.openPdf')}
                             >
-                              Ã°Å¸â€œâ€ž {t('propertiesPage.list.pdfLabel')}
+                              {"\u{1F4C4}"} {t('propertiesPage.list.pdfLabel')}
                             </a>
                           );
                         }
@@ -1326,14 +1326,14 @@ function PropertyList({
                         }}
                         className="w-full sm:w-auto rounded-lg bg-amber-500 px-4 py-2 text-xs font-medium text-white transition hover:bg-amber-600 sm:text-sm"
                       >
-                        Ã¢Å“ÂÃ¯Â¸Â {t('propertiesPage.list.edit')}
+                        {"\u270F\uFE0F"} {t('propertiesPage.list.edit')}
                       </button>
 
                       <button
                         onClick={() => handleDelete(p.id, p.createdAt)}
                         className="w-full sm:w-auto rounded-lg bg-red-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-red-700 sm:text-sm"
                       >
-                        Ã¢ÂÅ’ {t('propertiesPage.list.delete')}
+                        {"\u274C"} {t('propertiesPage.list.delete')}
                       </button>
                     </>
                   ) : (
@@ -1350,7 +1350,6 @@ function PropertyList({
     </>
   );
 }
-
 
 
 

@@ -1,6 +1,6 @@
 // ============================================================
 // frontend/src/pages/ServiceTasksPage.jsx
-// Version Premium 2025 AAAasAAaA MASTER SAFE (multi-pays) AAAasAAaA PARTIE 1 / 2
+// Contexte: taches de service.
 // ============================================================
 
 import { useEffect, useState, useMemo, useCallback } from "react";
@@ -20,13 +20,10 @@ import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
 
 /* ========================================================================
-   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ PAGE : ServiceTasksPage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Style A Premium 2025 (MASTER SAFE)
-   - Chargement des tÃƒÆ’Ã‚Â¢ches dÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢un service
-   - Labels cohÃƒÆ’Ã‚Â©rents (statusLabel, typeLabelÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦)
+   Module: taches liees au service.
    - UI responsive / mobile-first
-   - ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Aucune rÃƒÆ’Ã‚Â©gression : mÃƒÆ’Ã‚Âªme endpoint / mÃƒÆ’Ã‚Âªme navigation preuves
-   - ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Multi-pays : envoie params geo (admin scoped/master) comme le reste de lÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢app
-   - ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Permissions : admin/master/agent/client (affichage) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â backend reste source de vÃƒÆ’Ã‚Â©ritÃƒÆ’Ã‚Â©
+   Module: taches liees au service.
+   Composant principal.
 =========================================================================== */
 
 export default function ServiceTasksPage() {
@@ -59,14 +56,14 @@ export default function ServiceTasksPage() {
   });
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Auth headers (production-safe)
+     En-tetes d'authentification pour API protegee.
   ============================================================ */
   const authHeaders = useMemo(() => {
     return getAuthHeader();
   }, []);
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â RÃƒÆ’Ã‚Â´les (UX uniquement) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â backend = source de vÃƒÆ’Ã‚Â©ritÃƒÆ’Ã‚Â©
+     Roles admin/master et perimetre d'acces.
   ============================================================ */
   const role = normalizeRole(user?.role);
   const isAdmin = role === "admin";
@@ -85,7 +82,7 @@ export default function ServiceTasksPage() {
     : t("serviceTasksPage.header.title", { id });
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ Chargement des tÃƒÆ’Ã‚Â¢ches (MASTER SAFE + Geo Params)
+     Charge les taches associees.
   ============================================================ */
   const loadTasks = useCallback(async () => {
     if (!id) return;
@@ -96,12 +93,12 @@ export default function ServiceTasksPage() {
 
       const { data } = await api.get(`/tasks/service/${id}`, {
         headers: authHeaders,
-        params: getGeoParams(), // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ multi-pays : scope admin/master
+        params: getGeoParams(), // Propage le scope geo (pays/region).
       });
 
       const rawTasks = data?.tasks || [];
 
- // Toujours recalculer les labels via i18n (AAAvite les labels FR renvoyAAAs par le backend)
+ // Contexte: taches de service.
       const withLabels = rawTasks.map((t) => applyLabels(t, "task"));
 
       setTasks(withLabels);
@@ -115,7 +112,7 @@ export default function ServiceTasksPage() {
   }, [id, authHeaders, t]);
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ Init : user + tasks
+     En-tetes d'authentification pour API protegee.
   ============================================================ */
   useEffect(() => {
     let active = true;
@@ -183,7 +180,7 @@ export default function ServiceTasksPage() {
           }
         }
       } catch (e) {
- // si besoin, laisse lAAAasAAazAapp gAAArer ailleurs (middleware / router)
+ // Contexte: taches de service.
         console.error("AAAAA...aTM me() ServiceTasksPage:", e);
       } finally {
         if (active) {
@@ -211,7 +208,7 @@ export default function ServiceTasksPage() {
   }, [serviceTitle]);
 
   /* ============================================================
-     ÃƒÂ¢Ã…â€œÃ‚Â¨ CrÃƒÆ’Ã‚Â©ation d'une tÃƒÆ’Ã‚Â¢che (CLIENT + ADMIN)
+     Contexte: taches liees au service.
   ============================================================ */
   async function createTask(e) {
     e.preventDefault();
@@ -262,7 +259,7 @@ export default function ServiceTasksPage() {
   }
 
   /* ============================================================
-     ÃƒÂ¢Ã‚ÂÃ‚Â³ ÃƒÆ’Ã¢â‚¬Â°cran de chargement premium
+     Affiche l etat de chargement.
   ============================================================ */
   if (loading) {
     return (
@@ -280,12 +277,12 @@ export default function ServiceTasksPage() {
   }
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¨ Rendu principal ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â responsive
+     Rendu principal.
   ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 py-8 sm:px-4 sm:py-10">
       <div className="max-w-5xl mx-auto bg-surface-card shadow-2xl rounded-3xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
- {/* AAA...A AAAA EN-TAA...A TE */}
+ {/* Contexte: taches de service. */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-4 border-b border-border/70">
           <div className="break-words">
             <p className="text-[0.7rem] uppercase tracking-wide text-blue-600 font-semibold mb-1">
@@ -297,7 +294,7 @@ export default function ServiceTasksPage() {
                 {headerTitle}
               </h1>
 
- {/* Badge UX AAAasAAaA sans impact backend */}
+ {/* Contexte: taches de service. */}
               {serviceTypeLabel && (
                 <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.7rem] font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                   {serviceTypeLabel}
@@ -362,7 +359,7 @@ export default function ServiceTasksPage() {
           </div>
         )}
 
- {/* FORMULAIRE (crAAAation rapide) */}
+ {/* Contexte: taches de service. */}
         {canCreateTask && showForm && (
           <div className="mb-8">
             <h2 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
@@ -394,7 +391,7 @@ export default function ServiceTasksPage() {
                 bg-surface-main p-4 sm:p-5 rounded-2xl border border-border
               "
             >
- {/* Service (prAAA-sAAAlectionnAAA) */}
+ {/* Contexte: taches de service. */}
               <div className="w-full sm:col-span-2">
                 <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("serviceTasksPage.form.serviceLabel")}
@@ -415,7 +412,7 @@ export default function ServiceTasksPage() {
                 </p>
               </div>
 
- {/* Type de tAAAche */}
+ {/* Contexte: taches de service. */}
               <div className="w-full">
                 <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.typeLabel")}
@@ -473,7 +470,7 @@ export default function ServiceTasksPage() {
                 />
               </div>
 
- {/* PrioritAAA */}
+ {/* Contexte: taches de service. */}
               <div className="w-full">
                 <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.priorityLabel")}
@@ -496,7 +493,7 @@ export default function ServiceTasksPage() {
                 </select>
               </div>
 
- {/* Date dAAAasAAazAAAAchAAAance */}
+ {/* Contexte: taches de service. */}
               <div className="w-full">
                 <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.dueDateLabel")}
@@ -512,7 +509,7 @@ export default function ServiceTasksPage() {
                 />
               </div>
 
- {/* CoAAAt estimAAA */}
+ {/* Contexte: taches de service. */}
               <div className="w-full">
                 <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
                   {t("tasksPage.form.estimatedCostLabel")}
@@ -612,7 +609,7 @@ export default function ServiceTasksPage() {
                 key={t.id}
                 task={t}
                 navigate={navigate}
- // UX only: donne le rAAA le courant (sans changer lAAAasAAazAACL backend)
+ // Contexte: taches de service.
                 userRole={role}
                 isMaster={isMaster}
               />
@@ -625,9 +622,8 @@ export default function ServiceTasksPage() {
 }
 
 /* ========================================================================
-   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© TaskCard ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â carte responsive & premium (Style A)
-   ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Aucune rÃƒÆ’Ã‚Â©gression : mÃƒÆ’Ã‚Âªme navigation / mÃƒÆ’Ã‚Âªmes infos
-   ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ MASTER SAFE : aucun filtrage cÃƒÆ’Ã‚Â´tÃƒÆ’Ã‚Â© UI, backend gÃƒÆ’Ã‚Â¨re le scope/ACL
+   Contexte: taches liees au service.
+   Roles admin/master et perimetre d'acces.
 =========================================================================== */
 function TaskCard({ task, navigate, userRole, isMaster }) {
   const { t } = useTranslation();
@@ -691,7 +687,7 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
               {task.title || t("serviceTasksPage.taskFallback", { id: task.id })}
             </h3>
 
- {/* Badge rAAA le (UX only) */}
+ {/* Contexte: taches de service. */}
             {isMaster && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                 {t("roles.master")}
@@ -730,7 +726,7 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
         </div>
       </div>
 
- {/* DAAAtails */}
+ {/* Contexte: taches de service. */}
       <div className="mt-4 sm:mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-text-secondary">
         <div className="break-words">
           <span className="font-semibold text-text-primary">

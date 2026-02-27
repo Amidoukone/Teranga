@@ -1,6 +1,6 @@
 // ============================================================
 // ProductDetailPage.jsx Aaa Teranga PRODUCTION READY (Style A 2025)
-// Design premium + responsive, 0 rAAgression fonctionnelle
+// Contexte: detail de produit.
 // - Images robustes (allImageUrls + gallery + coverImage + imageUrl)
 // - FILE_BASE + toAbsUrl (Render/Netlify/Prod)
 // - Lightbox + navigation + miniatures
@@ -15,7 +15,7 @@ import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 
 /* ============================================================
-   Ã°Å¸Å’Â CONFIG PRODUCTION Ã¢â‚¬â€ FILE_BASE / toAbsUrl()
+   URLs API/fichiers (dev/prod).
 ============================================================ */
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -43,9 +43,9 @@ function toAbsUrl(path = '') {
 }
 
 /* ============================================================
-   Ã°Å¸â€“Â¼ IMAGES Ã¢â‚¬â€ robuste & rÃƒÂ©tro-compatible backend
+   Module: detail d un produit.
    Sources possibles:
-   - allImageUrls: array de strings (dÃƒÂ©jÃƒÂ  prÃƒÂªt cÃƒÂ´tÃƒÂ© backend)
+   Module: detail d un produit.
    - gallery: [{url}, "string", ...]
    - coverImage: "string" ou {url}
    - imageUrl: "string"
@@ -79,7 +79,7 @@ function getImagesForProduct(p) {
     urls.unshift(p.imageUrl);
   }
 
- // DAAdup + absolu
+ // Contexte: detail de produit.
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
@@ -87,7 +87,7 @@ function getImagesForProduct(p) {
 }
 
 /* ============================================================
-   Ã¢Â­Â PAGE DÃƒâ€°TAIL PRODUIT Ã¢â‚¬â€ Style A
+   Sous-composant formulaire.
 ============================================================ */
 export default function ProductDetailPage() {
   const { formatNumber, formatDate } = useLocale();
@@ -102,7 +102,7 @@ export default function ProductDetailPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   /* ============================================================
-     Ã°Å¸â€â€ž Load product (master/multi-pays friendly)
+     Lightbox medias plein ecran.
      - Compat si API renvoie `product` ou l'objet direct
   ============================================================ */
   useEffect(() => {
@@ -114,7 +114,7 @@ export default function ProductDetailPage() {
 
         const res = await getProductById(id);
 
- // AAa compat: res peut AAatre l'objet produit ou { product }
+ // Contexte: detail de produit.
         const prod = res?.product ? res.product : res;
 
         if (!mounted) return;
@@ -142,7 +142,7 @@ export default function ProductDetailPage() {
   }, [id, t]);
 
   /* ============================================================
-     Ã°Å¸Â§Â® Images dÃƒÂ©rivÃƒÂ©es (memo)
+     Filtrage et tri cote interface utilisateur.
   ============================================================ */
   const images = useMemo(() => {
     if (!product) return [];
@@ -154,7 +154,7 @@ export default function ProductDetailPage() {
   const currentImage = hasImages ? images[safeIndex] : null;
 
   /* ============================================================
-     Ã°Å¸Å’â‚¬ Load / Error / Not found
+     Affiche l etat de chargement.
   ============================================================ */
   if (loading) {
     return (
@@ -204,7 +204,7 @@ export default function ProductDetailPage() {
   }
 
   /* ============================================================
-     Ã°Å¸â€“Â¼ Lightbox navigation
+     Contexte: detail d un produit.
   ============================================================ */
   function goPrev(e) {
     if (e) e.stopPropagation();
@@ -240,7 +240,7 @@ export default function ProductDetailPage() {
   } = product;
 
   /* ============================================================
-     Ã°Å¸Â§Â± UI PRINCIPALE Ã¢â‚¬â€ Style A premium
+     Rendu principal.
   ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 sm:px-6 py-10">
@@ -278,7 +278,7 @@ export default function ProductDetailPage() {
           <div className="flex flex-col md:flex-row gap-6 lg:gap-8">
 
             {/* ===========================
-                Ã°Å¸â€“Â¼ Bloc images
+                Contexte: detail d un produit.
                =========================== */}
             <div className="w-full md:w-1/2">
               {hasImages ? (
@@ -365,10 +365,10 @@ export default function ProductDetailPage() {
               )}
             </div>
             {/* ===========================
-                Ã°Å¸â€œâ€ž Bloc infos
+                Contexte: detail d un produit.
                =========================== */}
             <div className="flex-1 flex flex-col">
- {/* CatAAgorie + titre */}
+ {/* Contexte: detail de produit. */}
               <div className="mb-3">
                 {category?.name && (
                   <p className="inline-flex items-center px-2 py-0.5 bg-blue-500/15 text-blue-700 dark:text-blue-300 rounded-full border border-blue-500/30 text-[11px] font-medium mb-2">
@@ -418,7 +418,7 @@ export default function ProductDetailPage() {
                 {description || t('productDetailPage.info.noDescription')}
               </div>
 
- {/* MAAtadonnAAes */}
+ {/* Contexte: detail de produit. */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-text-muted mb-6">
                 {createdAt && (
                   <div>
@@ -453,7 +453,7 @@ export default function ProductDetailPage() {
       </div>
 
       {/* ============================================================
-          Ã°Å¸â€™Â¡ LIGHTBOX PLEIN Ãƒâ€°CRAN Ã¢â‚¬â€ images uniquement
+          Lightbox medias plein ecran.
       ============================================================ */}
       {lightboxOpen && hasImages && (
         <div

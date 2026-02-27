@@ -27,7 +27,7 @@ export default function LoginPage() {
   const location = useLocation();
 
   /* ==========================================================
-     Ã¢Å“â€ Affiche le message de rÃƒÂ©ussite (depuis /register)
+     Initialisation au montage.
   ========================================================== */
   useEffect(() => {
     const msg = location.state?.successMsg;
@@ -44,7 +44,7 @@ export default function LoginPage() {
   }, [location.state]);
 
   /* ==========================================================
-     Ã°Å¸â€Â Redirection automatique si dÃƒÂ©jÃƒÂ  connectÃƒÂ©
+     Initialisation au montage.
   ========================================================== */
   useEffect(() => {
     async function check() {
@@ -57,7 +57,7 @@ export default function LoginPage() {
   }, [navigate]);
 
   /* ==========================================================
-     Ã°Å¸Å¡â‚¬ Connexion
+     Module: authentification et acces utilisateur.
   ========================================================== */
   async function handleLogin(e) {
     e.preventDefault();
@@ -76,7 +76,7 @@ export default function LoginPage() {
   }
 
   /* ==========================================================
-     Ã°Å¸â€“Â¥Ã¯Â¸Â UI Ã¢â‚¬â€ Apple Light Premium A1
+     Rendu principal.
   ========================================================== */
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-12">

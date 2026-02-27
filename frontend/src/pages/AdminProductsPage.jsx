@@ -19,7 +19,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 /* ============================================================
-   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â CONFIG PRODUCTION
+   URLs API/fichiers (dev/prod).
 ============================================================ */
 const FILE_BASE =
   (typeof window !== "undefined" &&
@@ -37,7 +37,7 @@ function toAbsUrl(path = "") {
 }
 
 /* ============================================================
-   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“Ãƒâ€šÃ‚Â¼ Helper : rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©cupÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rer toutes les images dÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢un produit
+   Module: administration des produits.
    (allImageUrls, gallery, coverImage, imageUrl)
 ============================================================ */
 function getProductImages(product) {
@@ -75,7 +75,7 @@ function getProductImages(product) {
     urls.unshift(product.imageUrl);
   }
 
- // DAAaTMAasAAduplication + normalisation en URL absolues
+ // Contexte: administration des produits.
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
@@ -83,7 +83,7 @@ function getProductImages(product) {
 }
 
 /* ============================================================
-   ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚Â­Ãƒâ€šÃ‚Â ADMIN PRODUITS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Apple Light Premium (Table + Miniature)
+   Sous-composant formulaire.
 ============================================================ */
 export default function AdminProductsPage() {
   const { formatNumber } = useLocale();
@@ -152,7 +152,7 @@ export default function AdminProductsPage() {
         regionName ||
         (regionId ? `${t("common.regionLabel")} #${regionId}` : "");
 
-      if (countryLabel && regionLabel) return `${countryLabel} â€¢ ${regionLabel}`;
+      if (countryLabel && regionLabel) return `${countryLabel} \u00B7 ${regionLabel}`;
       return countryLabel || regionLabel || "";
     };
   }, [countriesById, regionsById, t]);
@@ -572,7 +572,7 @@ export default function AdminProductsPage() {
               />
             </div>
 
- {/* CATAAaTMAAAasAAAGORIE */}
+ {/* Contexte: administration des produits. */}
             <div className="md:col-span-2 flex flex-col gap-1">
               <label className="text-xs font-semibold text-text-secondary">
                 {t("adminProductsPage.form.categoryLabel")}
@@ -681,7 +681,7 @@ export default function AdminProductsPage() {
         )}
 
          {/* ============================================================
-            TABLEAU DES PRODUITS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Option A1 (Miniature Apple Light)
+            Contexte: administration des produits.
         ============================================================ */}
         <div className="mt-4">
           <div className="overflow-x-auto border border-border rounded-2xl shadow-sm bg-surface-card">
@@ -780,7 +780,7 @@ export default function AdminProductsPage() {
                           </span>
                         </td>
 
- {/* CATAAaTMAAAasAAAGORIE */}
+ {/* Contexte: administration des produits. */}
                         <td className="px-4 py-3 align-top">
                           <span className="text-sm text-text-primary">
                             {cat ? cat.name : t("common.dash")}
@@ -881,7 +881,6 @@ export default function AdminProductsPage() {
     </div>
   );
 }
-
 
 
 

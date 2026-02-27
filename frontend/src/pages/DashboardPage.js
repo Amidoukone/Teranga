@@ -1,7 +1,7 @@
 // frontend/src/pages/DashboardPage.jsx
 // ============================================================================
-// DashboardPage AAAasAAaA Version Premium AAaAvoluAAAe 2025
-// (Responsive + UI moderne + rAAA le normalisAAA + typographies optimisAAAes)
+// Contexte: tableau de bord global.
+// Contexte: tableau de bord global.
 // ============================================================================
 
 import { useEffect, useState } from 'react';
@@ -84,7 +84,7 @@ export default function DashboardPage() {
     adjustment: 0,
   });
 
- // Stats dAAAtaillAAAes modules
+ // Contexte: tableau de bord global.
   const [detailStats, setDetailStats] = useState({
     properties: {
       total: 0,
@@ -361,7 +361,7 @@ export default function DashboardPage() {
   }
 
   /* ---------------------------------------------------------------------- */
- /* AAaATAT CHARGEMENT */
+ /* Contexte: tableau de bord global. */
   /* ---------------------------------------------------------------------- */
   if (loading || !user) {
     return (
@@ -392,7 +392,7 @@ export default function DashboardPage() {
   const shortName =
     (firstName.split(' ')[0] || '').trim() || t("dashboard.careFallbackName");
   /* ============================================================================
-     UI PRINCIPALE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION RÃƒÆ’Ã¢â‚¬Â°ORGANISÃƒÆ’Ã¢â‚¬Â°E & PLUS LISIBLE / ÃƒÆ’Ã¢â‚¬Â°LÃƒÆ’Ã¢â‚¬Â°GANTE
+     Rendu principal.
   =========================================================================== */
   return (
     <div className="app-page-wrap">
@@ -411,7 +411,7 @@ export default function DashboardPage() {
               <h1 className="text-2xl font-extrabold leading-snug text-text-primary truncate sm:text-3xl">
                 {t("dashboard.greeting", { name: user.firstName || user.email })}
               </h1>
- {/* AAA...aAaA Message EXACT, personnalisAAA par le prAAAnom */}
+ {/* Contexte: tableau de bord global. */}
               <p className="mt-2 text-sm text-text-secondary sm:text-base">
                 <span className="font-semibold text-blue-700 dark:text-blue-300">
                   {t("dashboard.careLine", { firstName: shortName })}
@@ -456,7 +456,7 @@ export default function DashboardPage() {
         </header>
 
         {/* ------------------------------------------------------------------ */}
- {/* VUE RAPIDE AAAasAAaA STATISTIQUES GAAaANAAaARALES */}
+ {/* Contexte: tableau de bord global. */}
         {/* ------------------------------------------------------------------ */}
         <section className="space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -485,12 +485,12 @@ export default function DashboardPage() {
         </section>
 
         {/* ------------------------------------------------------------------ */}
- {/* BLOC CENTRAL AAAasAAaA FINANCES & VUE GLOBALE DES MODULES */}
+ {/* Contexte: tableau de bord global. */}
         {/* ------------------------------------------------------------------ */}
         <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 xl:items-start">
- {/* Colonne gauche : finances dAAAtaillAAAes + modules */}
+ {/* Contexte: tableau de bord global. */}
           <div className="xl:col-span-2 space-y-6">
- {/* Finances dAAAtaillAAAes */}
+ {/* Contexte: tableau de bord global. */}
             <div className="rounded-2xl border border-border/70 bg-surface-card/90 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-5">
                 <div>
@@ -548,7 +548,7 @@ export default function DashboardPage() {
                   />
                 )}
 
- {/* TAAaACHES */}
+ {/* Contexte: tableau de bord global. */}
                 <ModuleCard
                   title={t("dashboard.modules.tasks")}
                   icon={ClipboardList}
@@ -630,9 +630,9 @@ export default function DashboardPage() {
             </div>
           </div>
 
- {/* Colonne droite : synthAAA se et accAAA s rapides */}
+ {/* Contexte: tableau de bord global. */}
           <div className="space-y-6">
- {/* SynthAAA se rapide finances */}
+ {/* Contexte: tableau de bord global. */}
             <div className="flex flex-col justify-between rounded-2xl border border-border/70 bg-surface-card/90 p-5 shadow-sm">
               <div>
                 <h3 className="mb-4 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
@@ -670,7 +670,7 @@ export default function DashboardPage() {
               </p>
             </div>
 
- {/* AccAAA s rapides */}
+ {/* Contexte: tableau de bord global. */}
             <div className="rounded-2xl border border-border/70 bg-surface-card/90 p-5 text-text-primary shadow-sm">
               <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
                 <Rocket size={18} className="text-text-muted" />
@@ -804,7 +804,7 @@ export default function DashboardPage() {
 }
 
 /* ============================================================================
-   COMPOSANTS RÃƒÆ’Ã¢â‚¬Â°UTILISABLES PREMIUM
+   Affiche l etat de chargement.
 =========================================================================== */
 
 function StatCard({ label, value, highlight = false, icon: Icon, loading = false }) {

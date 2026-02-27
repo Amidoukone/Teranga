@@ -23,14 +23,12 @@ import {
 
 /*
 ============================================================================
-ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ AdminCategoriesPage ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â Apple Light Premium A1 (Multi-pays + MASTER safe)
+Module: administration des categories.
 ============================================================================
-ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Objectif:
-- Garder 100% des fonctionnalitÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©s existantes (CRUD + recherche + anti double-submit)
-- Ajouter une compatibilitÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© "master" multi-pays sans casser la prod
+Roles admin/master et perimetre d'acces.
   - master explicite: user.role === "master"
   - master implicite: user.role === "admin" + (countryId/regionId) => admin scoped
-- Ne rien imposer au backend (on reste rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©tro-compatible)
+Roles admin/master et perimetre d'acces.
 - Ne pas casser tes services (getCategories/create/update/delete)
 ============================================================================
 */
@@ -57,9 +55,9 @@ export default function AdminCategoriesPage() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [saving, setSaving] = useState(false); // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ anti double-submit
+  const [saving, setSaving] = useState(false); // Affiche l etat de chargement.
 
- // AAaTMAasAAAAaAAAAasAA...aAAAAAAaAAAAasAA Ajout: AAaTMAa AaaAAaAAasAAtat d'erreur UI (n'enlAAaTMAa AaaAAaAAasAA ve rien, remplace juste certains alert)
+ // Contexte: administration des categories.
   const [errorMsg, setErrorMsg] = useState("");
 
   const [form, setForm] = useState({
@@ -69,12 +67,12 @@ export default function AdminCategoriesPage() {
 
   const [search, setSearch] = useState("");
 
- // AAaTMAasAAAAaAAAAasAA...aAAAAAAaAAAAasAA Flags: nAAaTMAasAAAAAAAAasAA...AAasAAAAAAAAasAA...A34AasAAimpacte pas le fonctionnement, juste lAAaTMAasAAAAAAAAasAA...AAasAAAAAAAAasAA...A34AasAAUX/affichage
+ // Contexte: administration des categories.
   const isMaster = useMemo(() => computeIsMaster(user), [user]);
   const canWrite = useMemo(() => isGlobalAdminUser(user), [user]);
 
   /* ============================================================
-     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Initialisation (inchangÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© fonctionnellement)
+     Initialisation au montage.
   ============================================================ */
   useEffect(() => {
     let mounted = true;
@@ -125,7 +123,7 @@ export default function AdminCategoriesPage() {
   }
 
   /* ============================================================
-     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹ Reset form (inchangÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©)
+     Sous-composant formulaire.
   ============================================================ */
   function resetForm() {
     setForm({ name: "", description: "" });
@@ -133,7 +131,7 @@ export default function AdminCategoriesPage() {
   }
 
   /* ============================================================
-     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾ Submit ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â avec verrou 'saving' (inchangÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© + guard write)
+     Soumission protegee (anti double-clic).
   ============================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
@@ -143,7 +141,7 @@ export default function AdminCategoriesPage() {
       return;
     }
 
-    if (saving) return; // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ empÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªche double-clic si la requÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªte est en cours
+    if (saving) return; // Roles admin/master et perimetre d'acces.
 
     if (!form.name.trim()) {
       notify(t("adminCategoriesPage.errors.nameRequired"));
@@ -175,7 +173,7 @@ export default function AdminCategoriesPage() {
   }
 
   /* ============================================================
-     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¹Ã…â€œ Suppression (inchangÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© + guard write)
+     Contexte: administration des categories.
   ============================================================ */
   async function handleDelete(id) {
     if (!canWrite) {
@@ -198,7 +196,7 @@ export default function AdminCategoriesPage() {
   }
 
   /* ============================================================
-     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ Filtrage simple par nom (inchangÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©)
+     Filtrage et tri cote interface utilisateur.
   ============================================================ */
   const filteredCategories = categories.filter((c) => {
     const term = search.trim().toLowerCase();
@@ -207,7 +205,7 @@ export default function AdminCategoriesPage() {
   });
 
   /* ============================================================
-     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± UI LOADING GLOBAL (user) (inchangÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©)
+     Rendu principal.
   ============================================================ */
   if (!user) {
     return (
@@ -224,7 +222,7 @@ export default function AdminCategoriesPage() {
 // (suite) frontend/src/pages/AdminCategoriesPage.jsx
 
   /* ============================================================
-     ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± RENDER PRINCIPAL (conserve toute la structure + ajoute badges/guards)
+     Roles admin/master et perimetre d'acces.
   ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-10">
@@ -303,7 +301,7 @@ export default function AdminCategoriesPage() {
           }
         />
 
- {/* AAaTMAasAAAAaAAAAasAA...aAAAAAAaAAAAasAA Message dAAaTMAasAAAAAAAAasAA...AAasAAAAAAAAasAA...A34AasAAerreur (nouveau, sans enlever les alert existants) */}
+ {/* Contexte: administration des categories. */}
         {errorMsg && (
           <div className="app-alert app-alert-error mb-6 flex gap-2 items-start">
             <span className="mt-[2px]">!</span>
@@ -395,7 +393,7 @@ export default function AdminCategoriesPage() {
           </AdminFormPanel>
         )}
 
- {/* LISTE DES CATAAaTMAa AaaAAAAAAaAAAAasAAGORIES */}
+ {/* Contexte: administration des categories. */}
         {loading && categories.length === 0 ? (
           <p className="text-text-muted italic text-center py-8">
             {t("adminCategoriesPage.loadingCategories")}
@@ -411,7 +409,7 @@ export default function AdminCategoriesPage() {
                 key={c.id}
                 className="bg-surface-card border border-border rounded-2xl shadow-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface-main hover:shadow-md transition"
               >
- {/* Infos catAAaTMAa AaaAAaAAasAAgorie */}
+ {/* Contexte: administration des categories. */}
                 <div className="min-w-0 flex-1">
                   <h3 className="text-base sm:text-lg font-semibold text-text-primary break-words">
                     {c.name}

@@ -7,11 +7,11 @@ import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 
 /**
- * AA Aa AaAAA aA AgentServicesPage Aaa Version Apple Light Minimal Premium
+ * Contexte: services affectes a l'agent.
  * ------------------------------------------------------------
- * - Interface clean, douce, AAlAAgante
- * - Aucune logique mAAtier modifiAAe
- * - AAa Multi-pays / Master-safe : PAS de geo params cAA tAA frontend
+ * Contexte: services affectes a l'agent.
+ * Contexte: services affectes a l'agent.
+ * Contexte: services affectes a l'agent.
  *   (le backend applique le scope via req.user)
  */
 export default function AgentServicesPage() {
@@ -22,10 +22,9 @@ export default function AgentServicesPage() {
   const [actingId, setActingId] = useState(null);
 
   /* ============================================================
-     Ã°Å¸â€Â¹ Chargement des services assignÃƒÂ©s
-     Ã¢Å¡Â Ã¯Â¸Â IMPORTANT :
+     Module: gestion des services.
      - Ne PAS injecter countryId/regionId en query params
-     - Le backend filtre dÃƒÂ©jÃƒÂ  via applyGeoScope(where, req.user)
+     Module: gestion des services.
   ============================================================ */
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,7 +51,7 @@ export default function AgentServicesPage() {
   }, [load]);
 
   /* ============================================================
-     Ã°Å¸â€Â¹ Mise ÃƒÂ  jour du statut (start / complete)
+     Module: gestion des services.
   ============================================================ */
   const updateStatus = async (id, action) => {
     try {
@@ -82,7 +81,7 @@ export default function AgentServicesPage() {
   };
 
   /* ============================================================
-     Ã°Å¸â€Â¹ Formatage utilisateur
+     Contexte: gestion des services.
   ============================================================ */
   const displayUser = (u) => {
     if (!u) return t('agentServicesPage.emptyValue');
@@ -90,14 +89,14 @@ export default function AgentServicesPage() {
   };
 
   /* ============================================================
-     Ã°Å¸â€Â¹ UI Apple Light Ã¢â‚¬â€ Clean / Minimal / Premium
+     Contexte: gestion des services.
   ============================================================ */
   const emptyValue = t('agentServicesPage.emptyValue');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-10">
       <div className="max-w-5xl mx-auto bg-surface-card/95 backdrop-blur-sm shadow-2xl rounded-3xl border border-border/70 p-8">
- {/* AA AA En-tAAate */}
+ {/* Contexte: services affectes a l'agent. */}
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4 pb-4 border-b border-border/70">
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary tracking-tight">
@@ -126,7 +125,7 @@ export default function AgentServicesPage() {
           </button>
         </div>
 
- {/* AA aA Liste des services */}
+ {/* Contexte: services affectes a l'agent. */}
         {loading ? (
           <div className="text-center py-10 text-text-muted animate-pulse">
             {t('agentServicesPage.loading.list')}
@@ -173,7 +172,7 @@ export default function AgentServicesPage() {
                     )}
                   </div>
 
- {/* AA AAA A A Badge statut */}
+ {/* Contexte: services affectes a l'agent. */}
                   <div
                     className={`
                       mt-3 sm:mt-0 px-4 py-1 rounded-full text-xs font-semibold border
@@ -196,7 +195,7 @@ export default function AgentServicesPage() {
                 </div>
 
                 {/* ===================== */}
- {/* DAAtails supplAAmentaires */}
+ {/* Contexte: services affectes a l'agent. */}
                 {/* ===================== */}
                 <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-text-secondary">
                   <div>

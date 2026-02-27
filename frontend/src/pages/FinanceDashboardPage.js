@@ -129,14 +129,14 @@ export default function FinanceDashboardPage() {
     return [];
   }, [isGlobalAdmin, isMaster]);
 
- // AA a a Filtres & UI
+ // Contexte: tableau de bord financier.
   const [filters, setFilters] = useState({
     q: '',
     type: '', // '', 'revenue', 'expense', 'commission', 'adjustment'
     role: '', // '', 'client', 'agent', 'admin'
     dateFrom: '',
     dateTo: '',
-    onlyLinked: false, // uniquement celles liÃƒÂ©es ÃƒÂ  un service/tÃƒÂ¢che
+    onlyLinked: false, // Filtre: transactions rattachees.
     sort: '-createdAt', // -createdAt, createdAt, amount, -amount
   });
 
@@ -149,7 +149,7 @@ export default function FinanceDashboardPage() {
     tRef.current = t;
   }, [t]);
 
- // AA aaz Persistance de lAaaAAtat du graphique
+ // Contexte: tableau de bord financier.
   useEffect(() => {
     localStorage.setItem('teranga_finance_showChart', showChart ? '1' : '0');
   }, [showChart]);
@@ -174,7 +174,7 @@ export default function FinanceDashboardPage() {
     }
   }, []);
 
- // AA Aa Initialisation
+ // Contexte: tableau de bord financier.
   useEffect(() => {
     if (initStartedRef.current) return;
     initStartedRef.current = true;
@@ -244,7 +244,7 @@ export default function FinanceDashboardPage() {
     loadTransactionsData();
   }, [user, loadTransactionsData]);
 
- // AA AA Transactions filtrAAes cAA tAA client (non destructif)
+ // Contexte: tableau de bord financier.
   const filtered = useMemo(() => {
     let arr = [...(transactions || [])];
 
@@ -275,12 +275,12 @@ export default function FinanceDashboardPage() {
       arr = arr.filter((t) => t.type === filters.type);
     }
 
- // RAA le (utile surtout pour admin)
+ // Contexte: tableau de bord financier.
     if (filters.role && roleFilterOptions.includes(filters.role)) {
       arr = arr.filter((t) => (t.user?.role || '') === filters.role);
     }
 
- // PAAriode
+ // Contexte: tableau de bord financier.
     if (filters.dateFrom) {
       const tsFrom = new Date(filters.dateFrom).setHours(0, 0, 0, 0);
       arr = arr.filter((t) => {
@@ -297,7 +297,7 @@ export default function FinanceDashboardPage() {
       });
     }
 
- // LiAAes AA un service/tAAche
+ // Contexte: tableau de bord financier.
     if (filters.onlyLinked) {
       arr = arr.filter((t) => t.service || t.task);
     }
@@ -454,7 +454,7 @@ export default function FinanceDashboardPage() {
       .slice(0, 6);
   }, [filtered]);
 
- // Format monAAtaire local (XOF, etc.)
+ // Contexte: tableau de bord financier.
   const formatCurrency = (v) =>
     new Intl.NumberFormat(locale, {
       minimumFractionDigits: 2,
@@ -485,7 +485,7 @@ export default function FinanceDashboardPage() {
     });
   }
 
- // Export CSV simple de la vue filtrAAe
+ // Contexte: tableau de bord financier.
   function exportCSV() {
     const headers = [
       'id',
@@ -573,7 +573,7 @@ export default function FinanceDashboardPage() {
     );
   }
 
- // AA A12A DonnAAes pour le graphique (vue filtrAAe)
+ // Contexte: tableau de bord financier.
   const COLORS = ['#34C759', '#FF3B30', '#0A84FF', '#AF52DE']; // Apple-like palette
   const chartData = [
     { name: t('financeDashboardPage.chart.revenues'), value: summary.revenues },
@@ -648,12 +648,12 @@ export default function FinanceDashboardPage() {
       ];
 
   // ============================================================
- // AA aAA A A UI principale Aaa Apple Light, sobre & premium
+ // Contexte: tableau de bord financier.
   // ============================================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 py-8 sm:px-4 sm:py-10">
       <div className="max-w-6xl mx-auto bg-surface-card/90 backdrop-blur-sm shadow-[0_18px_45px_rgba(0,0,0,0.06)] rounded-3xl border border-border px-4 py-5 sm:px-8 sm:py-7">
- {/* AA AA En-tAAate responsive */}
+ {/* Contexte: tableau de bord financier. */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary tracking-tight break-words flex items-center gap-2">
@@ -702,7 +702,7 @@ export default function FinanceDashboardPage() {
           </div>
         </div>
 
- {/* AA A12aoA A A Filtres premium + responsive */}
+ {/* Contexte: tableau de bord financier. */}
         <div className="mb-6 bg-surface-main border border-border rounded-2xl px-4 py-4 sm:px-5 sm:py-5">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
             {/* Recherche texte */}
@@ -739,7 +739,7 @@ export default function FinanceDashboardPage() {
               </select>
             </div>
 
- {/* RAA le (admin global / master) */}
+ {/* Contexte: tableau de bord financier. */}
             {roleFilterOptions.length > 0 && (
               <div>
                 <label className="block text-[11px] font-medium text-text-muted mb-1 uppercase tracking-wide">
@@ -838,7 +838,7 @@ export default function FinanceDashboardPage() {
                 <span>{t('financeDashboardPage.filters.onlyLinked')}</span>
               </label>
 
- {/* Raccourcis de pAAriode */}
+ {/* Contexte: tableau de bord financier. */}
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -1008,7 +1008,7 @@ export default function FinanceDashboardPage() {
           </div>
         </div>
 
- {/* AA a a Admin : breakdown par rAA le (vue filtrAAe) */}
+ {/* Contexte: tableau de bord financier. */}
         {isAdmin && (
           <div className="mt-6">
             <h3 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
@@ -1021,7 +1021,7 @@ export default function FinanceDashboardPage() {
           </div>
         )}
 
- {/* AA A12A Snapshot d'activitAA (agent / client) */}
+ {/* Contexte: tableau de bord financier. */}
         {(isAgent || isClient) && (
           <div className="mt-6">
             <h3 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
@@ -1056,7 +1056,7 @@ export default function FinanceDashboardPage() {
           </div>
         )}
 
- {/* AA AA Top entitAAs */}
+ {/* Contexte: tableau de bord financier. */}
         <div className="mt-6">
           <h3 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
             {t('financeDashboardPage.sections.topEntities')}
@@ -1074,7 +1074,7 @@ export default function FinanceDashboardPage() {
           </div>
         </div>
 
- {/* AA aE DAAtails globaux (vue filtrAAe) */}
+ {/* Contexte: tableau de bord financier. */}
         <div className="mt-6">
           <h3 className="text-base sm:text-lg font-semibold text-text-primary mb-2">
             {t('financeDashboardPage.sections.breakdown')}
@@ -1111,7 +1111,7 @@ export default function FinanceDashboardPage() {
           </div>
         </div>
 
- {/* AA aE RAAcents */}
+ {/* Contexte: tableau de bord financier. */}
         <div className="mt-6">
           <RecentTransactions
             items={recentTransactions}
@@ -1125,7 +1125,7 @@ export default function FinanceDashboardPage() {
   );
 }
 
-/** AA aA Petite carte statistique */
+/* Contexte: tableau de bord financier. */
 function StatCard({ label, value }) {
   return (
     <div className="bg-surface-card border border-border rounded-2xl p-4 shadow-sm transition-transform transform hover:-translate-y-0.5 hover:shadow-md">
@@ -1305,8 +1305,8 @@ function RecentTransactions({ items, formatCurrency, formatDate, t }) {
 }
 
 /**
- * AA a a Composant pour lAaaadmin Aaa affiche les sous-totaux sAAparAAs par rAA le
- * (reAAoit dAAjAA la liste filtrAAe)
+ * Contexte: tableau de bord financier.
+ * Contexte: tableau de bord financier.
  */
 function RoleBreakdown({ transactions, formatCurrency }) {
   const { t } = useTranslation();

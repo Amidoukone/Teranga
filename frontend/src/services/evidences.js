@@ -42,7 +42,7 @@ function asEvidenceArray(data) {
 }
 
 /* ============================================================
-   📸 PREUVES LIÉES AUX TÂCHES
+   PREUVES LIEES AUX TACHES
    ============================================================ */
 
 /**
@@ -63,11 +63,11 @@ export async function uploadEvidences(taskId, files = [], notes = '') {
   const formData = new FormData();
   if (notes) formData.append('notes', notes);
 
- // Champ canonique: "files" (et backend tolerant via anyCompat())
+  // Champ canonique: "files" (et backend tolerant via anyCompat())
   appendFiles(formData, files, 'files');
 
   const { data } = await api.post(`/tasks/${taskId}/evidences`, formData, {
- // Ne pas definir 'Content-Type' ici ! Axios le gere.
+    // Ne pas definir 'Content-Type' ici ! Axios le gere.
     headers: {
       ...authHeader(),
     },
@@ -120,7 +120,7 @@ export async function deleteEvidence(evidenceId) {
 }
 
 /* ============================================================
-   🛒 PREUVES LIÉES AUX COMMANDES (module e-commerce)
+   PREUVES LIEES AUX COMMANDES (module e-commerce)
    ============================================================ */
 
 /**
@@ -141,7 +141,7 @@ export async function uploadOrderEvidences(orderId, files = [], notes = '') {
   const formData = new FormData();
   if (notes) formData.append('notes', notes);
 
- // Champ canonique: "files" (backend tolerant via anyCompat())
+  // Champ canonique: "files" (backend tolerant via anyCompat())
   appendFiles(formData, files, 'files');
 
   const { data } = await api.post(`/orders/${orderId}/evidences`, formData, {

@@ -20,10 +20,9 @@ const DEFAULT_FILTERS = {
 };
 
 /* ============================================================
-   ?? Page Services ï¿½ Premium Pro 2025 (responsive & production-ready)
+   Roles admin/master et perimetre d'acces.
    - Gestion des services (client + admin/master)
-   - Crï¿½ation / ï¿½dition / suppression
-   - Filtres avancï¿½s + tri
+   Roles admin/master et perimetre d'acces.
    ? Multi-pays MASTER: UI uniquement (backend applique le scope)
 ============================================================ */
 export default function ServicesPage() {
@@ -130,7 +129,7 @@ const roleVariant = useMemo(() => {
         ? res
         : res?.services || [];
 
- // Toujours recalculer les labels via i18n (i12vite les labels FR renvoyi12s par le backend)
+ // Contexte: gestion des services.
       const enriched = list.map((s) => applyLabels(s, 'service'));
 
       setServices(enriched);
@@ -225,7 +224,7 @@ const roleVariant = useMemo(() => {
 
         setUser(u);
 
-        // INFO admin global OU master (toujours role=admin, scope gINFOrINFO cINFOtINFO backend)
+        // Contexte: gestion des services.
         if (u.role === 'admin') {
           await loadClients();
         } else {
@@ -244,7 +243,7 @@ const roleVariant = useMemo(() => {
     loadServices();
   }, [user, loadServices]);
 
- // Lorsqui12un admin/master choisit un client, charger ses biens
+ // Contexte: gestion des services.
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
     if (form.clientId) {
@@ -265,7 +264,7 @@ const roleVariant = useMemo(() => {
     }
   }, [properties, form.propertyId, user]);
 
- // Persister li12i12tat di12affichage du formulaire
+ // Contexte: gestion des services.
   useEffect(() => {
     localStorage.setItem('teranga_services_showForm', showForm ? '1' : '0');
   }, [showForm]);
@@ -283,7 +282,7 @@ const roleVariant = useMemo(() => {
       // Backend applique le scope sur base de req.user
       const payload = { ...form };
 
-      // INFOINFO si12curiti12 UI: admin/master => clientId obligatoire (backend li12exige)
+      // Contexte: gestion des services.
       if (user?.role === 'admin' && !payload.clientId) {
         setNotice({
           type: 'error',
@@ -354,7 +353,7 @@ const roleVariant = useMemo(() => {
         propertyId: form.propertyId ? parseInt(form.propertyId, 10) : null,
       };
 
-      // INFO admin/master: clientId autorisi12 si renseigni12 (backend supporte)
+      // Contexte: gestion des services.
       if (user?.role === 'admin' && form.clientId) {
         payload.clientId = parseInt(form.clientId, 10);
       }
@@ -655,7 +654,7 @@ function Header({ showForm, setShowForm, loading, loadServices, totalCount, role
 }
 
 /* ============================================================
-   ?? FILTRES (grid mobile-first, labels + meilleure lisibilitï¿½)
+   Filtrage et tri cote interface utilisateur.
 ============================================================ */
 function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
   const { t } = useTranslation();
@@ -766,7 +765,7 @@ function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
 }
 
 /* ============================================================
-   ?? FORMULAIRE DE CRï¿½ATION / ï¿½DITION
+   Sous-composant formulaire.
 ============================================================ */
 function ServiceForm({
   user,
@@ -801,7 +800,7 @@ function ServiceForm({
           bg-surface-main/55 p-4 sm:p-5 rounded-2xl border border-border/70
         "
       >
- {/* ADMIN/MASTER : si12lection client */}
+ {/* Contexte: gestion des services. */}
         {isAdminOrMaster && (
           <div className="col-span-1 sm:col-span-2">
             <label className="block text-sm font-medium text-text-secondary mb-1">
@@ -829,7 +828,7 @@ function ServiceForm({
           </div>
         )}
 
- {/* Biens i12 optionnel */}
+ {/* Contexte: gestion des services. */}
         <div className="col-span-1 sm:col-span-2">
           <label className="block text-sm font-medium text-text-secondary mb-1">
             {t("services.form.propertyLabel")}
@@ -948,7 +947,7 @@ function ServiceFormFields({ form, setForm }) {
         />
       </div>
 
- {/* Ti12li12phone */}
+ {/* Contexte: gestion des services. */}
       <div className="w-full">
         <label className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.phoneLabel")}
@@ -993,7 +992,7 @@ function ServiceFormFields({ form, setForm }) {
 }
 
 /* ============================================================
-   ?? ServiceCard (Affichage ï¿½ Optimisï¿½ mobile/desktop)
+   Sous-composant formulaire.
 ============================================================ */
 function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
   const { formatDate, formatNumber } = useLocale();
@@ -1057,7 +1056,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
         border-l-4 ${statusMeta.accent}
       `}
     >
- {/* ENTi12TE (titre + statut) */}
+ {/* Contexte: gestion des services. */}
       <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:items-start">
         <div className="min-w-0 break-words">
           <div className="flex flex-wrap items-center gap-2">

@@ -1,6 +1,6 @@
 // ============================================================
 // frontend/src/pages/ProjectDetailPage.jsx
-// Version Premium Responsive AAAasAAaA MASTER SAFE AAAasAAaA PARTIE 1 / 2
+// Contexte: detail de projet.
 // ============================================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
@@ -31,7 +31,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 /* ============================================================
-   ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â FILE_BASE + Helpers
+   URLs API/fichiers (dev/prod).
 ============================================================ */
 const FILE_BASE =
   window.__TERANGA_FILE_BASE_URL || process.env.REACT_APP_FILE_BASE_URL || "";
@@ -184,8 +184,7 @@ function Btn({ variant = "primary", size = "md", children, className = "", ...pr
 }
 
 /* ============================================================
-   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¾ Auteur transaction
-   ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ IMPORTANT : sera utilisÃƒÆ’Ã‚Â© dans la table transactions (PARTIE 2)
+   Contexte: detail d un projet.
 ============================================================ */
 function getTransactionAuthorLabel(transaction, dashLabel = "-") {
   if (!transaction) return dashLabel;
@@ -208,7 +207,7 @@ function getTransactionAuthorLabel(transaction, dashLabel = "-") {
 }
 
 /* ============================================================
-   ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Formulaire transaction projet
+   Sous-composant formulaire.
 ============================================================ */
 function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
   const { t } = useTranslation();
@@ -395,7 +394,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
   );
 }
 /* ============================================================
-   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â  PAGE PRINCIPALE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ProjectDetailPage (PARTIE 2 / 2)
+   Sous-composant formulaire.
 ============================================================ */
 export default function ProjectDetailPage() {
   const { formatNumber, formatDate, formatDateTime } = useLocale();
@@ -434,14 +433,14 @@ export default function ProjectDetailPage() {
 
   const [now, setNow] = useState(Date.now());
 
- // refresh fenAAAatre client (1h)
+ // Contexte: detail de projet.
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Roles & Permissions (MASTER SAFE)
+     Roles admin/master et perimetre d'acces.
   ============================================================ */
   const role = normalizeRole(user?.role);
   const isAdmin = role === "admin";
@@ -476,7 +475,7 @@ export default function ProjectDetailPage() {
   }, [clientCanModifyOrDelete, createdAtMs, now]);
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Load project (backend gÃƒÆ’Ã‚Â¨re scope)
+     Contexte: detail d un projet.
   ============================================================ */
   const loadProject = useCallback(async (pid) => {
     if (!pid) return;
@@ -528,7 +527,7 @@ export default function ProjectDetailPage() {
   }, [id, loadProject, navigate, t]);
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¹ Update status (admin/master = admin)
+     Mise a jour du statut metier.
   ============================================================ */
   async function handleStatusChange(newStatus) {
     if (!isAdmin) return;
@@ -543,7 +542,7 @@ export default function ProjectDetailPage() {
   }
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Totaux financiers
+     Filtrage et tri cote interface utilisateur.
   ============================================================ */
   const totals = useMemo(() => {
     const rev = transactions
@@ -558,7 +557,7 @@ export default function ProjectDetailPage() {
   }, [transactions]);
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã¢â‚¬Å¡ÃƒÂ¯Ã‚Â¸Ã‚Â Phases
+     Contexte: detail d un projet.
   ============================================================ */
   async function handlePhaseSubmit(e) {
     e.preventDefault();
@@ -581,7 +580,7 @@ export default function ProjectDetailPage() {
   }
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â½ Documents
+     Contexte: detail d un projet.
   ============================================================ */
   function handleFileChange(e) {
     setFiles(Array.from(e.target.files || []));
@@ -671,7 +670,7 @@ export default function ProjectDetailPage() {
   }, [documents, docFilters, t]);
 
   /* ============================================================
-     ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¨ Rendu
+     Filtrage et tri cote interface utilisateur.
   ============================================================ */
   if (loading)
     return (
@@ -883,7 +882,7 @@ export default function ProjectDetailPage() {
                               </div>
                             </td>
 
- {/* AAA...aAaA UTILISATION = supprime lAAAasAAazAerreur eslint/ts */}
+ {/* Contexte: detail de projet. */}
                             <td className="px-3 py-2">
                               <div className="max-w-[180px] break-words line-clamp-2">
                                 {getTransactionAuthorLabel(
@@ -1052,7 +1051,7 @@ export default function ProjectDetailPage() {
               </section>
             </div>
 
- {/* ----------- RIGHT COLUMN AAAasAAaA DOCUMENTS ----------- */}
+ {/* Contexte: detail de projet. */}
             <div className="space-y-6">
               <section>
                 <h2 className="text-lg font-semibold text-text-primary mb-3">

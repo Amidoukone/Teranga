@@ -1,6 +1,6 @@
 // ============================================================================
-// TasksPage.jsx AAAasAAaA VERSION PREMIUM 2025
-// MASTER SAFE AAAasAAaA Multi-pays backend-driven AAAasAAaA PARTIE 1 / 2
+// Contexte: gestion des taches.
+// Contexte: gestion des taches.
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -28,7 +28,7 @@ const DEFAULT_FILTERS = {
 };
 
 // ============================================================================
-// AAA...A AAAA PAGE PRINCIPALE
+// Contexte: gestion des taches.
 // ============================================================================
 export default function TasksPage() {
   const { t } = useTranslation();
@@ -48,12 +48,12 @@ export default function TasksPage() {
   const navigate = useNavigate();
 
   // ========================================================================
- // AAA...A AaAAA RAAA les (MASTER SAFE)
+ // Contexte: gestion des taches.
   // =========================================================================
   const role = normalizeRole(user?.role);
   const isAdmin = role === 'admin';
   const isMaster = isMasterUser(user); // UX uniquement
-  const isAdminLike = isAdmin; // MASTER = admin cÃƒÆ’Ã‚Â´tÃƒÆ’Ã‚Â© UI
+  const isAdminLike = isAdmin; // MASTER traite comme admin cote UI.
   const canCreateTask = role === 'client' || isAdminLike;
 
   // ========================================================================
@@ -98,7 +98,7 @@ export default function TasksPage() {
   }, []);
 
   // ========================================================================
- // Chargement des tAAAches (backend applique le scope geo)
+ // Contexte: gestion des taches.
   // =========================================================================
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -182,7 +182,7 @@ export default function TasksPage() {
   }, [showForm]);
 
     // ========================================================================
- // CrAAAation d'une tAAAche (CLIENT + ADMIN/MASTER)
+ // Contexte: gestion des taches.
   // =========================================================================
   async function createTask(e) {
     e.preventDefault();
@@ -431,7 +431,7 @@ export default function TasksPage() {
 }
 
 // ============================================================================
-// AAA...A AAAA SOUS-COMPOSANTS (UI premium & responsive)
+// Contexte: gestion des taches.
 // ============================================================================
 
 function Header({ showForm, setShowForm, loadTasks, loading, total, isMaster }) {
@@ -541,7 +541,7 @@ function TaskFilters({
           ))}
         </select>
 
- {/* PrioritAAA */}
+ {/* Contexte: gestion des taches. */}
         <select
           value={filters.priority}
           onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
@@ -622,7 +622,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
           bg-surface-main p-4 sm:p-5 rounded-2xl border border-border
         "
       >
- {/* Service liAAA */}
+ {/* Contexte: gestion des taches. */}
         <div className="w-full">
           <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
             {t('tasksPage.form.serviceLabel')} <span className="app-required">*</span>
@@ -645,7 +645,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
           </select>
         </div>
 
- {/* Type de tAAAche */}
+ {/* Contexte: gestion des taches. */}
         <div className="w-full">
           <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
             {t('tasksPage.form.typeLabel')}
@@ -701,7 +701,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
           />
         </div>
 
- {/* PrioritAAA */}
+ {/* Contexte: gestion des taches. */}
         <div className="w-full">
           <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
             {t('tasksPage.form.priorityLabel')}
@@ -722,7 +722,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
           </select>
         </div>
 
- {/* Date dAAAasAAazAAAAchAAAance */}
+ {/* Contexte: gestion des taches. */}
         <div className="w-full">
           <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
             {t('tasksPage.form.dueDateLabel')}
@@ -738,7 +738,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
           />
         </div>
 
- {/* CoAAAt estimAAA */}
+ {/* Contexte: gestion des taches. */}
         <div className="w-full">
           <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
             {t('tasksPage.form.estimatedCostLabel')}
@@ -829,7 +829,7 @@ function TaskList({
             p-4 sm:p-5 hover:shadow-md transition
           "
         >
- {/* En-tAAAate : titre + statut */}
+ {/* Contexte: gestion des taches. */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
             <div className="min-w-0 break-words">
               <h3 className="text-lg sm:text-xl font-semibold text-text-primary break-words">
@@ -911,7 +911,7 @@ function TaskList({
               </select>
             )}
 
- {/* Agent AAAaA Aaa DAAAmarrer */}
+ {/* Contexte: gestion des taches. */}
             {role === 'agent' && task.status === 'created' && (
               <button
                 onClick={() => updateStatus(task.id, 'in_progress')}
@@ -924,7 +924,7 @@ function TaskList({
               </button>
             )}
 
- {/* Agent AAAaA Aaa Terminer */}
+ {/* Contexte: gestion des taches. */}
             {role === 'agent' && task.status === 'in_progress' && (
               <button
                 onClick={() => updateStatus(task.id, 'completed')}
@@ -937,7 +937,7 @@ function TaskList({
               </button>
             )}
 
- {/* Admin/master UI AAAaA Aaa Valider (backend reste la vAAAritAAA : admin only) */}
+ {/* Contexte: gestion des taches. */}
             {isAdminLike && role === 'admin' && task.status === 'completed' && (
               <button
                 onClick={() => updateStatus(task.id, 'validated')}

@@ -16,7 +16,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 // ============================================================================
-// AAA...A A...aTMAA URL BASE AAAasAAaA robuste production (inchangAAA)
+// Contexte: preuves de tache.
 // ============================================================================
 const FILE_BASE =
   (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
@@ -47,7 +47,7 @@ const DEFAULT_FILTERS = {
 };
 
 // ============================================================================
-// HELPERS (inchangAAAs)
+// Contexte: preuves de tache.
 // ============================================================================
 function inferKind(name = '', mime = '') {
   const lower = name.toLowerCase();
@@ -68,7 +68,7 @@ function isImageEvidence(ev) {
 
 function fixMojibake(value) {
   if (!value || typeof value !== 'string') return value;
-  if (!/[ÃƒÆ’Ã†â€™ÃƒÆ’Ã¢â‚¬Å¡]/.test(value)) return value;
+  if (!/(\u00C3|\u00C2|\u00E2\u20AC|\uFFFD|\u00EF\u00BF\u00BD)/.test(value)) return value;
   try {
     return decodeURIComponent(escape(value));
   } catch {
@@ -228,7 +228,7 @@ export default function TaskEvidencesPage() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
   // ========================================================================
- // AAA...A AaAAA Permissions FRONTEND (MASTER SAFE)
+ // Contexte: preuves de tache.
   // ========================================================================
   const isAdmin = user?.role === 'admin';
   const resetFilters = useCallback(() => {
@@ -586,7 +586,7 @@ export default function TaskEvidencesPage() {
                 : t('taskEvidencesPage.filters.withNotesOff')}
             </button>
 
- {/* Date de dAAAbut */}
+ {/* Contexte: preuves de tache. */}
             <input
               type="date"
               value={filters.dateFrom}
@@ -1025,7 +1025,6 @@ export default function TaskEvidencesPage() {
     </div>
   );
 }
-
 
 
 

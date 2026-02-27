@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { notify } from '../utils/notify';
 
 /* ============================================================================
-   ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â FILE_BASE + normalizePath + toAbsUrl ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PRODUCTION READY (SSR safe)
+   URLs API/fichiers (dev/prod).
 ============================================================================ */
 const RAW_API =
   (typeof window !== "undefined" &&
@@ -44,7 +44,7 @@ function toAbsUrl(path = "") {
 }
 
 /* ============================================================================
-   ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¨ STYLE INPUTS (remplace "form-input" cassÃƒÆ’Ã‚Â© + ÃƒÆ’Ã‚Â©vite window.formInputStyle)
+   Styles communs des champs.
 ============================================================================ */
 const FORM_INPUT =
   "w-full border border-border rounded-lg px-3 py-2 text-sm bg-surface-card text-text-primary " +
@@ -54,7 +54,7 @@ const TRANSACTION_TYPE_VALUES = ["revenue", "expense", "commission", "adjustment
 const SERVICE_CURRENCY_CODES = ["XOF", "XAF", "EUR", "USD", "GBP"];
 
 /* ============================================================================
-   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â€ Proof resolver (ImageKit + legacy)
+   Preuves: compat ImageKit + legacy.
    - backend peut renvoyer: proofFile.url, proofFile.path, proofFile.filePath
    - ou proofFile string, ou proofFile = { url, fileId, ... }
 ============================================================================ */
@@ -109,9 +109,9 @@ function getProofExtLabel(pf, proofHref = "", fallback = "FILE") {
 
 
 /* ============================================================================
-   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¾ Payload builder (FormData si fichier)
-   - ÃƒÆ’Ã‚Â©vite rÃƒÆ’Ã‚Â©gressions: createTransaction(payload) support JSON sans fichier
-   - et support multipart si proofFile prÃƒÆ’Ã‚Â©sent (upload.any() cÃƒÆ’Ã‚Â´tÃƒÆ’Ã‚Â© backend)
+   Contexte: transactions liees au service.
+   Payload JSON ou multipart selon les donnees.
+   Preuves: compat ImageKit + legacy.
 ============================================================================ */
 function buildCreateTransactionPayload(payload) {
   const hasFile = payload?.proofFile instanceof File;
@@ -130,7 +130,7 @@ function buildCreateTransactionPayload(payload) {
     if (v === undefined || v === null || v === "") return;
 
     if (k === "proofFile") {
- // AAA...aAaA backend tolAAA re plusieurs noms, mais on envoie "proofFile"
+ // Contexte: transactions de service.
       fd.append("proofFile", v);
       return;
     }
@@ -142,7 +142,7 @@ function buildCreateTransactionPayload(payload) {
 }
 
 /* ============================================================================
-   ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¾ PAGE : ServiceTransactionsPage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â VERSION PREMIUM STYLE A 2025
+   Composant principal.
 ============================================================================ */
 export default function ServiceTransactionsPage() {
   const { t } = useTranslation();
@@ -159,7 +159,7 @@ export default function ServiceTransactionsPage() {
   const [form, setForm] = useState({
     type: "expense",
     amount: "",
- // AAA...aAaA multi-pays : laisse backend normaliser (fallback XOF)
+ // Contexte: transactions de service.
     currency: "XOF",
     description: "",
     taskId: "",
@@ -167,14 +167,14 @@ export default function ServiceTransactionsPage() {
   });
 
   /* ============================================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Auth headers
+     En-tetes d'authentification pour API protegee.
   ============================================================================ */
   const authHeaders = useMemo(() => {
     return getAuthHeader();
   }, []);
 
   /* ============================================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ Charger transactions (robuste: array ou {transactions})
+     Charge les transactions.
   ============================================================================ */
   const fetchTransactions = useCallback(async () => {
     try {
@@ -196,7 +196,7 @@ export default function ServiceTransactionsPage() {
   }, [id]);
 
   /* ============================================================================
-     ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ Charger tÃƒÆ’Ã‚Â¢ches
+     Charge les taches associees.
   ============================================================================ */
   const fetchTasks = useCallback(async () => {
     try {
@@ -211,7 +211,7 @@ export default function ServiceTransactionsPage() {
   }, [id, authHeaders]);
 
   /* ============================================================================
-     ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ Initialisation
+     En-tetes d'authentification pour API protegee.
   ============================================================================ */
   useEffect(() => {
     let active = true;
@@ -249,10 +249,9 @@ export default function ServiceTransactionsPage() {
   }, [fetchTransactions, fetchTasks]);
 
   /* ============================================================================
-     ÃƒÂ¢Ã…Â¾Ã¢â‚¬Â¢ CrÃƒÆ’Ã‚Â©ation transaction (admin/agent/master)
-     - ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ anti double submit
-     - ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ payload FormData si fichier
-     - ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ currency inclus (multi-pays)
+     Charge les transactions.
+     Contexte: transactions liees au service.
+     Soumission protegee (anti double-clic).
   ============================================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
@@ -303,7 +302,7 @@ export default function ServiceTransactionsPage() {
   }
 
   /* ============================================================================
-     ÃƒÂ¢Ã‚ÂÃ‚Â³ Loading
+     Affiche l etat de chargement.
   ============================================================================ */
   if (loading) {
     return (
@@ -325,17 +324,17 @@ export default function ServiceTransactionsPage() {
     );
   }
 
- // AAA...aAaA master inclus (multi-pays / ACL backend)
+ // Contexte: transactions de service.
   const canCreate =
     user?.role === "admin" || user?.role === "agent" || user?.role === "master";
 
   /* ============================================================================
-     ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¨ UI principale ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â STYLE A PREMIUM
+     Roles admin/master et perimetre d'acces.
   ============================================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 py-8 sm:px-4 sm:py-10">
       <div className="max-w-5xl mx-auto bg-surface-card shadow-2xl rounded-3xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-10">
- {/* AAA...A AAAA HEADER PREMIUM */}
+ {/* Contexte: transactions de service. */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[0.7rem] uppercase tracking-wide font-semibold text-blue-600 mb-1">
@@ -359,7 +358,7 @@ export default function ServiceTransactionsPage() {
           </button>
         </div>
 
- {/* AAA...A34AaA FORMULAIRE PREMIUM (si autorisAAA) */}
+ {/* Contexte: transactions de service. */}
         {canCreate && (
           <TransactionForm
             form={form}
@@ -370,7 +369,7 @@ export default function ServiceTransactionsPage() {
           />
         )}
 
- {/* AAA...A AaAA...a HISTORIQUE PREMIUM */}
+ {/* Contexte: transactions de service. */}
         <TransactionHistory
           transactions={transactions}
           getProofHref={getProofHrefFromTransaction}
@@ -380,7 +379,7 @@ export default function ServiceTransactionsPage() {
   );
 }
 /* ============================================================================
-   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© FORMULAIRE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PREMIUM STYLE A
+   Soumission protegee (anti double-clic).
 ============================================================================ */
 function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
   const { t } = useTranslation();
@@ -446,7 +445,7 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
           </select>
         </FormGroup>
 
- {/* TAAAche liAAAe */}
+ {/* Contexte: transactions de service. */}
         <FormGroup label={t("serviceTransactions.form.taskLabel")} full>
           <select
             value={form.taskId}
@@ -517,7 +516,7 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
 }
 
 /* ============================================================================
-   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© FormGroup ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â composant premium
+   Sous-composant formulaire.
 ============================================================================ */
 function FormGroup({ label, children, full }) {
   return (
@@ -531,7 +530,7 @@ function FormGroup({ label, children, full }) {
 }
 
 /* ============================================================================
-   ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â© HISTORIQUE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Premium Style A (proofs ImageKit + legacy)
+   Preuves: compat ImageKit + legacy.
 ============================================================================ */
 function TransactionHistory({ transactions, getProofHref }) {
   const { t } = useTranslation();

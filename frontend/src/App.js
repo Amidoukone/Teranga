@@ -1,8 +1,8 @@
 // ============================================================================
 // App.js Aaa Teranga Platform (Version Premium PRO 2025)
-// Navigation AaA Routage protAAgAA AaA SEO dynamique AaA GA4 tracking
-// AAa MASTER support (admin + geo scope) sans rAAgression
-// AAa 2026: AdminOnboardingPage (Pays Aa aTM RAAgions Aa aTM MASTER)
+// Contexte: routage et guardes d'acces.
+// Contexte: routage et guardes d'acces.
+// Contexte: routage et guardes d'acces.
 // ============================================================================
 
 import { Suspense, lazy, useEffect, useState } from 'react';
@@ -13,7 +13,7 @@ import NavBar from './components/NavBar';
 import Analytics from './components/Analytics';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import ErrorBoundary from './components/ErrorBoundary';
-import SetSeo from './components/SetSeo'; // Ã¢Å“â€¦ Source unique SEO
+import SetSeo from './components/SetSeo'; // SEO centralise.
 import ToastProvider from './components/ToastProvider';
 import ConfirmProvider from './components/ConfirmProvider';
 import { GeoProvider } from './contexts/GeoContext';
@@ -22,21 +22,21 @@ import { installGlobalErrorHandlers } from './utils/errorReporter';
 import { getToken, getLocalUser, hasSessionHint, me } from './services/auth';
 import { normalizeRole } from './utils/role'; // ensure roles are canonical (admin/agent/client)
 
-// AA AA Pages (lazy loaded route-level pour reduire le bundle initial)
+// Contexte: routage et guardes d'acces.
 const HomePage = lazy(() => import('./pages/HomePage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const ProductCatalogPage = lazy(() => import('./pages/ProductCatalogPage'));
 const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
 
-// AA AA34 Pages lAAgales
+// Contexte: routage et guardes d'acces.
 const LegalPage = lazy(() => import('./pages/LegalPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const HelpSupportPage = lazy(() => import('./pages/HelpSupportPage'));
 
-// AA a A Utilisateurs connectAAs
+// Contexte: routage et guardes d'acces.
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const PropertiesPage = lazy(() => import('./pages/PropertiesPage'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
@@ -49,14 +49,14 @@ const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const ActivityCenterPage = lazy(() => import('./pages/ActivityCenterPage'));
 
-// AA AA Projets
+// Contexte: routage et guardes d'acces.
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
 const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage'));
 
-// AA a A AaAAA aTMA14 Agents
+// Contexte: routage et guardes d'acces.
 const AgentServicesPage = lazy(() => import('./pages/AgentServicesPage'));
 
-// AA a a Admin
+// Contexte: routage et guardes d'acces.
 const AdminAgentsPage = lazy(() => import('./pages/AdminAgentsPage'));
 const AdminServicesPage = lazy(() => import('./pages/AdminServicesPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
@@ -66,15 +66,15 @@ const AdminCategoriesPage = lazy(() => import('./pages/AdminCategoriesPage'));
 const AdminProductsPage = lazy(() => import('./pages/AdminProductsPage'));
 const AdminMetricsPage = lazy(() => import('./pages/AdminMetricsPage'));
 
-// AAa NEW: Onboarding Pays Aa aTM RAAgions Aa aTM MASTER
+// Contexte: routage et guardes d'acces.
 const AdminOnboardingPage = lazy(() => import('./pages/AdminOnboardingPage'));
 
-// AA AA34 Commerce
+// Contexte: routage et guardes d'acces.
 const OrdersPage = lazy(() => import('./pages/OrdersPage'));
 const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
 const OrderTransactionsPage = lazy(() => import('./pages/OrderTransactionsPage'));
 
-// AA aA Auth
+// Contexte: routage et guardes d'acces.
 
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
   .toLowerCase()
@@ -82,7 +82,7 @@ const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
 const USES_COOKIE_AUTH = AUTH_STORAGE_MODE === 'cookie';
 
 // ============================================================================
-// AA AA Scroll automatique
+// Contexte: routage et guardes d'acces.
 // ============================================================================
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -107,16 +107,16 @@ function RouteLoadingFallback() {
 }
 
 // ============================================================================
-// AA aA Helpers Auth / Role (MASTER safe)
-// - IMPORTANT: "master" n'est pas un rAA le backend.
+// Contexte: routage et guardes d'acces.
+// Contexte: routage et guardes d'acces.
 //   Un MASTER = admin + (countryId || regionId)
-// - Donc cAA tAA routes : on garde allow=['admin'] pour les AAcrans admin.
+// Contexte: routage et guardes d'acces.
 // ============================================================================
 function getSession() {
   const token = getToken();
   const user = getLocalUser();
 
- // RAAtro-compat: certains fronts stockent user mais pas token (ou inverse)
+ // Contexte: routage et guardes d'acces.
   const hasSession = USES_COOKIE_AUTH
     ? Boolean(user) || hasSessionHint()
     : Boolean(token);
@@ -132,7 +132,7 @@ function getSession() {
 }
 
 // ============================================================================
-// AA aA Auth Guards
+// Contexte: routage et guardes d'acces.
 // ============================================================================
 function RequireAuth({ children }) {
   const location = useLocation();
@@ -146,7 +146,7 @@ function RequireAuth({ children }) {
 
 /**
  * RequireRole:
- * - compare avec role normalisAA (admin/agent/client)
+ * Contexte: routage et guardes d'acces.
  * - IMPORTANT: un MASTER doit passer comme "admin"
  *   => allow=['admin'] reste correct
  */
@@ -158,7 +158,7 @@ function RequireRole({ allow = [], children }) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
- // Si allow vide => aucune restriction spAAcifique
+ // Contexte: routage et guardes d'acces.
   if (allow.length === 0) return children;
 
   const normalizedAllow = Array.isArray(allow)
@@ -215,7 +215,7 @@ function PublicOnly({ children }) {
 }
 
 // ============================================================================
-// AA AA App (Final)
+// Contexte: routage et guardes d'acces.
 // ============================================================================
 export default function App() {
   const trackingId = 'G-5JVYGYHZ7Y';
@@ -243,7 +243,7 @@ export default function App() {
               <ScrollToTop />
               <NavBar />
 
- {/* AA aE Google Analytics v4 Aaa tracking automatique */}
+ {/* Contexte: routage et guardes d'acces. */}
           <Analytics trackingId={trackingId} enabled={analyticsConsent === 'granted'} />
           <AnalyticsConsentBanner
             trackingId={trackingId}
@@ -256,7 +256,7 @@ export default function App() {
               <Suspense fallback={<RouteLoadingFallback />}>
                 <Routes>
             {/* ============================= */}
- {/* AA AA PAGES PUBLIQUES */}
+ {/* Contexte: routage et guardes d'acces. */}
             {/* ============================= */}
             <Route
               path="/"
@@ -292,7 +292,7 @@ export default function App() {
             />
 
             {/* ============================= */}
- {/* AA aaz PAGES LAaGALES */}
+ {/* Contexte: routage et guardes d'acces. */}
             {/* ============================= */}
             <Route
               path="/legal"
@@ -397,7 +397,7 @@ export default function App() {
             />
 
             {/* ============================= */}
- {/* AA a A UTILISATEURS CONNECTAaS */}
+ {/* Contexte: routage et guardes d'acces. */}
             {/* ============================= */}
             <Route
               path="/dashboard"
@@ -568,7 +568,7 @@ export default function App() {
             />
 
             {/* ============================= */}
- {/* AA AA34 COMMERCE Aaa COMMANDES */}
+ {/* Contexte: routage et guardes d'acces. */}
             {/* ============================= */}
             <Route
               path="/orders"
@@ -607,7 +607,7 @@ export default function App() {
             />
 
             {/* ============================= */}
- {/* AAaA A A AGENTS */}
+ {/* Contexte: routage et guardes d'acces. */}
             {/* ============================= */}
             <Route
               path="/agent/services"
@@ -624,10 +624,10 @@ export default function App() {
             />
 
             {/* ============================= */}
- {/* AA a a ADMIN (inclut MASTER) */}
+ {/* Contexte: routage et guardes d'acces. */}
             {/* ============================= */}
 
- {/* AAa NEW: Onboarding Pays Aa aTM RAAgions Aa aTM MASTER */}
+ {/* Contexte: routage et guardes d'acces. */}
             <Route
               path="/admin/onboarding"
               element={
@@ -755,7 +755,7 @@ export default function App() {
             />
 
             {/* ============================= */}
- {/* AA AA ROUTE PAR DAaFAUT */}
+ {/* Contexte: routage et guardes d'acces. */}
             {/* ============================= */}
             <Route
               path="*"

@@ -1,9 +1,9 @@
 // ============================================================
 // OrderTransactionsPage.jsx Aaa Teranga PRODUCTION READY (Option B2-A)
 // Clean Shop Premium + FILE_BASE + toAbsUrl + Optimisations visuelles
-// AAa MASTER + Multi-pays ready (alignAA backend 2025)
-// AAa ZAAro rAAgression : toutes fonctionnalitAAs conservAAes
-// AAa Robustesse: payloads API (array vs {transactions}), preuves ImageKit (url/path/filePath)
+// Contexte: transactions de commande.
+// Contexte: transactions de commande.
+// Contexte: transactions de commande.
 // ============================================================
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -27,9 +27,9 @@ import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 
 /* ============================================================
-   Ã°Å¸Å’Â PRODUCTION CONFIG Ã¢â‚¬â€ FILE_BASE / normalizePath / toAbsUrl()
+   Module: transactions liees aux commandes.
    Compatible Render + Netlify, aucun localhost
-   Ã¢Å“â€¦ Safe: support absolute URLs, slashes propres
+   URLs API/fichiers (dev/prod).
 ============================================================ */
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -68,8 +68,8 @@ function getUserDisplay(u) {
 }
 
 /**
- * AAa Preuve (ImageKit / legacy / file system)
- * Backend Transaction.proofFile peut AAatre:
+ * Contexte: transactions de commande.
+ * Contexte: transactions de commande.
  * - { url, fileId, originalName, mimeType, size }
  * - { path } (legacy)
  * - { filePath } (legacy)
@@ -80,7 +80,7 @@ function getProofHref(t) {
   if (!pf) return '';
 
   if (typeof pf === 'string') {
- // si c'est dAAjAA une URL absolue => ok, sinon => FILE_BASE
+ // Contexte: transactions de commande.
     return toAbsUrl(pf);
   }
 
@@ -128,7 +128,7 @@ function getProofExtLabel(pf, proofHref = '', fallback = 'FILE') {
 
 
 /* ============================================================
-   Ã¢Â­Â PAGE PRINCIPALE
+   Sous-composant formulaire.
 ============================================================ */
 export default function OrderTransactionsPage() {
   const { formatNumber, formatDate, formatTime } = useLocale();
@@ -143,7 +143,7 @@ export default function OrderTransactionsPage() {
   // Liste
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false); // chargement liste
-  const [creating, setCreating] = useState(false); // Ã°Å¸â€Â crÃƒÂ©ation transaction
+  const [creating, setCreating] = useState(false); // Etat creation (verrou formulaire).
 
   // UI
   const [showForm, setShowForm] = useState(() => {
@@ -228,7 +228,7 @@ export default function OrderTransactionsPage() {
     try {
       const data = await getOrderTransactions(id);
 
- // AAa backend peut renvoyer [] OU { transactions: [], pagination: {} }
+ // Contexte: transactions de commande.
       const arr = Array.isArray(data) ? data : data?.transactions || [];
 
       const labeled = (arr || []).map((t) => applyLabels(t, 'transaction'));
@@ -301,14 +301,13 @@ export default function OrderTransactionsPage() {
   }, [showForm]);
 
   /* ============================================================
-      Ã¢Å¾â€¢ CrÃƒÂ©ation transaction (anti double-submit)
-      Ã¢Å“â€¦ MASTER support (backend: requireRoles inclut master)
-      Ã¢Å“â€¦ Preuve: service sÃ¢â‚¬â„¢occupe du multipart; ici on garde la structure
+      Contexte: transactions liees aux commandes.
+      Soumission protegee (anti double-clic).
   ============================================================ */
   async function handleSubmit(e) {
     e.preventDefault();
 
- // Aaoa EmpAAache un double clic si une crAAation est dAAjAA en cours
+ // Contexte: transactions de commande.
     if (creating) return;
 
     if (!form.amount || isNaN(parseFloat(form.amount))) {
@@ -316,9 +315,9 @@ export default function OrderTransactionsPage() {
     }
 
     try {
-      setCreating(true); // Ã°Å¸â€Â Verrouille le bouton dÃ¢â‚¬â„¢envoi
+      setCreating(true); // Active le verrou de creation.
 
- // AAa payload stable (service gAA re proofFile = File -> FormData si besoin)
+ // Contexte: transactions de commande.
       const payload = {
         ...form,
         amount: parseFloat(form.amount),
@@ -333,7 +332,7 @@ export default function OrderTransactionsPage() {
       console.error("Erreur ajout transaction:", err);
       notify(t("orderTransactions.alerts.createError"));
     } finally {
-      setCreating(false); // Ã°Å¸â€â€œ DÃƒÂ©verrouille lÃ¢â‚¬â„¢envoi, mÃƒÂªme en cas dÃ¢â‚¬â„¢erreur
+      setCreating(false); // Desactive le verrou apres reponse API.
     }
   }
 
@@ -349,7 +348,7 @@ export default function OrderTransactionsPage() {
   }
 
   /* ============================================================
-      Ã°Å¸â€Â Filtres et tri
+      Filtrage et tri cote interface utilisateur.
   ============================================================ */
   const filteredTransactions = useMemo(() => {
     let arr = [...(transactions || [])];
@@ -410,7 +409,7 @@ export default function OrderTransactionsPage() {
   }, [transactions, filters]);
 
   /* ============================================================
-      UI Ã¢â‚¬â€ Ãƒâ€°tat initial
+      Filtrage et tri cote interface utilisateur.
   ============================================================ */
   if (!user) {
     return (
@@ -422,7 +421,7 @@ export default function OrderTransactionsPage() {
     );
   }
 
- // AAa Ajout master (sans retirer admin/agent)
+ // Contexte: transactions de commande.
   const canCreate = ['admin', 'agent', 'master'].includes(user.role);
 
   /* ============================================================
@@ -508,7 +507,7 @@ export default function OrderTransactionsPage() {
             setForm={setForm}
             handleSubmit={handleSubmit}
             loading={loading}
-            creating={creating} // Ã°Å¸â€˜Ë† ÃƒÂ©tat de crÃƒÂ©ation
+            creating={creating} // Passe l'etat de creation au formulaire.
           />
         )}
 
@@ -527,7 +526,7 @@ export default function OrderTransactionsPage() {
 }
 
 /* ============================================================
-   Ã°Å¸â€Â¹ Sous-composants Ã¢â‚¬â€ Filtres / Formulaire / Liste
+   Filtrage et tri cote interface utilisateur.
 ============================================================ */
 
 function TransactionFilters({ filters, setFilters, count }) {
@@ -560,7 +559,7 @@ function TransactionFilters({ filters, setFilters, count }) {
           ))}
         </select>
 
- {/* MAAthode paiement */}
+ {/* Contexte: transactions de commande. */}
         <input
           placeholder={t("orderTransactions.filters.paymentPlaceholder")}
           value={filters.payment}
@@ -568,7 +567,7 @@ function TransactionFilters({ filters, setFilters, count }) {
           className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
         />
 
- {/* Tri Aaa prend plus de place sur les grands AAcrans */}
+ {/* Contexte: transactions de commande. */}
         <select
           value={filters.sort}
           onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
@@ -737,11 +736,8 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
 }
 
 /* ============================================================
-   LISTE DES TRANSACTIONS Ã¢â‚¬â€ PARTIE 2 / 2
-   (ÃƒÂ  coller directement ÃƒÂ  la suite de la PARTIE 1)
-   Ã¢Å“â€¦ ZÃƒÂ©ro rÃƒÂ©gression
-   Ã¢Å“â€¦ Support ImageKit / legacy proofs
-   Ã¢Å“â€¦ UI premium + responsive
+   Contexte: transactions liees aux commandes.
+   Sous-composant liste/historique.
 ============================================================ */
 
 function TransactionList({
@@ -785,14 +781,14 @@ function TransactionList({
             tx.status
           : undefined;
 
- // AA A12A Accent visuel par type
+ // Contexte: transactions de commande.
         let accentClass = 'border-l-4 border-l-slate-200';
         if (tx.type === 'revenue') accentClass = 'border-l-4 border-l-emerald-400/80';
         else if (tx.type === 'expense') accentClass = 'border-l-4 border-l-rose-400/80';
         else if (tx.type === 'commission') accentClass = 'border-l-4 border-l-amber-400/80';
         else if (tx.type === 'adjustment') accentClass = 'border-l-4 border-l-blue-400/80';
 
- // AA AA Badge type
+ // Contexte: transactions de commande.
         let typeBadge =
           'bg-surface-main/80 text-text-secondary border border-border';
         if (tx.type === 'revenue')

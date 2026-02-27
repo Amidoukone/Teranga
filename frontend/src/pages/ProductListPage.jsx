@@ -1,13 +1,13 @@
 // frontend/src/pages/ProductListPage.jsx
 /* eslint-disable jsx-a11y/img-redundant-alt */
 /**
- * AA aoAA A A ProductListPage Aaa Teranga PRODUCTION READY (Style A 2025)
+ * Contexte: liste des produits.
  * ----------------------------------------------------------------
  * - Liste des produits avec design premium & responsive
  * - Compatible multi-images (imageUrl + allImageUrls + coverImage + gallery)
  * - Utilise FILE_BASE + toAbsUrl pour les environnements de prod
- * - Compatible rAAponses API: array direct OU { products, pagination }
- * - Aucune rAAgression de logique, uniquement alignement + robustesse
+ * Contexte: liste des produits.
+ * Contexte: liste des produits.
  * ----------------------------------------------------------------
  */
 
@@ -19,8 +19,7 @@ import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
 
 /* =========================================================
-   Ã°Å¸Å’Â FILE_BASE + normalizePath + toAbsUrl
-   (mÃƒÂªme logique que ProductCatalogPage, harmonisation)
+   URLs API/fichiers (dev/prod).
 ========================================================= */
 const FILE_BASE =
   (typeof window !== "undefined" &&
@@ -48,7 +47,7 @@ function toAbsUrl(path = "") {
 }
 
 /* =========================================================
-   Ã°Å¸â€“Â¼ Helpers images (robuste, rÃƒÂ©tro-compatible)
+   Module: liste des produits.
    - backend withLabels => imageUrl, allImageUrls, coverImage, gallery
 ========================================================= */
 function getProductImages(product) {
@@ -83,7 +82,7 @@ function getProductImages(product) {
     });
   }
 
- // DAAduplication + normalisation en URL absolues
+ // Contexte: liste des produits.
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
@@ -91,7 +90,7 @@ function getProductImages(product) {
 }
 
 /* =========================================================
-   Ã°Å¸â€ºÂÃ¯Â¸Â Page Liste des produits
+   Sous-composant formulaire.
 ========================================================= */
 export default function ProductListPage() {
   const { formatNumber } = useLocale();
@@ -105,7 +104,7 @@ export default function ProductListPage() {
       try {
         setLoading(true);
 
- // AAa compat: getProducts peut renvoyer:
+ // Contexte: liste des produits.
         // - un array directement
         // - ou { products, pagination }
         const res = await getProducts();
@@ -127,7 +126,7 @@ export default function ProductListPage() {
   }, [t]);
 
   /* =========================================================
-     Ã°Å¸Å’â‚¬ Ãƒâ€°tats de chargement / erreur
+     Affiche l etat de chargement.
   ========================================================= */
   if (loading) {
     return (
@@ -176,7 +175,7 @@ export default function ProductListPage() {
   }
 
   /* =========================================================
-     Ã°Å¸Â§Â± Affichage des produits Ã¢â‚¬â€ Design premium
+     Rendu principal.
   ========================================================= */
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 sm:px-6 py-10">
@@ -259,7 +258,7 @@ export default function ProductListPage() {
 
                   {/* Contenu carte */}
                   <div className="flex-1 flex flex-col p-4">
- {/* Titre + rAAf */}
+ {/* Contexte: liste des produits. */}
                     <div className="flex items-start justify-between gap-2">
                       <h2 className="text-base font-semibold text-text-primary line-clamp-2">
                         {p.name || t("common.dash")}

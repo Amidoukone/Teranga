@@ -37,7 +37,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 /* ============================================================
-   Ã°Å¸Å’Â FILE_BASE + normalizePath + toAbsUrl (multi-pays / master)
+   URLs API/fichiers (dev/prod).
 ============================================================ */
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -58,12 +58,12 @@ function toAbsUrl(path = '') {
   const norm = normalizePath(path);
   if (!norm) return '';
   if (/^https?:\/\//i.test(norm)) return norm;
- // FILE_BASE dAAjAA sans trailing slash dans la plupart des cas
+ // Contexte: detail de commande.
   return FILE_BASE.replace(/\/$/, '') + norm;
 }
 
 /* ============================================================
-   Ã°Å¸Â§Â­ Timeline des statuts (visuelle + animÃƒÂ©e)
+   Module: detail d une commande.
 ============================================================ */
 const ORDER_STEP_DEFS = [
   { key: 'created', labelKey: 'orderDetail.timeline.created', icon: 'C' },
@@ -87,7 +87,7 @@ function mapStatusToStepKey(status = '') {
 }
 
 /* ============================================================
-   Ã¢Â­Â Page DÃƒÂ©tail Commande
+   Sous-composant formulaire.
 ============================================================ */
 export default function OrderDetailPage() {
   const { formatNumber, formatDateTime } = useLocale();
@@ -171,7 +171,7 @@ export default function OrderDetailPage() {
   );
 
   /* ============================================================
-     Ã°Å¸â€˜Â¤ Affichage client
+     Filtrage et tri cote interface utilisateur.
   ============================================================ */
   const customerDisplay = useMemo(() => {
     if (!order?.customer) return "-";
@@ -184,7 +184,7 @@ export default function OrderDetailPage() {
   }, [order]);
 
   /* ============================================================
-     Ã°Å¸â€˜Â¤ Affichage uploader (preuves)
+     Sous-composant formulaire.
   ============================================================ */
   function formatUploader(u) {
     if (!u) return "-";
@@ -194,7 +194,7 @@ export default function OrderDetailPage() {
   }
 
   /* ============================================================
-     Ã°Å¸â€Â Helpers preuves
+     Rendu principal.
   ============================================================ */
   function isEvidenceImage(ev) {
     return (ev?.mimeType || '').toLowerCase().startsWith('image/');
@@ -257,7 +257,7 @@ export default function OrderDetailPage() {
     return (evidences || []).filter((ev) => inferEvidenceKind(ev) !== 'image');
   }, [evidences]);
 
- // AAa UTILISAa dans la liste des preuves (vignettes)
+ // Contexte: detail de commande.
   function openEvidenceLightbox(fromId) {
     const idx = imageEvidences.findIndex((e) => e.id === fromId);
     if (idx >= 0) setEvidenceLightbox({ open: true, index: idx });
@@ -284,7 +284,7 @@ export default function OrderDetailPage() {
   }
 
   /* ============================================================
-     Ã°Å¸â€â€ž Initialisation sÃƒÂ©curisÃƒÂ©e (master / multi-pays)
+     Initialisation au montage.
   ============================================================ */
   const init = useCallback(async () => {
     try {
@@ -368,7 +368,7 @@ export default function OrderDetailPage() {
   }, [id]);
 
   /* ============================================================
-     Ã°Å¸â€â€ž Mise ÃƒÂ  jour statut commande
+     Contexte: detail d une commande.
   ============================================================ */
   async function handleOrderUpdate(patch) {
     try {
@@ -391,7 +391,7 @@ export default function OrderDetailPage() {
   }
 
   /* ============================================================
-     Ã°Å¸Â§Â© Gestion articles
+     Contexte: detail d une commande.
   ============================================================ */
   async function handleAddItem(e) {
     e.preventDefault();
@@ -445,7 +445,7 @@ export default function OrderDetailPage() {
   }
 
   /* ============================================================
-     Ã°Å¸â€œÅ½ Gestion preuves
+     Contexte: detail d une commande.
   ============================================================ */
   function onFilesChange(ev) {
     const selected = Array.from(ev.target.files || []);
@@ -491,7 +491,7 @@ export default function OrderDetailPage() {
     }
   }
   /* ============================================================
-     Ã¢ÂÂ³ Loading + commande introuvable
+     Affiche l etat de chargement.
   ============================================================ */
   if (!user || loading) {
     return (
@@ -511,7 +511,7 @@ export default function OrderDetailPage() {
     );
   }
 
- // AAa Multi-pays / master: on autorise admin + master aux actions admin
+ // Contexte: detail de commande.
   const canAdmin = user.role === 'admin' || user.role === 'master';
   const canUploadProofs = ['admin', 'agent', 'client', 'master'].includes(user.role);
 
@@ -533,7 +533,7 @@ export default function OrderDetailPage() {
   const activeStepIndex = ORDER_STEP_DEFS.findIndex((s) => s.key === statusStepKey);
 
   /* ============================================================
-     Ã¢Â­Â UI PRINCIPALE
+     Rendu principal.
   ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-10">
@@ -1158,7 +1158,7 @@ export default function OrderDetailPage() {
       </div>
 
       {/* ============================================================
-          Ã°Å¸â€™Â¡ LIGHTBOX PLEIN Ãƒâ€°CRAN POUR PREUVES (IMAGES)
+          Lightbox medias plein ecran.
       ============================================================ */}
       {evidenceLightbox.open && imageEvidences.length > 0 && (
         <div

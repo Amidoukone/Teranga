@@ -21,7 +21,7 @@ import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 
 /* ============================================================
-   ?? CONFIG UI � DESIGN SYSTEM PREMIUM (OPTION B)
+   Module: gestion des projets.
 ============================================================ */
 const CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 const PROJECT_TYPE_VALUES = ['immobilier', 'agricole', 'commerce', 'autre'];
@@ -43,7 +43,7 @@ const STATUS_STYLES = {
 
 /* ============================================================
    ? Permissions
-   ? MASTER = admin c�t� backend -> normalizeRole garantit robustesse
+   Module: gestion des projets.
 ============================================================ */
 function isWithinOneHour(date) {
   if (!date) return false;
@@ -75,7 +75,7 @@ function canCreateProjectTransaction(project, user) {
 }
 
 /* ============================================================
-   ? Premium Button � Option B
+   Module: gestion des projets.
 ============================================================ */
 function Btn({
   children,
@@ -137,7 +137,7 @@ function StatusBadge({ value, label }) {
 }
 
 /* ============================================================
-   Field Row � responsive premium
+   Contexte: gestion des projets.
 ============================================================ */
 function FieldRow({ children }) {
   return <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{children}</div>;
@@ -339,7 +339,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
 }
 
 /* ============================================================
-   ?? PAGE PRINCIPALE � D�but
+   Sous-composant formulaire.
 ============================================================ */
 export default function ProjectsPage() {
   const { formatDateTime, formatNumber } = useLocale();
@@ -412,7 +412,7 @@ export default function ProjectsPage() {
   );
 
   /* ============================================================
-     ?? Chargement des donn�es (clients, agents, projets)
+     Contexte: gestion des projets.
   ============================================================= */
   const loadClients = useCallback(async () => {
     try {
@@ -457,7 +457,7 @@ export default function ProjectsPage() {
   }, [t]);
   /* ============================================================
      ?? Initialisation
-     - MASTER = admin backend + scope ? ici trait� comme admin
+     Initialisation au montage.
   ============================================================= */
   useEffect(() => {
     if (initStartedRef.current) return;

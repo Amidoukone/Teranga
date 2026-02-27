@@ -18,8 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 
 /* ============================================================
-   Ã°Å¸Å’Â PRODUCTION CONFIG Ã¢â‚¬â€ FILE_BASE / toAbsUrl()
-   Compatible Render + Netlify, aucun localhost forcÃƒÂ©
+   URLs API/fichiers (dev/prod).
 ============================================================ */
 const FILE_BASE =
   (typeof window !== 'undefined' &&
@@ -47,7 +46,7 @@ function toAbsUrl(path = '') {
 }
 
 /* ============================================================
-   Ã°Å¸â€“Â¼ Helper : rÃƒÂ©cupÃƒÂ©rer toutes les images dÃ¢â‚¬â„¢un produit
+   Module: catalogue des produits.
    (allImageUrls, gallery, coverImage, imageUrl)
 ============================================================ */
 function getImagesForProduct(p) {
@@ -79,7 +78,7 @@ function getImagesForProduct(p) {
     urls.unshift(p.imageUrl);
   }
 
- // DAAduplication + normalisation en URL absolues
+ // Contexte: catalogue des produits.
   const seen = new Set();
   return urls
     .map((u) => toAbsUrl(u))
@@ -87,7 +86,7 @@ function getImagesForProduct(p) {
 }
 
 /* ============================================================
-   Ã°Å¸â€™Â° Helper : affichage PRO du prix (montant + devise)
+   Sous-composant formulaire.
    Exemple : "12 500 Franc CFA (XOF)"
 ============================================================ */
 function formatProductPrice(amount, currency = 'XOF', locale = 'fr-FR') {
@@ -105,7 +104,7 @@ function formatProductPrice(amount, currency = 'XOF', locale = 'fr-FR') {
 }
 
 /* ============================================================
-   Ã¢Â­Â PAGE CATALOGUE PRODUITS (CLEAN SHOP PREMIUM Ã¢â‚¬â€ STYLE A)
+   Composant principal.
 ============================================================ */
 export default function ProductCatalogPage() {
   const { locale } = useLocale();
@@ -236,7 +235,7 @@ export default function ProductCatalogPage() {
   }, [search, categoryFilter, priceMin, priceMax, sort, page, pageSize, t]);
 
   /* ============================================================
-     Ã°Å¸â€“Â¼Ã¯Â¸Â Lightbox controls (utilisÃƒÂ©s => pas de warnings)
+     Contexte: catalogue des produits.
   ============================================================ */
   function openPreview(product, startIndex = 0) {
     const imgs = getImagesForProduct(product);
@@ -273,7 +272,7 @@ export default function ProductCatalogPage() {
   }
 
   /* ============================================================
-     Ã°Å¸â€ºâ€™ CrÃƒÂ©ation d'une commande rapide (logique existante conservÃƒÂ©e)
+     Contexte: catalogue des produits.
   ============================================================ */
   function handleOrder(product) {
     if (!user) {
@@ -302,7 +301,7 @@ export default function ProductCatalogPage() {
       return;
     }
 
- // Si stock connu et la demande dAApasse le stock Aa aTM message personnalisAA
+ // Contexte: catalogue des produits.
     if (typeof selectedProduct.stock === 'number') {
       if (selectedProduct.stock <= 0) {
         notify(t('productCatalogPage.alerts.outOfStock'));
@@ -360,7 +359,7 @@ export default function ProductCatalogPage() {
   }
 
   /* ============================================================
-     Ã°Å¸Â§Â® CatÃƒÂ©gories disponibles (dÃƒÂ©rivÃƒÂ©es)
+     Filtrage et tri cote interface utilisateur.
   ============================================================ */
   const availableCategories = useMemo(() => {
     if (Array.isArray(categories) && categories.length > 0) {
@@ -484,7 +483,7 @@ export default function ProductCatalogPage() {
 
         {/* ==== BARRE DE FILTRES ==== */}
         <div className="bg-surface-main/80 backdrop-blur-sm border border-border rounded-2xl shadow-sm px-4 py-4 sm:px-5 sm:py-4 space-y-3">
- {/* Ligne 1 : recherche + catAAgorie */}
+ {/* Contexte: catalogue des produits. */}
           <div className="grid gap-3 md:grid-cols-4 items-end">
             {/* Recherche */}
             <div className="md:col-span-2">
@@ -503,7 +502,7 @@ export default function ProductCatalogPage() {
               </div>
             </div>
 
- {/* CatAAgorie */}
+ {/* Contexte: catalogue des produits. */}
             <div>
               <label className="block text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-1">
                 {t('productCatalogPage.filters.categoryLabel')}
@@ -739,7 +738,7 @@ export default function ProductCatalogPage() {
         )}
 
         {/* ============================================================
-            POPUP COMMANDE Ã¢â‚¬â€ UX PREMIUM
+            Contexte: catalogue des produits.
         ============================================================ */}
         {creating && selectedProduct && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 px-4">
@@ -801,7 +800,7 @@ export default function ProductCatalogPage() {
         )}
 
         {/* ============================================================
-            LIGHTBOX PLEIN Ãƒâ€°CRAN Ã¢â‚¬â€ IMAGES UNIQUEMENT
+            Contexte: catalogue des produits.
         ============================================================ */}
         {previewProduct && (() => {
           const images = getImagesForProduct(previewProduct);

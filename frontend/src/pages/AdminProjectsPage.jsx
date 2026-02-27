@@ -1,7 +1,7 @@
 // frontend/src/pages/AdminProjectsPage.jsx
 // ============================================================================
-// AdminProjectsPage.jsx AAAAAAaAAAAAAasAAA VERSION PRODUCTION READY (Apple Light PRO)
-// Admin GLOBAL + MASTER (admin + geo scope) AAAAAAaAAAAAAasAAA ZAAaTMAAAasAAARO RAAaTMAAAasAAAGRESSION
+// Contexte: administration des projets.
+// Contexte: administration des projets.
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -30,7 +30,7 @@ import {
 } from '../components/admin/AdminFormUi';
 
 /* ============================================================
-   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â§ Typologies et statuts
+   Roles admin/master et perimetre d'acces.
 ============================================================ */
 const CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 const PROJECT_TYPE_VALUES = ['immobilier', 'agricole', 'commerce', 'autre'];
@@ -43,7 +43,7 @@ const PROJECT_STATUS_VALUES = [
 ];
 
 /* ============================================================
-   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢Ãƒâ€šÃ‚Â° Formulaire transaction projet (inchangÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©)
+   Sous-composant formulaire.
 ============================================================ */
 function ProjectTransactionForm({ project, onClose, onSuccess }) {
   const { t } = useTranslation();
@@ -148,7 +148,7 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
           </select>
         </AdminField>
 
- {/* MAAaTMAasAAthode paiement */}
+ {/* Contexte: administration des projets. */}
         <AdminField label={t('projects.transaction.paymentMethodLabelOptional')}>
           <input
             value={form.paymentMethod}
@@ -197,9 +197,9 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
 }
 
 /* ============================================================
-   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Â  Page principale : Administration des projets (Admin only)
+   Roles admin/master et perimetre d'acces.
    - ADMIN GLOBAL et MASTER (admin + scope)
-   - AUCUN filtre geo cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© frontend : le backend est source de vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ritÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©
+   Sous-composant formulaire.
 ============================================================ */
 export default function AdminProjectsPage() {
   const { formatNumber, formatDate } = useLocale();
@@ -212,7 +212,7 @@ export default function AdminProjectsPage() {
   const [loading, setLoading] = useState(false);
   const [openTrxProjectId, setOpenTrxProjectId] = useState(null);
 
- // AAAAaAA AAAasAAAAaAA12 Infos session (me)
+ // Contexte: administration des projets.
   const [currentUser, setCurrentUser] = useState(null);
 
   // Filtres locaux
@@ -222,7 +222,7 @@ export default function AdminProjectsPage() {
     type: 'all',
   });
 
- // MASTER = admin + scope geo (dAAaTMAasAAduction frontend)
+ // Contexte: administration des projets.
   const isMaster = useMemo(() => isMasterUser(currentUser), [currentUser]);
   const projectTypeOptions = useMemo(
     () =>
@@ -249,7 +249,7 @@ export default function AdminProjectsPage() {
   );
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“Ãƒâ€šÃ‚Â® VÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rification admin via /auth/me
+     Initialisation au montage.
      - MASTER passe comme admin (role backend = 'admin')
 ============================================================ */
   useEffect(() => {
@@ -290,8 +290,8 @@ export default function AdminProjectsPage() {
   }, [navigate]);
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“Ãƒâ€šÃ‚Â¥ Chargement des agents (admin)
-     - Aucune rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©gression: mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªme endpoint, mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªme param role=agent
+     Roles admin/master et perimetre d'acces.
+     Charge les agents assignables.
      - IMPORTANT: le backend applique le scope automatiquement si MASTER
 ============================================================ */
   const loadAgents = useCallback(async () => {
@@ -307,8 +307,7 @@ export default function AdminProjectsPage() {
   }, []);
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â Chargement des projets
-     - Aucun filtre geo ajoutÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© (backend applique scope)
+     Charge la liste des projets.
 ============================================================ */
   const loadProjects = useCallback(async () => {
     setLoading(true);
@@ -324,7 +323,7 @@ export default function AdminProjectsPage() {
   }, []);
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â Initialisation quand on sait qu'on est admin
+     Initialisation au montage.
 ============================================================ */
   useEffect(() => {
     if (!isAdmin) return;
@@ -333,9 +332,8 @@ export default function AdminProjectsPage() {
   }, [isAdmin, loadProjects, loadAgents]);
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“Ãƒâ€šÃ‚Â¤ Assignation agent au projet
-     - Pas de logique "master" en rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´le
-     - Backend gÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨re le scope (si MASTER, la liste d'agents est dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  scope)
+     Charge la liste des projets.
+     Assignation d un agent a l entite cible.
 ============================================================ */
   async function handleAssign(projectId, agentId) {
     try {
@@ -350,9 +348,9 @@ export default function AdminProjectsPage() {
   }
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Changement de statut
+     Payload JSON ou multipart selon les donnees.
      - Aucun changement de payload destructif
-     - NOTE: on conserve exactement les champs utilisÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©s en prod
+     Payload JSON ou multipart selon les donnees.
 ============================================================ */
   async function handleStatusChange(projectId, newStatus) {
     try {
@@ -373,7 +371,7 @@ export default function AdminProjectsPage() {
       };
 
       // IMPORTANT: pas d'ajout countryId/regionId ici
- // Le backend applique le scope et gAAaTMAasAA re la sAAaTMAasAAcuritAAaTMAasAA.
+ // Contexte: administration des projets.
       await updateProject(projectId, payload);
 
       await loadProjects();
@@ -385,7 +383,7 @@ export default function AdminProjectsPage() {
   }
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Â® Application des filtres (locaux, sans geo)
+     Filtrage et tri cote interface utilisateur.
 ============================================================ */
   const filteredProjects = useMemo(() => {
     let arr = [...projects];
@@ -417,7 +415,7 @@ export default function AdminProjectsPage() {
       arr = arr.filter((p) => p.type === filters.type);
     }
 
- // Tri du plus rAAaTMAasAAcent au plus ancien
+ // Contexte: administration des projets.
     arr.sort((a, b) => {
       const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
       const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -428,7 +426,7 @@ export default function AdminProjectsPage() {
   }, [projects, filters]);
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â³ ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°cran de chargement avant de savoir si admin
+     Filtrage et tri cote interface utilisateur.
 ============================================================ */
   if (isAdmin === null) {
     return (
@@ -441,7 +439,7 @@ export default function AdminProjectsPage() {
   }
 
   /* ============================================================
-     ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¨ Rendu principal ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Apple Light Premium
+     Rendu principal.
 ============================================================ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-blue-50 px-3 sm:px-4 py-8 sm:py-10">
@@ -471,7 +469,7 @@ export default function AdminProjectsPage() {
                           })}`
                         : ''}
                       {currentUser?.regionId != null
-                        ? ` Ã‚Â· ${t('adminProjects.scope.region', {
+                        ? ` \u00B7 ${t('adminProjects.scope.region', {
                             id: currentUser.regionId,
                           })}`
                         : ''}
@@ -706,7 +704,7 @@ export default function AdminProjectsPage() {
                             ))}
                           </select>
 
- {/* Transaction liAAaTMAasAAe */}
+ {/* Contexte: administration des projets. */}
                           <button
                             onClick={() =>
                               setOpenTrxProjectId(trxOpen ? null : p.id)
@@ -720,7 +718,7 @@ export default function AdminProjectsPage() {
                               : t('adminProjects.actions.addTransaction')}
                           </button>
 
- {/* Formulaire transaction liAAaTMAasAAe */}
+ {/* Contexte: administration des projets. */}
                           {trxOpen && (
                             <ProjectTransactionForm
                               project={p}
@@ -741,7 +739,6 @@ export default function AdminProjectsPage() {
     </div>
   );
 }
-
 
 
 
