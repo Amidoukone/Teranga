@@ -520,35 +520,43 @@ export default function NotificationsPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    onClick={() => navigate(resolveLink(n))}
-                    className="app-btn-primary"
-                  >
-                    {t("notifications.view")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteOne(n.id)}
-                    disabled={Boolean(deletingIds[n.id])}
-                    className="app-btn-danger"
-                  >
-                    {deletingIds[n.id]
-                      ? t("common.loading", { defaultValue: "Chargement..." })
-                      : t("notifications.delete")}
-                  </button>
+                <div className="flex w-full flex-col gap-2 sm:w-auto">
+                  <div className="flex w-full items-center justify-end sm:w-auto sm:justify-end">
+                    <button
+                      onClick={() => navigate(resolveLink(n))}
+                      className="app-btn-primary"
+                    >
+                      {t("notifications.view")}
+                    </button>
+                  </div>
+
                   {n.status !== "read" && (
+                    <div className="flex justify-center sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleMarkRead(n.id)}
+                        disabled={Boolean(markingOneIds[n.id])}
+                        className="app-btn-soft"
+                      >
+                        {markingOneIds[n.id]
+                          ? t("common.loading", { defaultValue: "Chargement..." })
+                          : t("notifications.markRead")}
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex justify-center sm:justify-end">
                     <button
                       type="button"
-                      onClick={() => handleMarkRead(n.id)}
-                      disabled={Boolean(markingOneIds[n.id])}
-                      className="app-btn-soft"
+                      onClick={() => handleDeleteOne(n.id)}
+                      disabled={Boolean(deletingIds[n.id])}
+                      className="app-btn-danger"
                     >
-                      {markingOneIds[n.id]
+                      {deletingIds[n.id]
                         ? t("common.loading", { defaultValue: "Chargement..." })
-                        : t("notifications.markRead")}
+                        : t("notifications.delete")}
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
             );

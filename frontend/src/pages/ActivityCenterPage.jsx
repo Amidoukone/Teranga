@@ -542,8 +542,9 @@ export default function ActivityCenterPage() {
                     </div>
                   </div>
 
-                  <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
-                    <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-border/70 bg-surface-main/60 px-3 py-2 sm:flex-none">
+                  <div className="flex w-full flex-col gap-2 sm:w-auto">
+                    <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
+                      <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-border/70 bg-surface-main/60 px-3 py-2 sm:flex-none">
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 via-sky-500 to-emerald-500 text-white text-xs font-bold flex items-center justify-center shadow">
                         {actorInitials}
                       </div>
@@ -557,28 +558,33 @@ export default function ActivityCenterPage() {
                         {actorRoleLabel ? (
                           <span
                             className={[
-                              "mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[0.55rem] font-semibold uppercase tracking-wide",
+                              "mt-1 inline-flex max-w-[130px] items-center truncate rounded-full border px-2 py-0.5 text-[0.55rem] font-semibold",
                               roleBadgeClass(actorRole),
                             ].join(" ")}
+                            title={actorRoleLabel}
                           >
                             {actorRoleLabel}
                           </span>
                         ) : null}
                       </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => navigate(resolveLink(n))}
+                          disabled={isDateRangeInvalid}
+                          className={[
+                            "rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm",
+                            isDateRangeInvalid
+                              ? "cursor-not-allowed bg-surface-main/80 text-text-muted"
+                              : "app-btn-primary",
+                          ].join(" ")}
+                        >
+                          {t("activities.view")}
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => navigate(resolveLink(n))}
-                        disabled={isDateRangeInvalid}
-                        className={[
-                          "rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm",
-                          isDateRangeInvalid
-                            ? "cursor-not-allowed bg-surface-main/80 text-text-muted"
-                            : "app-btn-primary",
-                        ].join(" ")}
-                      >
-                        {t("activities.view")}
-                      </button>
+
+                    <div className="flex justify-center sm:justify-end">
                       <button
                         type="button"
                         onClick={() => handleDeleteOne(n.id)}
