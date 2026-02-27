@@ -27,8 +27,15 @@ if (sequelize?.options) {
 process.on('unhandledRejection', (reason) => {
   logger.error({ err: reason }, 'process.unhandled_rejection');
 });
+let fatalShutdownScheduled = false;
+function scheduleFatalShutdown(exitCode = 1) {
+  if (fatalShutdownScheduled) return;
+  fatalShutdownScheduled = true;
+  setTimeout(() => process.exit(exitCode), 1000).unref();
+}
 process.on('uncaughtException', (err) => {
   logger.error({ err }, 'process.uncaught_exception');
+  scheduleFatalShutdown(1);
 });
 
 /* ======================================================

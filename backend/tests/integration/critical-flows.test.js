@@ -47,6 +47,11 @@ describe('P2-T1 critical integration flows', () => {
     expect(res.status).toBe(401);
   });
 
+  test('metrics endpoint requires authentication', async () => {
+    const res = await request(app).get('/api/metrics');
+    expect(res.status).toBe(401);
+  });
+
   test('recover-with-code validates required fields', async () => {
     const res = await request(app)
       .post('/api/auth/recover-with-code')

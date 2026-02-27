@@ -8,6 +8,8 @@ const fs = require('fs');
 const logger = require('./utils/logger');
 const requestContext = require('./middleware/requestContext.middleware');
 const securityHeaders = require('./middleware/securityHeaders.middleware');
+const auth = require('./middleware/auth.middleware');
+const { requireRoles } = require('./middleware/roles.middleware');
 const {
   metricsMiddleware,
   metricsHandler,
@@ -222,7 +224,7 @@ const readinessHandler = (req, res) => {
 
 apiRouter.get('/ready', readinessHandler);
 apiRouter.get('/readiness', readinessHandler);
-apiRouter.get('/metrics', metricsHandler);
+apiRouter.get('/metrics', auth, requireRoles('admin'), metricsHandler);
 apiRouter.post('/observability/frontend-errors', frontendErrorHandler);
 apiRouter.get('/openapi.json', (_req, res) => {
   if (!fs.existsSync(openapiContractPath)) {
