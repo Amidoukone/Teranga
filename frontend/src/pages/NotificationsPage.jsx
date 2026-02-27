@@ -521,12 +521,23 @@ export default function NotificationsPage() {
                 </div>
 
                 <div className="flex w-full flex-col gap-2 sm:w-auto">
-                  <div className="flex w-full items-center justify-end sm:w-auto sm:justify-end">
+                  <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-end">
                     <button
                       onClick={() => navigate(resolveLink(n))}
                       className="app-btn-primary"
                     >
                       {t("notifications.view")}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOne(n.id)}
+                      disabled={Boolean(deletingIds[n.id])}
+                      className="app-btn-danger"
+                    >
+                      {deletingIds[n.id]
+                        ? t("common.loading", { defaultValue: "Chargement..." })
+                        : t("notifications.delete")}
                     </button>
                   </div>
 
@@ -545,18 +556,6 @@ export default function NotificationsPage() {
                     </div>
                   )}
 
-                  <div className="flex justify-center sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteOne(n.id)}
-                      disabled={Boolean(deletingIds[n.id])}
-                      className="app-btn-danger"
-                    >
-                      {deletingIds[n.id]
-                        ? t("common.loading", { defaultValue: "Chargement..." })
-                        : t("notifications.delete")}
-                    </button>
-                  </div>
                 </div>
               </div>
             );
