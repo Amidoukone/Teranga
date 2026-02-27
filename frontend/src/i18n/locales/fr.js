@@ -356,11 +356,13 @@ const fr = {
       address: "Adresse",
       budget: "Budget",
       agent: "Agent",
+      creator: "Créé par",
       createdAt: "Créé le",
       noDescription: "Aucune description.",
       noProperty: "Aucun (service indépendant)",
       unassigned: "Non assigné",
       budgetUnknown: "Non précisé",
+      creatorUnknown: "Inconnu",
       contactFallback: "N/A",
     },
     alerts: {

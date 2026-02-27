@@ -16,6 +16,7 @@ const {
   TASK_STATUSES,
   SERVICE_TYPES,
   SERVICE_STATUSES,
+  canonicalizeServiceType,
   getLabel,
 } = require("../utils/labels");
 const { getPagination } = require("../utils/pagination");
@@ -139,6 +140,7 @@ const BASE_INCLUDES = [
 function addLabels(task) {
   if (!task) return null;
   const t = task.toJSON ? task.toJSON() : task;
+  const normalizedServiceType = canonicalizeServiceType(t?.service?.type, t?.service?.type);
 
   return {
     ...t,
@@ -148,8 +150,9 @@ function addLabels(task) {
     service: t.service
       ? {
           ...t.service,
+          type: normalizedServiceType,
           statusLabel: getLabel(t.service.status, SERVICE_STATUSES),
-          typeLabel: getLabel(t.service.type, SERVICE_TYPES),
+          typeLabel: getLabel(normalizedServiceType, SERVICE_TYPES),
         }
       : null,
   };

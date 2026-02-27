@@ -12,7 +12,7 @@ import {
   TASK_TYPES,
   TASK_PRIORITIES,
   TASK_STATUSES,
-  SERVICE_TYPES,
+  getServiceTypeLabel,
   applyLabels,
 } from '../utils/labels';
 import { normalizeRole, isMasterUser } from '../utils/role';
@@ -138,7 +138,10 @@ export default function TasksPage() {
         // CLIENT
         if (u.role === 'client') {
           const servs = await getMyServices();
-          setServices(servs || []);
+          const enrichedServices = (servs || []).map((s) =>
+            applyLabels(s, 'service')
+          );
+          setServices(enrichedServices);
         }
 
         // ADMIN / MASTER
@@ -562,11 +565,11 @@ function TaskFilters({
           className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
         >
           <option value="">{t('tasksPage.filters.serviceAll')}</option>
-          {services.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.title} - {SERVICE_TYPES[s.type] || s.type || t('common.dash')}
-            </option>
-          ))}
+            {services.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.title} - {getServiceTypeLabel(s.type, t('common.dash'))}
+              </option>
+            ))}
         </select>
 
         {/* Agent (admin/master uniquement) */}
@@ -639,7 +642,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
             <option value="">{t('tasksPage.form.servicePlaceholder')}</option>
             {services.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.title} ({SERVICE_TYPES[s.type] || s.type || t('common.dash')})
+                {s.title} ({getServiceTypeLabel(s.type, t('common.dash'))})
               </option>
             ))}
           </select>

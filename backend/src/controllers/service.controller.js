@@ -5,6 +5,7 @@ const { Op } = require("sequelize");
 const {
   SERVICE_STATUSES,
   SERVICE_TYPES,
+  canonicalizeServiceType,
   getLabel,
 } = require("../utils/labels");
 const {
@@ -128,10 +129,12 @@ const ALLOWED_STATUSES = new Set(Object.keys(SERVICE_STATUSES));
 function addLabels(service) {
   if (!service) return null;
   const s = service.toJSON ? service.toJSON() : service;
+  const normalizedType = canonicalizeServiceType(s.type, s.type);
   return {
     ...s,
+    type: normalizedType,
     statusLabel: getLabel(s.status, SERVICE_STATUSES),
-    typeLabel: getLabel(s.type, SERVICE_TYPES),
+    typeLabel: getLabel(normalizedType, SERVICE_TYPES),
   };
 }
 
@@ -158,7 +161,7 @@ exports.create = async (req, res) => {
 
     propertyId = toSafeInt(propertyId);
 
-    type = String(type || "").trim();
+    type = canonicalizeServiceType(type, null);
     if (!type || !ALLOWED_TYPES.has(type))
       return res.status(400).json({ error: "Type de service invalide" });
 
@@ -243,6 +246,7 @@ exports.create = async (req, res) => {
     const service = await Service.create({
       clientId: targetClientId,
       agentId: null,
+      createdById: req.user.id,
       propertyId: propertyId || null,
       type,
       title,
@@ -258,6 +262,7 @@ exports.create = async (req, res) => {
 
     const full = await Service.findByPk(service.id, {
       include: [
+        { model: User, as: "creator", attributes: ["id", "firstName", "lastName", "email"] },
         { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
         { model: User, as: "client", attributes: ["id", "firstName", "lastName", "email"] },
         { model: Property, as: "property", attributes: ["id", "title", "city", "address", "photos"] },
@@ -294,7 +299,7 @@ exports.listClient = async (req, res) => {
     const { clientId } = req.query;
     const q = toTrimOrNull(req.query?.q);
     const status = toTrimOrNull(req.query?.status);
-    const type = toTrimOrNull(req.query?.type);
+    const type = canonicalizeServiceType(req.query?.type, null);
     const propertyId = toSafeInt(req.query?.propertyId);
     const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
     const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
@@ -348,6 +353,7 @@ exports.listClient = async (req, res) => {
           as: "client",
           attributes: ["id", "firstName", "lastName", "email", "country"],
         },
+        { model: User, as: "creator", attributes: ["id", "firstName", "lastName", "email"] },
         { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
         { model: Property, as: "property", attributes: ["id", "title", "city", "address", "photos"] },
       ],
@@ -381,7 +387,7 @@ exports.listAll = async (req, res) => {
     const status = (req.query.status || "").trim();
     const unassigned = isTrue(req.query.unassigned);
     const q = (req.query.q || "").trim();
-    const type = toTrimOrNull(req.query?.type);
+    const type = canonicalizeServiceType(req.query?.type, null);
     const propertyId = toSafeInt(req.query?.propertyId);
     const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
     const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
@@ -430,6 +436,7 @@ exports.listAll = async (req, res) => {
           as: "client",
           attributes: ["id", "firstName", "lastName", "email", "country"],
         },
+        { model: User, as: "creator", attributes: ["id", "firstName", "lastName", "email"] },
         { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
         { model: Property, as: "property", attributes: ["id", "title", "city", "address"] },
       ],
@@ -519,6 +526,11 @@ exports.assignAgent = async (req, res) => {
           },
           {
             model: User,
+            as: "creator",
+            attributes: ["id", "firstName", "lastName", "email"],
+          },
+          {
+            model: User,
             as: "agent",
             attributes: ["id", "firstName", "lastName", "email"],
           },
@@ -590,6 +602,22 @@ exports.updateService = async (req, res) => {
       if (field in req.body) updates[field] = req.body[field];
     }
 
+    if ("type" in updates) {
+      const normalizedType = canonicalizeServiceType(updates.type, null);
+      if (!normalizedType || !ALLOWED_TYPES.has(normalizedType)) {
+        return res.status(400).json({ error: "Type de service invalide" });
+      }
+      updates.type = normalizedType;
+    }
+
+    if ("status" in updates) {
+      const nextStatus = toTrimOrNull(updates.status);
+      if (!nextStatus || !ALLOWED_STATUSES.has(nextStatus)) {
+        return res.status(400).json({ error: "Statut de service invalide" });
+      }
+      updates.status = nextStatus;
+    }
+
     if ("propertyId" in updates) {
       const newPid = toSafeInt(updates.propertyId);
       if (!newPid) {
@@ -641,6 +669,11 @@ exports.updateService = async (req, res) => {
         {
           model: User,
           as: "client",
+          attributes: ["id", "firstName", "lastName", "email"],
+        },
+        {
+          model: User,
+          as: "creator",
           attributes: ["id", "firstName", "lastName", "email"],
         },
         {
@@ -707,7 +740,7 @@ exports.listAgent = async (req, res) => {
     const { limit, offset, page } = getPagination(req, 25, 100);
     const q = toTrimOrNull(req.query?.q);
     const status = toTrimOrNull(req.query?.status);
-    const type = toTrimOrNull(req.query?.type);
+    const type = canonicalizeServiceType(req.query?.type, null);
     const propertyId = toSafeInt(req.query?.propertyId);
     const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
     const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
@@ -754,6 +787,11 @@ exports.listAgent = async (req, res) => {
           model: User,
           as: "client",
           attributes: ["id", "firstName", "lastName", "email", "country"],
+        },
+        {
+          model: User,
+          as: "creator",
+          attributes: ["id", "firstName", "lastName", "email"],
         },
         {
           model: Property,

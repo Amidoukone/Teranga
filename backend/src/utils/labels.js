@@ -47,6 +47,14 @@ const SERVICE_TYPES = {
   other: 'Autre service',
 };
 
+const SERVICE_TYPE_ALIASES = {
+  errand: ['errand', 'errand / commission', 'course / commission'],
+  administrative: ['administrative', 'administrative request', 'demarche administrative'],
+  payment: ['payment', 'paiement'],
+  money_transfer: ['money_transfer', 'money transfer', "transfert d'argent", 'transfert argent'],
+  other: ['other', 'autre', 'autre service'],
+};
+
 const SERVICE_STATUSES = {
   created: 'Créé',
   in_progress: 'En cours',
@@ -128,6 +136,36 @@ const CATEGORY_STATUSES = {
   inactive: 'Inactive',
 };
 
+function normalizeAliasKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/['’`]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+const SERVICE_TYPE_ALIAS_LOOKUP = Object.entries(SERVICE_TYPE_ALIASES).reduce(
+  (acc, [canonical, aliases]) => {
+    acc[normalizeAliasKey(canonical)] = canonical;
+    for (const alias of aliases) {
+      acc[normalizeAliasKey(alias)] = canonical;
+    }
+    return acc;
+  },
+  {}
+);
+
+function canonicalizeServiceType(value, fallback = null) {
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+  if (SERVICE_TYPES[raw]) return raw;
+  const normalized = normalizeAliasKey(raw);
+  return SERVICE_TYPE_ALIAS_LOOKUP[normalized] || fallback;
+}
+
 /**
  * Retourne le label français correspondant à une clé technique.
  * @param {string} key
@@ -169,6 +207,7 @@ module.exports = {
   CURRENCY_LABELS,
 
   // Fonctions utilitaires
+  canonicalizeServiceType,
   getLabel,
   formatCurrency,
 };

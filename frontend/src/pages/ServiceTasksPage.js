@@ -11,7 +11,7 @@ import {
   TASK_STATUSES,
   TASK_TYPES,
   TASK_PRIORITIES,
-  SERVICE_TYPES,
+  getServiceTypeLabel,
 } from "../utils/labels";
 import { me, getAuthHeader } from "../services/auth";
 import { getGeoParams } from "../services/geo";
@@ -74,7 +74,7 @@ export default function ServiceTasksPage() {
   const serviceTitle = serviceInfo?.title?.trim() || "";
   const serviceTypeLabel =
     serviceInfo?.typeLabel ||
-    (serviceInfo?.type ? SERVICE_TYPES[serviceInfo.type] : "") ||
+    getServiceTypeLabel(serviceInfo?.type, "") ||
     "";
   const headerTotal = tasks.length;
   const headerTitle = serviceTitle

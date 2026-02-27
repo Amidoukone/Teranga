@@ -5,7 +5,12 @@ import api from '../services/api';
 import { me, getAuthHeader } from '../services/auth';
 import { getMyServices, createService } from '../services/services';
 import { getProperties } from '../services/properties';
-import { applyLabels, SERVICE_TYPES, SERVICE_STATUSES } from '../utils/labels';
+import {
+  applyLabels,
+  getServiceTypeLabel,
+  SERVICE_TYPES,
+  SERVICE_STATUSES,
+} from '../utils/labels';
 import PaginationBar from '../components/PaginationBar';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
@@ -998,7 +1003,7 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
   const { formatDate, formatNumber } = useLocale();
   const { t } = useTranslation();
   const isAdminOrMaster = user?.role === 'admin';
-  const typeLabel = SERVICE_TYPES[s.type] || s.type || t("common.dash");
+  const typeLabel = getServiceTypeLabel(s.type, t("common.dash"));
   const statusLabel =
     SERVICE_STATUSES[s.status] ||
     (s.status ? String(s.status).replace("_", " ") : t("common.dash"));
@@ -1044,6 +1049,15 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
       s.agent.email ||
       t("services.card.unassigned")
     : t("services.card.unassigned");
+  const creatorLabel = s.creator
+    ? `${s.creator.firstName || ''} ${s.creator.lastName || ''}`.trim() ||
+      s.creator.email ||
+      t("services.card.creatorUnknown")
+    : s.client
+    ? `${s.client.firstName || ''} ${s.client.lastName || ''}`.trim() ||
+      s.client.email ||
+      t("services.card.creatorUnknown")
+    : t("services.card.creatorUnknown");
   const createdLabel = s.createdAt ? formatDate(s.createdAt) : t("common.dash");
 
   return (
@@ -1128,6 +1142,15 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
           </div>
           <div className="text-sm text-text-primary break-words">
             {agentLabel}
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          <div className="text-[11px] uppercase tracking-wide text-text-muted">
+            {t("services.card.creator")}
+          </div>
+          <div className="text-sm text-text-primary break-words">
+            {creatorLabel}
           </div>
         </div>
 

@@ -107,6 +107,14 @@ const SERVICE_TYPES_BASE = {
 };
 export const SERVICE_TYPES = createLabelMap('services.type', SERVICE_TYPES_BASE);
 
+const SERVICE_TYPE_ALIASES = {
+  errand: ['errand', 'errand / commission', 'course / commission'],
+  administrative: ['administrative', 'administrative request', 'demarche administrative'],
+  payment: ['payment', 'paiement'],
+  money_transfer: ['money_transfer', 'money transfer', "transfert d'argent", 'transfert argent'],
+  other: ['other', 'autre', 'autre service'],
+};
+
 const SERVICE_STATUSES_BASE = {
   created: 'Créé',
   in_progress: 'En cours',
@@ -328,6 +336,44 @@ export function getLabel(key, map) {
   return map?.[key] || key;
 }
 
+function normalizeAliasKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/['’`]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+const SERVICE_TYPE_ALIAS_LOOKUP = Object.entries(SERVICE_TYPE_ALIASES).reduce(
+  (acc, [canonical, aliases]) => {
+    acc[normalizeAliasKey(canonical)] = canonical;
+    for (const alias of aliases) {
+      acc[normalizeAliasKey(alias)] = canonical;
+    }
+    return acc;
+  },
+  {}
+);
+
+export function canonicalizeServiceType(key, fallback = null) {
+  const raw = String(key || '').trim();
+  if (!raw) return fallback;
+  if (SERVICE_TYPES_BASE[raw]) return raw;
+  const normalized = normalizeAliasKey(raw);
+  return SERVICE_TYPE_ALIAS_LOOKUP[normalized] || fallback;
+}
+
+export function getServiceTypeLabel(key, fallback = '') {
+  const canonical = canonicalizeServiceType(key, null);
+  if (canonical && SERVICE_TYPES[canonical]) {
+    return getLabel(canonical, SERVICE_TYPES);
+  }
+  return String(key || '').trim() || fallback;
+}
+
 /**
  * Canonicalise un statut de commande
  */
@@ -473,8 +519,12 @@ export function applyLabels(item, category = null) {
 
   /* ---------- Services ---------- */
   if (cat === 'service') {
-    if (item.type && SERVICE_TYPES[item.type]) {
-      enriched.typeLabel = getLabel(item.type, SERVICE_TYPES);
+    const canonicalServiceType = canonicalizeServiceType(item.type, item.type);
+    if (canonicalServiceType && canonicalServiceType !== item.type) {
+      enriched.type = canonicalServiceType;
+    }
+    if (canonicalServiceType && SERVICE_TYPES[canonicalServiceType]) {
+      enriched.typeLabel = getLabel(canonicalServiceType, SERVICE_TYPES);
     }
     if (item.status && SERVICE_STATUSES[item.status]) {
       enriched.statusLabel = getLabel(item.status, SERVICE_STATUSES);
@@ -595,10 +645,12 @@ const Labels = {
   formatStatus,
   formatCurrency,
   applyLabels,
+  canonicalizeServiceType,
   canonicalizeOrderStatus,
   canonicalizePaymentStatus,
   canonicalizeTransactionStatus,
   canonicalizeStatus,
+  getServiceTypeLabel,
 };
 
 export default Labels;

@@ -1,7 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
 import { getAuthHeader } from '../services/auth';
-import { applyLabels, SERVICE_STATUSES, SERVICE_TYPES } from '../utils/labels';
+import {
+  applyLabels,
+  getServiceTypeLabel,
+  SERVICE_STATUSES,
+} from '../utils/labels';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
@@ -156,7 +160,7 @@ export default function AgentServicesPage() {
                     </h3>
 
                     <p className="text-sm text-text-secondary">
-                      {SERVICE_TYPES[s.type] || s.type}{' '}
+                      {getServiceTypeLabel(s.type, t('common.dash'))}{' '}
                       <span className="text-text-muted">&bull;</span>{' '}
                       <span className="font-medium text-text-primary">
                         {t('agentServicesPage.labels.budget', {

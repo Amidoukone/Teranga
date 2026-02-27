@@ -354,11 +354,13 @@ const en = {
       address: "Address",
       budget: "Budget",
       agent: "Agent",
+      creator: "Created by",
       createdAt: "Created on",
       noDescription: "No description.",
       noProperty: "None (independent service)",
       unassigned: "Unassigned",
       budgetUnknown: "Not specified",
+      creatorUnknown: "Unknown",
       contactFallback: "N/A",
     },
     alerts: {

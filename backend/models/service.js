@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       // Relations utilisateurs
       Service.belongsTo(models.User, { foreignKey: 'clientId', as: 'client' });
       Service.belongsTo(models.User, { foreignKey: 'agentId', as: 'agent' });
+      Service.belongsTo(models.User, { foreignKey: 'createdById', as: 'creator' });
 
       // Lien vers une propriété (optionnel)
       Service.belongsTo(models.Property, { foreignKey: 'propertyId', as: 'property' });
@@ -44,6 +45,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       clientId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
       agentId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+      createdById: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
 
       // 🔥 Correction : devient facultatif
       propertyId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
