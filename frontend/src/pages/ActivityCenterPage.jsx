@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { getActivities } from "../services/activities";
+import {
+  cleanupActivities,
+  deleteActivity,
+  getActivities,
+} from "../services/activities";
 import { getLocalUser } from "../services/auth";
 import PaginationBar from "../components/PaginationBar";
 import SettingsSubpageLayout from "../components/SettingsSubpageLayout";
 import { useLocale } from "../i18n/useLocale";
 import { formatStatus } from "../utils/labels";
 import { normalizeRole } from "../utils/role";
+import { notify } from "../utils/notify";
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 const PROGRESS_TABS = [
   { key: "all", labelKey: "activities.tabs.all" },
@@ -82,6 +88,7 @@ export default function ActivityCenterPage() {
   const { t } = useTranslation();
   const { formatDate } = useLocale();
   const navigate = useNavigate();
+  const { confirmDelete } = useDeleteConfirm();
   const currentUserRole = useMemo(
     () => normalizeRole(getLocalUser()?.role),
     []
@@ -96,6 +103,8 @@ export default function ActivityCenterPage() {
   const [dateError, setDateError] = useState("");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [cleaningOld, setCleaningOld] = useState(false);
+  const [deletingIds, setDeletingIds] = useState({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0 });
@@ -237,6 +246,71 @@ export default function ActivityCenterPage() {
     [currentUserRole]
   );
 
+  const handleDeleteOne = useCallback(
+    async (id) => {
+      if (!id || deletingIds[id]) return;
+      const ok = await confirmDelete("activity");
+      if (!ok) return;
+
+      try {
+        setDeletingIds((prev) => ({ ...prev, [id]: true }));
+        await deleteActivity(id);
+        await loadItems();
+        notify(
+          t("activities.deleteSuccess", {
+            defaultValue: "Activite supprimee du fil.",
+          }),
+          { type: "success" }
+        );
+      } catch (e) {
+        console.error("delete activity:", e);
+        notify(
+          t("activities.deleteError", {
+            defaultValue: "Erreur lors de la suppression de l'activite.",
+          }),
+          { type: "error" }
+        );
+      } finally {
+        setDeletingIds((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }
+    },
+    [confirmDelete, deletingIds, loadItems, t]
+  );
+
+  const handleCleanupOld = useCallback(async () => {
+    if (cleaningOld) return;
+
+    try {
+      setCleaningOld(true);
+      const before = new Date(
+        Date.now() - 30 * 24 * 60 * 60 * 1000
+      ).toISOString();
+      const result = await cleanupActivities({ before });
+      await loadItems();
+      notify(
+        t("activities.cleanupSuccess", {
+          count: result?.deleted || 0,
+          defaultValue: "{{count}} activites supprimees du fil.",
+        }),
+        { type: "success" }
+      );
+    } catch (e) {
+      console.error("cleanup activities:", e);
+      notify(
+        t("activities.cleanupError", {
+          defaultValue: "Erreur lors du nettoyage des activites.",
+        }),
+        { type: "error" }
+      );
+    } finally {
+      setCleaningOld(false);
+    }
+  }, [cleaningOld, loadItems, t]);
+
   return (
     <SettingsSubpageLayout
       kicker={t("activities.kicker")}
@@ -308,6 +382,19 @@ export default function ActivityCenterPage() {
               {dateError}
             </p>
           ) : null}
+          <button
+            type="button"
+            onClick={handleCleanupOld}
+            disabled={cleaningOld}
+            className={[
+              "app-btn-soft",
+              cleaningOld ? "opacity-60 cursor-not-allowed" : "",
+            ].join(" ")}
+          >
+            {cleaningOld
+              ? t("common.loading", { defaultValue: "Chargement..." })
+              : t("activities.cleanupOld")}
+          </button>
         </div>
       }
     >
@@ -455,16 +542,16 @@ export default function ActivityCenterPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                    <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-surface-main/60 px-3 py-2">
+                  <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
+                    <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-border/70 bg-surface-main/60 px-3 py-2 sm:flex-none">
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 via-sky-500 to-emerald-500 text-white text-xs font-bold flex items-center justify-center shadow">
                         {actorInitials}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="text-[0.6rem] uppercase tracking-wide text-text-muted">
                           {t("activities.actor.label")}
                         </div>
-                        <div className="text-xs font-semibold text-text-primary max-w-[160px] truncate">
+                        <div className="text-xs font-semibold text-text-primary max-w-[120px] truncate sm:max-w-[160px]">
                           {actorLabel}
                         </div>
                         {actorRoleLabel ? (
@@ -479,18 +566,30 @@ export default function ActivityCenterPage() {
                         ) : null}
                       </div>
                     </div>
-                    <button
-                      onClick={() => navigate(resolveLink(n))}
-                      disabled={isDateRangeInvalid}
-                      className={[
-                        "rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm",
-                        isDateRangeInvalid
-                          ? "cursor-not-allowed bg-surface-main/80 text-text-muted"
-                          : "app-btn-primary",
-                      ].join(" ")}
-                    >
-                      {t("activities.view")}
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => navigate(resolveLink(n))}
+                        disabled={isDateRangeInvalid}
+                        className={[
+                          "rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm",
+                          isDateRangeInvalid
+                            ? "cursor-not-allowed bg-surface-main/80 text-text-muted"
+                            : "app-btn-primary",
+                        ].join(" ")}
+                      >
+                        {t("activities.view")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteOne(n.id)}
+                        disabled={Boolean(deletingIds[n.id])}
+                        className="app-btn-danger"
+                      >
+                        {deletingIds[n.id]
+                          ? t("common.loading", { defaultValue: "Chargement..." })
+                          : t("activities.delete")}
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -501,4 +600,3 @@ export default function ActivityCenterPage() {
     </SettingsSubpageLayout>
   );
 }
-

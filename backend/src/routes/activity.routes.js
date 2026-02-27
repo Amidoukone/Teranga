@@ -8,5 +8,20 @@ const { requireRoles } = require("../middleware/roles.middleware");
 // Toutes les activites (tous roles connectes)
 router.get("/", auth, requireRoles("client", "agent", "admin"), ctrl.list);
 
-module.exports = router;
+// Nettoyage cible du fil (par filtres)
+router.delete(
+  "/cleanup",
+  auth,
+  requireRoles("client", "agent", "admin"),
+  ctrl.cleanup
+);
 
+// Supprimer une activite du fil utilisateur
+router.delete(
+  "/:id",
+  auth,
+  requireRoles("client", "agent", "admin"),
+  ctrl.removeOne
+);
+
+module.exports = router;

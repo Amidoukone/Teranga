@@ -27,4 +27,20 @@ router.patch(
   ctrl.markAllRead
 );
 
+// Nettoyage ciblé du fil (par filtres)
+router.delete(
+  '/cleanup',
+  auth,
+  requireRoles('client', 'agent', 'admin'),
+  ctrl.cleanup
+);
+
+// Supprimer une notification du fil utilisateur
+router.delete(
+  '/:id',
+  auth,
+  requireRoles('client', 'agent', 'admin'),
+  ctrl.removeOne
+);
+
 module.exports = router;

@@ -40,3 +40,13 @@ export async function markAllNotificationsRead() {
   const { data } = await api.patch("/notifications/read-all");
   return data;
 }
+
+export async function deleteNotification(id) {
+  const { data } = await api.delete(`/notifications/${id}`);
+  return data;
+}
+
+export async function cleanupNotifications(params = {}) {
+  const { data } = await api.delete("/notifications/cleanup", { params });
+  return data;
+}

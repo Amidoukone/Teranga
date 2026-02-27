@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
+  cleanupNotifications,
+  deleteNotification,
   getNotifications,
   getNotificationSummary,
   markAllNotificationsRead,
@@ -14,6 +16,7 @@ import { useLocale } from "../i18n/useLocale";
 import { formatStatus } from "../utils/labels";
 import { normalizeRole } from "../utils/role";
 import { notify } from "../utils/notify";
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 const PROGRESS_TABS = [
   { key: "new", labelKey: "notifications.tabs.new" },
@@ -25,6 +28,7 @@ export default function NotificationsPage() {
   const { t } = useTranslation();
   const { formatDate } = useLocale();
   const navigate = useNavigate();
+  const { confirmDelete } = useDeleteConfirm();
   const currentUserRole = useMemo(
     () => normalizeRole(getLocalUser()?.role),
     []
@@ -36,7 +40,9 @@ export default function NotificationsPage() {
   const [summary, setSummary] = useState({ unread: 0, byProgress: {} });
   const [loading, setLoading] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
+  const [cleaningOld, setCleaningOld] = useState(false);
   const [markingOneIds, setMarkingOneIds] = useState({});
+  const [deletingIds, setDeletingIds] = useState({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0 });
@@ -229,6 +235,79 @@ export default function NotificationsPage() {
     }
   }, [loadItems, loadSummary, markingAll, summary.unread, t]);
 
+  const handleDeleteOne = useCallback(
+    async (id) => {
+      if (!id || deletingIds[id]) return;
+      const ok = await confirmDelete("notification");
+      if (!ok) return;
+
+      try {
+        setDeletingIds((prev) => ({ ...prev, [id]: true }));
+        await deleteNotification(id);
+        await Promise.all([loadSummary(), loadItems()]);
+        notify(
+          t("notifications.deleteSuccess", {
+            defaultValue: "Notification supprimÃ©e du fil.",
+          }),
+          { type: "success" }
+        );
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("notifications:refresh"));
+        }
+      } catch (e) {
+        console.error("delete notification:", e);
+        notify(
+          t("notifications.deleteError", {
+            defaultValue: "Erreur lors de la suppression de la notification.",
+          }),
+          { type: "error" }
+        );
+      } finally {
+        setDeletingIds((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }
+    },
+    [confirmDelete, deletingIds, loadItems, loadSummary, t]
+  );
+
+  const handleCleanupOld = useCallback(async () => {
+    if (cleaningOld) return;
+
+    try {
+      setCleaningOld(true);
+      const before = new Date(
+        Date.now() - 30 * 24 * 60 * 60 * 1000
+      ).toISOString();
+      const result = await cleanupNotifications({ before });
+
+      await Promise.all([loadSummary(), loadItems()]);
+
+      notify(
+        t("notifications.cleanupSuccess", {
+          count: result?.deleted || 0,
+          defaultValue: "{{count}} notifications supprimÃ©es du fil.",
+        }),
+        { type: "success" }
+      );
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("notifications:refresh"));
+      }
+    } catch (e) {
+      console.error("cleanup notifications:", e);
+      notify(
+        t("notifications.cleanupError", {
+          defaultValue: "Erreur lors du nettoyage des notifications.",
+        }),
+        { type: "error" }
+      );
+    } finally {
+      setCleaningOld(false);
+    }
+  }, [cleaningOld, loadItems, loadSummary, t]);
+
   const resolveLink = useCallback(
     (n) => {
       if (!n) return "/dashboard";
@@ -284,6 +363,18 @@ export default function NotificationsPage() {
             className="app-btn-primary"
           >
             {t("activities.title")}
+          </button>
+          <button
+            onClick={handleCleanupOld}
+            disabled={cleaningOld}
+            className={[
+              "app-btn-soft",
+              cleaningOld ? "opacity-60 cursor-not-allowed" : "",
+            ].join(" ")}
+          >
+            {cleaningOld
+              ? t("common.loading", { defaultValue: "Chargement..." })
+              : t("notifications.cleanupOld")}
           </button>
           <button
             onClick={handleMarkAllRead}
@@ -435,6 +526,16 @@ export default function NotificationsPage() {
                     className="app-btn-primary"
                   >
                     {t("notifications.view")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteOne(n.id)}
+                    disabled={Boolean(deletingIds[n.id])}
+                    className="app-btn-danger"
+                  >
+                    {deletingIds[n.id]
+                      ? t("common.loading", { defaultValue: "Chargement..." })
+                      : t("notifications.delete")}
                   </button>
                   {n.status !== "read" && (
                     <button
