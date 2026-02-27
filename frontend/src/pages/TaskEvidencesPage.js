@@ -14,6 +14,7 @@ import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
+import { fixMojibakeText } from '../utils/mojibake';
 
 // ============================================================================
 // Contexte: preuves de tache.
@@ -66,16 +67,6 @@ function isImageEvidence(ev) {
   return k === 'image';
 }
 
-function fixMojibake(value) {
-  if (!value || typeof value !== 'string') return value;
-  if (!/(\u00C3|\u00C2|\u00E2\u20AC|\uFFFD|\u00EF\u00BF\u00BD)/.test(value)) return value;
-  try {
-    return decodeURIComponent(escape(value));
-  } catch {
-    return value;
-  }
-}
-
 function extractFileName(path = '') {
   if (!path) return '';
   try {
@@ -93,10 +84,10 @@ function extractFileName(path = '') {
 }
 
 function getEvidenceDisplayName(ev, fallbackLabel = 'Fichier') {
-  const original = fixMojibake(ev?.originalName || '');
+  const original = fixMojibakeText(ev?.originalName || '');
   if (original) return original;
   const fallback = extractFileName(ev?.filePath || '');
-  return fixMojibake(fallback) || fallbackLabel;
+  return fixMojibakeText(fallback) || fallbackLabel;
 }
 
 function getEvidenceKindForUI(ev) {

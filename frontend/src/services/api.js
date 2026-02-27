@@ -1,5 +1,6 @@
 // frontend/src/services/api.js
 import axios from 'axios';
+import { fixMojibakeDeep } from '../utils/mojibake';
 
 /**
  * ============================================================
@@ -304,6 +305,12 @@ function shouldAttemptAuthRefresh(status, config) {
   return true;
 }
 
+function shouldNormalizeMojibake(response) {
+  if (!response || response?.config?.skipMojibakeFix) return false;
+  const responseType = String(response?.config?.responseType || '').toLowerCase();
+  return !['arraybuffer', 'blob', 'stream', 'document'].includes(responseType);
+}
+
 async function refreshAccessSession() {
   if (refreshAccessPromise) return refreshAccessPromise;
 
@@ -365,6 +372,10 @@ function tryFlipDevHostOnce(cfg) {
 /* ---------- Intercepteur: gestion d’erreurs ---------- */
 api.interceptors.response.use(
   (response) => {
+    if (shouldNormalizeMojibake(response) && response?.data !== undefined) {
+      response.data = fixMojibakeDeep(response.data);
+    }
+
     try {
       const method = (response?.config?.method || 'get').toUpperCase();
       const url = response?.config?.url || '';
@@ -382,6 +393,10 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
+    if (shouldNormalizeMojibake(error?.response) && error?.response?.data !== undefined) {
+      error.response.data = fixMojibakeDeep(error.response.data);
+    }
+
     const status = error?.response?.status;
     let cfg = error?.config || {};
     const url = cfg?.url;
