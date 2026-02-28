@@ -6,6 +6,8 @@ node_modules/
 dist/
 build/
 tmp/
+playwright-report/
+test-results/
 
 # --- Fichiers de logs ---
 *.log

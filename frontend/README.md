@@ -19,6 +19,50 @@ You may also see any lint errors in the console.
 Launches the test runner in the interactive watch mode.\
 See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
+### `npm run e2e:install`
+
+Installs Playwright browser binaries (Chromium).
+
+### `npm run e2e`
+
+Runs Playwright end-to-end tests for critical journeys:
+- auth (register + login)
+- services
+- tasks
+- notifications
+- orders
+
+### `npm run e2e:integration`
+
+Runs a second Playwright pass in real integration mode:
+- frontend on `http://127.0.0.1:3001`
+- backend on `http://127.0.0.1:5001`
+- real MySQL test database (`NODE_ENV=test`)
+- automatic backend migrations + deterministic fixtures
+
+Important:
+- this pass recreates the **test DB** before execution
+- never point test env variables to a production database
+
+Critical real flows covered:
+- auth (register + login)
+- services (read + create)
+- tasks (read + create)
+- notifications (read)
+- orders (read + create)
+
+### `npm run e2e:integration:headed`
+
+Runs the real integration Playwright pass in headed mode.
+
+### `npm run e2e:headed`
+
+Runs Playwright tests in headed mode for visual debugging.
+
+### `npm run e2e:ui`
+
+Runs Playwright UI mode.
+
 ### `npm run build`
 
 Builds the app for production to the `build` folder.\

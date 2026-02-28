@@ -2,30 +2,47 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Ajout de paymentMethod
-    await queryInterface.addColumn('transactions', 'paymentMethod', {
-      type: Sequelize.STRING(50),
-      allowNull: true
-    });
+    const table = await queryInterface.describeTable('transactions');
+    const indexes = await queryInterface.showIndex('transactions');
 
-    // Ajout de status (PlanetScale accepte les ENUM Sequelize)
-    await queryInterface.addColumn('transactions', 'status', {
-      type: Sequelize.ENUM('pending', 'completed', 'cancelled'),
-      allowNull: false,
-      defaultValue: 'pending'
-    });
+    if (!Object.prototype.hasOwnProperty.call(table, 'paymentMethod')) {
+      await queryInterface.addColumn('transactions', 'paymentMethod', {
+        type: Sequelize.STRING(50),
+        allowNull: true,
+      });
+    }
 
-    // Ajout des index pour performance
-    await queryInterface.addIndex('transactions', ['status']);
-    await queryInterface.addIndex('transactions', ['paymentMethod']);
+    if (!Object.prototype.hasOwnProperty.call(table, 'status')) {
+      await queryInterface.addColumn('transactions', 'status', {
+        type: Sequelize.ENUM('pending', 'completed', 'cancelled'),
+        allowNull: false,
+        defaultValue: 'pending',
+      });
+    }
+
+    const hasStatusIndex = indexes.some((idx) =>
+      (idx.fields || []).some((field) => field.attribute === 'status')
+    );
+    const hasPaymentMethodIndex = indexes.some((idx) =>
+      (idx.fields || []).some((field) => field.attribute === 'paymentMethod')
+    );
+
+    if (!hasStatusIndex) {
+      await queryInterface.addIndex('transactions', ['status']);
+    }
+    if (!hasPaymentMethodIndex) {
+      await queryInterface.addIndex('transactions', ['paymentMethod']);
+    }
   },
 
-  async down(queryInterface, Sequelize) {
-    // Supprimer les colonnes
-    await queryInterface.removeColumn('transactions', 'paymentMethod');
-    await queryInterface.removeColumn('transactions', 'status');
+  async down(queryInterface) {
+    const table = await queryInterface.describeTable('transactions');
 
-    // Aucun cleanup ENUM pour PlanetScale (MySQL/Vitess)
-    // PlanetScale gère automatiquement les enums
-  }
+    if (Object.prototype.hasOwnProperty.call(table, 'paymentMethod')) {
+      await queryInterface.removeColumn('transactions', 'paymentMethod');
+    }
+    if (Object.prototype.hasOwnProperty.call(table, 'status')) {
+      await queryInterface.removeColumn('transactions', 'status');
+    }
+  },
 };

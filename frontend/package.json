@@ -25,7 +25,13 @@
     "start": "react-scripts start",
     "lint": "eslint \"src/**/*.{js,jsx}\"",
     "build": "react-scripts build",
-    "test": "react-scripts test --watch=false --passWithNoTests",
+    "test": "react-scripts test --watch=false --watchAll=false --runInBand --passWithNoTests",
+    "e2e:install": "playwright install chromium",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --project=chromium --headed",
+    "e2e:integration": "playwright test --config=playwright.integration.config.js",
+    "e2e:integration:headed": "playwright test --config=playwright.integration.config.js --project=chromium --headed",
+    "e2e:ui": "playwright test --ui",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -50,6 +56,7 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "autoprefixer": "^10.4.21",
     "baseline-browser-mapping": "^2.9.19",
     "postcss": "^8.5.6",

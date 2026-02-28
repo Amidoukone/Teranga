@@ -1,5 +1,19 @@
 'use strict';
 
+async function resolveMaliGeo(queryInterface) {
+  const [rows] = await queryInterface.sequelize.query(`
+    SELECT c.id AS countryId, r.id AS regionId
+    FROM countries c
+    LEFT JOIN regions r ON r.country_id = c.id AND r.code = 'BKO'
+    WHERE c.iso_code = 'ML'
+    LIMIT 1;
+  `);
+
+  const geo = rows?.[0] || null;
+  if (!geo?.countryId || !geo?.regionId) return null;
+  return geo;
+}
+
 module.exports = {
   async up(queryInterface) {
     await queryInterface.sequelize.query(`
@@ -19,129 +33,180 @@ module.exports = {
       );
     `);
 
-    // ✅ Résolution sûre: Bamako du Mali uniquement
-    await queryInterface.sequelize.query(`
-      SET @ml_country_id = (SELECT id FROM countries WHERE iso_code = 'ML' LIMIT 1);
-      SET @bko_region_id = (SELECT id FROM regions WHERE country_id = @ml_country_id AND code = 'BKO' LIMIT 1);
-    `);
+    const geo = await resolveMaliGeo(queryInterface);
+    if (!geo) return;
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE properties
-      SET countryId = @ml_country_id,
-          regionId  = @bko_region_id
+      SET countryId = :countryId,
+          regionId  = :regionId
       WHERE countryId IS NULL;
-    `);
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE services
-      SET countryId = @ml_country_id,
-          regionId  = @bko_region_id
+      SET countryId = :countryId,
+          regionId  = :regionId
       WHERE countryId IS NULL;
-    `);
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE tasks
-      SET countryId = @ml_country_id,
-          regionId  = @bko_region_id
+      SET countryId = :countryId,
+          regionId  = :regionId
       WHERE countryId IS NULL;
-    `);
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE evidences
-      SET countryId = @ml_country_id,
-          regionId  = @bko_region_id
+      SET countryId = :countryId,
+          regionId  = :regionId
       WHERE countryId IS NULL;
-    `);
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE transactions
-      SET countryId = @ml_country_id,
-          regionId  = @bko_region_id
+      SET countryId = :countryId,
+          regionId  = :regionId
       WHERE countryId IS NULL;
-    `);
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE projects
-      SET countryId = @ml_country_id,
-          regionId  = @bko_region_id
+      SET countryId = :countryId,
+          regionId  = :regionId
       WHERE countryId IS NULL;
-    `);
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE products
-      SET country_id = @ml_country_id,
-          region_id  = @bko_region_id
+      SET country_id = :countryId,
+          region_id  = :regionId
       WHERE country_id IS NULL;
-    `);
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE orders
-      SET country_id = @ml_country_id,
-          region_id  = @bko_region_id
+      SET country_id = :countryId,
+          region_id  = :regionId
       WHERE country_id IS NULL;
-    `);
+      `,
+      { replacements: geo }
+    );
   },
 
   async down(queryInterface) {
-    await queryInterface.sequelize.query(`
-      SET @ml_country_id = (SELECT id FROM countries WHERE iso_code = 'ML' LIMIT 1);
-      SET @bko_region_id = (SELECT id FROM regions WHERE country_id = @ml_country_id AND code = 'BKO' LIMIT 1);
-    `);
+    const geo = await resolveMaliGeo(queryInterface);
+    if (!geo) return;
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE properties
       SET countryId = NULL, regionId = NULL
-      WHERE countryId = @ml_country_id;
-    `);
+      WHERE countryId = :countryId;
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE services
       SET countryId = NULL, regionId = NULL
-      WHERE countryId = @ml_country_id;
-    `);
+      WHERE countryId = :countryId;
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE tasks
       SET countryId = NULL, regionId = NULL
-      WHERE countryId = @ml_country_id;
-    `);
+      WHERE countryId = :countryId;
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE evidences
       SET countryId = NULL, regionId = NULL
-      WHERE countryId = @ml_country_id;
-    `);
+      WHERE countryId = :countryId;
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE transactions
       SET countryId = NULL, regionId = NULL
-      WHERE countryId = @ml_country_id;
-    `);
+      WHERE countryId = :countryId;
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE projects
       SET countryId = NULL, regionId = NULL
-      WHERE countryId = @ml_country_id;
-    `);
+      WHERE countryId = :countryId;
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE products
       SET country_id = NULL, region_id = NULL
-      WHERE country_id = @ml_country_id;
-    `);
+      WHERE country_id = :countryId;
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
+    await queryInterface.sequelize.query(
+      `
       UPDATE orders
       SET country_id = NULL, region_id = NULL
-      WHERE country_id = @ml_country_id;
-    `);
+      WHERE country_id = :countryId;
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
-      DELETE FROM regions WHERE id = @bko_region_id;
-    `);
+    await queryInterface.sequelize.query(
+      `
+      DELETE FROM regions
+      WHERE id = :regionId;
+      `,
+      { replacements: geo }
+    );
 
-    await queryInterface.sequelize.query(`
-      DELETE FROM countries WHERE id = @ml_country_id;
-    `);
+    await queryInterface.sequelize.query(
+      `
+      DELETE FROM countries
+      WHERE id = :countryId;
+      `,
+      { replacements: geo }
+    );
   },
 };

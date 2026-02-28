@@ -247,7 +247,7 @@ export default function NotificationsPage() {
         await Promise.all([loadSummary(), loadItems()]);
         notify(
           t("notifications.deleteSuccess", {
-            defaultValue: "Notification supprimÃ©e du fil.",
+            defaultValue: "Notification supprimée du fil.",
           }),
           { type: "success" }
         );
@@ -288,7 +288,7 @@ export default function NotificationsPage() {
       notify(
         t("notifications.cleanupSuccess", {
           count: result?.deleted || 0,
-          defaultValue: "{{count}} notifications supprimÃ©es du fil.",
+          defaultValue: "{{count}} notifications supprimées du fil.",
         }),
         { type: "success" }
       );

@@ -17,6 +17,9 @@
     "db:seed": "sequelize-cli db:seed:all",
     "db:reset": "npm run db:migrate:undo -- --all && npm run db:migrate && npm run db:seed",
     "db:test:setup": "NODE_ENV=test sequelize-cli db:create && NODE_ENV=test sequelize-cli db:migrate && NODE_ENV=test sequelize-cli db:seed:all",
+    "e2e:integration:migrate": "node scripts/e2e-integration-migrate.js",
+    "e2e:integration:setup": "node scripts/e2e-integration-setup.js",
+    "e2e:integration:server": "node scripts/start-e2e-integration-server.js",
     "test": "node scripts/run-tests.js --runInBand",
     "test:contract": "node scripts/run-tests.js tests/contract --runInBand"
   },
