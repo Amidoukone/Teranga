@@ -45,6 +45,52 @@ function toAbsUrl(path = '') {
   return `${FILE_BASE}${clean}`.replace(/([^:]\/)\/+/g, '$1');
 }
 
+function normalizeProofFile(rawProofFile) {
+  if (!rawProofFile) return null;
+  if (typeof rawProofFile === 'object') return rawProofFile;
+  if (typeof rawProofFile !== 'string') return null;
+
+  const trimmed = rawProofFile.trim();
+  if (!trimmed) return null;
+
+  if (
+    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+    (trimmed.startsWith('[') && trimmed.endsWith(']'))
+  ) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch (_err) {
+      // Legacy rows can contain non-JSON strings; ignore and fallback below.
+    }
+  }
+
+  return { url: trimmed };
+}
+
+function getProofHrefFromProofFile(rawProofFile) {
+  const pf = normalizeProofFile(rawProofFile);
+  if (!pf) return '';
+
+  const directUrl =
+    pf.url ||
+    pf.path ||
+    pf.filePath ||
+    pf.file_url ||
+    pf.location ||
+    pf.secure_url ||
+    (typeof pf.file === 'string' ? pf.file : '');
+
+  if (directUrl) return toAbsUrl(directUrl);
+
+  const nestedFile = pf.file && typeof pf.file === 'object' ? pf.file : null;
+  if (!nestedFile) return '';
+
+  return toAbsUrl(
+    nestedFile.url || nestedFile.path || nestedFile.filePath || ''
+  );
+}
+
 function stripUrlParams(url = '') {
   return String(url || '').split('?')[0].split('#')[0];
 }
@@ -934,17 +980,13 @@ function TransactionList({
   return (
     <div className="[column-width:260px] md:[column-width:300px] [column-gap:1rem]">
       {transactions.map((trx) => {
-        const proof =
-          trx?.proofFile?.url ||
-          (trx?.proofFile?.path ? toAbsUrl(trx.proofFile.path) : '');
-        const proofKind = inferProofKind(trx?.proofFile, proof);
+        const proofMeta = normalizeProofFile(trx?.proofFile);
+        const proof = getProofHrefFromProofFile(proofMeta);
+        const proofKind = inferProofKind(proofMeta, proof);
         const proofLabel =
-          trx?.proofFile?.originalName ||
-          trx?.proofFile?.fileName ||
-          trx?.proofFile?.name ||
-          '';
+          proofMeta?.originalName || proofMeta?.fileName || proofMeta?.name || '';
         const proofExt = getProofExtLabel(
-          trx?.proofFile,
+          proofMeta,
           proof,
           proofKind === 'pdf'
             ? t('transactionsPage.list.pdfLabel')
