@@ -12,8 +12,8 @@ const createProductSchema = Joi.object({
   description: Joi.string().allow('', null),
   shortDescription: Joi.string().allow('', null),
   isActive: Joi.boolean().allow(null),
-  countryId: Joi.number().integer().allow(null),
-  regionId: Joi.number().integer().allow(null),
+  countryId: Joi.number().integer().allow(null, ''),
+  regionId: Joi.number().integer().allow(null, ''),
 });
 
 const updateProductSchema = Joi.object({
@@ -26,8 +26,8 @@ const updateProductSchema = Joi.object({
   description: Joi.string().allow('', null),
   shortDescription: Joi.string().allow('', null),
   isActive: Joi.boolean().allow(null),
-  countryId: Joi.number().integer().allow(null),
-  regionId: Joi.number().integer().allow(null),
+  countryId: Joi.number().integer().allow(null, ''),
+  regionId: Joi.number().integer().allow(null, ''),
 });
 
 module.exports = {

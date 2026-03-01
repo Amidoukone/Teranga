@@ -128,11 +128,12 @@ function toFormData(payload = {}) {
  * Retourne un tableau de produits normalisés
  * --------------------------------------------------------- */
 export async function getProducts(params = {}, options = {}) {
-  const { data } = await api.get('/products', { params: mergeGeoParams(params) });
+  const queryParams = options?.skipGeo ? params : mergeGeoParams(params);
+  const { data } = await api.get('/products', { params: queryParams });
   const items = data?.items || data?.products || [];
   const normalized = items.map(normalizeProduct);
   const pagination = data?.pagination || null;
-  if (options.withPagination) {
+  if (options?.withPagination) {
     return { items: normalized, pagination };
   }
   return normalized;

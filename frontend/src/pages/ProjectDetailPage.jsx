@@ -425,6 +425,8 @@ export default function ProjectDetailPage() {
   const [selectedPhaseId, setSelectedPhaseId] = useState("");
   const [docTitle, setDocTitle] = useState("");
   const [docKind, setDocKind] = useState("other");
+  const [uploadingDocuments, setUploadingDocuments] = useState(false);
+  const uploadInFlightRef = useRef(false);
   const [docFilters, setDocFilters] = useState({
     q: "",
     kind: "",
@@ -588,6 +590,10 @@ export default function ProjectDetailPage() {
 
   async function handleUploadDocuments(e) {
     e.preventDefault();
+    if (uploadInFlightRef.current) return;
+
+    uploadInFlightRef.current = true;
+    setUploadingDocuments(true);
     try {
       await uploadProjectDocuments(
         project.id,
@@ -606,6 +612,9 @@ export default function ProjectDetailPage() {
     } catch (err) {
       console.error("upload docs:", err);
       notify(t("projectDetail.documents.alerts.uploadError"));
+    } finally {
+      uploadInFlightRef.current = false;
+      if (isMounted.current) setUploadingDocuments(false);
     }
   }
 
@@ -1135,7 +1144,17 @@ export default function ProjectDetailPage() {
                     />
 
                     <div className="sm:col-span-2 flex justify-end">
-                      <Btn type="submit" variant="primary" size="sm">{t("projectDetail.documents.upload")}</Btn>
+                      <Btn
+                        type="submit"
+                        variant="primary"
+                        size="sm"
+                        disabled={uploadingDocuments}
+                        aria-busy={uploadingDocuments}
+                      >
+                        {uploadingDocuments
+                          ? `${t("projectDetail.documents.upload")}...`
+                          : t("projectDetail.documents.upload")}
+                      </Btn>
                     </div>
                   </form>
                 )}

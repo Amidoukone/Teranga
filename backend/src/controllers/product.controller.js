@@ -334,6 +334,8 @@ exports.list = async (req, res) => {
 
     const q = toTrimOrNull(req.query?.q);
     const categoryId = toSafeInt(req.query?.categoryId);
+    const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
+    const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
     const active = req.query?.isActive;
     const priceMin = toNullableNumber(req.query?.priceMin);
     const priceMax = toNullableNumber(req.query?.priceMax);
@@ -362,6 +364,11 @@ exports.list = async (req, res) => {
     where = applyGeoScopeForModel(where, req.user, Product, {
       includeClients: true,
     });
+
+    // Optional geo filters from query (useful for global admin management UI).
+    // These constraints are additive and do not bypass existing ACL scope.
+    if (countryId) where.countryId = countryId;
+    if (regionId) where.regionId = regionId;
 
     const { rows, count } = await Product.findAndCountAll({
       where,

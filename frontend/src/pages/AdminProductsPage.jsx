@@ -99,6 +99,10 @@ export default function AdminProductsPage() {
   const [editing, setEditing] = useState(null);
 
   const [search, setSearch] = useState("");
+  const [geoFilters, setGeoFilters] = useState({
+    countryId: "",
+    regionId: "",
+  });
 
   const [form, setForm] = useState({
     name: "",
@@ -107,6 +111,8 @@ export default function AdminProductsPage() {
     currency: "XOF",
     stock: 0,
     categoryId: "",
+    countryId: "",
+    regionId: "",
     imageFile: null,
     imageFiles: [],
   });
@@ -115,6 +121,10 @@ export default function AdminProductsPage() {
   const [previewGalleryUrls, setPreviewGalleryUrls] = useState([]);
 
   const isGlobalAdmin = isGlobalAdminUser(user);
+
+  function getRegionCountryId(region) {
+    return region?.countryId ?? region?.country?.id ?? region?.country_id ?? null;
+  }
 
   const countriesById = useMemo(() => {
     const map = new Map();
@@ -127,6 +137,26 @@ export default function AdminProductsPage() {
     (regions || []).forEach((r) => map.set(String(r.id), r));
     return map;
   }, [regions]);
+
+  const availableRegions = useMemo(() => {
+    if (!isGlobalAdmin) return [];
+    const selectedCountryId = geoFilters.countryId ? String(geoFilters.countryId) : "";
+    if (!selectedCountryId) return regions || [];
+
+    return (regions || []).filter(
+      (r) => String(getRegionCountryId(r) ?? "") === selectedCountryId
+    );
+  }, [regions, geoFilters.countryId, isGlobalAdmin]);
+
+  const formAvailableRegions = useMemo(() => {
+    if (!isGlobalAdmin) return [];
+    const selectedCountryId = form.countryId ? String(form.countryId) : "";
+    if (!selectedCountryId) return regions || [];
+
+    return (regions || []).filter(
+      (r) => String(getRegionCountryId(r) ?? "") === selectedCountryId
+    );
+  }, [regions, form.countryId, isGlobalAdmin]);
 
   const getGeoLabel = useMemo(() => {
     return (entity) => {
@@ -222,7 +252,10 @@ export default function AdminProductsPage() {
           return;
         }
         setUser(current);
-        await Promise.all([loadCategories(), loadProducts()]);
+        await loadCategories();
+        if (!isGlobalAdminUser(current)) {
+          await loadProducts();
+        }
       } catch (err) {
         console.error("AAAAasAAAaAaa init AdminProductsPage:", err);
         if (!mounted) return;
@@ -261,10 +294,27 @@ export default function AdminProductsPage() {
     };
   }, [isGlobalAdmin]);
 
-  async function loadProducts() {
+  useEffect(() => {
+    if (!isGlobalAdmin) return;
+    loadProducts(geoFilters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGlobalAdmin, geoFilters.countryId, geoFilters.regionId]);
+
+  async function loadProducts(filters = geoFilters) {
     setLoading(true);
     try {
-      const res = await getProducts({ limit: 200 });
+      const query = { limit: 200 };
+      const countryId = Number(filters?.countryId);
+      const regionId = Number(filters?.regionId);
+
+      if (isGlobalAdmin && Number.isFinite(countryId) && countryId > 0) {
+        query.countryId = countryId;
+      }
+      if (isGlobalAdmin && Number.isFinite(regionId) && regionId > 0) {
+        query.regionId = regionId;
+      }
+
+      const res = await getProducts(query, { skipGeo: true });
 
       // Compat: certains services renvoient {products, pagination}
       const list = Array.isArray(res) ? res : res?.products;
@@ -304,6 +354,8 @@ export default function AdminProductsPage() {
       currency: "XOF",
       stock: 0,
       categoryId: "",
+      countryId: "",
+      regionId: "",
       imageFile: null,
       imageFiles: [],
     });
@@ -329,6 +381,26 @@ export default function AdminProductsPage() {
     setPreviewGalleryUrls(arr.map((f) => URL.createObjectURL(f)));
   }
 
+  function handleFormCountryChange(value) {
+    setForm((prev) => {
+      const nextCountryId = value || "";
+      if (!prev.regionId) {
+        return { ...prev, countryId: nextCountryId };
+      }
+
+      const region = regionsById.get(String(prev.regionId));
+      const regionCountryId = region ? String(getRegionCountryId(region) ?? "") : "";
+      const keepRegion =
+        !nextCountryId || (regionCountryId && regionCountryId === String(nextCountryId));
+
+      return {
+        ...prev,
+        countryId: nextCountryId,
+        regionId: keepRegion ? prev.regionId : "",
+      };
+    });
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     try {
@@ -343,6 +415,11 @@ export default function AdminProductsPage() {
         stock: Number(form.stock),
         categoryId: form.categoryId ? Number(form.categoryId) : "",
       };
+
+      if (!isGlobalAdmin) {
+        delete payload.countryId;
+        delete payload.regionId;
+      }
 
       if (editing) {
         await updateProduct(editing.id, payload);
@@ -403,6 +480,8 @@ export default function AdminProductsPage() {
       currency: (p.currency || "XOF").toUpperCase(),
       stock: p.stock ?? 0,
       categoryId: p.categoryId ? String(p.categoryId) : "",
+      countryId: p.countryId ? String(p.countryId) : (p.country?.id ? String(p.country.id) : ""),
+      regionId: p.regionId ? String(p.regionId) : (p.region?.id ? String(p.region.id) : ""),
       imageFile: null,
       imageFiles: [],
     });
@@ -426,6 +505,29 @@ export default function AdminProductsPage() {
     if (!term) return products;
     return products.filter((p) => (p.name || "").toLowerCase().includes(term));
   }, [products, search]);
+
+  function handleCountryFilterChange(value) {
+    setGeoFilters((prev) => {
+      const nextCountryId = value || "";
+      if (!prev.regionId) {
+        return { ...prev, countryId: nextCountryId };
+      }
+
+      const region = regionsById.get(String(prev.regionId));
+      const regionCountryId = region ? String(getRegionCountryId(region) ?? "") : "";
+      const keepRegion =
+        !nextCountryId || (regionCountryId && regionCountryId === String(nextCountryId));
+
+      return {
+        countryId: nextCountryId,
+        regionId: keepRegion ? prev.regionId : "",
+      };
+    });
+  }
+
+  function resetGeoFilters() {
+    setGeoFilters({ countryId: "", regionId: "" });
+  }
 
   /* ============================================================
      RENDER
@@ -471,7 +573,7 @@ export default function AdminProductsPage() {
 
             <button
               disabled={loading}
-              onClick={loadProducts}
+              onClick={() => loadProducts()}
               className={`px-4 py-2 rounded-xl text-sm font-semibold shadow-sm ${
                 loading
                   ? "bg-blue-300 cursor-not-allowed text-white"
@@ -489,6 +591,62 @@ export default function AdminProductsPage() {
             BARRE DE RECHERCHE
         ============================================ */}
         <div className="mb-6">
+          {isGlobalAdmin && (
+            <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-text-secondary">
+                  {t("adminProductsPage.filters.countryLabel")}
+                </label>
+                <select
+                  value={geoFilters.countryId}
+                  onChange={(e) => handleCountryFilterChange(e.target.value)}
+                  className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-main text-text-primary"
+                >
+                  <option value="">
+                    {t("adminProductsPage.filters.countryAll")}
+                  </option>
+                  {(countries || []).map((c) => (
+                    <option key={c.id} value={String(c.id)}>
+                      {c.name || `${t("common.countryLabel")} #${c.id}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-text-secondary">
+                  {t("adminProductsPage.filters.regionLabel")}
+                </label>
+                <select
+                  value={geoFilters.regionId}
+                  onChange={(e) =>
+                    setGeoFilters((prev) => ({ ...prev, regionId: e.target.value }))
+                  }
+                  className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-main text-text-primary"
+                >
+                  <option value="">
+                    {t("adminProductsPage.filters.regionAll")}
+                  </option>
+                  {availableRegions.map((r) => (
+                    <option key={r.id} value={String(r.id)}>
+                      {r.name || `${t("common.regionLabel")} #${r.id}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={resetGeoFilters}
+                  className="px-3 py-2 rounded-lg bg-surface-main border border-border text-sm text-text-secondary hover:text-text-primary"
+                >
+                  {t("adminProductsPage.filters.reset")}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">
               /
@@ -590,6 +748,52 @@ export default function AdminProductsPage() {
                 ))}
               </select>
             </div>
+
+            {isGlobalAdmin && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-text-secondary">
+                    {t("adminProductsPage.form.countryLabel")}
+                  </label>
+                  <select
+                    value={form.countryId}
+                    onChange={(e) => handleFormCountryChange(e.target.value)}
+                    className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card text-text-primary"
+                  >
+                    <option value="">
+                      {t("adminProductsPage.form.countryAll")}
+                    </option>
+                    {(countries || []).map((c) => (
+                      <option key={c.id} value={String(c.id)}>
+                        {c.name || `${t("common.countryLabel")} #${c.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-text-secondary">
+                    {t("adminProductsPage.form.regionLabel")}
+                  </label>
+                  <select
+                    value={form.regionId}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, regionId: e.target.value }))
+                    }
+                    className="border border-border rounded-lg px-3 py-2 text-sm bg-surface-card text-text-primary"
+                  >
+                    <option value="">
+                      {t("adminProductsPage.form.regionAll")}
+                    </option>
+                    {formAvailableRegions.map((r) => (
+                      <option key={r.id} value={String(r.id)}>
+                        {r.name || `${t("common.regionLabel")} #${r.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
 
             {/* DESCRIPTION */}
             <div className="md:col-span-2 flex flex-col gap-1">
