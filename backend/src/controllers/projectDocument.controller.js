@@ -1,5 +1,6 @@
 "use strict";
 
+const fs = require("fs");
 const { ProjectDocument, Project, User, ProjectPhase } = require("../../models");
 const { getLabel } = require("../utils/labels");
 const imageKit = require("../helpers/teranga-imagekit");
@@ -159,28 +160,102 @@ function extractFiles(req) {
 }
 
 /* =========================================================
-   🚀 Upload → ImageKit (sécurisé)
+   🚀 Upload storage (ImageKit with local fallback)
 ========================================================= */
-async function uploadToImageKit(file, projectId) {
-  if (!isImageKitEnabled()) {
-    logger.warn("⚠️ ImageKit désactivé — upload ignoré");
-    return { url: null, fileId: null };
+function sanitizeBasename(value) {
+  return String(value || "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function buildLocalProjectDocName(originalName, projectId) {
+  const base = path.basename(originalName || "file");
+  const ext = path.extname(base || "").toLowerCase();
+  const stem = base.slice(0, base.length - ext.length);
+  const safeStem = sanitizeBasename(stem) || "file";
+  const safeExt = ext && ext.length <= 10 ? ext : "";
+  const salt = Math.random().toString(36).slice(2, 8);
+  return `project_${projectId}_${Date.now()}_${salt}_${safeStem}${safeExt}`;
+}
+
+async function saveProjectDocumentLocally(file, projectId) {
+  if (!file?.buffer) {
+    throw new Error("Fichier invalide: buffer absent");
+  }
+
+  const uploadsRoot = path.join(__dirname, "..", "..", "uploads");
+  const projectsDir = path.join(uploadsRoot, "projects");
+  await fs.promises.mkdir(projectsDir, { recursive: true });
+
+  const localName = buildLocalProjectDocName(file.originalname, projectId);
+  const absolutePath = path.join(projectsDir, localName);
+
+  await fs.promises.writeFile(absolutePath, file.buffer);
+
+  return {
+    url: `/uploads/projects/${localName}`,
+    fileId: null,
+  };
+}
+
+function isLocalUploadPath(filePath) {
+  return typeof filePath === "string" && /^\/?uploads\//.test(filePath);
+}
+
+async function removeLocalUpload(filePath) {
+  if (!isLocalUploadPath(filePath)) return;
+
+  const relPath = filePath.replace(/^\/+/, "");
+  const absolutePath = path.join(__dirname, "..", "..", relPath);
+
+  try {
+    await fs.promises.unlink(absolutePath);
+  } catch (err) {
+    logger.warn(
+      { filePath, message: err?.message },
+      "project_document.local_file.delete.failed"
+    );
+  }
+}
+
+async function uploadProjectDocumentFile(file, projectId) {
+  if (isImageKitEnabled()) {
+    try {
+      const uploaded = await imageKit.upload({
+        file: file.buffer,
+        fileName: `project_${projectId}_${Date.now()}_${file.originalname}`,
+        folder: "/teranga/projects/",
+      });
+
+      if (uploaded?.url) {
+        return {
+          url: uploaded.url,
+          fileId: uploaded.fileId || null,
+        };
+      }
+
+      logger.warn(
+        { projectId, fileName: file?.originalname },
+        "project_document.imagekit.upload_missing_url.fallback_local"
+      );
+    } catch (err) {
+      logger.warn(
+        { err, projectId, fileName: file?.originalname },
+        "project_document.imagekit.upload.failed.fallback_local"
+      );
+    }
+  } else {
+    logger.warn("project_document.imagekit.disabled.fallback_local");
   }
 
   try {
-    const uploaded = await imageKit.upload({
-      file: file.buffer,
-      fileName: `project_${projectId}_${Date.now()}_${file.originalname}`,
-      folder: "/teranga/projects/",
-    });
-
-    return {
-      url: uploaded.url,
-      fileId: uploaded.fileId,
-    };
+    return await saveProjectDocumentLocally(file, projectId);
   } catch (err) {
-    logger.error(`❌ Upload ImageKit échoué (${file.originalname}):`, err);
-    return { url: null, fileId: null };
+    logger.error(
+      { err, projectId, fileName: file?.originalname },
+      "project_document.local_upload.failed"
+    );
+    throw err;
   }
 }
 
@@ -236,7 +311,7 @@ exports.upload = async (req, res) => {
        🚀 Upload + insert DB
     ========================================================== */
     for (const file of files) {
-      const uploaded = await uploadToImageKit(file, pid);
+      const uploaded = await uploadProjectDocumentFile(file, pid);
 
       const doc = await ProjectDocument.create({
         projectId: pid,
@@ -398,6 +473,10 @@ exports.remove = async (req, res) => {
       } catch (e) {
         logger.warn("⚠️ Suppression ImageKit impossible:", e.message);
       }
+    }
+
+    if (isLocalUploadPath(doc.filePath)) {
+      await removeLocalUpload(doc.filePath);
     }
 
     await doc.destroy();

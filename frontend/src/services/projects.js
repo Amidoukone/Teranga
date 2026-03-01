@@ -253,9 +253,7 @@ export async function uploadProjectDocuments(
 
   files.forEach((f) => formData.append('files', f));
 
-  const { data } = await api.post('/project-documents', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const { data } = await api.post('/project-documents', formData);
   return data?.documents || [];
 }
 
