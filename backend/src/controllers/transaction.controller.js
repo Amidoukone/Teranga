@@ -8,6 +8,8 @@
 
 "use strict";
 
+const fs = require("fs");
+const path = require("path");
 const { Op } = require("sequelize");
 const {
   Transaction,
@@ -114,6 +116,105 @@ function extractUploadFile(req) {
   return null;
 }
 
+function sanitizeBasename(value) {
+  return String(value || "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function buildLocalTransactionProofName(originalName = "file") {
+  const base = path.basename(originalName || "file");
+  const ext = path.extname(base || "").toLowerCase();
+  const stem = base.slice(0, base.length - ext.length);
+  const safeStem = sanitizeBasename(stem) || "file";
+  const safeExt = ext && ext.length <= 10 ? ext : "";
+  const salt = Math.random().toString(36).slice(2, 8);
+  const timestamp = Date.now();
+  return `transaction_${timestamp}_${salt}_${safeStem}${safeExt}`;
+}
+
+async function saveTransactionProofLocally(file) {
+  if (!file?.buffer) {
+    throw new Error("Fichier invalide: buffer absent");
+  }
+
+  const uploadsRoot = path.join(__dirname, "..", "..", "uploads");
+  const transactionsDir = path.join(uploadsRoot, "transactions");
+  await fs.promises.mkdir(transactionsDir, { recursive: true });
+
+  const localName = buildLocalTransactionProofName(file.originalname);
+  const absolutePath = path.join(transactionsDir, localName);
+
+  await fs.promises.writeFile(absolutePath, file.buffer);
+
+  return {
+    url: `/uploads/transactions/${localName}`,
+    fileId: null,
+  };
+}
+
+function normalizeProofMeta(rawProof) {
+  if (!rawProof) return null;
+  if (typeof rawProof === "object") return rawProof;
+  if (typeof rawProof !== "string") return null;
+
+  const trimmed = rawProof.trim();
+  if (!trimmed) return null;
+
+  if (
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"))
+  ) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch (_err) {
+      // legacy non-JSON string
+    }
+  }
+
+  return { url: trimmed };
+}
+
+function extractProofUrl(rawProof) {
+  const pf = normalizeProofMeta(rawProof);
+  if (!pf) return "";
+
+  const direct =
+    pf.url ||
+    pf.path ||
+    pf.filePath ||
+    pf.file_url ||
+    pf.location ||
+    (typeof pf.file === "string" ? pf.file : "");
+
+  if (direct) return String(direct);
+
+  const nested = pf.file && typeof pf.file === "object" ? pf.file : null;
+  if (!nested) return "";
+  return String(nested.url || nested.path || nested.filePath || "");
+}
+
+function isLocalUploadPath(filePath) {
+  return typeof filePath === "string" && /^\/?uploads\//.test(filePath);
+}
+
+async function removeLocalUpload(filePath) {
+  if (!isLocalUploadPath(filePath)) return;
+
+  const relPath = filePath.replace(/^\/+/, "");
+  const absolutePath = path.join(__dirname, "..", "..", relPath);
+
+  try {
+    await fs.promises.unlink(absolutePath);
+  } catch (err) {
+    logger.warn(
+      { filePath, message: err?.message },
+      "transaction.proof.local_delete.failed"
+    );
+  }
+}
+
 /**
  * GEO helper : déduire countryId / regionId depuis modules liés
  * - Non destructif
@@ -193,39 +294,58 @@ async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
  *  ⭐ ImageKit Upload sécurisé
  * ============================================================================ */
 async function uploadProofToImageKit(file) {
-  if (!isImageKitEnabled()) {
-    logger.warn("transaction.imagekit.disabled_upload_skipped");
-    return {
-      url: null,
-      fileId: null,
-      originalName: file.originalname,
-      mimeType: file.mimetype,
-      size: file.size,
-    };
+  const baseMeta = {
+    originalName: file?.originalname || null,
+    mimeType: file?.mimetype || null,
+    size: file?.size ?? null,
+  };
+
+  if (isImageKitEnabled()) {
+    try {
+      const uploaded = await imageKit.upload({
+        file: file.buffer,
+        fileName: `transaction_${Date.now()}_${file.originalname}`,
+        folder: "/teranga/transactions/",
+      });
+
+      const uploadedUrl =
+        uploaded?.url || uploaded?.fileUrl || uploaded?.path || "";
+
+      if (uploadedUrl) {
+        return {
+          ...baseMeta,
+          url: uploadedUrl,
+          fileId: uploaded?.fileId || null,
+        };
+      }
+
+      logger.warn(
+        { fileName: file?.originalname },
+        "transaction.imagekit.upload_missing_url.fallback_local"
+      );
+    } catch (e) {
+      logger.warn(
+        { err: e, fileName: file?.originalname },
+        "transaction.imagekit.upload.failed.fallback_local"
+      );
+    }
+  } else {
+    logger.warn("transaction.imagekit.disabled.fallback_local");
   }
 
   try {
-    const uploaded = await imageKit.upload({
-      file: file.buffer,
-      fileName: `transaction_${Date.now()}_${file.originalname}`,
-      folder: "/teranga/transactions/",
-    });
-
+    const localSaved = await saveTransactionProofLocally(file);
     return {
-      url: uploaded.url,
-      fileId: uploaded.fileId,
-      originalName: file.originalname,
-      mimeType: file.mimetype,
-      size: file.size,
+      ...baseMeta,
+      url: localSaved.url,
+      fileId: localSaved.fileId,
     };
   } catch (e) {
-    logger.error({ err: e }, "transaction.imagekit.upload.failed");
+    logger.error({ err: e, fileName: file?.originalname }, "transaction.local_upload.failed");
     return {
+      ...baseMeta,
       url: null,
       fileId: null,
-      originalName: file.originalname,
-      mimeType: file.mimetype,
-      size: file.size,
     };
   }
 }
@@ -613,6 +733,8 @@ exports.update = async (req, res) => {
        --------------------------------------- */
     const up = extractUploadFile(req);
     if (up) {
+      const previousProof = trx.proofFile;
+
       if (trx.proofFile?.fileId) {
         try {
           await imageKit.deleteFile(trx.proofFile.fileId);
@@ -620,6 +742,12 @@ exports.update = async (req, res) => {
           logger.warn({ err }, "transaction.proof.delete_old.failed");
         }
       }
+
+      const previousProofUrl = extractProofUrl(previousProof);
+      if (previousProofUrl) {
+        await removeLocalUpload(previousProofUrl);
+      }
+
       trx.proofFile = await uploadProofToImageKit(up);
     }
 
@@ -802,6 +930,11 @@ exports.remove = async (req, res) => {
       } catch (err) {
         logger.warn({ err }, "transaction.proof.delete.failed");
       }
+    }
+
+    const localProofUrl = extractProofUrl(trx.proofFile);
+    if (localProofUrl) {
+      await removeLocalUpload(localProofUrl);
     }
 
     await trx.destroy();
