@@ -20,6 +20,7 @@ import { GeoProvider } from './contexts/GeoContext';
 import { getAnalyticsConsent, loadAnalytics } from './utils/analytics';
 import { installGlobalErrorHandlers } from './utils/errorReporter';
 import { getToken, getLocalUser, hasSessionHint, me } from './services/auth';
+import { GEO_SELECTION_CHANGED_EVENT } from './services/geo';
 import { normalizeRole } from './utils/role'; // ensure roles are canonical (admin/agent/client)
 
 // Contexte: routage et guardes d'acces.
@@ -220,6 +221,7 @@ function PublicOnly({ children }) {
 export default function App() {
   const trackingId = 'G-5JVYGYHZ7Y';
   const { t } = useTranslation();
+  const [geoRefreshKey, setGeoRefreshKey] = useState(0);
   const [analyticsConsent, setAnalyticsConsent] = useState(() =>
     getAnalyticsConsent()
   );
@@ -232,6 +234,17 @@ export default function App() {
 
   useEffect(() => {
     installGlobalErrorHandlers();
+  }, []);
+
+  useEffect(() => {
+    function onGeoChanged() {
+      setGeoRefreshKey((k) => k + 1);
+    }
+
+    if (typeof window === 'undefined') return () => {};
+
+    window.addEventListener(GEO_SELECTION_CHANGED_EVENT, onGeoChanged);
+    return () => window.removeEventListener(GEO_SELECTION_CHANGED_EVENT, onGeoChanged);
   }, []);
 
   return (
@@ -254,7 +267,7 @@ export default function App() {
           <main className="flex-1 w-full">
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
               <Suspense fallback={<RouteLoadingFallback />}>
-                <Routes>
+                <Routes key={`geo-${geoRefreshKey}`}>
             {/* ============================= */}
  {/* Contexte: routage et guardes d'acces. */}
             {/* ============================= */}

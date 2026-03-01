@@ -314,7 +314,7 @@ export default function AdminProductsPage() {
         query.regionId = regionId;
       }
 
-      const res = await getProducts(query, { skipGeo: true });
+      const res = await getProducts(query);
 
       // Compat: certains services renvoient {products, pagination}
       const list = Array.isArray(res) ? res : res?.products;
