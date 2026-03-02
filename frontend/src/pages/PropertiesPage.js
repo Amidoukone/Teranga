@@ -42,7 +42,7 @@ function toAbsUrl(pathOrUrl = '') {
 function isPdf(path = '') {
   return /\\.pdf($|\\?)/i.test(path);
 }
-const PROPERTY_MAX_FILES = 5;
+const PROPERTY_MAX_FILES = 10;
 const PROPERTY_MAX_FILE_MB = 15;
 const PROPERTY_ALLOWED_EXTS = new Set([
   'jpg',
@@ -145,6 +145,7 @@ export default function PropertiesPage() {
   const [files, setFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [editId, setEditId] = useState(null);
+  const [editMediaCount, setEditMediaCount] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -222,6 +223,19 @@ export default function PropertiesPage() {
   // --------------------------------------------------------------------------
   function handleFileChange(e) {
     const rawSelected = Array.from(e.target.files || []);
+    const availableSlots = editId
+      ? Math.max(0, PROPERTY_MAX_FILES - editMediaCount)
+      : PROPERTY_MAX_FILES;
+
+    if (availableSlots <= 0) {
+      notify(
+        t('propertiesPage.alerts.mediaLimitReached', {
+          max: PROPERTY_MAX_FILES,
+        })
+      );
+      e.target.value = '';
+      return;
+    }
 
     const badType = rawSelected.find((f) => !isAllowedPropertyFile(f));
     if (badType) {
@@ -248,11 +262,15 @@ export default function PropertiesPage() {
       return;
     }
 
-    if (rawSelected.length > PROPERTY_MAX_FILES) {
-      notify(t('propertiesPage.alerts.tooManyFiles', { max: PROPERTY_MAX_FILES }));
+    if (rawSelected.length > availableSlots) {
+      notify(
+        t('propertiesPage.alerts.tooManyFiles', {
+          max: availableSlots,
+        })
+      );
     }
 
-    const selected = rawSelected.slice(0, PROPERTY_MAX_FILES);
+    const selected = rawSelected.slice(0, availableSlots);
     setFiles(selected);
 
     previewUrls.forEach((u) => URL.revokeObjectURL(u));
@@ -316,7 +334,11 @@ export default function PropertiesPage() {
       await load();
     } catch (e) {
       console.error('AAA update property:', e);
-      notify(t('propertiesPage.alerts.updateError'));
+      notify(
+        e?.response?.data?.error ||
+          e?.message ||
+          t('propertiesPage.alerts.updateError')
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -363,7 +385,29 @@ export default function PropertiesPage() {
     setFiles([]);
     setPreviewUrls([]);
     setEditId(null);
+    setEditMediaCount(0);
     setShowPreview(false);
+  }
+
+  function startEditProperty(p) {
+    previewUrls.forEach((u) => URL.revokeObjectURL(u));
+    setFiles([]);
+    setPreviewUrls([]);
+
+    setEditId(p.id);
+    setEditMediaCount(Array.isArray(p.photos) ? p.photos.length : 0);
+    setShowForm(true);
+    setShowPreview(false);
+    setForm({
+      title: p.title,
+      type: p.type,
+      address: p.address,
+      city: p.city,
+      postalCode: p.postalCode || '',
+      surfaceArea: p.surfaceArea || '',
+      roomCount: p.roomCount || '',
+      description: p.description || '',
+    });
   }
 
   // --------------------------------------------------------------------------
@@ -519,29 +563,27 @@ export default function PropertiesPage() {
 
  {/* Contexte: gestion des biens. */}
         {showForm && (
-          <PropertyForm
-            form={form}
-            setForm={setForm}
-            showPreview={showPreview}
-            setShowPreview={setShowPreview}
-            handleFileChange={handleFileChange}
-            previewUrls={previewUrls}
-            handleSubmit={handleSubmit}
-            handleUpdate={handleUpdate}
-            resetForm={resetForm}
-            editId={editId}
-            isSubmitting={isSubmitting}
-          />
+        <PropertyForm
+          form={form}
+          setForm={setForm}
+          showPreview={showPreview}
+          setShowPreview={setShowPreview}
+          handleFileChange={handleFileChange}
+          previewUrls={previewUrls}
+          handleSubmit={handleSubmit}
+          handleUpdate={handleUpdate}
+          resetForm={resetForm}
+          editId={editId}
+          editMediaCount={editMediaCount}
+          isSubmitting={isSubmitting}
+        />
         )}
 
  {/* Contexte: gestion des biens. */}
         <PropertyList
           filtered={filtered}
           now={now}
-          setEditId={setEditId}
-          setShowForm={setShowForm}
-          setShowPreview={setShowPreview}
-          setForm={setForm}
+          startEditProperty={startEditProperty}
           handleDelete={handleDelete}
           toAbsUrl={toAbsUrl}
           isPdf={isPdf}
@@ -809,6 +851,7 @@ function PropertyForm({
   handleUpdate,
   resetForm,
   editId,
+  editMediaCount,
   isSubmitting,
 }) {
   const { t } = useTranslation();
@@ -839,6 +882,7 @@ function PropertyForm({
       ) : (
         <PropertyEditor
           editId={editId}
+          editMediaCount={editMediaCount}
           form={form}
           setForm={setForm}
           handleFileChange={handleFileChange}
@@ -948,6 +992,7 @@ function PropertyPreview({
 
 function PropertyEditor({
   editId,
+  editMediaCount,
   form,
   setForm,
   handleFileChange,
@@ -1115,6 +1160,17 @@ function PropertyEditor({
           onChange={handleFileChange}
           className="w-full cursor-pointer rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         />
+        <p className="mt-1 text-xs text-text-secondary">
+          {editId
+            ? t('propertiesPage.form.editMediaHint', {
+                current: editMediaCount,
+                remaining: Math.max(0, PROPERTY_MAX_FILES - editMediaCount),
+                max: PROPERTY_MAX_FILES,
+              })
+            : t('propertiesPage.form.createMediaHint', {
+                max: PROPERTY_MAX_FILES,
+              })}
+        </p>
         {previewUrls.length > 0 && (
           <p className="mt-1 text-xs text-text-secondary">
             {t('propertiesPage.form.filesSelected', {
@@ -1171,10 +1227,7 @@ function PropertyEditor({
 function PropertyList({
   filtered,
   now,
-  setEditId,
-  setShowForm,
-  setShowPreview,
-  setForm,
+  startEditProperty,
   handleDelete,
   toAbsUrl,
   isPdf,
@@ -1310,19 +1363,7 @@ function PropertyList({
                     <>
                       <button
                         onClick={() => {
-                          setEditId(p.id);
-                          setShowForm(true);
-                          setShowPreview(false);
-                          setForm({
-                            title: p.title,
-                            type: p.type,
-                            address: p.address,
-                            city: p.city,
-                            postalCode: p.postalCode || '',
-                            surfaceArea: p.surfaceArea || '',
-                            roomCount: p.roomCount || '',
-                            description: p.description || '',
-                          });
+                          startEditProperty(p);
                         }}
                         className="w-full sm:w-auto rounded-lg bg-amber-500 px-4 py-2 text-xs font-medium text-white transition hover:bg-amber-600 sm:text-sm"
                       >

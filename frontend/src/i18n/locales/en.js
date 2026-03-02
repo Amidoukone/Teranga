@@ -15,7 +15,7 @@ const en = {
     register: "Sign up",
     products: "Products",
     orders: "Orders",
-    master: "Master",
+    master: "Country & MASTER",
     security: "Security",
     settings: "Settings",
     helpSupport: "Help & Support",
@@ -1084,7 +1084,8 @@ const en = {
     form: {
       titleEdit: "Edit property",
       titleCreate: "Add a new property",
-      helperCreate: "Fill in the details, add photos, then submit.",
+      helperCreate:
+        "Fill in details and upload photos/documents (up to 10 files per property).",
       labels: {
         title: "Property title",
         type: "Property type",
@@ -1117,6 +1118,9 @@ const en = {
         automobileRoomsPlaceholder: "e.g., 5",
       },
       filesLabel: "Photos / documents (jpg, jpeg, png, webp, heic, heif, pdf)",
+      createMediaHint: "You can upload up to {{max}} files.",
+      editMediaHint:
+        "Existing files: {{current}}/{{max}}. New uploads are appended ({{remaining}} slot(s) left).",
       filesSelected: "{{count}} file selected.",
       filesSelected_other: "{{count}} files selected.",
       previewAlt: "Preview {{index}}",
@@ -1178,7 +1182,9 @@ const en = {
       invalidFileType:
         "Unsupported file: {{name}}. Allowed formats: JPG, JPEG, PNG, WEBP, HEIC, HEIF, PDF.",
       fileTooLarge: "File too large: {{name}} (max {{max}} MB).",
-      tooManyFiles: "Maximum {{max}} files allowed.",
+      tooManyFiles: "You can add up to {{max}} file(s) in this step.",
+      mediaLimitReached:
+        "This property already reached the maximum of {{max}} files.",
       updateSuccess: "Property updated",
       updateError: "Error updating.",
       deleteNotAllowed: "Deletion not allowed (time window expired)",
@@ -1477,6 +1483,12 @@ const en = {
       updateSuccess: "Property updated successfully.",
       updateError: "Error updating the property.",
       deleteError: "Error deleting the property.",
+      invalidFileType:
+        "Unsupported file: {{name}}. Allowed formats: JPG, JPEG, PNG, WEBP, HEIC, HEIF, PDF.",
+      fileTooLarge: "File too large: {{name}} (max {{max}} MB).",
+      tooManyFiles: "You can add up to {{max}} file(s) in this step.",
+      mediaLimitReached:
+        "This property already reached the maximum of {{max}} files.",
     },
     client: {
       title: "👤 Select a client",
@@ -1521,7 +1533,12 @@ const en = {
         automobileRoomsLabel: "Number of seats",
         automobileRoomsPlaceholder: "Number of seats",
       },
-      filesLabel: "📁 Photos & documents (JPG, PNG, PDF)",
+      filesLabel: "Photos / documents (jpg, jpeg, png, webp, heic, heif, pdf)",
+      createMediaHint: "You can upload up to {{max}} files.",
+      editMediaHint:
+        "Existing files: {{current}}/{{max}}. New uploads are appended ({{remaining}} slot(s) left).",
+      filesSelected: "{{count}} file selected.",
+      filesSelected_other: "{{count}} files selected.",
       previewAlt: "Preview {{index}}",
     },
     list: {
@@ -1623,7 +1640,7 @@ const en = {
     },
   },
   adminOnboardingPage: {
-    title: "🚀 Country & MASTER onboarding",
+    title: "Country & MASTER",
     subtitle:
       "1) Create a country • 2) Add regions (optional) • 3) Create the MASTER with guided selection",
     management: {
@@ -1694,6 +1711,8 @@ const en = {
     hints: {
       noRegionsForMaster:
         "⚠️ No region created. Add at least one region in step 2, or switch back to \"MASTER for the country\".",
+      countryForceDeleteAdminWarning:
+        "Country force delete detaches non-admin users, but linked admin/master accounts must be reassigned or removed first.",
     },
     confirmations: {
       deleteCountry: "Delete country \"{{name}}\"? This action is permanent.",
@@ -2823,7 +2842,7 @@ const en = {
         title: "Assigned services",
       },
       adminOnboarding: {
-        title: "Country & MASTER onboarding",
+        title: "Country & MASTER",
       },
       adminProjects: {
         title: "Project management",
@@ -3050,6 +3069,7 @@ const en = {
 };
 
 export default en;
+
 
 
 

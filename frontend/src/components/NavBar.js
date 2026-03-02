@@ -236,7 +236,10 @@ const ICON_BY_PATH_PREFIX = [
   { prefix: "/orders", icon: Package },
 ];
 
+const TEXT_ONLY_PATHS = new Set(["/admin/onboarding"]);
+
 function iconForPath(path) {
+  if (TEXT_ONLY_PATHS.has(path)) return null;
   const found = ICON_BY_PATH_PREFIX.find(
     (x) => path === x.prefix || path.startsWith(x.prefix + "/")
   );
@@ -881,16 +884,18 @@ function NavBar() {
                                   aria-current={active ? "page" : undefined}
                                   role="menuitem"
                                 >
-                                  <span
-                                    className={[
-                                      clsPanelIconChip,
-                                      active
-                                        ? "border-primary/20 bg-primary/10 text-primary"
-                                        : "text-text-secondary group-hover:text-text-primary",
-                                    ].join(" ")}
-                                  >
-                                    <Icon size={16} />
-                                  </span>
+                                  {Icon ? (
+                                    <span
+                                      className={[
+                                        clsPanelIconChip,
+                                        active
+                                          ? "border-primary/20 bg-primary/10 text-primary"
+                                          : "text-text-secondary group-hover:text-text-primary",
+                                      ].join(" ")}
+                                    >
+                                      <Icon size={16} />
+                                    </span>
+                                  ) : null}
                                   <span className="flex-1">{l.label}</span>
                                   {active ? (
                                     <Check size={16} className="text-primary" />
@@ -1215,16 +1220,18 @@ function NavBar() {
                             ].join(" ")}
                             aria-current={active ? "page" : undefined}
                           >
-                            <span
-                              className={[
-                                clsPanelIconChip,
-                                active
-                                  ? "border-primary/20 bg-primary/10 text-primary"
-                                  : "text-text-secondary group-hover:text-text-primary",
-                              ].join(" ")}
-                            >
-                              <Icon size={16} />
-                            </span>
+                            {Icon ? (
+                              <span
+                                className={[
+                                  clsPanelIconChip,
+                                  active
+                                    ? "border-primary/20 bg-primary/10 text-primary"
+                                    : "text-text-secondary group-hover:text-text-primary",
+                                ].join(" ")}
+                              >
+                                <Icon size={16} />
+                              </span>
+                            ) : null}
                             <span className="flex-1">{l.label}</span>
                             {active ? (
                               <Check size={16} className="text-primary" />

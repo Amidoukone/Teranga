@@ -21,6 +21,7 @@ import {
 import { getRegions, updateRegion, deleteRegion } from "../services/regions";
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
+import { confirmAction } from "../utils/confirm";
 import {
   AdminActionsRow,
   AdminPanelCard,
@@ -174,6 +175,26 @@ export default function AdminOnboardingPage() {
     return map;
   }, [countries]);
 
+  function isUsersDependencyConflict(err) {
+    const status = err?.response?.status;
+    const message = String(err?.response?.data?.error || "").toLowerCase();
+    return status === 409 && (message.includes("utilisateurs") || message.includes("users"));
+  }
+
+  async function confirmForceDelete(scope, name) {
+    if (scope === "country") {
+      return confirmAction({
+        message: `Le pays "${name}" est encore lie a des utilisateurs. Forcer la suppression va detacher les utilisateurs non-admin de ce pays. Continuer ?`,
+        danger: true,
+      });
+    }
+
+    return confirmAction({
+      message: `La region "${name}" est encore liee a des utilisateurs. Forcer la suppression va detacher ces utilisateurs de la region. Continuer ?`,
+      danger: true,
+    });
+  }
+
   async function loadCountries() {
     setLoadingCountries(true);
     try {
@@ -246,6 +267,27 @@ export default function AdminOnboardingPage() {
       await loadCountries();
       await loadRegions();
     } catch (err) {
+      if (isUsersDependencyConflict(err)) {
+        const confirmForce = await confirmForceDelete("country", country.name);
+        if (!confirmForce) return;
+
+        try {
+          await deleteCountry(country.id, { force: true });
+          if (createdCountry?.id === country.id) {
+            setCreatedCountry(null);
+            setStep(1);
+          }
+          await loadCountries();
+          await loadRegions();
+          return;
+        } catch (forceErr) {
+          notify(
+            forceErr?.response?.data?.error ||
+              t("adminOnboardingPage.errors.countryDelete")
+          );
+          return;
+        }
+      }
       notify(err?.response?.data?.error || t("adminOnboardingPage.errors.countryDelete"));
     }
   }
@@ -291,6 +333,23 @@ export default function AdminOnboardingPage() {
       setRegions((prev) => prev.filter((r) => r.id !== region.id));
       setRegionsCreated((prev) => prev.filter((r) => r.id !== region.id));
     } catch (err) {
+      if (isUsersDependencyConflict(err)) {
+        const confirmForce = await confirmForceDelete("region", region.name);
+        if (!confirmForce) return;
+
+        try {
+          await deleteRegion(region.id, { force: true });
+          setRegions((prev) => prev.filter((r) => r.id !== region.id));
+          setRegionsCreated((prev) => prev.filter((r) => r.id !== region.id));
+          return;
+        } catch (forceErr) {
+          notify(
+            forceErr?.response?.data?.error ||
+              t("adminOnboardingPage.errors.regionDelete")
+          );
+          return;
+        }
+      }
       notify(err?.response?.data?.error || t("adminOnboardingPage.errors.regionDelete"));
     }
   }
@@ -480,6 +539,9 @@ export default function AdminOnboardingPage() {
                       })}
                 </span>
               </div>
+              <p className="mb-2 rounded-lg border border-amber-300/50 bg-amber-50/80 px-2 py-1 text-[11px] text-amber-900">
+                {t("adminOnboardingPage.hints.countryForceDeleteAdminWarning")}
+              </p>
 
               <div className="space-y-2 max-h-72 overflow-auto pr-1">
                 {countries.map((country) => {
@@ -926,6 +988,3 @@ export default function AdminOnboardingPage() {
     </div>
   );
 }
-
-
-

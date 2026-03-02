@@ -11,6 +11,7 @@ const {
 
 // 🔹 Instance ImageKit (backend/src/helpers/teranga-imagekit.js)
 const imageKit = require('../helpers/teranga-imagekit');
+const fs = require('fs');
 const path = require('path');
 
 // ✅ GeoScope (strict + admin global)
@@ -44,6 +45,11 @@ const toSafeInt = (v, fallback = null) => {
   const n = parseInt(String(v), 10);
   return Number.isNaN(n) ? fallback : n;
 };
+
+const PROPERTY_MAX_FILES = Math.max(
+  1,
+  toSafeInt(process.env.PROPERTY_MAX_FILES, 10) || 10
+);
 
 async function resolveCountryIdFromLegacy(countryValue) {
   const trimmed = toTrimOrNull(countryValue);
@@ -90,6 +96,88 @@ function canAccessByGeoScope(user, resource) {
   return canAccessGeoResource(resource, user);
 }
 
+function sanitizeBasename(value) {
+  return String(value || '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function buildLocalPropertyFileName(originalName = 'file') {
+  const base = path.basename(originalName || 'file');
+  const ext = path.extname(base || '').toLowerCase();
+  const stem = base.slice(0, base.length - ext.length);
+  const safeStem = sanitizeBasename(stem) || 'file';
+  const safeExt = ext && ext.length <= 10 ? ext : '';
+  const salt = Math.random().toString(36).slice(2, 8);
+  const timestamp = Date.now();
+  return `property_${timestamp}_${salt}_${safeStem}${safeExt}`;
+}
+
+async function savePropertyFileLocally(file) {
+  if (!file?.buffer) {
+    throw new Error('Fichier invalide: buffer absent');
+  }
+
+  const uploadsRoot = path.join(__dirname, '..', '..', 'uploads');
+  const propertiesDir = path.join(uploadsRoot, 'properties');
+  await fs.promises.mkdir(propertiesDir, { recursive: true });
+
+  const localName = buildLocalPropertyFileName(file.originalname);
+  const absolutePath = path.join(propertiesDir, localName);
+  await fs.promises.writeFile(absolutePath, file.buffer);
+
+  return {
+    url: `/uploads/properties/${localName}`,
+    fileId: null,
+  };
+}
+
+function isLocalUploadPath(filePath) {
+  return typeof filePath === 'string' && /^\/?uploads\//.test(filePath);
+}
+
+async function removeLocalUpload(filePath) {
+  if (!isLocalUploadPath(filePath)) return;
+
+  const relPath = filePath.replace(/^\/+/, '');
+  const backendRoot = path.join(__dirname, '..', '..');
+  const uploadsRoot = path.resolve(path.join(backendRoot, 'uploads'));
+  const absolutePath = path.resolve(path.join(backendRoot, relPath));
+
+  if (
+    absolutePath !== uploadsRoot &&
+    !absolutePath.startsWith(`${uploadsRoot}${path.sep}`)
+  ) {
+    logger.warn({ filePath }, 'property.local_file.delete.blocked_path');
+    return;
+  }
+
+  try {
+    await fs.promises.unlink(absolutePath);
+  } catch (err) {
+    logger.warn(
+      { filePath, message: err?.message },
+      'property.local_file.delete.failed'
+    );
+  }
+}
+
+function normalizeStoredPhotoItem(value) {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    return { url: value, fileId: null };
+  }
+  if (typeof value === 'object' && value.url) {
+    return { url: String(value.url), fileId: value.fileId || null };
+  }
+  return null;
+}
+
+function normalizeStoredPhotos(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(normalizeStoredPhotoItem).filter(Boolean);
+}
+
 /* ============================================================
    Labels + normalisation photos pour le frontend
 ============================================================ */
@@ -97,22 +185,7 @@ function addLabels(p) {
   if (!p) return null;
 
   const obj = p.toJSON ? p.toJSON() : p;
-
-  // 🖼 Normalisation des photos pour le frontend :
-  // - en base : [{ url, fileId }, ...] OU ["https://...", ...]
-  // - en réponse API : ["https://...", ...] (compat avec PropertiesPage)
-  let photos = [];
-
-  if (Array.isArray(obj.photos)) {
-    photos = obj.photos
-      .map((ph) => {
-        if (!ph) return null;
-        if (typeof ph === 'string') return ph;
-        if (typeof ph === 'object' && ph.url) return ph.url;
-        return null;
-      })
-      .filter(Boolean);
-  }
+  const photos = normalizeStoredPhotos(obj.photos).map((ph) => ph.url);
 
   return {
     ...obj,
@@ -130,36 +203,57 @@ async function uploadPhotosToImageKit(files = []) {
 
   if (!files || !files.length) return results;
 
-  // Si ImageKit n'est pas configuré, on log et on ignore l'upload
-  if (!isImageKitEnabled()) {
-    logger.warn(
-      "⚠️ ImageKit désactivé ou mal configuré. Les fichiers ne seront pas uploadés."
-    );
-    return results;
+  const imageKitEnabled = isImageKitEnabled();
+  if (!imageKitEnabled) {
+    logger.warn('property.imagekit.disabled.fallback_local');
   }
 
   for (const f of files) {
     const ext = path.extname(f.originalname || '').replace('.', '') || 'jpg';
 
-    try {
-      const uploaded = await imageKit.upload({
-        // Buffer mémoire fourni par multer.memoryStorage()
-        file: f.buffer,
-        fileName: `prop_${Date.now()}_${Math.round(Math.random() * 1e9)}.${ext}`,
-        folder: '/teranga/properties',
-      });
+    if (imageKitEnabled) {
+      try {
+        const uploaded = await imageKit.upload({
+          // Buffer mémoire fourni par multer.memoryStorage()
+          file: f.buffer,
+          fileName: `prop_${Date.now()}_${Math.round(Math.random() * 1e9)}.${ext}`,
+          folder: '/teranga/properties',
+        });
 
+        const uploadedUrl =
+          uploaded?.url || uploaded?.fileUrl || uploaded?.path || '';
+
+        if (uploadedUrl) {
+          results.push({
+            url: uploadedUrl,
+            fileId: uploaded?.fileId || null,
+          });
+          continue;
+        }
+
+        logger.warn(
+          { fileName: f?.originalname },
+          'property.imagekit.upload_missing_url.fallback_local'
+        );
+      } catch (e) {
+        logger.warn(
+          { err: e, fileName: f?.originalname },
+          'property.imagekit.upload.failed.fallback_local'
+        );
+      }
+    }
+
+    try {
+      const localSaved = await savePropertyFileLocally(f);
       results.push({
-        url: uploaded.url,
-        fileId: uploaded.fileId,
+        url: localSaved.url,
+        fileId: localSaved.fileId,
       });
     } catch (e) {
       logger.error(
-        '❌ Échec upload ImageKit pour le fichier',
-        f.originalname,
-        e?.message || e
+        { err: e, fileName: f?.originalname },
+        'property.local_upload.failed'
       );
-      // On continue avec les autres fichiers, mais on ne bloque pas la création du bien
     }
   }
 
@@ -170,27 +264,30 @@ async function uploadPhotosToImageKit(files = []) {
    DELETE ImageKit
 ============================================================ */
 async function deleteImageKitFiles(photoObjects = []) {
-  if (!Array.isArray(photoObjects) || !photoObjects.length) return;
+  const normalized = normalizeStoredPhotos(photoObjects);
+  if (!normalized.length) return;
 
-  // Si ImageKit n'est pas configuré, inutile d'essayer de supprimer
-  if (!isImageKitEnabled()) {
+  const imageKitEnabled = isImageKitEnabled();
+  if (!imageKitEnabled && normalized.some((p) => p.fileId)) {
     logger.warn(
-      "⚠️ ImageKit désactivé ou mal configuré. Suppression distante ignorée."
+      'property.imagekit.disabled.remote_delete_skipped'
     );
-    return;
   }
 
-  for (const p of photoObjects) {
-    const fileId = p && typeof p === 'object' ? p.fileId : null;
-    if (fileId) {
+  for (const p of normalized) {
+    if (p.fileId && imageKitEnabled) {
       try {
-        await imageKit.deleteFile(fileId);
+        await imageKit.deleteFile(p.fileId);
       } catch (e) {
         logger.warn(
-          `⚠️ Impossible de supprimer ImageKit fileId=${fileId}`,
+          `⚠️ Impossible de supprimer ImageKit fileId=${p.fileId}`,
           e?.message || e
         );
       }
+    }
+
+    if (isLocalUploadPath(p.url)) {
+      await removeLocalUpload(p.url);
     }
   }
 }
@@ -392,7 +489,13 @@ exports.create = async (req, res) => {
       }
     }
 
-    /* 🔥 Upload ImageKit (non bloquant en cas d’erreur) */
+    if ((req.files?.length || 0) > PROPERTY_MAX_FILES) {
+      return res.status(400).json({
+        error: `Maximum ${PROPERTY_MAX_FILES} fichiers autorisés par bien`,
+      });
+    }
+
+    /* 🔥 Upload fichiers (ImageKit + fallback local, non bloquant) */
     const photos = req.files?.length ? await uploadPhotosToImageKit(req.files) : [];
 
     // 🌍 Multi-pays :
@@ -623,19 +726,32 @@ exports.update = async (req, res) => {
     /* ========================================================
        🔥 Gestion photos (ImageKit)
     ======================================================== */
+    const replace = String(body.replacePhotos || '').toLowerCase() === 'true';
+    const existingPhotos = normalizeStoredPhotos(p.photos || []);
+    const incomingFilesCount = req.files?.length || 0;
+
+    const maxNewFiles = replace
+      ? PROPERTY_MAX_FILES
+      : Math.max(0, PROPERTY_MAX_FILES - existingPhotos.length);
+    if (incomingFilesCount > maxNewFiles) {
+      return res.status(400).json({
+        error: replace
+          ? `Maximum ${PROPERTY_MAX_FILES} fichiers autorisés par bien`
+          : `Limite atteinte: ce bien contient déjà ${existingPhotos.length}/${PROPERTY_MAX_FILES} fichiers`,
+      });
+    }
+
     let newPhotos = [];
-    if (req.files?.length) {
+    if (incomingFilesCount > 0) {
       newPhotos = await uploadPhotosToImageKit(req.files);
     }
 
     if (newPhotos.length) {
-      const replace = String(body.replacePhotos || '').toLowerCase() === 'true';
-
       if (replace) {
-        await deleteImageKitFiles(p.photos || []);
+        await deleteImageKitFiles(existingPhotos);
         updates.photos = newPhotos;
       } else {
-        updates.photos = [...(p.photos || []), ...newPhotos];
+        updates.photos = [...existingPhotos, ...newPhotos];
       }
     }
 
@@ -689,7 +805,7 @@ exports.remove = async (req, res) => {
     }
 
     // 🗑️ Suppression ImageKit (safe)
-    await deleteImageKitFiles(p.photos || []);
+    await deleteImageKitFiles(normalizeStoredPhotos(p.photos || []));
 
     await p.destroy();
 

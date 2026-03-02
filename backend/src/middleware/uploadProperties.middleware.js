@@ -33,6 +33,7 @@ function toInt(value, fallback) {
 }
 
 const MAX_FILE_SIZE_MB = toInt(process.env.PROPERTY_MAX_FILE_MB, 15);
+const MAX_FILES = toInt(process.env.PROPERTY_MAX_FILES, 10);
 
 function fileFilter(_req, file, cb) {
   const ext = (path.extname(file.originalname) || '').toLowerCase();
@@ -60,7 +61,10 @@ function fileFilter(_req, file, cb) {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: MAX_FILE_SIZE_MB * 1024 * 1024 },
+  limits: {
+    fileSize: MAX_FILE_SIZE_MB * 1024 * 1024,
+    files: MAX_FILES,
+  },
 });
 
 module.exports = upload;

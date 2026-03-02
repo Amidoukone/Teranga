@@ -69,6 +69,18 @@ async function findRegionUsage(regionId) {
   return results.find((result) => result.count > 0) || null;
 }
 
+async function forceDetachRegionUsers(region) {
+  if (!region?.id) return;
+
+  // Preserve country scope for users that only had a region scope.
+  await User.update(
+    { countryId: region.countryId },
+    { where: { regionId: region.id, countryId: null } }
+  );
+
+  await User.update({ regionId: null }, { where: { regionId: region.id } });
+}
+
 /* ======================================================
    📋 LIST
    - Public : OK
@@ -221,12 +233,23 @@ exports.remove = async (req, res) => {
 
     const id = toSafeInt(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID invalide' });
+    const force = String(req.query?.force || '').toLowerCase() === 'true';
 
     const region = await Region.findByPk(id);
     if (!region) return res.status(404).json({ error: 'Région introuvable' });
 
-    const usage = await findRegionUsage(id);
+    let usage = await findRegionUsage(id);
     if (usage) {
+      if (force && usage.label === 'utilisateurs') {
+        await forceDetachRegionUsers(region);
+        usage = await findRegionUsage(id);
+      }
+
+      if (!usage) {
+        await region.destroy();
+        return res.json({ success: true });
+      }
+
       return res.status(409).json({
         error: `Suppression impossible : cette région possède encore des ${usage.label}.`,
       });

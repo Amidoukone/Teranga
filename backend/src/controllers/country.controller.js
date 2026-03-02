@@ -70,6 +70,25 @@ async function findCountryUsage(countryId) {
   return results.find((result) => result.count > 0) || null;
 }
 
+async function forceDetachCountryUsers(countryId) {
+  const adminCount = await User.count({
+    where: { countryId, role: 'admin' },
+  });
+
+  if (adminCount > 0) {
+    const err = new Error(
+      'Suppression forcee impossible : ce pays est encore lie a des comptes admin/master. Reassignez ou supprimez-les d abord.'
+    );
+    err.status = 409;
+    throw err;
+  }
+
+  await User.update(
+    { countryId: null, regionId: null },
+    { where: { countryId } }
+  );
+}
+
 /* ======================================================
    📋 LIST
    - Public (ou tous rôles)
@@ -244,12 +263,30 @@ exports.remove = async (req, res) => {
 
     const id = toSafeInt(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID invalide' });
+    const force = String(req.query?.force || '').toLowerCase() === 'true';
 
     const country = await Country.findByPk(id);
     if (!country) return res.status(404).json({ error: 'Pays introuvable' });
 
-    const usage = await findCountryUsage(id);
+    let usage = await findCountryUsage(id);
     if (usage) {
+      if (force && usage.label === 'utilisateurs') {
+        try {
+          await forceDetachCountryUsers(id);
+        } catch (detachErr) {
+          if (detachErr?.status) {
+            return res.status(detachErr.status).json({ error: detachErr.message });
+          }
+          throw detachErr;
+        }
+        usage = await findCountryUsage(id);
+      }
+
+      if (!usage) {
+        await country.destroy();
+        return res.json({ success: true });
+      }
+
       return res.status(409).json({
         error: `Suppression impossible : ce pays possède encore des ${usage.label}.`,
       });

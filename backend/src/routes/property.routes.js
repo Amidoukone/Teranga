@@ -7,6 +7,11 @@ const { requireRoles } = require('../middleware/roles.middleware');
 const upload = require('../middleware/uploadProperties.middleware');
 const logger = require('../utils/logger');
 
+const parsedMaxFiles = Number.parseInt(process.env.PROPERTY_MAX_FILES, 10);
+const PROPERTY_MAX_FILES = Number.isFinite(parsedMaxFiles) && parsedMaxFiles > 0
+  ? parsedMaxFiles
+  : 10;
+
 function attachOwnerIdFromParam(req, _res, next) {
   req.body = req.body || {};
   req.body.ownerId = req.params.id;
@@ -17,7 +22,7 @@ router.post(
   '/',
   auth,
   requireRoles('client', 'admin'),
-  upload.array('files', 5),
+  upload.array('files', PROPERTY_MAX_FILES),
   ctrl.create
 );
 
@@ -32,7 +37,7 @@ router.put(
   '/:id',
   auth,
   requireRoles('client', 'admin'),
-  upload.array('files', 5),
+  upload.array('files', PROPERTY_MAX_FILES),
   ctrl.update
 );
 
@@ -47,7 +52,7 @@ router.post(
   '/client/:id',
   auth,
   requireRoles('admin'),
-  upload.array('files', 5),
+  upload.array('files', PROPERTY_MAX_FILES),
   attachOwnerIdFromParam,
   (req, res, next) => {
     logger.info(
@@ -66,7 +71,7 @@ router.post(
   '/admin',
   auth,
   requireRoles('admin'),
-  upload.array('files', 5),
+  upload.array('files', PROPERTY_MAX_FILES),
   (req, res, next) => {
     const { ownerId, clientId, ownerEmail } = req.body || {};
     logger.info(
@@ -101,7 +106,7 @@ router.post(
   '/create',
   auth,
   requireRoles('client', 'admin'),
-  upload.array('files', 5),
+  upload.array('files', PROPERTY_MAX_FILES),
   (req, res, next) => {
     logger.info(
       { route: '/properties/create' },
@@ -115,7 +120,7 @@ router.post(
   '/admin/create',
   auth,
   requireRoles('admin'),
-  upload.array('files', 5),
+  upload.array('files', PROPERTY_MAX_FILES),
   (req, res, next) => {
     logger.info(
       { route: '/properties/admin/create' },

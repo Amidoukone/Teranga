@@ -54,6 +54,40 @@ function isPdf(path = '') {
   return /\.pdf($|\?)/i.test(String(path || ''));
 }
 
+const PROPERTY_MAX_FILES = 10;
+const PROPERTY_MAX_FILE_MB = 15;
+const PROPERTY_ALLOWED_EXTS = new Set([
+  'jpg',
+  'jpeg',
+  'png',
+  'webp',
+  'heic',
+  'heif',
+  'pdf',
+]);
+
+function getFileExt(fileName = '') {
+  const dot = String(fileName).lastIndexOf('.');
+  if (dot < 0) return '';
+  return String(fileName).slice(dot + 1).toLowerCase();
+}
+
+function isAllowedPropertyFile(file) {
+  const ext = getFileExt(file?.name || '');
+  const mime = String(file?.type || '').toLowerCase();
+
+  const extOk = PROPERTY_ALLOWED_EXTS.has(ext);
+  const mimeOk =
+    !mime ||
+    mime.startsWith('image/') ||
+    mime === 'application/pdf' ||
+    mime === 'application/x-pdf' ||
+    mime === 'application/octet-stream' ||
+    mime === 'binary/octet-stream';
+
+  return extOk && mimeOk;
+}
+
 function getPropertyTypeFieldConfig(type, t) {
   if (type === 'land') {
     return {
@@ -143,6 +177,7 @@ export default function AdminPropertiesPage() {
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [editMediaCount, setEditMediaCount] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
 
   const [form, setForm] = useState({
@@ -278,13 +313,61 @@ export default function AdminPropertiesPage() {
   // ==========================================================================
   function handleFileChange(e) {
     const selected = Array.from(e.target.files || []);
-    setFiles(selected);
+    const availableSlots = editId
+      ? Math.max(0, PROPERTY_MAX_FILES - editMediaCount)
+      : PROPERTY_MAX_FILES;
+
+    if (availableSlots <= 0) {
+      notify(
+        t('adminPropertiesPage.alerts.mediaLimitReached', {
+          max: PROPERTY_MAX_FILES,
+        })
+      );
+      e.target.value = '';
+      return;
+    }
+
+    const badType = selected.find((f) => !isAllowedPropertyFile(f));
+    if (badType) {
+      notify(
+        t('adminPropertiesPage.alerts.invalidFileType', {
+          name: badType.name || 'file',
+        })
+      );
+      e.target.value = '';
+      return;
+    }
+
+    const tooLarge = selected.find(
+      (f) => Number(f.size || 0) > PROPERTY_MAX_FILE_MB * 1024 * 1024
+    );
+    if (tooLarge) {
+      notify(
+        t('adminPropertiesPage.alerts.fileTooLarge', {
+          name: tooLarge.name || 'file',
+          max: PROPERTY_MAX_FILE_MB,
+        })
+      );
+      e.target.value = '';
+      return;
+    }
+
+    if (selected.length > availableSlots) {
+      notify(
+        t('adminPropertiesPage.alerts.tooManyFiles', {
+          max: availableSlots,
+        })
+      );
+    }
+
+    const limited = selected.slice(0, availableSlots);
+    setFiles(limited);
 
     // Nettoyage anciennes URLs (uniquement blob)
     previewUrls.forEach(safeRevoke);
 
     // Previews blob pour fichiers locaux
-    const previews = selected.map((f) => URL.createObjectURL(f));
+    const previews = limited.map((f) => URL.createObjectURL(f));
     setPreviewUrls(previews);
   }
 
@@ -309,7 +392,11 @@ export default function AdminPropertiesPage() {
       await loadProperties(selectedClient);
     } catch (e2) {
       console.error('AAAAA...aTM Erreur crAAAation:', e2);
-      notify(t('adminPropertiesPage.alerts.createError'));
+      notify(
+        e2?.response?.data?.error ||
+          e2?.message ||
+          t('adminPropertiesPage.alerts.createError')
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -320,6 +407,7 @@ export default function AdminPropertiesPage() {
   // ==========================================================================
   function startEdit(p) {
     setEditId(p.id);
+    setEditMediaCount(Array.isArray(p.photos) ? p.photos.length : 0);
     setIsCreating(false);
 
     setForm({
@@ -363,7 +451,11 @@ export default function AdminPropertiesPage() {
       await loadProperties(selectedClient);
     } catch (e2) {
       console.error('AAAAA...aTM Update:', e2);
-      notify(t('adminPropertiesPage.alerts.updateError'));
+      notify(
+        e2?.response?.data?.error ||
+          e2?.message ||
+          t('adminPropertiesPage.alerts.updateError')
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -389,6 +481,7 @@ export default function AdminPropertiesPage() {
   // ==========================================================================
   function resetForm() {
     setEditId(null);
+    setEditMediaCount(0);
     setFiles([]);
 
     previewUrls.forEach(safeRevoke);
@@ -708,19 +801,50 @@ export default function AdminPropertiesPage() {
                   type="file"
                   multiple
                   onChange={handleFileChange}
-                  accept=".jpg,.jpeg,.png,.pdf"
+                  accept="image/*,.pdf,.webp,.heic,.heif"
                   className="app-input-subtle"
                 />
+                <p className="text-[11px] text-text-muted">
+                  {editId
+                    ? t('adminPropertiesPage.form.editMediaHint', {
+                        current: editMediaCount,
+                        remaining: Math.max(0, PROPERTY_MAX_FILES - editMediaCount),
+                        max: PROPERTY_MAX_FILES,
+                      })
+                    : t('adminPropertiesPage.form.createMediaHint', {
+                        max: PROPERTY_MAX_FILES,
+                      })}
+                </p>
+                {files.length > 0 && (
+                  <p className="text-[11px] text-text-muted">
+                    {t('adminPropertiesPage.form.filesSelected', {
+                      count: files.length,
+                    })}
+                  </p>
+                )}
 
                 {previewUrls.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-3">
                     {previewUrls.map((url, i) => (
-                      <img
-                        key={i}
-                        src={url}
-                        className="w-20 h-20 object-cover rounded-xl border border-border shadow-sm"
-                        alt={t('adminPropertiesPage.form.previewAlt', { index: i + 1 })}
-                      />
+                      isPdf(url) ? (
+                        <a
+                          key={i}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="w-20 h-20 border border-border bg-surface-main rounded-xl flex items-center justify-center text-xs text-text-secondary"
+                          title={t('adminPropertiesPage.list.pdfLabel')}
+                        >
+                          {t('adminPropertiesPage.list.pdfLabel')}
+                        </a>
+                      ) : (
+                        <img
+                          key={i}
+                          src={url}
+                          className="w-20 h-20 object-cover rounded-xl border border-border shadow-sm"
+                          alt={t('adminPropertiesPage.form.previewAlt', { index: i + 1 })}
+                        />
+                      )
                     ))}
                   </div>
                 )}
@@ -941,6 +1065,3 @@ export default function AdminPropertiesPage() {
     </div>
   );
 }
-
-
-

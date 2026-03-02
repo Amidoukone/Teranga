@@ -15,7 +15,7 @@ const fr = {
     register: "Inscription",
     products: "Produits",
     orders: "Commandes",
-    master: "Espace master",
+    master: "Pays & MASTER",
     security: "Securite",
     settings: "Parametres",
     helpSupport: "Aide & Support",
@@ -1088,7 +1088,7 @@ const fr = {
       titleEdit: "Modifier le bien",
       titleCreate: "Ajouter un nouveau bien",
       helperCreate:
-        "Remplissez les informations, ajoutez des photos, puis validez.",
+        "Remplissez les informations et ajoutez des photos/documents (jusqu'à 10 fichiers par bien).",
       labels: {
         title: "Titre du bien",
         type: "Type de bien",
@@ -1121,6 +1121,9 @@ const fr = {
         automobileRoomsPlaceholder: "Ex : 5",
       },
       filesLabel: "Photos / documents (jpg, jpeg, png, webp, heic, heif, pdf)",
+      createMediaHint: "Vous pouvez importer jusqu'à {{max}} fichiers.",
+      editMediaHint:
+        "Fichiers existants : {{current}}/{{max}}. Les nouveaux fichiers sont ajoutés sans supprimer les anciens ({{remaining}} place(s) restante(s)).",
       filesSelected: "{{count}} fichier sélectionné.",
       filesSelected_other: "{{count}} fichiers sélectionnés.",
       previewAlt: "Aperçu {{index}}",
@@ -1182,7 +1185,9 @@ const fr = {
       invalidFileType:
         "Fichier non supporté: {{name}}. Formats autorisés: JPG, JPEG, PNG, WEBP, HEIC, HEIF, PDF.",
       fileTooLarge: "Fichier trop volumineux: {{name}} (max {{max}} Mo).",
-      tooManyFiles: "Maximum {{max}} fichiers autorisés.",
+      tooManyFiles: "Vous pouvez ajouter au maximum {{max}} fichier(s) à cette étape.",
+      mediaLimitReached:
+        "Ce bien a déjà atteint la limite de {{max}} fichiers.",
       updateSuccess: "Bien mis à jour",
       updateError: "Erreur lors de la mise à jour.",
       deleteNotAllowed: "Suppression non autorisée (délai dépassé)",
@@ -1482,6 +1487,12 @@ const fr = {
       updateSuccess: "Bien mis à jour avec succès.",
       updateError: "Erreur lors de la mise à jour.",
       deleteError: "Erreur lors de la suppression.",
+      invalidFileType:
+        "Fichier non supporté: {{name}}. Formats autorisés: JPG, JPEG, PNG, WEBP, HEIC, HEIF, PDF.",
+      fileTooLarge: "Fichier trop volumineux: {{name}} (max {{max}} Mo).",
+      tooManyFiles: "Vous pouvez ajouter au maximum {{max}} fichier(s) à cette étape.",
+      mediaLimitReached:
+        "Ce bien a déjà atteint la limite de {{max}} fichiers.",
     },
     client: {
       title: "👤 Sélectionner un client",
@@ -1526,7 +1537,12 @@ const fr = {
         automobileRoomsLabel: "Nombre de places",
         automobileRoomsPlaceholder: "Nombre de places",
       },
-      filesLabel: "📁 Photos & documents (JPG, PNG, PDF)",
+      filesLabel: "Photos / documents (jpg, jpeg, png, webp, heic, heif, pdf)",
+      createMediaHint: "Vous pouvez importer jusqu'à {{max}} fichiers.",
+      editMediaHint:
+        "Fichiers existants : {{current}}/{{max}}. Les nouveaux fichiers sont ajoutés sans supprimer les anciens ({{remaining}} place(s) restante(s)).",
+      filesSelected: "{{count}} fichier sélectionné.",
+      filesSelected_other: "{{count}} fichiers sélectionnés.",
       previewAlt: "Aperçu {{index}}",
     },
     list: {
@@ -1628,7 +1644,7 @@ const fr = {
     },
   },
   adminOnboardingPage: {
-    title: "🚀 Onboarding Pays & MASTER",
+    title: "Pays & MASTER",
     subtitle:
       "1) Crée un pays • 2) Ajoute des régions (optionnel) • 3) Crée le MASTER avec sélection guidée",
     management: {
@@ -1699,6 +1715,8 @@ const fr = {
     hints: {
       noRegionsForMaster:
         "⚠️ Aucune région créée. Ajoute au moins une région à l’étape 2, ou repasse en \\\"MASTER du pays\\\".",
+      countryForceDeleteAdminWarning:
+        "Suppression forcee d un pays: les utilisateurs non-admin seront detaches, mais les comptes admin/master lies au pays doivent etre reassignes ou supprimes avant la suppression.",
     },
     confirmations: {
       deleteCountry:
@@ -2837,7 +2855,7 @@ const fr = {
         title: "Services assign\u00E9s",
       },
       adminOnboarding: {
-        title: "Onboarding Pays & MASTER",
+        title: "Pays & MASTER",
       },
       adminProjects: {
         title: "Gestion des projets",
@@ -3064,4 +3082,5 @@ const fr = {
 };
 
 export default fr;
+
 
