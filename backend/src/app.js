@@ -65,6 +65,15 @@ if (!isDev && allowedOrigins.length === 0) {
 }
 const allowAllOrigins =
   allowedOrigins.includes('*') || (isDev && allowedOrigins.length === 0);
+const allowedCorpPolicies = new Set(['same-origin', 'same-site', 'cross-origin']);
+const configuredUploadsCorp = String(process.env.UPLOADS_CORP_POLICY || '')
+  .trim()
+  .toLowerCase();
+const uploadsCrossOriginResourcePolicy = allowedCorpPolicies.has(configuredUploadsCorp)
+  ? configuredUploadsCorp
+  : isDev
+  ? 'same-site'
+  : 'cross-origin';
 
 if (!isDev && allowedOrigins.length === 0) {
   logger.warn('app.cors.origins.missing_configuration');
@@ -115,11 +124,17 @@ app.use(
     fallthrough: true,
     setHeaders: (res) => {
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+      res.setHeader(
+        'Cross-Origin-Resource-Policy',
+        uploadsCrossOriginResourcePolicy
+      );
     },
   })
 );
-logger.info('app.uploads.static_serving.enabled');
+logger.info(
+  { corp: uploadsCrossOriginResourcePolicy },
+  'app.uploads.static_serving.enabled'
+);
 
 /* ======================================================
    🔧 Chargement des routeurs Express
