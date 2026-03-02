@@ -10,7 +10,7 @@ import {
   createProperty,
   deleteProperty,
 } from '../services/properties';
-import api from '../services/api';
+import api, { getFileUrl } from '../services/api';
 import {
   PROPERTY_TYPES,
   PROPERTY_STATUSES,
@@ -23,24 +23,49 @@ import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 // ============================================================================
 // Contexte: gestion des biens.
 // ============================================================================
-const FILE_BASE =
-  (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
-  (typeof window !== 'undefined' &&
-  window.__TERANGA_API_BASE_URL
-    ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
-    : '');
+function resolvePropertyMediaPath(pathOrUrl = '') {
+  if (!pathOrUrl) return '';
+  if (typeof pathOrUrl === 'string') return pathOrUrl.trim();
+  if (typeof pathOrUrl !== 'object') return '';
+
+  const direct =
+    pathOrUrl.url ||
+    pathOrUrl.path ||
+    pathOrUrl.filePath ||
+    pathOrUrl.file_url ||
+    pathOrUrl.secure_url ||
+    pathOrUrl.src ||
+    pathOrUrl.href ||
+    pathOrUrl.location ||
+    pathOrUrl?.file?.url ||
+    pathOrUrl?.file?.path ||
+    pathOrUrl?.file?.filePath ||
+    '';
+
+  return typeof direct === 'string' ? direct.trim() : '';
+}
 
 function toAbsUrl(pathOrUrl = '') {
-  if (!pathOrUrl) return '';
-  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
-  const normalized = pathOrUrl.startsWith('/')
-    ? pathOrUrl
-    : `/${pathOrUrl}`;
-  return `${FILE_BASE}${normalized}`.replace(/([^:]\/)\/+/g, '$1');
+  const mediaPath = resolvePropertyMediaPath(pathOrUrl);
+  if (!mediaPath) return '';
+  if (/^https?:\/\//i.test(mediaPath)) return mediaPath;
+  return getFileUrl(mediaPath);
 }
 
 function isPdf(path = '') {
-  return /\.pdf($|\?)/i.test(path);
+  const mediaPath = resolvePropertyMediaPath(path);
+  if (/\.pdf($|[?#])/i.test(mediaPath)) return true;
+  if (!path || typeof path !== 'object') return false;
+
+  const mime = String(
+    path.mimeType || path.mimetype || path.contentType || path.type || ''
+  ).toLowerCase();
+  if (mime.includes('pdf')) return true;
+
+  const fileName = String(
+    path.originalName || path.fileName || path.name || ''
+  ).toLowerCase();
+  return /\.pdf($|[?#])/i.test(fileName);
 }
 const PROPERTY_MAX_FILES = 10;
 const PROPERTY_MAX_FILE_MB = 15;
@@ -1309,7 +1334,8 @@ function PropertyList({
 
             const imageUrls = (p.photos || [])
               .filter((ph) => !isPdf(ph))
-              .map((ph) => toAbsUrl(ph));
+              .map((ph) => toAbsUrl(ph))
+              .filter(Boolean);
 
             return (
               <div
@@ -1326,6 +1352,7 @@ function PropertyList({
                     <div className="flex flex-wrap gap-2 mb-3">
                       {p.photos.map((photo, i) => {
                         const absUrl = toAbsUrl(photo);
+                        if (!absUrl) return null;
                         if (isPdf(photo)) {
                           return (
                             <a

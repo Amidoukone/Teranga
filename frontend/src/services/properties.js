@@ -8,6 +8,66 @@ const PROPERTY_UPLOAD_TIMEOUT_MS =
   Number(process.env.REACT_APP_UPLOAD_TIMEOUT_MS) ||
   180000;
 
+function parseMaybeJson(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) return null;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+}
+
+function pickMediaUrl(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value !== 'object') return '';
+
+  const direct =
+    value.url ||
+    value.path ||
+    value.filePath ||
+    value.file_url ||
+    value.secure_url ||
+    value.src ||
+    value.href ||
+    value.location ||
+    value?.file?.url ||
+    value?.file?.path ||
+    value?.file?.filePath ||
+    '';
+
+  return typeof direct === 'string' ? direct.trim() : '';
+}
+
+function toMediaArray(rawPhotos) {
+  if (Array.isArray(rawPhotos)) return rawPhotos;
+  const parsed = parseMaybeJson(rawPhotos);
+  if (Array.isArray(parsed)) return parsed;
+  if (rawPhotos == null || rawPhotos === '') return [];
+  return [rawPhotos];
+}
+
+function normalizeProperty(item) {
+  if (!item || typeof item !== 'object') return item;
+
+  const photos = toMediaArray(item.photos)
+    .map((entry) => {
+      const fromEntry = pickMediaUrl(entry);
+      if (fromEntry) return fromEntry;
+      if (typeof entry === 'string') {
+        const parsed = parseMaybeJson(entry);
+        if (parsed && typeof parsed === 'object') return pickMediaUrl(parsed);
+      }
+      return '';
+    })
+    .filter(Boolean);
+
+  return { ...item, photos };
+}
+
 /**
  * ============================================================
  * 🌍 Service Frontend : Gestion des Biens Immobiliers (robuste)
@@ -86,7 +146,7 @@ export async function getProperties() {
     ]);
 
     const list = data.properties || data.rows || data.list || [];
-    return list.map((p) => applyLabels(p));
+    return list.map((p) => normalizeProperty(applyLabels(p)));
   } catch (err) {
     console.error(' Erreur chargement proprietes:', err);
     return []; // On garde l’UI fonctionnelle
@@ -108,7 +168,7 @@ export async function getClientProperties(clientId) {
     ]);
 
     const list = data.properties || data.rows || data.list || [];
-    return list.map((p) => applyLabels(p));
+    return list.map((p) => normalizeProperty(applyLabels(p)));
   } catch (err) {
     console.error('❌ Erreur chargement biens client:', err);
     return [];
@@ -127,7 +187,7 @@ export async function getAllProperties() {
     ]);
 
     const list = data.properties || data.rows || data.list || [];
-    return list.map((p) => applyLabels(p));
+    return list.map((p) => normalizeProperty(applyLabels(p)));
   } catch (err) {
     console.error('❌ Erreur chargement biens (admin):', err);
     return [];
@@ -172,7 +232,7 @@ export async function createProperty(form, files = [], adminTarget = null) {
         }
       );
       const created = data.property || data.item || data.result;
-      return applyLabels(created);
+      return normalizeProperty(applyLabels(created));
     } catch (err) {
       console.error(' Erreur creation bien (standard):', err);
       throw err;
@@ -196,7 +256,7 @@ export async function createProperty(form, files = [], adminTarget = null) {
         }
       );
       const created = data.property || data.item || data.result;
-      return applyLabels(created);
+      return normalizeProperty(applyLabels(created));
     } catch (e) {
       // On log puis on continue sur les fallbacks
       console.warn(
@@ -223,7 +283,7 @@ export async function createProperty(form, files = [], adminTarget = null) {
       }
     );
     const created = data.property || data.item || data.result;
-    return applyLabels(created);
+    return normalizeProperty(applyLabels(created));
   } catch (e) {
     console.warn(
       ' Fallback Admin create: /properties/admin non dispo, on tente /properties avec body...',
@@ -252,7 +312,7 @@ export async function createProperty(form, files = [], adminTarget = null) {
       }
     );
     const created = data.property || data.item || data.result;
-    return applyLabels(created);
+    return normalizeProperty(applyLabels(created));
   } catch (err) {
     console.error(' Erreur creation bien (admin cible, tous fallbacks):', err);
     throw err;
@@ -292,7 +352,7 @@ export async function updateProperty(id, form, files = []) {
     );
 
     const updated = data.property || data.item || data.result;
-    return applyLabels(updated);
+    return normalizeProperty(applyLabels(updated));
   } catch (err) {
     console.error(' Erreur mise a jour bien:', err);
     throw err;
@@ -327,7 +387,7 @@ export async function searchProperties(params = {}) {
     ]);
 
     const list = data.properties || data.rows || data.list || [];
-    return list.map((p) => applyLabels(p));
+    return list.map((p) => normalizeProperty(applyLabels(p)));
   } catch (err) {
     console.error(' Erreur recherche proprietes:', err);
     return [];
@@ -346,7 +406,7 @@ export async function getPropertyById(id) {
     ]);
 
     const item = data.property || data.item || data.result;
-    return item ? applyLabels(item) : null;
+    return item ? normalizeProperty(applyLabels(item)) : null;
   } catch (err) {
     console.error(' Erreur recuperation bien:', err);
     return null;

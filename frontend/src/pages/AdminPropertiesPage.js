@@ -15,25 +15,11 @@ import {
   updateProperty,
   createPropertyForClient,
 } from '../services/properties';
-import api from '../services/api';
+import api, { getFileUrl } from '../services/api';
 import { me } from '../services/auth';
 import { normalizeRole } from '../utils/role';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
-
-// ============================================================================
-// AAA...A A...aTMAA FILE_BASE + normalizePath + toAbsUrl AAAasAAaA Standard Teranga (PRODUCTION SAFE)
-// - Compatible Render/Netlify
-// - SSR safe
-// - No localhost fallback (AAAvite bugs prod multi-pays)
-// ============================================================================
-const FILE_BASE =
-  (typeof window !== 'undefined' &&
-    (window.__TERANGA_FILE_BASE_URL ||
-      (window.__TERANGA_API_BASE_URL
-        ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
-        : ''))) ||
-  '';
 
 function normalizePath(path = '') {
   if (!path) return '';
@@ -43,15 +29,49 @@ function normalizePath(path = '') {
   return fixed.replace(/\/{2,}/g, '/');
 }
 
+function resolvePropertyMediaPath(value = '') {
+  if (!value) return '';
+  if (typeof value === 'string') return normalizePath(value);
+  if (typeof value !== 'object') return '';
+
+  const direct =
+    value.url ||
+    value.path ||
+    value.filePath ||
+    value.file_url ||
+    value.secure_url ||
+    value.src ||
+    value.href ||
+    value.location ||
+    value?.file?.url ||
+    value?.file?.path ||
+    value?.file?.filePath ||
+    '';
+
+  return normalizePath(direct);
+}
+
 function toAbsUrl(path = '') {
-  const norm = normalizePath(path);
+  const norm = resolvePropertyMediaPath(path);
   if (!norm) return '';
   if (/^https?:\/\//i.test(norm)) return norm;
-  return FILE_BASE.replace(/\/$/, '') + norm;
+  return getFileUrl(norm);
 }
 
 function isPdf(path = '') {
-  return /\.pdf($|\?)/i.test(String(path || ''));
+  const mediaPath = resolvePropertyMediaPath(path);
+  if (/\.pdf($|[?#])/i.test(String(mediaPath || ''))) return true;
+  if (!path || typeof path !== 'object') return false;
+
+  const mime = String(
+    path.mimeType || path.mimetype || path.contentType || path.type || ''
+  ).toLowerCase();
+  if (mime.includes('pdf')) return true;
+
+  const fileName = String(
+    path.originalName || path.fileName || path.name || ''
+  ).toLowerCase();
+  return /\.pdf($|[?#])/i.test(fileName);
 }
 
 const PROPERTY_MAX_FILES = 10;
@@ -86,6 +106,13 @@ function isAllowedPropertyFile(file) {
     mime === 'binary/octet-stream';
 
   return extOk && mimeOk;
+}
+
+function isPdfFileLike(file) {
+  if (!file) return false;
+  const ext = getFileExt(file?.name || '');
+  const mime = String(file?.type || '').toLowerCase();
+  return ext === 'pdf' || mime === 'application/pdf' || mime === 'application/x-pdf';
 }
 
 function getPropertyTypeFieldConfig(type, t) {
@@ -139,12 +166,7 @@ function getPropertyTypeFieldConfig(type, t) {
 // - ou {photos:[{url}...]} (selon couches)
 // ============================================================================
 function normalizePhotoValue(photo) {
-  if (!photo) return '';
-  if (typeof photo === 'string') return photo;
-  if (typeof photo === 'object' && photo.url) return photo.url;
-  if (typeof photo === 'object' && photo.path) return photo.path;
-  if (typeof photo === 'object' && photo.filePath) return photo.filePath;
-  return '';
+  return resolvePropertyMediaPath(photo);
 }
 
 // ============================================================================
@@ -826,7 +848,7 @@ export default function AdminPropertiesPage() {
                 {previewUrls.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-3">
                     {previewUrls.map((url, i) => (
-                      isPdf(url) ? (
+                      isPdf(url) || isPdfFileLike(files?.[i]) ? (
                         <a
                           key={i}
                           href={url}
@@ -897,7 +919,8 @@ export default function AdminPropertiesPage() {
                 {properties.map((p) => {
                   const imageUrls = (p.photos || [])
                     .filter((ph) => !isPdf(ph))
-                    .map((ph) => toAbsUrl(ph));
+                    .map((ph) => toAbsUrl(ph))
+                    .filter(Boolean);
                   const typeLabel = p.type
                     ? t(`labels.property.types.${p.type}`, { defaultValue: p.type })
                     : t('adminPropertiesPage.list.typeUnknown');
@@ -916,6 +939,7 @@ export default function AdminPropertiesPage() {
                         <div className="flex flex-wrap gap-2 mb-3">
                           {p.photos.map((photo, i) => {
                             const abs = toAbsUrl(photo);
+                            if (!abs) return null;
 
                             if (isPdf(photo)) {
                               return (
