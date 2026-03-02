@@ -40,10 +40,14 @@ function toAbsUrl(pathOrUrl = '') {
 }
 
 function isPdf(path = '') {
-  return /\\.pdf($|\\?)/i.test(path);
+  return /\.pdf($|\?)/i.test(path);
 }
 const PROPERTY_MAX_FILES = 10;
 const PROPERTY_MAX_FILE_MB = 15;
+const PROPERTY_UPLOAD_TIMEOUT_MS =
+  Number(process.env.REACT_APP_PROPERTY_UPLOAD_TIMEOUT_MS) ||
+  Number(process.env.REACT_APP_UPLOAD_TIMEOUT_MS) ||
+  180000;
 const PROPERTY_ALLOWED_EXTS = new Set([
   'jpg',
   'jpeg',
@@ -74,6 +78,13 @@ function isAllowedPropertyFile(file) {
     mime === 'binary/octet-stream';
 
   return extOk && mimeOk;
+}
+
+function isPdfFileLike(file) {
+  if (!file) return false;
+  const ext = getFileExt(file?.name || '');
+  const mime = String(file?.type || '').toLowerCase();
+  return ext === 'pdf' || mime === 'application/pdf' || mime === 'application/x-pdf';
 }
 
 function getPropertyTypeFieldConfig(type, t) {
@@ -327,6 +338,7 @@ export default function PropertiesPage() {
 
       await api.put(`/properties/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: PROPERTY_UPLOAD_TIMEOUT_MS,
       });
 
       notify(t('propertiesPage.alerts.updateSuccess'));
@@ -566,6 +578,7 @@ export default function PropertiesPage() {
         <PropertyForm
           form={form}
           setForm={setForm}
+          files={files}
           showPreview={showPreview}
           setShowPreview={setShowPreview}
           handleFileChange={handleFileChange}
@@ -843,6 +856,7 @@ function PropertyFilters({
 function PropertyForm({
   form,
   setForm,
+  files,
   showPreview,
   setShowPreview,
   handleFileChange,
@@ -874,6 +888,7 @@ function PropertyForm({
       {showPreview && !editId ? (
         <PropertyPreview
           form={form}
+          files={files}
           previewUrls={previewUrls}
           setShowPreview={setShowPreview}
           handleSubmit={handleSubmit}
@@ -884,6 +899,7 @@ function PropertyForm({
           editId={editId}
           editMediaCount={editMediaCount}
           form={form}
+          files={files}
           setForm={setForm}
           handleFileChange={handleFileChange}
           previewUrls={previewUrls}
@@ -899,6 +915,7 @@ function PropertyForm({
 
 function PropertyPreview({
   form,
+  files,
   previewUrls,
   setShowPreview,
   handleSubmit,
@@ -959,12 +976,24 @@ function PropertyPreview({
           </p>
           <div className="flex flex-wrap gap-3">
             {previewUrls.map((url, i) => (
-              <img
-                key={i}
-                src={url}
-                alt={t('propertiesPage.preview.photoAlt', { index: i + 1 })}
-                className="h-24 w-24 rounded-lg border border-border/80 object-cover shadow-sm sm:h-28 sm:w-28"
-              />
+              isPdf(url) || isPdfFileLike(files?.[i]) ? (
+                <a
+                  key={i}
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="h-24 w-24 inline-flex items-center justify-center rounded-lg border border-border/80 bg-surface-card text-xs text-text-secondary shadow-sm sm:h-28 sm:w-28"
+                >
+                  {t('propertiesPage.list.pdfLabel')}
+                </a>
+              ) : (
+                <img
+                  key={i}
+                  src={url}
+                  alt={t('propertiesPage.preview.photoAlt', { index: i + 1 })}
+                  className="h-24 w-24 rounded-lg border border-border/80 object-cover shadow-sm sm:h-28 sm:w-28"
+                />
+              )
             ))}
           </div>
         </div>
@@ -994,6 +1023,7 @@ function PropertyEditor({
   editId,
   editMediaCount,
   form,
+  files,
   setForm,
   handleFileChange,
   previewUrls,
@@ -1188,11 +1218,22 @@ function PropertyEditor({
               key={i}
               className="h-24 w-24 overflow-hidden rounded-lg border border-border/80 bg-surface-card shadow-sm sm:h-28 sm:w-28"
             >
-              <img
-                src={url}
-                alt={t('propertiesPage.form.previewAlt', { index: i + 1 })}
-                className="w-full h-full object-cover"
-              />
+              {isPdf(url) || isPdfFileLike(files?.[i]) ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-full w-full items-center justify-center text-xs text-text-secondary"
+                >
+                  {t('propertiesPage.list.pdfLabel')}
+                </a>
+              ) : (
+                <img
+                  src={url}
+                  alt={t('propertiesPage.form.previewAlt', { index: i + 1 })}
+                  className="w-full h-full object-cover"
+                />
+              )}
             </div>
           ))}
         </div>

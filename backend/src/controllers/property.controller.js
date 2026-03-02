@@ -199,65 +199,65 @@ function addLabels(p) {
    ImageKit Upload
 ============================================================ */
 async function uploadPhotosToImageKit(files = []) {
-  const results = [];
-
-  if (!files || !files.length) return results;
+  if (!files || !files.length) return [];
 
   const imageKitEnabled = isImageKitEnabled();
   if (!imageKitEnabled) {
     logger.warn('property.imagekit.disabled.fallback_local');
   }
 
-  for (const f of files) {
-    const ext = path.extname(f.originalname || '').replace('.', '') || 'jpg';
+  const uploads = await Promise.all(
+    files.map(async (f) => {
+      const ext = path.extname(f.originalname || '').replace('.', '') || 'jpg';
 
-    if (imageKitEnabled) {
-      try {
-        const uploaded = await imageKit.upload({
-          // Buffer mémoire fourni par multer.memoryStorage()
-          file: f.buffer,
-          fileName: `prop_${Date.now()}_${Math.round(Math.random() * 1e9)}.${ext}`,
-          folder: '/teranga/properties',
-        });
-
-        const uploadedUrl =
-          uploaded?.url || uploaded?.fileUrl || uploaded?.path || '';
-
-        if (uploadedUrl) {
-          results.push({
-            url: uploadedUrl,
-            fileId: uploaded?.fileId || null,
+      if (imageKitEnabled) {
+        try {
+          const uploaded = await imageKit.upload({
+            // Buffer provided by multer.memoryStorage()
+            file: f.buffer,
+            fileName: `prop_${Date.now()}_${Math.round(Math.random() * 1e9)}.${ext}`,
+            folder: '/teranga/properties',
           });
-          continue;
+
+          const uploadedUrl =
+            uploaded?.url || uploaded?.fileUrl || uploaded?.path || '';
+
+          if (uploadedUrl) {
+            return {
+              url: uploadedUrl,
+              fileId: uploaded?.fileId || null,
+            };
+          }
+
+          logger.warn(
+            { fileName: f?.originalname },
+            'property.imagekit.upload_missing_url.fallback_local'
+          );
+        } catch (e) {
+          logger.warn(
+            { err: e, fileName: f?.originalname },
+            'property.imagekit.upload.failed.fallback_local'
+          );
         }
-
-        logger.warn(
-          { fileName: f?.originalname },
-          'property.imagekit.upload_missing_url.fallback_local'
-        );
-      } catch (e) {
-        logger.warn(
-          { err: e, fileName: f?.originalname },
-          'property.imagekit.upload.failed.fallback_local'
-        );
       }
-    }
 
-    try {
-      const localSaved = await savePropertyFileLocally(f);
-      results.push({
-        url: localSaved.url,
-        fileId: localSaved.fileId,
-      });
-    } catch (e) {
-      logger.error(
-        { err: e, fileName: f?.originalname },
-        'property.local_upload.failed'
-      );
-    }
-  }
+      try {
+        const localSaved = await savePropertyFileLocally(f);
+        return {
+          url: localSaved.url,
+          fileId: localSaved.fileId,
+        };
+      } catch (e) {
+        logger.error(
+          { err: e, fileName: f?.originalname },
+          'property.local_upload.failed'
+        );
+        return null;
+      }
+    })
+  );
 
-  return results;
+  return uploads.filter(Boolean);
 }
 
 /* ============================================================
@@ -280,7 +280,7 @@ async function deleteImageKitFiles(photoObjects = []) {
         await imageKit.deleteFile(p.fileId);
       } catch (e) {
         logger.warn(
-          `⚠️ Impossible de supprimer ImageKit fileId=${p.fileId}`,
+          `Warning: unable to delete ImageKit fileId=${p.fileId}`,
           e?.message || e
         );
       }
@@ -322,7 +322,7 @@ exports.list = async (req, res) => {
       });
     }
 
-    // 🔐 ACL + GeoScope
+    // ACL + GeoScope
     // - admin global: tout (optionnel filtre clientId)
     // - admin scoped: tout dans scope (optionnel filtre clientId)
     // - agent: lecture dans scope uniquement (pas de filtre clientId sauf si voulu)
@@ -345,7 +345,7 @@ exports.list = async (req, res) => {
       ? { ...where, [Op.and]: whereAnd }
       : where;
 
-    // 🌍 Scope strict (admin scoped/agent/client)
+    // Strict scope (admin scoped/agent/client)
     finalWhere = applyGeoScopeForModel
       ? applyGeoScopeForModel(finalWhere, req.user, Property, { includeClients: true })
       : finalWhere;
@@ -369,7 +369,7 @@ exports.list = async (req, res) => {
       pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
-    logger.error('❌ list properties:', e);
+    logger.error('property.list.failed:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la récupération des biens' });
@@ -419,7 +419,7 @@ exports.listByClient = async (req, res) => {
       pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
-    logger.error('❌ listByClient:', e);
+    logger.error('property.list_by_client.failed:', e);
     return res.status(500).json({
       error: 'Erreur lors de la récupération des biens du client',
     });
@@ -448,7 +448,7 @@ exports.create = async (req, res) => {
       description,
       status,
 
-      // 🌍 Multi-pays (nouveau, non bloquant)
+      // Multi-country (new, non-blocking)
       countryId,
       regionId,
       country_id,
@@ -461,7 +461,7 @@ exports.create = async (req, res) => {
         .json({ error: 'title, type, address, city sont requis' });
     }
 
-    /* 🔐 Résolution propriétaire */
+    /* Owner resolution */
     let targetOwnerId = req.user.id;
     let targetOwner = req.user;
 
@@ -498,7 +498,7 @@ exports.create = async (req, res) => {
     /* 🔥 Upload fichiers (ImageKit + fallback local, non bloquant) */
     const photos = req.files?.length ? await uploadPhotosToImageKit(req.files) : [];
 
-    // 🌍 Multi-pays :
+    // Multi-country:
     // - admin global : peut définir librement
     // - admin scoped : doit rester dans scope, et on force si nécessaire
     // - client/agent : non bloquant => null
@@ -572,7 +572,7 @@ exports.create = async (req, res) => {
       description: toTrimOrNull(description),
       status: status ? String(status).trim() : 'active',
 
-      // 🌍 Multi-pays
+      // Multi-country
       countryId: finalCountryId,
       regionId: finalRegionId,
 
@@ -601,7 +601,7 @@ exports.create = async (req, res) => {
       property: addLabels(property),
     });
   } catch (e) {
-    logger.error('❌ create property:', e);
+    logger.error('property.create.failed:', e);
     return res.status(500).json({ error: 'Erreur lors de la création du bien' });
   }
 };
@@ -617,7 +617,7 @@ exports.update = async (req, res) => {
     const p = await Property.findByPk(id);
     if (!p) return res.status(404).json({ error: 'Bien introuvable' });
 
-    // 🔐 ACL de base
+    // Base ACL
     const isOwner = String(p.ownerId) === String(req.user.id);
     const isAdminOrMaster = req.user.role === 'admin';
 
@@ -625,7 +625,7 @@ exports.update = async (req, res) => {
       return res.status(403).json({ error: 'Non autorisé' });
     }
 
-    // 🌍 ACL GeoScope (strict)
+    // GeoScope ACL (strict)
     if (!isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, p)) {
         return res.status(403).json({ error: 'Bien hors scope géographique' });
@@ -662,7 +662,7 @@ exports.update = async (req, res) => {
       updates.roomCount = toNullableNumber(body.roomCount);
 
     /* ========================================================
-       🌍 Multi-pays UPDATE
+       Multi-country UPDATE
        - admin global : libre
        - admin scoped : uniquement dans son scope
        - client : interdit
@@ -772,7 +772,7 @@ exports.update = async (req, res) => {
       property: addLabels(property),
     });
   } catch (e) {
-    logger.error('❌ update property:', e);
+    logger.error('property.update.failed:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la mise à jour' });
@@ -797,23 +797,25 @@ exports.remove = async (req, res) => {
       return res.status(403).json({ error: 'Non autorisé' });
     }
 
-    // 🌍 GeoScope strict
+    // Strict GeoScope
     if (!isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, p)) {
         return res.status(403).json({ error: 'Bien hors scope géographique' });
       }
     }
 
-    // 🗑️ Suppression ImageKit (safe)
+    // ImageKit deletion (safe)
     await deleteImageKitFiles(normalizeStoredPhotos(p.photos || []));
 
     await p.destroy();
 
     return res.json({ message: 'Bien supprimé' });
   } catch (e) {
-    logger.error('❌ delete property:', e);
+    logger.error('property.delete.failed:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la suppression' });
   }
 };
+
+

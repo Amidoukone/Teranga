@@ -3,6 +3,11 @@ import api from './api';
 import { applyLabels } from '../utils/labels';
 import { appendGeoFormData, mergeGeoParams } from './geo';
 
+const PROPERTY_UPLOAD_TIMEOUT_MS =
+  Number(process.env.REACT_APP_PROPERTY_UPLOAD_TIMEOUT_MS) ||
+  Number(process.env.REACT_APP_UPLOAD_TIMEOUT_MS) ||
+  180000;
+
 /**
  * ============================================================
  * 🌍 Service Frontend : Gestion des Biens Immobiliers (robuste)
@@ -161,7 +166,10 @@ export async function createProperty(form, files = [], adminTarget = null) {
           { url: '/admin/properties', data: formData },
           { url: '/properties/create', data: formData },
         ],
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: PROPERTY_UPLOAD_TIMEOUT_MS,
+        }
       );
       const created = data.property || data.item || data.result;
       return applyLabels(created);
@@ -182,7 +190,10 @@ export async function createProperty(form, files = [], adminTarget = null) {
       const data = await tryEndpoints(
         'post',
         [{ url: `/properties/client/${targetId}`, data: formDataClientParam }],
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: PROPERTY_UPLOAD_TIMEOUT_MS,
+        }
       );
       const created = data.property || data.item || data.result;
       return applyLabels(created);
@@ -206,7 +217,10 @@ export async function createProperty(form, files = [], adminTarget = null) {
     const data = await tryEndpoints(
       'post',
       [{ url: '/properties/admin', data: formDataAdminAlias }],
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: PROPERTY_UPLOAD_TIMEOUT_MS,
+      }
     );
     const created = data.property || data.item || data.result;
     return applyLabels(created);
@@ -232,7 +246,10 @@ export async function createProperty(form, files = [], adminTarget = null) {
         { url: '/admin/properties', data: formDataWithTarget },
         { url: '/properties/create', data: formDataWithTarget },
       ],
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: PROPERTY_UPLOAD_TIMEOUT_MS,
+      }
     );
     const created = data.property || data.item || data.result;
     return applyLabels(created);
@@ -268,7 +285,10 @@ export async function updateProperty(id, form, files = []) {
         { url: `/admin/properties/${id}`, data: formData },
         { url: `/properties/update/${id}`, data: formData },
       ],
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: PROPERTY_UPLOAD_TIMEOUT_MS,
+      }
     );
 
     const updated = data.property || data.item || data.result;
