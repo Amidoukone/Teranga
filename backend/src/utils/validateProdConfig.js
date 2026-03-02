@@ -70,6 +70,20 @@ function validateProdConfig(env = process.env) {
     warnings.push('BOOTSTRAP_ADMIN_DEFAULT_EMAIL is set; remove it in production');
   }
 
+  const imageKitConfigured = Boolean(
+    String(env.IMAGEKIT_PUBLIC_KEY || '').trim() &&
+      String(env.IMAGEKIT_PRIVATE_KEY || '').trim() &&
+      String(env.IMAGEKIT_URL_ENDPOINT || '').trim()
+  );
+  const hasCustomUploadsRoot = Boolean(
+    String(env.UPLOADS_ROOT || env.UPLOADS_DIR || '').trim()
+  );
+  if (!imageKitConfigured && !hasCustomUploadsRoot) {
+    warnings.push(
+      'IMAGEKIT_* is not configured and UPLOADS_ROOT is not set. Uploaded files may be lost on redeploy with ephemeral storage.'
+    );
+  }
+
   return { isProd, errors, warnings };
 }
 

@@ -23,6 +23,7 @@ const {
 } = require('../utils/geoScope');
 const { getPagination } = require('../utils/pagination');
 const logger = require('../utils/logger');
+const { resolveUploadsRoot } = require('../utils/uploadsRoot');
 
 /* ============================================================
    Helpers utilitaires
@@ -147,7 +148,7 @@ async function savePropertyFileLocally(file) {
     throw new Error('Fichier invalide: buffer absent');
   }
 
-  const uploadsRoot = path.join(__dirname, '..', '..', 'uploads');
+  const uploadsRoot = resolveUploadsRoot();
   const propertiesDir = path.join(uploadsRoot, 'properties');
   await fs.promises.mkdir(propertiesDir, { recursive: true });
 
@@ -169,9 +170,9 @@ async function removeLocalUpload(filePath) {
   if (!isLocalUploadPath(filePath)) return;
 
   const relPath = filePath.replace(/^\/+/, '');
-  const backendRoot = path.join(__dirname, '..', '..');
-  const uploadsRoot = path.resolve(path.join(backendRoot, 'uploads'));
-  const absolutePath = path.resolve(path.join(backendRoot, relPath));
+  const uploadsRoot = path.resolve(resolveUploadsRoot());
+  const uploadsRelativePath = relPath.replace(/^uploads\/+/i, '');
+  const absolutePath = path.resolve(path.join(uploadsRoot, uploadsRelativePath));
 
   if (
     absolutePath !== uploadsRoot &&

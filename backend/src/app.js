@@ -15,6 +15,7 @@ const {
   metricsHandler,
   frontendErrorHandler,
 } = require('./middleware/metrics.middleware');
+const { resolveUploadsRoot } = require('./utils/uploadsRoot');
 
 const app = express();
 app.locals.runtimeStatus = app.locals.runtimeStatus || {
@@ -109,12 +110,30 @@ app.use(express.urlencoded({ extended: true }));
 /* ======================================================
    📂 Fichiers uploadés (uploads/)
    ====================================================== */
-const uploadsRoot = path.join(__dirname, '..', 'uploads');
+const uploadsRoot = resolveUploadsRoot();
 const openapiContractPath = path.join(__dirname, '..', 'openapi', 'openapi.json');
+const hasCustomUploadsRoot = Boolean(
+  String(process.env.UPLOADS_ROOT || process.env.UPLOADS_DIR || '').trim()
+);
+const imageKitConfigured = Boolean(
+  process.env.IMAGEKIT_PUBLIC_KEY &&
+    process.env.IMAGEKIT_PRIVATE_KEY &&
+    process.env.IMAGEKIT_URL_ENDPOINT
+);
 
 if (!fs.existsSync(uploadsRoot)) {
   fs.mkdirSync(uploadsRoot, { recursive: true });
   logger.info({ uploadsRoot }, 'app.uploads.directory.created');
+}
+if (isDev || hasCustomUploadsRoot || imageKitConfigured) {
+  logger.info({ uploadsRoot }, 'app.uploads.directory.using');
+} else {
+  logger.warn(
+    {
+      uploadsRoot,
+    },
+    'app.uploads.directory.ephemeral_risk'
+  );
 }
 
 app.use(
