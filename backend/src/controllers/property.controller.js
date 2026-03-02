@@ -40,6 +40,35 @@ const toTrimOrNull = (v) => {
   return s.length ? s : null;
 };
 
+const toStringArray = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => String(entry || '').trim())
+      .filter(Boolean);
+  }
+
+  if (value === undefined || value === null) return [];
+
+  const raw = String(value).trim();
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean);
+    }
+  } catch {
+    // ignore invalid JSON and fallback to raw string format
+  }
+
+  return raw
+    .split(',')
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean);
+};
+
 const toSafeInt = (v, fallback = null) => {
   if (v === null || v === undefined || v === '') return fallback;
   const n = parseInt(String(v), 10);
@@ -728,16 +757,30 @@ exports.update = async (req, res) => {
     ======================================================== */
     const replace = String(body.replacePhotos || '').toLowerCase() === 'true';
     const existingPhotos = normalizeStoredPhotos(p.photos || []);
+    const requestedRemovedUrls = new Set(
+      toStringArray(
+        body.removePhotos ??
+          body.removedPhotos ??
+          body.photosToRemove ??
+          body.removePhotoUrls
+      )
+    );
+    const photosToRemove = existingPhotos.filter((ph) =>
+      requestedRemovedUrls.has(ph.url)
+    );
+    const keptExistingPhotos = existingPhotos.filter(
+      (ph) => !requestedRemovedUrls.has(ph.url)
+    );
     const incomingFilesCount = req.files?.length || 0;
 
     const maxNewFiles = replace
       ? PROPERTY_MAX_FILES
-      : Math.max(0, PROPERTY_MAX_FILES - existingPhotos.length);
+      : Math.max(0, PROPERTY_MAX_FILES - keptExistingPhotos.length);
     if (incomingFilesCount > maxNewFiles) {
       return res.status(400).json({
         error: replace
           ? `Maximum ${PROPERTY_MAX_FILES} fichiers autorisés par bien`
-          : `Limite atteinte: ce bien contient déjà ${existingPhotos.length}/${PROPERTY_MAX_FILES} fichiers`,
+          : `Limite atteinte: ce bien contient déjà ${keptExistingPhotos.length}/${PROPERTY_MAX_FILES} fichiers`,
       });
     }
 
@@ -746,13 +789,20 @@ exports.update = async (req, res) => {
       newPhotos = await uploadPhotosToImageKit(req.files);
     }
 
-    if (newPhotos.length) {
+    const photosChanged = replace
+      ? incomingFilesCount > 0 || photosToRemove.length > 0
+      : photosToRemove.length > 0 || newPhotos.length > 0;
+
+    if (photosChanged) {
       if (replace) {
         await deleteImageKitFiles(existingPhotos);
-        updates.photos = newPhotos;
       } else {
-        updates.photos = [...existingPhotos, ...newPhotos];
+        await deleteImageKitFiles(photosToRemove);
       }
+
+      updates.photos = replace
+        ? newPhotos
+        : [...keptExistingPhotos, ...newPhotos];
     }
 
     await p.update(updates);

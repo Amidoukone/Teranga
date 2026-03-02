@@ -199,7 +199,8 @@ export default function AdminPropertiesPage() {
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [editMediaCount, setEditMediaCount] = useState(0);
+  const [editExistingMedia, setEditExistingMedia] = useState([]);
+  const [removedMedia, setRemovedMedia] = useState([]);
   const [isCreating, setIsCreating] = useState(false);
 
   const [form, setForm] = useState({
@@ -218,6 +219,12 @@ export default function AdminPropertiesPage() {
 
   const [files, setFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
+  const editMediaCount = useMemo(() => {
+    if (!editId) return 0;
+    const removedSet = new Set(removedMedia);
+    return editExistingMedia.filter((mediaPath) => !removedSet.has(mediaPath))
+      .length;
+  }, [editId, editExistingMedia, removedMedia]);
 
   // ==========================================================================
  // AAA...A AaaAA14AA AA AA LIGHTBOX (Agrandissement + Navigation)
@@ -429,7 +436,6 @@ export default function AdminPropertiesPage() {
   // ==========================================================================
   function startEdit(p) {
     setEditId(p.id);
-    setEditMediaCount(Array.isArray(p.photos) ? p.photos.length : 0);
     setIsCreating(false);
 
     setForm({
@@ -447,27 +453,38 @@ export default function AdminPropertiesPage() {
     });
 
     setFiles([]);
+    setRemovedMedia([]);
+    setEditExistingMedia(
+      Array.isArray(p.photos)
+        ? p.photos.map(normalizePhotoValue).filter(Boolean)
+        : []
+    );
 
     // Nettoyage anciennes previews blob uniquement
     previewUrls.forEach(safeRevoke);
-
-    // Ici on affiche en preview les photos existantes (URL absolues),
-    // sans les "revoke" ensuite (safeRevoke ne touchera pas http)
-    const previews = (p.photos || [])
-      .map(normalizePhotoValue)
-      .filter(Boolean)
-      .map((photo) => toAbsUrl(photo));
-
-    setPreviewUrls(previews);
+    setPreviewUrls([]);
   }
 
   async function handleUpdate(e) {
     e.preventDefault();
     if (isSubmitting) return;
 
+    const nextTotalMedia = editMediaCount + files.length;
+    if (nextTotalMedia > PROPERTY_MAX_FILES) {
+      notify(
+        t('adminPropertiesPage.alerts.tooManyFiles', {
+          max: Math.max(0, PROPERTY_MAX_FILES - editMediaCount),
+        })
+      );
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      await updateProperty(editId, form, files);
+      const payload = removedMedia.length
+        ? { ...form, removePhotos: JSON.stringify(removedMedia) }
+        : form;
+      await updateProperty(editId, payload, files);
       notify(t('adminPropertiesPage.alerts.updateSuccess'));
       resetForm();
       await loadProperties(selectedClient);
@@ -503,7 +520,8 @@ export default function AdminPropertiesPage() {
   // ==========================================================================
   function resetForm() {
     setEditId(null);
-    setEditMediaCount(0);
+    setEditExistingMedia([]);
+    setRemovedMedia([]);
     setFiles([]);
 
     previewUrls.forEach(safeRevoke);
@@ -521,6 +539,15 @@ export default function AdminPropertiesPage() {
       // countryId: '',
       // regionId: '',
     });
+  }
+
+  function toggleRemoveExistingMedia(mediaPath) {
+    if (!mediaPath) return;
+    setRemovedMedia((prev) =>
+      prev.includes(mediaPath)
+        ? prev.filter((item) => item !== mediaPath)
+        : [...prev, mediaPath]
+    );
   }
 
   // ==========================================================================
@@ -551,6 +578,10 @@ export default function AdminPropertiesPage() {
     [clients, selectedClient]
   );
   const fieldConfig = getPropertyTypeFieldConfig(form.type, t);
+  const removedSet = useMemo(
+    () => new Set(removedMedia || []),
+    [removedMedia]
+  );
 
   // ==========================================================================
  // AAA...A AaaAAAA AA AA UI AAAasAAaA Apple Light Premium (Cartes uniquement)
@@ -813,6 +844,65 @@ export default function AdminPropertiesPage() {
                   className="app-input-subtle resize-y"
                 />
               </div>
+
+              {editId && editExistingMedia.length > 0 && (
+                <div className="sm:col-span-2 flex flex-col gap-2 mt-1">
+                  <label className="text-[11px] font-medium text-text-secondary">
+                    {t('adminPropertiesPage.form.existingMediaLabel')}
+                  </label>
+
+                  <div className="flex flex-wrap gap-3">
+                    {editExistingMedia.map((mediaPath, i) => {
+                      const absUrl = toAbsUrl(mediaPath);
+                      if (!absUrl) return null;
+                      const markedForRemoval = removedSet.has(mediaPath);
+
+                      return (
+                        <div
+                          key={`${mediaPath}-${i}`}
+                          className={`relative w-20 h-20 border rounded-xl overflow-hidden ${
+                            markedForRemoval
+                              ? 'border-red-400 opacity-60'
+                              : 'border-border'
+                          } bg-surface-main`}
+                        >
+                          {isPdf(mediaPath) ? (
+                            <a
+                              href={absUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="w-full h-full flex items-center justify-center text-xs text-text-secondary"
+                              title={t('adminPropertiesPage.list.pdfLabel')}
+                            >
+                              {t('adminPropertiesPage.list.pdfLabel')}
+                            </a>
+                          ) : (
+                            <img
+                              src={absUrl}
+                              className="w-full h-full object-cover"
+                              alt={t('adminPropertiesPage.form.previewAlt', { index: i + 1 })}
+                            />
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => toggleRemoveExistingMedia(mediaPath)}
+                            className={`absolute bottom-1 left-1 right-1 rounded px-1 py-0.5 text-[10px] font-medium ${
+                              markedForRemoval
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-red-600 text-white'
+                            }`}
+                          >
+                            {markedForRemoval
+                              ? t('adminPropertiesPage.form.restoreMedia')
+                              : t('adminPropertiesPage.form.removeMedia')}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* FILES */}
               <div className="sm:col-span-2 flex flex-col gap-2 mt-1">

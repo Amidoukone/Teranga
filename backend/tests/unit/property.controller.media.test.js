@@ -181,6 +181,67 @@ describe('property.controller media handling', () => {
     expect(imageKit.upload).not.toHaveBeenCalled();
   });
 
+  test('update removes selected media and keeps remaining files', async () => {
+    const update = jest.fn().mockResolvedValue(undefined);
+    Property.findByPk
+      .mockResolvedValueOnce({
+        id: 92,
+        ownerId: 7,
+        countryId: null,
+        regionId: null,
+        photos: [
+          { url: '/uploads/properties/keep.jpg', fileId: null },
+          { url: '/uploads/properties/remove.pdf', fileId: null },
+        ],
+        update,
+      })
+      .mockResolvedValueOnce({
+        toJSON: () => ({
+          id: 92,
+          ownerId: 7,
+          title: 'Appartement test',
+          type: 'apartment',
+          status: 'active',
+          city: 'Dakar',
+          photos: [{ url: '/uploads/properties/keep.jpg', fileId: null }],
+          owner: {
+            id: 7,
+            firstName: 'Client',
+            lastName: 'Test',
+            email: 'client@test.local',
+          },
+        }),
+      });
+
+    const req = {
+      params: { id: '92' },
+      user: { id: 7, role: 'client' },
+      body: {
+        removePhotos: JSON.stringify(['/uploads/properties/remove.pdf']),
+      },
+      files: [],
+    };
+    const res = makeRes();
+
+    await controller.update(req, res);
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        photos: [
+          expect.objectContaining({ url: '/uploads/properties/keep.jpg' }),
+        ],
+      })
+    );
+    expect(fs.promises.unlink).toHaveBeenCalledTimes(1);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        property: expect.objectContaining({
+          photos: ['/uploads/properties/keep.jpg'],
+        }),
+      })
+    );
+  });
+
   test('remove deletes local uploaded files before deleting property row', async () => {
     const destroy = jest.fn().mockResolvedValue(undefined);
     Property.findByPk.mockResolvedValue({
@@ -205,4 +266,3 @@ describe('property.controller media handling', () => {
     );
   });
 });
-

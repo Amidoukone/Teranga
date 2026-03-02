@@ -181,7 +181,8 @@ export default function PropertiesPage() {
   const [files, setFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [editId, setEditId] = useState(null);
-  const [editMediaCount, setEditMediaCount] = useState(0);
+  const [editExistingMedia, setEditExistingMedia] = useState([]);
+  const [removedMedia, setRemovedMedia] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -208,6 +209,13 @@ export default function PropertiesPage() {
     maxSurface: '',
     sort: '-createdAt',
   });
+
+  const editMediaCount = useMemo(() => {
+    if (!editId) return 0;
+    const removedSet = new Set(removedMedia);
+    return editExistingMedia.filter((mediaPath) => !removedSet.has(mediaPath))
+      .length;
+  }, [editId, editExistingMedia, removedMedia]);
 
   // --------------------------------------------------------------------------
   // INIT
@@ -353,6 +361,16 @@ export default function PropertiesPage() {
   async function handleUpdate(id) {
     if (isSubmitting) return;
 
+    const nextTotalMedia = editMediaCount + files.length;
+    if (nextTotalMedia > PROPERTY_MAX_FILES) {
+      notify(
+        t('propertiesPage.alerts.tooManyFiles', {
+          max: Math.max(0, PROPERTY_MAX_FILES - editMediaCount),
+        })
+      );
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const formData = new FormData();
@@ -360,6 +378,9 @@ export default function PropertiesPage() {
         if (v !== undefined && v !== null) formData.append(k, v);
       });
       files.forEach((f) => formData.append('files', f));
+      if (removedMedia.length) {
+        formData.append('removePhotos', JSON.stringify(removedMedia));
+      }
 
       await api.put(`/properties/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -422,7 +443,8 @@ export default function PropertiesPage() {
     setFiles([]);
     setPreviewUrls([]);
     setEditId(null);
-    setEditMediaCount(0);
+    setEditExistingMedia([]);
+    setRemovedMedia([]);
     setShowPreview(false);
   }
 
@@ -431,8 +453,13 @@ export default function PropertiesPage() {
     setFiles([]);
     setPreviewUrls([]);
 
+    const existingMedia = Array.isArray(p.photos)
+      ? p.photos.map((mediaPath) => resolvePropertyMediaPath(mediaPath)).filter(Boolean)
+      : [];
+
     setEditId(p.id);
-    setEditMediaCount(Array.isArray(p.photos) ? p.photos.length : 0);
+    setEditExistingMedia(existingMedia);
+    setRemovedMedia([]);
     setShowForm(true);
     setShowPreview(false);
     setForm({
@@ -445,6 +472,15 @@ export default function PropertiesPage() {
       roomCount: p.roomCount || '',
       description: p.description || '',
     });
+  }
+
+  function toggleRemoveExistingMedia(mediaPath) {
+    if (!mediaPath) return;
+    setRemovedMedia((prev) =>
+      prev.includes(mediaPath)
+        ? prev.filter((item) => item !== mediaPath)
+        : [...prev, mediaPath]
+    );
   }
 
   // --------------------------------------------------------------------------
@@ -613,6 +649,11 @@ export default function PropertiesPage() {
           resetForm={resetForm}
           editId={editId}
           editMediaCount={editMediaCount}
+          editExistingMedia={editExistingMedia}
+          removedMedia={removedMedia}
+          toggleRemoveExistingMedia={toggleRemoveExistingMedia}
+          toAbsUrl={toAbsUrl}
+          isPdf={isPdf}
           isSubmitting={isSubmitting}
         />
         )}
@@ -891,6 +932,11 @@ function PropertyForm({
   resetForm,
   editId,
   editMediaCount,
+  editExistingMedia,
+  removedMedia,
+  toggleRemoveExistingMedia,
+  toAbsUrl,
+  isPdf,
   isSubmitting,
 }) {
   const { t } = useTranslation();
@@ -931,6 +977,11 @@ function PropertyForm({
           handleUpdate={handleUpdate}
           resetForm={resetForm}
           setShowPreview={setShowPreview}
+          editExistingMedia={editExistingMedia}
+          removedMedia={removedMedia}
+          toggleRemoveExistingMedia={toggleRemoveExistingMedia}
+          toAbsUrl={toAbsUrl}
+          isPdf={isPdf}
           isSubmitting={isSubmitting}
         />
       )}
@@ -1055,10 +1106,19 @@ function PropertyEditor({
   handleUpdate,
   resetForm,
   setShowPreview,
+  editExistingMedia,
+  removedMedia,
+  toggleRemoveExistingMedia,
+  toAbsUrl,
+  isPdf,
   isSubmitting,
 }) {
   const { t } = useTranslation();
   const fieldConfig = getPropertyTypeFieldConfig(form.type, t);
+  const removedSet = useMemo(
+    () => new Set(removedMedia || []),
+    [removedMedia]
+  );
 
   return (
     <form
@@ -1202,6 +1262,63 @@ function PropertyEditor({
           rows={3}
         />
       </div>
+
+      {editId && editExistingMedia.length > 0 && (
+        <div className="sm:col-span-2">
+          <p className="mb-2 text-xs sm:text-sm font-medium text-text-secondary">
+            {t('propertiesPage.form.existingMediaLabel')}
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {editExistingMedia.map((mediaPath, i) => {
+              const absUrl = toAbsUrl(mediaPath);
+              if (!absUrl) return null;
+              const markedForRemoval = removedSet.has(mediaPath);
+
+              return (
+                <div
+                  key={`${mediaPath}-${i}`}
+                  className={`relative h-24 w-24 overflow-hidden rounded-lg border bg-surface-card shadow-sm sm:h-28 sm:w-28 ${
+                    markedForRemoval
+                      ? 'border-red-400 opacity-60'
+                      : 'border-border/80'
+                  }`}
+                >
+                  {isPdf(mediaPath) ? (
+                    <a
+                      href={absUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-full w-full items-center justify-center text-xs text-text-secondary"
+                    >
+                      {t('propertiesPage.list.pdfLabel')}
+                    </a>
+                  ) : (
+                    <img
+                      src={absUrl}
+                      alt={t('propertiesPage.form.previewAlt', { index: i + 1 })}
+                      className="h-full w-full object-cover"
+                    />
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => toggleRemoveExistingMedia(mediaPath)}
+                    className={`absolute bottom-1 left-1 right-1 rounded px-1 py-0.5 text-[10px] font-medium ${
+                      markedForRemoval
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-red-600 text-white'
+                    }`}
+                  >
+                    {markedForRemoval
+                      ? t('propertiesPage.form.restoreMedia')
+                      : t('propertiesPage.form.removeMedia')}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Fichiers */}
       <div className="sm:col-span-2">
