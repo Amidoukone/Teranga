@@ -67,6 +67,7 @@ describe('property.controller media handling', () => {
     UPLOADS_ROOT: process.env.UPLOADS_ROOT,
     UPLOADS_DIR: process.env.UPLOADS_DIR,
     PROPERTY_ALLOW_LOCAL_FALLBACK: process.env.PROPERTY_ALLOW_LOCAL_FALLBACK,
+    MEDIA_ENFORCE_DURABLE_UPLOADS: process.env.MEDIA_ENFORCE_DURABLE_UPLOADS,
   };
 
   beforeEach(() => {
@@ -78,6 +79,7 @@ describe('property.controller media handling', () => {
     delete process.env.UPLOADS_ROOT;
     delete process.env.UPLOADS_DIR;
     delete process.env.PROPERTY_ALLOW_LOCAL_FALLBACK;
+    delete process.env.MEDIA_ENFORCE_DURABLE_UPLOADS;
 
     jest.spyOn(fs.promises, 'mkdir').mockResolvedValue();
     jest.spyOn(fs.promises, 'writeFile').mockResolvedValue();
@@ -97,6 +99,8 @@ describe('property.controller media handling', () => {
     process.env.UPLOADS_DIR = envBackup.UPLOADS_DIR;
     process.env.PROPERTY_ALLOW_LOCAL_FALLBACK =
       envBackup.PROPERTY_ALLOW_LOCAL_FALLBACK;
+    process.env.MEDIA_ENFORCE_DURABLE_UPLOADS =
+      envBackup.MEDIA_ENFORCE_DURABLE_UPLOADS;
   });
 
   test('create falls back to local storage when ImageKit is disabled', async () => {
@@ -158,6 +162,7 @@ describe('property.controller media handling', () => {
 
   test('create rejects in production when ImageKit is unavailable and no persistent uploads root is set', async () => {
     process.env.NODE_ENV = 'production';
+    process.env.MEDIA_ENFORCE_DURABLE_UPLOADS = 'true';
 
     const req = {
       user: { id: 10, role: 'client', country: null, countryId: null, regionId: null },
@@ -193,6 +198,7 @@ describe('property.controller media handling', () => {
 
   test('create falls back to local storage in production when uploads root is explicitly configured', async () => {
     process.env.NODE_ENV = 'production';
+    process.env.MEDIA_ENFORCE_DURABLE_UPLOADS = 'true';
     process.env.UPLOADS_ROOT = '/var/lib/teranga-uploads';
 
     Property.create.mockResolvedValue({ id: 56 });

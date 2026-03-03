@@ -19,6 +19,7 @@ function evaluateLocalMediaFallback(options = {}) {
   const env = options.env || process.env;
   const moduleFallbackEnvVar = String(options.moduleFallbackEnvVar || '').trim();
   const globalFallbackEnvVar = 'MEDIA_ALLOW_LOCAL_FALLBACK';
+  const enforceDurableUploadsEnvVar = 'MEDIA_ENFORCE_DURABLE_UPLOADS';
 
   const moduleDecision = moduleFallbackEnvVar
     ? parseBooleanEnv(env[moduleFallbackEnvVar])
@@ -48,6 +49,26 @@ function evaluateLocalMediaFallback(options = {}) {
     };
   }
 
+  const enforceDurableUploads = parseBooleanEnv(
+    env[enforceDurableUploadsEnvVar]
+  );
+  if (enforceDurableUploads !== true) {
+    const isProduction = isProductionRuntime(env);
+    return {
+      allowLocalFallback: true,
+      reason: isProduction
+        ? 'production_legacy_compatible_default'
+        : 'non_production_default',
+      resolvedFrom: 'runtime_default',
+      moduleDecision: null,
+      globalDecision: null,
+      enforceDurableUploads:
+        enforceDurableUploads === null ? 'auto' : enforceDurableUploads,
+      isProduction,
+      hasCustomUploadsRoot: hasCustomUploadsRoot(env),
+    };
+  }
+
   const isProduction = isProductionRuntime(env);
   if (!isProduction) {
     return {
@@ -56,6 +77,7 @@ function evaluateLocalMediaFallback(options = {}) {
       resolvedFrom: 'runtime_default',
       moduleDecision: null,
       globalDecision: null,
+      enforceDurableUploads: true,
       isProduction,
       hasCustomUploadsRoot: hasCustomUploadsRoot(env),
     };
@@ -69,6 +91,7 @@ function evaluateLocalMediaFallback(options = {}) {
       resolvedFrom: 'UPLOADS_ROOT/UPLOADS_DIR',
       moduleDecision: null,
       globalDecision: null,
+      enforceDurableUploads: true,
       isProduction,
       hasCustomUploadsRoot: customUploadsRoot,
     };
@@ -80,6 +103,7 @@ function evaluateLocalMediaFallback(options = {}) {
     resolvedFrom: 'runtime_default',
     moduleDecision: null,
     globalDecision: null,
+    enforceDurableUploads: true,
     isProduction,
     hasCustomUploadsRoot: customUploadsRoot,
   };

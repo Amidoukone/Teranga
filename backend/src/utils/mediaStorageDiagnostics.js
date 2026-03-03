@@ -22,6 +22,9 @@ function buildMediaStorageDiagnostics(extra = {}, env = process.env) {
   const mediaAllowLocalFallback = parseBooleanEnv(
     env.MEDIA_ALLOW_LOCAL_FALLBACK
   );
+  const mediaEnforceDurableUploads = parseBooleanEnv(
+    env.MEDIA_ENFORCE_DURABLE_UPLOADS
+  );
 
   const moduleFallbackEnvVar = String(
     extra.moduleFallbackEnvVar || ''
@@ -44,6 +47,8 @@ function buildMediaStorageDiagnostics(extra = {}, env = process.env) {
       propertyAllowLocalFallback === null ? 'auto' : propertyAllowLocalFallback,
     mediaAllowLocalFallback:
       mediaAllowLocalFallback === null ? 'auto' : mediaAllowLocalFallback,
+    mediaEnforceDurableUploads:
+      mediaEnforceDurableUploads === null ? 'auto' : mediaEnforceDurableUploads,
     ...extra,
   };
 

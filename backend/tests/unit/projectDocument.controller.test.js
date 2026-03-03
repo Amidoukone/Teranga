@@ -51,6 +51,7 @@ describe('projectDocument.controller', () => {
     UPLOADS_DIR: process.env.UPLOADS_DIR,
     PROJECT_DOCUMENT_ALLOW_LOCAL_FALLBACK:
       process.env.PROJECT_DOCUMENT_ALLOW_LOCAL_FALLBACK,
+    MEDIA_ENFORCE_DURABLE_UPLOADS: process.env.MEDIA_ENFORCE_DURABLE_UPLOADS,
   };
 
   beforeEach(() => {
@@ -59,6 +60,7 @@ describe('projectDocument.controller', () => {
     delete process.env.UPLOADS_ROOT;
     delete process.env.UPLOADS_DIR;
     delete process.env.PROJECT_DOCUMENT_ALLOW_LOCAL_FALLBACK;
+    delete process.env.MEDIA_ENFORCE_DURABLE_UPLOADS;
 
     jest.spyOn(fs.promises, 'mkdir').mockResolvedValue();
     jest.spyOn(fs.promises, 'writeFile').mockResolvedValue();
@@ -78,6 +80,8 @@ describe('projectDocument.controller', () => {
     process.env.UPLOADS_DIR = envBackup.UPLOADS_DIR;
     process.env.PROJECT_DOCUMENT_ALLOW_LOCAL_FALLBACK =
       envBackup.PROJECT_DOCUMENT_ALLOW_LOCAL_FALLBACK;
+    process.env.MEDIA_ENFORCE_DURABLE_UPLOADS =
+      envBackup.MEDIA_ENFORCE_DURABLE_UPLOADS;
   });
 
   test('upload falls back to local storage and persists a non-null filePath', async () => {
@@ -141,6 +145,7 @@ describe('projectDocument.controller', () => {
 
   test('upload rejects in production when ImageKit is unavailable and uploads root is not configured', async () => {
     process.env.NODE_ENV = 'production';
+    process.env.MEDIA_ENFORCE_DURABLE_UPLOADS = 'true';
     delete process.env.IMAGEKIT_PUBLIC_KEY;
     delete process.env.IMAGEKIT_PRIVATE_KEY;
     delete process.env.IMAGEKIT_URL_ENDPOINT;

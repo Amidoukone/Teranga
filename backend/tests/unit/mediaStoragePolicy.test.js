@@ -27,20 +27,21 @@ describe('mediaStoragePolicy', () => {
     expect(result.reason).toBe('non_production_default');
   });
 
-  test('blocks fallback in production without ImageKit and without explicit uploads root', () => {
+  test('allows fallback by default in production for legacy-compatible behavior', () => {
     const result = evaluateLocalMediaFallback({
       env: { NODE_ENV: 'production' },
       moduleFallbackEnvVar: 'PROPERTY_ALLOW_LOCAL_FALLBACK',
     });
 
-    expect(result.allowLocalFallback).toBe(false);
-    expect(result.reason).toBe('production_ephemeral_blocked');
+    expect(result.allowLocalFallback).toBe(true);
+    expect(result.reason).toBe('production_legacy_compatible_default');
   });
 
   test('allows fallback in production when uploads root is explicitly configured', () => {
     const result = evaluateLocalMediaFallback({
       env: {
         NODE_ENV: 'production',
+        MEDIA_ENFORCE_DURABLE_UPLOADS: 'true',
         UPLOADS_ROOT: '/var/lib/teranga-uploads',
       },
       moduleFallbackEnvVar: 'PROPERTY_ALLOW_LOCAL_FALLBACK',
@@ -76,5 +77,19 @@ describe('mediaStoragePolicy', () => {
     expect(result.allowLocalFallback).toBe(true);
     expect(result.reason).toBe('explicit_global_env');
     expect(result.resolvedFrom).toBe('MEDIA_ALLOW_LOCAL_FALLBACK');
+  });
+
+  test('blocks fallback in production when durable mode is explicitly enforced', () => {
+    const result = evaluateLocalMediaFallback({
+      env: {
+        NODE_ENV: 'production',
+        MEDIA_ENFORCE_DURABLE_UPLOADS: 'true',
+      },
+      moduleFallbackEnvVar: 'PROPERTY_ALLOW_LOCAL_FALLBACK',
+    });
+
+    expect(result.allowLocalFallback).toBe(false);
+    expect(result.reason).toBe('production_ephemeral_blocked');
+    expect(result.enforceDurableUploads).toBe(true);
   });
 });
