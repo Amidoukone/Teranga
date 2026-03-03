@@ -38,6 +38,7 @@ const {
 // 📸 ImageKit Helper unifié
 const imageKit = require("../helpers/teranga-imagekit");
 const logger = require('../utils/logger');
+const { resolveUploadsRoot } = require("../utils/uploadsRoot");
 
 // 📌 Labels français
 const {
@@ -138,7 +139,7 @@ async function saveTransactionProofLocally(file) {
     throw new Error("Fichier invalide: buffer absent");
   }
 
-  const uploadsRoot = path.join(__dirname, "..", "..", "uploads");
+  const uploadsRoot = resolveUploadsRoot();
   const transactionsDir = path.join(uploadsRoot, "transactions");
   await fs.promises.mkdir(transactionsDir, { recursive: true });
 
@@ -203,7 +204,20 @@ async function removeLocalUpload(filePath) {
   if (!isLocalUploadPath(filePath)) return;
 
   const relPath = filePath.replace(/^\/+/, "");
-  const absolutePath = path.join(__dirname, "..", "..", relPath);
+  const uploadsRoot = path.resolve(resolveUploadsRoot());
+  const uploadsRelativePath = relPath.replace(/^uploads\/+/i, "");
+  const absolutePath = path.resolve(path.join(uploadsRoot, uploadsRelativePath));
+
+  if (
+    absolutePath !== uploadsRoot &&
+    !absolutePath.startsWith(`${uploadsRoot}${path.sep}`)
+  ) {
+    logger.warn(
+      { filePath },
+      "transaction.proof.local_delete.blocked_path"
+    );
+    return;
+  }
 
   try {
     await fs.promises.unlink(absolutePath);

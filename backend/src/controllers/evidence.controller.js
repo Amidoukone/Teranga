@@ -21,6 +21,7 @@ const {
 } = require("../services/notification.service");
 const { emitEvent } = require("../services/activity.service");
 const logger = require('../utils/logger');
+const { resolveUploadsRoot } = require("../utils/uploadsRoot");
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
 
 function toIntOr(value, fallback) {
@@ -163,7 +164,7 @@ async function ensureDir(dir) {
 }
 
 async function saveEvidenceLocally(file, fileName) {
-  const uploadsRoot = path.join(__dirname, "..", "..", "uploads");
+  const uploadsRoot = resolveUploadsRoot();
   const evidenceDir = path.join(uploadsRoot, "evidences");
   await ensureDir(evidenceDir);
 
@@ -177,6 +178,24 @@ async function saveEvidenceLocally(file, fileName) {
     url: `/uploads/evidences/${localName}`,
     fileId: null,
   };
+}
+
+function resolveLocalUploadAbsolutePath(filePath) {
+  if (typeof filePath !== "string" || !/^\/?uploads\//.test(filePath)) return null;
+
+  const relPath = filePath.replace(/^\/+/, "");
+  const uploadsRoot = path.resolve(resolveUploadsRoot());
+  const uploadsRelativePath = relPath.replace(/^uploads\/+/i, "");
+  const absolutePath = path.resolve(path.join(uploadsRoot, uploadsRelativePath));
+
+  if (
+    absolutePath !== uploadsRoot &&
+    !absolutePath.startsWith(`${uploadsRoot}${path.sep}`)
+  ) {
+    return null;
+  }
+
+  return absolutePath;
 }
 
 function getEvidenceLevel(totalImages, maxImages) {
@@ -834,12 +853,18 @@ exports.remove = async (req, res) => {
     }
 
     if (ev.filePath && /^\/?uploads\//.test(ev.filePath)) {
-      const relPath = ev.filePath.replace(/^\/+/, "");
-      const absolutePath = path.join(__dirname, "..", "..", relPath);
+      const absolutePath = resolveLocalUploadAbsolutePath(ev.filePath);
+      if (!absolutePath) {
+        logger.warn(
+          { filePath: ev.filePath },
+          "evidence.local_file.delete.blocked_path"
+        );
+      } else {
       try {
         await fs.promises.unlink(absolutePath);
       } catch (e) {
         logger.warn("⚠️ Impossible de supprimer le fichier local:", e.message);
+      }
       }
     }
 

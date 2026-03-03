@@ -132,7 +132,7 @@ function parseBooleanEnv(raw) {
 function canFallbackToLocalStorage() {
   const explicit = parseBooleanEnv(process.env.PROPERTY_ALLOW_LOCAL_FALLBACK);
   if (explicit !== null) return explicit;
-  return !isProductionRuntime() || hasPersistentUploadsRoot();
+  return true;
 }
 
 function mediaStorageError() {

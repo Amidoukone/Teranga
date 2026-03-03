@@ -5,6 +5,7 @@ const { ProjectDocument, Project, User, ProjectPhase } = require("../../models")
 const { getLabel } = require("../utils/labels");
 const imageKit = require("../helpers/teranga-imagekit");
 const path = require("path");
+const { resolveUploadsRoot } = require("../utils/uploadsRoot");
 
 // ✅ GEO scope (strict + admin global)
 const { canAccessGeoResource } = require("../utils/geoScope");
@@ -183,7 +184,7 @@ async function saveProjectDocumentLocally(file, projectId) {
     throw new Error("Fichier invalide: buffer absent");
   }
 
-  const uploadsRoot = path.join(__dirname, "..", "..", "uploads");
+  const uploadsRoot = resolveUploadsRoot();
   const projectsDir = path.join(uploadsRoot, "projects");
   await fs.promises.mkdir(projectsDir, { recursive: true });
 
@@ -206,7 +207,20 @@ async function removeLocalUpload(filePath) {
   if (!isLocalUploadPath(filePath)) return;
 
   const relPath = filePath.replace(/^\/+/, "");
-  const absolutePath = path.join(__dirname, "..", "..", relPath);
+  const uploadsRoot = path.resolve(resolveUploadsRoot());
+  const uploadsRelativePath = relPath.replace(/^uploads\/+/i, "");
+  const absolutePath = path.resolve(path.join(uploadsRoot, uploadsRelativePath));
+
+  if (
+    absolutePath !== uploadsRoot &&
+    !absolutePath.startsWith(`${uploadsRoot}${path.sep}`)
+  ) {
+    logger.warn(
+      { filePath },
+      "project_document.local_file.delete.blocked_path"
+    );
+    return;
+  }
 
   try {
     await fs.promises.unlink(absolutePath);

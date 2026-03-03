@@ -150,6 +150,28 @@ app.use(
     },
   })
 );
+const legacyUploadsRoot = path.resolve(path.join(__dirname, '..', 'uploads'));
+const normalizedUploadsRoot = path.resolve(uploadsRoot);
+if (legacyUploadsRoot !== normalizedUploadsRoot) {
+  app.use(
+    '/uploads',
+    express.static(legacyUploadsRoot, {
+      dotfiles: 'deny',
+      fallthrough: true,
+      setHeaders: (res) => {
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader(
+          'Cross-Origin-Resource-Policy',
+          uploadsCrossOriginResourcePolicy
+        );
+      },
+    })
+  );
+  logger.warn(
+    { uploadsRoot: normalizedUploadsRoot, legacyUploadsRoot },
+    'app.uploads.static_serving.legacy_fallback_enabled'
+  );
+}
 logger.info(
   { corp: uploadsCrossOriginResourcePolicy },
   'app.uploads.static_serving.enabled'

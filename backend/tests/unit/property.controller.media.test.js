@@ -156,8 +156,21 @@ describe('property.controller media handling', () => {
     );
   });
 
-  test('create rejects media upload in production when storage is not persistent', async () => {
+  test('create falls back to local storage in production when ImageKit is unavailable', async () => {
     process.env.NODE_ENV = 'production';
+    Property.create.mockResolvedValue({ id: 55 });
+    Property.findByPk.mockResolvedValue({
+      toJSON: () => ({
+        id: 55,
+        ownerId: 10,
+        title: 'Villa test',
+        type: 'house',
+        address: 'A',
+        city: 'Bamako',
+        photos: [{ url: '/uploads/properties/property_demo.pdf', fileId: null }],
+        owner: { id: 10, firstName: 'User', lastName: 'Client', email: 'c@test.local' },
+      }),
+    });
 
     const req = {
       user: { id: 10, role: 'client', country: null, countryId: null, regionId: null },
@@ -180,15 +193,10 @@ describe('property.controller media handling', () => {
 
     await controller.create(req, res);
 
-    expect(Property.create).not.toHaveBeenCalled();
+    expect(Property.create).toHaveBeenCalledTimes(1);
     expect(imageKit.upload).not.toHaveBeenCalled();
-    expect(fs.promises.writeFile).not.toHaveBeenCalled();
-    expect(res.status).toHaveBeenCalledWith(503);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        error: expect.stringContaining('ImageKit'),
-      })
-    );
+    expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(201);
   });
 
   test('update rejects uploads when property already reached 10 files', async () => {
