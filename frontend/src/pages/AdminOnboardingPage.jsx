@@ -1,8 +1,8 @@
 // ============================================================================
 // AdminOnboardingPage.jsx
-// Onboarding Pays AAaTMAasAAAAAAAAaAAAAasAA AAAAAAaAAAAAAaA34AA RAAaTMAa AaaAAaAAasAAgions AAaTMAasAAAAAAAAaAAAAasAA AAAAAAaAAAAAAaA34AA MASTER
-// AAaTMAasAAAAaAAasAA AAAAAAaAAAAasAAAAAAAAaAAAAAAaA34AA ADMIN GLOBAL ONLY (redirection si MASTER)
-// ZAAaTMAa AaaAAAAAAaAAAAasAARO RAAaTMAa AaaAAAAAAaAAAAasAAGRESSION AAaTMAasAAAAAAAAasAA...AAasAAAAaAAasAA BACKEND SOURCE OF TRUTH
+// Onboarding Pays + Regions + creation MASTER
+// ADMIN GLOBAL ONLY (redirection si MASTER)
+// Zero regression: backend source of truth
 // ============================================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -34,24 +34,24 @@ export default function AdminOnboardingPage() {
   const { confirmDeleteNamed } = useDeleteConfirm();
   const [step, setStep] = useState(1);
 
- // AAaTMAasAAAAaAAasAA AAAAAAaAAAAasAAAAaAAasAA Auth guard state
+ // Auth guard state
   const [isAllowed, setIsAllowed] = useState(null);
 
- // AAaTMAa AaaAAAAAAaAAAAasAAtape 1 AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA Pays
+ // Etape 1: pays
   const [countryForm, setCountryForm] = useState({
     name: "",
     isoCode: "",
   });
   const [createdCountry, setCreatedCountry] = useState(null);
 
- // AAaTMAa AaaAAAAAAaAAAAasAAtape 2 AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA RAAaTMAa AaaAAaAAasAAgions
+ // Etape 2: regions
   const [regionForm, setRegionForm] = useState({
     name: "",
     code: "",
   });
   const [regionsCreated, setRegionsCreated] = useState([]);
 
- // AAaTMAa AaaAAAAAAaAAAAasAAtape 3 AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA MASTER
+ // Etape 3: compte MASTER
   const [masterForm, setMasterForm] = useState({
     email: "",
     password: "",
@@ -59,7 +59,7 @@ export default function AdminOnboardingPage() {
     regionId: "",
   });
 
- // AAaTMAasAAAAaAAAAasAA...aAAAAAAaAAAAasAA Conserve GeoContext (cohAAaTMAa AaaAAaAAasAArence globale)
+ // Conserve GeoContext (coherence globale)
   useGeo();
 
   // Loading flags
@@ -86,9 +86,9 @@ export default function AdminOnboardingPage() {
   });
 
   // ========================================================================
- //  AUTH CHECK AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA ADMIN GLOBAL ONLY
- // - AutorisAAaTMAa AaaAAaAAasAA : admin sans countryId/regionId
- // - RefusAAaTMAa AaaAAaAAasAA : agent/client + MASTER (admin scopAAaTMAa AaaAAaAAasAA)
+ // AUTH CHECK - ADMIN GLOBAL ONLY
+ // - Autorise: admin sans countryId/regionId
+ // - Refuse: agent/client + MASTER (admin scope)
   // ========================================================================
   useEffect(() => {
     let alive = true;
@@ -108,16 +108,16 @@ export default function AdminOnboardingPage() {
         const isAdmin = role === "admin";
         const isMaster = Boolean(user?.countryId) || Boolean(user?.regionId);
 
- // AAaTMAasAAAAaAAasAAAAaAAAAasAAazA Pas admin ou admin scopAAaTMAa AaaAAaAAasAA (MASTER) -> redirect
+ // Pas admin ou admin scope (MASTER) -> redirect
         if (!isAdmin || isMaster) {
           window.location.href = "/dashboard";
           return;
         }
 
- // AAaTMAasAAAAaAAAAasAA...aAAAAAAaAAAAasAA Admin global autorisAAaTMAa AaaAAaAAasAA
+ // Admin global autorise
         setIsAllowed(true);
       } catch (e) {
-        console.error("/me error:", e);
+        console.error("AdminOnboardingPage /me error:", e);
         window.location.href = "/login";
       }
     }
@@ -201,7 +201,7 @@ export default function AdminOnboardingPage() {
       const list = await getCountries({ includeInactive: true });
       setCountries(list);
     } catch (e) {
-      console.error("load countries:", e);
+      console.error("AdminOnboardingPage load countries error:", e);
     } finally {
       setLoadingCountries(false);
     }
@@ -216,7 +216,7 @@ export default function AdminOnboardingPage() {
       });
       setRegions(list);
     } catch (e) {
-      console.error("load regions:", e);
+      console.error("AdminOnboardingPage load regions error:", e);
     } finally {
       setLoadingRegions(false);
     }
@@ -355,7 +355,7 @@ export default function AdminOnboardingPage() {
   }
 
   // ========================================================================
- // AAaTMAa AaaAAAAAAaAAAAasAAtape 1 AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA CrAAaTMAa AaaAAaAAasAAer pays
+ // Etape 1: creer pays
   // ========================================================================
   async function createCountry(e) {
     e.preventDefault();
@@ -377,7 +377,7 @@ export default function AdminOnboardingPage() {
       setStep(2);
       await loadCountries();
 
- // Reset rAAaTMAa AaaAAaAAasAAgions/master quand on recrAAaTMAa AaaAAaAAasAAe un pays
+ // Reset regions/master quand on recree un pays
       setRegionsCreated([]);
       setMasterForm((m) => ({
         ...m,
@@ -392,7 +392,7 @@ export default function AdminOnboardingPage() {
   }
 
   // ========================================================================
- // AAaTMAa AaaAAAAAAaAAAAasAAtape 2 AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA Ajouter rAAaTMAa AaaAAaAAasAAgion
+ // Etape 2: ajouter region
   // ========================================================================
   async function addRegion(e) {
     e.preventDefault();
@@ -422,7 +422,7 @@ export default function AdminOnboardingPage() {
   }
 
   // ========================================================================
- // AAaTMAa AaaAAAAAAaAAAAasAAtape 3 AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA CrAAaTMAa AaaAAaAAasAAer MASTER
+ // Etape 3: creer MASTER
   // ========================================================================
   async function createMaster(e) {
     e.preventDefault();
@@ -443,7 +443,7 @@ export default function AdminOnboardingPage() {
         role: "admin",
       };
 
- // AAaTMAasAAAAaAAAAasAA...aAAAAAAaAAAAasAA Backend existant: supporte countryId / regionId
+ // Backend existant: supporte countryId / regionId
       if (masterForm.scope === "region") {
         const rid = Number(masterForm.regionId);
         payload.regionId = rid;

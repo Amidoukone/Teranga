@@ -24,6 +24,7 @@ const {
 const { getPagination } = require('../utils/pagination');
 const logger = require('../utils/logger');
 const { resolveUploadsRoot } = require('../utils/uploadsRoot');
+const { buildMediaStorageDiagnostics } = require('../utils/mediaStorageDiagnostics');
 
 /* ============================================================
    Helpers utilitaires
@@ -133,6 +134,13 @@ function canFallbackToLocalStorage() {
   const explicit = parseBooleanEnv(process.env.PROPERTY_ALLOW_LOCAL_FALLBACK);
   if (explicit !== null) return explicit;
   return true;
+}
+
+function propertyMediaDiagnostics(extra = {}) {
+  return buildMediaStorageDiagnostics({
+    module: 'property',
+    ...extra,
+  });
 }
 
 function mediaStorageError() {
@@ -267,10 +275,16 @@ async function uploadPhotosToImageKit(files = []) {
   const allowLocalFallback = canFallbackToLocalStorage();
   if (!imageKitEnabled) {
     if (!allowLocalFallback) {
-      logger.error('property.media_storage.unconfigured.production');
+      logger.error(
+        propertyMediaDiagnostics({ allowLocalFallback }),
+        'property.media_storage.unconfigured.production'
+      );
       throw mediaStorageError();
     }
-    logger.warn('property.imagekit.disabled.fallback_local');
+    logger.warn(
+      propertyMediaDiagnostics({ allowLocalFallback }),
+      'property.imagekit.disabled.fallback_local'
+    );
   }
 
   const uploads = await Promise.all(
@@ -297,12 +311,19 @@ async function uploadPhotosToImageKit(files = []) {
           }
 
           logger.warn(
-            { fileName: f?.originalname },
+            propertyMediaDiagnostics({
+              fileName: f?.originalname,
+              allowLocalFallback,
+            }),
             'property.imagekit.upload_missing_url.fallback_local'
           );
         } catch (e) {
           logger.warn(
-            { err: e, fileName: f?.originalname },
+            propertyMediaDiagnostics({
+              err: e,
+              fileName: f?.originalname,
+              allowLocalFallback,
+            }),
             'property.imagekit.upload.failed.fallback_local'
           );
           if (!allowLocalFallback) {
@@ -323,7 +344,11 @@ async function uploadPhotosToImageKit(files = []) {
         };
       } catch (e) {
         logger.error(
-          { err: e, fileName: f?.originalname },
+          propertyMediaDiagnostics({
+            err: e,
+            fileName: f?.originalname,
+            allowLocalFallback,
+          }),
           'property.local_upload.failed'
         );
         if (!allowLocalFallback) {

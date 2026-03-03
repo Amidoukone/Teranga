@@ -163,7 +163,7 @@ export default function AdminUsersPage() {
         setCurrentUser(user);
         setIsAdmin(true);
       } catch (e) {
-        console.error("AAAAA...aTM /me error:", e);
+        console.error("AdminUsersPage /me error:", e);
         window.location.href = "/login";
       }
     }
@@ -185,7 +185,7 @@ export default function AdminUsersPage() {
       });
       setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("AAAAA...aTM Load users error:", err);
+      console.error("AdminUsersPage load users error:", err);
       setUsers([]);
     } finally {
       setLoading(false);
@@ -226,7 +226,7 @@ export default function AdminUsersPage() {
         });
         if (active) setFormRegions(Array.isArray(list) ? list : []);
       } catch (err) {
-        console.error("AAAAA...aTM load form regions:", err);
+        console.error("AdminUsersPage load form regions error:", err);
         if (active) setFormRegions([]);
       } finally {
         if (active) setLoadingFormRegions(false);
@@ -367,7 +367,7 @@ export default function AdminUsersPage() {
       await load();
     } catch (err) {
       notify(extractApiError(err, t("adminUsersPage.alerts.submitError")));
-      console.error("AAAAA...aTM Submit error:", err);
+      console.error("AdminUsersPage submit error:", err);
     }
   }
 
@@ -430,7 +430,7 @@ export default function AdminUsersPage() {
       await load();
     } catch (err) {
       notify(extractApiError(err, t("adminUsersPage.alerts.submitError")));
-      console.error("AAAAA...aTM Delete error:", err);
+      console.error("AdminUsersPage delete error:", err);
     }
   }
 

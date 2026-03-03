@@ -1,6 +1,6 @@
 // ============================================================================
-// TransactionsPage.jsx AAAasAAaA VERSION PREMIUM 2025 (TERANGA)
-// Master / Multi-pays READY AAAasAAaA ZERO rAAAgression
+// TransactionsPage.jsx VERSION PREMIUM 2025 (TERANGA)
+// Master / Multi-pays READY, zero regression
 // ============================================================================
 
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -29,7 +29,7 @@ const TRANSACTION_TYPE_VALUES = ['expense', 'revenue', 'commission', 'adjustment
 const CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 
 // ============================================================================
-// AAA...A A...aTMAA FILE_BASE AAAasAAaA Standard Teranga (Render / Netlify / CDN safe)
+// FILE_BASE - Standard Teranga (Render / Netlify / CDN safe)
 // ============================================================================
 const FILE_BASE =
   (typeof window !== 'undefined' && window.__TERANGA_FILE_BASE_URL) ||
@@ -121,7 +121,7 @@ function getProofExtLabel(pf, proofHref = '', fallback = 'FILE') {
   return ext || fallback;
 }
 
-// AAA...A AaAAaA PAGE PRINCIPALE
+// PAGE PRINCIPALE
 // ============================================================================
 export default function TransactionsPage() {
   const { formatNumber, formatDate } = useLocale();
@@ -195,11 +195,11 @@ export default function TransactionsPage() {
   }, [showForm]);
 
   // ========================================================================
- // AAA...A AaAAA1 SERVICES SELON RAAaALE (client / agent / admin / master)
+ // Services selon role (client / agent / admin / master)
   // ========================================================================
   const loadServicesByRole = useCallback(async (u) => {
     try {
-      if (debug) console.warn('[TransactionsPage] loadServicesByRole start', u?.role);
+      if (debug) console.warn('TransactionsPage loadServicesByRole start:', u?.role);
       let servs = [];
 
       if (u.role === 'client') {
@@ -211,36 +211,36 @@ export default function TransactionsPage() {
       }
 
       setServices(servs || []);
-      if (debug) console.warn('[TransactionsPage] loadServicesByRole done', (servs || []).length);
+      if (debug) console.warn('TransactionsPage loadServicesByRole done:', (servs || []).length);
     } catch (e) {
-      console.error('Erreur services:', e);
+      console.error('TransactionsPage load services error:', e);
       setServices([]);
-      if (debug) console.warn('[TransactionsPage] loadServicesByRole error', e);
+      if (debug) console.warn('TransactionsPage loadServicesByRole warning:', e);
     }
   }, [debug]);
 
   // ========================================================================
- // AAA...A AaAAA1 TRANSACTIONS
+ // Transactions
   // ========================================================================
   const loadTransactions = useCallback(async () => {
     setLoading(true);
     try {
-      if (debug) console.warn('[TransactionsPage] loadTransactions start');
+      if (debug) console.warn('TransactionsPage loadTransactions start');
       const data = await getTransactions();
       const arr = Array.isArray(data) ? data : data?.transactions || [];
       setTransactions(arr);
-      if (debug) console.warn('[TransactionsPage] loadTransactions done', arr.length);
+      if (debug) console.warn('TransactionsPage loadTransactions done:', arr.length);
     } catch (e) {
-      console.error('Erreur loadTransactions:', e);
+      console.error('TransactionsPage load transactions error:', e);
       notify(tRef.current('transactionsPage.alerts.loadError'));
       setTransactions([]);
-      if (debug) console.warn('[TransactionsPage] loadTransactions error', e);
+      if (debug) console.warn('TransactionsPage loadTransactions warning:', e);
     } finally {
       setLoading(false);
     }
   }, [debug]);
   // ========================================================================
- // AAA...A AaAAA INIT USER + DATA
+ // Init user + data
   // ========================================================================
   useEffect(() => {
     if (initStartedRef.current) return;
@@ -252,7 +252,7 @@ export default function TransactionsPage() {
         if (active) {
           setBooting(true);
           setBootError('');
-          if (debug) console.warn('[TransactionsPage] init start');
+          if (debug) console.warn('TransactionsPage init start');
         }
         const userData = await me();
         if (!active) return;
@@ -267,7 +267,7 @@ export default function TransactionsPage() {
         setUser(current);
         // On sort du boot UI dès que l'auth est validée.
         if (active) setBooting(false);
-        if (debug) console.warn('[TransactionsPage] init user ok', current?.id);
+        if (debug) console.warn('TransactionsPage init user ok:', current?.id);
 
         // Ne bloque pas le rendu UI sur des requetes potentiellement lentes.
         // Les etats `loading`/`services` gerent deja l'affichage interne.
@@ -278,8 +278,8 @@ export default function TransactionsPage() {
           // no-op: chaque loader gere deja ses erreurs
         });
       } catch (err) {
-        console.error('Erreur init TransactionsPage:', err);
-        if (debug) console.warn('[TransactionsPage] init error', err);
+        console.error('TransactionsPage init error:', err);
+        if (debug) console.warn('TransactionsPage init warning:', err);
         if (err?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
@@ -299,7 +299,7 @@ export default function TransactionsPage() {
         }
       } finally {
         if (active) setBooting(false);
-        if (debug) console.warn('[TransactionsPage] init finally booting=false');
+        if (debug) console.warn('TransactionsPage init finally booting=false');
       }
     }
 
@@ -311,7 +311,7 @@ export default function TransactionsPage() {
   }, [loadServicesByRole, loadTransactions, t, debug]);
 
   // ========================================================================
- // AAA...A AaAAA1 SERVICE AAAaA Aaa TASKS
+ // Service et tasks
   // ========================================================================
   async function handleServiceChange(e) {
     const serviceId = e.target.value;
@@ -332,13 +332,13 @@ export default function TransactionsPage() {
       const { data } = await api.get(`/tasks/service/${serviceId}`);
       setTasks(data.tasks || []);
     } catch (e) {
-      console.error('Erreur load tasks:', e);
+      console.error('TransactionsPage load tasks error:', e);
       setTasks([]);
     }
   }
 
   // ========================================================================
- // AAA...A AaAAA1 SUBMIT TRANSACTION (ANTI DOUBLE-SUBMIT)
+ // Submit transaction (anti double-submit)
   // ========================================================================
   async function handleSubmit(e) {
     e.preventDefault();
@@ -384,7 +384,7 @@ export default function TransactionsPage() {
         projectId: form.projectId ? Number(form.projectId) : undefined,
       };
 
- // Transaction indAAApendante AAAaA Aaa completed
+ // Transaction independante et completed
       if (!payload.orderId && !payload.projectId) {
         payload.status = 'completed';
       }
@@ -397,7 +397,7 @@ export default function TransactionsPage() {
       notify(t('transactionsPage.alerts.createSuccess'));
       resetForm();
     } catch (e) {
-      console.error('Erreur createTransaction:', e);
+      console.error('TransactionsPage create transaction error:', e);
       notify(
         e?.response?.data?.error ||
           e?.message ||
@@ -426,7 +426,7 @@ export default function TransactionsPage() {
   }
 
   // ========================================================================
- // AAA...A AaAAA1 USER DISPLAY
+ // User display
   // ========================================================================
   const getUserDisplayName = useCallback((u) => {
     if (!u) return t('common.dash');
@@ -437,7 +437,7 @@ export default function TransactionsPage() {
   }, [t]);
 
   // ========================================================================
- // AAA...A AaAAA FILTERING & SORTING
+ // Filtering & sorting
   // ========================================================================
   useEffect(() => {
     let arr = [...transactions];
@@ -523,7 +523,7 @@ export default function TransactionsPage() {
   const pagedTransactions = filtered.slice(startIndex, endIndex);
 
   // ========================================================================
- // AAAAAA3 LOADING
+ // Loading
   // ========================================================================
   if (booting) {
     return (
@@ -582,7 +582,7 @@ export default function TransactionsPage() {
   }
 
   // ========================================================================
- // AAA...A AaaAAAA AA AA UI PRINCIPALE
+ // UI principale
   // ========================================================================
   return (
     <div className="app-page-wrap">
@@ -688,7 +688,7 @@ export default function TransactionsPage() {
 }
 
 // ============================================================================
-// AAA...A AaAAA FILTRES
+// Filtres
 // ============================================================================
 function TransactionFilters({ filters, setFilters, services, filteredCount }) {
   const { t } = useTranslation();
@@ -805,7 +805,7 @@ function TransactionFilters({ filters, setFilters, services, filteredCount }) {
 }
 
 // ============================================================================
-// AAA...A AAAA34 FORMULAIRE
+// Formulaire
 // ============================================================================
 function TransactionForm({
   form,
@@ -950,7 +950,7 @@ function TransactionForm({
 }
 
 // ============================================================================
-// AAA...A AaAAaA1 LISTE
+// Liste
 // ============================================================================
 function TransactionList({
   transactions,
@@ -1131,7 +1131,7 @@ function TransactionList({
 }
 
 // ============================================================================
-// AAA...A AaAAA PAGINATION
+// Pagination
 // ============================================================================
 function buildPageItems(current, total) {
   if (total <= 7) {

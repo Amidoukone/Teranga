@@ -85,7 +85,7 @@ export default function AdminServicesPage() {
       const { data } = await api.get('/users?role=agent');
       setAgents(data?.users || []);
     } catch (err) {
-      console.error('AAAAasAAAaAaa Erreur chargement agents:', err);
+      console.error('AdminServicesPage load agents error:', err);
       setAgents([]);
     }
   }, []);
@@ -111,7 +111,7 @@ export default function AdminServicesPage() {
 
       setServices(data?.services || []);
     } catch (e) {
-      console.error('AAAAasAAAaAaa Erreur chargement services:', e);
+      console.error('AdminServicesPage load services error:', e);
       setServices([]);
     } finally {
       setLoading(false);
@@ -145,7 +145,7 @@ export default function AdminServicesPage() {
       );
       await loadServices();
     } catch (e) {
-      console.error('AAAAasAAAaAaa Erreur assignation:', e);
+      console.error('AdminServicesPage assignment error:', e);
       notify(
         e?.response?.data?.error ||
           t('adminServicesPage.alerts.assignError')

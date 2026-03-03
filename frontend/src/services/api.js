@@ -126,7 +126,20 @@ const TOKEN_STORAGE_KEYS = ['teranga_token', 'token'];
 const USER_STORAGE_KEY = 'teranga_user';
 const CSRF_TOKEN_STORAGE_KEY = 'teranga_csrf_token';
 const CSRF_COOKIE_NAME = 'teranga_csrf';
+const IS_PROD_RUNTIME =
+  String(process.env.NODE_ENV || 'development').trim().toLowerCase() ===
+  'production';
 let refreshAccessPromise = null;
+
+function logApiDebug(level, ...args) {
+  if (IS_PROD_RUNTIME) return;
+  try {
+    const fn = level === 'warn' ? console.warn : console.error;
+    fn(...args);
+  } catch {
+    // ignore logging failures
+  }
+}
 
 function parseBooleanLike(value, fallback = false) {
   if (['1', 'true', 'yes', 'on'].includes(value)) return true;
@@ -422,16 +435,12 @@ api.interceptors.response.use(
     // Log utile en dev (non bloquant)
     const silentAuth = Boolean(cfg?.silentAuth);
     if (!silentAuth) {
-      try {
-        console.error('❌ API ERROR:', {
-          url,
-          method,
-          status,
-          data: error?.response?.data,
-        });
-      } catch {
-        // ignore
-      }
+      logApiDebug('error', '[api] request failed', {
+        url,
+        method,
+        status,
+        data: error?.response?.data,
+      });
     }
 
  // 1) Erreurs reseau (pas de response) pas de redirect/logout
@@ -463,14 +472,14 @@ api.interceptors.response.use(
           return api.request(cfg);
         } catch (refreshError) {
           if (!silentAuth) {
-            try {
-              console.warn(' Refresh auto echoue, fallback sur gestion 401 standard', {
+            logApiDebug(
+              'warn',
+              '[api] refresh auto echoue, fallback 401 standard',
+              {
                 refreshStatus: refreshError?.response?.status,
                 refreshData: refreshError?.response?.data,
-              });
-            } catch {
-              // ignore
-            }
+              }
+            );
           }
         }
       }
@@ -505,7 +514,10 @@ api.interceptors.response.use(
 
  // 3) 403 ACL (autorisation insuffisante) pas de logout
     if (status === 403) {
-      console.warn(' Acces refuse (403) pour', method?.toUpperCase?.(), url);
+      logApiDebug('warn', '[api] acces refuse (403)', {
+        method: method?.toUpperCase?.(),
+        url,
+      });
       return Promise.reject(error);
     }
 

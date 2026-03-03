@@ -98,7 +98,7 @@ export default function LoginPage() {
           <p className="page-lead mt-1">{t("auth.login.subtitle")}</p>
         </div>
 
- {/* ---------- MESSAGE DE SUCCAES ---------- */}
+ {/* ---------- MESSAGE DE SUCCES ---------- */}
         {successMsg && (
           <div className="mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-sm flex items-start gap-2 shadow-sm">
             <CheckCircle2 className="w-5 h-5 mt-0.5" />
@@ -106,7 +106,7 @@ export default function LoginPage() {
           </div>
         )}
 
- {/* ---------- MESSAGE DAaaERREUR ---------- */}
+ {/* ---------- MESSAGE D'ERREUR ---------- */}
         {errorMsg && (
           <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-sm shadow-sm">
             {errorMsg}

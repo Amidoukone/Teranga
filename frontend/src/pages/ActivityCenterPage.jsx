@@ -155,8 +155,7 @@ export default function ActivityCenterPage() {
           : { page, limit: pageSize, total: 0 }
       );
     } catch (e) {
-      console.error("AAAAA...aTM load activities:", e);
-      console.error("Error load activities:", e);
+      console.error("ActivityCenterPage load activities error:", e);
       setPagination({ page, limit: pageSize, total: 0 });
     } finally {
       setLoading(false);
@@ -263,7 +262,7 @@ export default function ActivityCenterPage() {
           { type: "success" }
         );
       } catch (e) {
-        console.error("delete activity:", e);
+        console.error("ActivityCenterPage delete activity error:", e);
         notify(
           t("activities.deleteError", {
             defaultValue: "Erreur lors de la suppression de l'activite.",
@@ -299,7 +298,7 @@ export default function ActivityCenterPage() {
         { type: "success" }
       );
     } catch (e) {
-      console.error("cleanup activities:", e);
+      console.error("ActivityCenterPage cleanup activities error:", e);
       notify(
         t("activities.cleanupError", {
           defaultValue: "Erreur lors du nettoyage des activites.",

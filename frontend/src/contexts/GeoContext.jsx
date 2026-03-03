@@ -52,7 +52,7 @@ export function GeoProvider({ children }) {
       const list = await getRegions({ countryId: nextCountryId });
       setRegions(list || []);
     } catch (e) {
-      console.error('❌ Geo regions load:', e);
+      console.error('GeoContext load regions error:', e);
       setRegions([]);
     }
   }, [isAuthenticated]);

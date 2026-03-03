@@ -26,7 +26,7 @@ class ErrorBoundary extends React.Component {
     }
     if (isDev) {
       // eslint-disable-next-line no-console
-      console.error('ErrorBoundary caught an error:', error, errorInfo);
+      console.error('ErrorBoundary runtime error:', error, errorInfo);
     }
   }
 

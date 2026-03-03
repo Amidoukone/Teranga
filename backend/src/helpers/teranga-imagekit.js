@@ -2,6 +2,7 @@
 
 const ImageKit = require('imagekit');
 const logger = require('../utils/logger');
+const { buildMediaStorageDiagnostics } = require('../utils/mediaStorageDiagnostics');
 
 const isConfigured = Boolean(
   process.env.IMAGEKIT_PUBLIC_KEY &&
@@ -11,8 +12,13 @@ const isConfigured = Boolean(
 
 if (!isConfigured) {
   logger.warn(
-    '⚠️ ImageKit: variables manquantes. ' +
-      'Assurez-vous que IMAGEKIT_PUBLIC_KEY, IMAGEKIT_PRIVATE_KEY et IMAGEKIT_URL_ENDPOINT sont définies.'
+    buildMediaStorageDiagnostics({ module: 'imagekit-helper' }),
+    'imagekit.config.missing'
+  );
+} else {
+  logger.info(
+    buildMediaStorageDiagnostics({ module: 'imagekit-helper' }),
+    'imagekit.config.ready'
   );
 }
 
@@ -24,11 +30,12 @@ const imagekit = isConfigured
     })
   : {
       upload: async () => {
-        throw new Error('ImageKit non configuré');
+        throw new Error('ImageKit non configure');
       },
       deleteFile: async () => {
-        throw new Error('ImageKit non configuré');
+        throw new Error('ImageKit non configure');
       },
     };
 
 module.exports = imagekit;
+

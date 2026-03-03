@@ -93,7 +93,7 @@ export default function AdminCategoriesPage() {
         setUser(current);
         await loadCategories();
       } catch (err) {
-        console.error("init AdminCategoriesPage:", err);
+        console.error("AdminCategoriesPage init error:", err);
         if (!mounted) return;
         setErrorMsg(t("adminCategoriesPage.errors.sessionLoad"));
       }
@@ -114,7 +114,7 @@ export default function AdminCategoriesPage() {
       const cats = await getCategories();
       setCategories(cats || []);
     } catch (err) {
-      console.error("loadCategories:", err);
+      console.error("AdminCategoriesPage load categories error:", err);
       setErrorMsg(t("adminCategoriesPage.errors.load"));
       notify(t("adminCategoriesPage.errors.load"));
     } finally {
@@ -164,7 +164,7 @@ export default function AdminCategoriesPage() {
       await loadCategories();
       setShowForm(false);
     } catch (err) {
-      console.error("handleSubmit:", err);
+      console.error("AdminCategoriesPage submit error:", err);
       setErrorMsg(t("adminCategoriesPage.errors.save"));
       notify(t("adminCategoriesPage.errors.save"));
     } finally {
@@ -189,7 +189,7 @@ export default function AdminCategoriesPage() {
       await deleteCategory(id);
       await loadCategories();
     } catch (err) {
-      console.error("deleteCategory:", err);
+      console.error("AdminCategoriesPage delete category error:", err);
       setErrorMsg(t("adminCategoriesPage.errors.delete"));
       notify(t("adminCategoriesPage.errors.delete"));
     }

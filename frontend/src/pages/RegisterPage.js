@@ -212,7 +212,7 @@ export default function RegisterPage() {
         }
       } catch (err) {
         if (!active) return;
-        console.error("Unable to load master countries", err);
+        console.error("RegisterPage load master countries error:", err);
         setMasterCountries([]);
         setMasterError(t("auth.register.errors.countriesUnavailable"));
       } finally {

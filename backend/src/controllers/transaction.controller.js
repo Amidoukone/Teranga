@@ -39,6 +39,7 @@ const {
 const imageKit = require("../helpers/teranga-imagekit");
 const logger = require('../utils/logger');
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
+const { buildMediaStorageDiagnostics } = require("../utils/mediaStorageDiagnostics");
 
 // 📌 Labels français
 const {
@@ -334,17 +335,27 @@ async function uploadProofToImageKit(file) {
       }
 
       logger.warn(
-        { fileName: file?.originalname },
+        buildMediaStorageDiagnostics({
+          module: "transaction",
+          fileName: file?.originalname,
+        }),
         "transaction.imagekit.upload_missing_url.fallback_local"
       );
     } catch (e) {
       logger.warn(
-        { err: e, fileName: file?.originalname },
+        buildMediaStorageDiagnostics({
+          module: "transaction",
+          err: e,
+          fileName: file?.originalname,
+        }),
         "transaction.imagekit.upload.failed.fallback_local"
       );
     }
   } else {
-    logger.warn("transaction.imagekit.disabled.fallback_local");
+    logger.warn(
+      buildMediaStorageDiagnostics({ module: "transaction" }),
+      "transaction.imagekit.disabled.fallback_local"
+    );
   }
 
   try {

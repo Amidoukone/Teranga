@@ -1,5 +1,5 @@
 // ============================================================
-// OrderTransactionsPage.jsx Aaa Teranga PRODUCTION READY (Option B2-A)
+// OrderTransactionsPage.jsx Teranga PRODUCTION READY (Option B2-A)
 // Clean Shop Premium + FILE_BASE + toAbsUrl + Optimisations visuelles
 // Contexte: transactions de commande.
 // Contexte: transactions de commande.
@@ -236,7 +236,7 @@ export default function OrderTransactionsPage() {
       const labeled = (arr || []).map((t) => applyLabels(t, 'transaction'));
       setTransactions(labeled);
     } catch (err) {
-      console.error("Erreur chargement transactions commande:", err);
+      console.error("OrderTransactionsPage load order transactions error:", err);
       notify(t("orderTransactions.alerts.loadError"));
       setTransactions([]);
     } finally {
@@ -259,7 +259,7 @@ export default function OrderTransactionsPage() {
         setUser(current);
         await loadTransactions();
       } catch (err) {
-        console.error("Erreur init OrderTransactionsPage:", err);
+        console.error("OrderTransactionsPage init error:", err);
         if (err?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
@@ -282,7 +282,7 @@ export default function OrderTransactionsPage() {
         setCountries(Array.isArray(cList) ? cList : []);
         setRegions(Array.isArray(rList) ? rList : []);
       } catch (e) {
-        console.error("Erreur chargement pays/regions:", e);
+        console.error("OrderTransactionsPage load countries and regions error:", e);
         if (mounted) {
           setCountries([]);
           setRegions([]);
@@ -331,7 +331,7 @@ export default function OrderTransactionsPage() {
       resetForm();
       await loadTransactions();
     } catch (err) {
-      console.error("Erreur ajout transaction:", err);
+      console.error("OrderTransactionsPage create transaction error:", err);
       notify(t("orderTransactions.alerts.createError"));
     } finally {
       setCreating(false); // Desactive le verrou apres reponse API.
@@ -433,7 +433,7 @@ export default function OrderTransactionsPage() {
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
       <div className="max-w-6xl mx-auto bg-surface-card/95 backdrop-blur-sm shadow-xl rounded-2xl p-4 sm:p-8 border border-border/70 transition-all duration-150 ease-out">
 
- {/* HEADER Aaa 100% responsive mobile / tablette / desktop */}
+ {/* HEADER - 100% responsive mobile / tablette / desktop */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 sm:mb-8">
           {/* Bloc titre */}
           <div className="max-w-full break-words">
@@ -535,7 +535,7 @@ function TransactionFilters({ filters, setFilters, count }) {
   const { t } = useTranslation();
   return (
     <div className="mb-8 bg-surface-main border border-border rounded-xl p-4 sm:p-5 shadow-sm">
- {/* Ligne recherche seule Aaa pleine largeur, plus respirable */}
+ {/* Ligne recherche seule - pleine largeur, plus respirable */}
       <div className="flex flex-col lg:flex-row gap-3 mb-4">
         <input
           placeholder={t("orderTransactions.filters.searchPlaceholder")}

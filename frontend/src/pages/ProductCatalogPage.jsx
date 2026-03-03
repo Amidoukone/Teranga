@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/img-redundant-alt */
 // ============================================================
-// ProductCatalogPage.jsx Aaa Teranga PRODUCTION READY (Style A 2025)
+// ProductCatalogPage.jsx Teranga PRODUCTION READY (Style A 2025)
 // Clean Shop Premium + FILE_BASE + Lightbox + Optimisations
 // + compat multi-pays / master (backend-driven)
 // ============================================================
@@ -218,7 +218,7 @@ export default function ProductCatalogPage() {
         );
         setError('');
       } catch (e) {
-        console.error("Erreur chargement catalogue:", e);
+        console.error("ProductCatalogPage load catalog error:", e);
         if (!mounted) return;
         setError(
           e?.response?.data?.error || t('productCatalogPage.errors.load')
@@ -355,7 +355,7 @@ export default function ProductCatalogPage() {
       if (id) navigate(`/orders/${id}`);
       else navigate('/orders');
     } catch (err) {
-      console.error('Erreur creation commande:', err);
+      console.error('ProductCatalogPage create order error:', err);
       notify(t('productCatalogPage.alerts.orderError'));
     }
   }

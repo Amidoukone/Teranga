@@ -267,7 +267,7 @@ export default function TaskEvidencesPage() {
       const ev = await getEvidences(id);
       setEvidences(ev || []);
     } catch (err) {
-      console.error('AAAAA...aTM getEvidences:', err);
+      console.error('TaskEvidencesPage load evidences error:', err);
       setEvidences([]);
     } finally {
       setLoading(false);
@@ -292,7 +292,7 @@ export default function TaskEvidencesPage() {
         setUser(current);
         await fetchEvidences();
       } catch (err) {
-        console.error('AAAAA...aTM init evidence:', err);
+        console.error('TaskEvidencesPage init evidence error:', err);
       }
     }
 
@@ -373,7 +373,7 @@ export default function TaskEvidencesPage() {
 
       await fetchEvidences();
     } catch (err) {
-      console.error('AAAAA...aTM upload:', err);
+      console.error('TaskEvidencesPage upload evidence error:', err);
       const msg =
         err?.response?.data?.error ||
         t('taskEvidencesPage.errors.upload');
@@ -391,7 +391,7 @@ export default function TaskEvidencesPage() {
       await deleteEvidence(evidenceId);
       await fetchEvidences();
     } catch (err) {
-      console.error('AAAAA...aTM delete evidence:', err);
+      console.error('TaskEvidencesPage delete evidence error:', err);
       const msg =
         err?.response?.data?.error || t('taskEvidencesPage.errors.delete');
       notify(msg);

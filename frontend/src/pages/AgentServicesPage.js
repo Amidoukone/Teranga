@@ -42,7 +42,7 @@ export default function AgentServicesPage() {
       );
       setServices(enriched);
     } catch (err) {
-      console.error('AAA Erreur chargement services agent:', err);
+      console.error('AgentServicesPage load services error:', err);
       setServices([]);
       notify(t('agentServicesPage.errors.load'));
     } finally {
@@ -77,7 +77,7 @@ export default function AgentServicesPage() {
 
       await load();
     } catch (err) {
-      console.error('AAA Erreur mise AA jour statut service:', err);
+      console.error('AgentServicesPage update service status error:', err);
       notify(t('agentServicesPage.errors.updateStatus'));
     } finally {
       setActingId(null);

@@ -111,7 +111,7 @@ export default function TasksPage() {
 
       setTasks(enriched);
     } catch (err) {
-      console.error('Erreur chargement taches:', err);
+      console.error('TasksPage load tasks error:', err);
       setNotice({
         type: 'error',
         message: t('tasksPage.alerts.loadError'),
@@ -163,7 +163,7 @@ export default function TasksPage() {
             setServices(enrichedServices);
             setAgents(agentsRes?.users || []);
           } catch (err) {
-            console.error('Erreur chargement services/agents (admin/master):', err);
+            console.error('TasksPage load services and agents error:', err);
           }
         }
 
@@ -224,7 +224,7 @@ export default function TasksPage() {
 
       await loadTasks();
     } catch (err) {
-      console.error('Erreur creation tache:', err);
+      console.error('TasksPage create task error:', err);
       setNotice({
         type: 'error',
         message:
@@ -242,7 +242,7 @@ export default function TasksPage() {
       await api.put(`/tasks/${id}/status`, { status }, { headers: authHeader });
       await loadTasks();
     } catch (err) {
-      console.error('Erreur maj statut:', err);
+      console.error('TasksPage update status error:', err);
       setNotice({
         type: 'error',
         message:
@@ -270,7 +270,7 @@ export default function TasksPage() {
       });
       await loadTasks();
     } catch (err) {
-      console.error('Erreur assignation tache:', err);
+      console.error('TasksPage assign task error:', err);
       setNotice({
         type: 'error',
         message: err?.response?.data?.error || t('tasksPage.alerts.assignError'),

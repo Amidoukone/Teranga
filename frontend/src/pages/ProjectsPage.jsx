@@ -193,7 +193,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
       onSuccess?.();
       onClose?.();
     } catch (err) {
-      console.error('INFO Transaction error:', err);
+      console.error('ProjectsPage create transaction error:', err);
       notify(t('projects.transaction.alerts.createError'));
     } finally {
       setSaving(false);
@@ -419,7 +419,7 @@ export default function ProjectsPage() {
       const { data } = await api.get('/users?role=client');
       setClients(Array.isArray(data.users) ? data.users : []);
     } catch (e) {
-      console.error('INFO Erreur chargement clients:', e);
+      console.error('ProjectsPage load clients error:', e);
       setClients([]);
     }
   }, []);
@@ -429,7 +429,7 @@ export default function ProjectsPage() {
       const { data } = await api.get('/users?role=agent');
       setAgents(Array.isArray(data.users) ? data.users : []);
     } catch (e) {
-      console.error('INFO Erreur chargement agents:', e);
+      console.error('ProjectsPage load agents error:', e);
       setAgents([]);
     }
   }, []);
@@ -445,7 +445,7 @@ export default function ProjectsPage() {
       const normalized = Array.isArray(list) ? list.map(applyLabels) : [];
       if (isMounted.current) setProjects(normalized);
     } catch (e) {
-      console.error('INFO Erreur chargement projets:', e);
+      console.error('ProjectsPage load projects error:', e);
       setErrorMsg(
         e?.response?.data?.error ||
           e?.message ||
@@ -488,7 +488,7 @@ export default function ProjectsPage() {
           await Promise.all([loadClients(), loadAgents()]);
         }
       } catch (err) {
-        console.error('INFO Erreur chargement user:', err);
+        console.error('ProjectsPage load user error:', err);
         setUser(null);
         setErrorMsg(t('projects.alerts.userLoadError'));
       } finally {
@@ -526,7 +526,7 @@ export default function ProjectsPage() {
       resetForm();
       await loadForUser(user);
     } catch (err) {
-      console.error('INFO Erreur sauvegarde projet:', err);
+      console.error('ProjectsPage save project error:', err);
       const fallback = editId
         ? t('projects.alerts.updateError')
         : t('projects.alerts.createError');
@@ -542,7 +542,7 @@ export default function ProjectsPage() {
       notify(t('projects.alerts.deleteSuccess'));
       await loadForUser(user);
     } catch (err) {
-      console.error('INFO Erreur suppression projet:', err);
+      console.error('ProjectsPage delete project error:', err);
       notify(
         err?.response?.data?.error || t('projects.alerts.deleteError')
       );
@@ -558,7 +558,7 @@ export default function ProjectsPage() {
       notify(t('projects.alerts.assignSuccess'));
       await loadForUser(user);
     } catch (err) {
-      console.error('INFO Erreur assignation agent:', err);
+      console.error('ProjectsPage assign agent error:', err);
       notify(t('projects.alerts.assignError'));
     }
   }
@@ -582,7 +582,7 @@ export default function ProjectsPage() {
       await loadForUser(user);
       notify(t('projects.alerts.statusUpdateSuccess'));
     } catch (err) {
-      console.error('INFO Erreur mise jour du statut:', err);
+      console.error('ProjectsPage update status error:', err);
       notify(t('projects.alerts.statusUpdateError'));
     }
   }

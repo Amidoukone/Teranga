@@ -1,5 +1,5 @@
 // ============================================================
-// ProductDetailPage.jsx Aaa Teranga PRODUCTION READY (Style A 2025)
+// ProductDetailPage.jsx Teranga PRODUCTION READY (Style A 2025)
 // Contexte: detail de produit.
 // - Images robustes (allImageUrls + gallery + coverImage + imageUrl)
 // - FILE_BASE + toAbsUrl (Render/Netlify/Prod)
@@ -126,7 +126,7 @@ export default function ProductDetailPage() {
         setLightboxOpen(false);
         setError('');
       } catch (e) {
-        console.error("Erreur chargement produit:", e);
+        console.error("ProductDetailPage load product error:", e);
         const msg =
           e?.response?.data?.error ||
           t('productDetailPage.errors.load');

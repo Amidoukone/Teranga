@@ -58,7 +58,7 @@ export default function NotificationsPage() {
       const isTimeout = e?.code === "ECONNABORTED";
       const isNetwork = !e?.response;
       if (!isTimeout && !isNetwork) {
-        console.error("load summary notifications:", e);
+        console.error("NotificationsPage load summary error:", e);
       }
     }
   }, []);
@@ -83,7 +83,7 @@ export default function NotificationsPage() {
           : { page, limit: pageSize, total: 0 }
       );
     } catch (e) {
-      console.error("load notifications:", e);
+      console.error("NotificationsPage load notifications error:", e);
       setItems([]);
       setPagination({ page, limit: pageSize, total: 0 });
     } finally {
@@ -178,7 +178,7 @@ export default function NotificationsPage() {
           window.dispatchEvent(new Event("notifications:refresh"));
         }
       } catch (e) {
-        console.error("mark notification read:", e);
+        console.error("NotificationsPage mark notification read error:", e);
         notify(
           t("notifications.markReadError", {
             defaultValue: "Impossible de marquer cette notification comme lue.",
@@ -223,7 +223,7 @@ export default function NotificationsPage() {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
     } catch (e) {
-      console.error("mark all notifications read:", e);
+      console.error("NotificationsPage mark all notifications read error:", e);
       notify(
         t("notifications.markAllReadError", {
           defaultValue: "Erreur lors du marquage global des notifications.",
@@ -255,7 +255,7 @@ export default function NotificationsPage() {
           window.dispatchEvent(new Event("notifications:refresh"));
         }
       } catch (e) {
-        console.error("delete notification:", e);
+        console.error("NotificationsPage delete notification error:", e);
         notify(
           t("notifications.deleteError", {
             defaultValue: "Erreur lors de la suppression de la notification.",
@@ -296,7 +296,7 @@ export default function NotificationsPage() {
         window.dispatchEvent(new Event("notifications:refresh"));
       }
     } catch (e) {
-      console.error("cleanup notifications:", e);
+      console.error("NotificationsPage cleanup notifications error:", e);
       notify(
         t("notifications.cleanupError", {
           defaultValue: "Erreur lors du nettoyage des notifications.",

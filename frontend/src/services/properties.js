@@ -7,6 +7,23 @@ const PROPERTY_UPLOAD_TIMEOUT_MS =
   Number(process.env.REACT_APP_PROPERTY_UPLOAD_TIMEOUT_MS) ||
   Number(process.env.REACT_APP_UPLOAD_TIMEOUT_MS) ||
   180000;
+const IS_PROD_RUNTIME =
+  String(process.env.NODE_ENV || 'development').trim().toLowerCase() ===
+  'production';
+
+function logPropertiesDebug(level, message, meta) {
+  if (IS_PROD_RUNTIME) return;
+  try {
+    const fn = level === 'warn' ? console.warn : console.error;
+    if (meta === undefined) {
+      fn(message);
+      return;
+    }
+    fn(message, meta);
+  } catch {
+    // ignore logging failures
+  }
+}
 
 function parseMaybeJson(value) {
   if (typeof value !== 'string') return null;
@@ -100,7 +117,11 @@ async function tryEndpoints(method, candidates, options = {}) {
       break;
     }
   }
-  console.error(' API properties fallback epuise:', lastErr || 'Unknown error');
+  logPropertiesDebug(
+    'warn',
+    '[properties] endpoint fallbacks exhausted',
+    lastErr || 'Unknown error'
+  );
   throw lastErr || new Error('Properties service: all endpoints failed');
 }
 
@@ -165,8 +186,9 @@ async function createPropertyWithMediaFallback(
       throw err;
     }
 
-    console.warn(
-      ' Upload media indisponible: nouvelle tentative de creation sans fichiers.'
+    logPropertiesDebug(
+      'warn',
+      '[properties] upload media indisponible, nouvelle tentative sans fichiers'
     );
     const payloadWithoutFiles = buildFormData(form, [], extra);
     return tryEndpoints('post', candidatesBuilder(payloadWithoutFiles), options);
@@ -190,7 +212,7 @@ export async function getProperties() {
     const list = data.properties || data.rows || data.list || [];
     return list.map((p) => normalizeProperty(applyLabels(p)));
   } catch (err) {
-    console.error(' Erreur chargement proprietes:', err);
+    logPropertiesDebug('error', '[properties] erreur chargement proprietes', err);
     return []; // On garde l’UI fonctionnelle
   }
 }
@@ -212,7 +234,7 @@ export async function getClientProperties(clientId) {
     const list = data.properties || data.rows || data.list || [];
     return list.map((p) => normalizeProperty(applyLabels(p)));
   } catch (err) {
-    console.error('❌ Erreur chargement biens client:', err);
+    logPropertiesDebug('error', '[properties] erreur chargement biens client', err);
     return [];
   }
 }
@@ -231,7 +253,7 @@ export async function getAllProperties() {
     const list = data.properties || data.rows || data.list || [];
     return list.map((p) => normalizeProperty(applyLabels(p)));
   } catch (err) {
-    console.error('❌ Erreur chargement biens (admin):', err);
+    logPropertiesDebug('error', '[properties] erreur chargement biens (admin)', err);
     return [];
   }
 }
@@ -272,7 +294,7 @@ export async function createProperty(form, files = [], adminTarget = null) {
       const created = data.property || data.item || data.result;
       return normalizeProperty(applyLabels(created));
     } catch (err) {
-      console.error(' Erreur creation bien (standard):', err);
+      logPropertiesDebug('error', '[properties] erreur creation bien (standard)', err);
       throw err;
     }
   }
@@ -293,8 +315,9 @@ export async function createProperty(form, files = [], adminTarget = null) {
       return normalizeProperty(applyLabels(created));
     } catch (e) {
       // On log puis on continue sur les fallbacks
-      console.warn(
-        ' Fallback Admin create: /properties/client/:id non dispo, on tente alias/body...',
+      logPropertiesDebug(
+        'warn',
+        '[properties] fallback admin create /properties/client/:id non dispo',
         e?.response?.status
       );
     }
@@ -315,8 +338,9 @@ export async function createProperty(form, files = [], adminTarget = null) {
     const created = data.property || data.item || data.result;
     return normalizeProperty(applyLabels(created));
   } catch (e) {
-    console.warn(
-      ' Fallback Admin create: /properties/admin non dispo, on tente /properties avec body...',
+    logPropertiesDebug(
+      'warn',
+      '[properties] fallback admin create /properties/admin non dispo',
       e?.response?.status
     );
   }
@@ -340,7 +364,7 @@ export async function createProperty(form, files = [], adminTarget = null) {
     const created = data.property || data.item || data.result;
     return normalizeProperty(applyLabels(created));
   } catch (err) {
-    console.error(' Erreur creation bien (admin cible, tous fallbacks):', err);
+    logPropertiesDebug('error', '[properties] erreur creation bien (admin cible)', err);
     throw err;
   }
 }
@@ -380,7 +404,7 @@ export async function updateProperty(id, form, files = []) {
     const updated = data.property || data.item || data.result;
     return normalizeProperty(applyLabels(updated));
   } catch (err) {
-    console.error(' Erreur mise a jour bien:', err);
+    logPropertiesDebug('error', '[properties] erreur mise a jour bien', err);
     throw err;
   }
 }
@@ -397,7 +421,7 @@ export async function deleteProperty(id) {
     ]);
     return data;
   } catch (err) {
-    console.error('❌ Erreur suppression bien:', err);
+    logPropertiesDebug('error', '[properties] erreur suppression bien', err);
     throw err;
   }
 }
@@ -415,7 +439,7 @@ export async function searchProperties(params = {}) {
     const list = data.properties || data.rows || data.list || [];
     return list.map((p) => normalizeProperty(applyLabels(p)));
   } catch (err) {
-    console.error(' Erreur recherche proprietes:', err);
+    logPropertiesDebug('error', '[properties] erreur recherche proprietes', err);
     return [];
   }
 }
@@ -434,7 +458,7 @@ export async function getPropertyById(id) {
     const item = data.property || data.item || data.result;
     return item ? normalizeProperty(applyLabels(item)) : null;
   } catch (err) {
-    console.error(' Erreur recuperation bien:', err);
+    logPropertiesDebug('error', '[properties] erreur recuperation bien', err);
     return null;
   }
 }

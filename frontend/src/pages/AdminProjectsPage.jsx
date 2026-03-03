@@ -82,7 +82,7 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
       onSuccess?.();
       onClose?.();
     } catch (err) {
-      console.error('AAAAasAAAaAaa Erreur crAAaTMAasAAation transaction projet:', err);
+      console.error('AdminProjectsPage create project transaction error:', err);
       notify(
         err?.response?.data?.error ||
           err?.message ||
@@ -277,7 +277,7 @@ export default function AdminProjectsPage() {
         setCurrentUser(user);
         setIsAdmin(true);
       } catch (err) {
-        console.error('AAAAasAAAaAaa Erreur /auth/me (AdminProjectsPage):', err);
+        console.error('AdminProjectsPage /auth/me error:', err);
         if (!active) return;
         navigate('/login');
       }
@@ -301,7 +301,7 @@ export default function AdminProjectsPage() {
       });
       setAgents(data?.users || []);
     } catch (err) {
-      console.error('AAAAasAAAaAaa Erreur chargement agents:', err);
+      console.error('AdminProjectsPage load agents error:', err);
       setAgents([]);
     }
   }, []);
@@ -315,7 +315,7 @@ export default function AdminProjectsPage() {
       const list = await getProjects();
       setProjects(Array.isArray(list) ? list : []);
     } catch (err) {
-      console.error('AAAAasAAAaAaa Erreur chargement projets:', err);
+      console.error('AdminProjectsPage load projects error:', err);
       setProjects([]);
     } finally {
       setLoading(false);
@@ -342,7 +342,7 @@ export default function AdminProjectsPage() {
       await loadProjects();
       notify(t('projects.alerts.assignSuccess'));
     } catch (err) {
-      console.error('AAAAasAAAaAaa Erreur assignation agent:', err);
+      console.error('AdminProjectsPage assign agent error:', err);
       notify(t('projects.alerts.assignError'));
     }
   }
@@ -377,7 +377,7 @@ export default function AdminProjectsPage() {
       await loadProjects();
       notify(t('projects.alerts.statusUpdateSuccess'));
     } catch (err) {
-      console.error('AAAAasAAAaAaa Erreur mise AAaTMAasAA jour statut:', err);
+      console.error('AdminProjectsPage update status error:', err);
       notify(t('projects.alerts.statusUpdateError'));
     }
   }

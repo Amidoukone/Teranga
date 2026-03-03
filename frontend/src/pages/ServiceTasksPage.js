@@ -103,7 +103,7 @@ export default function ServiceTasksPage() {
 
       setTasks(withLabels);
     } catch (err) {
-      console.error("AAAAA...aTM Erreur chargement tAAAches:", err);
+      console.error("ServiceTasksPage load tasks error:", err);
       setErrorMsg(t("serviceTasksPage.errors.load"));
       setTasks([]);
     } finally {
@@ -161,7 +161,7 @@ export default function ServiceTasksPage() {
                 setServiceInfo(found ? applyLabels(found, "service") : null);
               }
             } catch (err) {
-              console.error("AAAAA...aTM Erreur chargement service:", err);
+              console.error("ServiceTasksPage load service error:", err);
               if (active) setServiceInfo(null);
             }
           }
@@ -175,13 +175,13 @@ export default function ServiceTasksPage() {
             });
             if (active) setAgents(agentsRes?.users || []);
           } catch (err) {
-            console.error("AAAAA...aTM Erreur chargement agents:", err);
+            console.error("ServiceTasksPage load agents error:", err);
             if (active) setAgents([]);
           }
         }
       } catch (e) {
  // Contexte: taches de service.
-        console.error("AAAAA...aTM me() ServiceTasksPage:", e);
+        console.error("ServiceTasksPage /me error:", e);
       } finally {
         if (active) {
           await loadTasks();
@@ -248,7 +248,7 @@ export default function ServiceTasksPage() {
 
       await loadTasks();
     } catch (err) {
-      console.error("AAAAA...aTM Erreur crAAAation tAAAche:", err);
+      console.error("ServiceTasksPage create task error:", err);
       setFormNotice({
         type: "error",
         message: err?.response?.data?.error || t("tasksPage.alerts.createError"),

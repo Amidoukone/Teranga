@@ -130,7 +130,7 @@ export default function DashboardPage() {
         setLoading(false);
         loadStats(u);
       } catch (err) {
-        console.error('AAAAA...aTM Erreur Dashboard init:', err);
+        console.error('DashboardPage init error:', err);
         setLoading(false);
       }
     }
@@ -166,7 +166,7 @@ export default function DashboardPage() {
           return;
         }
       } catch (summaryErr) {
-        console.warn('Dashboard summary indisponible, fallback legacy:', summaryErr);
+        console.warn('DashboardPage load summary warning:', summaryErr);
       }
 
       let services = [];
@@ -192,26 +192,26 @@ export default function DashboardPage() {
           ? api
               .get('/properties', { params: geoParams })
               .catch((err) => {
-                console.error('AAA...AAA AA AA AA Erreur chargement biens Dashboard:', err);
+                console.error('DashboardPage load properties error:', err);
                 return { data: {} };
               })
           : Promise.resolve({ data: { properties: [] } }),
         api
           .get('/tasks', { params: geoParams })
           .catch((err) => {
-            console.error('AAA...AAA AA AA AA Erreur chargement tAAAches Dashboard:', err);
+            console.error('DashboardPage load tasks error:', err);
             return { data: {} };
           }),
         api
           .get('/projects', { params: geoParams })
           .catch((err) => {
-            console.error('AAA...AAA AA AA AA Erreur chargement projets Dashboard:', err);
+            console.error('DashboardPage load projects error:', err);
             return { data: {} };
           }),
         api
           .get('/orders', { params: geoParams })
           .catch((err) => {
-            console.error('AAA...AAA AA AA AA Erreur chargement commandes Dashboard:', err);
+            console.error('DashboardPage load orders error:', err);
             return { data: {} };
           }),
       ]);
@@ -354,7 +354,7 @@ export default function DashboardPage() {
         },
       });
     } catch (err) {
-      console.error('AAAAA...aTM Erreur chargement stats Dashboard:', err);
+      console.error('DashboardPage load stats error:', err);
     } finally {
       setStatsLoading(false);
     }

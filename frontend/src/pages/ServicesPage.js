@@ -151,7 +151,7 @@ const roleVariant = useMemo(() => {
           : { page, limit: pageSize, total: enriched.length }
       );
     } catch (e) {
-      console.error('INFO Load services:', e);
+      console.error('ServicesPage load services error:', e);
       setNotice({
         type: 'error',
         message: e?.response?.data?.error || t("services.alerts.loadError"),
@@ -175,7 +175,7 @@ const roleVariant = useMemo(() => {
         );
         setProperties(data.properties || []);
       } catch (e) {
-        console.error('INFO Erreur chargement biens client:', e);
+        console.error('ServicesPage load client properties error:', e);
         setNotice({
           type: 'error',
           message: t("services.alerts.loadClientPropertiesError"),
@@ -190,7 +190,7 @@ const roleVariant = useMemo(() => {
       const props = await getProperties();
       setProperties(Array.isArray(props) ? props : props?.properties || []);
     } catch (e) {
-      console.error('INFO Load properties (me):', e);
+      console.error('ServicesPage load my properties error:', e);
       setNotice({
         type: 'error',
         message: t("services.alerts.loadPropertiesError"),
@@ -204,7 +204,7 @@ const roleVariant = useMemo(() => {
       const { data } = await api.get('/users?role=client', authHeaders);
       setClients(data.users || []);
     } catch (e) {
-      console.error('INFO Erreur chargement clients:', e);
+      console.error('ServicesPage load clients error:', e);
       setClients([]);
     }
   }, [authHeaders]);
@@ -236,7 +236,7 @@ const roleVariant = useMemo(() => {
           await loadMyProperties();
         }
       } catch (err) {
-        console.error('INFO Erreur init ServicesPage:', err);
+        console.error('ServicesPage init error:', err);
         navigate('/login');
       }
     }
@@ -323,7 +323,7 @@ const roleVariant = useMemo(() => {
         await loadMyProperties();
       }
     } catch (e) {
-      console.error('INFO createService:', e);
+      console.error('ServicesPage create service error:', e);
       setNotice({
         type: 'error',
         message: e?.response?.data?.error || t("services.alerts.createError"),
@@ -372,7 +372,7 @@ const roleVariant = useMemo(() => {
       setEditingId(null);
       await loadServices();
     } catch (e) {
-      console.error('INFO Erreur mise i12 jour service:', e);
+      console.error('ServicesPage update service error:', e);
       setNotice({
         type: 'error',
         message: e?.response?.data?.error || t("services.alerts.updateError"),
@@ -393,7 +393,7 @@ const roleVariant = useMemo(() => {
         message: t("services.alerts.deleteSuccess"),
       });
     } catch (e) {
-      console.error('INFO Erreur suppression service:', e);
+      console.error('ServicesPage delete service error:', e);
       setNotice({
         type: 'error',
         message: e?.response?.data?.error || t("services.alerts.deleteError"),

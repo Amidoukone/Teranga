@@ -115,7 +115,7 @@ export default function ProductListPage() {
         setProducts(Array.isArray(prods) ? prods : []);
         setError("");
       } catch (e) {
-        console.error("Erreur chargement produits:", e);
+        console.error("ProductListPage load products error:", e);
         const msg =
           e?.response?.data?.error ||
           t("productListPage.errors.load");

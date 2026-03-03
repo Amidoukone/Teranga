@@ -167,7 +167,7 @@ export default function FinanceDashboardPage() {
       const txs = Array.isArray(data) ? data : data?.transactions || [];
       setTransactions(txs);
     } catch (err) {
-      console.error('Erreur chargement FinanceDashboard:', err);
+      console.error('FinanceDashboardPage load transactions error:', err);
       setTransactions([]);
     } finally {
       setLoadingTransactions(false);
@@ -201,7 +201,7 @@ export default function FinanceDashboardPage() {
         if (active) setBooting(false);
 
       } catch (err) {
-        console.error('Erreur chargement FinanceDashboard:', err);
+        console.error('FinanceDashboardPage init error:', err);
         if (err?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');

@@ -191,7 +191,7 @@ export async function register(payload) {
     const { data } = await api.post('/auth/register', payload);
     return data; // { message, user, token? }
   } catch (error) {
-    console.error('❌ Erreur register:', error);
+    console.error('AuthService register error:', error);
     throw error;
   }
 }
@@ -232,7 +232,7 @@ export async function login(payload) {
 
     return data; // { token, user }
   } catch (error) {
-    console.error('❌ Erreur login:', error);
+    console.error('AuthService login error:', error);
     throw error;
   }
 }
@@ -289,14 +289,14 @@ export async function me() {
         const cached = readCachedUser();
         if (cached) {
           syncLanguageFromUser(cached);
-          console.warn(' Backend indisponible utilisation du user en cache (mode offline).');
+          console.warn('AuthService backend unavailable warning:', 'using cached user (offline mode)');
           return { user: cached, offline: true };
         }
-        console.warn(' Erreur connexion backend /auth/me:', error?.message || error);
+        console.warn('AuthService /auth/me backend connection warning:', error?.message || error);
         return { user: null };
       }
 
-      console.warn(' Erreur /auth/me:', {
+      console.warn('AuthService /auth/me warning:', {
         status,
         data: error?.response?.data,
         msg: error?.message,
@@ -350,15 +350,15 @@ export async function me() {
         if (cached) {
           syncLanguageFromUser(cached);
           console.warn(
-            ' Backend indisponible utilisation du user en cache (mode offline).'
+            'AuthService backend unavailable warning: using cached user (offline mode)'
           );
           return { user: cached, offline: true };
         }
-        console.warn(' Erreur connexion backend /auth/me:', error?.message || error);
+        console.warn('AuthService /auth/me backend connection warning:', error?.message || error);
         return { user: null };
       }
 
-      console.warn(' Erreur /auth/me sans token:', {
+      console.warn('AuthService /auth/me without token warning:', {
         status,
         data: error?.response?.data,
         msg: error?.message,
@@ -367,10 +367,10 @@ export async function me() {
 
     const cached = readCachedUser();
     if (cached) {
-      console.warn('Aucun token detecte - purge du user en cache.');
+      console.warn('AuthService missing token warning:', 'clearing cached user');
       writeCachedUser(null);
     } else {
-      console.warn('Aucun token trouve (localStorage vide)');
+      console.warn('AuthService missing token warning:', 'localStorage token not found');
     }
     return { user: null };
   }
@@ -413,7 +413,7 @@ export async function me() {
         }
       }
 
-      console.warn(' Token invalide ou expire suppression locale');
+      console.warn('AuthService invalid token warning:', 'clearing local auth data');
       removeTokenAll();
       clearCsrfToken();
       writeCachedUser(null);
@@ -426,15 +426,15 @@ export async function me() {
     if (isNetworkError) {
       const cached = readCachedUser();
       if (cached) {
-        console.warn(' Backend indisponible utilisation du user en cache (mode offline).');
+        console.warn('AuthService backend unavailable warning:', 'using cached user (offline mode)');
         return { user: cached, offline: true };
       }
-      console.warn(' Erreur connexion backend /auth/me:', error?.message || error);
+      console.warn('AuthService /auth/me backend connection warning:', error?.message || error);
       return { user: null };
     }
 
     // Autres erreurs (4xx, 5xx) — on journalise, on ne casse pas
-    console.warn(' Erreur /auth/me:', {
+    console.warn('AuthService /auth/me warning:', {
       status,
       data: error?.response?.data,
       msg: error?.message,
@@ -503,7 +503,7 @@ export async function logout() {
     clearCsrfToken();
     writeCachedUser(null);
   } catch (e) {
-    console.warn(' Erreur suppression donnees locales:', e);
+    console.warn('AuthService clear local data warning:', e);
   }
 }
 

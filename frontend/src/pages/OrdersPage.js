@@ -199,7 +199,7 @@ export default function OrdersPage() {
           : { page, limit: pageSize, total: items.length }
       );
     } catch (e) {
-      console.error('Erreur chargement commandes:', e);
+      console.error('OrdersPage load orders error:', e);
       notify(t("orders.alerts.loadError"));
       setOrders([]);
       setPagination({ page, limit: pageSize, total: 0 });
@@ -214,7 +214,7 @@ export default function OrdersPage() {
       const data = await getProducts({ limit: 200 });
       setProducts(normalizeListResponse(data, 'products'));
     } catch (e) {
-      console.error('Erreur chargement produits:', e);
+      console.error('OrdersPage load products error:', e);
       setProducts([]);
     } finally {
       setLoadingProducts(false);
@@ -239,7 +239,7 @@ export default function OrdersPage() {
         setUser(current);
         await loadProducts();
       } catch (e) {
-        console.error('Erreur init OrdersPage:', e);
+        console.error('OrdersPage init error:', e);
         if (e?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
@@ -267,7 +267,7 @@ export default function OrdersPage() {
         setCountries(Array.isArray(cList) ? cList : []);
         setRegions(Array.isArray(rList) ? rList : []);
       } catch (e) {
-        console.error('Erreur chargement pays/regions:', e);
+        console.error('OrdersPage load countries and regions error:', e);
         if (mounted) {
           setCountries([]);
           setRegions([]);
@@ -350,7 +350,7 @@ export default function OrdersPage() {
         await loadOrders();
       }
     } catch (err) {
-      console.error('Erreur creation commande:', err);
+      console.error('OrdersPage create order error:', err);
       notify(
         err?.response?.data?.error ||
           err?.message ||

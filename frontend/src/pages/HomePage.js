@@ -1,7 +1,7 @@
 // ============================================================================
-// HomePage.jsx Aaa Teranga Landing Page 2025
-// Option A Aaa Apple Light Premium v2 (Ultra-clean, cohAArente avec NavBar A1-C)
-// - Style : Apple Light minimal, typographie AAquilibrAAe, animations douces
+// HomePage.jsx Teranga Landing Page 2025
+// Option A - Apple Light Premium v2 (Ultra-clean, coherente avec NavBar A1-C)
+// - Style : Apple Light minimal, typographie equilibree, animations douces
 // - 100% compatible avec ta structure (routes /login, /register, ancres, etc.)
 // ============================================================================
 
@@ -91,7 +91,7 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-surface-main via-surface-card to-surface-main text-text-primary scroll-smooth">
       <main className="flex-1">
         {/* ========================================================================= */}
- {/* AA Aa HERO Aaa Apple Light (grands espaces / typographie premium) */}
+ {/* HERO - Apple Light (grands espaces / typographie premium) */}
         {/* ========================================================================= */}
         <section
           id="accueil"
@@ -212,7 +212,7 @@ export default function HomePage() {
         </section>
 
         {/* ========================================================================= */}
- {/* AAaA A A SERVICES Aaa Apple Cards + Animations + Shadow douce */}
+ {/* SERVICES - Apple Cards + Animations + Shadow douce */}
         {/* ========================================================================= */}
         <section
           id="services"
@@ -260,7 +260,7 @@ export default function HomePage() {
         </section>
 
         {/* ========================================================================= */}
- {/* AA aTMA POURQUOI TERANGA Aaa 3 piliers (section courte & convaincante) */}
+ {/* POURQUOI TERANGA - 3 piliers (section courte et convaincante) */}
         {/* ========================================================================= */}
         <section
           id="pourquoi"
@@ -294,7 +294,7 @@ export default function HomePage() {
         </section>
 
         {/* ========================================================================= */}
- {/* AA aTMA Aa PROPOS Aaa Apple Storytelling */}
+ {/* A PROPOS - Apple Storytelling */}
         {/* ========================================================================= */}
         <section
           id="apropos"
@@ -340,7 +340,7 @@ export default function HomePage() {
         </section>
 
         {/* ========================================================================= */}
- {/* AA aA34 CONTACT Aaa Apple Form UI */}
+ {/* CONTACT - Apple Form UI */}
         {/* ========================================================================= */}
         <section
           id="contact"
@@ -360,7 +360,7 @@ export default function HomePage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
- // MAAame comportement que ta version actuelle : simple alert cAA tAA client.
+ // Meme comportement que ta version actuelle: notification simple cote client.
                 notify(t("homePage.contact.form.success"));
               }}
               className="
@@ -430,7 +430,7 @@ export default function HomePage() {
       </main>
 
       {/* ========================================================================= */}
- {/* AAa FOOTER Aaa Apple Minimal */}
+ {/* FOOTER - Apple Minimal */}
       {/* ========================================================================= */}
       <footer className="border-t border-border/70 bg-surface-card/95 text-text-muted text-xs sm:text-sm py-6 px-6 mt-4">
         <div
@@ -483,6 +483,5 @@ export default function HomePage() {
     </div>
   );
 }
-
 
 

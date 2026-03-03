@@ -25,3 +25,7 @@ Thumbs.db
 
 # --- Fichiers uploades runtime (ne pas versionner) ---
 backend/uploads/
+
+# --- Backups texte/mojibake (hors code actif) ---
+*.bak*
+archive/mojibake/

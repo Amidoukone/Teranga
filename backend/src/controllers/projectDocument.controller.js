@@ -6,6 +6,7 @@ const { getLabel } = require("../utils/labels");
 const imageKit = require("../helpers/teranga-imagekit");
 const path = require("path");
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
+const { buildMediaStorageDiagnostics } = require("../utils/mediaStorageDiagnostics");
 
 // ✅ GEO scope (strict + admin global)
 const { canAccessGeoResource } = require("../utils/geoScope");
@@ -249,17 +250,32 @@ async function uploadProjectDocumentFile(file, projectId) {
       }
 
       logger.warn(
-        { projectId, fileName: file?.originalname },
+        buildMediaStorageDiagnostics({
+          module: "project-document",
+          projectId,
+          fileName: file?.originalname,
+        }),
         "project_document.imagekit.upload_missing_url.fallback_local"
       );
     } catch (err) {
       logger.warn(
-        { err, projectId, fileName: file?.originalname },
+        buildMediaStorageDiagnostics({
+          module: "project-document",
+          err,
+          projectId,
+          fileName: file?.originalname,
+        }),
         "project_document.imagekit.upload.failed.fallback_local"
       );
     }
   } else {
-    logger.warn("project_document.imagekit.disabled.fallback_local");
+    logger.warn(
+      buildMediaStorageDiagnostics({
+        module: "project-document",
+        projectId,
+      }),
+      "project_document.imagekit.disabled.fallback_local"
+    );
   }
 
   try {

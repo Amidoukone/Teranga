@@ -22,6 +22,7 @@ const {
 const { emitEvent } = require("../services/activity.service");
 const logger = require('../utils/logger');
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
+const { buildMediaStorageDiagnostics } = require("../utils/mediaStorageDiagnostics");
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
 
 function toIntOr(value, fallback) {
@@ -442,6 +443,18 @@ exports.create = async (req, res) => {
       }
     }
 
+    const imageKitEnabled = isImageKitEnabled();
+    if (!imageKitEnabled) {
+      logger.warn(
+        buildMediaStorageDiagnostics({
+          module: "evidence",
+          taskId: taskId || null,
+          orderId: orderId || null,
+        }),
+        "evidence.imagekit.disabled.fallback_local"
+      );
+    }
+
     const results = await mapWithConcurrency(
       files,
       EVIDENCE_UPLOAD_CONCURRENCY,
@@ -450,7 +463,7 @@ exports.create = async (req, res) => {
           const fileName = buildEvidenceFileName(f.originalname, idx);
           let uploaded = null;
 
-          if (isImageKitEnabled()) {
+          if (imageKitEnabled) {
             try {
               uploaded = await uploadToImageKitWithRetry({
                 file: f.buffer,
@@ -458,10 +471,15 @@ exports.create = async (req, res) => {
                 folder: "/teranga/evidences/",
               });
             } catch (err) {
-              logger.warn("⚠️ ImageKit upload failed:", {
-                code: err?.code || err?.cause?.code,
-                message: err?.message,
-              });
+              logger.warn(
+                buildMediaStorageDiagnostics({
+                  module: "evidence",
+                  fileName: f?.originalname || null,
+                  code: err?.code || err?.cause?.code || null,
+                  reason: err?.message || null,
+                }),
+                "evidence.imagekit.upload.failed.fallback_local"
+              );
             }
           }
 

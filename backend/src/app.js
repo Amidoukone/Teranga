@@ -16,6 +16,7 @@ const {
   frontendErrorHandler,
 } = require('./middleware/metrics.middleware');
 const { resolveUploadsRoot } = require('./utils/uploadsRoot');
+const { buildMediaStorageDiagnostics } = require('./utils/mediaStorageDiagnostics');
 
 const app = express();
 app.locals.runtimeStatus = app.locals.runtimeStatus || {
@@ -119,6 +120,15 @@ const imageKitConfigured = Boolean(
   process.env.IMAGEKIT_PUBLIC_KEY &&
     process.env.IMAGEKIT_PRIVATE_KEY &&
     process.env.IMAGEKIT_URL_ENDPOINT
+);
+
+logger.info(
+  buildMediaStorageDiagnostics({
+    module: 'app',
+    imageKitConfigured,
+    uploadsMode: hasCustomUploadsRoot ? 'custom' : 'default',
+  }),
+  'app.media_storage.diagnostics'
 );
 
 if (!fs.existsSync(uploadsRoot)) {

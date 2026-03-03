@@ -1,7 +1,7 @@
 // frontend/src/pages/AdminMetricsPage.jsx
 // ============================================================================
-// AdminMetricsPage.jsx AAAasAAaA Monitoring minimal (lecture seule)
-// Admin GLOBAL + MASTER (admin + geo scope) AAAasAAaA ZAAaARO RAAaAGRESSION
+// AdminMetricsPage.jsx Monitoring minimal (lecture seule)
+// Admin GLOBAL + MASTER (admin + geo scope) - zero regression
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -307,6 +307,5 @@ export default function AdminMetricsPage() {
     </div>
   );
 }
-
 
 

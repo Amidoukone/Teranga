@@ -1,8 +1,6 @@
 // ============================================================================
-// App.js Aaa Teranga Platform (Version Premium PRO 2025)
-// Contexte: routage et guardes d'acces.
-// Contexte: routage et guardes d'acces.
-// Contexte: routage et guardes d'acces.
+// App.js Teranga Platform (Version Premium PRO 2025)
+// Contexte: routage et gardes d'acces.
 // ============================================================================
 
 import { Suspense, lazy, useEffect, useState } from 'react';

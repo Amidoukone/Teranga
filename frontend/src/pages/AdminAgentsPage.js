@@ -1,7 +1,7 @@
 // frontend/src/pages/AdminAgentsPage.jsx
 // ============================================================================
-// AdminAgentsPage AAAasAAaA VERSION PROD 2025
-// Admin / Master (multi-pays) READY AAAasAAaA ZERO RAAaAGRESSION
+// AdminAgentsPage VERSION PROD 2025
+// Admin / Master (multi-pays) READY, zero regression
 // ============================================================================
 
 import { useEffect, useState, useCallback } from "react";
@@ -13,12 +13,12 @@ import { useTranslation } from "react-i18next";
 import { notify } from '../utils/notify';
 
 /* ============================================================================
-// AAA...A AaAAA CONSTANTES
+// CONSTANTES
 ============================================================================ */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /* ============================================================================
-// AAA...A AAAA PAGE PRINCIPALE
+// PAGE PRINCIPALE
 ============================================================================ */
 export default function AdminAgentsPage() {
   const { t } = useTranslation();
@@ -114,16 +114,16 @@ export default function AdminAgentsPage() {
   }
 
   /* ========================================================================
- * LOAD AGENTS (ADMIN / MASTER AAAasAAaA scope backend)
+ * LOAD AGENTS (ADMIN / MASTER scope backend)
    * ====================================================================== */
   const loadAgents = useCallback(async () => {
     setLoadingAgents(true);
     try {
- // AAA...A AaAAaa Le backend applique dAAAjAAA le scope multi-pays pour MASTER
+ // Le backend applique deja le scope multi-pays pour MASTER
       const { data } = await api.get("/users?role=agent");
       setAgents(data?.users || []);
     } catch (err) {
-      console.error("Erreur chargement agents:", err);
+      console.error("AdminAgentsPage load agents error:", err);
       setAgents([]);
     } finally {
       setLoadingAgents(false);
@@ -142,7 +142,7 @@ export default function AdminAgentsPage() {
   }, [showForm]);
 
   /* ========================================================================
- * FILTERING & SORTING AAAasAAaA CLIENT SIDE (SAFE)
+ * FILTERING & SORTING - CLIENT SIDE (SAFE)
    * ====================================================================== */
   useEffect(() => {
     let arr = [...agents];
@@ -179,7 +179,7 @@ export default function AdminAgentsPage() {
       );
     }
 
- // Avec tAAAlAAAphone uniquement
+ // Avec telephone uniquement
     if (filters.onlyPhone) {
       arr = arr.filter((a) => !!a.phone);
     }
@@ -243,7 +243,7 @@ export default function AdminAgentsPage() {
       setErrors({});
       await loadAgents();
     } catch (err) {
-      console.error("Erreur creation agent:", err);
+      console.error("AdminAgentsPage create agent error:", err);
       const msg =
         err?.response?.data?.error ||
         t("adminAgentsPage.alerts.createError");
@@ -254,7 +254,7 @@ export default function AdminAgentsPage() {
   }
 
   /* ========================================================================
- * UI RENDER AAAasAAaA PREMIUM PROD (APPLE LIGHT A1)
+ * UI RENDER - PREMIUM PROD (APPLE LIGHT A1)
    * ====================================================================== */
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-10">
@@ -345,7 +345,7 @@ export default function AdminAgentsPage() {
               />
             </div>
 
- {/* TAAAlAAAphone */}
+ {/* Telephone */}
             <div className="flex items-end">
               <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
                 <input
@@ -441,7 +441,7 @@ export default function AdminAgentsPage() {
               </div>
             ))}
 
- {/* TAAAlAAAphone */}
+ {/* Telephone */}
             <div>
               <label className="text-xs font-medium text-text-secondary">
                 {t("adminAgentsPage.form.phoneLabel")}

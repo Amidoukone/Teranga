@@ -23,7 +23,7 @@ export function notify(message, options = {}) {
   // Fallback safe si le provider n'est pas encore monte.
   // Evite les boites natives bloquantes.
   if (typeof console !== "undefined" && typeof console.warn === "function") {
-    console.warn(`[notify:fallback] ${text}`);
+    console.warn("Notify fallback warning:", text);
   }
 }
 

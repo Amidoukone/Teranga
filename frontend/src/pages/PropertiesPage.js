@@ -1,6 +1,6 @@
 // frontend/src/pages/PropertiesPage.js
 // ============================================================================
-// PropertiesPage Aaa Version Premium 2025
+// PropertiesPage Version Premium 2025
 // Contexte: gestion des biens.
 // ============================================================================
 
@@ -73,6 +73,14 @@ const PROPERTY_UPLOAD_TIMEOUT_MS =
   Number(process.env.REACT_APP_PROPERTY_UPLOAD_TIMEOUT_MS) ||
   Number(process.env.REACT_APP_UPLOAD_TIMEOUT_MS) ||
   180000;
+const IS_PROD_RUNTIME =
+  String(process.env.NODE_ENV || 'development').trim().toLowerCase() ===
+  'production';
+
+function logPropertiesPageError(message, error) {
+  if (IS_PROD_RUNTIME) return;
+  console.error(message, error);
+}
 const PROPERTY_ALLOWED_EXTS = new Set([
   'jpg',
   'jpeg',
@@ -257,7 +265,7 @@ export default function PropertiesPage() {
       const props = await getProperties();
       setProperties(props || []);
     } catch (e) {
-      console.error('AAA load properties:', e);
+      logPropertiesPageError('PropertiesPage load properties error:', e);
       notify(t('propertiesPage.alerts.loadError'));
     }
   }
@@ -344,7 +352,7 @@ export default function PropertiesPage() {
       resetForm();
       await load();
     } catch (e) {
-      console.error('AAA create property:', e);
+      logPropertiesPageError('PropertiesPage create property error:', e);
       notify(
         e?.response?.data?.error ||
           e?.message ||
@@ -391,7 +399,7 @@ export default function PropertiesPage() {
       resetForm();
       await load();
     } catch (e) {
-      console.error('AAA update property:', e);
+      logPropertiesPageError('PropertiesPage update property error:', e);
       notify(
         e?.response?.data?.error ||
           e?.message ||
@@ -419,7 +427,7 @@ export default function PropertiesPage() {
       await deleteProperty(id);
       load();
     } catch (e) {
-      console.error('AAA delete property:', e);
+      logPropertiesPageError('PropertiesPage delete property error:', e);
       notify(t('propertiesPage.alerts.deleteError'));
     }
   }

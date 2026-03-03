@@ -259,7 +259,7 @@ export default function AdminProductsPage() {
           await loadProducts();
         }
       } catch (err) {
-        console.error("AAAAasAAAaAaa init AdminProductsPage:", err);
+        console.error("AdminProductsPage init error:", err);
         if (!mounted) return;
         window.location.href = "/login";
       }
@@ -284,7 +284,7 @@ export default function AdminProductsPage() {
         setCountries(Array.isArray(cList) ? cList : []);
         setRegions(Array.isArray(rList) ? rList : []);
       } catch (e) {
-        console.error("AAAAasAAAaAaa Erreur chargement pays/rAAaTMAasAAgions:", e);
+        console.error("AdminProductsPage load countries/regions error:", e);
         if (mounted) {
           setCountries([]);
           setRegions([]);
@@ -323,7 +323,7 @@ export default function AdminProductsPage() {
 
       setProducts(list || []);
     } catch (e) {
-      console.error("AAAAasAAAaAaa Erreur chargement produits:", e);
+      console.error("AdminProductsPage load products error:", e);
       notify(t("adminProductsPage.alerts.loadProductsError"));
       setProducts([]);
     } finally {
@@ -340,7 +340,7 @@ export default function AdminProductsPage() {
 
       setCategories(list || []);
     } catch (e) {
-      console.error("AAAAasAAAaAaa Erreur chargement catAAaTMAasAAgories:", e);
+      console.error("AdminProductsPage load categories error:", e);
       setCategories([]);
     }
   }
@@ -435,7 +435,7 @@ export default function AdminProductsPage() {
       await loadProducts();
       setShowForm(false);
     } catch (err) {
-      console.error("AAAAasAAAaAaa Erreur sauvegarde produit:", err);
+      console.error("AdminProductsPage save product error:", err);
       const status = err?.response?.status;
       const apiMessage =
         err?.response?.data?.error || err?.response?.data?.message || "";
@@ -468,7 +468,7 @@ export default function AdminProductsPage() {
       await loadProducts();
       notify(t("adminProductsPage.alerts.deleteSuccess"));
     } catch (err) {
-      console.error("AAAAasAAAaAaa Erreur suppression :", err);
+      console.error("AdminProductsPage delete product error:", err);
       notify(t("adminProductsPage.alerts.deleteError"));
     }
   }

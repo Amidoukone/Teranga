@@ -1,15 +1,15 @@
 // ============================================================================
-// NavBar.jsx Aaa Enterprise SaaS (Stripe/Revolut/Notion vibe)
-// - MAAame structure/logic routes/roles (zAAro rAAgression)
+// NavBar.jsx Enterprise SaaS (Stripe/Revolut/Notion vibe)
+// - Meme structure/logique routes/roles (zero regression)
 // - Desktop: Tabs principaux + menu "Plus" + User menu (avatar dropdown)
-// - Mobile: Bottom nav compact + "Plus" panel (organisAA par sections)
+// - Mobile: Bottom nav compact + "Plus" panel (organise par sections)
 // - Admin Onboarding visible uniquement ADMIN GLOBAL (pas Master)
 // ============================================================================
 //
-// AAa Fix UI:
-// - LisibilitAA renforcAAe dans tous les AAtats (idle / hover / actif / focus)
-// - Suppression des couleurs hex hardcodAAes -> tokens (surface/text/border/primary)
-// - Aucune fonctionnalitAA supprimAAe
+// Fix UI:
+// - Lisibilite renforcee dans tous les etats (idle / hover / actif / focus)
+// - Suppression des couleurs hex hardcodees -> tokens (surface/text/border/primary)
+// - Aucune fonctionnalite supprimee
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
@@ -71,7 +71,7 @@ const COMMON_COMMERCE = [
   { path: "/orders", labelKey: "nav.orders" },
 ];
 
-// AAa Admin-only onboarding link (GLOBAL ADMIN ONLY)
+// Admin-only onboarding link (GLOBAL ADMIN ONLY)
 const ADMIN_ONBOARDING_LINK = {
   path: "/admin/onboarding",
   labelKey: "nav.master",
@@ -153,7 +153,7 @@ const ROLE_LINKS = {
     { path: "/projects", labelKey: "nav.projects" },
     { path: "/admin/projects", labelKey: "nav.adminProjects" },
 
- // Onboarding injectAA dynamiquement uniquement admin global
+ // Onboarding injecte dynamiquement uniquement admin global
 
     { path: "/services", labelKey: "nav.services" },
     { path: "/tasks", labelKey: "nav.tasks" },
@@ -177,7 +177,7 @@ const ROLE_LINKS = {
 };
 
 /* ============================================================================ */
-/* BOTTOM LINKS Aaa MOBILE ONLY (COMPACT) */
+/* BOTTOM LINKS - MOBILE ONLY (COMPACT) */
 /* ============================================================================ */
 
 const BOTTOM_LINKS = {
@@ -247,7 +247,7 @@ function iconForPath(path) {
 }
 
 /* ============================================================================ */
-/* GROUPING Aaa Enterprise information architecture (UI only) */
+/* GROUPING - Enterprise information architecture (UI only) */
 /* ============================================================================ */
 
 function buildSections(role, links, t) {
@@ -400,7 +400,7 @@ function NavBar() {
       const isTimeout = e?.code === "ECONNABORTED";
       const isNetwork = !e?.response;
       if (status !== 401 && !isTimeout && !isNetwork) {
-        console.error("AAA notifications summary:", e);
+        console.error("NavBar notifications summary error:", e);
       }
       setNotificationSummary((prev) => prev || { unread: 0, byProgress: {} });
     }
@@ -415,7 +415,7 @@ function NavBar() {
     try {
       await markAllNotificationsRead();
     } catch (e) {
-      console.error("AAA mark all notifications read:", e);
+      console.error("NavBar mark all notifications read error:", e);
     } finally {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("notifications:refresh"));
@@ -542,7 +542,7 @@ function NavBar() {
 
   const role = normalizeRole(user?.role);
 
- // AAa DAAtection ADMIN GLOBAL vs MASTER (admin scopAA)
+ // Detection ADMIN GLOBAL vs MASTER (admin scope)
   const isAdmin = role === "admin";
   const isGlobalAdmin = useMemo(() => {
     if (!isAdmin) return false;
@@ -560,7 +560,7 @@ function NavBar() {
   }, [user, isAdmin, isGlobalAdmin, role, t]);
 
 
- // AAa Links de rAA le (inject onboarding uniquement pour admin global)
+ // Links de role (inject onboarding uniquement pour admin global)
   const links = useMemo(() => {
     const base = ROLE_LINKS[role] || [];
     let out = base;
@@ -1079,7 +1079,7 @@ function NavBar() {
       </nav>
 
       {/* ======================================================================== */}
- {/* BOTTOM NAV Aaa MOBILE ONLY (COMPACT) */}
+ {/* BOTTOM NAV - MOBILE ONLY (COMPACT) */}
       {/* ======================================================================== */}
       <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent" aria-label="Navigation basse">
         <div className="mx-auto w-full flex justify-center">
@@ -1131,7 +1131,7 @@ function NavBar() {
       </nav>
 
       {/* ======================================================================== */}
- {/* PANEL PLUS Aaa MOBILE (OrganisAA par sections) */}
+ {/* PANEL PLUS - MOBILE (Organise par sections) */}
       {/* ======================================================================== */}
       <AnimatePresence>
         {openMore && (

@@ -190,7 +190,7 @@ export default function ServiceTransactionsPage() {
 
       setTransactions(enriched);
     } catch (err) {
-      console.error("AAAAA...aTM Erreur fetchTransactions:", err);
+      console.error("ServiceTransactionsPage load transactions error:", err);
       setTransactions([]);
     }
   }, [id]);
@@ -205,7 +205,7 @@ export default function ServiceTransactionsPage() {
       });
       setTasks(data?.tasks || []);
     } catch (err) {
-      console.error("AAAAA...aTM Erreur fetchTasks:", err);
+      console.error("ServiceTransactionsPage load tasks error:", err);
       setTasks([]);
     }
   }, [id, authHeaders]);
@@ -230,7 +230,7 @@ export default function ServiceTransactionsPage() {
 
         await Promise.all([fetchTransactions(), fetchTasks()]);
       } catch (err) {
-        console.error("AAAAA...aTM Erreur init:", err);
+        console.error("ServiceTransactionsPage init error:", err);
 
         if (typeof window !== "undefined") {
           localStorage.removeItem("teranga_token");
@@ -294,7 +294,7 @@ export default function ServiceTransactionsPage() {
 
       await fetchTransactions();
     } catch (err) {
-      console.error("AAAAA...aTM Erreur ajout transaction:", err);
+      console.error("ServiceTransactionsPage create transaction error:", err);
       notify(t("serviceTransactions.alerts.createError"));
     } finally {
       setSubmitting(false);

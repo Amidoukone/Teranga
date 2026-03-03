@@ -44,7 +44,7 @@ export default function LanguageSwitcher({ className = "", compact = false }) {
         setSaving(true);
         await updateMyLanguage(next);
       } catch (err) {
-        console.warn("Language update failed:", err?.message || err);
+        console.warn("LanguageSwitcher update language warning:", err?.message || err);
       } finally {
         setSaving(false);
       }

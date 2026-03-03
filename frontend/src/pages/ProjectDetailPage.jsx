@@ -262,7 +262,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       });
       onSuccess?.();
     } catch (err) {
-      console.error("Transaction error:", err);
+      console.error("ProjectDetailPage create transaction error:", err);
       notify(
         err?.response?.data?.error ||
           t("projects.transaction.alerts.createError")
@@ -496,7 +496,7 @@ export default function ProjectDetailPage() {
       setDocuments(docs || []);
       setTransactions((trxs || []).map((t) => applyLabels(t, "transaction")));
     } catch (e) {
-      console.error("loadProject:", e);
+      console.error("ProjectDetailPage load project error:", e);
       setErrorMsg(t("projectDetail.alerts.loadError"));
       setProject(null);
     }
@@ -516,7 +516,7 @@ export default function ProjectDetailPage() {
         setUser(u);
         await loadProject(id);
       } catch (e) {
-        console.error("init:", e);
+        console.error("ProjectDetailPage init error:", e);
         setErrorMsg(t("projectDetail.alerts.genericError"));
       } finally {
         if (isMounted.current) setLoading(false);
@@ -538,7 +538,7 @@ export default function ProjectDetailPage() {
       await loadProject(project.id);
       notify(t("projectDetail.alerts.statusUpdateSuccess"));
     } catch (err) {
-      console.error("update status:", err);
+      console.error("ProjectDetailPage update status error:", err);
       notify(t("projectDetail.alerts.statusUpdateError"));
     }
   }
@@ -571,7 +571,7 @@ export default function ProjectDetailPage() {
       resetPhaseForm();
       await loadProject(project.id);
     } catch (err) {
-      console.error("savePhase:", err);
+      console.error("ProjectDetailPage save phase error:", err);
       notify(t("projectDetail.phases.alerts.saveError"));
     }
   }
@@ -610,7 +610,7 @@ export default function ProjectDetailPage() {
 
       await loadProject(project.id);
     } catch (err) {
-      console.error("upload docs:", err);
+      console.error("ProjectDetailPage upload documents error:", err);
       notify(t("projectDetail.documents.alerts.uploadError"));
     } finally {
       uploadInFlightRef.current = false;
@@ -625,7 +625,7 @@ export default function ProjectDetailPage() {
       await deleteProjectDocument(docId);
       await loadProject(project.id);
     } catch (err) {
-      console.error("delete doc:", err);
+      console.error("ProjectDetailPage delete document error:", err);
       notify(t("projectDetail.documents.alerts.deleteError"));
     }
   }

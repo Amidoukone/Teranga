@@ -1,6 +1,6 @@
 // ============================================================
-// OrderDetailPage.jsx Aaa Teranga PRODUCTION READY (Option B2)
-// Clean Shop Premium Aaa Responsive Aaa FILE_BASE system (multi-pays)
+// OrderDetailPage.jsx Teranga PRODUCTION READY (Option B2)
+// Clean Shop Premium - Responsive - FILE_BASE system (multi-pays)
 // ============================================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -322,7 +322,7 @@ export default function OrderDetailPage() {
         localStorage.removeItem('token');
         navigate('/login');
       } else {
-        console.error("init OrderDetailPage:", e);
+        console.error("OrderDetailPage init error:", e);
       }
     } finally {
       setLoading(false);
@@ -346,7 +346,7 @@ export default function OrderDetailPage() {
         setCountries(Array.isArray(cList) ? cList : []);
         setRegions(Array.isArray(rList) ? rList : []);
       } catch (e) {
-        console.error("Erreur chargement pays/regions:", e);
+        console.error("OrderDetailPage load countries and regions error:", e);
         if (mounted) {
           setCountries([]);
           setRegions([]);
@@ -387,7 +387,7 @@ export default function OrderDetailPage() {
       await refresh();
       notify(t("orderDetail.alerts.updateSuccess"));
     } catch (e) {
-      console.error("update order:", e);
+      console.error("OrderDetailPage update order error:", e);
       notify(t("orderDetail.alerts.updateError"));
     }
   }
@@ -418,7 +418,7 @@ export default function OrderDetailPage() {
       await refresh();
       notify(t("orderDetail.alerts.itemAdded"));
     } catch (e2) {
-      console.error("add item:", e2);
+      console.error("OrderDetailPage add item error:", e2);
       notify(t("orderDetail.alerts.itemAddError"));
     }
   }
@@ -428,7 +428,7 @@ export default function OrderDetailPage() {
       await updateOrderItem(id, itemId, patch);
       await refresh();
     } catch (e) {
-      console.error("update item:", e);
+      console.error("OrderDetailPage update item error:", e);
       notify(t("orderDetail.alerts.itemUpdateError"));
     }
   }
@@ -441,7 +441,7 @@ export default function OrderDetailPage() {
       await deleteOrderItem(id, itemId);
       await refresh();
     } catch (e) {
-      console.error("delete item:", e);
+      console.error("OrderDetailPage delete item error:", e);
       notify(t("orderDetail.alerts.itemDeleteError"));
     }
   }
@@ -471,7 +471,7 @@ export default function OrderDetailPage() {
       await refreshEvidences();
       notify(t("orderDetail.alerts.evidenceAdded"));
     } catch (e2) {
-      console.error("upload evidences:", e2);
+      console.error("OrderDetailPage upload evidences error:", e2);
       notify(t("orderDetail.alerts.evidenceUploadError"));
     } finally {
       setUploading(false);
@@ -486,7 +486,7 @@ export default function OrderDetailPage() {
       await deleteOrderEvidence(evId);
       await refreshEvidences();
     } catch (e) {
-      console.error("delete evidence:", e);
+      console.error("OrderDetailPage delete evidence error:", e);
       const msg =
         e?.response?.data?.error || t("orderDetail.alerts.evidenceDeleteError");
       notify(msg);
@@ -759,7 +759,7 @@ export default function OrderDetailPage() {
             </p>
           )}
 
- {/* Ajout dAaaarticle - Admin/Master */}
+ {/* Ajout d'article - Admin/Master */}
           {canAdmin && (
             <form
               onSubmit={handleAddItem}
