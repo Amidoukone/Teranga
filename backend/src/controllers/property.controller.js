@@ -25,6 +25,7 @@ const { getPagination } = require('../utils/pagination');
 const logger = require('../utils/logger');
 const { resolveUploadsRoot } = require('../utils/uploadsRoot');
 const { buildMediaStorageDiagnostics } = require('../utils/mediaStorageDiagnostics');
+const { evaluateLocalMediaFallback } = require('../utils/mediaStoragePolicy');
 
 /* ============================================================
    Helpers utilitaires
@@ -82,6 +83,7 @@ const PROPERTY_MAX_FILES = Math.max(
   toSafeInt(process.env.PROPERTY_MAX_FILES, 10) || 10
 );
 const MEDIA_STORAGE_ERROR_CODE = 'PROPERTY_MEDIA_STORAGE_UNAVAILABLE';
+const PROPERTY_LOCAL_FALLBACK_ENV_VAR = 'PROPERTY_ALLOW_LOCAL_FALLBACK';
 
 async function resolveCountryIdFromLegacy(countryValue) {
   const trimmed = toTrimOrNull(countryValue);
@@ -113,27 +115,10 @@ function isImageKitEnabled() {
   );
 }
 
-function isProductionRuntime() {
-  return String(process.env.NODE_ENV || '').trim().toLowerCase() === 'production';
-}
-
-function hasPersistentUploadsRoot() {
-  return Boolean(
-    String(process.env.UPLOADS_ROOT || process.env.UPLOADS_DIR || '').trim()
-  );
-}
-
-function parseBooleanEnv(raw) {
-  const normalized = String(raw || '').trim().toLowerCase();
-  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
-  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
-  return null;
-}
-
-function canFallbackToLocalStorage() {
-  const explicit = parseBooleanEnv(process.env.PROPERTY_ALLOW_LOCAL_FALLBACK);
-  if (explicit !== null) return explicit;
-  return true;
+function resolveLocalFallbackPolicy() {
+  return evaluateLocalMediaFallback({
+    moduleFallbackEnvVar: PROPERTY_LOCAL_FALLBACK_ENV_VAR,
+  });
 }
 
 function propertyMediaDiagnostics(extra = {}) {
@@ -272,17 +257,26 @@ async function uploadPhotosToImageKit(files = []) {
   if (!files || !files.length) return [];
 
   const imageKitEnabled = isImageKitEnabled();
-  const allowLocalFallback = canFallbackToLocalStorage();
+  const fallbackPolicy = resolveLocalFallbackPolicy();
+  const allowLocalFallback = fallbackPolicy.allowLocalFallback;
   if (!imageKitEnabled) {
     if (!allowLocalFallback) {
       logger.error(
-        propertyMediaDiagnostics({ allowLocalFallback }),
+        propertyMediaDiagnostics({
+          allowLocalFallback,
+          fallbackPolicy,
+          moduleFallbackEnvVar: PROPERTY_LOCAL_FALLBACK_ENV_VAR,
+        }),
         'property.media_storage.unconfigured.production'
       );
       throw mediaStorageError();
     }
     logger.warn(
-      propertyMediaDiagnostics({ allowLocalFallback }),
+      propertyMediaDiagnostics({
+        allowLocalFallback,
+        fallbackPolicy,
+        moduleFallbackEnvVar: PROPERTY_LOCAL_FALLBACK_ENV_VAR,
+      }),
       'property.imagekit.disabled.fallback_local'
     );
   }
@@ -314,6 +308,8 @@ async function uploadPhotosToImageKit(files = []) {
             propertyMediaDiagnostics({
               fileName: f?.originalname,
               allowLocalFallback,
+              fallbackPolicy,
+              moduleFallbackEnvVar: PROPERTY_LOCAL_FALLBACK_ENV_VAR,
             }),
             'property.imagekit.upload_missing_url.fallback_local'
           );
@@ -323,6 +319,8 @@ async function uploadPhotosToImageKit(files = []) {
               err: e,
               fileName: f?.originalname,
               allowLocalFallback,
+              fallbackPolicy,
+              moduleFallbackEnvVar: PROPERTY_LOCAL_FALLBACK_ENV_VAR,
             }),
             'property.imagekit.upload.failed.fallback_local'
           );
@@ -348,6 +346,8 @@ async function uploadPhotosToImageKit(files = []) {
             err: e,
             fileName: f?.originalname,
             allowLocalFallback,
+            fallbackPolicy,
+            moduleFallbackEnvVar: PROPERTY_LOCAL_FALLBACK_ENV_VAR,
           }),
           'property.local_upload.failed'
         );

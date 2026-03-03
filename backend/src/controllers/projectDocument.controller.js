@@ -7,10 +7,15 @@ const imageKit = require("../helpers/teranga-imagekit");
 const path = require("path");
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
 const { buildMediaStorageDiagnostics } = require("../utils/mediaStorageDiagnostics");
+const { evaluateLocalMediaFallback } = require("../utils/mediaStoragePolicy");
 
 // ✅ GEO scope (strict + admin global)
 const { canAccessGeoResource } = require("../utils/geoScope");
 const logger = require('../utils/logger');
+const PROJECT_DOCUMENT_MEDIA_STORAGE_ERROR_CODE =
+  "PROJECT_DOCUMENT_MEDIA_STORAGE_UNAVAILABLE";
+const PROJECT_DOCUMENT_LOCAL_FALLBACK_ENV_VAR =
+  "PROJECT_DOCUMENT_ALLOW_LOCAL_FALLBACK";
 
 /* =========================================================
    🏷 Types de documents
@@ -32,6 +37,20 @@ function isImageKitEnabled() {
       process.env.IMAGEKIT_PRIVATE_KEY &&
       process.env.IMAGEKIT_URL_ENDPOINT
   );
+}
+
+function resolveLocalFallbackPolicy() {
+  return evaluateLocalMediaFallback({
+    moduleFallbackEnvVar: PROJECT_DOCUMENT_LOCAL_FALLBACK_ENV_VAR,
+  });
+}
+
+function mediaStorageError() {
+  const err = new Error(
+    "Stockage des documents indisponible. Configurez IMAGEKIT_* ou UPLOADS_ROOT persistant."
+  );
+  err.code = PROJECT_DOCUMENT_MEDIA_STORAGE_ERROR_CODE;
+  return err;
 }
 
 /* =========================================================
@@ -233,7 +252,18 @@ async function removeLocalUpload(filePath) {
   }
 }
 
-async function uploadProjectDocumentFile(file, projectId) {
+async function uploadProjectDocumentFile(file, projectId, fallbackPolicy) {
+  const effectivePolicy = fallbackPolicy || resolveLocalFallbackPolicy();
+  const allowLocalFallback = effectivePolicy.allowLocalFallback;
+  const diagnosticsBase = {
+    module: "project-document",
+    projectId,
+    fileName: file?.originalname,
+    allowLocalFallback,
+    fallbackPolicy: effectivePolicy,
+    moduleFallbackEnvVar: PROJECT_DOCUMENT_LOCAL_FALLBACK_ENV_VAR,
+  };
+
   if (isImageKitEnabled()) {
     try {
       const uploaded = await imageKit.upload({
@@ -250,32 +280,40 @@ async function uploadProjectDocumentFile(file, projectId) {
       }
 
       logger.warn(
-        buildMediaStorageDiagnostics({
-          module: "project-document",
-          projectId,
-          fileName: file?.originalname,
-        }),
+        buildMediaStorageDiagnostics(diagnosticsBase),
         "project_document.imagekit.upload_missing_url.fallback_local"
       );
+      if (!allowLocalFallback) {
+        throw mediaStorageError();
+      }
     } catch (err) {
       logger.warn(
         buildMediaStorageDiagnostics({
-          module: "project-document",
+          ...diagnosticsBase,
           err,
-          projectId,
-          fileName: file?.originalname,
         }),
         "project_document.imagekit.upload.failed.fallback_local"
       );
+      if (!allowLocalFallback) {
+        throw mediaStorageError();
+      }
     }
   } else {
+    if (!allowLocalFallback) {
+      logger.error(
+        buildMediaStorageDiagnostics(diagnosticsBase),
+        "project_document.media_storage.unconfigured.production"
+      );
+      throw mediaStorageError();
+    }
     logger.warn(
-      buildMediaStorageDiagnostics({
-        module: "project-document",
-        projectId,
-      }),
+      buildMediaStorageDiagnostics(diagnosticsBase),
       "project_document.imagekit.disabled.fallback_local"
     );
+  }
+
+  if (!allowLocalFallback) {
+    throw mediaStorageError();
   }
 
   try {
@@ -285,6 +323,9 @@ async function uploadProjectDocumentFile(file, projectId) {
       { err, projectId, fileName: file?.originalname },
       "project_document.local_upload.failed"
     );
+    if (!allowLocalFallback) {
+      throw mediaStorageError();
+    }
     throw err;
   }
 }
@@ -336,12 +377,17 @@ exports.upload = async (req, res) => {
         : "other";
 
     const createdDocs = [];
+    const fallbackPolicy = resolveLocalFallbackPolicy();
 
     /* =========================================================
        🚀 Upload + insert DB
     ========================================================== */
     for (const file of files) {
-      const uploaded = await uploadProjectDocumentFile(file, pid);
+      const uploaded = await uploadProjectDocumentFile(
+        file,
+        pid,
+        fallbackPolicy
+      );
 
       const doc = await ProjectDocument.create({
         projectId: pid,
@@ -390,7 +436,13 @@ exports.upload = async (req, res) => {
       documents: createdDocs,
     });
   } catch (e) {
-    logger.error("❌ Erreur upload document:", e);
+    if (e?.code === PROJECT_DOCUMENT_MEDIA_STORAGE_ERROR_CODE) {
+      return res.status(503).json({
+        error:
+          "Stockage des documents indisponible en production. Configurez ImageKit ou un UPLOADS_ROOT persistant.",
+      });
+    }
+    logger.error("projectDocument upload error", e);
     return res.status(500).json({ error: "Erreur lors de l'ajout du document" });
   }
 };
@@ -522,3 +574,4 @@ exports.remove = async (req, res) => {
       .json({ error: "Erreur lors de la suppression du document" });
   }
 };
+

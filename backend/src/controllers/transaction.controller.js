@@ -40,6 +40,7 @@ const imageKit = require("../helpers/teranga-imagekit");
 const logger = require('../utils/logger');
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
 const { buildMediaStorageDiagnostics } = require("../utils/mediaStorageDiagnostics");
+const { evaluateLocalMediaFallback } = require("../utils/mediaStoragePolicy");
 
 // 📌 Labels français
 const {
@@ -53,6 +54,10 @@ const {
 const ALLOWED_TYPES = new Set(Object.keys(TRANSACTION_TYPES || {}));
 const ALLOWED_STATUSES = new Set(Object.keys(TRANSACTION_STATUSES || {}));
 const KNOWN_CURRENCIES = new Set(Object.keys(CURRENCY_LABELS || {}));
+const TRANSACTION_MEDIA_STORAGE_ERROR_CODE =
+  "TRANSACTION_MEDIA_STORAGE_UNAVAILABLE";
+const TRANSACTION_LOCAL_FALLBACK_ENV_VAR =
+  "TRANSACTION_ALLOW_LOCAL_FALLBACK";
 
 /* ============================================================================
  *  🧩 ImageKit Enabled ?
@@ -63,6 +68,20 @@ function isImageKitEnabled() {
       process.env.IMAGEKIT_PRIVATE_KEY &&
       process.env.IMAGEKIT_URL_ENDPOINT
   );
+}
+
+function resolveLocalFallbackPolicy() {
+  return evaluateLocalMediaFallback({
+    moduleFallbackEnvVar: TRANSACTION_LOCAL_FALLBACK_ENV_VAR,
+  });
+}
+
+function mediaStorageError() {
+  const err = new Error(
+    "Stockage des preuves de transaction indisponible. Configurez IMAGEKIT_* ou UPLOADS_ROOT persistant."
+  );
+  err.code = TRANSACTION_MEDIA_STORAGE_ERROR_CODE;
+  return err;
 }
 
 /* ============================================================================
@@ -308,11 +327,20 @@ async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
 /* ============================================================================
  *  ⭐ ImageKit Upload sécurisé
  * ============================================================================ */
-async function uploadProofToImageKit(file) {
+async function uploadProofToImageKit(file, fallbackPolicy) {
   const baseMeta = {
     originalName: file?.originalname || null,
     mimeType: file?.mimetype || null,
     size: file?.size ?? null,
+  };
+  const effectivePolicy = fallbackPolicy || resolveLocalFallbackPolicy();
+  const allowLocalFallback = effectivePolicy.allowLocalFallback;
+  const diagnosticsBase = {
+    module: "transaction",
+    fileName: file?.originalname || null,
+    allowLocalFallback,
+    fallbackPolicy: effectivePolicy,
+    moduleFallbackEnvVar: TRANSACTION_LOCAL_FALLBACK_ENV_VAR,
   };
 
   if (isImageKitEnabled()) {
@@ -335,27 +363,40 @@ async function uploadProofToImageKit(file) {
       }
 
       logger.warn(
-        buildMediaStorageDiagnostics({
-          module: "transaction",
-          fileName: file?.originalname,
-        }),
+        buildMediaStorageDiagnostics(diagnosticsBase),
         "transaction.imagekit.upload_missing_url.fallback_local"
       );
+      if (!allowLocalFallback) {
+        throw mediaStorageError();
+      }
     } catch (e) {
       logger.warn(
         buildMediaStorageDiagnostics({
-          module: "transaction",
+          ...diagnosticsBase,
           err: e,
-          fileName: file?.originalname,
         }),
         "transaction.imagekit.upload.failed.fallback_local"
       );
+      if (!allowLocalFallback) {
+        throw mediaStorageError();
+      }
     }
   } else {
+    if (!allowLocalFallback) {
+      logger.error(
+        buildMediaStorageDiagnostics(diagnosticsBase),
+        "transaction.media_storage.unconfigured.production"
+      );
+      throw mediaStorageError();
+    }
     logger.warn(
-      buildMediaStorageDiagnostics({ module: "transaction" }),
+      buildMediaStorageDiagnostics(diagnosticsBase),
       "transaction.imagekit.disabled.fallback_local"
     );
+  }
+
+  if (!allowLocalFallback) {
+    throw mediaStorageError();
   }
 
   try {
@@ -367,11 +408,10 @@ async function uploadProofToImageKit(file) {
     };
   } catch (e) {
     logger.error({ err: e, fileName: file?.originalname }, "transaction.local_upload.failed");
-    return {
-      ...baseMeta,
-      url: null,
-      fileId: null,
-    };
+    if (!allowLocalFallback) {
+      throw mediaStorageError();
+    }
+    throw e;
   }
 }
 
@@ -432,8 +472,9 @@ exports.create = async (req, res) => {
     /* -------------------------------
        📎 Upload preuve via ImageKit
        ------------------------------- */
+    const fallbackPolicy = resolveLocalFallbackPolicy();
     const up = extractUploadFile(req);
-    const proofFile = up ? await uploadProofToImageKit(up) : null;
+    const proofFile = up ? await uploadProofToImageKit(up, fallbackPolicy) : null;
 
     // Owner userId : si transaction liée à une commande -> userId commande
     const ownerUserId = order?.userId ?? req.user.id;
@@ -548,6 +589,12 @@ exports.create = async (req, res) => {
       transaction: withLabels(created),
     });
   } catch (e) {
+    if (e?.code === TRANSACTION_MEDIA_STORAGE_ERROR_CODE) {
+      return res.status(503).json({
+        error:
+          "Stockage des preuves de transaction indisponible en production. Configurez ImageKit ou un UPLOADS_ROOT persistant.",
+      });
+    }
     logger.error({ err: e }, "transaction.create.failed");
     return res.status(500).json({
       error: "Erreur lors de l'ajout de la transaction",
@@ -756,6 +803,7 @@ exports.update = async (req, res) => {
     /* ---------------------------------------
        📸 Nouvelle preuve : suppr + re-upload
        --------------------------------------- */
+    const fallbackPolicy = resolveLocalFallbackPolicy();
     const up = extractUploadFile(req);
     if (up) {
       const previousProof = trx.proofFile;
@@ -773,7 +821,7 @@ exports.update = async (req, res) => {
         await removeLocalUpload(previousProofUrl);
       }
 
-      trx.proofFile = await uploadProofToImageKit(up);
+      trx.proofFile = await uploadProofToImageKit(up, fallbackPolicy);
     }
 
     const isAdmin = req.user?.role === "admin";
@@ -922,6 +970,12 @@ exports.update = async (req, res) => {
       transaction: withLabels(updated),
     });
   } catch (e) {
+    if (e?.code === TRANSACTION_MEDIA_STORAGE_ERROR_CODE) {
+      return res.status(503).json({
+        error:
+          "Stockage des preuves de transaction indisponible en production. Configurez ImageKit ou un UPLOADS_ROOT persistant.",
+      });
+    }
     logger.error({ err: e }, "transaction.update.failed");
     return res.status(500).json({
       error: "Erreur lors de la mise à jour de la transaction",

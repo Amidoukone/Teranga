@@ -156,12 +156,49 @@ describe('property.controller media handling', () => {
     );
   });
 
-  test('create falls back to local storage in production when ImageKit is unavailable', async () => {
+  test('create rejects in production when ImageKit is unavailable and no persistent uploads root is set', async () => {
     process.env.NODE_ENV = 'production';
-    Property.create.mockResolvedValue({ id: 55 });
+
+    const req = {
+      user: { id: 10, role: 'client', country: null, countryId: null, regionId: null },
+      body: {
+        title: 'Villa test',
+        type: 'house',
+        address: 'Rue 1',
+        city: 'Bamako',
+      },
+      files: [
+        {
+          originalname: 'doc.pdf',
+          mimetype: 'application/pdf',
+          size: 12,
+          buffer: Buffer.from('demo'),
+        },
+      ],
+    };
+    const res = makeRes();
+
+    await controller.create(req, res);
+
+    expect(Property.create).not.toHaveBeenCalled();
+    expect(imageKit.upload).not.toHaveBeenCalled();
+    expect(fs.promises.writeFile).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.stringContaining('Stockage des images indisponible'),
+      })
+    );
+  });
+
+  test('create falls back to local storage in production when uploads root is explicitly configured', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.UPLOADS_ROOT = '/var/lib/teranga-uploads';
+
+    Property.create.mockResolvedValue({ id: 56 });
     Property.findByPk.mockResolvedValue({
       toJSON: () => ({
-        id: 55,
+        id: 56,
         ownerId: 10,
         title: 'Villa test',
         type: 'house',

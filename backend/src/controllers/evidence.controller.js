@@ -23,7 +23,10 @@ const { emitEvent } = require("../services/activity.service");
 const logger = require('../utils/logger');
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
 const { buildMediaStorageDiagnostics } = require("../utils/mediaStorageDiagnostics");
+const { evaluateLocalMediaFallback } = require("../utils/mediaStoragePolicy");
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
+const EVIDENCE_MEDIA_STORAGE_ERROR_CODE = "EVIDENCE_MEDIA_STORAGE_UNAVAILABLE";
+const EVIDENCE_LOCAL_FALLBACK_ENV_VAR = "EVIDENCE_ALLOW_LOCAL_FALLBACK";
 
 function toIntOr(value, fallback) {
   const parsed = Number.parseInt(String(value), 10);
@@ -106,6 +109,20 @@ function isImageKitEnabled() {
       process.env.IMAGEKIT_PRIVATE_KEY &&
       process.env.IMAGEKIT_URL_ENDPOINT
   );
+}
+
+function resolveLocalFallbackPolicy() {
+  return evaluateLocalMediaFallback({
+    moduleFallbackEnvVar: EVIDENCE_LOCAL_FALLBACK_ENV_VAR,
+  });
+}
+
+function mediaStorageError() {
+  const err = new Error(
+    "Stockage des preuves indisponible. Configurez IMAGEKIT_* ou UPLOADS_ROOT persistant."
+  );
+  err.code = EVIDENCE_MEDIA_STORAGE_ERROR_CODE;
+  return err;
 }
 
 function sanitizeBasename(value) {
@@ -444,12 +461,29 @@ exports.create = async (req, res) => {
     }
 
     const imageKitEnabled = isImageKitEnabled();
+    const fallbackPolicy = resolveLocalFallbackPolicy();
+    const allowLocalFallback = fallbackPolicy.allowLocalFallback;
     if (!imageKitEnabled) {
+      if (!allowLocalFallback) {
+        logger.error(
+          buildMediaStorageDiagnostics({
+            module: "evidence",
+            taskId: taskId || null,
+            orderId: orderId || null,
+            fallbackPolicy,
+            moduleFallbackEnvVar: EVIDENCE_LOCAL_FALLBACK_ENV_VAR,
+          }),
+          "evidence.media_storage.unconfigured.production"
+        );
+        throw mediaStorageError();
+      }
       logger.warn(
         buildMediaStorageDiagnostics({
           module: "evidence",
           taskId: taskId || null,
           orderId: orderId || null,
+          fallbackPolicy,
+          moduleFallbackEnvVar: EVIDENCE_LOCAL_FALLBACK_ENV_VAR,
         }),
         "evidence.imagekit.disabled.fallback_local"
       );
@@ -477,13 +511,34 @@ exports.create = async (req, res) => {
                   fileName: f?.originalname || null,
                   code: err?.code || err?.cause?.code || null,
                   reason: err?.message || null,
+                  allowLocalFallback,
+                  fallbackPolicy,
+                  moduleFallbackEnvVar: EVIDENCE_LOCAL_FALLBACK_ENV_VAR,
                 }),
                 "evidence.imagekit.upload.failed.fallback_local"
               );
+              if (!allowLocalFallback) {
+                throw mediaStorageError();
+              }
             }
           }
 
           if (!uploaded || !uploaded.url) {
+            if (imageKitEnabled) {
+              logger.warn(
+                buildMediaStorageDiagnostics({
+                  module: "evidence",
+                  fileName: f?.originalname || null,
+                  allowLocalFallback,
+                  fallbackPolicy,
+                  moduleFallbackEnvVar: EVIDENCE_LOCAL_FALLBACK_ENV_VAR,
+                }),
+                "evidence.imagekit.upload_missing_url.fallback_local"
+              );
+            }
+            if (!allowLocalFallback) {
+              throw mediaStorageError();
+            }
             uploaded = await saveEvidenceLocally(f, fileName);
           }
 
@@ -507,6 +562,9 @@ exports.create = async (req, res) => {
 
           return { ok: true, id: created.id };
         } catch (err) {
+          if (err?.code === EVIDENCE_MEDIA_STORAGE_ERROR_CODE) {
+            throw err;
+          }
           return {
             ok: false,
             originalName: f?.originalname || null,
@@ -618,6 +676,12 @@ exports.create = async (req, res) => {
 
     return res.status(createdIds.length ? 201 : 500).json(response);
   } catch (e) {
+    if (e?.code === EVIDENCE_MEDIA_STORAGE_ERROR_CODE) {
+      return res.status(503).json({
+        error:
+          "Stockage des preuves indisponible en production. Configurez ImageKit ou un UPLOADS_ROOT persistant.",
+      });
+    }
     logger.error("❌ Erreur create evidence:", e);
     return res.status(500).json({ error: "Erreur lors de l'ajout des preuves" });
   }

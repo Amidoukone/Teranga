@@ -10,6 +10,10 @@ const PROPERTY_UPLOAD_TIMEOUT_MS =
 const IS_PROD_RUNTIME =
   String(process.env.NODE_ENV || 'development').trim().toLowerCase() ===
   'production';
+const ALLOW_CREATE_WITHOUT_MEDIA_FALLBACK =
+  String(process.env.REACT_APP_PROPERTY_ALLOW_CREATE_WITHOUT_MEDIA || '')
+    .trim()
+    .toLowerCase() === 'true';
 
 function logPropertiesDebug(level, message, meta) {
   if (IS_PROD_RUNTIME) return;
@@ -182,7 +186,9 @@ async function createPropertyWithMediaFallback(
   try {
     return await tryEndpoints('post', candidatesBuilder(payload), options);
   } catch (err) {
-    if (!files.length || !isMediaStorageUnavailable(err)) {
+    const canRetryWithoutFiles =
+      !IS_PROD_RUNTIME || ALLOW_CREATE_WITHOUT_MEDIA_FALLBACK;
+    if (!files.length || !isMediaStorageUnavailable(err) || !canRetryWithoutFiles) {
       throw err;
     }
 

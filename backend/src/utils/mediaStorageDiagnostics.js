@@ -1,13 +1,7 @@
 'use strict';
 
 const { resolveUploadsRoot } = require('./uploadsRoot');
-
-function parseBooleanEnv(raw) {
-  const normalized = String(raw || '').trim().toLowerCase();
-  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
-  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
-  return null;
-}
+const { parseBooleanEnv } = require('./mediaStoragePolicy');
 
 function isImageKitConfigured(env = process.env) {
   return Boolean(
@@ -25,8 +19,18 @@ function buildMediaStorageDiagnostics(extra = {}, env = process.env) {
   const propertyAllowLocalFallback = parseBooleanEnv(
     env.PROPERTY_ALLOW_LOCAL_FALLBACK
   );
+  const mediaAllowLocalFallback = parseBooleanEnv(
+    env.MEDIA_ALLOW_LOCAL_FALLBACK
+  );
 
-  return {
+  const moduleFallbackEnvVar = String(
+    extra.moduleFallbackEnvVar || ''
+  ).trim();
+  const moduleAllowLocalFallback = moduleFallbackEnvVar
+    ? parseBooleanEnv(env[moduleFallbackEnvVar])
+    : null;
+
+  const diagnostics = {
     nodeEnv: nodeEnv || 'development',
     uploadsRoot: resolveUploadsRoot(),
     hasCustomUploadsRoot,
@@ -38,12 +42,23 @@ function buildMediaStorageDiagnostics(extra = {}, env = process.env) {
     },
     propertyAllowLocalFallback:
       propertyAllowLocalFallback === null ? 'auto' : propertyAllowLocalFallback,
+    mediaAllowLocalFallback:
+      mediaAllowLocalFallback === null ? 'auto' : mediaAllowLocalFallback,
     ...extra,
   };
+
+  if (moduleFallbackEnvVar) {
+    diagnostics.moduleAllowLocalFallback = {
+      envVar: moduleFallbackEnvVar,
+      value:
+        moduleAllowLocalFallback === null ? 'auto' : moduleAllowLocalFallback,
+    };
+  }
+
+  return diagnostics;
 }
 
 module.exports = {
   buildMediaStorageDiagnostics,
   isImageKitConfigured,
 };
-

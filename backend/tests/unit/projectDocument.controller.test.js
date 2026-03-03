@@ -43,13 +43,22 @@ function makeRes() {
 
 describe('projectDocument.controller', () => {
   const envBackup = {
+    NODE_ENV: process.env.NODE_ENV,
     IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY,
     IMAGEKIT_PRIVATE_KEY: process.env.IMAGEKIT_PRIVATE_KEY,
     IMAGEKIT_URL_ENDPOINT: process.env.IMAGEKIT_URL_ENDPOINT,
+    UPLOADS_ROOT: process.env.UPLOADS_ROOT,
+    UPLOADS_DIR: process.env.UPLOADS_DIR,
+    PROJECT_DOCUMENT_ALLOW_LOCAL_FALLBACK:
+      process.env.PROJECT_DOCUMENT_ALLOW_LOCAL_FALLBACK,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.NODE_ENV = 'test';
+    delete process.env.UPLOADS_ROOT;
+    delete process.env.UPLOADS_DIR;
+    delete process.env.PROJECT_DOCUMENT_ALLOW_LOCAL_FALLBACK;
 
     jest.spyOn(fs.promises, 'mkdir').mockResolvedValue();
     jest.spyOn(fs.promises, 'writeFile').mockResolvedValue();
@@ -61,9 +70,14 @@ describe('projectDocument.controller', () => {
     fs.promises.writeFile.mockRestore();
     fs.promises.unlink.mockRestore();
 
+    process.env.NODE_ENV = envBackup.NODE_ENV;
     process.env.IMAGEKIT_PUBLIC_KEY = envBackup.IMAGEKIT_PUBLIC_KEY;
     process.env.IMAGEKIT_PRIVATE_KEY = envBackup.IMAGEKIT_PRIVATE_KEY;
     process.env.IMAGEKIT_URL_ENDPOINT = envBackup.IMAGEKIT_URL_ENDPOINT;
+    process.env.UPLOADS_ROOT = envBackup.UPLOADS_ROOT;
+    process.env.UPLOADS_DIR = envBackup.UPLOADS_DIR;
+    process.env.PROJECT_DOCUMENT_ALLOW_LOCAL_FALLBACK =
+      envBackup.PROJECT_DOCUMENT_ALLOW_LOCAL_FALLBACK;
   });
 
   test('upload falls back to local storage and persists a non-null filePath', async () => {
@@ -121,6 +135,50 @@ describe('projectDocument.controller', () => {
       expect.objectContaining({
         projectId: 12,
         documents: expect.any(Array),
+      })
+    );
+  });
+
+  test('upload rejects in production when ImageKit is unavailable and uploads root is not configured', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.IMAGEKIT_PUBLIC_KEY;
+    delete process.env.IMAGEKIT_PRIVATE_KEY;
+    delete process.env.IMAGEKIT_URL_ENDPOINT;
+    delete process.env.UPLOADS_ROOT;
+    delete process.env.UPLOADS_DIR;
+
+    models.Project.findByPk.mockResolvedValue({
+      id: 12,
+      clientId: 2,
+      agentId: null,
+      createdAt: new Date().toISOString(),
+      countryId: 1,
+      regionId: 2,
+    });
+
+    const req = {
+      user: { id: 1, role: 'admin' },
+      body: { projectId: '12', title: 'spec', kind: 'other', notes: 'n' },
+      files: [
+        {
+          originalname: 'plan.pdf',
+          mimetype: 'application/pdf',
+          size: 10,
+          buffer: Buffer.from('demo'),
+        },
+      ],
+    };
+    const res = makeRes();
+
+    await controller.upload(req, res);
+
+    expect(imageKit.upload).not.toHaveBeenCalled();
+    expect(fs.promises.writeFile).not.toHaveBeenCalled();
+    expect(models.ProjectDocument.create).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.stringContaining('Stockage des documents indisponible'),
       })
     );
   });
