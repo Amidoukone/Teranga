@@ -131,6 +131,48 @@ function buildFormData(form = {}, files = [], extra = {}) {
   return formData;
 }
 
+function isMediaStorageUnavailable(err) {
+  const status = err?.response?.status;
+  if (status !== 503) return false;
+
+  const message = String(
+    err?.response?.data?.error || err?.message || ''
+  ).toLowerCase();
+
+  return (
+    message.includes('stockage') ||
+    message.includes('imagekit') ||
+    message.includes('media')
+  );
+}
+
+async function createPropertyWithMediaFallback(
+  candidatesBuilder,
+  form,
+  files = [],
+  extra = {}
+) {
+  const options = {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: PROPERTY_UPLOAD_TIMEOUT_MS,
+  };
+
+  const payload = buildFormData(form, files, extra);
+  try {
+    return await tryEndpoints('post', candidatesBuilder(payload), options);
+  } catch (err) {
+    if (!files.length || !isMediaStorageUnavailable(err)) {
+      throw err;
+    }
+
+    console.warn(
+      ' Upload media indisponible: nouvelle tentative de creation sans fichiers.'
+    );
+    const payloadWithoutFiles = buildFormData(form, [], extra);
+    return tryEndpoints('post', candidatesBuilder(payloadWithoutFiles), options);
+  }
+}
+
 /**
  * Liste des biens du client connecte
  * Essaie plusieurs chemins possibles cote backend.
@@ -217,19 +259,15 @@ export async function createProperty(form, files = [], adminTarget = null) {
     !adminTarget ||
     (!adminTarget.ownerId && !adminTarget.clientId && !adminTarget.ownerEmail)
   ) {
-    const formData = buildFormData(form, files);
     try {
-      const data = await tryEndpoints(
-        'post',
-        [
-          { url: '/properties', data: formData },
-          { url: '/admin/properties', data: formData },
-          { url: '/properties/create', data: formData },
+      const data = await createPropertyWithMediaFallback(
+        (payload) => [
+          { url: '/properties', data: payload },
+          { url: '/admin/properties', data: payload },
+          { url: '/properties/create', data: payload },
         ],
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          timeout: PROPERTY_UPLOAD_TIMEOUT_MS,
-        }
+        form,
+        files
       );
       const created = data.property || data.item || data.result;
       return normalizeProperty(applyLabels(created));
@@ -245,15 +283,11 @@ export async function createProperty(form, files = [], adminTarget = null) {
 
  // 1) Tente la route dediee : /properties/client/:id
   if (targetId) {
-    const formDataClientParam = buildFormData(form, files);
     try {
-      const data = await tryEndpoints(
-        'post',
-        [{ url: `/properties/client/${targetId}`, data: formDataClientParam }],
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          timeout: PROPERTY_UPLOAD_TIMEOUT_MS,
-        }
+      const data = await createPropertyWithMediaFallback(
+        (payload) => [{ url: `/properties/client/${targetId}`, data: payload }],
+        form,
+        files
       );
       const created = data.property || data.item || data.result;
       return normalizeProperty(applyLabels(created));
@@ -267,19 +301,15 @@ export async function createProperty(form, files = [], adminTarget = null) {
   }
 
  // 2) Alias admin generique : /properties/admin (body peut contenir ownerId|clientId|ownerEmail)
-  const formDataAdminAlias = buildFormData(form, files, {
-    ...(ownerId ? { ownerId } : {}),
-    ...(clientId ? { clientId } : {}),
-    ...(ownerEmail ? { ownerEmail } : {}),
-  });
-
   try {
-    const data = await tryEndpoints(
-      'post',
-      [{ url: '/properties/admin', data: formDataAdminAlias }],
+    const data = await createPropertyWithMediaFallback(
+      (payload) => [{ url: '/properties/admin', data: payload }],
+      form,
+      files,
       {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: PROPERTY_UPLOAD_TIMEOUT_MS,
+        ...(ownerId ? { ownerId } : {}),
+        ...(clientId ? { clientId } : {}),
+        ...(ownerEmail ? { ownerEmail } : {}),
       }
     );
     const created = data.property || data.item || data.result;
@@ -292,23 +322,19 @@ export async function createProperty(form, files = [], adminTarget = null) {
   }
 
   // 3) Fallback ultime : /properties (classique) + ownerId|clientId|ownerEmail dans le body
-  const formDataWithTarget = buildFormData(form, files, {
-    ...(ownerId ? { ownerId } : {}),
-    ...(clientId ? { clientId } : {}),
-    ...(ownerEmail ? { ownerEmail } : {}),
-  });
-
   try {
-    const data = await tryEndpoints(
-      'post',
-      [
-        { url: '/properties', data: formDataWithTarget },
-        { url: '/admin/properties', data: formDataWithTarget },
-        { url: '/properties/create', data: formDataWithTarget },
+    const data = await createPropertyWithMediaFallback(
+      (payload) => [
+        { url: '/properties', data: payload },
+        { url: '/admin/properties', data: payload },
+        { url: '/properties/create', data: payload },
       ],
+      form,
+      files,
       {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: PROPERTY_UPLOAD_TIMEOUT_MS,
+        ...(ownerId ? { ownerId } : {}),
+        ...(clientId ? { clientId } : {}),
+        ...(ownerEmail ? { ownerEmail } : {}),
       }
     );
     const created = data.property || data.item || data.result;

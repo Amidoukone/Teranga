@@ -25,6 +25,19 @@ function joinUrl(base, path) {
   return stripTrailingSlash(base) + ensureLeadingSlash(path);
 }
 
+function normalizeFileBase(fileBaseCandidate, apiBaseCandidate = '') {
+  const explicit = stripTrailingSlash(fileBaseCandidate || '');
+  if (explicit) {
+    const sanitized = explicit.replace(/\/api\/?$/i, '');
+    return sanitized || '/';
+  }
+
+  const fromApi = stripTrailingSlash(
+    String(apiBaseCandidate || '').replace(/\/api\/?$/i, '')
+  );
+  return fromApi || '/';
+}
+
 function normalizeStoredToken(value) {
   const raw = typeof value === 'string' ? value.trim() : String(value || '').trim();
   if (!raw) return null;
@@ -69,11 +82,9 @@ function resolveOrigins() {
   const envFileBase = (process.env.REACT_APP_FILE_BASE_URL || '').trim();
 
   if (envApiBase || envApiUrl || envFileBase) {
-    const apiBaseRaw = stripTrailingSlash(envApiBase || envApiUrl);
+    const apiBaseRaw = stripTrailingSlash(envApiBase || envApiUrl || '/api');
     const apiBase = apiBaseRaw.endsWith('/api') ? apiBaseRaw : `${apiBaseRaw}/api`;
-    const fileBase =
-      stripTrailingSlash(envFileBase) ||
-      stripTrailingSlash(apiBase.replace(/\/api$/, ''));
+    const fileBase = normalizeFileBase(envFileBase, apiBase);
 
     return {
       FILE_BASE_URL: fileBase, // sert /uploads
@@ -89,14 +100,14 @@ function resolveOrigins() {
     const backendHost = host === '127.0.0.1' ? '127.0.0.1' : 'localhost';
     const origin = `http://${backendHost}:5000`;
     return {
-      FILE_BASE_URL: origin,          // ex: http://127.0.0.1:5000/uploads/...
+      FILE_BASE_URL: normalizeFileBase(origin, origin + '/api'), // ex: http://127.0.0.1:5000/uploads/...
       API_BASE_URL: origin + '/api',  // ex: http://127.0.0.1:5000/api/...
     };
   }
 
  // 3) Production / reverse proxy : API mappee sous /api, fichiers sous /uploads a la racine
   return {
-    FILE_BASE_URL: '',     // même origin que le front (ex: https://app.mondomaine.com)
+    FILE_BASE_URL: '/',    // même origin que le front (ex: https://app.mondomaine.com)
     API_BASE_URL: '/api',
   };
 }
@@ -156,9 +167,15 @@ if (typeof window !== 'undefined') {
 /* ---------- Utilitaire public: URL de fichier statique ---------- */
 /** Construit l'URL absolue vers un fichier servi par le backend (ex: /uploads/xxx.pdf) */
 export function getFileUrl(filePath) {
-  if (!filePath) return '';
+  const rawPath =
+    typeof filePath === 'string'
+      ? filePath.trim()
+      : String(filePath || '').trim();
+  if (!rawPath) return '';
+  if (/^https?:\/\//i.test(rawPath)) return rawPath;
   // filePath commence normalement par "/uploads/..."
-  return joinUrl(FILE_BASE_URL || '', filePath);
+  const fileBase = FILE_BASE_URL === '/' ? '' : FILE_BASE_URL || '';
+  return joinUrl(fileBase, rawPath);
 }
 
 /* ---------- Intercepteur: injecter token ---------- */
@@ -505,7 +522,7 @@ export function setApiBaseUrl(newBaseUrl) {
     api.defaults.baseURL = sanitized;
 
  // Met a jour automatiquement FILE_BASE_URL en retirant un eventuel "/api"
-    FILE_BASE_URL = sanitized.replace(/\/api\/?$/, '');
+    FILE_BASE_URL = normalizeFileBase('', sanitized);
     if (typeof window !== 'undefined') {
       window.__TERANGA_API_BASE_URL = api.defaults.baseURL;
       window.__TERANGA_FILE_BASE_URL = FILE_BASE_URL;

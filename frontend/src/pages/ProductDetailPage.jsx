@@ -20,7 +20,9 @@ import { useTranslation } from 'react-i18next';
 const FILE_BASE =
   (typeof window !== 'undefined' &&
     (window.__TERANGA_FILE_BASE_URL ||
-      window.__TERANGA_API_BASE_URL ||
+      (window.__TERANGA_API_BASE_URL
+        ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
+        : '') ||
       '')) ||
   '';
 

@@ -1,10 +1,13 @@
-function setupApiModule() {
+function setupApiModule(options = {}) {
+  const { keepEnv = false } = options;
   jest.resetModules();
   localStorage.clear();
   document.cookie = 'teranga_csrf=; Max-Age=0; path=/';
-  delete process.env.REACT_APP_API_BASE_URL;
-  delete process.env.REACT_APP_API_URL;
-  delete process.env.REACT_APP_FILE_BASE_URL;
+  if (!keepEnv) {
+    delete process.env.REACT_APP_API_BASE_URL;
+    delete process.env.REACT_APP_API_URL;
+    delete process.env.REACT_APP_FILE_BASE_URL;
+  }
 
   const interceptorState = {
     request: [],
@@ -222,4 +225,24 @@ test('cookie-only strict skips bearer injection and does not persist refreshed J
   expect(localStorage.getItem('teranga_token')).toBeNull();
   expect(localStorage.getItem('token')).toBeNull();
   expect(localStorage.getItem('teranga_csrf_token')).toBe('new-csrf');
+});
+
+test('getFileUrl builds upload URL without /api prefix in local mode', () => {
+  const { apiModule } = setupApiModule();
+  expect(window.__TERANGA_FILE_BASE_URL).toBe('http://localhost:5000');
+  expect(apiModule.getFileUrl('/uploads/properties/a.jpg')).toBe(
+    'http://localhost:5000/uploads/properties/a.jpg'
+  );
+});
+
+test('getFileUrl strips accidental /api file base and keeps absolute URLs untouched', () => {
+  process.env.REACT_APP_API_BASE_URL = '/api';
+  process.env.REACT_APP_FILE_BASE_URL = '/api';
+  const { apiModule } = setupApiModule({ keepEnv: true });
+
+  expect(window.__TERANGA_FILE_BASE_URL).toBe('/');
+  expect(apiModule.getFileUrl('/uploads/evidences/b.jpg')).toBe('/uploads/evidences/b.jpg');
+  expect(apiModule.getFileUrl('https://ik.imagekit.io/teranga/file.jpg')).toBe(
+    'https://ik.imagekit.io/teranga/file.jpg'
+  );
 });
