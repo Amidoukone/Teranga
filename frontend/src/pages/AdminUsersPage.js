@@ -96,7 +96,7 @@ export default function AdminUsersPage() {
     country: "",
     role: "client",
 
- // Contexte: administration des utilisateurs.
+ // Contexte: administration des utilisateurs
     scopeCountry: "",
     scopeRegion: "",
 
