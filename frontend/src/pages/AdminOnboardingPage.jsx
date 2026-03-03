@@ -86,7 +86,7 @@ export default function AdminOnboardingPage() {
   });
 
   // ========================================================================
- // AAaTMAasAAAAaAAasAA AUTH CHECK AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA ADMIN GLOBAL ONLY
+ //  AUTH CHECK AAaTMAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA ADMIN GLOBAL ONLY
  // - AutorisAAaTMAa AaaAAaAAasAA : admin sans countryId/regionId
  // - RefusAAaTMAa AaaAAaAAasAA : agent/client + MASTER (admin scopAAaTMAa AaaAAaAAasAA)
   // ========================================================================
