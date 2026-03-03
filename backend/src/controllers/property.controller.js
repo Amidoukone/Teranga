@@ -80,6 +80,7 @@ const PROPERTY_MAX_FILES = Math.max(
   1,
   toSafeInt(process.env.PROPERTY_MAX_FILES, 10) || 10
 );
+const MEDIA_STORAGE_ERROR_CODE = 'PROPERTY_MEDIA_STORAGE_UNAVAILABLE';
 
 async function resolveCountryIdFromLegacy(countryValue) {
   const trimmed = toTrimOrNull(countryValue);
@@ -109,6 +110,37 @@ function isImageKitEnabled() {
       process.env.IMAGEKIT_PRIVATE_KEY &&
       process.env.IMAGEKIT_URL_ENDPOINT
   );
+}
+
+function isProductionRuntime() {
+  return String(process.env.NODE_ENV || '').trim().toLowerCase() === 'production';
+}
+
+function hasPersistentUploadsRoot() {
+  return Boolean(
+    String(process.env.UPLOADS_ROOT || process.env.UPLOADS_DIR || '').trim()
+  );
+}
+
+function parseBooleanEnv(raw) {
+  const normalized = String(raw || '').trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return null;
+}
+
+function canFallbackToLocalStorage() {
+  const explicit = parseBooleanEnv(process.env.PROPERTY_ALLOW_LOCAL_FALLBACK);
+  if (explicit !== null) return explicit;
+  return !isProductionRuntime() || hasPersistentUploadsRoot();
+}
+
+function mediaStorageError() {
+  const err = new Error(
+    'Stockage media indisponible. Configurez IMAGEKIT_* ou UPLOADS_ROOT persistant.'
+  );
+  err.code = MEDIA_STORAGE_ERROR_CODE;
+  return err;
 }
 
 /* ============================================================
@@ -232,7 +264,12 @@ async function uploadPhotosToImageKit(files = []) {
   if (!files || !files.length) return [];
 
   const imageKitEnabled = isImageKitEnabled();
+  const allowLocalFallback = canFallbackToLocalStorage();
   if (!imageKitEnabled) {
+    if (!allowLocalFallback) {
+      logger.error('property.media_storage.unconfigured.production');
+      throw mediaStorageError();
+    }
     logger.warn('property.imagekit.disabled.fallback_local');
   }
 
@@ -268,7 +305,14 @@ async function uploadPhotosToImageKit(files = []) {
             { err: e, fileName: f?.originalname },
             'property.imagekit.upload.failed.fallback_local'
           );
+          if (!allowLocalFallback) {
+            throw mediaStorageError();
+          }
         }
+      }
+
+      if (!allowLocalFallback) {
+        throw mediaStorageError();
       }
 
       try {
@@ -282,6 +326,9 @@ async function uploadPhotosToImageKit(files = []) {
           { err: e, fileName: f?.originalname },
           'property.local_upload.failed'
         );
+        if (!allowLocalFallback) {
+          throw mediaStorageError();
+        }
         return null;
       }
     })
@@ -631,6 +678,12 @@ exports.create = async (req, res) => {
       property: addLabels(property),
     });
   } catch (e) {
+    if (e?.code === MEDIA_STORAGE_ERROR_CODE) {
+      return res.status(503).json({
+        error:
+          'Stockage des images indisponible en production. Configurez ImageKit ou un UPLOADS_ROOT persistant.',
+      });
+    }
     logger.error('property.create.failed:', e);
     return res.status(500).json({ error: 'Erreur lors de la création du bien' });
   }
@@ -823,6 +876,12 @@ exports.update = async (req, res) => {
       property: addLabels(property),
     });
   } catch (e) {
+    if (e?.code === MEDIA_STORAGE_ERROR_CODE) {
+      return res.status(503).json({
+        error:
+          'Stockage des images indisponible en production. Configurez ImageKit ou un UPLOADS_ROOT persistant.',
+      });
+    }
     logger.error('property.update.failed:', e);
     return res
       .status(500)

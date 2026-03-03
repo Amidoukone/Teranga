@@ -60,16 +60,24 @@ function makeRes() {
 
 describe('property.controller media handling', () => {
   const envBackup = {
+    NODE_ENV: process.env.NODE_ENV,
     IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY,
     IMAGEKIT_PRIVATE_KEY: process.env.IMAGEKIT_PRIVATE_KEY,
     IMAGEKIT_URL_ENDPOINT: process.env.IMAGEKIT_URL_ENDPOINT,
+    UPLOADS_ROOT: process.env.UPLOADS_ROOT,
+    UPLOADS_DIR: process.env.UPLOADS_DIR,
+    PROPERTY_ALLOW_LOCAL_FALLBACK: process.env.PROPERTY_ALLOW_LOCAL_FALLBACK,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.NODE_ENV = 'test';
     delete process.env.IMAGEKIT_PUBLIC_KEY;
     delete process.env.IMAGEKIT_PRIVATE_KEY;
     delete process.env.IMAGEKIT_URL_ENDPOINT;
+    delete process.env.UPLOADS_ROOT;
+    delete process.env.UPLOADS_DIR;
+    delete process.env.PROPERTY_ALLOW_LOCAL_FALLBACK;
 
     jest.spyOn(fs.promises, 'mkdir').mockResolvedValue();
     jest.spyOn(fs.promises, 'writeFile').mockResolvedValue();
@@ -81,9 +89,14 @@ describe('property.controller media handling', () => {
     fs.promises.writeFile.mockRestore();
     fs.promises.unlink.mockRestore();
 
+    process.env.NODE_ENV = envBackup.NODE_ENV;
     process.env.IMAGEKIT_PUBLIC_KEY = envBackup.IMAGEKIT_PUBLIC_KEY;
     process.env.IMAGEKIT_PRIVATE_KEY = envBackup.IMAGEKIT_PRIVATE_KEY;
     process.env.IMAGEKIT_URL_ENDPOINT = envBackup.IMAGEKIT_URL_ENDPOINT;
+    process.env.UPLOADS_ROOT = envBackup.UPLOADS_ROOT;
+    process.env.UPLOADS_DIR = envBackup.UPLOADS_DIR;
+    process.env.PROPERTY_ALLOW_LOCAL_FALLBACK =
+      envBackup.PROPERTY_ALLOW_LOCAL_FALLBACK;
   });
 
   test('create falls back to local storage when ImageKit is disabled', async () => {
@@ -139,6 +152,41 @@ describe('property.controller media handling', () => {
         property: expect.objectContaining({
           photos: expect.arrayContaining(['/uploads/properties/property_demo.pdf']),
         }),
+      })
+    );
+  });
+
+  test('create rejects media upload in production when storage is not persistent', async () => {
+    process.env.NODE_ENV = 'production';
+
+    const req = {
+      user: { id: 10, role: 'client', country: null, countryId: null, regionId: null },
+      body: {
+        title: 'Villa test',
+        type: 'house',
+        address: 'Rue 1',
+        city: 'Bamako',
+      },
+      files: [
+        {
+          originalname: 'doc.pdf',
+          mimetype: 'application/pdf',
+          size: 12,
+          buffer: Buffer.from('demo'),
+        },
+      ],
+    };
+    const res = makeRes();
+
+    await controller.create(req, res);
+
+    expect(Property.create).not.toHaveBeenCalled();
+    expect(imageKit.upload).not.toHaveBeenCalled();
+    expect(fs.promises.writeFile).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.stringContaining('ImageKit'),
       })
     );
   });
