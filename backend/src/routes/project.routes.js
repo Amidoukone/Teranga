@@ -152,12 +152,12 @@ const logger = require('../utils/logger');
       // ✅ Message clair
       const msg =
         targetAgentId === null
-          ? `✅ Agent désassigné du projet “${updated.title}”.`
-          : `✅ Agent ${updated.agent.firstName} ${updated.agent.lastName} assigné au projet “${updated.title}”.`;
+          ? `Agent désassigné du projet "${updated.title}".`
+          : `Agent ${updated.agent.firstName} ${updated.agent.lastName} assigné au projet "${updated.title}".`;
 
       res.json({ message: msg, project: updated });
     } catch (e) {
-      logger.error('❌ Erreur assignation projet:', e);
+      logger.error('Erreur assignation projet:', e);
       res
         .status(500)
         .json({ error: "Erreur lors de l’assignation de l’agent au projet." });

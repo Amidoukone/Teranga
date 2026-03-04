@@ -64,7 +64,7 @@ function canClientEditOrDelete(project, user) {
 exports.create = async (req, res) => {
   try {
     if (!req.user?.id)
-      return res.status(401).json({ error: "Non authentifie" });
+      return res.status(401).json({ error: "Non authentifié" });
 
     const {
       title,

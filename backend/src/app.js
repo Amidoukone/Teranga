@@ -17,6 +17,7 @@ const {
 } = require('./middleware/metrics.middleware');
 const { resolveUploadsRoot } = require('./utils/uploadsRoot');
 const { buildMediaStorageDiagnostics } = require('./utils/mediaStorageDiagnostics');
+const { normalizeApiResponsePayload } = require('./utils/apiMessageNormalizer');
 
 const app = express();
 app.locals.runtimeStatus = app.locals.runtimeStatus || {
@@ -107,6 +108,13 @@ app.use(
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Normalisation centrale des messages API visibles côté frontend (toasts, erreurs).
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = (payload) => originalJson(normalizeApiResponsePayload(payload));
+  next();
+});
 
 /* ======================================================
    📂 Fichiers uploadés (uploads/)

@@ -70,7 +70,7 @@ const en = {
   },
   footer: {
     copyright:
-      "© {{year}} <brand>Teranga Diaspora</brand>. All rights reserved.",
+      "\u00A9 {{year}} <brand>Teranga Diaspora</brand>. All rights reserved.",
     links: {
       helpSupport: "Help & Support",
       privacy: "Privacy",
@@ -377,7 +377,7 @@ const en = {
       updateSuccess: "Service updated successfully!",
       updateError: "Error updating service.",
       deleteSuccess: "Service deleted successfully.",
-      deleteError: "Error deleting service ❌",
+      deleteError: "Error deleting service",
       noEditTarget: "No service to update.",
     },
     status: {
@@ -1065,7 +1065,7 @@ const en = {
       newProperty: "New property",
     },
     filters: {
-      searchPlaceholder: "🔎 Search (title, city, address...)",
+      searchPlaceholder: "Search (title, city, address...)",
       typeAll: "Type (all)",
       statusAll: "Status (all)",
       cityPlaceholder: "City",
@@ -1158,12 +1158,12 @@ const en = {
       empty: "No property matches the criteria.",
       status: "Status: {{status}}",
       noDescription: "No description.",
-      surfaceRooms: "🏠 {{surface}} — {{count}} room",
-      surfaceRooms_other: "🏠 {{surface}} — {{count}} rooms",
+      surfaceRooms: "{{surface}} — {{count}} room",
+      surfaceRooms_other: "{{surface}} — {{count}} rooms",
       createdAt: "Created on {{date}}",
       edit: "Edit",
       delete: "Delete",
-      locked: "⏰ Edits locked (time window expired).",
+      locked: "Edits locked (time window expired).",
       openPdf: "Open PDF in a new tab",
       zoomHint: "Click to enlarge",
       pdfLabel: "PDF",
@@ -1200,13 +1200,13 @@ const en = {
     empty: "No users.",
     buttons: {
       hideForm: "Hide form",
-      showForm: "➕ Create user",
+      showForm: "Create user",
       refresh: "Refresh",
       reset: "Reset",
       cancel: "Cancel",
-      update: "💾 Update",
-      create: "➕ Create",
-      resetPassword: "🔐 Reset password",
+      update: "Update",
+      create: "Create",
+      resetPassword: "Reset password",
     },
     badges: {
       master: "MASTER",
@@ -1273,21 +1273,21 @@ const en = {
       regionsLoading: "Loading regions...",
       masterCountryOption: "— Country MASTER (all regions) —",
       masterHint:
-        "ℹ️ To create a MASTER, select a country (country MASTER) or a country + a region (regional MASTER). Leave empty = global admin.",
+        "To create a MASTER, select a country (country MASTER) or a country + a region (regional MASTER). Leave empty = global admin.",
     },
     alerts: {
       masterCannotPromote:
-        "⛔ A MASTER admin cannot create or promote an admin account.",
+        "A MASTER admin cannot create or promote an admin account.",
       passwordRequired: "Password required on creation.",
-      updated: "✅ User updated",
-      created: "✅ User created",
-      deleted: "✅ User deleted",
+      updated: "User updated",
+      created: "User created",
+      deleted: "User deleted",
       submitError: "Error submitting form",
-      masterCannotEdit: "⛔ A MASTER cannot edit an admin.",
-      masterCannotDelete: "⛔ A MASTER cannot delete an admin.",
-      masterCannotResetAdmin: "⛔ A MASTER cannot reset an admin password.",
+      masterCannotEdit: "A MASTER cannot edit an admin.",
+      masterCannotDelete: "A MASTER cannot delete an admin.",
+      masterCannotResetAdmin: "A MASTER cannot reset an admin password.",
       resetSuccess:
-        "✅ Password reset completed. Share the temporary password through a secure channel.",
+        "Password reset completed. Share the temporary password through a secure channel.",
       resetPasswordMin: "Password must be at least 8 characters.",
       resetPasswordMismatch: "Passwords do not match.",
       resetAuditError: "Unable to load reset audit history.",
@@ -1327,7 +1327,7 @@ const en = {
     },
   },
   adminAgentsPage: {
-    title: "👤 Agent management",
+    title: "Agent management",
     loading: "Loading…",
     loadingAgents: "Loading agents…",
     labels: {
@@ -1338,7 +1338,7 @@ const en = {
     },
     buttons: {
       hideForm: "Hide form",
-      showForm: "➕ Add",
+      showForm: "Add",
       refresh: "Refresh",
       reset: "Reset",
       creating: "Creating…",
@@ -1370,7 +1370,7 @@ const en = {
       countryInvalid: "ISO2 country code required (e.g., ML, FR)",
     },
     alerts: {
-      createSuccess: "✅ Agent created successfully",
+      createSuccess: "Agent created successfully",
       createError: "Error during creation",
     },
     count: "{{count}} agent",
@@ -1384,7 +1384,7 @@ const en = {
       countryLabel: "Country (ISO2) *",
     },
     table: {
-      title: "📋 Agent list",
+      title: "Agent list",
       empty: "No agents found.",
       headers: {
         name: "Name",
@@ -1399,7 +1399,7 @@ const en = {
     },
   },
   adminServicesPage: {
-    title: "🧩 Service management",
+    title: "Service management",
     subtitle:
       "Admin view to track, filter, and assign services to agents.",
     loading: "Loading…",
@@ -1431,7 +1431,7 @@ const en = {
     loadedCount: "{{count}} service loaded for this page",
     loadedCount_other: "{{count}} services loaded for this page",
     alerts: {
-      assignError: "Error during assignment ❌",
+      assignError: "Error during assignment",
     },
     table: {
       headers: {
@@ -1460,7 +1460,7 @@ const en = {
     },
   },
   adminPropertiesPage: {
-    title: "🏡 Property management",
+    title: "Property management",
     subtitle:
       "Admin/Master — create, edit, and monitor client properties.",
     loading: "Loading properties…",
@@ -1468,16 +1468,16 @@ const en = {
     labels: {
       selectedClient: "Selected client:",
       masterNote:
-        "🌍 Master mode: list and actions are automatically limited to the country/region scope on the backend.",
+        "Master mode: list and actions are automatically limited to the country/region scope on the backend.",
     },
     buttons: {
       refresh: "Refresh",
-      addProperty: "➕ Add property",
+      addProperty: "Add property",
       cancel: "Cancel",
-      save: "💾 Save",
-      create: "➕ Create",
-      edit: "✏️ Edit",
-      delete: "❌ Delete",
+      save: "Save",
+      create: "Create",
+      edit: "Edit",
+      delete: "Delete",
     },
     alerts: {
       selectClient: "Please select a client.",
@@ -1494,7 +1494,7 @@ const en = {
         "This property already reached the maximum of {{max}} files.",
     },
     client: {
-      title: "👤 Select a client",
+      title: "Select a client",
       badge: "{{count}} property for this client",
       badge_other: "{{count}} properties for this client",
       searchLabel: "Client search",
@@ -1503,8 +1503,8 @@ const en = {
       selectPlaceholder: "— Choose a client —",
     },
     form: {
-      titleCreate: "➕ New property",
-      titleEdit: "✏️ Edit property #{{id}}",
+      titleCreate: "New property",
+      titleEdit: "Edit property #{{id}}",
       requiredNote: "Fields marked with * are required.",
       labels: {
         title: "Title *",
@@ -1550,11 +1550,11 @@ const en = {
     list: {
       count: "{{count}} property shown",
       count_other: "{{count}} properties shown",
-      pdfLabel: "📄 PDF",
+      pdfLabel: "PDF",
       photoAlt: "Photo {{index}}",
-      surfaceRooms: "🏠 {{surface}} m² — {{count}} room",
-      surfaceRooms_other: "🏠 {{surface}} m² — {{count}} rooms",
-      scopePrefix: "🌍",
+      surfaceRooms: "{{surface}} m² — {{count}} room",
+      surfaceRooms_other: "{{surface}} m² — {{count}} rooms",
+      scopePrefix: "",
       regionId: "Region #{{id}}",
       countryId: "Country #{{id}}",
       typeUnknown: "Unknown type",
@@ -1581,16 +1581,16 @@ const en = {
     },
     badges: {
       master: "MASTER",
-      readOnly: "🔒 Read only",
+      readOnly: "Read only",
     },
     buttons: {
       hideForm: "Hide form",
-      showForm: "➕ New category",
+      showForm: "New category",
       refresh: "Refresh",
       cancel: "Cancel",
       saving: "Saving…",
-      update: "💾 Update",
-      create: "➕ Add",
+      update: "Update",
+      create: "Add",
     },
     form: {
       nameLabel: "Category name *",
@@ -1600,8 +1600,8 @@ const en = {
     },
     table: {
       emptyValue: "—",
-      edit: "✏️ Edit",
-      delete: "🗑 Delete",
+      edit: "Edit",
+      delete: "Delete",
     },
     errors: {
       sessionLoad: "Error loading session.",
@@ -1612,8 +1612,8 @@ const en = {
       delete: "Error deleting category.",
     },
     alerts: {
-      updated: "✅ Category updated.",
-      created: "✅ Category added.",
+      updated: "Category updated.",
+      created: "Category added.",
     },
   },
   adminMetricsPage: {
@@ -1669,9 +1669,9 @@ const en = {
       edit: "Edit",
       delete: "Delete",
       createCountry: "Create country →",
-      addRegion: "➕ Add region",
+      addRegion: "Add region",
       continue: "Continue →",
-      createMaster: "🎉 Create MASTER",
+      createMaster: "Create MASTER",
       backToRegions: "← Back to regions",
     },
     lists: {
@@ -1697,9 +1697,9 @@ const en = {
       countryFallback: "Country #{{id}}",
     },
     steps: {
-      step1: "1️⃣ Create a country",
-      step2: "2️⃣ Add regions (optional)",
-      step3: "3️⃣ Create the MASTER account",
+      step1: "1 Create a country",
+      step2: "2 Add regions (optional)",
+      step3: "3 Create the MASTER account",
     },
     placeholders: {
       countryName: "Country name",
@@ -1716,7 +1716,7 @@ const en = {
     },
     hints: {
       noRegionsForMaster:
-        "⚠️ No region created. Add at least one region in step 2, or switch back to \"MASTER for the country\".",
+        "No region created. Add at least one region in step 2, or switch back to \"MASTER for the country\".",
       countryForceDeleteAdminWarning:
         "Country force delete detaches non-admin users, but linked admin/master accounts must be reassigned or removed first.",
     },
@@ -1741,11 +1741,11 @@ const en = {
       masterCreate: "Error creating MASTER",
     },
     success: {
-      masterCreated: "✅ MASTER created successfully!",
+      masterCreated: "MASTER created successfully!",
     },
   },
   agentServicesPage: {
-    title: "🧑‍🔧 My Assigned Services",
+    title: "My Assigned Services",
     subtitle: "Services you are responsible for.",
     buttons: {
       refresh: "Refresh",
@@ -1767,16 +1767,16 @@ const en = {
       createdAt: "Created at:",
     },
     actions: {
-      start: "▶️ Start",
-      complete: "✅ Complete",
+      start: "Start",
+      complete: "Complete",
     },
     status: {
-      completed: "✅ Service completed — awaiting validation",
-      validated: "🏁 Service validated and closed",
+      completed: "Service completed — awaiting validation",
+      validated: "Service validated and closed",
     },
     errors: {
-      load: "Error loading assigned services ❌",
-      updateStatus: "Error updating status ❌",
+      load: "Error loading assigned services",
+      updateStatus: "Error updating status",
     },
   },
   changePasswordPage: {
@@ -1941,10 +1941,10 @@ const en = {
       empty: "No recent transactions",
     },
     roleBreakdown: {
-      clients: "👤 Clients",
-      agents: "🧑‍🔧 Agents",
-      admins: "👑 Admins",
-      others: "⚙️ Others / Internal adjustments",
+      clients: "Clients",
+      agents: "Agents",
+      admins: "Admins",
+      others: "Others / Internal adjustments",
       revenues: "Revenues: {{amount}} {{currency}}",
       expenses: "Expenses: {{amount}} {{currency}}",
       commissions: "Commissions: {{amount}} {{currency}}",
@@ -2055,7 +2055,7 @@ const en = {
     },
     footer: {
       copyright:
-        "© {{year}} <0>Teranga</0> — All rights reserved.",
+        "\u00A9 {{year}} <0>Teranga</0> — All rights reserved.",
       links: {
         home: "Home",
         services: "Services",
@@ -2392,13 +2392,13 @@ const en = {
     },
     alerts: {
       loginRequired: "You must be signed in to place an order.",
-      adminBlocked: "ℹ️ Administrators cannot place orders here.",
+      adminBlocked: "Administrators cannot place orders here.",
       invalidQuantity: "Please enter a valid quantity (at least 1).",
       outOfStock:
         "This product is currently out of stock. Please contact customer service for more information.",
       overStock:
         "The requested quantity ({{requested}}) exceeds available stock ({{available}}).\n\nPlease contact customer service to adjust your order or arrange a special order.",
-      orderSuccess: "✅ Order created for {{quantity}} × {{name}}",
+      orderSuccess: "Order created for {{quantity}} × {{name}}",
       orderError: "Error creating the order.",
     },
     order: {
@@ -3075,8 +3075,3 @@ const en = {
 };
 
 export default en;
-
-
-
-
-

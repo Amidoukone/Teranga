@@ -671,7 +671,7 @@ exports.create = async (req, res) => {
         });
       }
     } catch (err) {
-      logger.warn("⚠️ Notification preuve (create) échouée:", err?.message || err);
+      logger.warn("Notification preuve (create) échouée:", err?.message || err);
     }
 
     return res.status(createdIds.length ? 201 : 500).json(response);
@@ -682,7 +682,7 @@ exports.create = async (req, res) => {
           "Stockage des preuves indisponible en production. Configurez ImageKit ou un UPLOADS_ROOT persistant.",
       });
     }
-    logger.error("❌ Erreur create evidence:", e);
+    logger.error("Erreur create evidence:", e);
     return res.status(500).json({ error: "Erreur lors de l'ajout des preuves" });
   }
 };
@@ -745,7 +745,7 @@ exports.list = async (req, res) => {
 
     return res.json({ evidences: evidences.map(addLabels) });
   } catch (e) {
-    logger.error("❌ Erreur list evidences:", e);
+    logger.error("Erreur list evidences:", e);
     return res.status(500).json({
       error: "Erreur lors de la récupération des preuves",
     });
@@ -795,7 +795,7 @@ exports.listByTask = async (req, res) => {
 
     return res.json({ evidences: evidences.map(addLabels) });
   } catch (e) {
-    logger.error("❌ Erreur listByTask:", e);
+    logger.error("Erreur listByTask:", e);
     return res.status(500).json({
       error: "Erreur lors de la récupération des preuves",
     });
@@ -845,7 +845,7 @@ exports.listByOrder = async (req, res) => {
 
     return res.json({ evidences: evidences.map(addLabels) });
   } catch (e) {
-    logger.error("❌ Erreur listByOrder:", e);
+    logger.error("Erreur listByOrder:", e);
     return res.status(500).json({
       error: "Erreur lors de la récupération des preuves",
     });
@@ -945,7 +945,7 @@ exports.remove = async (req, res) => {
       try {
         await fs.promises.unlink(absolutePath);
       } catch (e) {
-        logger.warn("⚠️ Impossible de supprimer le fichier local:", e.message);
+        logger.warn("Impossible de supprimer le fichier local:", e.message);
       }
       }
     }
@@ -954,7 +954,7 @@ exports.remove = async (req, res) => {
 
     return res.json({ message: "Preuve supprimée avec succès" });
   } catch (e) {
-    logger.error("❌ Erreur remove evidence:", e);
+    logger.error("Erreur remove evidence:", e);
     return res.status(500).json({
       error: "Erreur lors de la suppression du fichier",
     });

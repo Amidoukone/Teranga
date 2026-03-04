@@ -513,7 +513,7 @@ exports.listByProject = async (req, res) => {
       documents: formatted,
     });
   } catch (e) {
-    logger.error("❌ Erreur list documents:", e);
+    logger.error("Erreur list documents:", e);
     return res
       .status(500)
       .json({ error: "Erreur lors de la récupération des documents" });
@@ -553,7 +553,7 @@ exports.remove = async (req, res) => {
       try {
         await imageKit.deleteFile(doc.fileId);
       } catch (e) {
-        logger.warn("⚠️ Suppression ImageKit impossible:", e.message);
+        logger.warn("Suppression ImageKit impossible:", e.message);
       }
     }
 
@@ -568,7 +568,7 @@ exports.remove = async (req, res) => {
       projectId: project.id,
     });
   } catch (e) {
-    logger.error("❌ Erreur suppression document:", e);
+    logger.error("Erreur suppression document:", e);
     return res
       .status(500)
       .json({ error: "Erreur lors de la suppression du document" });

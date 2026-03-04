@@ -886,7 +886,11 @@ function TaskList({
           <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
             {/* PREUVES */}
             <button
-              onClick={() => navigate(`/tasks/${task.id}/evidences`)}
+              onClick={() =>
+                navigate(`/tasks/${task.id}/evidences`, {
+                  state: { from: '/tasks' },
+                })
+              }
               className="
                 app-btn-primary w-full sm:w-auto px-4 py-2 text-sm sm:text-base
                 font-medium

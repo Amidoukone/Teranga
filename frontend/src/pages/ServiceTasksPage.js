@@ -4,7 +4,7 @@
 // ============================================================
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../services/api";
 import {
   applyLabels,
@@ -30,6 +30,7 @@ export default function ServiceTasksPage() {
   const { t } = useTranslation();
   const { id } = useParams(); // serviceId depuis URL
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [tasks, setTasks] = useState([]);
   const [agents, setAgents] = useState([]);
@@ -71,6 +72,19 @@ export default function ServiceTasksPage() {
   const isClient = role === "client";
   const isMaster = isMasterUser(user); // MASTER = admin scoped (UX tag)
   const canCreateTask = isClient || isAdmin;
+  const backFallbackPath = role === "agent" ? "/agent/services" : "/services";
+  const handleBack = useCallback(() => {
+    const from = location.state?.from;
+    if (
+      typeof from === "string" &&
+      from.startsWith("/") &&
+      from !== location.pathname
+    ) {
+      navigate(from);
+      return;
+    }
+    navigate(backFallbackPath);
+  }, [backFallbackPath, location.pathname, location.state?.from, navigate]);
   const serviceTitle = serviceInfo?.title?.trim() || "";
   const serviceTypeLabel =
     serviceInfo?.typeLabel ||
@@ -343,9 +357,10 @@ export default function ServiceTasksPage() {
               </button>
             )}
             <button
-              onClick={() => navigate(-1)}
+              onClick={handleBack}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
             >
+              <span aria-hidden="true">&lt;-</span>
               <span>{t("common.back")}</span>
             </button>
           </div>
@@ -609,6 +624,8 @@ export default function ServiceTasksPage() {
                 key={t.id}
                 task={t}
                 navigate={navigate}
+                serviceId={id}
+                fromPath={location.pathname}
  // Contexte: taches de service.
                 userRole={role}
                 isMaster={isMaster}
@@ -625,7 +642,7 @@ export default function ServiceTasksPage() {
    Contexte: taches liees au service.
    Roles admin/master et perimetre d'acces.
 =========================================================================== */
-function TaskCard({ task, navigate, userRole, isMaster }) {
+function TaskCard({ task, navigate, userRole, isMaster, serviceId, fromPath }) {
   const { t } = useTranslation();
   const { formatDateTime } = useLocale();
   const statusMeta =
@@ -669,6 +686,8 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
         task.assignee.email
       )
     : t("serviceTasksPage.details.unassigned");
+  const evidencesFromPath =
+    fromPath || (serviceId ? `/services/${serviceId}/tasks` : "/tasks");
 
   return (
     <div
@@ -778,7 +797,13 @@ function TaskCard({ task, navigate, userRole, isMaster }) {
       {/* Actions */}
       <div className="mt-5 sm:mt-6">
         <button
-          onClick={() => navigate(`/tasks/${task.id}/evidences`)}
+          onClick={() =>
+            navigate(`/tasks/${task.id}/evidences`, {
+              state: serviceId
+                ? { from: evidencesFromPath, serviceId }
+                : { from: evidencesFromPath },
+            })
+          }
           className="
             w-full sm:w-auto inline-flex items-center justify-center gap-1
             px-4 py-2 text-xs sm:text-sm font-semibold

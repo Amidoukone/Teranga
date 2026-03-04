@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   uploadEvidences,
   getEvidences,
@@ -200,6 +200,8 @@ export default function TaskEvidencesPage() {
   const { confirmDelete } = useDeleteConfirm();
   const { formatDateTime } = useLocale();
   const { id } = useParams(); // taskId
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [evidences, setEvidences] = useState([]);
   const [files, setFiles] = useState([]);
@@ -217,6 +219,29 @@ export default function TaskEvidencesPage() {
   });
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const backTarget = useMemo(() => {
+    const from = location.state?.from;
+    if (
+      typeof from === 'string' &&
+      from.startsWith('/') &&
+      from !== location.pathname
+    ) {
+      return from;
+    }
+    const serviceId = location.state?.serviceId;
+    if (
+      serviceId !== undefined &&
+      serviceId !== null &&
+      String(serviceId).trim()
+    ) {
+      return `/services/${serviceId}/tasks`;
+    }
+    return '/tasks';
+  }, [location.pathname, location.state?.from, location.state?.serviceId]);
+
+  const handleBack = useCallback(() => {
+    navigate(backTarget);
+  }, [backTarget, navigate]);
 
   // ========================================================================
  // Contexte: preuves de tache.
@@ -513,6 +538,13 @@ export default function TaskEvidencesPage() {
               {showForm
                 ? t('taskEvidencesPage.buttons.hideForm')
                 : t('taskEvidencesPage.buttons.showForm')}
+            </button>
+            <button
+              onClick={handleBack}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
+            >
+              <span aria-hidden="true">&lt;-</span>
+              <span>{t('common.back')}</span>
             </button>
           </div>
         </div>
@@ -1016,7 +1048,3 @@ export default function TaskEvidencesPage() {
     </div>
   );
 }
-
-
-
-

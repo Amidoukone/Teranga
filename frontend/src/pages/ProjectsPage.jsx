@@ -131,7 +131,7 @@ function StatusBadge({ value, label }) {
       className={`inline-flex items-center gap-1 ${s.bg} ${s.text} ${s.ring}
         ring-1 px-2.5 py-0.5 rounded-full text-xs font-medium`}
     >
-      ? {label || value}
+      {label || value}
     </span>
   );
 }

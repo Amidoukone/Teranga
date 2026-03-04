@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   cleanupActivities,
   deleteActivity,
@@ -88,6 +88,7 @@ export default function ActivityCenterPage() {
   const { t } = useTranslation();
   const { formatDate } = useLocale();
   const navigate = useNavigate();
+  const location = useLocation();
   const { confirmDelete } = useDeleteConfirm();
   const currentUserRole = useMemo(
     () => normalizeRole(getLocalUser()?.role),
@@ -569,7 +570,14 @@ export default function ActivityCenterPage() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <button
-                          onClick={() => navigate(resolveLink(n))}
+                          onClick={() => {
+                            const target = resolveLink(n);
+                            const options =
+                              n?.entityType === "evidence"
+                                ? { state: { from: location.pathname } }
+                                : undefined;
+                            navigate(target, options);
+                          }}
                           disabled={isDateRangeInvalid}
                           className={[
                             "rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm",

@@ -248,7 +248,7 @@ function frontendErrorHandler(req, res) {
   if (observabilityToken) {
     const headerToken = req.headers['x-observability-token'];
     if (!headerToken || headerToken !== observabilityToken) {
-      return res.status(403).json({ error: 'Acces interdit' });
+      return res.status(403).json({ error: 'Accès interdit' });
     }
   }
 

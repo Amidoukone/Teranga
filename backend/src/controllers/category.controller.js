@@ -117,7 +117,7 @@ exports.create = async (req, res) => {
 
     res.status(201).json({ category: withLabels(cat) });
   } catch (e) {
-    logger.error('❌ [Category] create:', e);
+    logger.error('[Category] create:', e);
     res.status(500).json({ error: 'Erreur lors de la création de la catégorie' });
   }
 };
@@ -163,7 +163,7 @@ exports.list = async (req, res) => {
       pagination: { page, limit, offset, total: count },
     });
   } catch (e) {
-    logger.error('❌ [Category] list:', e);
+    logger.error('[Category] list:', e);
     res.status(500).json({ error: 'Erreur lors de la récupération des catégories' });
   }
 };
@@ -201,7 +201,7 @@ exports.detail = async (req, res) => {
 
     res.json({ category: withLabels(cat) });
   } catch (e) {
-    logger.error('❌ [Category] detail:', e);
+    logger.error('[Category] detail:', e);
     res.status(500).json({ error: 'Erreur lors de la récupération de la catégorie' });
   }
 };
@@ -282,7 +282,7 @@ exports.update = async (req, res) => {
     await cat.save();
     res.json({ category: withLabels(cat) });
   } catch (e) {
-    logger.error('❌ [Category] update:', e);
+    logger.error('[Category] update:', e);
     res.status(500).json({ error: 'Erreur lors de la mise à jour de la catégorie' });
   }
 };
@@ -319,7 +319,7 @@ exports.remove = async (req, res) => {
     await cat.destroy();
     res.json({ message: 'Catégorie supprimée' });
   } catch (e) {
-    logger.error('❌ [Category] remove:', e);
+    logger.error('[Category] remove:', e);
     res.status(500).json({ error: 'Erreur lors de la suppression de la catégorie' });
   }
 };

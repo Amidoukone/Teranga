@@ -1,6 +1,6 @@
 // frontend/src/pages/ServiceTransactionsPage.jsx
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { me, getAuthHeader } from "../services/auth";
 import { getTransactions, createTransaction } from "../services/transactions";
 import api from "../services/api";
@@ -148,6 +148,7 @@ export default function ServiceTransactionsPage() {
   const { t } = useTranslation();
   const { id } = useParams(); // serviceId
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -351,7 +352,11 @@ export default function ServiceTransactionsPage() {
           </div>
 
           <button
-            onClick={() => navigate(`/services/${id}/tasks`)}
+            onClick={() =>
+              navigate(`/services/${id}/tasks`, {
+                state: { from: location.pathname },
+              })
+            }
             className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
           >
             {t("serviceTransactions.header.viewTasks")}

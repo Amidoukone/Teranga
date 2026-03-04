@@ -52,7 +52,7 @@ async function uploadToImageKit(folder, fileBuffer, fileName) {
       filePath: response.filePath // chemin interne chez ImageKit
     };
   } catch (err) {
-    logger.error("❌ ImageKit upload error:", err);
+    logger.error("ImageKit upload error:", err);
     return null;
   }
 }
@@ -68,7 +68,7 @@ async function deleteFromImageKit(fileId) {
     await imagekit.deleteFile(fileId);
     return true;
   } catch (err) {
-    logger.error("❌ ImageKit delete error:", err);
+    logger.error("ImageKit delete error:", err);
     return false;
   }
 }

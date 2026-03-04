@@ -1172,7 +1172,11 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
         "
       >
         <button
-          onClick={() => navigate(`/services/${s.id}/tasks`)}
+          onClick={() =>
+            navigate(`/services/${s.id}/tasks`, {
+              state: { from: '/services' },
+            })
+          }
           className="app-btn-primary w-full sm:w-auto"
         >
           {t("services.buttons.viewTasks")}

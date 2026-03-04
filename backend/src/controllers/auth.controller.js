@@ -41,7 +41,7 @@ const COOKIE_ACCESS = 'teranga_access';
 const COOKIE_REFRESH = 'teranga_refresh';
 const COOKIE_CSRF = 'teranga_csrf';
 const MANUAL_RESET_MESSAGE =
-  "Mot de passe oublie ? Contactez l'admin ou le master de votre pays/region pour reinitialiser. Ensuite, vous pourrez le modifier dans votre compte.";
+  "Mot de passe oublié ? Contactez l'admin ou le master de votre pays/région pour réinitialiser. Ensuite, vous pourrez le modifier dans votre compte.";
 
 /* ======================================================
    🔧 Helpers
@@ -551,7 +551,7 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: 'Email déjà utilisé' });
     }
 
-    logger.error('❌ Erreur register:', e);
+    logger.error('Erreur register:', e);
     return res.status(500).json({ error: "Erreur lors de l'inscription" });
   }
 };
@@ -586,7 +586,7 @@ exports.login = async (req, res) => {
     try {
       await user.update({ lastLogin: new Date() });
     } catch (errUpdate) {
-      logger.warn('⚠️ Impossible de mettre à jour lastLogin:', errUpdate.message);
+      logger.warn('Impossible de mettre à jour lastLogin:', errUpdate.message);
     }
 
     let token;
@@ -601,7 +601,7 @@ exports.login = async (req, res) => {
       language: user.language || 'fr',
       });
     } catch (jwtErr) {
-      logger.error('❌ Erreur signature JWT:', jwtErr.message);
+      logger.error('Erreur signature JWT:', jwtErr.message);
       return res.status(500).json({ error: 'Configuration serveur invalide (JWT)' });
     }
 
@@ -634,7 +634,7 @@ exports.login = async (req, res) => {
       },
     });
   } catch (e) {
-    logger.error('❌ Erreur login:', e);
+    logger.error('Erreur login:', e);
     return res.status(500).json({ error: 'Erreur lors de la connexion' });
   }
 };
@@ -674,7 +674,7 @@ exports.me = async (req, res) => {
 
     return res.json({ user });
   } catch (e) {
-    logger.error('❌ Erreur /auth/me:', e);
+    logger.error('Erreur /auth/me:', e);
     return res.status(500).json({ error: 'Erreur' });
   }
 };
@@ -686,7 +686,7 @@ exports.updateMe = async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({ error: 'Non authentifie' });
+      return res.status(401).json({ error: 'Non authentifié' });
     }
 
     const nextLanguage = normalizeLanguage(req.body?.language);
@@ -714,8 +714,8 @@ exports.updateMe = async (req, res) => {
       },
     });
   } catch (e) {
-    logger.error('❌ Erreur /auth/me PATCH:', e);
-    return res.status(500).json({ error: 'Erreur mise a jour profil' });
+    logger.error('Erreur /auth/me PATCH:', e);
+    return res.status(500).json({ error: 'Erreur lors de la mise à jour du profil' });
   }
 };
 
@@ -791,7 +791,7 @@ exports.refresh = async (req, res) => {
       csrfToken,
     });
   } catch (e) {
-    logger.error('❌ Erreur refresh:', e);
+    logger.error('Erreur refresh:', e);
     return res.status(500).json({ error: 'Erreur lors du refresh' });
   }
 };
@@ -836,7 +836,7 @@ exports.logout = async (req, res) => {
     clearAuthCookies(res);
     return res.json({ message: 'Déconnexion réussie' });
   } catch (e) {
-    logger.error('❌ Erreur logout:', e);
+    logger.error('Erreur logout:', e);
     return res.status(500).json({ error: 'Erreur lors de la déconnexion' });
   }
 };
@@ -876,7 +876,7 @@ exports.changePassword = async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({ error: 'Non authentifie' });
+      return res.status(401).json({ error: 'Non authentifié' });
     }
 
     const currentPassword = String(req.body?.currentPassword || '');
@@ -890,7 +890,7 @@ exports.changePassword = async (req, res) => {
 
     if (newPassword.length < 8) {
       return res.status(400).json({
-        error: 'Mot de passe trop court (minimum 8 caracteres)',
+        error: 'Mot de passe trop court (minimum 8 caractères)',
       });
     }
 
@@ -936,7 +936,6 @@ exports.changePassword = async (req, res) => {
       .json({ error: 'Erreur lors du changement de mot de passe' });
   }
 };
-
 
 
 

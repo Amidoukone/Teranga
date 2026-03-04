@@ -33,7 +33,7 @@ function isTrue(x) {
 exports.list = async (req, res) => {
   try {
     if (!req.user?.id) {
-      return res.status(401).json({ error: "Non authentifie" });
+      return res.status(401).json({ error: "Non authentifié" });
     }
 
     const { limit, offset, page } = getPagination(req, 20, 100);
@@ -79,7 +79,7 @@ exports.list = async (req, res) => {
   } catch (e) {
     logger.error({ err: e, userId: req.user?.id || null }, "list activities failed");
     return res.status(500).json({
-      error: "Erreur lors de la recuperation des activites",
+      error: "Erreur lors de la récupération des activités",
     });
   }
 };
@@ -87,7 +87,7 @@ exports.list = async (req, res) => {
 exports.removeOne = async (req, res) => {
   try {
     if (!req.user?.id) {
-      return res.status(401).json({ error: "Non authentifie" });
+      return res.status(401).json({ error: "Non authentifié" });
     }
 
     const id = toSafeInt(req.params?.id);
@@ -97,16 +97,16 @@ exports.removeOne = async (req, res) => {
       where: { id, userId: req.user.id },
     });
 
-    if (!count) return res.status(404).json({ error: "Activite introuvable" });
+    if (!count) return res.status(404).json({ error: "Activité introuvable" });
 
     return res.json({
-      message: "Activite supprimee du fil d'actualite",
+      message: "Activité supprimée du fil d'actualité",
       deleted: count,
     });
   } catch (e) {
     logger.error({ err: e, userId: req.user?.id || null }, "remove activity failed");
     return res.status(500).json({
-      error: "Erreur lors de la suppression de l'activite",
+      error: "Erreur lors de la suppression de l'activité",
     });
   }
 };
@@ -114,7 +114,7 @@ exports.removeOne = async (req, res) => {
 exports.cleanup = async (req, res) => {
   try {
     if (!req.user?.id) {
-      return res.status(401).json({ error: "Non authentifie" });
+      return res.status(401).json({ error: "Non authentifié" });
     }
 
     const entityType = toTrimOrNull(req.query?.entityType);
@@ -159,13 +159,13 @@ exports.cleanup = async (req, res) => {
     const deleted = await Activity.destroy({ where });
 
     return res.json({
-      message: "Nettoyage des activites termine",
+      message: "Nettoyage des activités terminé",
       deleted: deleted || 0,
     });
   } catch (e) {
     logger.error({ err: e, userId: req.user?.id || null }, "cleanup activities failed");
     return res.status(500).json({
-      error: "Erreur lors du nettoyage des activites",
+      error: "Erreur lors du nettoyage des activités",
     });
   }
 };

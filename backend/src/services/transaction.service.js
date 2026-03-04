@@ -384,7 +384,7 @@ async function canAccessTransaction(req, trx) {
 
     return false;
   } catch (e) {
-    logger.error('❌ canAccessTransaction error:', e);
+    logger.error('canAccessTransaction error:', e);
     return false;
   }
 }

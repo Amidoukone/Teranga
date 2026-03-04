@@ -379,7 +379,7 @@ const fr = {
       updateSuccess: "Service mis à jour avec succès !",
       updateError: "Erreur lors de la mise à jour du service.",
       deleteSuccess: "Service supprimé avec succès.",
-      deleteError: "Erreur lors de la suppression du service ❌",
+      deleteError: "Erreur lors de la suppression du service",
       noEditTarget: "Aucun service à modifier.",
     },
     status: {
@@ -1068,7 +1068,7 @@ const fr = {
       newProperty: "Nouveau bien",
     },
     filters: {
-      searchPlaceholder: "🔎 Rechercher (titre, ville, adresse...)",
+      searchPlaceholder: "Rechercher (titre, ville, adresse...)",
       typeAll: "Type (tous)",
       statusAll: "Statut (tous)",
       cityPlaceholder: "Ville",
@@ -1161,12 +1161,12 @@ const fr = {
       empty: "Aucun bien correspondant aux critères.",
       status: "Statut : {{status}}",
       noDescription: "Aucune description.",
-      surfaceRooms: "🏠 {{surface}} — {{count}} pièce",
-      surfaceRooms_other: "🏠 {{surface}} — {{count}} pièces",
+      surfaceRooms: "{{surface}} — {{count}} pièce",
+      surfaceRooms_other: "{{surface}} — {{count}} pièces",
       createdAt: "Créé le {{date}}",
       edit: "Modifier",
       delete: "Supprimer",
-      locked: "⏰ Modifications verrouillées (délai dépassé).",
+      locked: "Modifications verrouillées (délai dépassé).",
       openPdf: "Ouvrir le PDF dans un nouvel onglet",
       zoomHint: "Cliquer pour agrandir",
       pdfLabel: "PDF",
@@ -1203,13 +1203,13 @@ const fr = {
     empty: "Aucun utilisateur.",
     buttons: {
       hideForm: "Masquer le formulaire",
-      showForm: "➕ Créer utilisateur",
-      refresh: "🔄 Rafraîchir",
+      showForm: "Créer utilisateur",
+      refresh: "Rafraîchir",
       reset: "Réinitialiser",
       cancel: "Annuler",
-      update: "💾 Mettre à jour",
-      create: "➕ Créer",
-      resetPassword: "🔐 Reset mot de passe",
+      update: "Mettre à jour",
+      create: "Créer",
+      resetPassword: "Reset mot de passe",
     },
     badges: {
       master: "MASTER",
@@ -1276,22 +1276,22 @@ const fr = {
       regionsLoading: "Chargement des régions...",
       masterCountryOption: "— MASTER pays (toutes régions) —",
       masterHint:
-        "ℹ️ Pour créer un MASTER, sélectionne un pays (MASTER pays) ou un pays + une région (MASTER régional). Laisser vide = admin global.",
+        "Pour créer un MASTER, sélectionne un pays (MASTER pays) ou un pays + une région (MASTER régional). Laisser vide = admin global.",
     },
     alerts: {
       masterCannotPromote:
-        "⛔ Un ADMIN MASTER ne peut pas créer ou promouvoir un compte admin.",
+        "Un ADMIN MASTER ne peut pas créer ou promouvoir un compte admin.",
       passwordRequired: "Mot de passe requis à la création.",
-      updated: "✅ Utilisateur mis à jour",
-      created: "✅ Utilisateur créé",
-      deleted: "✅ Utilisateur supprimé",
+      updated: "Utilisateur mis à jour",
+      created: "Utilisateur créé",
+      deleted: "Utilisateur supprimé",
       submitError: "Erreur lors de la soumission",
-      masterCannotEdit: "⛔ Impossible de modifier un admin en tant que MASTER.",
-      masterCannotDelete: "⛔ Impossible de supprimer un admin en tant que MASTER.",
+      masterCannotEdit: "Impossible de modifier un admin en tant que MASTER.",
+      masterCannotDelete: "Impossible de supprimer un admin en tant que MASTER.",
       masterCannotResetAdmin:
-        "⛔ Impossible de réinitialiser un admin en tant que MASTER.",
+        "Impossible de réinitialiser un admin en tant que MASTER.",
       resetSuccess:
-        "✅ Mot de passe réinitialisé. Communiquez le nouveau mot de passe par canal sécurisé.",
+        "Mot de passe réinitialisé. Communiquez le nouveau mot de passe par canal sécurisé.",
       resetPasswordMin: "Le mot de passe doit contenir au moins 8 caractères.",
       resetPasswordMismatch: "Les mots de passe ne correspondent pas.",
       resetAuditError: "Impossible de charger l'historique des réinitialisations.",
@@ -1331,7 +1331,7 @@ const fr = {
     },
   },
   adminAgentsPage: {
-    title: "👤 Gestion des agents",
+    title: "Gestion des agents",
     loading: "Chargement…",
     loadingAgents: "Chargement des agents…",
     labels: {
@@ -1342,8 +1342,8 @@ const fr = {
     },
     buttons: {
       hideForm: "Masquer le formulaire",
-      showForm: "➕ Ajouter",
-      refresh: "🔄 Rafraîchir",
+      showForm: "Ajouter",
+      refresh: "Rafraîchir",
       reset: "Réinitialiser",
       creating: "Création…",
       createAgent: "Créer Agent",
@@ -1374,7 +1374,7 @@ const fr = {
       countryInvalid: "Code pays ISO2 requis (ex: ML, FR)",
     },
     alerts: {
-      createSuccess: "✅ Agent créé avec succès",
+      createSuccess: "Agent créé avec succès",
       createError: "Erreur lors de la création",
     },
     count: "{{count}} agent",
@@ -1388,7 +1388,7 @@ const fr = {
       countryLabel: "Pays (ISO2) *",
     },
     table: {
-      title: "📋 Liste des agents",
+      title: "Liste des agents",
       empty: "Aucun agent trouvé.",
       headers: {
         name: "Nom",
@@ -1403,7 +1403,7 @@ const fr = {
     },
   },
   adminServicesPage: {
-    title: "🧩 Gestion des services",
+    title: "Gestion des services",
     subtitle:
       "Vue administrateur pour suivre, filtrer et assigner les services aux agents.",
     loading: "Chargement…",
@@ -1419,7 +1419,7 @@ const fr = {
       globalAccess: "Accès global",
     },
     buttons: {
-      refresh: "🔄 Rafraîchir la liste",
+      refresh: "Rafraîchir la liste",
       resetFilters: "Réinitialiser les filtres",
     },
     filters: {
@@ -1435,7 +1435,7 @@ const fr = {
     loadedCount: "{{count}} service chargé pour cette page",
     loadedCount_other: "{{count}} services chargés pour cette page",
     alerts: {
-      assignError: "Erreur lors de l’assignation ❌",
+      assignError: "Erreur lors de l’assignation",
     },
     table: {
       headers: {
@@ -1464,7 +1464,7 @@ const fr = {
     },
   },
   adminPropertiesPage: {
-    title: "🏡 Gestion des biens",
+    title: "Gestion des biens",
     subtitle:
       "Admin/Master — création, édition et suivi des biens immobiliers des clients.",
     loading: "Chargement des biens…",
@@ -1472,16 +1472,16 @@ const fr = {
     labels: {
       selectedClient: "Client sélectionné :",
       masterNote:
-        "🌍 Mode Master : la liste et les actions sont automatiquement limitées au scope pays/région côté backend.",
+        "Mode Master : la liste et les actions sont automatiquement limitées au scope pays/région côté backend.",
     },
     buttons: {
-      refresh: "🔄 Rafraîchir la liste",
-      addProperty: "➕ Ajouter un bien",
+      refresh: "Rafraîchir la liste",
+      addProperty: "Ajouter un bien",
       cancel: "Annuler",
-      save: "💾 Enregistrer",
-      create: "➕ Créer",
-      edit: "✏️ Modifier",
-      delete: "❌ Supprimer",
+      save: "Enregistrer",
+      create: "Créer",
+      edit: "Modifier",
+      delete: "Supprimer",
     },
     alerts: {
       selectClient: "Veuillez sélectionner un client.",
@@ -1498,7 +1498,7 @@ const fr = {
         "Ce bien a déjà atteint la limite de {{max}} fichiers.",
     },
     client: {
-      title: "👤 Sélectionner un client",
+      title: "Sélectionner un client",
       badge: "{{count}} bien pour ce client",
       badge_other: "{{count}} biens pour ce client",
       searchLabel: "Recherche client",
@@ -1507,8 +1507,8 @@ const fr = {
       selectPlaceholder: "— Choisir un client —",
     },
     form: {
-      titleCreate: "➕ Nouveau bien",
-      titleEdit: "✏️ Modifier le bien #{{id}}",
+      titleCreate: "Nouveau bien",
+      titleEdit: "Modifier le bien #{{id}}",
       requiredNote: "Les champs marqués d’un * sont obligatoires.",
       labels: {
         title: "Titre *",
@@ -1554,11 +1554,11 @@ const fr = {
     list: {
       count: "{{count}} bien affiché",
       count_other: "{{count}} biens affichés",
-      pdfLabel: "📄 PDF",
+      pdfLabel: "PDF",
       photoAlt: "Photo {{index}}",
-      surfaceRooms: "🏠 {{surface}} m² — {{count}} pièce",
-      surfaceRooms_other: "🏠 {{surface}} m² — {{count}} pièces",
-      scopePrefix: "🌍",
+      surfaceRooms: "{{surface}} m² — {{count}} pièce",
+      surfaceRooms_other: "{{surface}} m² — {{count}} pièces",
+      scopePrefix: "",
       regionId: "Région #{{id}}",
       countryId: "Pays #{{id}}",
       typeUnknown: "Type inconnu",
@@ -1585,16 +1585,16 @@ const fr = {
     },
     badges: {
       master: "MASTER",
-      readOnly: "🔒 Lecture seule",
+      readOnly: "Lecture seule",
     },
     buttons: {
       hideForm: "Masquer le formulaire",
-      showForm: "➕ Nouvelle catégorie",
-      refresh: "🔄 Rafraîchir",
+      showForm: "Nouvelle catégorie",
+      refresh: "Rafraîchir",
       cancel: "Annuler",
       saving: "Enregistrement…",
-      update: "💾 Mettre à jour",
-      create: "➕ Ajouter",
+      update: "Mettre à jour",
+      create: "Ajouter",
     },
     form: {
       nameLabel: "Nom de la catégorie *",
@@ -1604,8 +1604,8 @@ const fr = {
     },
     table: {
       emptyValue: "—",
-      edit: "✏️ Modifier",
-      delete: "🗑 Supprimer",
+      edit: "Modifier",
+      delete: "Supprimer",
     },
     errors: {
       sessionLoad: "Erreur lors du chargement de la session.",
@@ -1616,8 +1616,8 @@ const fr = {
       delete: "Erreur lors de la suppression.",
     },
     alerts: {
-      updated: "✅ Catégorie mise à jour.",
-      created: "✅ Catégorie ajoutée.",
+      updated: "Catégorie mise à jour.",
+      created: "Catégorie ajoutée.",
     },
   },
   adminMetricsPage: {
@@ -1673,9 +1673,9 @@ const fr = {
       edit: "Modifier",
       delete: "Supprimer",
       createCountry: "Créer le pays →",
-      addRegion: "➕ Ajouter région",
+      addRegion: "Ajouter région",
       continue: "Continuer →",
-      createMaster: "🎉 Créer le MASTER",
+      createMaster: "Créer le MASTER",
       backToRegions: "← Retour aux régions",
     },
     lists: {
@@ -1701,9 +1701,9 @@ const fr = {
       countryFallback: "Pays #{{id}}",
     },
     steps: {
-      step1: "1️⃣ Créer un pays",
-      step2: "2️⃣ Ajouter des régions (optionnel)",
-      step3: "3️⃣ Créer le compte MASTER",
+      step1: "1 Créer un pays",
+      step2: "2 Ajouter des régions (optionnel)",
+      step3: "3 Créer le compte MASTER",
     },
     placeholders: {
       countryName: "Nom du pays",
@@ -1720,7 +1720,7 @@ const fr = {
     },
     hints: {
       noRegionsForMaster:
-        "⚠️ Aucune région créée. Ajoute au moins une région à l’étape 2, ou repasse en \\\"MASTER du pays\\\".",
+        "Aucune région créée. Ajoute au moins une région à l’étape 2, ou repasse en \\\"MASTER du pays\\\".",
       countryForceDeleteAdminWarning:
         "Suppression forcee d un pays: les utilisateurs non-admin seront detaches, mais les comptes admin/master lies au pays doivent etre reassignes ou supprimes avant la suppression.",
     },
@@ -1748,14 +1748,14 @@ const fr = {
       masterCreate: "Erreur création MASTER",
     },
     success: {
-      masterCreated: "✅ MASTER créé avec succès !",
+      masterCreated: "MASTER créé avec succès !",
     },
   },
   agentServicesPage: {
-    title: "🧑‍🔧 Mes Services assignés",
+    title: "Mes Services assignés",
     subtitle: "Les services pour lesquels vous êtes responsable.",
     buttons: {
-      refresh: "🔄 Rafraîchir",
+      refresh: "Rafraîchir",
     },
     loading: {
       refresh: "Chargement…",
@@ -1774,16 +1774,16 @@ const fr = {
       createdAt: "Date création :",
     },
     actions: {
-      start: "▶️ Démarrer",
-      complete: "✅ Terminer",
+      start: "Démarrer",
+      complete: "Terminer",
     },
     status: {
-      completed: "✅ Service terminé — en attente de validation",
-      validated: "🏁 Service validé et clôturé",
+      completed: "Service terminé — en attente de validation",
+      validated: "Service validé et clôturé",
     },
     errors: {
-      load: "Erreur lors du chargement des services assignés ❌",
-      updateStatus: "Erreur lors de la mise à jour du statut ❌",
+      load: "Erreur lors du chargement des services assignés",
+      updateStatus: "Erreur lors de la mise à jour du statut",
     },
   },
   changePasswordPage: {
@@ -1948,10 +1948,10 @@ const fr = {
       empty: "Aucune transaction récente",
     },
     roleBreakdown: {
-      clients: "👤 Clients",
-      agents: "🧑‍🔧 Agents",
-      admins: "👑 Admins",
-      others: "⚙️ Autres / Ajustements internes",
+      clients: "Clients",
+      agents: "Agents",
+      admins: "Admins",
+      others: "Autres / Ajustements internes",
       revenues: "Revenus : {{amount}} {{currency}}",
       expenses: "Dépenses : {{amount}} {{currency}}",
       commissions: "Commissions : {{amount}} {{currency}}",
@@ -2403,13 +2403,13 @@ const fr = {
     },
     alerts: {
       loginRequired: "Vous devez être connecté pour commander.",
-      adminBlocked: "ℹ️ Les administrateurs ne passent pas de commandes ici.",
+      adminBlocked: "Les administrateurs ne passent pas de commandes ici.",
       invalidQuantity: "Veuillez saisir une quantité valide (au moins 1).",
       outOfStock:
         "Ce produit est actuellement en rupture de stock. Merci de contacter le service client pour plus d'informations.",
       overStock:
         "La quantité demandée ({{requested}}) dépasse le stock disponible ({{available}}).\\n\\nMerci de contacter le service client pour ajuster votre commande ou organiser une commande spéciale.",
-      orderSuccess: "✅ Commande créée pour {{quantity}} × {{name}}",
+      orderSuccess: "Commande créée pour {{quantity}} × {{name}}",
       orderError: "Erreur lors de la création de la commande.",
     },
     order: {
@@ -3088,5 +3088,3 @@ const fr = {
 };
 
 export default fr;
-
-

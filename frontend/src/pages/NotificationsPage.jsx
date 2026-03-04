@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   cleanupNotifications,
   deleteNotification,
@@ -28,6 +28,7 @@ export default function NotificationsPage() {
   const { t } = useTranslation();
   const { formatDate } = useLocale();
   const navigate = useNavigate();
+  const location = useLocation();
   const { confirmDelete } = useDeleteConfirm();
   const currentUserRole = useMemo(
     () => normalizeRole(getLocalUser()?.role),
@@ -523,7 +524,14 @@ export default function NotificationsPage() {
                 <div className="flex w-full flex-col gap-2 sm:w-auto">
                   <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-end">
                     <button
-                      onClick={() => navigate(resolveLink(n))}
+                      onClick={() => {
+                        const target = resolveLink(n);
+                        const options =
+                          n?.entityType === "evidence"
+                            ? { state: { from: location.pathname } }
+                            : undefined;
+                        navigate(target, options);
+                      }}
                       className="app-btn-primary"
                     >
                       {t("notifications.view")}

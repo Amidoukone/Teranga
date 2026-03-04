@@ -73,7 +73,7 @@ exports.list = async (req, res) => {
 
     return res.json({ franchises: rows });
   } catch (e) {
-    logger.error('❌ list franchises:', e);
+    logger.error('list franchises:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la récupération des franchises' });
@@ -153,7 +153,7 @@ exports.listMasterCountries = async (req, res) => {
 
     return res.json({ countries: Array.from(uniqueByIso.values()) });
   } catch (e) {
-    logger.error('❌ list master countries:', e);
+    logger.error('list master countries:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la récupération des pays disponibles' });
@@ -268,7 +268,7 @@ exports.create = async (req, res) => {
 
     return res.status(201).json({ franchise: withIncludes || created });
   } catch (e) {
-    logger.error('❌ create franchise:', e);
+    logger.error('create franchise:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la création de la franchise' });
@@ -373,7 +373,7 @@ exports.update = async (req, res) => {
 
     return res.json({ franchise: withIncludes || franchise });
   } catch (e) {
-    logger.error('❌ update franchise:', e);
+    logger.error('update franchise:', e);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la mise à jour de la franchise' });

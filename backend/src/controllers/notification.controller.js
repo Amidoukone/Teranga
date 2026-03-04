@@ -76,7 +76,7 @@ exports.list = async (req, res) => {
       pagination: { page, limit, offset, total: count, count },
     });
   } catch (e) {
-    logger.error("❌ list notifications:", e);
+    logger.error("list notifications:", e);
     return res.status(500).json({
       error: "Erreur lors de la récupération des notifications",
     });
@@ -92,7 +92,7 @@ exports.summary = async (req, res) => {
     const data = await getNotificationSummary(req.user.id);
     return res.json(data);
   } catch (e) {
-    logger.error("❌ notifications summary:", e);
+    logger.error("notifications summary:", e);
     return res.status(500).json({
       error: "Erreur lors du chargement des indicateurs",
     });
@@ -123,7 +123,7 @@ exports.markRead = async (req, res) => {
       notification: notif.toJSON ? notif.toJSON() : notif,
     });
   } catch (e) {
-    logger.error("❌ markRead notification:", e);
+    logger.error("markRead notification:", e);
     return res.status(500).json({
       error: "Erreur lors de la mise à jour de la notification",
     });
@@ -146,7 +146,7 @@ exports.markAllRead = async (req, res) => {
       updated: count || 0,
     });
   } catch (e) {
-    logger.error("❌ markAllRead notification:", e);
+    logger.error("markAllRead notification:", e);
     return res.status(500).json({
       error: "Erreur lors de la mise à jour des notifications",
     });
@@ -156,7 +156,7 @@ exports.markAllRead = async (req, res) => {
 exports.removeOne = async (req, res) => {
   try {
     if (!req.user?.id) {
-      return res.status(401).json({ error: "Non authentifie" });
+      return res.status(401).json({ error: "Non authentifié" });
     }
 
     const id = toSafeInt(req.params?.id);
@@ -171,7 +171,7 @@ exports.removeOne = async (req, res) => {
     }
 
     return res.json({
-      message: "Notification supprimee du fil d'actualite",
+      message: "Notification supprimée du fil d'actualité",
       deleted: count,
     });
   } catch (e) {
@@ -185,7 +185,7 @@ exports.removeOne = async (req, res) => {
 exports.cleanup = async (req, res) => {
   try {
     if (!req.user?.id) {
-      return res.status(401).json({ error: "Non authentifie" });
+      return res.status(401).json({ error: "Non authentifié" });
     }
 
     const status = toTrimOrNull(req.query?.status);
