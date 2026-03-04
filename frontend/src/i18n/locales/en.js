@@ -176,6 +176,7 @@ const en = {
         projectDocument: "this document",
         projectPhase: "this phase",
         user: "this user",
+        order: "this order",
         orderItem: "this item",
         product: "this product",
         country: "this country",
@@ -668,6 +669,8 @@ const en = {
       refreshLoading: "Loading…",
       openOrder: "Open order",
       viewTransactions: "Transactions",
+      delete: "Delete",
+      deleting: "Deleting...",
     },
     filters: {
       searchLabel: "Search",
@@ -717,6 +720,8 @@ const en = {
       loadError: "Error loading orders.",
       createSuccess: "Order created successfully.",
       createError: "Error creating order.",
+      deleteSuccess: "Order deleted successfully.",
+      deleteError: "Error deleting the order.",
     },
     status: {
       created: "Created",

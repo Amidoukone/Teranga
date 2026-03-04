@@ -37,7 +37,7 @@ router.put(
   validateBody(updateOrderSchema),
   ctrl.update
 );
-router.delete('/:id', auth, requireRoles('admin', 'client'), writeLimiter, ctrl.remove);
+router.delete('/:id', auth, requireRoles('admin'), writeLimiter, ctrl.remove);
 
 /* =====================================================================
    🧩 Routes imbriquées — Items de commande

@@ -785,15 +785,10 @@ exports.remove = async (req, res) => {
       return res.status(404).json({ error: 'Commande introuvable.' });
     }
 
-    if (req.user.role === 'client') {
-      if (
-        order.userId !== req.user.id ||
-        !['created', 'processing'].includes(order.status)
-      ) {
-        return res.status(403).json({ error: 'Suppression non autorisée.' });
-      }
-    } else if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Suppression non autorisée.' });
+    if (!isGlobalAdmin(req.user)) {
+      return res
+        .status(403)
+        .json({ error: 'Action réservée à un administrateur global.' });
     }
 
     const hasDelivered = (order.items || []).some((it) =>

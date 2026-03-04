@@ -178,6 +178,7 @@ const fr = {
         projectDocument: "ce document",
         projectPhase: "cette phase",
         user: "cet utilisateur",
+        order: "cette commande",
         orderItem: "cet article",
         product: "ce produit",
         country: "ce pays",
@@ -670,6 +671,8 @@ const fr = {
       refreshLoading: "Chargement…",
       openOrder: "Ouvrir la commande",
       viewTransactions: "Transactions",
+      delete: "Supprimer",
+      deleting: "Suppression...",
     },
     filters: {
       searchLabel: "Rechercher",
@@ -719,6 +722,8 @@ const fr = {
       loadError: "Erreur lors du chargement des commandes.",
       createSuccess: "Commande créée avec succès.",
       createError: "Erreur lors de la création de la commande.",
+      deleteSuccess: "Commande supprimée avec succès.",
+      deleteError: "Erreur lors de la suppression de la commande.",
     },
     status: {
       created: "Créée",

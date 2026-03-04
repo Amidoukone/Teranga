@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getOrders, createOrder } from '../services/orders';
+import { getOrders, createOrder, deleteOrder } from '../services/orders';
 import { getProducts } from '../services/products';
 import { getCountries } from '../services/countries';
 import { getRegions } from '../services/regions';
@@ -16,6 +16,7 @@ import {
   canonicalizeOrderStatus,
   canonicalizePaymentStatus,
 } from '../utils/labels';
+import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 import { isGlobalAdminUser } from '../utils/role';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
@@ -84,11 +85,13 @@ function toDecimal(value) {
 export default function OrdersPage() {
   const { formatNumber, formatDateTime } = useLocale();
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   const [user, setUser] = useState(null);
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [deletingIds, setDeletingIds] = useState({});
 
   const isGlobalAdmin = isGlobalAdminUser(user);
   const [countries, setCountries] = useState([]);
@@ -358,6 +361,42 @@ export default function OrdersPage() {
       );
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleDeleteOrder(orderId) {
+    if (!isGlobalAdmin) return;
+    if (!orderId || deletingIds[orderId]) return;
+
+    const confirmed = await confirmDelete('order');
+    if (!confirmed) return;
+
+    setDeletingIds((prev) => ({ ...prev, [orderId]: true }));
+
+    try {
+      await deleteOrder(orderId);
+      setOrders((prev) => prev.filter((item) => String(item.id) !== String(orderId)));
+      setPagination((prev) => {
+        const currentTotal = Number(prev?.total ?? 0);
+        return {
+          ...(prev || {}),
+          total: Math.max(0, currentTotal - 1),
+        };
+      });
+      notify(t("orders.alerts.deleteSuccess"));
+    } catch (err) {
+      console.error('OrdersPage delete order error:', err);
+      notify(
+        err?.response?.data?.error ||
+          err?.message ||
+          t("orders.alerts.deleteError")
+      );
+    } finally {
+      setDeletingIds((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
     }
   }
 
@@ -842,6 +881,19 @@ export default function OrdersPage() {
                       >
                         {t("orders.buttons.viewTransactions")}
                       </Link>
+
+                      {isGlobalAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteOrder(o.id)}
+                          disabled={Boolean(deletingIds[o.id])}
+                          className="app-btn-danger w-full text-center sm:w-auto disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {deletingIds[o.id]
+                            ? t("orders.buttons.deleting")
+                            : t("orders.buttons.delete")}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
