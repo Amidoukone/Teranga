@@ -865,6 +865,8 @@ const en = {
       invalidAmount: "Invalid amount.",
       createSuccess: "Transaction added",
       createError: "Error while adding.",
+      deleteSuccess: "Transaction deleted.",
+      deleteError: "Error deleting the transaction.",
     },
     filters: {
       searchPlaceholder:
@@ -907,6 +909,8 @@ const en = {
       proofFormat: "Format: {{ext}}",
       enteredBy: "Entered by",
       viewAttachment: "View attachment",
+      delete: "Delete",
+      deleting: "Deleting...",
     },
   },
   transactionsPage: {

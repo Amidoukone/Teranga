@@ -11,6 +11,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   getOrderTransactions,
   createOrderTransaction,
+  deleteTransaction,
 } from '../services/transactions';
 import { me } from '../services/auth';
 import { getCountries } from '../services/countries';
@@ -22,6 +23,7 @@ import {
   TRANSACTION_STATUSES,
 } from '../utils/labels';
 import { isGlobalAdminUser } from '../utils/role';
+import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
@@ -135,6 +137,7 @@ function getProofExtLabel(pf, proofHref = '', fallback = 'FILE') {
 export default function OrderTransactionsPage() {
   const { formatNumber, formatDate, formatTime } = useLocale();
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   const { id } = useParams(); // orderId
   const navigate = useNavigate();
 
@@ -146,6 +149,7 @@ export default function OrderTransactionsPage() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false); // chargement liste
   const [creating, setCreating] = useState(false); // Etat creation (verrou formulaire).
+  const [deletingIds, setDeletingIds] = useState({});
 
   // UI
   const [showForm, setShowForm] = useState(() => {
@@ -338,6 +342,37 @@ export default function OrderTransactionsPage() {
     }
   }
 
+  async function handleDeleteTransaction(transactionId) {
+    if (!isGlobalAdmin) return;
+    if (!transactionId || deletingIds[transactionId]) return;
+
+    const confirmed = await confirmDelete('transaction');
+    if (!confirmed) return;
+
+    setDeletingIds((prev) => ({ ...prev, [transactionId]: true }));
+
+    try {
+      await deleteTransaction(transactionId);
+      setTransactions((prev) =>
+        prev.filter((item) => String(item.id) !== String(transactionId))
+      );
+      notify(t('orderTransactions.alerts.deleteSuccess'));
+    } catch (err) {
+      console.error("OrderTransactionsPage delete transaction error:", err);
+      notify(
+        err?.response?.data?.error ||
+          err?.message ||
+          t("orderTransactions.alerts.deleteError")
+      );
+    } finally {
+      setDeletingIds((prev) => {
+        const next = { ...prev };
+        delete next[transactionId];
+        return next;
+      });
+    }
+  }
+
   function resetForm() {
     setForm({
       type: 'revenue',
@@ -521,6 +556,9 @@ export default function OrderTransactionsPage() {
           formatNumber={formatNumber}
           formatDate={formatDate}
           formatTime={formatTime}
+          canDelete={isGlobalAdmin}
+          deletingIds={deletingIds}
+          onDelete={handleDeleteTransaction}
         />
       </div>
     </div>
@@ -749,6 +787,9 @@ function TransactionList({
   formatNumber,
   formatDate,
   formatTime,
+  canDelete,
+  deletingIds,
+  onDelete,
 }) {
   const { t } = useTranslation();
   if (loading) {
@@ -943,21 +984,37 @@ function TransactionList({
 
             {/* Footer carte */}
 
-            <div className="mt-3 flex flex-col sm:flex-row justify-between text-sm gap-1 sm:gap-0">
+            <div className="mt-3 flex flex-col sm:flex-row justify-between text-sm gap-2 sm:gap-0">
               <div className="text-xs text-text-muted">
                 {t("orderTransactions.list.enteredBy")}{' '}
                 <strong>{userDisplay}</strong>
               </div>
 
-              {proofHref && (
-                <a
-                  href={proofHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
-                >                  {t("orderTransactions.list.viewAttachment")}
-                </a>
-              )}
+              <div className="flex items-center gap-2 sm:justify-end">
+                {proofHref && (
+                  <a
+                    href={proofHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    {t("orderTransactions.list.viewAttachment")}
+                  </a>
+                )}
+
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete?.(tx.id)}
+                    disabled={Boolean(deletingIds?.[tx.id])}
+                    className="app-btn-danger px-3 py-1.5 text-xs font-medium rounded-lg disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {deletingIds?.[tx.id]
+                      ? t("orderTransactions.list.deleting")
+                      : t("orderTransactions.list.delete")}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         );

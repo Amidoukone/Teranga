@@ -868,6 +868,8 @@ const fr = {
       invalidAmount: "Montant invalide.",
       createSuccess: "Transaction ajoutée",
       createError: "Erreur lors de l'ajout.",
+      deleteSuccess: "Transaction supprimée.",
+      deleteError: "Erreur lors de la suppression de la transaction.",
     },
     filters: {
       searchPlaceholder:
@@ -910,6 +912,8 @@ const fr = {
       proofFormat: "Format : {{ext}}",
       enteredBy: "Saisie par",
       viewAttachment: "Voir la pièce jointe",
+      delete: "Supprimer",
+      deleting: "Suppression...",
     },
   },
   transactionsPage: {
