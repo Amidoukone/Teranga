@@ -7,7 +7,11 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-import { getTransactions, createTransaction } from '../services/transactions';
+import {
+  getTransactions,
+  createTransaction,
+  deleteTransaction,
+} from '../services/transactions';
 import { me } from '../services/auth';
 import {
   getMyServices,
@@ -16,6 +20,8 @@ import {
 } from '../services/services';
 import api from '../services/api';
 import { useLocale } from '../i18n/useLocale';
+import { isGlobalAdminUser } from '../utils/role';
+import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 import { notify } from '../utils/notify';
 
 import {
@@ -126,6 +132,7 @@ function getProofExtLabel(pf, proofHref = '', fallback = 'FILE') {
 export default function TransactionsPage() {
   const { formatNumber, formatDate } = useLocale();
   const { t } = useTranslation();
+  const { confirmDelete } = useDeleteConfirm();
   const tRef = useRef(t);
   const [user, setUser] = useState(null);
   const debug =
@@ -145,8 +152,10 @@ export default function TransactionsPage() {
 
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [deletingIds, setDeletingIds] = useState({});
   const [booting, setBooting] = useState(true);
   const [bootError, setBootError] = useState('');
+  const canDeleteTransactions = isGlobalAdminUser(user);
 
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_transactions_showForm');
@@ -405,6 +414,37 @@ export default function TransactionsPage() {
       );
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleDeleteTransaction(transactionId) {
+    if (!canDeleteTransactions) return;
+    if (!transactionId || deletingIds[transactionId]) return;
+
+    const confirmed = await confirmDelete('transaction');
+    if (!confirmed) return;
+
+    setDeletingIds((prev) => ({ ...prev, [transactionId]: true }));
+
+    try {
+      await deleteTransaction(transactionId);
+      setTransactions((prev) =>
+        prev.filter((item) => String(item.id) !== String(transactionId))
+      );
+      notify(tRef.current('transactionsPage.alerts.deleteSuccess'));
+    } catch (e) {
+      console.error('TransactionsPage delete transaction error:', e);
+      notify(
+        e?.response?.data?.error ||
+          e?.message ||
+          tRef.current('transactionsPage.alerts.deleteError')
+      );
+    } finally {
+      setDeletingIds((prev) => {
+        const next = { ...prev };
+        delete next[transactionId];
+        return next;
+      });
     }
   }
 
@@ -668,6 +708,9 @@ export default function TransactionsPage() {
           getUserDisplayName={getUserDisplayName}
           formatNumber={formatNumber}
           formatDate={formatDate}
+          canDelete={canDeleteTransactions}
+          deletingIds={deletingIds}
+          onDelete={handleDeleteTransaction}
         />
 
         {filtered.length > 0 && (
@@ -958,6 +1001,9 @@ function TransactionList({
   getUserDisplayName,
   formatNumber,
   formatDate,
+  canDelete,
+  deletingIds,
+  onDelete,
 }) {
   const { t } = useTranslation();
 
@@ -1122,6 +1168,21 @@ function TransactionList({
                   date: createdAtLabel,
                 })}
               </div>
+
+              {canDelete && (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => onDelete?.(trx.id)}
+                    disabled={Boolean(deletingIds?.[trx.id])}
+                    className="app-btn-danger rounded-lg px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {deletingIds?.[trx.id]
+                      ? t('transactionsPage.list.deleting')
+                      : t('transactionsPage.list.delete')}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         );

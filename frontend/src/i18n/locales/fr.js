@@ -184,6 +184,7 @@ const fr = {
         region: "cette region",
         notification: "cette notification",
         activity: "cette activite",
+        transaction: "cette transaction",
       },
     },
   },
@@ -973,6 +974,8 @@ const fr = {
       projectFallbackId: "#{{id}}",
       paymentLabel: "Paiement",
       byLine: "Par {{name}} • {{date}}",
+      delete: "Supprimer",
+      deleting: "Suppression...",
     },
     pagination: {
       showing: "Affichage {{from}}–{{to}} sur {{total}}",
@@ -984,6 +987,8 @@ const fr = {
       loadError: "Erreur lors du chargement des transactions.",
       createSuccess: "Transaction ajoutée.",
       createError: "Erreur lors de l'ajout de la transaction.",
+      deleteSuccess: "Transaction supprimée.",
+      deleteError: "Erreur lors de la suppression de la transaction.",
     },
   },
   serviceTransactions: {

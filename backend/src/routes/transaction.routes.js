@@ -101,7 +101,7 @@ router.put(
 router.delete(
   '/:id',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requireRoles('admin'),
   ctrl.remove
 );
 

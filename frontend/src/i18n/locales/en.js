@@ -182,6 +182,7 @@ const en = {
         region: "this region",
         notification: "this notification",
         activity: "this activity",
+        transaction: "this transaction",
       },
     },
   },
@@ -970,6 +971,8 @@ const en = {
       projectFallbackId: "#{{id}}",
       paymentLabel: "Payment",
       byLine: "By {{name}} • {{date}}",
+      delete: "Delete",
+      deleting: "Deleting...",
     },
     pagination: {
       showing: "Showing {{from}}–{{to}} of {{total}}",
@@ -981,6 +984,8 @@ const en = {
       loadError: "Error loading transactions.",
       createSuccess: "Transaction added.",
       createError: "Error adding the transaction.",
+      deleteSuccess: "Transaction deleted.",
+      deleteError: "Error deleting the transaction.",
     },
   },
   serviceTransactions: {

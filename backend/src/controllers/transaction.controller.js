@@ -33,6 +33,7 @@ const {
   buildWhereWithACL,
   canAccessTransaction,
   COMMON_INCLUDE,
+  isGlobalAdmin,
 } = require("../services/transaction.service");
 
 // 📸 ImageKit Helper unifié
@@ -994,12 +995,10 @@ exports.remove = async (req, res) => {
     if (!trx)
       return res.status(404).json({ error: "Transaction introuvable" });
 
-    const isOwner = req.user && String(trx.userId) === String(req.user.id);
-    const isAdmin = req.user?.role === "admin";
-
-    // Règle stable: admin peut tout supprimer, owner seulement si pending
-    if (!(isAdmin || (isOwner && trx.status === "pending"))) {
-      return res.status(403).json({ error: "Suppression non autorisée" });
+    if (!isGlobalAdmin(req.user)) {
+      return res
+        .status(403)
+        .json({ error: "Action réservée à un administrateur global" });
     }
 
     if (trx.proofFile?.fileId && isImageKitEnabled()) {
