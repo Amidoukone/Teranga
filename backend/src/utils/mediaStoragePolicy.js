@@ -11,6 +11,14 @@ function isProductionRuntime(env = process.env) {
   return String(env.NODE_ENV || '').trim().toLowerCase() === 'production';
 }
 
+function isImageKitConfigured(env = process.env) {
+  return Boolean(
+    String(env.IMAGEKIT_PUBLIC_KEY || '').trim() &&
+      String(env.IMAGEKIT_PRIVATE_KEY || '').trim() &&
+      String(env.IMAGEKIT_URL_ENDPOINT || '').trim()
+  );
+}
+
 function hasCustomUploadsRoot(env = process.env) {
   return Boolean(String(env.UPLOADS_ROOT || env.UPLOADS_DIR || '').trim());
 }
@@ -24,6 +32,7 @@ function evaluateLocalMediaFallback(options = {}) {
   const moduleDecision = moduleFallbackEnvVar
     ? parseBooleanEnv(env[moduleFallbackEnvVar])
     : null;
+  const imageKitConfigured = isImageKitConfigured(env);
   if (moduleDecision !== null) {
     return {
       allowLocalFallback: moduleDecision,
@@ -33,6 +42,7 @@ function evaluateLocalMediaFallback(options = {}) {
       globalDecision: parseBooleanEnv(env[globalFallbackEnvVar]),
       isProduction: isProductionRuntime(env),
       hasCustomUploadsRoot: hasCustomUploadsRoot(env),
+      imageKitConfigured,
     };
   }
 
@@ -46,30 +56,16 @@ function evaluateLocalMediaFallback(options = {}) {
       globalDecision,
       isProduction: isProductionRuntime(env),
       hasCustomUploadsRoot: hasCustomUploadsRoot(env),
+      imageKitConfigured,
     };
   }
 
   const enforceDurableUploads = parseBooleanEnv(
     env[enforceDurableUploadsEnvVar]
   );
-  if (enforceDurableUploads !== true) {
-    const isProduction = isProductionRuntime(env);
-    return {
-      allowLocalFallback: true,
-      reason: isProduction
-        ? 'production_legacy_compatible_default'
-        : 'non_production_default',
-      resolvedFrom: 'runtime_default',
-      moduleDecision: null,
-      globalDecision: null,
-      enforceDurableUploads:
-        enforceDurableUploads === null ? 'auto' : enforceDurableUploads,
-      isProduction,
-      hasCustomUploadsRoot: hasCustomUploadsRoot(env),
-    };
-  }
-
   const isProduction = isProductionRuntime(env);
+  const customUploadsRoot = hasCustomUploadsRoot(env);
+
   if (!isProduction) {
     return {
       allowLocalFallback: true,
@@ -77,13 +73,14 @@ function evaluateLocalMediaFallback(options = {}) {
       resolvedFrom: 'runtime_default',
       moduleDecision: null,
       globalDecision: null,
-      enforceDurableUploads: true,
+      enforceDurableUploads:
+        enforceDurableUploads === null ? 'auto' : enforceDurableUploads,
       isProduction,
-      hasCustomUploadsRoot: hasCustomUploadsRoot(env),
+      hasCustomUploadsRoot: customUploadsRoot,
+      imageKitConfigured,
     };
   }
 
-  const customUploadsRoot = hasCustomUploadsRoot(env);
   if (customUploadsRoot) {
     return {
       allowLocalFallback: true,
@@ -91,27 +88,66 @@ function evaluateLocalMediaFallback(options = {}) {
       resolvedFrom: 'UPLOADS_ROOT/UPLOADS_DIR',
       moduleDecision: null,
       globalDecision: null,
-      enforceDurableUploads: true,
+      enforceDurableUploads:
+        enforceDurableUploads === null ? 'auto' : enforceDurableUploads,
       isProduction,
       hasCustomUploadsRoot: customUploadsRoot,
+      imageKitConfigured,
     };
   }
 
+  if (enforceDurableUploads === false) {
+    return {
+      allowLocalFallback: true,
+      reason: 'explicit_durable_enforcement_disabled',
+      resolvedFrom: enforceDurableUploadsEnvVar,
+      moduleDecision: null,
+      globalDecision: null,
+      enforceDurableUploads: false,
+      isProduction,
+      hasCustomUploadsRoot: customUploadsRoot,
+      imageKitConfigured,
+    };
+  }
+
+  if (imageKitConfigured) {
+    return {
+      allowLocalFallback: false,
+      reason: 'production_imagekit_default',
+      resolvedFrom: 'runtime_default',
+      moduleDecision: null,
+      globalDecision: null,
+      enforceDurableUploads:
+        enforceDurableUploads === null ? 'auto' : enforceDurableUploads,
+      isProduction,
+      hasCustomUploadsRoot: customUploadsRoot,
+      imageKitConfigured,
+    };
+  }
+
+  const reason =
+    enforceDurableUploads === true
+      ? 'production_ephemeral_blocked'
+      : 'production_default_durable';
+
   return {
     allowLocalFallback: false,
-    reason: 'production_ephemeral_blocked',
+    reason,
     resolvedFrom: 'runtime_default',
     moduleDecision: null,
     globalDecision: null,
-    enforceDurableUploads: true,
+    enforceDurableUploads:
+      enforceDurableUploads === null ? 'auto' : enforceDurableUploads,
     isProduction,
     hasCustomUploadsRoot: customUploadsRoot,
+    imageKitConfigured,
   };
 }
 
 module.exports = {
   evaluateLocalMediaFallback,
   hasCustomUploadsRoot,
+  isImageKitConfigured,
   isProductionRuntime,
   parseBooleanEnv,
 };

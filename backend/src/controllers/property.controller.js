@@ -24,7 +24,10 @@ const {
 const { getPagination } = require('../utils/pagination');
 const logger = require('../utils/logger');
 const { resolveUploadsRoot } = require('../utils/uploadsRoot');
-const { buildMediaStorageDiagnostics } = require('../utils/mediaStorageDiagnostics');
+const {
+  buildMediaStorageDiagnostics,
+  isImageKitConfigured,
+} = require('../utils/mediaStorageDiagnostics');
 const { evaluateLocalMediaFallback } = require('../utils/mediaStoragePolicy');
 
 /* ============================================================
@@ -108,11 +111,7 @@ async function resolveCountryIdFromLegacy(countryValue) {
 
 /** Indique si ImageKit est configuré (évite les blocages inutiles) */
 function isImageKitEnabled() {
-  return Boolean(
-    process.env.IMAGEKIT_PUBLIC_KEY &&
-      process.env.IMAGEKIT_PRIVATE_KEY &&
-      process.env.IMAGEKIT_URL_ENDPOINT
-  );
+  return isImageKitConfigured(process.env);
 }
 
 function resolveLocalFallbackPolicy() {

@@ -39,7 +39,10 @@ const {
 const imageKit = require("../helpers/teranga-imagekit");
 const logger = require('../utils/logger');
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
-const { buildMediaStorageDiagnostics } = require("../utils/mediaStorageDiagnostics");
+const {
+  buildMediaStorageDiagnostics,
+  isImageKitConfigured,
+} = require("../utils/mediaStorageDiagnostics");
 const { evaluateLocalMediaFallback } = require("../utils/mediaStoragePolicy");
 
 // 📌 Labels français
@@ -63,11 +66,7 @@ const TRANSACTION_LOCAL_FALLBACK_ENV_VAR =
  *  🧩 ImageKit Enabled ?
  * ============================================================================ */
 function isImageKitEnabled() {
-  return Boolean(
-    process.env.IMAGEKIT_PUBLIC_KEY &&
-      process.env.IMAGEKIT_PRIVATE_KEY &&
-      process.env.IMAGEKIT_URL_ENDPOINT
-  );
+  return isImageKitConfigured(process.env);
 }
 
 function resolveLocalFallbackPolicy() {

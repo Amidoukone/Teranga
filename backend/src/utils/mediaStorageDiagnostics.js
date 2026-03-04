@@ -1,15 +1,7 @@
 'use strict';
 
 const { resolveUploadsRoot } = require('./uploadsRoot');
-const { parseBooleanEnv } = require('./mediaStoragePolicy');
-
-function isImageKitConfigured(env = process.env) {
-  return Boolean(
-    String(env.IMAGEKIT_PUBLIC_KEY || '').trim() &&
-      String(env.IMAGEKIT_PRIVATE_KEY || '').trim() &&
-      String(env.IMAGEKIT_URL_ENDPOINT || '').trim()
-  );
-}
+const { parseBooleanEnv, isImageKitConfigured } = require('./mediaStoragePolicy');
 
 function buildMediaStorageDiagnostics(extra = {}, env = process.env) {
   const nodeEnv = String(env.NODE_ENV || 'development').trim().toLowerCase();

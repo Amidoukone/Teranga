@@ -16,7 +16,10 @@ const {
   frontendErrorHandler,
 } = require('./middleware/metrics.middleware');
 const { resolveUploadsRoot } = require('./utils/uploadsRoot');
-const { buildMediaStorageDiagnostics } = require('./utils/mediaStorageDiagnostics');
+const {
+  buildMediaStorageDiagnostics,
+  isImageKitConfigured,
+} = require('./utils/mediaStorageDiagnostics');
 const { normalizeApiResponsePayload } = require('./utils/apiMessageNormalizer');
 
 const app = express();
@@ -124,11 +127,7 @@ const openapiContractPath = path.join(__dirname, '..', 'openapi', 'openapi.json'
 const hasCustomUploadsRoot = Boolean(
   String(process.env.UPLOADS_ROOT || process.env.UPLOADS_DIR || '').trim()
 );
-const imageKitConfigured = Boolean(
-  process.env.IMAGEKIT_PUBLIC_KEY &&
-    process.env.IMAGEKIT_PRIVATE_KEY &&
-    process.env.IMAGEKIT_URL_ENDPOINT
-);
+const imageKitConfigured = isImageKitConfigured(process.env);
 
 logger.info(
   buildMediaStorageDiagnostics({

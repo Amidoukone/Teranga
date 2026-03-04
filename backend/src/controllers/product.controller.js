@@ -11,6 +11,7 @@ const {
   isGlobalAdmin,
 } = require('../utils/geoScope');
 const { getPagination } = require('../utils/pagination');
+const { isImageKitConfigured } = require('../utils/mediaStorageDiagnostics');
 const logger = require('../utils/logger');
 
 /* ============================================================
@@ -70,11 +71,7 @@ function slugify(str = '') {
    🔒 ImageKit activation check
 ============================================================ */
 function isImageKitEnabled() {
-  return Boolean(
-    process.env.IMAGEKIT_PUBLIC_KEY &&
-      process.env.IMAGEKIT_PRIVATE_KEY &&
-      process.env.IMAGEKIT_URL_ENDPOINT
-  );
+  return isImageKitConfigured(process.env);
 }
 
 /* ============================================================

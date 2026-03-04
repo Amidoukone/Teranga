@@ -1,5 +1,7 @@
 'use strict';
 
+const { parseBooleanEnv } = require('./mediaStoragePolicy');
+
 const MIN_JWT_SECRET_LENGTH = 32;
 const WEAK_JWT_SECRETS = new Set([
   'super_secret_key',
@@ -81,6 +83,22 @@ function validateProdConfig(env = process.env) {
   if (!imageKitConfigured && !hasCustomUploadsRoot) {
     warnings.push(
       'IMAGEKIT_* is not configured and UPLOADS_ROOT is not set. Uploaded files may be lost on redeploy with ephemeral storage.'
+    );
+  }
+
+  const mediaAllowLocalFallback = parseBooleanEnv(env.MEDIA_ALLOW_LOCAL_FALLBACK);
+  if (mediaAllowLocalFallback === true && !hasCustomUploadsRoot) {
+    warnings.push(
+      'MEDIA_ALLOW_LOCAL_FALLBACK=true without UPLOADS_ROOT enables ephemeral local uploads in production.'
+    );
+  }
+
+  const mediaEnforceDurableUploads = parseBooleanEnv(
+    env.MEDIA_ENFORCE_DURABLE_UPLOADS
+  );
+  if (mediaEnforceDurableUploads === false && !hasCustomUploadsRoot) {
+    warnings.push(
+      'MEDIA_ENFORCE_DURABLE_UPLOADS=false allows local fallback in production; files can be lost on redeploy.'
     );
   }
 

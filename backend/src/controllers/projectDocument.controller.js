@@ -6,7 +6,10 @@ const { getLabel } = require("../utils/labels");
 const imageKit = require("../helpers/teranga-imagekit");
 const path = require("path");
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
-const { buildMediaStorageDiagnostics } = require("../utils/mediaStorageDiagnostics");
+const {
+  buildMediaStorageDiagnostics,
+  isImageKitConfigured,
+} = require("../utils/mediaStorageDiagnostics");
 const { evaluateLocalMediaFallback } = require("../utils/mediaStoragePolicy");
 
 // ✅ GEO scope (strict + admin global)
@@ -32,11 +35,7 @@ const DOCUMENT_KINDS = {
    🛡 ImageKit actif ?
 ========================================================= */
 function isImageKitEnabled() {
-  return Boolean(
-    process.env.IMAGEKIT_PUBLIC_KEY &&
-      process.env.IMAGEKIT_PRIVATE_KEY &&
-      process.env.IMAGEKIT_URL_ENDPOINT
-  );
+  return isImageKitConfigured(process.env);
 }
 
 function resolveLocalFallbackPolicy() {
@@ -574,4 +573,3 @@ exports.remove = async (req, res) => {
       .json({ error: "Erreur lors de la suppression du document" });
   }
 };
-

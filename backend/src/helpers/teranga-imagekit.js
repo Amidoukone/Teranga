@@ -2,13 +2,12 @@
 
 const ImageKit = require('imagekit');
 const logger = require('../utils/logger');
-const { buildMediaStorageDiagnostics } = require('../utils/mediaStorageDiagnostics');
+const {
+  buildMediaStorageDiagnostics,
+  isImageKitConfigured,
+} = require('../utils/mediaStorageDiagnostics');
 
-const isConfigured = Boolean(
-  process.env.IMAGEKIT_PUBLIC_KEY &&
-    process.env.IMAGEKIT_PRIVATE_KEY &&
-    process.env.IMAGEKIT_URL_ENDPOINT
-);
+const isConfigured = isImageKitConfigured(process.env);
 
 if (!isConfigured) {
   logger.warn(
@@ -24,8 +23,8 @@ if (!isConfigured) {
 
 const imagekit = isConfigured
   ? new ImageKit({
-      publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
-      privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+      publicKey: String(process.env.IMAGEKIT_PUBLIC_KEY || '').trim(),
+      privateKey: String(process.env.IMAGEKIT_PRIVATE_KEY || '').trim(),
       urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT.trim(),
     })
   : {
@@ -38,4 +37,3 @@ const imagekit = isConfigured
     };
 
 module.exports = imagekit;
-

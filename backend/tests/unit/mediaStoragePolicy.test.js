@@ -27,14 +27,30 @@ describe('mediaStoragePolicy', () => {
     expect(result.reason).toBe('non_production_default');
   });
 
-  test('allows fallback by default in production for legacy-compatible behavior', () => {
+  test('blocks fallback by default in production', () => {
     const result = evaluateLocalMediaFallback({
       env: { NODE_ENV: 'production' },
       moduleFallbackEnvVar: 'PROPERTY_ALLOW_LOCAL_FALLBACK',
     });
 
-    expect(result.allowLocalFallback).toBe(true);
-    expect(result.reason).toBe('production_legacy_compatible_default');
+    expect(result.allowLocalFallback).toBe(false);
+    expect(result.reason).toBe('production_default_durable');
+  });
+
+  test('blocks fallback in production by default when ImageKit is configured', () => {
+    const result = evaluateLocalMediaFallback({
+      env: {
+        NODE_ENV: 'production',
+        IMAGEKIT_PUBLIC_KEY: 'pk_test',
+        IMAGEKIT_PRIVATE_KEY: 'sk_test',
+        IMAGEKIT_URL_ENDPOINT: 'https://ik.imagekit.io/teranga',
+      },
+      moduleFallbackEnvVar: 'PROPERTY_ALLOW_LOCAL_FALLBACK',
+    });
+
+    expect(result.allowLocalFallback).toBe(false);
+    expect(result.reason).toBe('production_imagekit_default');
+    expect(result.imageKitConfigured).toBe(true);
   });
 
   test('allows fallback in production when uploads root is explicitly configured', () => {
@@ -77,6 +93,20 @@ describe('mediaStoragePolicy', () => {
     expect(result.allowLocalFallback).toBe(true);
     expect(result.reason).toBe('explicit_global_env');
     expect(result.resolvedFrom).toBe('MEDIA_ALLOW_LOCAL_FALLBACK');
+  });
+
+  test('explicit durable disable enables fallback in production', () => {
+    const result = evaluateLocalMediaFallback({
+      env: {
+        NODE_ENV: 'production',
+        MEDIA_ENFORCE_DURABLE_UPLOADS: 'false',
+      },
+      moduleFallbackEnvVar: 'PROPERTY_ALLOW_LOCAL_FALLBACK',
+    });
+
+    expect(result.allowLocalFallback).toBe(true);
+    expect(result.reason).toBe('explicit_durable_enforcement_disabled');
+    expect(result.resolvedFrom).toBe('MEDIA_ENFORCE_DURABLE_UPLOADS');
   });
 
   test('blocks fallback in production when durable mode is explicitly enforced', () => {

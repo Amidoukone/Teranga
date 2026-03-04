@@ -22,7 +22,10 @@ const {
 const { emitEvent } = require("../services/activity.service");
 const logger = require('../utils/logger');
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
-const { buildMediaStorageDiagnostics } = require("../utils/mediaStorageDiagnostics");
+const {
+  buildMediaStorageDiagnostics,
+  isImageKitConfigured,
+} = require("../utils/mediaStorageDiagnostics");
 const { evaluateLocalMediaFallback } = require("../utils/mediaStoragePolicy");
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
 const EVIDENCE_MEDIA_STORAGE_ERROR_CODE = "EVIDENCE_MEDIA_STORAGE_UNAVAILABLE";
@@ -104,11 +107,7 @@ async function mapWithConcurrency(items, limit, fn) {
    Upload helpers (ImageKit + fallback local)
 ====================================================== */
 function isImageKitEnabled() {
-  return Boolean(
-    process.env.IMAGEKIT_PUBLIC_KEY &&
-      process.env.IMAGEKIT_PRIVATE_KEY &&
-      process.env.IMAGEKIT_URL_ENDPOINT
-  );
+  return isImageKitConfigured(process.env);
 }
 
 function resolveLocalFallbackPolicy() {
