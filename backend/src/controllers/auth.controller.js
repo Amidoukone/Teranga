@@ -672,7 +672,10 @@ exports.me = async (req, res) => {
       return res.status(404).json({ error: 'Utilisateur introuvable' });
     }
 
-    return res.json({ user });
+    return res.json({
+      user,
+      csrfToken: req.cookies?.[COOKIE_CSRF] || null,
+    });
   } catch (e) {
     logger.error('Erreur /auth/me:', e);
     return res.status(500).json({ error: 'Erreur' });
@@ -936,7 +939,6 @@ exports.changePassword = async (req, res) => {
       .json({ error: 'Erreur lors du changement de mot de passe' });
   }
 };
-
 
 
 

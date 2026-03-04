@@ -85,6 +85,7 @@ test('me in cookie mode caches backend user response', async () => {
   apiMock.get.mockResolvedValue({
     data: {
       user: { id: 15, language: 'fr' },
+      csrfToken: 'csrf-from-me',
     },
   });
 
@@ -96,6 +97,7 @@ test('me in cookie mode caches backend user response', async () => {
   });
   expect(result.user.id).toBe(15);
   expect(localStorage.getItem('teranga_user')).toContain('"id":15');
+  expect(localStorage.getItem('teranga_csrf_token')).toBe('csrf-from-me');
   expect(i18nMock.setLanguage).toHaveBeenCalledWith('fr');
 });
 

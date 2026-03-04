@@ -110,6 +110,11 @@ function clearCsrfToken() {
   safeRemove(CSRF_TOKEN_KEY);
 }
 
+function syncCsrfToken(data) {
+  const token = normalizeTokenValue(data?.csrfToken);
+  if (token) writeCsrfToken(token);
+}
+
 /** Acces localStorage safe (evite exceptions quota, disabled, SSR...) */
 function safeGet(key) {
   try {
@@ -250,6 +255,7 @@ export async function me() {
         skipAuthRedirect: true,
         silentAuth: true,
       });
+      syncCsrfToken(data);
       if (data?.user) {
         writeCachedUser(data.user);
         syncLanguageFromUser(data.user);
@@ -267,6 +273,7 @@ export async function me() {
               silentAuth: true,
               skipAuthHeader: true,
             });
+            syncCsrfToken(data);
             if (data?.user) {
               removeTokenAll(); // purge le Bearer obsolete
               writeCachedUser(data.user);
@@ -328,6 +335,7 @@ export async function me() {
         skipAuthRedirect: true,
         silentAuth: true,
       });
+      syncCsrfToken(data);
       if (data?.user) {
         writeCachedUser(data.user);
         syncLanguageFromUser(data.user);
@@ -382,6 +390,7 @@ export async function me() {
       skipAuthRedirect: true,
       silentAuth: true,
     });
+    syncCsrfToken(data);
 
     // Mise à jour du cache local
     if (data?.user) writeCachedUser(data.user);
@@ -402,6 +411,7 @@ export async function me() {
             silentAuth: true,
             skipAuthHeader: true,
           });
+          syncCsrfToken(data);
           if (data?.user) {
             removeTokenAll(); // purge le Bearer obsolète pour éviter les 401 suivants
             writeCachedUser(data.user);
@@ -586,3 +596,4 @@ const AuthService = {
 };
 
 export default AuthService;
+

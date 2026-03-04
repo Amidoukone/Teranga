@@ -315,9 +315,7 @@ function persistRefreshedSession(data) {
   }
 
   const csrfToken = normalizeStoredToken(data?.csrfToken);
-  if (csrfToken) {
-    safeStorageSet(CSRF_TOKEN_STORAGE_KEY, csrfToken);
-  }
+  if (csrfToken) safeStorageSet(CSRF_TOKEN_STORAGE_KEY, csrfToken);
 }
 
 function clearAuthorizationHeader(config) {
@@ -366,6 +364,40 @@ async function refreshAccessSession() {
   }
 }
 
+function isCsrfInvalidResponse(status, payload) {
+  if (status !== 403) return false;
+  const message = String(payload?.error || payload?.message || '').toLowerCase();
+  return message.includes('csrf');
+}
+
+function shouldAttemptCsrfResync(error, config) {
+  if (!isCsrfInvalidResponse(error?.response?.status, error?.response?.data)) {
+    return false;
+  }
+  if (!config) return false;
+  if (config.skipCsrfResync) return false;
+  if (config.__isRetryAfterCsrf) return false;
+  if (isAuthRefreshRequest(config.url)) return false;
+  if (/\/auth\/me(?:\/|$)/.test(getRequestPath(config.url))) return false;
+  return hasRefreshSessionHint();
+}
+
+async function resyncCsrfSessionToken() {
+  const { data } = await api.get('/auth/me', {
+    skipAuthRedirect: true,
+    silentAuth: true,
+    skipAuthRefresh: true,
+    skipAuthHeader: true,
+    skipCsrfResync: true,
+  });
+
+  const csrfToken = normalizeStoredToken(data?.csrfToken);
+  if (csrfToken) {
+    safeStorageSet(CSRF_TOKEN_STORAGE_KEY, csrfToken);
+  }
+  return csrfToken;
+}
+
 /* ---------- Helper: retry reseau leger + flip host dev ---------- */
 function shouldRetryNetwork(error) {
  // Pas de reponse = reseau (ERR_CONNECTION_REFUSED, offline, CORS dur)
@@ -404,6 +436,11 @@ api.interceptors.response.use(
   (response) => {
     if (shouldNormalizeMojibake(response) && response?.data !== undefined) {
       response.data = fixMojibakeDeep(response.data);
+    }
+
+    if (response?.data && typeof response.data === 'object') {
+      const csrfToken = normalizeStoredToken(response.data.csrfToken);
+      if (csrfToken) safeStorageSet(CSRF_TOKEN_STORAGE_KEY, csrfToken);
     }
 
     try {
@@ -462,7 +499,27 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // 2) 401: tentative de refresh (1x) puis fallback cleanup + redirection
+    // 2) 403 CSRF: resync /auth/me puis retry unique
+    if (shouldAttemptCsrfResync(error, cfg)) {
+      try {
+        const csrfToken = await resyncCsrfSessionToken();
+        if (csrfToken) {
+          cfg.__isRetryAfterCsrf = true;
+          cfg.headers = cfg.headers || {};
+          cfg.headers['X-CSRF-Token'] = csrfToken;
+          return api.request(cfg);
+        }
+      } catch (csrfResyncErr) {
+        if (!silentAuth) {
+          logApiDebug('warn', '[api] csrf resync echoue', {
+            status: csrfResyncErr?.response?.status,
+            data: csrfResyncErr?.response?.data,
+          });
+        }
+      }
+    }
+
+    // 3) 401: tentative de refresh (1x) puis fallback cleanup + redirection
     if (status === 401) {
       if (shouldAttemptAuthRefresh(status, cfg)) {
         try {
@@ -512,7 +569,7 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
- // 3) 403 ACL (autorisation insuffisante) pas de logout
+ // 4) 403 ACL (autorisation insuffisante) pas de logout
     if (status === 403) {
       logApiDebug('warn', '[api] acces refuse (403)', {
         method: method?.toUpperCase?.(),
@@ -521,7 +578,7 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
- // 4) Autres erreurs (400, 404, 500, ...) on remonte
+ // 5) Autres erreurs (400, 404, 500, ...) on remonte
     return Promise.reject(error);
   }
 );

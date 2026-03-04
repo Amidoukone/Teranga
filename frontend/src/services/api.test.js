@@ -32,6 +32,7 @@ function setupApiModule(options = {}) {
     },
     request: jest.fn(),
     post: jest.fn(),
+    get: jest.fn(),
   };
 
   const axiosMock = {
@@ -225,6 +226,49 @@ test('cookie-only strict skips bearer injection and does not persist refreshed J
   expect(localStorage.getItem('teranga_token')).toBeNull();
   expect(localStorage.getItem('token')).toBeNull();
   expect(localStorage.getItem('teranga_csrf_token')).toBe('new-csrf');
+});
+
+test('403 csrf invalid resyncs token via /auth/me then retries once', async () => {
+  process.env.REACT_APP_AUTH_STORAGE = 'cookie';
+  process.env.REACT_APP_COOKIE_BEARER_FALLBACK = 'false';
+  const { responseErrorInterceptor, apiInstance } = setupApiModule();
+
+  localStorage.setItem('teranga_csrf_token', 'stale-csrf');
+
+  apiInstance.get.mockResolvedValue({
+    data: {
+      user: { id: 9 },
+      csrfToken: 'fresh-csrf',
+    },
+  });
+  apiInstance.request.mockResolvedValue({ data: { ok: true } });
+
+  const cfg = {
+    url: '/properties',
+    method: 'post',
+    headers: { 'X-CSRF-Token': 'stale-csrf' },
+  };
+
+  const result = await responseErrorInterceptor({
+    response: { status: 403, data: { error: 'CSRF token invalide' } },
+    config: cfg,
+  });
+
+  expect(apiInstance.get).toHaveBeenCalledWith(
+    '/auth/me',
+    expect.objectContaining({
+      skipAuthRedirect: true,
+      silentAuth: true,
+      skipAuthRefresh: true,
+      skipAuthHeader: true,
+      skipCsrfResync: true,
+    })
+  );
+  expect(cfg.__isRetryAfterCsrf).toBe(true);
+  expect(cfg.headers['X-CSRF-Token']).toBe('fresh-csrf');
+  expect(localStorage.getItem('teranga_csrf_token')).toBe('fresh-csrf');
+  expect(apiInstance.request).toHaveBeenCalledWith(cfg);
+  expect(result).toEqual({ data: { ok: true } });
 });
 
 test('getFileUrl builds upload URL without /api prefix in local mode', () => {
