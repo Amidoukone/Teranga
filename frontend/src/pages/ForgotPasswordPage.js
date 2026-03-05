@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
         data?.message ||
           t('auth.forgotPassword.success', {
             defaultValue:
-              'Si un compte existe, un lien de réinitialisation a été envoyé.',
+              'Si un compte existe, un lien de r\u00E9initialisation a \u00E9t\u00E9 envoy\u00E9.',
           })
       );
 
@@ -53,12 +53,12 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-12">
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface-card shadow-sm p-8">
         <h1 className="text-2xl font-bold text-text-primary mb-2">
-          {t('auth.forgotPassword.title', { defaultValue: 'Mot de passe oublié' })}
+          {t('auth.forgotPassword.title', { defaultValue: 'Mot de passe oubli\u00E9' })}
         </h1>
         <p className="text-sm text-text-secondary mb-6">
           {t('auth.forgotPassword.subtitle', {
             defaultValue:
-              'Entrez votre email pour recevoir un lien de réinitialisation.',
+              'Entrez votre email pour recevoir un lien de r\u00E9initialisation.',
           })}
         </p>
 
@@ -83,7 +83,7 @@ export default function ForgotPasswordPage() {
             <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
               {t('auth.forgotPassword.debugInfo', {
                 defaultValue:
-                  'Utilisez ce token/lien pour réinitialiser le mot de passe.',
+                  'Utilisez ce token/lien pour r\u00E9initialiser le mot de passe.',
               })}
             </p>
             {debugToken ? (
@@ -101,7 +101,7 @@ export default function ForgotPasswordPage() {
                   className="text-blue-700 dark:text-blue-400 hover:underline text-xs font-medium"
                 >
                   {t('auth.forgotPassword.debugOpenLink', {
-                    defaultValue: 'Ouvrir le lien de réinitialisation',
+                    defaultValue: 'Ouvrir le lien de r\u00E9initialisation',
                   })}
                 </a>
               </div>
@@ -151,18 +151,18 @@ export default function ForgotPasswordPage() {
           <div className="mb-2">
             <Link to="/reset-password/code" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
               {t('auth.forgotPassword.recoveryCodeLink', {
-                defaultValue: 'Utiliser un code de récupération',
+                defaultValue: 'Utiliser un code de r\u00E9cup\u00E9ration',
               })}
             </Link>
             <p className="mt-1 text-xs text-text-muted">
               {t('auth.forgotPassword.recoveryCodeInfo', {
                 defaultValue:
-                  'Les codes sont affichés uniquement lors de leur génération.',
+                  'Les codes sont affich\u00E9s uniquement lors de leur g\u00E9n\u00E9ration.',
               })}
             </p>
           </div>
           <Link to="/login" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
-            {t('auth.forgotPassword.backToLogin', { defaultValue: 'Retour à la connexion' })}
+            {t('auth.forgotPassword.backToLogin', { defaultValue: 'Retour \u00E0 la connexion' })}
           </Link>
         </div>
       </div>

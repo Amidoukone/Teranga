@@ -362,7 +362,7 @@ export default function App() {
                       state={{
                         errorMsg: t("auth.login.forgotInfo", {
                           defaultValue:
-                            "Mot de passe oublié ? Contactez l'admin ou le master de votre pays/région pour le réinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                            "Mot de passe oubli\u00E9 ? Contactez l'admin ou le master de votre pays/r\u00E9gion pour le r\u00E9initialiser. Ensuite, vous pourrez le modifier dans votre compte.",
                         }),
                       }}
                     />
@@ -383,7 +383,7 @@ export default function App() {
                       state={{
                         errorMsg: t("auth.login.forgotInfo", {
                           defaultValue:
-                            "Mot de passe oublié ? Contactez l'admin ou le master de votre pays/région pour le réinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                            "Mot de passe oubli\u00E9 ? Contactez l'admin ou le master de votre pays/r\u00E9gion pour le r\u00E9initialiser. Ensuite, vous pourrez le modifier dans votre compte.",
                         }),
                       }}
                     />
@@ -404,7 +404,7 @@ export default function App() {
                       state={{
                         errorMsg: t("auth.login.forgotInfo", {
                           defaultValue:
-                            "Mot de passe oublié ? Contactez l'admin ou le master de votre pays/région pour le réinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                            "Mot de passe oubli\u00E9 ? Contactez l'admin ou le master de votre pays/r\u00E9gion pour le r\u00E9initialiser. Ensuite, vous pourrez le modifier dans votre compte.",
                         }),
                       }}
                     />

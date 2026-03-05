@@ -179,7 +179,7 @@ export default function LoginPage() {
           <div className="rounded-xl border border-border bg-surface-main px-3 py-2 text-sm text-text-secondary">
             {t("auth.login.forgotInfo", {
               defaultValue:
-                "Mot de passe oublié ? Contactez l'admin ou le master de votre pays/région pour le réinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                "Mot de passe oubli\u00E9 ? Contactez l'admin ou le master de votre pays/r\u00E9gion pour le r\u00E9initialiser. Ensuite, vous pourrez le modifier dans votre compte.",
             })}
           </div>
 

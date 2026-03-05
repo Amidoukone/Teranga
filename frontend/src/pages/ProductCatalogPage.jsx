@@ -161,7 +161,7 @@ export default function ProductCatalogPage() {
   }, []);
 
   /* ============================================================
-     ?? Cat?gories (filtre stable)
+     Catégories (filtre stable)
   ============================================================ */
   useEffect(() => {
     let mounted = true;

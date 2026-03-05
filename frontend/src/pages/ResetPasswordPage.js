@@ -38,7 +38,7 @@ export default function ResetPasswordPage() {
     if (!password || password.length < 8) {
       setErrorMsg(
         t('auth.resetPassword.errors.passwordMin', {
-          defaultValue: 'Mot de passe trop court (minimum 8 caractères).',
+          defaultValue: 'Mot de passe trop court (minimum 8 caract\u00E8res).',
         })
       );
       return;
@@ -61,7 +61,7 @@ export default function ResetPasswordPage() {
       setSuccessMsg(
         data?.message ||
           t('auth.resetPassword.success', {
-            defaultValue: 'Mot de passe réinitialisé avec succès.',
+            defaultValue: 'Mot de passe r\u00E9initialis\u00E9 avec succ\u00E8s.',
           })
       );
       setTimeout(() => navigate('/login', { replace: true }), 1200);
@@ -69,7 +69,7 @@ export default function ResetPasswordPage() {
       setErrorMsg(
         err?.response?.data?.error ||
           t('auth.resetPassword.error', {
-            defaultValue: 'Impossible de réinitialiser le mot de passe.',
+            defaultValue: 'Impossible de r\u00E9initialiser le mot de passe.',
           })
       );
     } finally {
@@ -82,7 +82,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface-card shadow-sm p-8">
         <h1 className="text-2xl font-bold text-text-primary mb-2">
           {t('auth.resetPassword.title', {
-            defaultValue: 'Réinitialiser le mot de passe',
+            defaultValue: 'R\u00E9initialiser le mot de passe',
           })}
         </h1>
         <p className="text-sm text-text-secondary mb-6">
@@ -174,7 +174,7 @@ export default function ResetPasswordPage() {
               </>
             ) : (
               t('auth.resetPassword.submit', {
-                defaultValue: 'Mettre à jour le mot de passe',
+                defaultValue: 'Mettre \u00E0 jour le mot de passe',
               })
             )}
           </button>
@@ -182,7 +182,7 @@ export default function ResetPasswordPage() {
 
         <div className="mt-6 text-center text-sm">
           <Link to="/login" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
-            {t('auth.resetPassword.backToLogin', { defaultValue: 'Retour à la connexion' })}
+            {t('auth.resetPassword.backToLogin', { defaultValue: 'Retour \u00E0 la connexion' })}
           </Link>
         </div>
       </div>
