@@ -15,12 +15,12 @@ export default function RecoveryCodesPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-12">
       <div className="w-full max-w-lg rounded-2xl border border-border bg-surface-card shadow-sm p-8">
         <h1 className="text-2xl font-bold text-text-primary mb-2">
-          {t('auth.recoveryCodes.title', { defaultValue: 'Codes de recuperation' })}
+          {t('auth.recoveryCodes.title', { defaultValue: 'Codes de récupération' })}
         </h1>
         <p className="text-sm text-text-secondary mb-4">
           {t('auth.recoveryCodes.subtitle', {
             defaultValue:
-              'Conservez ces codes dans un endroit sur. Ils ne seront plus affiches.',
+              'Conservez ces codes dans un endroit sûr. Ils ne seront plus affichés.',
           })}
         </p>
 
@@ -45,7 +45,7 @@ export default function RecoveryCodesPage() {
           <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/15 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
             {t('auth.recoveryCodes.empty', {
               defaultValue:
-                "Aucun code disponible. Verifiez que la migration recovery_codes est appliquee.",
+                "Aucun code disponible. Vérifiez que la migration recovery_codes est appliquée.",
             })}
           </div>
         )}
@@ -56,7 +56,7 @@ export default function RecoveryCodesPage() {
             onClick={() => navigate('/login', { replace: true })}
             className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
           >
-            {t('auth.recoveryCodes.toLogin', { defaultValue: 'Aller a la connexion' })}
+            {t('auth.recoveryCodes.toLogin', { defaultValue: 'Aller à la connexion' })}
           </button>
           <Link to="/login" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
             {t('auth.recoveryCodes.loginLink', { defaultValue: 'Connexion' })}

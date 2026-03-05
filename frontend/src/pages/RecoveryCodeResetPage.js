@@ -25,7 +25,7 @@ export default function RecoveryCodeResetPage() {
     if (!password || password.length < 8) {
       setErrorMsg(
         t('auth.recoveryCode.errors.passwordMin', {
-          defaultValue: 'Mot de passe trop court (minimum 8 caracteres).',
+          defaultValue: 'Mot de passe trop court (minimum 8 caractères).',
         })
       );
       return;
@@ -50,7 +50,7 @@ export default function RecoveryCodeResetPage() {
       setSuccessMsg(
         data?.message ||
           t('auth.recoveryCode.success', {
-            defaultValue: 'Mot de passe reinitialise avec succes.',
+            defaultValue: 'Mot de passe réinitialisé avec succès.',
           })
       );
 
@@ -60,7 +60,7 @@ export default function RecoveryCodeResetPage() {
       setErrorMsg(
         err?.response?.data?.error ||
           t('auth.recoveryCode.error', {
-            defaultValue: 'Impossible de reinitialiser le mot de passe.',
+            defaultValue: 'Impossible de réinitialiser le mot de passe.',
           })
       );
     } finally {
@@ -72,17 +72,17 @@ export default function RecoveryCodeResetPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-12">
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface-card shadow-sm p-8">
         <h1 className="text-2xl font-bold text-text-primary mb-2">
-          {t('auth.recoveryCode.title', { defaultValue: 'Reset avec code de recuperation' })}
+          {t('auth.recoveryCode.title', { defaultValue: 'Réinitialiser avec un code de récupération' })}
         </h1>
         <p className="text-sm text-text-secondary mb-6">
           {t('auth.recoveryCode.subtitle', {
-            defaultValue: 'Utilisez un code de recuperation pour changer votre mot de passe.',
+            defaultValue: 'Utilisez un code de récupération pour changer votre mot de passe.',
           })}
         </p>
         <p className="text-xs text-text-muted mb-4">
           {t('auth.recoveryCode.help', {
             defaultValue:
-              'Ces codes sont remis lors de l inscription ou apres regeneration depuis un compte connecte.',
+              "Ces codes sont remis lors de l'inscription ou après régénération depuis un compte connecté.",
           })}
         </p>
 
@@ -101,11 +101,11 @@ export default function RecoveryCodeResetPage() {
         {newCodes.length ? (
           <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/15 px-3 py-3">
             <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-              {t('auth.recoveryCode.newCodesTitle', { defaultValue: 'Nouveaux codes de recuperation' })}
+              {t('auth.recoveryCode.newCodesTitle', { defaultValue: 'Nouveaux codes de récupération' })}
             </p>
             <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
               {t('auth.recoveryCode.newCodesInfo', {
-                defaultValue: 'Conservez ces codes. Ils ne seront plus affiches.',
+                defaultValue: 'Conservez ces codes. Ils ne seront plus affichés.',
               })}
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -140,7 +140,7 @@ export default function RecoveryCodeResetPage() {
 
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1">
-              {t('auth.recoveryCode.code', { defaultValue: 'Code de recuperation' })}
+              {t('auth.recoveryCode.code', { defaultValue: 'Code de récupération' })}
             </label>
             <div className="relative">
               <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
@@ -206,14 +206,14 @@ export default function RecoveryCodeResetPage() {
                 {t('auth.recoveryCode.submitting', { defaultValue: 'Validation...' })}
               </>
             ) : (
-              t('auth.recoveryCode.submit', { defaultValue: 'Reinitialiser avec code' })
+              t('auth.recoveryCode.submit', { defaultValue: 'Réinitialiser avec un code' })
             )}
           </button>
         </form>
 
         <div className="mt-6 text-center text-sm">
           <Link to="/login" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
-            {t('auth.recoveryCode.backToLogin', { defaultValue: 'Retour a la connexion' })}
+            {t('auth.recoveryCode.backToLogin', { defaultValue: 'Retour à la connexion' })}
           </Link>
         </div>
       </div>

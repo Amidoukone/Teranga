@@ -360,8 +360,10 @@ export default function App() {
                       to="/login"
                       replace
                       state={{
-                        errorMsg:
-                          "Mot de passe oublie ? Contactez l'admin ou le master de votre pays/region pour reinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                        errorMsg: t("auth.login.forgotInfo", {
+                          defaultValue:
+                            "Mot de passe oublié ? Contactez l'admin ou le master de votre pays/région pour le réinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                        }),
                       }}
                     />
                   </>
@@ -379,8 +381,10 @@ export default function App() {
                       to="/login"
                       replace
                       state={{
-                        errorMsg:
-                          "Mot de passe oublie ? Contactez l'admin ou le master de votre pays/region pour reinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                        errorMsg: t("auth.login.forgotInfo", {
+                          defaultValue:
+                            "Mot de passe oublié ? Contactez l'admin ou le master de votre pays/région pour le réinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                        }),
                       }}
                     />
                   </>
@@ -398,8 +402,10 @@ export default function App() {
                       to="/login"
                       replace
                       state={{
-                        errorMsg:
-                          "Mot de passe oublie ? Contactez l'admin ou le master de votre pays/region pour reinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                        errorMsg: t("auth.login.forgotInfo", {
+                          defaultValue:
+                            "Mot de passe oublié ? Contactez l'admin ou le master de votre pays/région pour le réinitialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+                        }),
                       }}
                     />
                   </>
