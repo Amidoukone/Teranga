@@ -1805,6 +1805,11 @@ const fr = {
     logoAlt: "Logo Teranga",
     title: "Modifier le mot de passe",
     subtitle: "Protégez votre compte.",
+    context: {
+      title: "Protection de l'acces",
+      description:
+        "Mettez a jour votre mot de passe des que vous detectez un risque ou apres un partage d'appareil.",
+    },
     labels: {
       currentPassword: "Mot de passe actuel",
       newPassword: "Nouveau mot de passe",
@@ -1828,6 +1833,29 @@ const fr = {
       differs: "Le nouveau mot de passe est different de l'actuel",
       logoutNotice:
         "Apres la mise a jour du mot de passe, vous serez deconnecte puis invite a vous reconnecter.",
+    },
+    bestPractices: {
+      title: "Bonnes pratiques",
+      items: {
+        p1: "Utilisez un mot de passe unique pour Teranga.",
+        p2: "Evitez les informations faciles a deviner (nom, date, telephone).",
+        p3: "Renouvelez votre mot de passe regulierement sur les comptes sensibles.",
+      },
+    },
+    resources: {
+      title: "Pages utiles du compte",
+      privacy: {
+        title: "Confidentialite",
+        description: "Consultez la gestion des donnees personnelles et vos droits.",
+      },
+      terms: {
+        title: "Conditions",
+        description: "Relisez les regles d'utilisation de la plateforme.",
+      },
+      support: {
+        title: "Aide & Support",
+        description: "Contactez l'equipe si vous suspectez un acces non autorise.",
+      },
     },
     errors: {
       required: "Tous les champs sont requis.",
@@ -1974,11 +2002,11 @@ const fr = {
   },
   homePage: {
     hero: {
-      badge: "Plateforme de confiance pour la diaspora africaine",
+      badge: "Plateforme de confiance pour la diaspora et les residents locaux",
       titleLine1: "La confiance \u00E0 distance,",
       titleLine2: "la s\u00E9r\u00E9nit\u00E9 \u00E0 port\u00E9e de main.",
       description:
-        "Avec <0>Teranga</0>, la diaspora africaine suit et g\u00E8re ses biens, projets et d\u00E9marches depuis l'\u00E9tranger - avec transparence, fiabilit\u00E9 et une pr\u00E9sence humaine sur le terrain.",
+        "Avec <0>Teranga</0>, la diaspora africaine et les residents locaux suivent et gerent leurs biens, services, taches et projets avec transparence, fiabilite et une presence humaine sur le terrain.",
       ctaLogin: "Se connecter",
       ctaRegister: "Cr\u00E9er un compte",
       stats: {
@@ -1991,8 +2019,8 @@ const fr = {
           text: "Des personnes de confiance, proches de vos projets.",
         },
         diaspora: {
-          label: "Pens\u00E9e pour la diaspora",
-          text: "Une interface claire, utilisable depuis l'\u00E9tranger.",
+          label: "Ouverte a tous",
+          text: "Utilisable aussi bien depuis l'etranger que depuis les pays locaux.",
         },
       },
       tagline:
@@ -2001,7 +2029,7 @@ const fr = {
     services: {
       title: "Nos services, votre tranquillit\u00E9",
       subtitle:
-        "Des solutions con\u00E7ues pour simplifier la vie de la diaspora tout en garantissant transparence et pr\u00E9sence humaine sur place.",
+        "Des solutions pour toute personne qui manque de temps : nous prenons en charge vos demandes sur le terrain avec suivi, preuves et responsabilite.",
       cards: {
         realEstate: {
           title: "Gestion immobili\u00E8re",
@@ -2017,10 +2045,40 @@ const fr = {
         },
       },
     },
+    useCases: {
+      title: "Une application utile pour tous",
+      subtitle:
+        "Que vous soyez membre de la diaspora ou resident local, vous pouvez confier vos operations terrain a Teranga lorsque votre emploi du temps ne vous permet pas de tout faire vous-meme.",
+      cards: {
+        service: {
+          title: "Demander un service",
+          desc: "Courses, demarches, visites ou interventions terrain : nous executons et vous suivez en temps reel.",
+        },
+        task: {
+          title: "Deleguer une tache",
+          desc: "Creez une tache avec vos consignes et recevez des preuves concretes de l'execution sur place.",
+        },
+        project: {
+          title: "Piloter un projet",
+          desc: "Suivez l'avancement de vos projets, les documents et les decisions sans etre physiquement present.",
+        },
+      },
+    },
+    impact: {
+      title: "Notre ambition en Afrique",
+      subtitle:
+        "Transformer la facon dont les services sont rendus, avec un modele plus efficace, innovant et verifiable.",
+      points: {
+        p1: "Un service operationnel plus rapide grace a une coordination terrain + application.",
+        p2: "Une transparence continue avec preuves photo, rapports et historique des actions.",
+        p3: "Une execution fiable pour les services, taches et projets, meme quand vous n'avez pas le temps.",
+      },
+      cta: "Voir l'aide et le support",
+    },
     why: {
       title: "Pourquoi choisir Teranga ?",
       subtitle:
-        "Parce qu'il ne s'agit pas seulement d'une application, mais d'un lien de confiance entre vous, vos proches et vos projets au pays.",
+        "Parce qu'il ne s'agit pas seulement d'une application, mais d'un cadre de confiance pour executer des services de maniere moderne en Afrique.",
       pillars: {
         clarity: {
           title: "Clart\u00E9",
@@ -2039,11 +2097,11 @@ const fr = {
     about: {
       title: "Teranga : bien plus qu'un service",
       subtitle:
-        "Une plateforme inspir\u00E9e par la confiance et l'hospitalit\u00E9, offrant un lien direct entre diaspora et projets au pays.",
+        "Une plateforme inspiree par la confiance et l'hospitalite, qui relie les besoins reels aux equipes terrain de facon structuree.",
       paragraphs: {
         p1: "Le mot <0>Teranga</0> \u00E9voque chaleur humaine, confiance et respect. Notre plateforme reprend ces valeurs pour offrir une exp\u00E9rience moderne et rassurante.",
         p2: "Vos projets m\u00E9ritent une visibilit\u00E9 totale : photos, preuves, rapports, transactions, progression... tout est accessible en temps r\u00E9el, depuis n'importe o\u00F9.",
-        p3: "Gr\u00E2ce \u00E0 nos agents certifi\u00E9s et \u00E0 une interface claire, vous gardez toujours le contr\u00F4le, sans devoir \u00EAtre physiquement sur place.",
+        p3: "Grace a nos agents certifies et a une interface claire, toute personne ayant un service, une tache ou un projet peut deleguer efficacement sans perdre le controle.",
       },
       cta: "Rejoindre Teranga",
     },
@@ -2088,8 +2146,39 @@ const fr = {
   legalPage: {
     kicker: "Conformit\u00E9 l\u00E9gale",
     title: "Mentions l\u00E9gales",
+    subtitle:
+      "Un cadre legal clair pour identifier l'editeur, les responsabilites et les canaux de contact officiels.",
     intro:
       "Conform\u00E9ment aux dispositions de la loi n\u00B02004-575 du 21 juin 2004 pour la confiance dans l'\u00E9conomie num\u00E9rique (LCEN), il est pr\u00E9cis\u00E9 aux utilisateurs de l'application Teranga l'identit\u00E9 des diff\u00E9rents intervenants dans le cadre de sa r\u00E9alisation et de son suivi.",
+    summary: {
+      title: "Points essentiels",
+      subtitle:
+        "Ces reperes donnent une vue rapide du cadre legal avant la lecture detaillee.",
+      cards: {
+        publisher: {
+          title: "Identite de l'editeur",
+          description:
+            "Les informations de l'entite operatrice sont publiques pour garantir la transparence.",
+        },
+        responsibility: {
+          title: "Responsabilite editoriale",
+          description:
+            "Un contact officiel est defini pour la publication et la gestion des contenus.",
+        },
+        compliance: {
+          title: "Conformite et protection",
+          description:
+            "La propriete intellectuelle et les regles d'usage sont explicitees pour proteger la plateforme.",
+        },
+      },
+    },
+    quickLinks: {
+      title: "Pages associees",
+      security: "Ouvrir la page Securite",
+      privacy: "Consulter Confidentialite",
+      terms: "Voir les Conditions d'utilisation",
+      support: "Acceder a Aide & Support",
+    },
     sections: {
       publisher: {
         title: "1. \u00C9diteur du site",
@@ -2128,6 +2217,36 @@ const fr = {
     title: "Politique de confidentialit\u00E9 (RGPD)",
     intro:
       "La pr\u00E9sente politique explique comment Teranga collecte, utilise, stocke et prot\u00E8ge vos donn\u00E9es personnelles conform\u00E9ment au RGPD.",
+    subtitle:
+      "Un cadre clair pour comprendre quelles donnees sont utilisees, pourquoi et avec quelles garanties.",
+    summary: {
+      title: "L'essentiel a retenir",
+      subtitle:
+        "Ces points resumes vous permettent de verifier rapidement notre approche de protection des donnees.",
+      cards: {
+        collection: {
+          title: "Collecte ciblee",
+          description:
+            "Nous collectons uniquement les informations necessaires au suivi de vos services, taches et projets.",
+        },
+        security: {
+          title: "Securite operationnelle",
+          description:
+            "Les acces et traitements sont encadres pour reduire les risques de consultation non autorisee.",
+        },
+        rights: {
+          title: "Droits utilisateurs",
+          description:
+            "Vous pouvez demander l'acces, la correction ou la suppression de vos donnees selon le cadre legal.",
+        },
+      },
+    },
+    quickLinks: {
+      title: "Acces rapides",
+      security: "Renforcer la securite du compte",
+      terms: "Voir les conditions d'utilisation",
+      support: "Contacter l'aide et support",
+    },
     sections: {
       collected: {
         title: "1. Donn\u00E9es collect\u00E9es",
@@ -2182,6 +2301,36 @@ const fr = {
     title: "Conditions g\u00E9n\u00E9rales d'utilisation",
     intro:
       "Les pr\u00E9sentes Conditions G\u00E9n\u00E9rales d'Utilisation (CGU) encadrent l'acc\u00E8s et l'utilisation de l'application Teranga par ses membres.",
+    subtitle:
+      "Un cadre commun pour garantir un usage responsable, transparent et securise de la plateforme.",
+    summary: {
+      title: "Points cles",
+      subtitle:
+        "Ces reperes facilitent la lecture avant de consulter le texte complet des conditions.",
+      cards: {
+        commitments: {
+          title: "Engagements utilisateur",
+          description:
+            "Chaque utilisateur s'engage a fournir des informations exactes et a utiliser la plateforme de bonne foi.",
+        },
+        security: {
+          title: "Protection du compte",
+          description:
+            "La confidentialite des identifiants reste sous votre responsabilite pour proteger vos operations.",
+        },
+        suspension: {
+          title: "Mesures en cas d'abus",
+          description:
+            "La plateforme peut suspendre un compte en cas de fraude ou de non-respect des regles.",
+        },
+      },
+    },
+    quickLinks: {
+      title: "Pages associees",
+      security: "Ouvrir la page Securite",
+      privacy: "Consulter Confidentialite",
+      support: "Acceder a Aide & Support",
+    },
     sections: {
       purpose: {
         title: "1. Objet",
@@ -2220,6 +2369,16 @@ const fr = {
     title: "Parametres du compte",
     subtitle:
       "Personnalisez votre experience et accedez rapidement aux ressources importantes.",
+    overview: {
+      title: "Espace compte unifie",
+      description:
+        "Centralisez vos preferences, votre securite et vos documents de reference depuis un seul espace.",
+      points: {
+        p1: "Parametres comptes accessibles en quelques clics.",
+        p2: "Regles et politiques claires pour une utilisation sans ambiguite.",
+        p3: "Support disponible pour accompagner les demandes sensibles.",
+      },
+    },
     theme: {
       title: "Apparence",
       description:
@@ -2242,24 +2401,64 @@ const fr = {
         "Mettez a jour votre mot de passe et les parametres de protection.",
       supportTitle: "Aide & Support",
       supportDesc:
-        "Consultez la page support et les prochaines fonctionnalites d'assistance.",
+        "Accedez aux canaux d'assistance, au cadre de prise en charge et aux ressources de securite.",
       privacyTitle: "Politique de confidentialite",
       privacyDesc: "Consultez la gestion des donnees personnelles et vos droits.",
       termsTitle: "Conditions d'utilisation",
       termsDesc: "Relisez les regles et responsabilites de la plateforme.",
       legalTitle: "Mentions legales",
       legalDesc: "Consultez les informations legales de l'editeur et de la plateforme.",
+      open: "Ouvrir",
+    },
+    quickSection: {
+      title: "Acces compte",
+      subtitle:
+        "Retrouvez toutes les pages compte importantes avec une structure coherente.",
+      footer:
+        "Les modifications de preference sont appliquees immediatement dans votre espace.",
     },
   },
   helpSupportPage: {
     kicker: "Support utilisateur",
     title: "Aide & Support",
     subtitle:
-      "Un espace d'assistance dedie est en preparation. Vous pouvez deja acceder aux informations essentielles.",
+      "Un espace d'assistance clair pour vous accompagner sur vos services, taches et projets.",
     comingSoon: {
-      title: "Centre d'assistance en cours de preparation",
+      title: "Centre support avance en cours de preparation",
       description:
-        "Le module support (tickets, suivi, FAQ) sera bientot disponible dans une version professionnelle complete.",
+        "Le module complet (tickets, suivi detaille, FAQ intelligente) arrive bientot. En attendant, le support operationnel est deja disponible.",
+    },
+    highlights: {
+      openToAll: "Accessible aux membres de la diaspora et aux residents locaux",
+      fieldAgents: "Interventions realisees par des agents sur le terrain",
+      africaMission: "Objectif: rendre les services en Afrique plus efficaces et innovants",
+    },
+    requestTypes: {
+      title: "Demandes que nous prenons en charge",
+      subtitle:
+        "Si vous manquez de temps, vous pouvez nous confier vos operations terrain en quelques etapes.",
+      cards: {
+        service: {
+          title: "Services",
+          description:
+            "Demarches, interventions et missions terrain avec retour clair sur chaque action.",
+        },
+        task: {
+          title: "Taches",
+          description:
+            "Execution de taches ponctuelles ou recurrentes avec preuve et statut de progression.",
+        },
+        project: {
+          title: "Projets",
+          description:
+            "Suivi de projet avec documents, jalons et coordination locale pour une execution fiable.",
+        },
+      },
+    },
+    resources: {
+      title: "Ressources utiles immediates",
+      subtitle:
+        "Avant toute demande, vous pouvez verifier la securite de votre compte et consulter le cadre legal.",
     },
     cards: {
       security: {
@@ -2278,10 +2477,46 @@ const fr = {
           "Verifiez les regles d'utilisation et les engagements de la plateforme.",
       },
     },
+    journey: {
+      title: "Comment l'assistance fonctionne",
+      subtitle:
+        "Un processus simple pour garder de la visibilite a chaque etape.",
+      steps: {
+        step1: {
+          title: "1. Vous decrivez votre besoin",
+          description:
+            "Indiquez votre demande (service, tache ou projet) avec les informations essentielles.",
+        },
+        step2: {
+          title: "2. Nous organisons l'intervention",
+          description:
+            "L'equipe support coordonne l'execution sur le terrain selon votre priorite.",
+        },
+        step3: {
+          title: "3. Vous suivez et validez",
+          description:
+            "Vous recevez un suivi documente avec preuves et pouvez valider l'avancement.",
+        },
+      },
+    },
     contact: {
       title: "Contact support",
       description:
-        "Pour les demandes urgentes, contactez l'administration Teranga via les canaux de communication habituels.",
+        "Pour les demandes urgentes ou sensibles, notre equipe vous repond via les canaux officiels Teranga.",
+      channels: {
+        email: "contact@teranga-platform.com",
+        phone: "+223 70 66 83 64 / +223 94 16 12 66",
+        hours: "Assistance prioritaire: reponse initiale sous 24h selon la nature de la demande.",
+      },
+      note:
+        "Pour accelerer le traitement, precisez le type de demande, la zone concernee et le niveau d'urgence.",
+      actionsTitle: "Acces rapide",
+      actionsDescription:
+        "Connectez-vous pour creer ou suivre vos demandes directement dans l'application.",
+      actions: {
+        login: "Se connecter",
+        register: "Creer un compte",
+      },
     },
   },
   adminProductsPage: {
@@ -2852,12 +3087,18 @@ const fr = {
       },
       accountSecurity: {
         title: "S\u00E9curit\u00E9 du compte",
+        description:
+          "Mettez a jour votre mot de passe et renforcez la protection d'acces a votre compte Teranga.",
       },
       settings: {
         title: "Param\u00E8tres",
+        description:
+          "Configurez votre experience, consultez les pages compte et accedez aux ressources essentielles.",
       },
       helpSupport: {
         title: "Aide & Support",
+        description:
+          "Consultez l'assistance Teranga pour vos services, taches et projets: ressources, process support et contacts officiels.",
       },
       finance: {
         title: "Finances",

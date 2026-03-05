@@ -11,6 +11,9 @@ import {
   Home,
   Truck,
   Globe,
+  ClipboardList,
+  Wrench,
+  FolderKanban,
   Mail,
   Phone,
   MapPin,
@@ -68,6 +71,28 @@ export default function HomePage() {
       title: t("homePage.why.pillars.support.title"),
       text: t("homePage.why.pillars.support.text"),
     },
+  ];
+  const useCaseCards = [
+    {
+      icon: Wrench,
+      title: t("homePage.useCases.cards.service.title"),
+      desc: t("homePage.useCases.cards.service.desc"),
+    },
+    {
+      icon: ClipboardList,
+      title: t("homePage.useCases.cards.task.title"),
+      desc: t("homePage.useCases.cards.task.desc"),
+    },
+    {
+      icon: FolderKanban,
+      title: t("homePage.useCases.cards.project.title"),
+      desc: t("homePage.useCases.cards.project.desc"),
+    },
+  ];
+  const impactPoints = [
+    t("homePage.impact.points.p1"),
+    t("homePage.impact.points.p2"),
+    t("homePage.impact.points.p3"),
   ];
   const contactFields = [
     {
@@ -212,6 +237,48 @@ export default function HomePage() {
         </section>
 
         {/* ========================================================================= */}
+ {/* POUR QUI / CAS D'USAGE */}
+        {/* ========================================================================= */}
+        <section
+          id="usage"
+          className="py-16 sm:py-20 px-6 bg-surface-main border-t border-border/70"
+        >
+          <div className="max-w-5xl mx-auto text-center mb-12 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-text-primary mb-4">
+              {t("homePage.useCases.title")}
+            </h2>
+            <p className="text-text-secondary text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
+              {t("homePage.useCases.subtitle")}
+            </p>
+          </div>
+
+          <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
+            {useCaseCards.map(({ icon: Icon, title, desc }) => (
+              <motion.div
+                key={title}
+                whileHover={{ y: -4, scale: 1.015 }}
+                transition={{ type: "spring", stiffness: 180, damping: 20 }}
+                className="
+                  bg-surface-card border border-border/70 rounded-3xl p-7 sm:p-8
+                  shadow-[0_10px_30px_rgba(15,23,42,0.06)]
+                  transition-all
+                "
+              >
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/15 flex items-center justify-center mb-4">
+                  <Icon size={24} className="text-blue-600" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-medium text-text-primary mb-2">
+                  {title}
+                </h3>
+                <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
+                  {desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
  {/* SERVICES - Apple Cards + Animations + Shadow douce */}
         {/* ========================================================================= */}
         <section
@@ -290,6 +357,42 @@ export default function HomePage() {
                 <p className="text-text-secondary leading-relaxed">{item.text}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+ {/* IMPACT */}
+        {/* ========================================================================= */}
+        <section
+          className="py-16 sm:py-20 px-6 bg-surface-main border-t border-border/70"
+        >
+          <div className="max-w-4xl mx-auto rounded-3xl border border-blue-500/25 bg-blue-500/10 p-7 sm:p-10">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-text-primary mb-3">
+              {t("homePage.impact.title")}
+            </h2>
+            <p className="text-text-secondary text-base sm:text-lg leading-relaxed mb-6">
+              {t("homePage.impact.subtitle")}
+            </p>
+
+            <div className="grid gap-3">
+              {impactPoints.map((point) => (
+                <div key={point} className="flex items-start gap-3">
+                  <CheckCircle2 className="mt-0.5 text-blue-600" size={18} />
+                  <p className="text-sm sm:text-base text-text-secondary leading-relaxed">
+                    {point}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-7">
+              <Link
+                to="/help-support"
+                className="btn-secondary rounded-full px-6 py-2.5 text-sm sm:text-base inline-flex items-center gap-2"
+              >
+                {t("homePage.impact.cta")} <ArrowRight size={16} />
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -483,5 +586,4 @@ export default function HomePage() {
     </div>
   );
 }
-
 

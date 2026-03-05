@@ -5,6 +5,8 @@ import {
   EyeOff,
   Loader2,
   Lock,
+  LifeBuoy,
+  FileText,
   CheckCircle2,
   ShieldCheck,
   ArrowLeft,
@@ -195,8 +197,34 @@ export default function ChangePasswordPage() {
         ? t("changePasswordPage.hints.matches")
         : t("changePasswordPage.errors.mismatch");
 
+  const resources = [
+    {
+      key: "privacy",
+      to: "/privacy",
+      icon: Lock,
+      title: t("changePasswordPage.resources.privacy.title"),
+      description: t("changePasswordPage.resources.privacy.description"),
+    },
+    {
+      key: "terms",
+      to: "/terms",
+      icon: FileText,
+      title: t("changePasswordPage.resources.terms.title"),
+      description: t("changePasswordPage.resources.terms.description"),
+    },
+    {
+      key: "support",
+      to: "/help-support",
+      icon: LifeBuoy,
+      title: t("changePasswordPage.resources.support.title"),
+      description: t("changePasswordPage.resources.support.description"),
+    },
+  ];
+
   return (
     <SettingsSubpageLayout
+      seoTitle={t("seo.pages.accountSecurity.title")}
+      seoDescription={t("seo.pages.accountSecurity.description")}
       kicker={t("changePasswordPage.kicker")}
       title={t("changePasswordPage.title")}
       subtitle={t("changePasswordPage.subtitle")}
@@ -215,6 +243,11 @@ export default function ChangePasswordPage() {
           <div className="mb-4 flex items-center gap-2 text-text-primary">
             <Lock className="h-4 w-4" />
             <h2 className="text-base font-semibold">{t("nav.security")}</h2>
+          </div>
+
+          <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-text-secondary">
+            <p className="font-medium text-text-primary">{t("changePasswordPage.context.title")}</p>
+            <p className="mt-1">{t("changePasswordPage.context.description")}</p>
           </div>
 
           {errorMsg && (
@@ -280,7 +313,7 @@ export default function ChangePasswordPage() {
               type="submit"
               disabled={loading || !canSubmit}
               className={[
-                "w-full justify-center rounded-xl px-4 py-2.5 text-white shadow-sm transition",
+                "inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-white shadow-sm transition",
                 loading || !canSubmit
                   ? "cursor-not-allowed bg-blue-400"
                   : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800",
@@ -299,6 +332,23 @@ export default function ChangePasswordPage() {
         </section>
 
         <aside className="space-y-4">
+          <section className="rounded-2xl border border-border/80 bg-surface-card p-5">
+            <h2 className="mb-3 text-base font-semibold text-text-primary">
+              {t("changePasswordPage.bestPractices.title")}
+            </h2>
+            <ul className="space-y-2 text-sm text-text-secondary">
+              {["p1", "p2", "p3"].map((point) => (
+                <li
+                  key={point}
+                  className="flex items-start gap-2 rounded-lg border border-border/70 bg-surface-main/60 px-3 py-2"
+                >
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-text-primary" />
+                  <span>{t(`changePasswordPage.bestPractices.items.${point}`)}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <section className="rounded-2xl border border-border/80 bg-surface-card p-5">
             <div className="mb-3 flex items-center gap-2 text-text-primary">
               <ShieldCheck className="h-4 w-4" />
@@ -333,6 +383,30 @@ export default function ChangePasswordPage() {
               <span>{t("changePasswordPage.kicker")}</span>
             </div>
             <p className="text-sm text-amber-800">{t("changePasswordPage.hints.logoutNotice")}</p>
+          </section>
+
+          <section className="rounded-2xl border border-border/80 bg-surface-card p-5">
+            <h2 className="mb-3 text-base font-semibold text-text-primary">
+              {t("changePasswordPage.resources.title")}
+            </h2>
+            <div className="space-y-2">
+              {resources.map((resource) => {
+                const Icon = resource.icon;
+                return (
+                  <Link
+                    key={resource.key}
+                    to={resource.to}
+                    className="block rounded-xl border border-border/70 bg-surface-main/60 px-3 py-3 transition hover:bg-surface-main"
+                  >
+                    <div className="mb-1 flex items-center gap-2 text-text-primary">
+                      <Icon className="h-4 w-4" />
+                      <h3 className="text-sm font-semibold">{resource.title}</h3>
+                    </div>
+                    <p className="text-xs text-text-secondary">{resource.description}</p>
+                  </Link>
+                );
+              })}
+            </div>
           </section>
         </aside>
       </div>
