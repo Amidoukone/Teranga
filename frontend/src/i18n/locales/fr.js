@@ -16,8 +16,8 @@ const fr = {
     products: "Produits",
     orders: "Commandes",
     master: "Pays & MASTER",
-    security: "Securite",
-    settings: "Parametres",
+    security: "S\u00E9curit\u00E9",
+    settings: "Param\u00E8tres",
     helpSupport: "Aide & Support",
       privacy: "Confidentialit\u00E9",
     terms: "Conditions d'utilisation",
@@ -25,36 +25,36 @@ const fr = {
     dashboard: "Tableau de bord",
     dashboardTitle: "Tableau de bord",
     notifications: "Notifications",
-    activities: "Centre d'activite",
+    activities: "Centre d'activit\u00E9",
     projects: "Projets",
     properties: "Biens",
     services: "Services",
-    tasks: "Taches",
+    tasks: "T\u00E2ches",
     transactions: "Transactions",
     finance: "Finances",
-    assignedProjects: "Projets assignes",
-    assignedServices: "Services assignes",
+    assignedProjects: "Projets assign\u00E9s",
+    assignedServices: "Services assign\u00E9s",
     adminProjects: "Pilotage projets",
     adminServices: "Pilotage services",
     metrics: "Pilotage",
     agents: "Agents",
     users: "Utilisateurs",
     clientProperties: "Biens des clients",
-    categories: "Categories",
+    categories: "Cat\u00E9gories",
     home: "Accueil",
     flow: "Flux",
     more: "Plus",
     menuPlus: "Menu Plus",
-    perimeter: "Perimetre",
+    perimeter: "P\u00E9rim\u00E8tre",
     userMenu: "Menu utilisateur",
-    accountSecurity: "Securite du compte",
-    helpSupportSoon: "Aide & Support (bientot)",
+    accountSecurity: "S\u00E9curit\u00E9 du compte",
+    helpSupportSoon: "Aide & Support (bient\u00F4t)",
     settingsMenuHint:
-      "Securite, aide & support, confidentialite, conditions d'utilisation et mentions legales.",
+      "S\u00E9curit\u00E9, aide & support, confidentialit\u00E9, conditions d'utilisation et mentions l\u00E9gales.",
     settingsMenuHintShort:
-      "Regrouper securite, support et documents legaux.",
-    comingSoon: "Bientot disponible",
-    logout: "Deconnexion",
+      "Regroupe la s\u00E9curit\u00E9, le support et les documents l\u00E9gaux.",
+    comingSoon: "Bient\u00F4t disponible",
+    logout: "D\u00E9connexion",
     userFallback: "Utilisateur",
     openMoreMenu: "Ouvrir le menu Plus",
     closeMenu: "Fermer le menu",
@@ -1873,9 +1873,9 @@ const fr = {
     title: "Modifier le mot de passe",
     subtitle: "Prot\u00E9gez votre compte.",
     context: {
-      title: "Protection de l'acces",
+      title: "Protection de l'acc\u00E8s",
       description:
-        "Mettez a jour votre mot de passe des que vous detectez un risque ou apres un partage d'appareil.",
+        "Mettez \u00E0 jour votre mot de passe d\u00E8s que vous d\u00E9tectez un risque ou apr\u00E8s un partage d'appareil.",
     },
     labels: {
       currentPassword: "Mot de passe actuel",
@@ -1895,40 +1895,40 @@ const fr = {
     },
     hints: {
       title: "Exigences du mot de passe",
-      minLength: "Au moins 8 caracteres",
+      minLength: "Au moins 8 caract\u00E8res",
       matches: "La confirmation correspond au nouveau mot de passe",
-      differs: "Le nouveau mot de passe est different de l'actuel",
+      differs: "Le nouveau mot de passe est diff\u00E9rent de l'actuel",
       logoutNotice:
-        "Apres la mise a jour du mot de passe, vous serez deconnecte puis invite a vous reconnecter.",
+        "Apr\u00E8s la mise \u00E0 jour du mot de passe, vous serez d\u00E9connect\u00E9 puis invit\u00E9 \u00E0 vous reconnecter.",
     },
     bestPractices: {
       title: "Bonnes pratiques",
       items: {
         p1: "Utilisez un mot de passe unique pour Teranga.",
-        p2: "Evitez les informations faciles a deviner (nom, date, telephone).",
-        p3: "Renouvelez votre mot de passe regulierement sur les comptes sensibles.",
+        p2: "\u00C9vitez les informations faciles \u00E0 deviner (nom, date, t\u00E9l\u00E9phone).",
+        p3: "Renouvelez votre mot de passe r\u00E9guli\u00E8rement sur les comptes sensibles.",
       },
     },
     resources: {
       title: "Pages utiles du compte",
       privacy: {
-        title: "Confidentialite",
-        description: "Consultez la gestion des donnees personnelles et vos droits.",
+        title: "Confidentialit\u00E9",
+        description: "Consultez la gestion des donn\u00E9es personnelles et vos droits.",
       },
       terms: {
         title: "Conditions",
-        description: "Relisez les regles d'utilisation de la plateforme.",
+        description: "Relisez les r\u00E8gles d'utilisation de la plateforme.",
       },
       support: {
         title: "Aide & Support",
-        description: "Contactez l'equipe si vous suspectez un acces non autorise.",
+        description: "Contactez l'\u00E9quipe si vous suspectez un acc\u00E8s non autoris\u00E9.",
       },
     },
     errors: {
       required: "Tous les champs sont requis.",
       tooShort: "Mot de passe trop court (minimum 8 caract\u00E8res).",
       mismatch: "Les mots de passe ne correspondent pas.",
-      sameAsCurrent: "Le nouveau mot de passe doit etre different de l'actuel.",
+      sameAsCurrent: "Le nouveau mot de passe doit \u00EAtre diff\u00E9rent de l'actuel.",
       update: "Erreur de modification.",
     },
     success: {
@@ -2214,37 +2214,37 @@ const fr = {
     kicker: "Conformit\u00E9 l\u00E9gale",
     title: "Mentions l\u00E9gales",
     subtitle:
-      "Un cadre legal clair pour identifier l'editeur, les responsabilites et les canaux de contact officiels.",
+      "Un cadre l\u00E9gal clair pour identifier l'\u00E9diteur, les responsabilit\u00E9s et les canaux de contact officiels.",
     intro:
       "Conform\u00E9ment aux dispositions de la loi n\u00B02004-575 du 21 juin 2004 pour la confiance dans l'\u00E9conomie num\u00E9rique (LCEN), il est pr\u00E9cis\u00E9 aux utilisateurs de l'application Teranga l'identit\u00E9 des diff\u00E9rents intervenants dans le cadre de sa r\u00E9alisation et de son suivi.",
     summary: {
       title: "Points essentiels",
       subtitle:
-        "Ces reperes donnent une vue rapide du cadre legal avant la lecture detaillee.",
+        "Ces rep\u00E8res donnent une vue rapide du cadre l\u00E9gal avant la lecture d\u00E9taill\u00E9e.",
       cards: {
         publisher: {
-          title: "Identite de l'editeur",
+          title: "Identit\u00E9 de l'\u00E9diteur",
           description:
-            "Les informations de l'entite operatrice sont publiques pour garantir la transparence.",
+            "Les informations de l'entit\u00E9 op\u00E9ratrice sont publiques pour garantir la transparence.",
         },
         responsibility: {
-          title: "Responsabilite editoriale",
+          title: "Responsabilit\u00E9 \u00E9ditoriale",
           description:
-            "Un contact officiel est defini pour la publication et la gestion des contenus.",
+            "Un contact officiel est d\u00E9fini pour la publication et la gestion des contenus.",
         },
         compliance: {
-          title: "Conformite et protection",
+          title: "Conformit\u00E9 et protection",
           description:
-            "La propriete intellectuelle et les regles d'usage sont explicitees pour proteger la plateforme.",
+            "La propri\u00E9t\u00E9 intellectuelle et les r\u00E8gles d'usage sont explicit\u00E9es pour prot\u00E9ger la plateforme.",
         },
       },
     },
     quickLinks: {
-      title: "Pages associees",
-      security: "Ouvrir la page Securite",
-      privacy: "Consulter Confidentialite",
+      title: "Pages associ\u00E9es",
+      security: "Ouvrir la page S\u00E9curit\u00E9",
+      privacy: "Consulter Confidentialit\u00E9",
       terms: "Voir les Conditions d'utilisation",
-      support: "Acceder a Aide & Support",
+      support: "Acc\u00E9der \u00E0 Aide & Support",
     },
     sections: {
       publisher: {
@@ -2285,34 +2285,34 @@ const fr = {
     intro:
       "La pr\u00E9sente politique explique comment Teranga collecte, utilise, stocke et prot\u00E8ge vos donn\u00E9es personnelles conform\u00E9ment au RGPD.",
     subtitle:
-      "Un cadre clair pour comprendre quelles donnees sont utilisees, pourquoi et avec quelles garanties.",
+      "Un cadre clair pour comprendre quelles donn\u00E9es sont utilis\u00E9es, pourquoi et avec quelles garanties.",
     summary: {
-      title: "L'essentiel a retenir",
+      title: "L'essentiel \u00E0 retenir",
       subtitle:
-        "Ces points resumes vous permettent de verifier rapidement notre approche de protection des donnees.",
+        "Ces points r\u00E9sum\u00E9s vous permettent de v\u00E9rifier rapidement notre approche de protection des donn\u00E9es.",
       cards: {
         collection: {
-          title: "Collecte ciblee",
+          title: "Collecte cibl\u00E9e",
           description:
-            "Nous collectons uniquement les informations necessaires au suivi de vos services, taches et projets.",
+            "Nous collectons uniquement les informations n\u00E9cessaires au suivi de vos services, t\u00E2ches et projets.",
         },
         security: {
-          title: "Securite operationnelle",
+          title: "S\u00E9curit\u00E9 op\u00E9rationnelle",
           description:
-            "Les acces et traitements sont encadres pour reduire les risques de consultation non autorisee.",
+            "Les acc\u00E8s et traitements sont encadr\u00E9s pour r\u00E9duire les risques de consultation non autoris\u00E9e.",
         },
         rights: {
           title: "Droits utilisateurs",
           description:
-            "Vous pouvez demander l'acces, la correction ou la suppression de vos donnees selon le cadre legal.",
+            "Vous pouvez demander l'acc\u00E8s, la correction ou la suppression de vos donn\u00E9es selon le cadre l\u00E9gal.",
         },
       },
     },
     quickLinks: {
-      title: "Acces rapides",
-      security: "Renforcer la securite du compte",
+      title: "Acc\u00E8s rapides",
+      security: "Renforcer la s\u00E9curit\u00E9 du compte",
       terms: "Voir les conditions d'utilisation",
-      support: "Contacter l'aide et support",
+      support: "Contacter l'aide et le support",
     },
     sections: {
       collected: {
@@ -2369,34 +2369,34 @@ const fr = {
     intro:
       "Les pr\u00E9sentes Conditions G\u00E9n\u00E9rales d'Utilisation (CGU) encadrent l'acc\u00E8s et l'utilisation de l'application Teranga par ses membres.",
     subtitle:
-      "Un cadre commun pour garantir un usage responsable, transparent et securise de la plateforme.",
+      "Un cadre commun pour garantir un usage responsable, transparent et s\u00E9curis\u00E9 de la plateforme.",
     summary: {
-      title: "Points cles",
+      title: "Points cl\u00E9s",
       subtitle:
-        "Ces reperes facilitent la lecture avant de consulter le texte complet des conditions.",
+        "Ces rep\u00E8res facilitent la lecture avant de consulter le texte complet des conditions.",
       cards: {
         commitments: {
           title: "Engagements utilisateur",
           description:
-            "Chaque utilisateur s'engage a fournir des informations exactes et a utiliser la plateforme de bonne foi.",
+            "Chaque utilisateur s'engage \u00E0 fournir des informations exactes et \u00E0 utiliser la plateforme de bonne foi.",
         },
         security: {
           title: "Protection du compte",
           description:
-            "La confidentialite des identifiants reste sous votre responsabilite pour proteger vos operations.",
+            "La confidentialit\u00E9 des identifiants reste sous votre responsabilit\u00E9 pour prot\u00E9ger vos op\u00E9rations.",
         },
         suspension: {
           title: "Mesures en cas d'abus",
           description:
-            "La plateforme peut suspendre un compte en cas de fraude ou de non-respect des regles.",
+            "La plateforme peut suspendre un compte en cas de fraude ou de non-respect des r\u00E8gles.",
         },
       },
     },
     quickLinks: {
-      title: "Pages associees",
-      security: "Ouvrir la page Securite",
-      privacy: "Consulter Confidentialite",
-      support: "Acceder a Aide & Support",
+      title: "Pages associ\u00E9es",
+      security: "Ouvrir la page S\u00E9curit\u00E9",
+      privacy: "Consulter Confidentialit\u00E9",
+      support: "Acc\u00E9der \u00E0 Aide & Support",
     },
     sections: {
       purpose: {
@@ -2433,115 +2433,115 @@ const fr = {
   },
   settingsPage: {
     kicker: "Configuration",
-    title: "Parametres du compte",
+    title: "Param\u00E8tres du compte",
     subtitle:
-      "Personnalisez votre experience et accedez rapidement aux ressources importantes.",
+      "Personnalisez votre exp\u00E9rience et acc\u00E9dez rapidement aux ressources importantes.",
     overview: {
-      title: "Espace compte unifie",
+      title: "Espace compte unifi\u00E9",
       description:
-        "Centralisez vos preferences, votre securite et vos documents de reference depuis un seul espace.",
+        "Centralisez vos pr\u00E9f\u00E9rences, votre s\u00E9curit\u00E9 et vos documents de r\u00E9f\u00E9rence depuis un seul espace.",
       points: {
-        p1: "Parametres comptes accessibles en quelques clics.",
-        p2: "Regles et politiques claires pour une utilisation sans ambiguite.",
+        p1: "Param\u00E8tres compte accessibles en quelques clics.",
+        p2: "R\u00E8gles et politiques claires pour une utilisation sans ambigu\u00EFt\u00E9.",
         p3: "Support disponible pour accompagner les demandes sensibles.",
       },
     },
     theme: {
       title: "Apparence",
       description:
-        "Choisissez le mode d'affichage de l'application. Le mode systeme suit les preferences de votre appareil.",
+        "Choisissez le mode d'affichage de l'application. Le mode syst\u00E8me suit les pr\u00E9f\u00E9rences de votre appareil.",
       options: {
         light: "Clair",
         dark: "Sombre",
-        system: "Systeme",
+        system: "Syst\u00E8me",
       },
       help: {
-        light: "Toujours afficher le theme clair.",
-        dark: "Toujours afficher le theme sombre.",
-        system: "Suivre automatiquement le systeme.",
+        light: "Toujours afficher le th\u00E8me clair.",
+        dark: "Toujours afficher le th\u00E8me sombre.",
+        system: "Suivre automatiquement le syst\u00E8me.",
       },
       currentResolved: "Mode actif : {{mode}}",
     },
     quick: {
-      securityTitle: "Securite du compte",
+      securityTitle: "S\u00E9curit\u00E9 du compte",
       securityDesc:
-        "Mettez a jour votre mot de passe et les parametres de protection.",
+        "Mettez \u00E0 jour votre mot de passe et les param\u00E8tres de protection.",
       supportTitle: "Aide & Support",
       supportDesc:
-        "Accedez aux canaux d'assistance, au cadre de prise en charge et aux ressources de securite.",
-      privacyTitle: "Politique de confidentialite",
-      privacyDesc: "Consultez la gestion des donnees personnelles et vos droits.",
+        "Acc\u00E9dez aux canaux d'assistance, au cadre de prise en charge et aux ressources de s\u00E9curit\u00E9.",
+      privacyTitle: "Politique de confidentialit\u00E9",
+      privacyDesc: "Consultez la gestion des donn\u00E9es personnelles et vos droits.",
       termsTitle: "Conditions d'utilisation",
-      termsDesc: "Relisez les regles et responsabilites de la plateforme.",
-      legalTitle: "Mentions legales",
-      legalDesc: "Consultez les informations legales de l'editeur et de la plateforme.",
+      termsDesc: "Relisez les r\u00E8gles et responsabilit\u00E9s de la plateforme.",
+      legalTitle: "Mentions l\u00E9gales",
+      legalDesc: "Consultez les informations l\u00E9gales de l'\u00E9diteur et de la plateforme.",
       open: "Ouvrir",
     },
     quickSection: {
-      title: "Acces compte",
+      title: "Acc\u00E8s compte",
       subtitle:
-        "Retrouvez toutes les pages compte importantes avec une structure coherente.",
+        "Retrouvez toutes les pages compte importantes avec une structure coh\u00E9rente.",
       footer:
-        "Les modifications de preference sont appliquees immediatement dans votre espace.",
+        "Les modifications de pr\u00E9f\u00E9rence sont appliqu\u00E9es imm\u00E9diatement dans votre espace.",
     },
   },
   helpSupportPage: {
     kicker: "Support utilisateur",
     title: "Aide & Support",
     subtitle:
-      "Un espace d'assistance clair pour vous accompagner sur vos services, taches et projets.",
+      "Un espace d'assistance clair pour vous accompagner sur vos services, t\u00E2ches et projets.",
     comingSoon: {
-      title: "Centre support avance en cours de preparation",
+      title: "Centre support avanc\u00E9 en cours de pr\u00E9paration",
       description:
-        "Le module complet (tickets, suivi detaille, FAQ intelligente) arrive bientot. En attendant, le support operationnel est deja disponible.",
+        "Le module complet (tickets, suivi d\u00E9taill\u00E9, FAQ intelligente) arrive bient\u00F4t. En attendant, le support op\u00E9rationnel est d\u00E9j\u00E0 disponible.",
     },
     highlights: {
-      openToAll: "Accessible aux membres de la diaspora et aux residents locaux",
-      fieldAgents: "Interventions realisees par des agents sur le terrain",
-      africaMission: "Objectif: rendre les services en Afrique plus efficaces et innovants",
+      openToAll: "Accessible aux membres de la diaspora et aux r\u00E9sidents locaux",
+      fieldAgents: "Interventions r\u00E9alis\u00E9es par des agents sur le terrain",
+      africaMission: "Objectif : rendre les services en Afrique plus efficaces et innovants",
     },
     requestTypes: {
       title: "Demandes que nous prenons en charge",
       subtitle:
-        "Si vous manquez de temps, vous pouvez nous confier vos operations terrain en quelques etapes.",
+        "Si vous manquez de temps, vous pouvez nous confier vos op\u00E9rations terrain en quelques \u00E9tapes.",
       cards: {
         service: {
           title: "Services",
           description:
-            "Demarches, interventions et missions terrain avec retour clair sur chaque action.",
+            "D\u00E9marches, interventions et missions terrain avec retour clair sur chaque action.",
         },
         task: {
-          title: "Taches",
+          title: "T\u00E2ches",
           description:
-            "Execution de taches ponctuelles ou recurrentes avec preuve et statut de progression.",
+            "Ex\u00E9cution de t\u00E2ches ponctuelles ou r\u00E9currentes avec preuve et statut de progression.",
         },
         project: {
           title: "Projets",
           description:
-            "Suivi de projet avec documents, jalons et coordination locale pour une execution fiable.",
+            "Suivi de projet avec documents, jalons et coordination locale pour une ex\u00E9cution fiable.",
         },
       },
     },
     resources: {
-      title: "Ressources utiles immediates",
+      title: "Ressources utiles imm\u00E9diates",
       subtitle:
-        "Avant toute demande, vous pouvez verifier la securite de votre compte et consulter le cadre legal.",
+        "Avant toute demande, vous pouvez v\u00E9rifier la s\u00E9curit\u00E9 de votre compte et consulter le cadre l\u00E9gal.",
     },
     cards: {
       security: {
-        title: "Probleme de securite",
+        title: "Probl\u00E8me de s\u00E9curit\u00E9",
         description:
           "En cas de doute sur votre compte, changez rapidement votre mot de passe.",
       },
       privacy: {
-        title: "Confidentialite",
+        title: "Confidentialit\u00E9",
         description:
-          "Consultez vos droits et la facon dont vos donnees sont traitees.",
+          "Consultez vos droits et la fa\u00E7on dont vos donn\u00E9es sont trait\u00E9es.",
       },
       terms: {
         title: "Conditions",
         description:
-          "Verifiez les regles d'utilisation et les engagements de la plateforme.",
+          "V\u00E9rifiez les r\u00E8gles d'utilisation et les engagements de la plateforme.",
       },
     },
     journey: {
@@ -3160,17 +3160,17 @@ const fr = {
       accountSecurity: {
         title: "S\u00E9curit\u00E9 du compte",
         description:
-          "Mettez a jour votre mot de passe et renforcez la protection d'acces a votre compte Teranga.",
+          "Mettez \u00E0 jour votre mot de passe et renforcez la protection d'acc\u00E8s \u00E0 votre compte Teranga.",
       },
       settings: {
         title: "Param\u00E8tres",
         description:
-          "Configurez votre experience, consultez les pages compte et accedez aux ressources essentielles.",
+          "Configurez votre exp\u00E9rience, consultez les pages compte et acc\u00E9dez aux ressources essentielles.",
       },
       helpSupport: {
         title: "Aide & Support",
         description:
-          "Consultez l'assistance Teranga pour vos services, taches et projets: ressources, process support et contacts officiels.",
+          "Consultez l'assistance Teranga pour vos services, t\u00E2ches et projets : ressources, processus support et contacts officiels.",
       },
       finance: {
         title: "Finances",
