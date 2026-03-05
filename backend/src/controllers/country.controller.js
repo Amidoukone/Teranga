@@ -13,12 +13,19 @@ const {
   Project,
   Evidence,
   Order,
+  Activity,
+  Notification,
+  OrderItem,
+  ProjectPhase,
+  ProjectDocument,
+  sequelize,
 } = require('../../models');
+const { Op } = require('sequelize');
 const { getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
 const logger = require('../utils/logger');
 
 /* ======================================================
-   🧩 Helpers
+   ðŸ§© Helpers
 ====================================================== */
 function toSafeInt(v) {
   if (v === null || v === undefined || v === '') return null;
@@ -34,65 +41,104 @@ function toTrimOrNull(v) {
 
 function requireGlobalAdmin(req, res) {
   if (!req.user?.role) {
-    res.status(401).json({ error: 'Non authentifié' });
+    res.status(401).json({ error: 'Non authentifiÃ©' });
     return false;
   }
   if (req.user.role !== 'admin' || !isGlobalAdmin(req.user)) {
-    res.status(403).json({ error: 'Accès réservé à un administrateur global' });
+    res.status(403).json({ error: 'AccÃ¨s rÃ©servÃ© Ã  un administrateur global' });
     return false;
   }
   return true;
 }
 
-async function findCountryUsage(countryId) {
-  const checks = [
-    { model: Region, label: 'régions', field: 'countryId' },
-    { model: User, label: 'utilisateurs', field: 'countryId' },
-    { model: Franchise, label: 'franchises', field: 'countryId' },
-    { model: Property, label: 'biens', field: 'countryId' },
-    { model: Service, label: 'services', field: 'countryId' },
-    { model: Transaction, label: 'transactions', field: 'countryId' },
-    { model: Product, label: 'produits', field: 'countryId' },
-    { model: Task, label: 'tâches', field: 'countryId' },
-    { model: Project, label: 'projets', field: 'countryId' },
-    { model: Evidence, label: 'preuves', field: 'countryId' },
-    { model: Order, label: 'commandes', field: 'countryId' },
-  ];
-
-  const results = await Promise.all(
-    checks.map(async ({ model, label, field }) => {
-      if (!model?.count) return { label, count: 0 };
-      const count = await model.count({ where: { [field]: countryId } });
-      return { label, count };
-    })
-  );
-
-  return results.find((result) => result.count > 0) || null;
+function toIntIds(rows) {
+  return (rows || [])
+    .map((row) => toSafeInt(row?.id))
+    .filter((id) => Number.isInteger(id) && id > 0);
 }
 
-async function forceDetachCountryUsers(countryId) {
-  const adminCount = await User.count({
-    where: { countryId, role: 'admin' },
-  });
-
-  if (adminCount > 0) {
-    const err = new Error(
-      "Suppression forcée impossible : ce pays est encore lié à des comptes admin/master. Réassignez ou supprimez-les d'abord."
-    );
-    err.status = 409;
-    throw err;
+function buildCountryCascadeWhere(countryId, regionIds) {
+  const clauses = [{ countryId }];
+  if (regionIds.length) {
+    clauses.push({ regionId: { [Op.in]: regionIds } });
   }
 
+  if (clauses.length === 1) return clauses[0];
+  return { [Op.or]: clauses };
+}
+
+async function cascadeDeleteCountry(country, transaction) {
+  const regions = await Region.findAll({
+    where: { countryId: country.id },
+    attributes: ['id'],
+    transaction,
+  });
+  const regionIds = toIntIds(regions);
+  const where = buildCountryCascadeWhere(country.id, regionIds);
+
+  const [orders, projects] = await Promise.all([
+    Order.findAll({
+      where,
+      attributes: ['id'],
+      transaction,
+    }),
+    Project.findAll({
+      where,
+      attributes: ['id'],
+      transaction,
+    }),
+  ]);
+
+  const orderIds = toIntIds(orders);
+  const projectIds = toIntIds(projects);
+
+  if (orderIds.length) {
+    await OrderItem.destroy({
+      where: { orderId: { [Op.in]: orderIds } },
+      transaction,
+    });
+  }
+
+  if (projectIds.length) {
+    await ProjectDocument.destroy({
+      where: { projectId: { [Op.in]: projectIds } },
+      transaction,
+    });
+    await ProjectPhase.destroy({
+      where: { projectId: { [Op.in]: projectIds } },
+      transaction,
+    });
+  }
+
+  await Evidence.destroy({ where, transaction });
+  await Transaction.destroy({ where, transaction });
+  await Activity.destroy({ where, transaction });
+  await Notification.destroy({ where, transaction });
+  await Task.destroy({ where, transaction });
+  await Service.destroy({ where, transaction });
+  await Product.destroy({ where, transaction });
+  await Property.destroy({ where, transaction });
+  await Project.destroy({ where, transaction });
+  await Order.destroy({ where, transaction });
+  await Franchise.destroy({ where, transaction });
+
   await User.update(
-    { countryId: null, regionId: null },
-    { where: { countryId } }
+    { countryId: null, regionId: null, country: null },
+    { where, transaction }
   );
+
+  await Region.destroy({
+    where: { countryId: country.id },
+    transaction,
+  });
+
+  await country.destroy({ transaction });
 }
 
 /* ======================================================
-   📋 LIST
-   - Public (ou tous rôles)
-   - Par défaut : pays actifs uniquement
+   ðŸ“‹ LIST
+   - Public (ou tous rÃ´les)
+   - Par dÃ©faut : pays actifs uniquement
    - Admin : ?includeInactive=true -> inclut inactifs
 ====================================================== */
 exports.list = async (req, res) => {
@@ -130,12 +176,12 @@ exports.list = async (req, res) => {
     logger.error('list countries:', e);
     return res
       .status(500)
-      .json({ error: 'Erreur lors de la récupération des pays' });
+      .json({ error: 'Erreur lors de la rÃ©cupÃ©ration des pays' });
   }
 };
 
 /* ======================================================
-   ➕ CREATE (admin)
+   âž• CREATE (admin)
 ====================================================== */
 exports.create = async (req, res) => {
   try {
@@ -154,11 +200,11 @@ exports.create = async (req, res) => {
 
     const iso = trimmedIso.toUpperCase();
 
-    // ✅ Pré-check anti doublon (meilleur message utilisateur)
+    // âœ… PrÃ©-check anti doublon (meilleur message utilisateur)
     const existing = await Country.findOne({ where: { isoCode: iso } });
     if (existing) {
       return res.status(409).json({
-        error: `Un pays avec isoCode "${iso}" existe déjà`,
+        error: `Un pays avec isoCode "${iso}" existe dÃ©jÃ `,
       });
     }
 
@@ -172,20 +218,20 @@ exports.create = async (req, res) => {
 
     return res.status(201).json({ country: created });
   } catch (e) {
-    // ✅ Erreur unique constraint (sécurité supplémentaire)
+    // âœ… Erreur unique constraint (sÃ©curitÃ© supplÃ©mentaire)
     if (e?.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({
-        error: "Ce code ISO existe déjà (contrainte d'unicité)",
+        error: "Ce code ISO existe dÃ©jÃ  (contrainte d'unicitÃ©)",
       });
     }
 
     logger.error('create country:', e);
-    return res.status(500).json({ error: 'Erreur lors de la création du pays' });
+    return res.status(500).json({ error: 'Erreur lors de la crÃ©ation du pays' });
   }
 };
 
 /* ======================================================
-   ✏️ UPDATE (admin)
+   âœï¸ UPDATE (admin)
 ====================================================== */
 exports.update = async (req, res) => {
   try {
@@ -211,12 +257,12 @@ exports.update = async (req, res) => {
 
       const iso = trimmedIso.toUpperCase();
 
-      // ✅ Empêcher collision si isoCode changé
+      // âœ… EmpÃªcher collision si isoCode changÃ©
       if (iso !== country.isoCode) {
         const existing = await Country.findOne({ where: { isoCode: iso } });
         if (existing) {
           return res.status(409).json({
-            error: `Un pays avec isoCode "${iso}" existe déjà`,
+            error: `Un pays avec isoCode "${iso}" existe dÃ©jÃ `,
           });
         }
       }
@@ -243,19 +289,19 @@ exports.update = async (req, res) => {
   } catch (e) {
     if (e?.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({
-        error: "Ce code ISO existe déjà (contrainte d'unicité)",
+        error: "Ce code ISO existe dÃ©jÃ  (contrainte d'unicitÃ©)",
       });
     }
 
     logger.error('update country:', e);
     return res
       .status(500)
-      .json({ error: 'Erreur lors de la mise à jour du pays' });
+      .json({ error: 'Erreur lors de la mise Ã  jour du pays' });
   }
 };
 
 /* ======================================================
-   🗑️ DELETE (admin)
+   ðŸ—‘ï¸ DELETE (admin)
 ====================================================== */
 exports.remove = async (req, res) => {
   try {
@@ -263,36 +309,13 @@ exports.remove = async (req, res) => {
 
     const id = toSafeInt(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID invalide' });
-    const force = String(req.query?.force || '').toLowerCase() === 'true';
 
     const country = await Country.findByPk(id);
     if (!country) return res.status(404).json({ error: 'Pays introuvable' });
 
-    let usage = await findCountryUsage(id);
-    if (usage) {
-      if (force && usage.label === 'utilisateurs') {
-        try {
-          await forceDetachCountryUsers(id);
-        } catch (detachErr) {
-          if (detachErr?.status) {
-            return res.status(detachErr.status).json({ error: detachErr.message });
-          }
-          throw detachErr;
-        }
-        usage = await findCountryUsage(id);
-      }
-
-      if (!usage) {
-        await country.destroy();
-        return res.json({ success: true });
-      }
-
-      return res.status(409).json({
-        error: `Suppression impossible : ce pays possède encore des ${usage.label}.`,
-      });
-    }
-
-    await country.destroy();
+    await sequelize.transaction(async (transaction) => {
+      await cascadeDeleteCountry(country, transaction);
+    });
 
     return res.json({ success: true });
   } catch (e) {

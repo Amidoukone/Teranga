@@ -13,7 +13,14 @@ const {
   Project,
   Evidence,
   Order,
+  Activity,
+  Notification,
+  OrderItem,
+  ProjectPhase,
+  ProjectDocument,
+  sequelize,
 } = require('../../models');
+const { Op } = require('sequelize');
 const { getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
 const logger = require('../utils/logger');
 
@@ -44,41 +51,75 @@ function requireGlobalAdmin(req, res) {
   return true;
 }
 
-async function findRegionUsage(regionId) {
-  const checks = [
-    { model: User, label: 'utilisateurs', field: 'regionId' },
-    { model: Franchise, label: 'franchises', field: 'regionId' },
-    { model: Property, label: 'biens', field: 'regionId' },
-    { model: Service, label: 'services', field: 'regionId' },
-    { model: Transaction, label: 'transactions', field: 'regionId' },
-    { model: Product, label: 'produits', field: 'regionId' },
-    { model: Task, label: 'tâches', field: 'regionId' },
-    { model: Project, label: 'projets', field: 'regionId' },
-    { model: Evidence, label: 'preuves', field: 'regionId' },
-    { model: Order, label: 'commandes', field: 'regionId' },
-  ];
-
-  const results = await Promise.all(
-    checks.map(async ({ model, label, field }) => {
-      if (!model?.count) return { label, count: 0 };
-      const count = await model.count({ where: { [field]: regionId } });
-      return { label, count };
-    })
-  );
-
-  return results.find((result) => result.count > 0) || null;
+function toIntIds(rows) {
+  return (rows || [])
+    .map((row) => toSafeInt(row?.id))
+    .filter((id) => Number.isInteger(id) && id > 0);
 }
 
-async function forceDetachRegionUsers(region) {
-  if (!region?.id) return;
+async function cascadeDeleteRegion(region, transaction) {
+  const where = { regionId: region.id };
 
-  // Preserve country scope for users that only had a region scope.
+  const [orders, projects] = await Promise.all([
+    Order.findAll({
+      where,
+      attributes: ['id'],
+      transaction,
+    }),
+    Project.findAll({
+      where,
+      attributes: ['id'],
+      transaction,
+    }),
+  ]);
+
+  const orderIds = toIntIds(orders);
+  const projectIds = toIntIds(projects);
+
+  if (orderIds.length) {
+    await OrderItem.destroy({
+      where: { orderId: { [Op.in]: orderIds } },
+      transaction,
+    });
+  }
+
+  if (projectIds.length) {
+    await ProjectDocument.destroy({
+      where: { projectId: { [Op.in]: projectIds } },
+      transaction,
+    });
+    await ProjectPhase.destroy({
+      where: { projectId: { [Op.in]: projectIds } },
+      transaction,
+    });
+  }
+
+  await Evidence.destroy({ where, transaction });
+  await Transaction.destroy({ where, transaction });
+  await Activity.destroy({ where, transaction });
+  await Notification.destroy({ where, transaction });
+  await Task.destroy({ where, transaction });
+  await Service.destroy({ where, transaction });
+  await Product.destroy({ where, transaction });
+  await Property.destroy({ where, transaction });
+  await Project.destroy({ where, transaction });
+  await Order.destroy({ where, transaction });
+  await Franchise.destroy({ where, transaction });
+
   await User.update(
     { countryId: region.countryId },
-    { where: { regionId: region.id, countryId: null } }
+    {
+      where: { regionId: region.id, countryId: null },
+      transaction,
+    }
   );
 
-  await User.update({ regionId: null }, { where: { regionId: region.id } });
+  await User.update(
+    { regionId: null },
+    { where: { regionId: region.id }, transaction }
+  );
+
+  await region.destroy({ transaction });
 }
 
 /* ======================================================
@@ -233,29 +274,13 @@ exports.remove = async (req, res) => {
 
     const id = toSafeInt(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID invalide' });
-    const force = String(req.query?.force || '').toLowerCase() === 'true';
 
     const region = await Region.findByPk(id);
     if (!region) return res.status(404).json({ error: 'Région introuvable' });
 
-    let usage = await findRegionUsage(id);
-    if (usage) {
-      if (force && usage.label === 'utilisateurs') {
-        await forceDetachRegionUsers(region);
-        usage = await findRegionUsage(id);
-      }
-
-      if (!usage) {
-        await region.destroy();
-        return res.json({ success: true });
-      }
-
-      return res.status(409).json({
-        error: `Suppression impossible : cette région possède encore des ${usage.label}.`,
-      });
-    }
-
-    await region.destroy();
+    await sequelize.transaction(async (transaction) => {
+      await cascadeDeleteRegion(region, transaction);
+    });
 
     return res.json({ success: true });
   } catch (e) {

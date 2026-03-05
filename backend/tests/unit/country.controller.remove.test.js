@@ -1,28 +1,66 @@
 'use strict';
 
-jest.mock('../../models', () => {
-  const makeCountModel = () => ({ count: jest.fn() });
+const { Op } = require('sequelize');
 
-  return {
-    Country: {
-      findByPk: jest.fn(),
-    },
-    Region: makeCountModel(),
-    User: {
-      count: jest.fn(),
-      update: jest.fn(),
-    },
-    Franchise: makeCountModel(),
-    Property: makeCountModel(),
-    Service: makeCountModel(),
-    Transaction: makeCountModel(),
-    Product: makeCountModel(),
-    Task: makeCountModel(),
-    Project: makeCountModel(),
-    Evidence: makeCountModel(),
-    Order: makeCountModel(),
-  };
-});
+jest.mock('../../models', () => ({
+  Country: {
+    findByPk: jest.fn(),
+  },
+  Region: {
+    findAll: jest.fn(),
+    destroy: jest.fn(),
+  },
+  User: {
+    update: jest.fn(),
+  },
+  Franchise: {
+    destroy: jest.fn(),
+  },
+  Property: {
+    destroy: jest.fn(),
+  },
+  Service: {
+    destroy: jest.fn(),
+  },
+  Transaction: {
+    destroy: jest.fn(),
+  },
+  Product: {
+    destroy: jest.fn(),
+  },
+  Task: {
+    destroy: jest.fn(),
+  },
+  Project: {
+    findAll: jest.fn(),
+    destroy: jest.fn(),
+  },
+  Evidence: {
+    destroy: jest.fn(),
+  },
+  Order: {
+    findAll: jest.fn(),
+    destroy: jest.fn(),
+  },
+  Activity: {
+    destroy: jest.fn(),
+  },
+  Notification: {
+    destroy: jest.fn(),
+  },
+  OrderItem: {
+    destroy: jest.fn(),
+  },
+  ProjectPhase: {
+    destroy: jest.fn(),
+  },
+  ProjectDocument: {
+    destroy: jest.fn(),
+  },
+  sequelize: {
+    transaction: jest.fn(),
+  },
+}));
 
 jest.mock('../../src/utils/geoScope', () => ({
   getUserGeoScope: jest.fn(() => ({ countryId: null, regionId: null })),
@@ -49,6 +87,12 @@ const {
   Project,
   Evidence,
   Order,
+  Activity,
+  Notification,
+  OrderItem,
+  ProjectPhase,
+  ProjectDocument,
+  sequelize,
 } = require('../../models');
 const controller = require('../../src/controllers/country.controller');
 
@@ -61,34 +105,51 @@ function makeRes() {
   return res;
 }
 
-function setNoCountryUsageDefaults() {
-  Region.count.mockResolvedValue(0);
-  Franchise.count.mockResolvedValue(0);
-  Property.count.mockResolvedValue(0);
-  Service.count.mockResolvedValue(0);
-  Transaction.count.mockResolvedValue(0);
-  Product.count.mockResolvedValue(0);
-  Task.count.mockResolvedValue(0);
-  Project.count.mockResolvedValue(0);
-  Evidence.count.mockResolvedValue(0);
-  Order.count.mockResolvedValue(0);
+function setCascadeDefaults() {
+  Region.findAll.mockResolvedValue([]);
+  Order.findAll.mockResolvedValue([]);
+  Project.findAll.mockResolvedValue([]);
+  User.update.mockResolvedValue([0]);
+
+  const destroyModels = [
+    Region,
+    Franchise,
+    Property,
+    Service,
+    Transaction,
+    Product,
+    Task,
+    Project,
+    Evidence,
+    Order,
+    Activity,
+    Notification,
+    OrderItem,
+    ProjectPhase,
+    ProjectDocument,
+  ];
+
+  destroyModels.forEach((model) => {
+    model.destroy.mockResolvedValue(0);
+  });
 }
 
-describe('country.controller remove force behavior', () => {
+describe('country.controller remove cascade behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    setNoCountryUsageDefaults();
+    setCascadeDefaults();
+    sequelize.transaction.mockImplementation(async (callback) =>
+      callback('tx-country')
+    );
   });
 
-  test('returns 409 when users are still linked and force is not provided', async () => {
+  test('deletes country with all related scoped data in a transaction', async () => {
     const destroy = jest.fn().mockResolvedValue(undefined);
     Country.findByPk.mockResolvedValue({ id: 7, destroy });
 
-    User.count.mockImplementation(({ where }) => {
-      if (where?.role === 'admin') return Promise.resolve(0);
-      if (where?.countryId === 7) return Promise.resolve(2);
-      return Promise.resolve(0);
-    });
+    Region.findAll.mockResolvedValue([{ id: 12 }, { id: '13' }]);
+    Order.findAll.mockResolvedValue([{ id: 100 }, { id: '101' }]);
+    Project.findAll.mockResolvedValue([{ id: 9 }]);
 
     const req = {
       user: { role: 'admin' },
@@ -99,73 +160,97 @@ describe('country.controller remove force behavior', () => {
 
     await controller.remove(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(409);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        error: expect.stringContaining('utilisateurs'),
-      })
-    );
-    expect(User.update).not.toHaveBeenCalled();
-    expect(destroy).not.toHaveBeenCalled();
-  });
-
-  test('force delete detaches non-admin users and deletes the country', async () => {
-    const destroy = jest.fn().mockResolvedValue(undefined);
-    Country.findByPk.mockResolvedValue({ id: 7, destroy });
-
-    let countryUsageChecks = 0;
-    User.count.mockImplementation(({ where }) => {
-      if (where?.role === 'admin') return Promise.resolve(0);
-      if (where?.countryId === 7) {
-        countryUsageChecks += 1;
-        return Promise.resolve(countryUsageChecks === 1 ? 3 : 0);
-      }
-      return Promise.resolve(0);
-    });
-
-    const req = {
-      user: { role: 'admin' },
-      params: { id: '7' },
-      query: { force: 'true' },
+    const expectedWhere = {
+      [Op.or]: [{ countryId: 7 }, { regionId: { [Op.in]: [12, 13] } }],
     };
-    const res = makeRes();
 
-    await controller.remove(req, res);
-
+    expect(sequelize.transaction).toHaveBeenCalledTimes(1);
+    expect(OrderItem.destroy).toHaveBeenCalledWith({
+      where: { orderId: { [Op.in]: [100, 101] } },
+      transaction: 'tx-country',
+    });
+    expect(ProjectDocument.destroy).toHaveBeenCalledWith({
+      where: { projectId: { [Op.in]: [9] } },
+      transaction: 'tx-country',
+    });
+    expect(ProjectPhase.destroy).toHaveBeenCalledWith({
+      where: { projectId: { [Op.in]: [9] } },
+      transaction: 'tx-country',
+    });
+    expect(Evidence.destroy).toHaveBeenCalledWith({
+      where: expectedWhere,
+      transaction: 'tx-country',
+    });
+    expect(Transaction.destroy).toHaveBeenCalledWith({
+      where: expectedWhere,
+      transaction: 'tx-country',
+    });
+    expect(Activity.destroy).toHaveBeenCalledWith({
+      where: expectedWhere,
+      transaction: 'tx-country',
+    });
+    expect(Notification.destroy).toHaveBeenCalledWith({
+      where: expectedWhere,
+      transaction: 'tx-country',
+    });
+    expect(Task.destroy).toHaveBeenCalledWith({
+      where: expectedWhere,
+      transaction: 'tx-country',
+    });
+    expect(Service.destroy).toHaveBeenCalledWith({
+      where: expectedWhere,
+      transaction: 'tx-country',
+    });
+    expect(Product.destroy).toHaveBeenCalledWith({
+      where: expectedWhere,
+      transaction: 'tx-country',
+    });
+    expect(Property.destroy).toHaveBeenCalledWith({
+      where: expectedWhere,
+      transaction: 'tx-country',
+    });
+    expect(Project.destroy).toHaveBeenCalledWith({
+      where: expectedWhere,
+      transaction: 'tx-country',
+    });
+    expect(Order.destroy).toHaveBeenCalledWith({
+      where: expectedWhere,
+      transaction: 'tx-country',
+    });
+    expect(Franchise.destroy).toHaveBeenCalledWith({
+      where: expectedWhere,
+      transaction: 'tx-country',
+    });
     expect(User.update).toHaveBeenCalledWith(
-      { countryId: null, regionId: null },
-      { where: { countryId: 7 } }
+      { countryId: null, regionId: null, country: null },
+      { where: expectedWhere, transaction: 'tx-country' }
     );
-    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(Region.destroy).toHaveBeenCalledWith({
+      where: { countryId: 7 },
+      transaction: 'tx-country',
+    });
+    expect(destroy).toHaveBeenCalledWith({ transaction: 'tx-country' });
     expect(res.json).toHaveBeenCalledWith({ success: true });
   });
 
-  test('force delete is rejected when admin/master users are still linked', async () => {
-    const destroy = jest.fn().mockResolvedValue(undefined);
-    Country.findByPk.mockResolvedValue({ id: 7, destroy });
-
-    User.count.mockImplementation(({ where }) => {
-      if (where?.role === 'admin') return Promise.resolve(1);
-      if (where?.countryId === 7) return Promise.resolve(2);
-      return Promise.resolve(0);
-    });
+  test('returns 404 when country does not exist', async () => {
+    Country.findByPk.mockResolvedValue(null);
 
     const req = {
       user: { role: 'admin' },
-      params: { id: '7' },
-      query: { force: 'true' },
+      params: { id: '999' },
+      query: {},
     };
     const res = makeRes();
 
     await controller.remove(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.status).toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        error: expect.stringContaining('admin/master'),
+        error: expect.stringContaining('introuvable'),
       })
     );
-    expect(User.update).not.toHaveBeenCalled();
-    expect(destroy).not.toHaveBeenCalled();
+    expect(sequelize.transaction).not.toHaveBeenCalled();
   });
 });
