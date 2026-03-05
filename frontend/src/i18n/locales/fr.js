@@ -2563,6 +2563,7 @@ const fr = {
       reset: "Réinitialiser",
       update: "Mettre à jour",
       create: "Ajouter le produit",
+      submitting: "Enregistrement en cours...",
     },
     table: {
       product: "Produit",
@@ -2582,6 +2583,10 @@ const fr = {
       priceRequired: "Prix requis",
       updateSuccess: "Produit mis à jour",
       createSuccess: "Produit ajouté !",
+      createSuccessAfterTimeout:
+        "Produit ajouté (confirmation après un délai réseau).",
+      createPendingAfterTimeout:
+        "Le serveur prend plus de temps que prévu. Vérifiez la liste avant de relancer l'ajout.",
       saveError: "Erreur sauvegarde",
       deleteSuccess: "Produit supprimé !",
       deleteError: "Erreur suppression",

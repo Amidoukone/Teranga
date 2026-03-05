@@ -3,6 +3,11 @@ import api, { getFileUrl } from './api';
 import { applyLabels } from '../utils/labels';
 import { appendGeoFormData, mergeGeoParams } from './geo';
 
+const PRODUCT_UPLOAD_TIMEOUT_MS =
+  Number(process.env.REACT_APP_PRODUCT_UPLOAD_TIMEOUT_MS) ||
+  Number(process.env.REACT_APP_UPLOAD_TIMEOUT_MS) ||
+  180000;
+
 /* -----------------------------------------------------------
  * 🧩 Normalisation produit
  * -----------------------------------------------------------
@@ -159,6 +164,7 @@ export async function createProduct(payload) {
   const formData = toFormData(payload);
   const { data } = await api.post('/products', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: PRODUCT_UPLOAD_TIMEOUT_MS,
   });
   const product = data?.product ?? data;
   return normalizeProduct(product);
@@ -173,6 +179,7 @@ export async function updateProduct(id, payload) {
   const formData = toFormData(payload);
   const { data } = await api.put(`/products/${id}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: PRODUCT_UPLOAD_TIMEOUT_MS,
   });
   const product = data?.product ?? data;
   return normalizeProduct(product);

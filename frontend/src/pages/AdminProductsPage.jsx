@@ -99,6 +99,7 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [search, setSearch] = useState("");
   const [geoFilters, setGeoFilters] = useState({
@@ -320,12 +321,15 @@ export default function AdminProductsPage() {
 
       // Compat: certains services renvoient {products, pagination}
       const list = Array.isArray(res) ? res : res?.products;
+      const normalizedList = list || [];
 
-      setProducts(list || []);
+      setProducts(normalizedList);
+      return normalizedList;
     } catch (e) {
       console.error("AdminProductsPage load products error:", e);
       notify(t("adminProductsPage.alerts.loadProductsError"));
       setProducts([]);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -403,15 +407,77 @@ export default function AdminProductsPage() {
     });
   }
 
+  function isTimeoutError(err) {
+    if (!err) return false;
+    if (err?.code === "ECONNABORTED") return true;
+    const message = String(err?.message || "").toLowerCase();
+    return message.includes("timeout") || message.includes("timed out");
+  }
+
+  function toIntOrNull(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  function toComparableName(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  function findMatchingSubmittedProduct(items, payload) {
+    const targetName = toComparableName(payload?.name);
+    const targetPrice = Number(payload?.price);
+    const targetStock = Number(payload?.stock);
+    const targetCategoryId = toIntOrNull(payload?.categoryId);
+    const targetCountryId = toIntOrNull(payload?.countryId);
+    const targetRegionId = toIntOrNull(payload?.regionId);
+
+    return (items || []).find((item) => {
+      if (toComparableName(item?.name) !== targetName) return false;
+      if (Number(item?.price) !== targetPrice) return false;
+      if (Number(item?.stock) !== targetStock) return false;
+      if (toIntOrNull(item?.categoryId) !== targetCategoryId) return false;
+
+      if (isGlobalAdmin) {
+        const itemCountryId = toIntOrNull(item?.countryId ?? item?.country?.id);
+        const itemRegionId = toIntOrNull(item?.regionId ?? item?.region?.id);
+
+        if (targetCountryId && itemCountryId !== targetCountryId) {
+          return false;
+        }
+        if (targetRegionId && itemRegionId !== targetRegionId) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+
+  async function confirmProductCreatedAfterTimeout(payload) {
+    const timeoutFilters = isGlobalAdmin
+      ? {
+          countryId: payload?.countryId ? String(payload.countryId) : "",
+          regionId: payload?.regionId ? String(payload.regionId) : "",
+        }
+      : geoFilters;
+    const latestProducts = await loadProducts(timeoutFilters);
+    return Boolean(findMatchingSubmittedProduct(latestProducts, payload));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    const isUpdateMode = Boolean(editing);
+    let payload = null;
+
     try {
       if (!form.name.trim())
         return notify(t("adminProductsPage.alerts.nameRequired"));
       if (form.price === "")
         return notify(t("adminProductsPage.alerts.priceRequired"));
 
-      const payload = {
+      payload = {
         ...form,
         price: Number(form.price),
         stock: Number(form.stock),
@@ -423,7 +489,9 @@ export default function AdminProductsPage() {
         delete payload.regionId;
       }
 
-      if (editing) {
+      setIsSubmitting(true);
+
+      if (isUpdateMode) {
         await updateProduct(editing.id, payload);
         notify(t("adminProductsPage.alerts.updateSuccess"));
       } else {
@@ -436,6 +504,20 @@ export default function AdminProductsPage() {
       setShowForm(false);
     } catch (err) {
       console.error("AdminProductsPage save product error:", err);
+
+      if (!isUpdateMode && isTimeoutError(err)) {
+        const createdAfterTimeout = await confirmProductCreatedAfterTimeout(payload);
+        if (createdAfterTimeout) {
+          notify(t("adminProductsPage.alerts.createSuccessAfterTimeout"));
+          resetForm();
+          setShowForm(false);
+          return;
+        }
+
+        notify(t("adminProductsPage.alerts.createPendingAfterTimeout"));
+        return;
+      }
+
       const status = err?.response?.status;
       const apiMessage =
         err?.response?.data?.error || err?.response?.data?.message || "";
@@ -456,6 +538,8 @@ export default function AdminProductsPage() {
         .map((msg) => `\n${msg}`)
         .join("");
       notify(`${t("adminProductsPage.alerts.saveError")}${suffix}`);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -565,8 +649,14 @@ export default function AdminProductsPage() {
 
           <div className="flex flex-wrap gap-2">
             <button
+              type="button"
+              disabled={isSubmitting}
               onClick={() => setShowForm((v) => !v)}
-              className="px-4 py-2 rounded-xl app-btn-neutral text-sm font-semibold shadow-sm"
+              className={`px-4 py-2 rounded-xl text-sm font-semibold shadow-sm ${
+                isSubmitting
+                  ? "app-btn-neutral opacity-60 cursor-not-allowed"
+                  : "app-btn-neutral"
+              }`}
             >
               {showForm
                 ? t("adminProductsPage.buttons.hideForm")
@@ -574,10 +664,11 @@ export default function AdminProductsPage() {
             </button>
 
             <button
-              disabled={loading}
+              type="button"
+              disabled={loading || isSubmitting}
               onClick={() => loadProducts()}
               className={`px-4 py-2 rounded-xl text-sm font-semibold shadow-sm ${
-                loading
+                loading || isSubmitting
                   ? "bg-blue-300 cursor-not-allowed text-white"
                   : "bg-blue-600 hover:bg-blue-700 text-white"
               }`}
@@ -869,18 +960,31 @@ export default function AdminProductsPage() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-2 rounded-xl bg-surface-main/80 text-text-secondary hover:bg-surface-main text-sm font-semibold"
+                disabled={isSubmitting}
+                className={`px-4 py-2 rounded-xl bg-surface-main/80 text-text-secondary text-sm font-semibold ${
+                  isSubmitting
+                    ? "opacity-60 cursor-not-allowed"
+                    : "hover:bg-surface-main"
+                }`}
               >
                 {t("adminProductsPage.form.reset")}
               </button>
 
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow-sm text-sm font-semibold"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting}
+                className={`px-5 py-2 rounded-xl text-white shadow-sm text-sm font-semibold ${
+                  isSubmitting
+                    ? "bg-blue-300 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
               >
-                {editing
-                  ? t("adminProductsPage.form.update")
-                  : t("adminProductsPage.form.create")}
+                {isSubmitting
+                  ? t("adminProductsPage.form.submitting")
+                  : editing
+                    ? t("adminProductsPage.form.update")
+                    : t("adminProductsPage.form.create")}
               </button>
             </div>
           </form>

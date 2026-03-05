@@ -2552,6 +2552,7 @@ const en = {
       reset: "Reset",
       update: "Update",
       create: "Add product",
+      submitting: "Saving...",
     },
     table: {
       product: "Product",
@@ -2571,6 +2572,10 @@ const en = {
       priceRequired: "Price required.",
       updateSuccess: "Product updated",
       createSuccess: "Product added!",
+      createSuccessAfterTimeout:
+        "Product added (confirmed after a network delay).",
+      createPendingAfterTimeout:
+        "The server is taking longer than expected. Check the list before trying to add again.",
       saveError: "Error saving.",
       deleteSuccess: "Product deleted!",
       deleteError: "Error deleting.",
