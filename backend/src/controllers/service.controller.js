@@ -5,6 +5,7 @@ const { Op } = require("sequelize");
 const {
   SERVICE_STATUSES,
   SERVICE_TYPES,
+  CURRENCY_LABELS,
   canonicalizeServiceType,
   getLabel,
 } = require("../utils/labels");
@@ -43,6 +44,14 @@ function toTrimOrNull(v) {
 function toSafeInt(v, fallback = null) {
   const n = parseInt(v, 10);
   return Number.isNaN(n) ? fallback : n;
+}
+
+const KNOWN_CURRENCIES = new Set(Object.keys(CURRENCY_LABELS || {}));
+
+function normalizeCurrency(input, fallback = "XOF") {
+  if (!input) return fallback;
+  const cur = String(input).toUpperCase().trim();
+  return KNOWN_CURRENCIES.has(cur) ? cur : fallback;
 }
 
 function isTrue(x) {
@@ -130,11 +139,14 @@ function addLabels(service) {
   if (!service) return null;
   const s = service.toJSON ? service.toJSON() : service;
   const normalizedType = canonicalizeServiceType(s.type, s.type);
+  const normalizedCurrency = normalizeCurrency(s.currency, "XOF");
   return {
     ...s,
     type: normalizedType,
+    currency: normalizedCurrency,
     statusLabel: getLabel(s.status, SERVICE_STATUSES),
     typeLabel: getLabel(normalizedType, SERVICE_TYPES),
+    currencyLabel: getLabel(normalizedCurrency, CURRENCY_LABELS),
   };
 }
 
@@ -154,6 +166,7 @@ exports.create = async (req, res) => {
       contactPhone,
       address,
       budget,
+      currency,
       clientId,
       countryId,
       regionId,
@@ -255,6 +268,7 @@ exports.create = async (req, res) => {
       contactPhone: toTrimOrNull(contactPhone),
       address: toTrimOrNull(address),
       budget: toNullableNumber(budget),
+      currency: normalizeCurrency(currency, "XOF"),
       status: "created",
       countryId: resolvedCountryId,
       regionId: resolvedRegionId,
@@ -592,6 +606,7 @@ exports.updateService = async (req, res) => {
       "contactPhone",
       "address",
       "budget",
+      "currency",
       "status",
       "type",
       "propertyId",
@@ -616,6 +631,14 @@ exports.updateService = async (req, res) => {
         return res.status(400).json({ error: "Statut de service invalide" });
       }
       updates.status = nextStatus;
+    }
+
+    if ("budget" in updates) {
+      updates.budget = toNullableNumber(updates.budget);
+    }
+
+    if ("currency" in updates) {
+      updates.currency = normalizeCurrency(updates.currency, service.currency || "XOF");
     }
 
     if ("propertyId" in updates) {

@@ -10,6 +10,7 @@ import {
   getServiceTypeLabel,
   SERVICE_TYPES,
   SERVICE_STATUSES,
+  CURRENCY_LABELS,
 } from '../utils/labels';
 import PaginationBar from '../components/PaginationBar';
 import { useLocale } from '../i18n/useLocale';
@@ -23,6 +24,7 @@ const DEFAULT_FILTERS = {
   property: '',
   sort: '-createdAt',
 };
+const SERVICE_CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 
 /* ============================================================
    Roles admin/master et perimetre d'acces.
@@ -65,6 +67,7 @@ export default function ServicesPage() {
     contactPhone: '',
     address: '',
     budget: '',
+    currency: 'XOF',
   });
 
 /* ==========================================
@@ -347,23 +350,35 @@ const roleVariant = useMemo(() => {
         return;
       }
 
-      const payload = {
+      const normalizedBudgetRaw = String(form.budget || '').trim().replace(',', '.');
+      const normalizedBudget =
+        form.budget === ''
+          ? null
+          : Number(normalizedBudgetRaw);
+
+      const updatePayload = {
         title: form.title,
         description: form.description,
         contactPerson: form.contactPerson,
         contactPhone: form.contactPhone,
         address: form.address,
-        budget: form.budget === '' ? null : parseFloat(form.budget),
+        budget:
+          form.budget === ''
+            ? null
+            : Number.isFinite(normalizedBudget)
+            ? normalizedBudget
+            : null,
+        currency: String(form.currency || 'XOF').toUpperCase(),
         type: form.type,
         propertyId: form.propertyId ? parseInt(form.propertyId, 10) : null,
       };
 
       // Contexte: gestion des services.
       if (user?.role === 'admin' && form.clientId) {
-        payload.clientId = parseInt(form.clientId, 10);
+        updatePayload.clientId = parseInt(form.clientId, 10);
       }
 
-      await api.put(`/services/${editingId}`, payload, authHeaders);
+      await api.put(`/services/${editingId}`, updatePayload, authHeaders);
       setNotice({
         type: 'success',
         message: t("services.alerts.updateSuccess"),
@@ -417,6 +432,7 @@ const roleVariant = useMemo(() => {
         service.budget === null || service.budget === undefined
           ? ''
           : service.budget,
+      currency: String(service.currency || 'XOF').toUpperCase(),
     });
   }
 
@@ -431,6 +447,7 @@ const roleVariant = useMemo(() => {
       contactPhone: '',
       address: '',
       budget: '',
+      currency: 'XOF',
     });
     setEditingId(null);
   }
@@ -992,6 +1009,24 @@ function ServiceFormFields({ form, setForm }) {
           className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
         />
       </div>
+
+      {/* Devise */}
+      <div className="w-full">
+        <label className="block text-sm font-medium text-text-secondary mb-1">
+          {t("services.form.currencyLabel")}
+        </label>
+        <select
+          value={form.currency}
+          onChange={(e) => setForm({ ...form, currency: e.target.value })}
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
+        >
+          {SERVICE_CURRENCY_CODES.map((code) => (
+            <option key={code} value={code}>
+              {t(`currency.${code}`, { defaultValue: code })}
+            </option>
+          ))}
+        </select>
+      </div>
     </>
   );
 }
@@ -1040,9 +1075,13 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
   const contactLabel = s.contactPerson || t("services.card.contactFallback");
   const contactPhone = s.contactPhone || t("common.dash");
   const addressLabel = s.address || t("services.card.contactFallback");
+  const budgetCurrencyCode = String(s.currency || 'XOF').toUpperCase();
+  const budgetCurrencyLabel = t(`currency.${budgetCurrencyCode}`, {
+    defaultValue: budgetCurrencyCode,
+  });
   const budgetValue =
     s.budget != null && Number.isFinite(Number(s.budget))
-      ? `${formatNumber(Number(s.budget))} FCFA`
+      ? `${formatNumber(Number(s.budget))} ${budgetCurrencyLabel}`
       : t("services.card.budgetUnknown");
   const agentLabel = s.agent
     ? `${s.agent.firstName || ''} ${s.agent.lastName || ''}`.trim() ||

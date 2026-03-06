@@ -16,6 +16,7 @@ const {
   TASK_STATUSES,
   SERVICE_TYPES,
   SERVICE_STATUSES,
+  CURRENCY_LABELS,
   canonicalizeServiceType,
   getLabel,
 } = require("../utils/labels");
@@ -46,6 +47,14 @@ function toNullableNumber(v) {
   if (v === "" || v === null || v === undefined) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+const KNOWN_CURRENCIES = new Set(Object.keys(CURRENCY_LABELS || {}));
+
+function normalizeCurrency(input, fallback = "XOF") {
+  if (!input) return fallback;
+  const cur = String(input).toUpperCase().trim();
+  return KNOWN_CURRENCIES.has(cur) ? cur : fallback;
 }
 
 /**
@@ -88,6 +97,7 @@ const BASE_INCLUDES = [
       "type",
       "status",
       "budget",
+      "currency",
       "clientId",
       "agentId",
       "propertyId",
@@ -141,9 +151,16 @@ function addLabels(task) {
   if (!task) return null;
   const t = task.toJSON ? task.toJSON() : task;
   const normalizedServiceType = canonicalizeServiceType(t?.service?.type, t?.service?.type);
+  const normalizedServiceCurrency = normalizeCurrency(t?.service?.currency, "XOF");
+  const normalizedCurrency = normalizeCurrency(
+    t?.currency,
+    t?.service?.currency || "XOF"
+  );
 
   return {
     ...t,
+    currency: normalizedCurrency,
+    currencyLabel: getLabel(normalizedCurrency, CURRENCY_LABELS),
     typeLabel: getLabel(t.type, TASK_TYPES),
     priorityLabel: getLabel(t.priority, TASK_PRIORITIES),
     statusLabel: getLabel(t.status, TASK_STATUSES),
@@ -151,6 +168,8 @@ function addLabels(task) {
       ? {
           ...t.service,
           type: normalizedServiceType,
+          currency: normalizedServiceCurrency,
+          currencyLabel: getLabel(normalizedServiceCurrency, CURRENCY_LABELS),
           statusLabel: getLabel(t.service.status, SERVICE_STATUSES),
           typeLabel: getLabel(normalizedServiceType, SERVICE_TYPES),
         }
@@ -174,6 +193,7 @@ exports.create = async (req, res) => {
       priority,
       dueDate,
       estimatedCost,
+      currency,
       assignedTo,
     } = req.body || {};
 
@@ -218,6 +238,7 @@ exports.create = async (req, res) => {
       priority: priority || "normal",
       dueDate: dueDate ? new Date(dueDate) : null,
       estimatedCost: toNullableNumber(estimatedCost),
+      currency: normalizeCurrency(currency, service?.currency || "XOF"),
       status: "created",
       countryId: geoCountryId,
       regionId: geoRegionId,

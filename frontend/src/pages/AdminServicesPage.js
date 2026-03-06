@@ -204,6 +204,16 @@ export default function AdminServicesPage() {
     }
   }
 
+  function formatBudget(service) {
+    if (service?.budget === null || service?.budget === undefined || service?.budget === '') {
+      return t('adminServicesPage.table.emptyValue');
+    }
+
+    const code = String(service?.currency || 'XOF').toUpperCase();
+    const currencyLabel = t(`currency.${code}`, { defaultValue: code });
+    return `${service.budget} ${currencyLabel}`;
+  }
+
   if (isAdmin === null) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-main">
@@ -418,7 +428,7 @@ export default function AdminServicesPage() {
                         {s.type || t('adminServicesPage.table.typeUnknown')} - {' '}
                         {t('adminServicesPage.table.budgetLabel')}{' '}
                         <span className="font-medium text-text-secondary">
-                          {s.budget ?? t('adminServicesPage.table.emptyValue')}
+                          {formatBudget(s)}
                         </span>
                       </div>
                       {s.description && (

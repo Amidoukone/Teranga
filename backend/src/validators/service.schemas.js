@@ -19,6 +19,7 @@ const createServiceSchema = Joi.object({
   contactPhone: Joi.string().allow('', null).trim(),
   address: Joi.string().allow('', null).trim(),
   budget: Joi.alternatives().try(Joi.number(), Joi.string()).allow('', null),
+  currency: Joi.string().allow('', null).trim(),
   countryId: idSchema.allow(null),
   regionId: idSchema.allow(null),
 }).unknown(true);

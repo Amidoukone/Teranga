@@ -74,6 +74,11 @@ module.exports = (sequelize, DataTypes) => {
 
       // Coûts / dates
       estimatedCost: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
+      currency: {
+        type: DataTypes.STRING(10),
+        allowNull: false,
+        defaultValue: 'XOF',
+      },
       actualCost: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
       dueDate: { type: DataTypes.DATE, allowNull: true },
       completedAt: { type: DataTypes.DATE, allowNull: true },

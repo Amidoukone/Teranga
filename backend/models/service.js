@@ -67,6 +67,11 @@ module.exports = (sequelize, DataTypes) => {
       contactPhone: { type: DataTypes.STRING, allowNull: true },
       address: { type: DataTypes.TEXT, allowNull: true },
       budget: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
+      currency: {
+        type: DataTypes.STRING(10),
+        allowNull: false,
+        defaultValue: 'XOF',
+      },
 
       status: {
         type: DataTypes.ENUM('created', 'in_progress', 'completed', 'validated'),

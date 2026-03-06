@@ -19,7 +19,7 @@ import { notify } from '../utils/notify';
  *   (le backend applique le scope via req.user)
  */
 export default function AgentServicesPage() {
-  const { formatDateTime } = useLocale();
+  const { formatDateTime, formatNumber } = useLocale();
   const { t } = useTranslation();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -97,6 +97,23 @@ export default function AgentServicesPage() {
   ============================================================ */
   const emptyValue = t('agentServicesPage.emptyValue');
 
+  const getBudgetLabel = (service) => {
+    const budget = Number(service?.budget);
+    if (!Number.isFinite(budget)) {
+      return t('agentServicesPage.labels.budgetUnknown', {
+        defaultValue: `Budget : ${emptyValue}`,
+      });
+    }
+
+    const code = String(service?.currency || 'XOF').toUpperCase();
+    const currencyLabel = t(`currency.${code}`, { defaultValue: code });
+
+    return t('agentServicesPage.labels.budget', {
+      amount: formatNumber(budget),
+      currency: currencyLabel,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4 py-10">
       <div className="max-w-5xl mx-auto bg-surface-card/95 backdrop-blur-sm shadow-2xl rounded-3xl border border-border/70 p-8">
@@ -163,9 +180,7 @@ export default function AgentServicesPage() {
                       {getServiceTypeLabel(s.type, t('common.dash'))}{' '}
                       <span className="text-text-muted">&bull;</span>{' '}
                       <span className="font-medium text-text-primary">
-                        {t('agentServicesPage.labels.budget', {
-                          amount: s.budget ?? emptyValue,
-                        })}
+                        {getBudgetLabel(s)}
                       </span>
                     </p>
 

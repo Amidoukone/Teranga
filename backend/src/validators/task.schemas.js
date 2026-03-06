@@ -16,6 +16,7 @@ const createTaskSchema = Joi.object({
   priority: Joi.string().allow('', null).trim(),
   dueDate: Joi.alternatives().try(Joi.date(), Joi.string()).allow('', null),
   estimatedCost: Joi.alternatives().try(Joi.number(), Joi.string()).allow('', null),
+  currency: Joi.string().allow('', null).trim(),
   assignedTo: idSchema.allow(null),
 }).unknown(true);
 

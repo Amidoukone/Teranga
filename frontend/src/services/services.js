@@ -59,10 +59,15 @@ export async function createService(form) {
       : String(form.budget).trim().replace(',', '.');
   const normalizedBudget =
     normalizedBudgetRaw === undefined ? undefined : Number(normalizedBudgetRaw);
+  const normalizedCurrency =
+    typeof form?.currency === 'string' && form.currency.trim()
+      ? form.currency.trim().toUpperCase()
+      : 'XOF';
 
   const payload = mergeGeoPayload({
     ...form,
     propertyId: normalizedPropertyId,
+    currency: normalizedCurrency,
     budget:
       normalizedBudgetRaw === undefined || !Number.isFinite(normalizedBudget)
         ? undefined
@@ -81,7 +86,30 @@ export async function createService(form) {
  * PUT /api/services/:id
  */
 export async function updateService(id, form) {
-  const { data } = await api.put(`/services/${id}`, form, {
+  const normalizedBudgetRaw =
+    form?.budget === '' || form?.budget === undefined || form?.budget === null
+      ? form?.budget
+      : String(form.budget).trim().replace(',', '.');
+  const normalizedBudget =
+    normalizedBudgetRaw === '' || normalizedBudgetRaw === null || normalizedBudgetRaw === undefined
+      ? normalizedBudgetRaw
+      : Number(normalizedBudgetRaw);
+
+  const payload = {
+    ...form,
+    currency:
+      typeof form?.currency === 'string' && form.currency.trim()
+        ? form.currency.trim().toUpperCase()
+        : form?.currency,
+    budget:
+      normalizedBudgetRaw === '' || normalizedBudgetRaw === null || normalizedBudgetRaw === undefined
+        ? normalizedBudgetRaw
+        : Number.isFinite(normalizedBudget)
+        ? normalizedBudget
+        : form?.budget,
+  };
+
+  const { data } = await api.put(`/services/${id}`, payload, {
     headers: { 'Content-Type': 'application/json' },
   });
   return data.service;

@@ -12,6 +12,7 @@ import {
   TASK_TYPES,
   TASK_PRIORITIES,
   TASK_STATUSES,
+  CURRENCY_LABELS,
   getServiceTypeLabel,
   applyLabels,
 } from '../utils/labels';
@@ -26,6 +27,7 @@ const DEFAULT_FILTERS = {
   service: '',
   agent: '',
 };
+const TASK_CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 
 // ============================================================================
 // Contexte: gestion des taches.
@@ -67,6 +69,7 @@ export default function TasksPage() {
     priority: 'normal',
     dueDate: '',
     estimatedCost: '',
+    currency: 'XOF',
     assignedTo: '',
   });
 
@@ -201,6 +204,7 @@ export default function TasksPage() {
         dueDate: form.dueDate ? new Date(form.dueDate) : null,
         estimatedCost:
           form.estimatedCost === '' ? null : parseFloat(form.estimatedCost),
+        currency: String(form.currency || 'XOF').toUpperCase(),
         assignedTo: form.assignedTo ? parseInt(form.assignedTo, 10) : null,
       };
 
@@ -219,6 +223,7 @@ export default function TasksPage() {
         priority: 'normal',
         dueDate: '',
         estimatedCost: '',
+        currency: 'XOF',
         assignedTo: '',
       });
 
@@ -757,6 +762,26 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
               text-sm sm:text-base focus:ring-2 focus:ring-blue-500
             "
           />
+        </div>
+
+        <div className="w-full">
+          <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
+            {t('tasksPage.form.currencyLabel')}
+          </label>
+          <select
+            value={form.currency}
+            onChange={(e) => setForm({ ...form, currency: e.target.value })}
+            className="
+              w-full border border-border rounded-lg px-3 py-2 bg-surface-card text-text-primary
+              text-sm sm:text-base focus:ring-2 focus:ring-blue-500
+            "
+          >
+            {TASK_CURRENCY_CODES.map((code) => (
+              <option key={code} value={code}>
+                {t(`currency.${code}`, { defaultValue: code })}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Assignation (admin/master uniquement) */}

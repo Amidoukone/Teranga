@@ -53,6 +53,10 @@ export async function createTask(form) {
       form?.estimatedCost === '' || form?.estimatedCost === undefined
         ? null
         : parseFloat(form.estimatedCost),
+    currency:
+      typeof form?.currency === 'string' && form.currency.trim()
+        ? form.currency.trim().toUpperCase()
+        : 'XOF',
     dueDate: form?.dueDate ? new Date(form.dueDate) : null,
   });
 

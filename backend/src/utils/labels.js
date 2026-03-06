@@ -115,6 +115,7 @@ const TRANSACTION_STATUSES = {
 
 const CURRENCY_LABELS = {
   XOF: 'Franc CFA (XOF)',
+  XAF: 'Franc CFA (XAF)',
   EUR: 'Euro (€)',
   USD: 'Dollar US ($)',
   GBP: 'Livre sterling (£)',
@@ -123,6 +124,7 @@ const CURRENCY_LABELS = {
 // 💵 Symboles utilisés par formatCurrency()
 const CURRENCY_SYMBOLS = {
   XOF: 'CFA',
+  XAF: 'CFA',
   EUR: '€',
   USD: '$',
   GBP: '£',
