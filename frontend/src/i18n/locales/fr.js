@@ -2241,10 +2241,10 @@ const fr = {
     },
     quickLinks: {
       title: "Pages associ\u00E9es",
-      security: "Ouvrir la page S\u00E9curit\u00E9",
-      privacy: "Consulter Confidentialit\u00E9",
-      terms: "Voir les Conditions d'utilisation",
-      support: "Acc\u00E9der \u00E0 Aide & Support",
+      security: "Ouvrir la page S\u00E9curit\u00E9 du compte",
+      privacy: "Consulter la politique de confidentialit\u00E9",
+      terms: "Voir les conditions d'utilisation",
+      support: "Acc\u00E9der \u00E0 la page Aide & Support",
     },
     sections: {
       publisher: {
@@ -2394,9 +2394,9 @@ const fr = {
     },
     quickLinks: {
       title: "Pages associ\u00E9es",
-      security: "Ouvrir la page S\u00E9curit\u00E9",
-      privacy: "Consulter Confidentialit\u00E9",
-      support: "Acc\u00E9der \u00E0 Aide & Support",
+      security: "Ouvrir la page S\u00E9curit\u00E9 du compte",
+      privacy: "Consulter la politique de confidentialit\u00E9",
+      support: "Acc\u00E9der \u00E0 la page Aide & Support",
     },
     sections: {
       purpose: {
@@ -2441,7 +2441,7 @@ const fr = {
       description:
         "Centralisez vos pr\u00E9f\u00E9rences, votre s\u00E9curit\u00E9 et vos documents de r\u00E9f\u00E9rence depuis un seul espace.",
       points: {
-        p1: "Param\u00E8tres compte accessibles en quelques clics.",
+        p1: "Les param\u00E8tres du compte sont accessibles en quelques clics.",
         p2: "R\u00E8gles et politiques claires pour une utilisation sans ambigu\u00EFt\u00E9.",
         p3: "Support disponible pour accompagner les demandes sensibles.",
       },
@@ -2478,9 +2478,9 @@ const fr = {
       open: "Ouvrir",
     },
     quickSection: {
-      title: "Acc\u00E8s compte",
+      title: "Acc\u00E8s au compte",
       subtitle:
-        "Retrouvez toutes les pages compte importantes avec une structure coh\u00E9rente.",
+        "Retrouvez toutes les pages importantes du compte avec une structure coh\u00E9rente.",
       footer:
         "Les modifications de pr\u00E9f\u00E9rence sont appliqu\u00E9es imm\u00E9diatement dans votre espace.",
     },
@@ -2525,13 +2525,13 @@ const fr = {
     resources: {
       title: "Ressources utiles imm\u00E9diates",
       subtitle:
-        "Avant toute demande, vous pouvez v\u00E9rifier la s\u00E9curit\u00E9 de votre compte et consulter le cadre l\u00E9gal.",
+        "Avant toute demande, vous pouvez v\u00E9rifier la s\u00E9curit\u00E9 de votre compte et consulter le cadre l\u00E9gal de la plateforme.",
     },
     cards: {
       security: {
         title: "Probl\u00E8me de s\u00E9curit\u00E9",
         description:
-          "En cas de doute sur votre compte, changez rapidement votre mot de passe.",
+          "En cas de doute sur votre compte, changez rapidement votre mot de passe puis contactez le support.",
       },
       privacy: {
         title: "Confidentialit\u00E9",
@@ -2547,42 +2547,43 @@ const fr = {
     journey: {
       title: "Comment l'assistance fonctionne",
       subtitle:
-        "Un processus simple pour garder de la visibilite a chaque etape.",
+        "Un processus simple pour garder de la visibilit\u00E9 \u00E0 chaque \u00E9tape.",
       steps: {
         step1: {
-          title: "1. Vous decrivez votre besoin",
+          title: "1. Vous d\u00E9crivez votre besoin",
           description:
-            "Indiquez votre demande (service, tache ou projet) avec les informations essentielles.",
+            "Indiquez votre demande (service, t\u00E2che ou projet) avec les informations essentielles.",
         },
         step2: {
           title: "2. Nous organisons l'intervention",
           description:
-            "L'equipe support coordonne l'execution sur le terrain selon votre priorite.",
+            "L'\u00E9quipe support coordonne l'ex\u00E9cution sur le terrain selon votre priorit\u00E9.",
         },
         step3: {
           title: "3. Vous suivez et validez",
           description:
-            "Vous recevez un suivi documente avec preuves et pouvez valider l'avancement.",
+            "Vous recevez un suivi document\u00E9 avec preuves et pouvez valider l'avancement.",
         },
       },
     },
     contact: {
       title: "Contact support",
       description:
-        "Pour les demandes urgentes ou sensibles, notre equipe vous repond via les canaux officiels Teranga.",
+        "Pour les demandes urgentes ou sensibles, notre \u00E9quipe vous r\u00E9pond via les canaux officiels Teranga.",
       channels: {
         email: "contact@teranga-platform.com",
         phone: "+223 70 66 83 64 / +223 94 16 12 66",
-        hours: "Assistance prioritaire: reponse initiale sous 24h selon la nature de la demande.",
+        hours:
+          "Assistance prioritaire : r\u00E9ponse initiale sous 24 h selon la nature de la demande.",
       },
       note:
-        "Pour accelerer le traitement, precisez le type de demande, la zone concernee et le niveau d'urgence.",
-      actionsTitle: "Acces rapide",
+        "Pour acc\u00E9l\u00E9rer le traitement, pr\u00E9cisez le type de demande, la zone concern\u00E9e et le niveau d'urgence.",
+      actionsTitle: "Acc\u00E8s rapide",
       actionsDescription:
-        "Connectez-vous pour creer ou suivre vos demandes directement dans l'application.",
+        "Connectez-vous pour cr\u00E9er ou suivre vos demandes directement dans l'application.",
       actions: {
         login: "Se connecter",
-        register: "Creer un compte",
+        register: "Cr\u00E9er un compte",
       },
     },
   },
@@ -3165,12 +3166,12 @@ const fr = {
       settings: {
         title: "Param\u00E8tres",
         description:
-          "Configurez votre exp\u00E9rience, consultez les pages compte et acc\u00E9dez aux ressources essentielles.",
+          "Configurez votre exp\u00E9rience, consultez les pages du compte et acc\u00E9dez aux ressources essentielles.",
       },
       helpSupport: {
         title: "Aide & Support",
         description:
-          "Consultez l'assistance Teranga pour vos services, t\u00E2ches et projets : ressources, processus support et contacts officiels.",
+          "Consultez l'assistance Teranga pour vos services, t\u00E2ches et projets : ressources, processus de support et contacts officiels.",
       },
       finance: {
         title: "Finances",
