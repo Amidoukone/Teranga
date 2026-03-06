@@ -316,6 +316,8 @@ export default function ActivityCenterPage() {
       kicker={t("activities.kicker")}
       title={t("activities.title")}
       subtitle={t("activities.subtitle")}
+      settingsPath="/dashboard"
+      settingsLabel={t("nav.dashboard")}
       contentClassName="space-y-6"
       headerActions={
         <div className="flex flex-wrap items-center gap-2">

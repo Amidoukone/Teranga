@@ -2067,7 +2067,7 @@ const en = {
       titleLine1: "Trust at a distance,",
       titleLine2: "peace of mind within reach.",
       description:
-        "With <0>Teranga</0>, both diaspora members and local residents can track and manage assets, services, tasks, and projects with transparency, reliability, and a human presence on the ground.",
+        "With <0>Teranga</0>, both diaspora members and local residents can explicitly track and manage houses, apartments, land, automobiles, and commercial spaces, alongside services, tasks, and projects with transparency, reliability, and a human presence on the ground.",
       ctaLogin: "Sign in",
       ctaRegister: "Create an account",
       stats: {
@@ -2091,10 +2091,11 @@ const en = {
       title: "Our services, your peace of mind",
       subtitle:
         "Solutions for anyone short on time: we handle your field operations with tracking, evidence, and accountability.",
+      assetTypesTitle: "Supported asset types",
       cards: {
         realEstate: {
-          title: "Real estate management",
-          desc: "Property tracking, visits, inspections, photo reports, rental management… A dedicated on-site agent.",
+          title: "Asset management",
+          desc: "Tracking for houses, apartments, land, automobiles, and commercial spaces with visits, inspections, photo reports, and reliable on-site execution.",
         },
         personal: {
           title: "Personalized services",
@@ -2128,18 +2129,18 @@ const en = {
     impact: {
       title: "Our mission in Africa",
       subtitle:
-        "Change how services are delivered with a model that is more efficient, innovative, and verifiable.",
+        "Transform how houses, apartments, land, automobiles, and commercial spaces are managed with a service model that is more efficient, innovative, and verifiable.",
       points: {
-        p1: "Faster operations through better coordination between the app and field teams.",
+        p1: "Faster operations on houses, apartments, land, automobiles, and commercial spaces through tighter coordination between the app and field teams.",
         p2: "Continuous transparency with photos, reports, and full action history.",
-        p3: "Reliable execution for services, tasks, and projects even when you have no time.",
+        p3: "Reliable execution for your assets, services, tasks, and projects even when you have no time.",
       },
       cta: "Open Help & Support",
     },
     why: {
       title: "Why choose Teranga?",
       subtitle:
-        "Because it is not just an app, but a trusted framework to execute services in Africa in a modern way.",
+        "Because it is not just an app, but a trusted framework to manage houses, apartments, land, automobiles, and commercial spaces while executing services in Africa in a modern way.",
       pillars: {
         clarity: {
           title: "Clarity",
@@ -2147,7 +2148,7 @@ const en = {
         },
         credibility: {
           title: "Credibility",
-          text: "Documented tracking, visual proof, clear history: you always stay in control.",
+          text: "Documented tracking, visual proof, and clear history for every asset type: house, apartment, land, automobile, or commercial space.",
         },
         support: {
           title: "Support",
@@ -2161,7 +2162,7 @@ const en = {
         "A platform inspired by trust and hospitality that connects real needs with structured field execution.",
       paragraphs: {
         p1: "The word <0>“Teranga”</0> evokes warmth, trust, and respect. Our platform embraces these values to deliver a modern and reassuring experience.",
-        p2: "Your projects deserve total visibility: photos, evidence, reports, transactions, progress… everything is accessible in real time, from anywhere.",
+        p2: "Your houses, apartments, land, automobiles, and commercial spaces deserve total visibility: photos, evidence, reports, transactions, progress... everything is accessible in real time, from anywhere.",
         p3: "Thanks to certified agents and a clear interface, anyone with a service, task, or project can delegate efficiently without losing control.",
       },
       cta: "Join Teranga",
@@ -3404,3 +3405,4 @@ const en = {
 };
 
 export default en;
+

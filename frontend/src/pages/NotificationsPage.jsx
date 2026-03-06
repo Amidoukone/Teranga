@@ -334,6 +334,8 @@ export default function NotificationsPage() {
       kicker={t("notifications.kicker")}
       title={t("notifications.title")}
       subtitle={t("notifications.subtitle")}
+      settingsPath="/dashboard"
+      settingsLabel={t("nav.dashboard")}
       contentClassName="space-y-6"
       headerActions={
         <div className="flex flex-wrap items-center gap-2">

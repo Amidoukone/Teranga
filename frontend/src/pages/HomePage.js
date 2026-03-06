@@ -27,6 +27,16 @@ import { notify } from '../utils/notify';
 export default function HomePage() {
   const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
+  const supportedPropertyTypes = [
+    "house",
+    "apartment",
+    "land",
+    "automobile",
+    "commercial",
+  ];
+  const supportedPropertyTypeLabels = supportedPropertyTypes.map((type) =>
+    t(`labels.property.types.${type}`, { defaultValue: type })
+  );
   const heroStats = [
     {
       label: t("homePage.hero.stats.realTime.label"),
@@ -292,6 +302,22 @@ export default function HomePage() {
             <p className="text-text-secondary text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
               {t("homePage.services.subtitle")}
             </p>
+          </div>
+
+          <div className="max-w-5xl mx-auto mb-8 sm:mb-10 text-center">
+            <p className="text-xs sm:text-sm uppercase tracking-wide font-semibold text-text-secondary">
+              {t("homePage.services.assetTypesTitle")}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              {supportedPropertyTypeLabels.map((label, idx) => (
+                <span
+                  key={`${label}-${idx}`}
+                  className="inline-flex items-center rounded-full border border-border/80 bg-surface-main/80 px-3 py-1 text-xs sm:text-sm text-text-secondary"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
           </div>
 
           <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
@@ -586,4 +612,3 @@ export default function HomePage() {
     </div>
   );
 }
-

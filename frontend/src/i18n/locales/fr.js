@@ -2075,7 +2075,7 @@ const fr = {
       titleLine1: "La confiance \u00E0 distance,",
       titleLine2: "la s\u00E9r\u00E9nit\u00E9 \u00E0 port\u00E9e de main.",
       description:
-        "Avec <0>Teranga</0>, la diaspora africaine et les residents locaux suivent et gerent leurs biens, services, taches et projets avec transparence, fiabilite et une presence humaine sur le terrain.",
+        "Avec <0>Teranga</0>, la diaspora africaine et les residents locaux suivent et gerent explicitement leurs maisons, appartements, terrains, automobiles et locaux commerciaux, ainsi que leurs services, taches et projets avec transparence, fiabilite et une presence humaine sur le terrain.",
       ctaLogin: "Se connecter",
       ctaRegister: "Cr\u00E9er un compte",
       stats: {
@@ -2099,10 +2099,11 @@ const fr = {
       title: "Nos services, votre tranquillit\u00E9",
       subtitle:
         "Des solutions pour toute personne qui manque de temps : nous prenons en charge vos demandes sur le terrain avec suivi, preuves et responsabilite.",
+      assetTypesTitle: "Types de biens pris en charge",
       cards: {
         realEstate: {
-          title: "Gestion immobili\u00E8re",
-          desc: "Suivi des biens, visites, \u00E9tats des lieux, rapports photo, gestion locative... Un agent d\u00E9di\u00E9 sur place.",
+          title: "Gestion de biens",
+          desc: "Suivi de maisons, appartements, terrains, automobiles et locaux commerciaux : visites, etats des lieux, rapports photo et execution par un agent dedie sur place.",
         },
         personal: {
           title: "Services personnalis\u00E9s",
@@ -2136,18 +2137,18 @@ const fr = {
     impact: {
       title: "Notre ambition en Afrique",
       subtitle:
-        "Transformer la facon dont les services sont rendus, avec un modele plus efficace, innovant et verifiable.",
+        "Transformer la gestion des maisons, appartements, terrains, automobiles et locaux commerciaux avec un modele de service plus efficace, innovant et verifiable.",
       points: {
-        p1: "Un service operationnel plus rapide grace a une coordination terrain + application.",
+        p1: "Des operations plus rapides sur vos maisons, appartements, terrains, automobiles et locaux commerciaux grace a une coordination terrain + application.",
         p2: "Une transparence continue avec preuves photo, rapports et historique des actions.",
-        p3: "Une execution fiable pour les services, taches et projets, meme quand vous n'avez pas le temps.",
+        p3: "Une execution fiable pour vos biens, services, taches et projets, meme quand vous n'avez pas le temps.",
       },
       cta: "Voir l'aide et le support",
     },
     why: {
       title: "Pourquoi choisir Teranga ?",
       subtitle:
-        "Parce qu'il ne s'agit pas seulement d'une application, mais d'un cadre de confiance pour executer des services de maniere moderne en Afrique.",
+        "Parce qu'il ne s'agit pas seulement d'une application, mais d'un cadre de confiance pour piloter maisons, appartements, terrains, automobiles et locaux commerciaux avec des services executes de maniere moderne en Afrique.",
       pillars: {
         clarity: {
           title: "Clart\u00E9",
@@ -2155,7 +2156,7 @@ const fr = {
         },
         credibility: {
           title: "Cr\u00E9dibilit\u00E9",
-          text: "Suivi document\u00E9, preuves visuelles, historique clair : vous gardez toujours la main.",
+          text: "Suivi documente, preuves visuelles, historique clair pour chaque type de bien : maison, appartement, terrain, automobile ou local commercial.",
         },
         support: {
           title: "Accompagnement",
@@ -2169,7 +2170,7 @@ const fr = {
         "Une plateforme inspiree par la confiance et l'hospitalite, qui relie les besoins reels aux equipes terrain de facon structuree.",
       paragraphs: {
         p1: "Le mot <0>Teranga</0> \u00E9voque chaleur humaine, confiance et respect. Notre plateforme reprend ces valeurs pour offrir une exp\u00E9rience moderne et rassurante.",
-        p2: "Vos projets m\u00E9ritent une visibilit\u00E9 totale : photos, preuves, rapports, transactions, progression... tout est accessible en temps r\u00E9el, depuis n'importe o\u00F9.",
+        p2: "Vos maisons, appartements, terrains, automobiles et locaux commerciaux meritent une visibilite totale : photos, preuves, rapports, transactions, progression... tout est accessible en temps reel, depuis n'importe ou.",
         p3: "Grace a nos agents certifies et a une interface claire, toute personne ayant un service, une tache ou un projet peut deleguer efficacement sans perdre le controle.",
       },
       cta: "Rejoindre Teranga",
