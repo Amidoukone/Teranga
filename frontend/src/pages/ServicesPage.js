@@ -16,6 +16,7 @@ import PaginationBar from '../components/PaginationBar';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
+import { getFeedbackIcon } from '../utils/feedback';
 
 const DEFAULT_FILTERS = {
   q: '',
@@ -501,7 +502,7 @@ const roleVariant = useMemo(() => {
             }`}
           >
             <span className="mt-[1px]">
-              {notice.type === 'error' ? '!' : 'i'}
+              {getFeedbackIcon(notice.type)}
             </span>
             <p className="break-words">{notice.message}</p>
           </div>

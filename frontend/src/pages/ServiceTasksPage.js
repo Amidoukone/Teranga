@@ -19,6 +19,7 @@ import { getGeoParams } from "../services/geo";
 import { normalizeRole, isMasterUser } from "../utils/role";
 import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
+import { getFeedbackIcon } from "../utils/feedback";
 
 const TASK_CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 
@@ -411,7 +412,7 @@ export default function ServiceTasksPage() {
                 }`}
               >
                 <span className="mt-[1px]">
-                  {formNotice.type === "error" ? "!" : "i"}
+                  {getFeedbackIcon(formNotice.type)}
                 </span>
                 <p className="break-words">{formNotice.message}</p>
               </div>

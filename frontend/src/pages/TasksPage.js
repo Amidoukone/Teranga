@@ -18,6 +18,7 @@ import {
 } from '../utils/labels';
 import { normalizeRole, isMasterUser } from '../utils/role';
 import { useTranslation } from 'react-i18next';
+import { getFeedbackIcon } from '../utils/feedback';
 
 const DEFAULT_FILTERS = {
   q: '',
@@ -354,7 +355,7 @@ export default function TasksPage() {
             }`}
           >
             <span className="mt-[1px]">
-              {notice.type === 'error' ? '!' : 'i'}
+              {getFeedbackIcon(notice.type)}
             </span>
             <p className="break-words">{notice.message}</p>
           </div>
