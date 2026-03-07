@@ -31,7 +31,7 @@ async function notifyServiceCreated({
       entityId: service.id,
       action: "created",
       title: "Nouveau service",
-      message: service.title ? `Service: ${service.title}` : "Service cree",
+      message: service.title ? `Service: ${service.title}` : "Service créé",
       progress: computeProgress("service", "created"),
       entityStatus: "created",
       metadata: { serviceId: service.id, title: service.title || null },
@@ -40,7 +40,7 @@ async function notifyServiceCreated({
       notificationMode: "create",
     });
   } catch (err) {
-    logger.warn({ err }, "Notification service create echouee");
+    logger.warn({ err }, "Notification service create échouée");
   }
 }
 
@@ -57,10 +57,10 @@ async function notifyServiceAssigned({ actorId, service }) {
       entityType: "service",
       entityId: service.id,
       action: "assigned",
-      title: "Service assigne",
+      title: "Service assigné",
       message: service.title
-        ? `Service assigne: ${service.title}`
-        : "Un service vous a ete assigne",
+        ? `Service assigné: ${service.title}`
+        : "Un service vous a été assigné",
       progress: computeProgress("service", service.status),
       entityStatus: service.status,
       metadata: { serviceId: service.id, title: service.title || null },
@@ -70,7 +70,7 @@ async function notifyServiceAssigned({ actorId, service }) {
       notificationMode: "create",
     });
   } catch (err) {
-    logger.warn({ err }, "Notification service assign echouee");
+    logger.warn({ err }, "Notification service assign échouée");
   }
 }
 
@@ -102,7 +102,7 @@ async function notifyServiceStatusUpdate({ actorId, service, title, status }) {
       notificationMode: "update",
     });
   } catch (err) {
-    logger.warn({ err, status }, "Notification service status echouee");
+    logger.warn({ err, status }, "Notification service status échouée");
   }
 }
 
@@ -111,4 +111,3 @@ module.exports = {
   notifyServiceAssigned,
   notifyServiceStatusUpdate,
 };
-

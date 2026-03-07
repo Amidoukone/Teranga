@@ -523,7 +523,7 @@ exports.register = async (req, res) => {
       recoveryCodes = await rotateRecoveryCodes({ userId: user.id, req });
     } catch (recoveryErr) {
       recoveryCodesWarning =
-        "Codes de recuperation indisponibles pour le moment. Contactez l'administrateur.";
+        "Codes de récupération indisponibles pour le moment. Contactez l'administrateur.";
       logger.warn(
         'Generation recovery codes impossible:',
         recoveryErr?.message || recoveryErr
@@ -939,7 +939,6 @@ exports.changePassword = async (req, res) => {
       .json({ error: 'Erreur lors du changement de mot de passe' });
   }
 };
-
 
 
 

@@ -215,7 +215,7 @@ exports.create = async (req, res) => {
     }
 
     return res.status(201).json({
-      message: "Projet cree avec succes",
+      message: "Projet créé avec succès",
       project: {
         ...full.toJSON(),
         statusLabel: getLabel(full.status, PROJECT_STATUSES),

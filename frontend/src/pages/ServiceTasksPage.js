@@ -376,6 +376,16 @@ export default function ServiceTasksPage() {
               </button>
             )}
             <button
+              onClick={() =>
+                navigate(`/services/${id}/transactions`, {
+                  state: { from: location.pathname },
+                })
+              }
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm app-btn-primary transition"
+            >
+              <span>{t("nav.transactions")}</span>
+            </button>
+            <button
               onClick={handleBack}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
             >
@@ -836,7 +846,7 @@ function TaskCard({ task, navigate, userRole, isMaster, serviceId, fromPath }) {
       </div>
 
       {/* Actions */}
-      <div className="mt-5 sm:mt-6">
+      <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row flex-wrap gap-2">
         <button
           onClick={() =>
             navigate(`/tasks/${task.id}/evidences`, {
@@ -855,6 +865,24 @@ function TaskCard({ task, navigate, userRole, isMaster, serviceId, fromPath }) {
           <span>{t("serviceTasksPage.actions.viewEvidences")}</span>
 
         </button>
+        {serviceId && (
+          <button
+            onClick={() =>
+              navigate(`/services/${serviceId}/transactions?taskId=${task.id}`, {
+                state: {
+                  from: evidencesFromPath,
+                },
+              })
+            }
+            className="
+              w-full sm:w-auto inline-flex items-center justify-center gap-1
+              px-4 py-2 text-xs sm:text-sm font-semibold
+              app-btn-neutral rounded-lg shadow-sm transition
+            "
+          >
+            <span>{t("nav.transactions")}</span>
+          </button>
+        )}
       </div>
     </div>
   );

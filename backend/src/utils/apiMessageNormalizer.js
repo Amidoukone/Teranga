@@ -50,6 +50,7 @@ const FRENCH_NORMALIZATION_RULES = [
   [/\bActivite\b/gi, 'Activité'],
   [/\bactivites\b/gi, 'activités'],
   [/\bsupprimee\b/gi, 'supprimée'],
+  [/\bsupprimees\b/gi, 'supprimées'],
   [/\bactualite\b/gi, 'actualité'],
   [/\bmise a jour\b/gi, 'mise à jour'],
   [/\bdeconnexion\b/gi, 'déconnexion'],
@@ -57,6 +58,17 @@ const FRENCH_NORMALIZATION_RULES = [
   [/\bcaracteres\b/gi, 'caractères'],
   [/\bforcee\b/gi, 'forcée'],
   [/\blie a\b/gi, 'lié à'],
+  [/\bSession expiree\b/gi, 'Session expirée'],
+  [/\bmarquee\b/gi, 'marquée'],
+  [/\bProjet cree avec succes\b/gi, 'Projet créé avec succès'],
+  [/\bService cree\b/gi, 'Service créé'],
+  [/\bService assigne\b/gi, 'Service assigné'],
+  [/\bvous a ete assigne\b/gi, 'vous a été assigné'],
+  [/\bStatut service mis a jour\b/gi, 'Statut service mis à jour'],
+  [/\bStatut commande mis a jour\b/gi, 'Statut commande mis à jour'],
+  [/\bnon lue a marquer\b/gi, 'non lue à marquer'],
+  [/\bAucune notification non lue a marquer\b/gi, 'Aucune notification non lue à marquer'],
+  [/\bCodes de recuperation\b/gi, 'Codes de récupération'],
   [/\bd abord\b/gi, "d'abord"],
 ];
 
@@ -164,4 +176,3 @@ module.exports = {
   normalizeApiResponsePayload,
   normalizeMessageText,
 };
-

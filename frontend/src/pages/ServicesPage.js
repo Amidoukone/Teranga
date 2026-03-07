@@ -1222,6 +1222,17 @@ function ServiceCard({ s, user, startEdit, handleDelete, navigate }) {
           {t("services.buttons.viewTasks")}
         </button>
 
+        <button
+          onClick={() =>
+            navigate(`/services/${s.id}/transactions`, {
+              state: { from: '/services' },
+            })
+          }
+          className="app-btn-neutral w-full sm:w-auto"
+        >
+          {t("nav.transactions")}
+        </button>
+
         {isAdminOrMaster && (
           <>
             <button

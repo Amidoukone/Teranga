@@ -682,7 +682,7 @@ exports.updateService = async (req, res) => {
       await notifyServiceStatusUpdate({
         actorId: req.user.id,
         service,
-        title: "Statut service mis a jour",
+        title: "Statut service mis à jour",
         status: updates.status,
       });
     }

@@ -171,7 +171,7 @@ export default function NotificationsPage() {
         await Promise.all([loadSummary(), loadItems()]);
         notify(
           t("notifications.markReadSuccess", {
-            defaultValue: "Notification marquee comme lue.",
+            defaultValue: "Notification marquée comme lue.",
           }),
           { type: "success" }
         );
@@ -202,7 +202,7 @@ export default function NotificationsPage() {
     if ((summary.unread || 0) <= 0) {
       notify(
         t("notifications.nothingToMark", {
-          defaultValue: "Aucune notification non lue a marquer.",
+          defaultValue: "Aucune notification non lue à marquer.",
         }),
         { type: "info" }
       );
@@ -314,8 +314,14 @@ export default function NotificationsPage() {
       if (!n) return "/dashboard";
       if (n.entityType === "order") return n.entityId ? `/orders/${n.entityId}` : "/orders";
       if (n.entityType === "project") return n.entityId ? `/projects/${n.entityId}` : "/projects";
-      if (n.entityType === "task") return "/tasks";
+      if (n.entityType === "task") {
+        const serviceId = n?.metadata?.serviceId;
+        if (serviceId) return `/services/${serviceId}/tasks`;
+        return "/tasks";
+      }
       if (n.entityType === "service") {
+        const serviceId = n?.metadata?.serviceId || n?.entityId;
+        if (serviceId) return `/services/${serviceId}/tasks`;
         return currentUserRole === "agent" ? "/agent/services" : "/services";
       }
       if (n.entityType === "evidence") {
@@ -528,9 +534,14 @@ export default function NotificationsPage() {
                     <button
                       onClick={() => {
                         const target = resolveLink(n);
+                        const serviceId = n?.metadata?.serviceId;
                         const options =
                           n?.entityType === "evidence"
-                            ? { state: { from: location.pathname } }
+                            ? {
+                                state: serviceId
+                                  ? { from: location.pathname, serviceId }
+                                  : { from: location.pathname },
+                              }
                             : undefined;
                         navigate(target, options);
                       }}

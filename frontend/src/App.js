@@ -40,6 +40,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const PropertiesPage = lazy(() => import('./pages/PropertiesPage'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
 const ServiceTasksPage = lazy(() => import('./pages/ServiceTasksPage'));
+const ServiceTransactionsPage = lazy(() => import('./pages/ServiceTransactionsPage'));
 const TasksPage = lazy(() => import('./pages/TasksPage'));
 const TaskEvidencesPage = lazy(() => import('./pages/TaskEvidencesPage'));
 const TransactionsPage = lazy(() => import('./pages/TransactionsPage'));
@@ -483,6 +484,18 @@ export default function App() {
                   <>
                     <SetSeo title={t('seo.pages.serviceTasks.title')} />
                     <ServiceTasksPage />
+                  </>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/services/:id/transactions"
+              element={
+                <RequireAuth>
+                  <>
+                    <SetSeo title={t('seo.pages.transactions.title')} />
+                    <ServiceTransactionsPage />
                   </>
                 </RequireAuth>
               }

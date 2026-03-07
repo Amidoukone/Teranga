@@ -850,7 +850,9 @@ function TaskList({
 
   return (
     <div className="grid gap-5">
-      {tasks.map((task) => (
+      {tasks.map((task) => {
+        const linkedServiceId = task.service?.id || task.serviceId;
+        return (
         <div
           key={task.id}
           className="
@@ -914,7 +916,9 @@ function TaskList({
             <button
               onClick={() =>
                 navigate(`/tasks/${task.id}/evidences`, {
-                  state: { from: '/tasks' },
+                  state: linkedServiceId
+                    ? { from: '/tasks', serviceId: linkedServiceId }
+                    : { from: '/tasks' },
                 })
               }
               className="
@@ -924,6 +928,38 @@ function TaskList({
             >
               {t('tasksPage.list.viewEvidences')}
             </button>
+
+            {linkedServiceId && (
+              <button
+                onClick={() =>
+                  navigate(`/services/${linkedServiceId}/tasks`, {
+                    state: { from: '/tasks' },
+                  })
+                }
+                className="
+                  app-btn-neutral w-full sm:w-auto px-4 py-2 text-sm sm:text-base
+                  font-medium
+                "
+              >
+                {t('services.buttons.viewTasks')}
+              </button>
+            )}
+
+            {linkedServiceId && (
+              <button
+                onClick={() =>
+                  navigate(`/services/${linkedServiceId}/transactions?taskId=${task.id}`, {
+                    state: { from: '/tasks' },
+                  })
+                }
+                className="
+                  app-btn-neutral w-full sm:w-auto px-4 py-2 text-sm sm:text-base
+                  font-medium
+                "
+              >
+                {t('nav.transactions')}
+              </button>
+            )}
 
             {/* Assignation (admin/master) */}
             {isAdminLike && !task.assignee && task.status === 'created' && (
@@ -984,7 +1020,8 @@ function TaskList({
             )}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

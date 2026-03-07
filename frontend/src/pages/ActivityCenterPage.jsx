@@ -231,8 +231,14 @@ export default function ActivityCenterPage() {
       if (!n) return "/dashboard";
       if (n.entityType === "order") return n.entityId ? `/orders/${n.entityId}` : "/orders";
       if (n.entityType === "project") return n.entityId ? `/projects/${n.entityId}` : "/projects";
-      if (n.entityType === "task") return "/tasks";
+      if (n.entityType === "task") {
+        const serviceId = n?.metadata?.serviceId;
+        if (serviceId) return `/services/${serviceId}/tasks`;
+        return "/tasks";
+      }
       if (n.entityType === "service") {
+        const serviceId = n?.metadata?.serviceId || n?.entityId;
+        if (serviceId) return `/services/${serviceId}/tasks`;
         return currentUserRole === "agent" ? "/agent/services" : "/services";
       }
       if (n.entityType === "evidence") {
@@ -258,7 +264,7 @@ export default function ActivityCenterPage() {
         await loadItems();
         notify(
           t("activities.deleteSuccess", {
-            defaultValue: "Activite supprimee du fil.",
+            defaultValue: "Activité supprimée du fil.",
           }),
           { type: "success" }
         );
@@ -266,7 +272,7 @@ export default function ActivityCenterPage() {
         console.error("ActivityCenterPage delete activity error:", e);
         notify(
           t("activities.deleteError", {
-            defaultValue: "Erreur lors de la suppression de l'activite.",
+            defaultValue: "Erreur lors de la suppression de l’activité.",
           }),
           { type: "error" }
         );
@@ -294,7 +300,7 @@ export default function ActivityCenterPage() {
       notify(
         t("activities.cleanupSuccess", {
           count: result?.deleted || 0,
-          defaultValue: "{{count}} activites supprimees du fil.",
+          defaultValue: "{{count}} activités supprimées du fil.",
         }),
         { type: "success" }
       );
@@ -302,7 +308,7 @@ export default function ActivityCenterPage() {
       console.error("ActivityCenterPage cleanup activities error:", e);
       notify(
         t("activities.cleanupError", {
-          defaultValue: "Erreur lors du nettoyage des activites.",
+          defaultValue: "Erreur lors du nettoyage des activités.",
         }),
         { type: "error" }
       );
@@ -574,9 +580,14 @@ export default function ActivityCenterPage() {
                         <button
                           onClick={() => {
                             const target = resolveLink(n);
+                            const serviceId = n?.metadata?.serviceId;
                             const options =
                               n?.entityType === "evidence"
-                                ? { state: { from: location.pathname } }
+                                ? {
+                                    state: serviceId
+                                      ? { from: location.pathname, serviceId }
+                                      : { from: location.pathname },
+                                  }
                                 : undefined;
                             navigate(target, options);
                           }}

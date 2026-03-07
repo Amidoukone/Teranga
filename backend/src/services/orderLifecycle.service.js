@@ -57,7 +57,7 @@ async function notifyOrderStatusUpdated({ actorId, order }) {
       entityType: "order",
       entityId: order.id,
       action: "status_updated",
-      title: "Statut commande mis a jour",
+      title: "Statut commande mis à jour",
       message: order.code ? `Commande ${order.code}` : `Commande #${order.id}`,
       progress: computeProgress("order", order.status),
       entityStatus: order.status,

@@ -571,7 +571,7 @@ api.interceptors.response.use(
 
  // 4) 403 ACL (autorisation insuffisante) pas de logout
     if (status === 403) {
-      logApiDebug('warn', '[api] acces refuse (403)', {
+      logApiDebug('warn', '[api] accès refusé (403)', {
         method: method?.toUpperCase?.(),
         url,
       });

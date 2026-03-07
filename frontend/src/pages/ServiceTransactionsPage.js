@@ -1,6 +1,6 @@
 // frontend/src/pages/ServiceTransactionsPage.jsx
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { me, getAuthHeader } from "../services/auth";
 import { getTransactions, createTransaction } from "../services/transactions";
 import api from "../services/api";
@@ -109,39 +109,6 @@ function getProofExtLabel(pf, proofHref = "", fallback = "FILE") {
 
 
 /* ============================================================================
-   Contexte: transactions liees au service.
-   Payload JSON ou multipart selon les donnees.
-   Preuves: compat ImageKit + legacy.
-============================================================================ */
-function buildCreateTransactionPayload(payload) {
-  const hasFile = payload?.proofFile instanceof File;
-
-  if (!hasFile) {
-    // JSON simple (compatible existant)
-    const clean = { ...payload };
-    if (!clean.proofFile) delete clean.proofFile;
-    return clean;
-  }
-
-  // FormData (robuste prod)
-  const fd = new FormData();
-
-  Object.entries(payload || {}).forEach(([k, v]) => {
-    if (v === undefined || v === null || v === "") return;
-
-    if (k === "proofFile") {
- // Contexte: transactions de service.
-      fd.append("proofFile", v);
-      return;
-    }
-
-    fd.append(k, String(v));
-  });
-
-  return fd;
-}
-
-/* ============================================================================
    Composant principal.
 ============================================================================ */
 export default function ServiceTransactionsPage() {
@@ -173,6 +140,11 @@ export default function ServiceTransactionsPage() {
   const authHeaders = useMemo(() => {
     return getAuthHeader();
   }, []);
+  const taskIdFromQuery = useMemo(() => {
+    const raw = new URLSearchParams(location.search || "").get("taskId");
+    const parsed = parseInt(String(raw || ""), 10);
+    return Number.isFinite(parsed) ? String(parsed) : "";
+  }, [location.search]);
 
   /* ============================================================================
      Charge les transactions.
@@ -249,6 +221,17 @@ export default function ServiceTransactionsPage() {
     };
   }, [fetchTransactions, fetchTasks]);
 
+  useEffect(() => {
+    if (!taskIdFromQuery || !tasks.length) return;
+    const exists = tasks.some((task) => String(task.id) === String(taskIdFromQuery));
+    if (!exists) return;
+    setForm((prev) =>
+      String(prev.taskId || "") === String(taskIdFromQuery)
+        ? prev
+        : { ...prev, taskId: String(taskIdFromQuery) }
+    );
+  }, [taskIdFromQuery, tasks]);
+
   /* ============================================================================
      Charge les transactions.
      Contexte: transactions liees au service.
@@ -278,9 +261,7 @@ export default function ServiceTransactionsPage() {
         proofFile: form.proofFile || null,
       };
 
-      const finalPayload = buildCreateTransactionPayload(payload);
-
-      await createTransaction(finalPayload);
+      await createTransaction(payload);
 
       notify(t("serviceTransactions.alerts.createSuccess"));
 
@@ -296,11 +277,32 @@ export default function ServiceTransactionsPage() {
       await fetchTransactions();
     } catch (err) {
       console.error("ServiceTransactionsPage create transaction error:", err);
-      notify(t("serviceTransactions.alerts.createError"));
+      notify(
+        err?.response?.data?.error ||
+          err?.message ||
+          t("serviceTransactions.alerts.createError")
+      );
     } finally {
       setSubmitting(false);
     }
   }
+
+ // Contexte: transactions de service.
+  const canCreate =
+    user?.role === "admin" || user?.role === "agent" || user?.role === "master";
+  const servicesFallbackPath = user?.role === "agent" ? "/agent/services" : "/services";
+  const handleBackToServices = useCallback(() => {
+    const from = location.state?.from;
+    if (
+      typeof from === "string" &&
+      from.startsWith("/") &&
+      from !== location.pathname
+    ) {
+      navigate(from);
+      return;
+    }
+    navigate(servicesFallbackPath);
+  }, [location.pathname, location.state?.from, navigate, servicesFallbackPath]);
 
   /* ============================================================================
      Affiche l etat de chargement.
@@ -325,10 +327,6 @@ export default function ServiceTransactionsPage() {
     );
   }
 
- // Contexte: transactions de service.
-  const canCreate =
-    user?.role === "admin" || user?.role === "agent" || user?.role === "master";
-
   /* ============================================================================
      Roles admin/master et perimetre d'acces.
   ============================================================================ */
@@ -351,16 +349,25 @@ export default function ServiceTransactionsPage() {
             </p>
           </div>
 
-          <button
-            onClick={() =>
-              navigate(`/services/${id}/tasks`, {
-                state: { from: location.pathname },
-              })
-            }
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
-          >
-            {t("serviceTransactions.header.viewTasks")}
-          </button>
+          <div className="flex w-full sm:w-auto flex-col sm:flex-row gap-2">
+            <button
+              onClick={() =>
+                navigate(`/services/${id}/tasks`, {
+                  state: { from: location.pathname },
+                })
+              }
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
+            >
+              {t("serviceTransactions.header.viewTasks")}
+            </button>
+            <button
+              onClick={handleBackToServices}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
+            >
+              <span aria-hidden="true">&lt;-</span>
+              <span>{t("common.back")}</span>
+            </button>
+          </div>
         </div>
 
  {/* Contexte: transactions de service. */}
@@ -378,6 +385,8 @@ export default function ServiceTransactionsPage() {
         <TransactionHistory
           transactions={transactions}
           getProofHref={getProofHrefFromTransaction}
+          serviceId={id}
+          fromPath={location.pathname}
         />
       </div>
     </div>
@@ -537,7 +546,7 @@ function FormGroup({ label, children, full }) {
 /* ============================================================================
    Preuves: compat ImageKit + legacy.
 ============================================================================ */
-function TransactionHistory({ transactions, getProofHref }) {
+function TransactionHistory({ transactions, getProofHref, serviceId, fromPath }) {
   const { t } = useTranslation();
   const { formatNumber, formatDateTime } = useLocale();
 
@@ -644,8 +653,19 @@ function TransactionHistory({ transactions, getProofHref }) {
                   {trx.task && (
                     <p className="break-words">
                       <strong>{t("serviceTransactions.history.taskLabel")}:</strong>{" "}
-                      {trx.task.title} ({t("serviceTransactions.history.taskIdLabel")}{" "}
-                      {trx.task.id})
+                      <Link
+                        to={`/tasks/${trx.task.id}/evidences`}
+                        state={
+                          serviceId
+                            ? { from: fromPath || `/services/${serviceId}/transactions`, serviceId }
+                            : { from: fromPath || "/transactions" }
+                        }
+                        className="app-link-primary"
+                      >
+                        {trx.task.title ||
+                          t("serviceTransactions.form.taskFallback", { id: trx.task.id })}
+                      </Link>{" "}
+                      ({t("serviceTransactions.history.taskIdLabel")} {trx.task.id})
                     </p>
                   )}
 

@@ -1053,6 +1053,14 @@ function TransactionList({
         const createdAtLabel = trx.createdAt
           ? formatDate(trx.createdAt)
           : t('common.dash');
+        const linkedServiceId =
+          trx.service?.id ||
+          trx.serviceId ||
+          trx.task?.serviceId ||
+          null;
+        const taskLinkState = linkedServiceId
+          ? { from: '/transactions', serviceId: linkedServiceId }
+          : { from: '/transactions' };
 
         return (
           <div
@@ -1119,6 +1127,28 @@ function TransactionList({
                 <div className="mt-2 text-xs text-text-secondary break-words line-clamp-2">
                   {t('transactionsPage.list.paymentLabel')}: {trx.paymentMethod}
                 </div>
+              )}
+
+              {linkedServiceId && (
+                <Link
+                  to={`/services/${linkedServiceId}/tasks`}
+                  state={{ from: '/transactions' }}
+                  className="app-link-primary text-sm break-words line-clamp-2"
+                >
+                  {t('transactionsPage.filters.serviceLabel')}: {trx.service?.title ||
+                    t('serviceTasksPage.form.serviceValue', { id: linkedServiceId })}
+                </Link>
+              )}
+
+              {trx.task && (
+                <Link
+                  to={`/tasks/${trx.task.id}/evidences`}
+                  state={taskLinkState}
+                  className="app-link-primary text-sm break-words line-clamp-2"
+                >
+                  {t('serviceTransactions.history.taskLabel')}: {trx.task.title ||
+                    t('transactionsPage.form.taskFallback', { id: trx.task.id })}
+                </Link>
               )}
 
               {trx.order && (

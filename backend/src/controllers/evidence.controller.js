@@ -661,6 +661,7 @@ exports.create = async (req, res) => {
           metadata: {
             evidenceCount,
             taskId: task?.id || null,
+            serviceId: task?.serviceId || task?.service?.id || null,
             orderId: order?.id || null,
           },
           countryId: geoCountryId,

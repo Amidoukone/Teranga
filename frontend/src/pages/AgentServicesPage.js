@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { getAuthHeader } from '../services/auth';
 import {
@@ -21,6 +22,7 @@ import { notify } from '../utils/notify';
 export default function AgentServicesPage() {
   const { formatDateTime, formatNumber } = useLocale();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actingId, setActingId] = useState(null);
@@ -269,6 +271,30 @@ export default function AgentServicesPage() {
                 {/* Actions Agent */}
                 {/* ===================== */}
                 <div className="mt-6 flex gap-3 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(`/services/${s.id}/tasks`, {
+                        state: { from: '/agent/services' },
+                      })
+                    }
+                    className="app-btn-neutral"
+                  >
+                    {t('services.buttons.viewTasks')}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(`/services/${s.id}/transactions`, {
+                        state: { from: '/agent/services' },
+                      })
+                    }
+                    className="app-btn-primary"
+                  >
+                    {t('nav.transactions')}
+                  </button>
+
                   {s.status === 'created' && (
                     <button
                       onClick={() => updateStatus(s.id, 'start')}

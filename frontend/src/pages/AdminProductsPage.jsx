@@ -526,11 +526,11 @@ export default function AdminProductsPage() {
       const statusHint =
         status === 401
           ? t("common.sessionExpired", {
-              defaultValue: "Session expiree. Veuillez vous reconnecter.",
+              defaultValue: "Session expirée. Veuillez vous reconnecter.",
             })
           : status === 403
             ? t("common.accessDenied", {
-                defaultValue: "Acces interdit pour cette action.",
+                defaultValue: "Accès interdit pour cette action.",
               })
             : "";
       const suffix = [statusHint, detail]

@@ -242,6 +242,36 @@ export default function TaskEvidencesPage() {
   const handleBack = useCallback(() => {
     navigate(backTarget);
   }, [backTarget, navigate]);
+  const contextualServiceId = useMemo(() => {
+    const stateServiceId = location.state?.serviceId;
+    if (
+      stateServiceId !== undefined &&
+      stateServiceId !== null &&
+      String(stateServiceId).trim()
+    ) {
+      return String(stateServiceId);
+    }
+    const m = String(backTarget || '').match(/^\/services\/([^/]+)\/tasks$/);
+    return m?.[1] || null;
+  }, [backTarget, location.state?.serviceId]);
+  const handleGoToServiceTasks = useCallback(() => {
+    if (!contextualServiceId) {
+      navigate('/tasks');
+      return;
+    }
+    navigate(`/services/${contextualServiceId}/tasks`, {
+      state: { from: location.pathname },
+    });
+  }, [contextualServiceId, location.pathname, navigate]);
+  const handleGoToTransactions = useCallback(() => {
+    if (!contextualServiceId) {
+      navigate('/transactions');
+      return;
+    }
+    navigate(`/services/${contextualServiceId}/transactions?taskId=${id}`, {
+      state: { from: location.pathname },
+    });
+  }, [contextualServiceId, id, location.pathname, navigate]);
 
   // ========================================================================
  // Contexte: preuves de tache.
@@ -538,6 +568,18 @@ export default function TaskEvidencesPage() {
               {showForm
                 ? t('taskEvidencesPage.buttons.hideForm')
                 : t('taskEvidencesPage.buttons.showForm')}
+            </button>
+            <button
+              onClick={handleGoToServiceTasks}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
+            >
+              <span>{t('services.buttons.viewTasks')}</span>
+            </button>
+            <button
+              onClick={handleGoToTransactions}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm app-btn-primary transition"
+            >
+              <span>{t('nav.transactions')}</span>
             </button>
             <button
               onClick={handleBack}
