@@ -8,7 +8,7 @@ export function normalizeFeedbackType(type = "info") {
 export function getFeedbackIcon(type = "info") {
   const normalized = normalizeFeedbackType(type);
   if (normalized === "success") return "ok";
-  if (normalized === "error") return "!";
-  if (normalized === "warning") return "!";
-  return "";
+  if (normalized === "error") return "x";
+  if (normalized === "warning") return "i";
+  return "i";
 }

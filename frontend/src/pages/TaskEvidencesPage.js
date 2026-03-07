@@ -13,6 +13,7 @@ import { me } from '../services/auth';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
+import { getFeedbackIcon } from '../utils/feedback';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 import { fixMojibakeText } from '../utils/mojibake';
 
@@ -855,7 +856,7 @@ export default function TaskEvidencesPage() {
         ========================================================== */}
         {!isAdmin && (
           <div className="mb-4 rounded-2xl bg-surface-main border border-border px-4 py-3 text-xs sm:text-sm text-text-secondary flex gap-2 items-start">
-            <span className="mt-[1px]">!</span>
+            <span className="mt-[1px]">{getFeedbackIcon('warning')}</span>
             <p className="break-words">
               {t('taskEvidencesPage.warnings.deleteWindow')}
             </p>

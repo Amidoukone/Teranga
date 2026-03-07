@@ -11,6 +11,7 @@ import {
 import { me } from "../services/auth";
 import { normalizeRole, isGlobalAdminUser, isMasterUser } from "../utils/role";
 import { notify } from '../utils/notify';
+import { getFeedbackIcon } from "../utils/feedback";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 import {
   AdminActionsRow,
@@ -304,7 +305,7 @@ export default function AdminCategoriesPage() {
  {/* Contexte: administration des categories. */}
         {errorMsg && (
           <div className="app-alert app-alert-error mb-6 flex gap-2 items-start">
-            <span className="mt-[2px]">!</span>
+            <span className="mt-[2px]">{getFeedbackIcon("error")}</span>
             <p className="break-words">{errorMsg}</p>
           </div>
         )}

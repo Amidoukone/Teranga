@@ -398,7 +398,7 @@ export default function ServiceTasksPage() {
         {/* Message d'erreur */}
         {errorMsg && (
           <div className="mb-6 rounded-2xl bg-rose-500/15 border border-rose-500/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 flex gap-2 items-start">
-            <span className="mt-[2px]">!</span>
+            <span className="mt-[2px]">{getFeedbackIcon("error")}</span>
             <p className="break-words">{errorMsg}</p>
           </div>
         )}
