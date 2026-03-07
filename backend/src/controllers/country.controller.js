@@ -25,7 +25,7 @@ const { getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
 const logger = require('../utils/logger');
 
 /* ======================================================
-   ðŸ§© Helpers
+   Helpers
 ====================================================== */
 function toSafeInt(v) {
   if (v === null || v === undefined || v === '') return null;
@@ -41,11 +41,11 @@ function toTrimOrNull(v) {
 
 function requireGlobalAdmin(req, res) {
   if (!req.user?.role) {
-    res.status(401).json({ error: 'Non authentifiÃ©' });
+    res.status(401).json({ error: 'Non authentifié' });
     return false;
   }
   if (req.user.role !== 'admin' || !isGlobalAdmin(req.user)) {
-    res.status(403).json({ error: 'AccÃ¨s rÃ©servÃ© Ã  un administrateur global' });
+    res.status(403).json({ error: 'Accès réservé à un administrateur global' });
     return false;
   }
   return true;
@@ -136,9 +136,9 @@ async function cascadeDeleteCountry(country, transaction) {
 }
 
 /* ======================================================
-   ðŸ“‹ LIST
-   - Public (ou tous rÃ´les)
-   - Par dÃ©faut : pays actifs uniquement
+   LIST
+   - Public (ou tous rôles)
+   - Par défaut : pays actifs uniquement
    - Admin : ?includeInactive=true -> inclut inactifs
 ====================================================== */
 exports.list = async (req, res) => {
@@ -176,12 +176,12 @@ exports.list = async (req, res) => {
     logger.error('list countries:', e);
     return res
       .status(500)
-      .json({ error: 'Erreur lors de la rÃ©cupÃ©ration des pays' });
+      .json({ error: 'Erreur lors de la récupération des pays' });
   }
 };
 
 /* ======================================================
-   âž• CREATE (admin)
+   CREATE (admin)
 ====================================================== */
 exports.create = async (req, res) => {
   try {
@@ -200,11 +200,11 @@ exports.create = async (req, res) => {
 
     const iso = trimmedIso.toUpperCase();
 
-    // âœ… PrÃ©-check anti doublon (meilleur message utilisateur)
+    // Pré-check anti doublon (meilleur message utilisateur)
     const existing = await Country.findOne({ where: { isoCode: iso } });
     if (existing) {
       return res.status(409).json({
-        error: `Un pays avec isoCode "${iso}" existe dÃ©jÃ `,
+        error: `Un pays avec isoCode "${iso}" existe déjà`,
       });
     }
 
@@ -218,20 +218,20 @@ exports.create = async (req, res) => {
 
     return res.status(201).json({ country: created });
   } catch (e) {
-    // âœ… Erreur unique constraint (sÃ©curitÃ© supplÃ©mentaire)
+    // Erreur unique constraint (sécurité supplémentaire)
     if (e?.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({
-        error: "Ce code ISO existe dÃ©jÃ  (contrainte d'unicitÃ©)",
+        error: "Ce code ISO existe déjà (contrainte d'unicité)",
       });
     }
 
     logger.error('create country:', e);
-    return res.status(500).json({ error: 'Erreur lors de la crÃ©ation du pays' });
+    return res.status(500).json({ error: 'Erreur lors de la création du pays' });
   }
 };
 
 /* ======================================================
-   âœï¸ UPDATE (admin)
+   UPDATE (admin)
 ====================================================== */
 exports.update = async (req, res) => {
   try {
@@ -257,12 +257,12 @@ exports.update = async (req, res) => {
 
       const iso = trimmedIso.toUpperCase();
 
-      // âœ… EmpÃªcher collision si isoCode changÃ©
+      // Empêcher collision si isoCode changé
       if (iso !== country.isoCode) {
         const existing = await Country.findOne({ where: { isoCode: iso } });
         if (existing) {
           return res.status(409).json({
-            error: `Un pays avec isoCode "${iso}" existe dÃ©jÃ `,
+            error: `Un pays avec isoCode "${iso}" existe déjà`,
           });
         }
       }
@@ -289,19 +289,19 @@ exports.update = async (req, res) => {
   } catch (e) {
     if (e?.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({
-        error: "Ce code ISO existe dÃ©jÃ  (contrainte d'unicitÃ©)",
+        error: "Ce code ISO existe déjà (contrainte d'unicité)",
       });
     }
 
     logger.error('update country:', e);
     return res
       .status(500)
-      .json({ error: 'Erreur lors de la mise Ã  jour du pays' });
+      .json({ error: 'Erreur lors de la mise à jour du pays' });
   }
 };
 
 /* ======================================================
-   ðŸ—‘ï¸ DELETE (admin)
+   DELETE (admin)
 ====================================================== */
 exports.remove = async (req, res) => {
   try {

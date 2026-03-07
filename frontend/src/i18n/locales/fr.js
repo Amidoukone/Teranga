@@ -20,12 +20,12 @@ const fr = {
     settings: "Param\u00E8tres",
     helpSupport: "Aide & Support",
       privacy: "Confidentialit\u00E9",
-    terms: "Conditions d'utilisation",
+    terms: "Conditions d’utilisation",
       legal: "Mentions l\u00E9gales",
     dashboard: "Tableau de bord",
     dashboardTitle: "Tableau de bord",
     notifications: "Notifications",
-    activities: "Centre d'activit\u00E9",
+    activities: "Centre d’activit\u00E9",
     projects: "Projets",
     properties: "Biens",
     services: "Services",
@@ -50,7 +50,7 @@ const fr = {
     accountSecurity: "S\u00E9curit\u00E9 du compte",
     helpSupportSoon: "Aide & Support (bient\u00F4t)",
     settingsMenuHint:
-      "S\u00E9curit\u00E9, aide & support, confidentialit\u00E9, conditions d'utilisation et mentions l\u00E9gales.",
+      "S\u00E9curit\u00E9, aide & support, confidentialit\u00E9, conditions d’utilisation et mentions l\u00E9gales.",
     settingsMenuHintShort:
       "Regroupe la s\u00E9curit\u00E9, le support et les documents l\u00E9gaux.",
     comingSoon: "Bient\u00F4t disponible",
@@ -90,13 +90,13 @@ const fr = {
       passwordHide: "Masquer le mot de passe",
       passwordShow: "Afficher le mot de passe",
       forgotInfo:
-        "Mot de passe oubli\u00E9 ? Contactez l'admin ou le master de votre pays/r\u00E9gion pour le r\u00E9initialiser. Ensuite, vous pourrez le modifier dans votre compte.",
+        "Mot de passe oubli\u00E9 ? Contactez l’admin ou le master de votre pays/r\u00E9gion pour le r\u00E9initialiser. Ensuite, vous pourrez le modifier dans votre compte.",
       submitting: "Connexion...",
       submit: "Se connecter",
-      clientNoAccount: "Client : vous n'avez pas encore de compte ?",
+      clientNoAccount: "Client : vous n’avez pas encore de compte ?",
       createAccount: "Cr\u00E9er un compte client",
-      supportInfo: "Besoin d'un acc\u00E8s sp\u00E9cifique ? Contactez le support Teranga.",
-      errorDefault: "\u00C9chec de connexion : identifiants incorrects.",
+      supportInfo: "Besoin d’un acc\u00E8s sp\u00E9cifique ? Contactez le support Teranga.",
+      errorDefault: "\u00C9chec de connexion : identifiants incorrects.",
     },
     register: {
       kicker: "Rejoignez Teranga",
@@ -114,12 +114,12 @@ const fr = {
       countryLabel: "Pays (ISO2 ou nom)",
       countryPlaceholder: "ML, SN, CI... ou nom du pays",
       countryExample:
-        "Exemple : ML pour Mali, SN pour S\u00E9n\u00E9gal, CI pour C\u00F4te d'Ivoire.",
-      countryDetected: "D\u00E9tect\u00E9 :",
+        "Exemple : ML pour Mali, SN pour S\u00E9n\u00E9gal, CI pour C\u00F4te d’Ivoire.",
+      countryDetected: "D\u00E9tect\u00E9 :",
       regionInfo:
-        "Compte r\u00E9gional ? Contactez l'admin ou le master de votre pays. L'inscription publique est r\u00E9serv\u00E9e au pays uniquement.",
+        "Compte r\u00E9gional ? Contactez l’admin ou le master de votre pays. L’inscription publique est r\u00E9serv\u00E9e au pays uniquement.",
       countriesLoading: "V\u00E9rification des pays disponibles...",
-      countriesHint: "Pays actuellement couverts : {{count}}",
+      countriesHint: "Pays actuellement couverts : {{count}}",
       countriesEmpty: "Aucun pays pris en charge pour le moment.",
       passwordLabel: "Mot de passe",
       passwordPlaceholder: "********",
@@ -128,17 +128,17 @@ const fr = {
       passwordMin: "Minimum 8 caract\u00E8res.",
       submitting: "Cr\u00E9ation...",
       submit: "Cr\u00E9er mon compte",
-      haveAccount: "D\u00E9j\u00E0 un compte ?",
+      haveAccount: "D\u00E9j\u00E0 un compte ?",
       loginLink: "Se connecter",
       success:
-        "Votre compte a \u00E9t\u00E9 cr\u00E9\u00E9 avec succ\u00E8s ! Vous pouvez vous connecter.",
+        "Votre compte a \u00E9t\u00E9 cr\u00E9\u00E9 avec succ\u00E8s ! Vous pouvez vous connecter.",
       errors: {
         firstName: "Veuillez renseigner votre pr\u00E9nom.",
         lastName: "Veuillez renseigner votre nom.",
         email: "Adresse email invalide.",
         password: "Le mot de passe doit contenir au moins 8 caract\u00E8res.",
         countryIso:
-          "Veuillez renseigner un pays valide (format ISO2 : ML, SN, CI...).",
+          "Veuillez renseigner un pays valide (format ISO2 : ML, SN, CI...).",
         loadingCountries: "V\u00E9rification des pays en cours...",
         countriesUnavailable:
           "Impossible de confirmer la disponibilit\u00E9 des pays pour le moment.",
@@ -151,7 +151,7 @@ const fr = {
       title: "Mot de passe oubli\u00E9",
       subtitle: "Entrez votre email pour recevoir un lien de r\u00E9initialisation.",
       success: "Si un compte existe, un lien de r\u00E9initialisation a \u00E9t\u00E9 envoy\u00E9.",
-      error: "Impossible d'envoyer la demande pour le moment.",
+      error: "Impossible d’envoyer la demande pour le moment.",
       debugTitle: "Mode debug actif (sans SMTP)",
       debugInfo: "Utilisez ce token/lien pour r\u00E9initialiser le mot de passe.",
       debugOpenLink: "Ouvrir le lien de r\u00E9initialisation",
@@ -187,7 +187,7 @@ const fr = {
       subtitle:
         "Utilisez un code de r\u00E9cup\u00E9ration pour changer votre mot de passe.",
       help:
-        "Ces codes sont remis lors de l'inscription ou apr\u00E8s r\u00E9g\u00E9n\u00E9ration depuis un compte connect\u00E9.",
+        "Ces codes sont remis lors de l’inscription ou apr\u00E8s r\u00E9g\u00E9n\u00E9ration depuis un compte connect\u00E9.",
       success: "Mot de passe r\u00E9initialis\u00E9 avec succ\u00E8s.",
       error: "Impossible de r\u00E9initialiser le mot de passe.",
       newCodesTitle: "Nouveaux codes de r\u00E9cup\u00E9ration",
@@ -231,14 +231,14 @@ const fr = {
     regionLabel: "R\u00E9gion",
     confirmModal: {
       title: "Confirmation",
-      message: "Voulez-vous continuer ?",
+      message: "Voulez-vous continuer ?",
       confirm: "Confirmer",
       cancel: "Annuler",
-      delete: "Supprimer {{entity}} ?",
-      deleteNamed: "Supprimer {{entity}} \u00AB {{name}} \u00BB ?",
+      delete: "Supprimer {{entity}} ?",
+      deleteNamed: "Supprimer {{entity}} \u00AB {{name}} \u00BB ?",
       entities: {
         service: "ce service",
-        category: "cette categorie",
+        category: "cette catégorie",
         evidence: "cette preuve",
         property: "ce bien",
         project: "ce projet",
@@ -249,9 +249,9 @@ const fr = {
         orderItem: "cet article",
         product: "ce produit",
         country: "ce pays",
-        region: "cette region",
+        region: "cette région",
         notification: "cette notification",
-        activity: "cette activite",
+        activity: "cette activité",
         transaction: "cette transaction",
       },
     },
@@ -259,22 +259,22 @@ const fr = {
   dashboard: {
     loading: "Chargement du tableau de bord...",
     greeting: "Bonjour, {{name}}",
-    roleLabel: "Role :",
+    roleLabel: "Rôle :",
     careFallbackName: "Nous",
     careLine: "{{firstName}}, nous veillons sur tout ce qui compte pour vous.",
     balance: {
       global: "Solde global",
-      scope: "Solde de votre perimetre",
+      scope: "Solde de votre périmètre",
       positive: "Positif",
-      negative: "Negatif",
-      descScope: "Synthese de vos revenus et depenses sur votre pays ou region.",
+      negative: "Négatif",
+      descScope: "Synthèse de vos revenus et dépenses sur votre pays ou région.",
       descGlobal:
-        "Synthese de vos revenus et depenses sur l'ensemble de vos operations.",
+        "Synthèse de vos revenus et dépenses sur l’ensemble de vos opérations.",
     },
     quickView: {
       title: "Vue rapide",
       subtitle:
-        "Un apercu clair de vos services, activites et flux financiers.",
+        "Un aperçu clair de vos services, activités et flux financiers.",
     },
     stats: {
       totalServices: "Services totaux",
@@ -283,21 +283,21 @@ const fr = {
       currentBalance: "Solde actuel",
     },
     finance: {
-      title: "Vue detaillee des finances",
-      subtitle: "Basee sur vos transactions et operations declarees.",
+      title: "Vue détaillée des finances",
+      subtitle: "Basée sur vos transactions et opérations déclarées.",
     },
     modules: {
-      title: "Vue globale de vos operations",
-      subtitle: "Biens, taches, projets et commandes en un coup d'oeil.",
+      title: "Vue globale de vos opérations",
+      subtitle: "Biens, tâches, projets et commandes en un coup d’oeil.",
       properties: "Biens",
-      tasks: "Taches",
+      tasks: "Tâches",
       projects: "Projets",
       orders: "Commandes",
       counts: {
         property: "{{count}} bien",
         property_other: "{{count}} biens",
-        task: "{{count}} tache",
-        task_other: "{{count}} taches",
+        task: "{{count}} tâche",
+        task_other: "{{count}} tâches",
         project: "{{count}} projet",
         project_other: "{{count}} projets",
         order: "{{count}} commande",
@@ -305,26 +305,26 @@ const fr = {
       },
       items: {
         active: "Actifs",
-        created: "Creees",
+        created: "Créées",
         inProgress: "En cours",
-        completed: "Terminees",
-        validated: "Validees",
+        completed: "Terminées",
+        validated: "Validées",
         open: "En cours",
-        paid: "Payees",
+        paid: "Payées",
       },
     },
     summary: {
-      title: "Synthese financiere rapide",
+      title: "Synthèse financière rapide",
       revenue: "Revenus",
-      expense: "Depenses",
+      expense: "Dépenses",
       net: "Solde net",
       note:
-        "Pour plus de details, consultez le tableau financier complet dans la section Finances.",
+        "Pour plus de détails, consultez le tableau financier complet dans la section Finances.",
     },
     quickAccess: {
-      title: "Acces rapides",
+      title: "Accès rapides",
       subtitle:
-        "Accedez en un clic aux sections cles de votre espace Teranga selon votre role.",
+        "Accédez en un clic aux sections clés de votre espace Teranga selon votre rôle.",
       admin: {
         services: "Services clients",
         adminServices: "Gestion services",
@@ -345,8 +345,8 @@ const fr = {
         finance: "Mes finances",
       },
       agent: {
-        assignedServices: "Services assignes",
-        tasks: "Mes taches",
+        assignedServices: "Services assignés",
+        tasks: "Mes tâches",
         transactions: "Mes transactions",
         finance: "Mes finances",
       },
@@ -410,7 +410,7 @@ const fr = {
       propertyPlaceholderSelectClient: "\u2014 Choisir un client d\u2019abord \u2014",
       typeLabel: "Type de service",
       titleLabel: "Titre",
-      titlePlaceholder: "Ex : Paiement facture ORANGE MALI",
+      titlePlaceholder: "Ex : Paiement facture ORANGE MALI",
       descriptionLabel: "Description",
       descriptionPlaceholder: "D\u00E9tail du service\u2026",
       contactLabel: "Personne de contact",
@@ -419,7 +419,7 @@ const fr = {
       addressLabel: "Adresse",
       addressPlaceholder: "Adresse du lieu",
       budgetLabel: "Budget estim\u00E9",
-      budgetPlaceholder: "Ex : 15000",
+      budgetPlaceholder: "Ex : 15000",
       currencyLabel: "Devise",
     },
     card: {
@@ -443,10 +443,10 @@ const fr = {
       loadClientPropertiesError: "Erreur lors du chargement des biens du client.",
       selectClient: "Veuillez s\u00E9lectionner un client.",
       propertyOutdated:
-        "Le bien s\u00E9lectionn\u00E9 n'est plus disponible pour ce client. Veuillez le s\u00E9lectionner \u00E0 nouveau.",
-      createSuccess: "Service cr\u00E9\u00E9 avec succ\u00E8s !",
+        "Le bien s\u00E9lectionn\u00E9 n’est plus disponible pour ce client. Veuillez le s\u00E9lectionner \u00E0 nouveau.",
+      createSuccess: "Service cr\u00E9\u00E9 avec succ\u00E8s !",
       createError: "Erreur lors de la cr\u00E9ation du service.",
-      updateSuccess: "Service mis \u00E0 jour avec succ\u00E8s !",
+      updateSuccess: "Service mis \u00E0 jour avec succ\u00E8s !",
       updateError: "Erreur lors de la mise \u00E0 jour du service.",
       deleteSuccess: "Service supprim\u00E9 avec succ\u00E8s.",
       deleteError: "Erreur lors de la suppression du service",
@@ -497,7 +497,7 @@ const fr = {
       agentLabel: "Agent (optionnel)",
       agentPlaceholder: "\u2014 Aucun agent \u2014",
       titleLabel: "Titre",
-      titlePlaceholder: "Ex : Construction de villa",
+      titlePlaceholder: "Ex : Construction de villa",
       typeLabel: "Type",
       budgetLabel: "Budget",
       statusLabel: "Statut",
@@ -512,10 +512,10 @@ const fr = {
     },
     card: {
       createdAt: "Cr\u00E9\u00E9 le",
-      client: "Client :",
-      agent: "Agent :",
-      type: "Type :",
-      budget: "Budget :",
+      client: "Client :",
+      agent: "Agent :",
+      type: "Type :",
+      budget: "Budget :",
       currency: "XOF",
       unassigned: "Non assign\u00E9",
     },
@@ -563,11 +563,11 @@ const fr = {
       titleFor: "Nouvelle transaction pour",
       typeLabel: "Type",
       amountLabel: "Montant",
-      amountPlaceholder: "Ex : 250000",
+      amountPlaceholder: "Ex : 250000",
       currencyLabel: "Devise",
       paymentMethodLabel: "M\u00E9thode de paiement",
       paymentMethodLabelOptional: "M\u00E9thode de paiement (optionnel)",
-      paymentMethodPlaceholder: "Ex : OM, Wave",
+      paymentMethodPlaceholder: "Ex : OM, Wave",
       orderIdLabel: "ID commande (optionnel)",
       descriptionLabel: "Description",
       descriptionPlaceholder: "D\u00E9tail de la transaction\u2026",
@@ -591,8 +591,8 @@ const fr = {
       backToProjects: "Retour aux projets",
     },
     labels: {
-      status: "Statut : {{status}}",
-      budget: "Budget :",
+      status: "Statut : {{status}}",
+      budget: "Budget :",
     },
     badges: {
       master: "MASTER",
@@ -634,8 +634,8 @@ const fr = {
       },
       empty: "Aucune phase enregistr\u00E9e.",
       labels: {
-        start: "D\u00E9but :",
-        end: "Fin :",
+        start: "D\u00E9but :",
+        end: "Fin :",
       },
       alerts: {
         saveError: "Erreur lors de la sauvegarde.",
@@ -649,7 +649,7 @@ const fr = {
       upload: "Uploader",
       empty: "Aucun document.",
       itemFallback: "Document",
-      phaseLabel: "Phase :",
+      phaseLabel: "Phase :",
       addedOn: "Ajout\u00E9 le",
       addedOnBy: "Ajout\u00E9 le {{date}} par {{name}}",
       open: "Ouvrir",
@@ -691,7 +691,7 @@ const fr = {
         master: "MASTER",
         admin: "ADMIN",
       },
-      perimeter: "P\u00E9rim\u00E8tre :",
+      perimeter: "P\u00E9rim\u00E8tre :",
       country: "Pays #{{id}}",
       region: "R\u00E9gion #{{id}}",
     },
@@ -719,7 +719,7 @@ const fr = {
     },
     list: {
       empty: "Aucun projet correspondant aux filtres.",
-      budgetLabel: "Budget :",
+      budgetLabel: "Budget :",
       createdAt: "Cr\u00E9\u00E9 le",
     },
     actions: {
@@ -754,7 +754,7 @@ const fr = {
       sortAmountDesc: "Montant d\u00E9croissant",
       sortAmountAsc: "Montant croissant",
       all: "Tous",
-      activeLabel: "Filtre(s) actif(s) :",
+      activeLabel: "Filtre(s) actif(s) :",
       activeNone: "Aucun",
       reset: "R\u00E9initialiser tous les filtres",
       displayedCount: "{{count}} commande affich\u00E9e / {{total}}",
@@ -777,13 +777,13 @@ const fr = {
     list: {
       loading: "Chargement\u2026",
       empty: "Aucune commande trouv\u00E9e.",
-      internalId: "ID interne : {{id}}",
-      updatedAt: "MAJ :",
-      customerLabel: "Client :",
-      noteLabel: "Note :",
+      internalId: "ID interne : {{id}}",
+      updatedAt: "MAJ :",
+      customerLabel: "Client :",
+      noteLabel: "Note :",
       amountLabel: "Montant",
-      orderStatusLabel: "Commande :",
-      paymentStatusLabel: "Paiement :",
+      orderStatusLabel: "Commande :",
+      paymentStatusLabel: "Paiement :",
       orderNumber: "Commande #{{id}}",
     },
     alerts: {
@@ -833,17 +833,17 @@ const fr = {
       docsGallery: "Galerie des documents",
     },
     labels: {
-      orderStatus: "Commande :",
-      paymentStatus: "Paiement :",
+      orderStatus: "Commande :",
+      paymentStatus: "Paiement :",
       totalAmount: "Montant total",
-      note: "Note client :",
-      notes: "Notes :",
+      note: "Note client :",
+      notes: "Notes :",
       files: "Fichiers (images ou PDF)",
       uploadNotes: "Notes (optionnel)",
       proof: "Preuve",
       addedOn: "Ajout\u00E9 le",
       by: "par",
-      method: "M\u00E9thode :",
+      method: "M\u00E9thode :",
       preview: "Aper\u00E7u",
       open: "Ouvrir",
       file: "FICHIER",
@@ -867,10 +867,10 @@ const fr = {
       count: "{{count}} \u00E9l\u00E9ment",
       count_other: "{{count}} \u00E9l\u00E9ments",
       itemFallback: "Article #{{id}}",
-      itemId: "ID article : #{{id}}",
-      quantity: "Qt\u00E9 :",
-      unitPrice: "PU :",
-      total: "Total :",
+      itemId: "ID article : #{{id}}",
+      quantity: "Qt\u00E9 :",
+      unitPrice: "PU :",
+      total: "Total :",
       cancel: "Annuler",
       delete: "Supprimer",
       empty: "Aucun article dans cette commande.",
@@ -912,7 +912,7 @@ const fr = {
       addMoreLater:
         "Vous pouvez ajouter un seul fichier puis en ajouter d\u2019autres plus tard.",
       previewAvailable: "Aper\u00E7u disponible",
-      format: "Format : {{ext}}",
+      format: "Format : {{ext}}",
       delete: "Supprimer",
       deletePossible: "Suppression possible encore {{time}}.",
       deleteExpired: "Suppression expir\u00E9e (1 heure).",
@@ -940,7 +940,7 @@ const fr = {
       loadError: "Erreur lors du chargement des transactions.",
       invalidAmount: "Montant invalide.",
       createSuccess: "Transaction ajout\u00E9e",
-      createError: "Erreur lors de l'ajout.",
+      createError: "Erreur lors de l’ajout.",
       deleteSuccess: "Transaction supprim\u00E9e.",
       deleteError: "Erreur lors de la suppression de la transaction.",
     },
@@ -961,10 +961,10 @@ const fr = {
       title: "Nouvelle transaction",
       typeLabel: "Type",
       amountLabel: "Montant",
-      amountPlaceholder: "Ex : 25 000",
+      amountPlaceholder: "Ex : 25 000",
       currencyLabel: "Devise",
       paymentMethodLabel: "M\u00E9thode de paiement (optionnel)",
-      paymentMethodPlaceholder: "Ex : MoMo, Virement...",
+      paymentMethodPlaceholder: "Ex : MoMo, Virement...",
       descriptionLabel: "Description",
       descriptionPlaceholder: "Description (optionnelle)",
       attachmentLabel: "Pi\u00E8ce jointe (optionnel)",
@@ -975,14 +975,14 @@ const fr = {
       loading: "Chargement des transactions\u2026",
       empty: "Aucune transaction trouv\u00E9e.",
       descriptionFallback: "Aucune description fournie.",
-      methodLabel: "M\u00E9thode :",
+      methodLabel: "M\u00E9thode :",
       createdAt: "Cr\u00E9\u00E9e le",
       createdAtDash: "\u2014",
       createdTime: "\u00C0",
       proofLabel: "Preuve",
       proofAttachment: "Pi\u00E8ce jointe",
       proofPreview: "Aper\u00E7u disponible",
-      proofFormat: "Format : {{ext}}",
+      proofFormat: "Format : {{ext}}",
       enteredBy: "Saisie par",
       viewAttachment: "Voir la pi\u00E8ce jointe",
       delete: "Supprimer",
@@ -1063,7 +1063,7 @@ const fr = {
     alerts: {
       loadError: "Erreur lors du chargement des transactions.",
       createSuccess: "Transaction ajout\u00E9e.",
-      createError: "Erreur lors de l'ajout de la transaction.",
+      createError: "Erreur lors de l’ajout de la transaction.",
       deleteSuccess: "Transaction supprim\u00E9e.",
       deleteError: "Erreur lors de la suppression de la transaction.",
     },
@@ -1090,7 +1090,7 @@ const fr = {
       descriptionLabel: "Description",
       descriptionPlaceholder: "Description ou d\u00E9tails\u2026",
       proofLabel: "Pi\u00E8ce justificative (PDF, JPG, PNG)",
-      proofSelectedLabel: "Fichier s\u00E9lectionn\u00E9 :",
+      proofSelectedLabel: "Fichier s\u00E9lectionn\u00E9 :",
       submit: "Ajouter la transaction",
       submitting: "Ajout\u2026",
     },
@@ -1103,7 +1103,7 @@ const fr = {
       proofLabel: "Preuve",
       attachmentFallback: "Pi\u00E8ce jointe",
       previewAvailable: "Aper\u00E7u disponible",
-      format: "Format : {{ext}}",
+      format: "Format : {{ext}}",
       createdBy: "Enregistr\u00E9 par {{name}}",
       dateUnknown: "Date inconnue",
       proofImage: "IMAGE",
@@ -1170,7 +1170,7 @@ const fr = {
       titleEdit: "Modifier le bien",
       titleCreate: "Ajouter un nouveau bien",
       helperCreate:
-        "Remplissez les informations et ajoutez des photos/documents (jusqu'\u00E0 10 fichiers par bien).",
+        "Remplissez les informations et ajoutez des photos/documents (jusqu’\u00E0 10 fichiers par bien).",
       labels: {
         title: "Titre du bien",
         type: "Type de bien",
@@ -1182,31 +1182,31 @@ const fr = {
         description: "Description",
       },
       placeholders: {
-        title: "Ex : Appartement F3 centre-ville",
+        title: "Ex : Appartement F3 centre-ville",
         address: "Adresse compl\u00E8te",
-        city: "Ex : Dakar",
+        city: "Ex : Dakar",
         postalCode: "Code postal",
-        surface: "Ex : 85",
-        rooms: "Ex : 3",
+        surface: "Ex : 85",
+        rooms: "Ex : 3",
         description:
-          "Ajoutez des pr\u00E9cisions : \u00E9tage, vue, \u00E9tat g\u00E9n\u00E9ral, \u00E9quipements...",
+          "Ajoutez des pr\u00E9cisions : \u00E9tage, vue, \u00E9tat g\u00E9n\u00E9ral, \u00E9quipements...",
       },
       dynamic: {
         landSurfaceLabel: "Surface du terrain (m\u00B2)",
-        landSurfacePlaceholder: "Ex : 600",
+        landSurfacePlaceholder: "Ex : 600",
         commercialSurfaceLabel: "Surface commerciale (m\u00B2)",
-        commercialRoomsLabel: "Nombre d'espaces/bureaux",
-        commercialRoomsPlaceholder: "Ex : 4",
+        commercialRoomsLabel: "Nombre d’espaces/bureaux",
+        commercialRoomsPlaceholder: "Ex : 4",
         automobileSurfaceLabel: "Kilom\u00E9trage (km)",
-        automobileSurfacePlaceholder: "Ex : 45000",
+        automobileSurfacePlaceholder: "Ex : 45000",
         automobileRoomsLabel: "Nombre de places",
-        automobileRoomsPlaceholder: "Ex : 5",
+        automobileRoomsPlaceholder: "Ex : 5",
       },
       filesLabel: "Photos / documents (jpg, jpeg, png, webp, heic, heif, pdf)",
       existingMediaLabel: "Fichiers actuels (cliquez sur supprimer puis enregistrez)",
-      createMediaHint: "Vous pouvez importer jusqu'\u00E0 {{max}} fichiers.",
+      createMediaHint: "Vous pouvez importer jusqu’\u00E0 {{max}} fichiers.",
       editMediaHint:
-        "Fichiers existants : {{current}}/{{max}}. Les nouveaux fichiers sont ajout\u00E9s sans supprimer les anciens ({{remaining}} place(s) restante(s)).",
+        "Fichiers existants : {{current}}/{{max}}. Les nouveaux fichiers sont ajout\u00E9s sans supprimer les anciens ({{remaining}} place(s) restante(s)).",
       removeMedia: "Supprimer",
       restoreMedia: "Annuler",
       filesSelected: "{{count}} fichier s\u00E9lectionn\u00E9.",
@@ -1231,7 +1231,7 @@ const fr = {
       roomsCount: "{{count}} pi\u00E8ce",
       roomsCount_other: "{{count}} pi\u00E8ces",
       noDescription: "Aucune description renseign\u00E9e.",
-      photosLabel: "Aper\u00E7u des photos s\u00E9lectionn\u00E9es :",
+      photosLabel: "Aper\u00E7u des photos s\u00E9lectionn\u00E9es :",
       photoAlt: "Aper\u00E7u {{index}}",
       edit: "Modifier",
       create: "Cr\u00E9er le bien",
@@ -1241,7 +1241,7 @@ const fr = {
       results: "{{count}} r\u00E9sultat",
       results_other: "{{count}} r\u00E9sultats",
       empty: "Aucun bien correspondant aux crit\u00E8res.",
-      status: "Statut : {{status}}",
+      status: "Statut : {{status}}",
       noDescription: "Aucune description.",
       surfaceRooms: "{{surface}} \u2014 {{count}} pi\u00E8ce",
       surfaceRooms_other: "{{surface}} \u2014 {{count}} pi\u00E8ces",
@@ -1268,8 +1268,8 @@ const fr = {
       createSuccess: "Bien cr\u00E9\u00E9 avec succ\u00E8s",
       createError: "Erreur lors de la cr\u00E9ation du bien.",
       invalidFileType:
-        "Fichier non support\u00E9: {{name}}. Formats autoris\u00E9s: JPG, JPEG, PNG, WEBP, HEIC, HEIF, PDF.",
-      fileTooLarge: "Fichier trop volumineux: {{name}} (max {{max}} Mo).",
+        "Fichier non support\u00E9 : {{name}}. Formats autoris\u00E9s : JPG, JPEG, PNG, WEBP, HEIC, HEIF, PDF.",
+      fileTooLarge: "Fichier trop volumineux : {{name}} (max {{max}} Mo).",
       tooManyFiles: "Vous pouvez ajouter au maximum {{max}} fichier(s) \u00E0 cette \u00E9tape.",
       mediaLimitReached:
         "Ce bien a d\u00E9j\u00E0 atteint la limite de {{max}} fichiers.",
@@ -1300,11 +1300,11 @@ const fr = {
       globalTitle: "Admin GLOBAL",
     },
     labels: {
-      perimeter: "P\u00E9rim\u00E8tre :",
+      perimeter: "P\u00E9rim\u00E8tre :",
       countryId: "Pays #{{id}}",
       regionId: "R\u00E9gion #{{id}}",
       globalAccess: "Acc\u00E8s global",
-      filter: "Filtre:",
+      filter: "Filtre :",
       selection: "(s\u00E9lection)",
     },
     filters: {
@@ -1314,7 +1314,7 @@ const fr = {
         agents: "Agents",
         admins: "Admins",
       },
-      adminType: "Type d'admin",
+      adminType: "Type d’admin",
       adminTypes: {
         all: "Tous",
         master: "Masters (scop\u00E9s)",
@@ -1350,11 +1350,11 @@ const fr = {
     },
     info: {
       clientScope:
-        "Info : les clients inscrits publiquement sont cr\u00E9\u00E9s au niveau pays (r\u00E9gion vide). Un admin/master peut ensuite affecter la r\u00E9gion en modifiant le compte.",
+        "Info : les clients inscrits publiquement sont cr\u00E9\u00E9s au niveau pays (r\u00E9gion vide). Un admin/master peut ensuite affecter la r\u00E9gion en modifiant le compte.",
       countryScopeLabel: "P\u00E9rim\u00E8tre pays",
       regionScopeLabel: "P\u00E9rim\u00E8tre r\u00E9gion (optionnel)",
       globalScopeOption: "\u2014 Admin global (aucun p\u00E9rim\u00E8tre) \u2014",
-      chooseCountryFirst: "\u2014 Choisir d'abord un pays \u2014",
+      chooseCountryFirst: "\u2014 Choisir d’abord un pays \u2014",
       regionsLoading: "Chargement des r\u00E9gions...",
       masterCountryOption: "\u2014 MASTER pays (toutes r\u00E9gions) \u2014",
       masterHint:
@@ -1376,7 +1376,7 @@ const fr = {
         "Mot de passe r\u00E9initialis\u00E9. Communiquez le nouveau mot de passe par canal s\u00E9curis\u00E9.",
       resetPasswordMin: "Le mot de passe doit contenir au moins 8 caract\u00E8res.",
       resetPasswordMismatch: "Les mots de passe ne correspondent pas.",
-      resetAuditError: "Impossible de charger l'historique des r\u00E9initialisations.",
+      resetAuditError: "Impossible de charger l’historique des r\u00E9initialisations.",
     },
     countUsers: "{{count}} utilisateur",
     countUsers_other: "{{count}} utilisateurs",
@@ -1408,7 +1408,7 @@ const fr = {
       submitting: "Validation...",
       auditTitle: "Historique des resets manuels",
       auditEmpty: "Aucun reset manuel enregistr\u00E9 pour cet utilisateur.",
-      reasonLabel: "Motif:",
+      reasonLabel: "Motif :",
       revokedSessions: "{{count}} session(s) r\u00E9voqu\u00E9e(s)",
     },
   },
@@ -1417,7 +1417,7 @@ const fr = {
     loading: "Chargement\u2026",
     loadingAgents: "Chargement des agents\u2026",
     labels: {
-      filter: "Filtre:",
+      filter: "Filtre :",
       countryId: "Pays #{{id}}",
       regionId: "R\u00E9gion #{{id}}",
       selection: "(s\u00E9lection)",
@@ -1453,7 +1453,7 @@ const fr = {
       lastNameRequired: "Nom requis",
       emailInvalid: "Email invalide",
       passwordRequired: "Mot de passe requis (6 caract\u00E8res min.)",
-      countryInvalid: "Code pays ISO2 requis (ex: ML, FR)",
+      countryInvalid: "Code pays ISO2 requis (ex : ML, FR)",
     },
     alerts: {
       createSuccess: "Agent cr\u00E9\u00E9 avec succ\u00E8s",
@@ -1495,7 +1495,7 @@ const fr = {
       admin: "ADMINISTRATEUR",
     },
     labels: {
-      perimeter: "P\u00E9rim\u00E8tre :",
+      perimeter: "P\u00E9rim\u00E8tre :",
       countryId: "Pays #{{id}}",
       regionId: "R\u00E9gion #{{id}}",
       globalAccess: "Acc\u00E8s global",
@@ -1529,7 +1529,7 @@ const fr = {
       },
       serviceFallback: "Service #{{id}}",
       typeUnknown: "Type inconnu",
-      budgetLabel: "Budget :",
+      budgetLabel: "Budget :",
       emptyValue: "\u2014",
       unassigned: "Non assign\u00E9",
       statusUnknown: "Statut inconnu",
@@ -1541,8 +1541,8 @@ const fr = {
     pagination: {
       prev: "\u2190 Pr\u00E9c\u00E9dent",
       next: "Suivant \u2192",
-      offsetLabel: "Offset :",
-      limitLabel: "Limite :",
+      offsetLabel: "Offset :",
+      limitLabel: "Limite :",
     },
   },
   adminPropertiesPage: {
@@ -1552,9 +1552,9 @@ const fr = {
     loading: "Chargement des biens\u2026",
     empty: "Aucun bien trouv\u00E9 pour cette s\u00E9lection.",
     labels: {
-      selectedClient: "Client s\u00E9lectionn\u00E9 :",
+      selectedClient: "Client s\u00E9lectionn\u00E9 :",
       masterNote:
-        "Mode Master : la liste et les actions sont automatiquement limit\u00E9es au scope pays/r\u00E9gion c\u00F4t\u00E9 backend.",
+        "Mode Master : la liste et les actions sont automatiquement limit\u00E9es au scope pays/r\u00E9gion c\u00F4t\u00E9 backend.",
     },
     buttons: {
       refresh: "Rafra\u00EEchir la liste",
@@ -1573,8 +1573,8 @@ const fr = {
       updateError: "Erreur lors de la mise \u00E0 jour.",
       deleteError: "Erreur lors de la suppression.",
       invalidFileType:
-        "Fichier non support\u00E9: {{name}}. Formats autoris\u00E9s: JPG, JPEG, PNG, WEBP, HEIC, HEIF, PDF.",
-      fileTooLarge: "Fichier trop volumineux: {{name}} (max {{max}} Mo).",
+        "Fichier non support\u00E9 : {{name}}. Formats autoris\u00E9s : JPG, JPEG, PNG, WEBP, HEIC, HEIF, PDF.",
+      fileTooLarge: "Fichier trop volumineux : {{name}} (max {{max}} Mo).",
       tooManyFiles: "Vous pouvez ajouter au maximum {{max}} fichier(s) \u00E0 cette \u00E9tape.",
       mediaLimitReached:
         "Ce bien a d\u00E9j\u00E0 atteint la limite de {{max}} fichiers.",
@@ -1603,7 +1603,7 @@ const fr = {
         description: "Description",
       },
       placeholders: {
-        title: "Ex : Maison F3 \u00E0 Dakar",
+        title: "Ex : Maison F3 \u00E0 Dakar",
         address: "Adresse compl\u00E8te",
         city: "Ville",
         postalCode: "Code postal",
@@ -1615,8 +1615,8 @@ const fr = {
         landSurfaceLabel: "Surface du terrain (m\u00B2)",
         landSurfacePlaceholder: "Surface",
         commercialSurfaceLabel: "Surface commerciale (m\u00B2)",
-        commercialRoomsLabel: "Nombre d'espaces/bureaux",
-        commercialRoomsPlaceholder: "Nombre d'espaces/bureaux",
+        commercialRoomsLabel: "Nombre d’espaces/bureaux",
+        commercialRoomsPlaceholder: "Nombre d’espaces/bureaux",
         automobileSurfaceLabel: "Kilom\u00E9trage (km)",
         automobileSurfacePlaceholder: "Kilom\u00E9trage en km",
         automobileRoomsLabel: "Nombre de places",
@@ -1624,9 +1624,9 @@ const fr = {
       },
       filesLabel: "Photos / documents (jpg, jpeg, png, webp, heic, heif, pdf)",
       existingMediaLabel: "Fichiers actuels (cliquez sur supprimer puis enregistrez)",
-      createMediaHint: "Vous pouvez importer jusqu'\u00E0 {{max}} fichiers.",
+      createMediaHint: "Vous pouvez importer jusqu’\u00E0 {{max}} fichiers.",
       editMediaHint:
-        "Fichiers existants : {{current}}/{{max}}. Les nouveaux fichiers sont ajout\u00E9s sans supprimer les anciens ({{remaining}} place(s) restante(s)).",
+        "Fichiers existants : {{current}}/{{max}}. Les nouveaux fichiers sont ajout\u00E9s sans supprimer les anciens ({{remaining}} place(s) restante(s)).",
       removeMedia: "Supprimer",
       restoreMedia: "Annuler",
       filesSelected: "{{count}} fichier s\u00E9lectionn\u00E9.",
@@ -1661,7 +1661,7 @@ const fr = {
     searchPlaceholder: "Rechercher une cat\u00E9gorie par nom\u2026",
     labels: {
       connectedAs: "Connect\u00E9 en tant que {{email}} ({{role}})",
-      scope: "Scope :",
+      scope: "Scope :",
       countryId: "Pays #{{id}}",
       regionId: "R\u00E9gion #{{id}}",
     },
@@ -1680,7 +1680,7 @@ const fr = {
     },
     form: {
       nameLabel: "Nom de la cat\u00E9gorie *",
-      namePlaceholder: "Ex : Informatique",
+      namePlaceholder: "Ex : Informatique",
       descriptionLabel: "Description (optionnelle)",
       descriptionPlaceholder: "Description de la cat\u00E9gorie\u2026",
     },
@@ -1694,7 +1694,7 @@ const fr = {
       load: "Erreur lors du chargement des cat\u00E9gories.",
       forbidden: "Acc\u00E8s interdit.",
       nameRequired: "Le nom est requis.",
-      save: "Erreur lors de l'enregistrement de la cat\u00E9gorie.",
+      save: "Erreur lors de l’enregistrement de la cat\u00E9gorie.",
       delete: "Erreur lors de la suppression.",
     },
     alerts: {
@@ -1704,7 +1704,7 @@ const fr = {
   },
   adminMetricsPage: {
     title: "Monitoring applicatif (lecture seule)",
-    lastUpdated: "Derni\u00E8re mise \u00E0 jour :",
+    lastUpdated: "Derni\u00E8re mise \u00E0 jour :",
     loading: "Chargement des m\u00E9triques\u2026",
     emptyValue: "\u2014",
     buttons: {
@@ -1717,7 +1717,7 @@ const fr = {
       totalRequests: "Requ\u00EAtes totales",
       errors5xx: "Erreurs 5xx",
       avgLatency: "Latence moyenne",
-      maxLatency: "Max : {{value}}",
+      maxLatency: "Max : {{value}}",
     },
     sections: {
       httpStatus: "Statuts HTTP",
@@ -1778,8 +1778,8 @@ const fr = {
       regions: "Aucune r\u00E9gion enregistr\u00E9e.",
     },
     labels: {
-      countryCreated: "Pays cr\u00E9\u00E9 :",
-      targetCountry: "Pays cible :",
+      countryCreated: "Pays cr\u00E9\u00E9 :",
+      targetCountry: "Pays cible :",
       countryFallback: "Pays #{{id}}",
     },
     steps: {
@@ -1789,9 +1789,9 @@ const fr = {
     },
     placeholders: {
       countryName: "Nom du pays",
-      iso2: "Code ISO2 (ex: NE, ML)",
+      iso2: "Code ISO2 (ex : NE, ML)",
       regionName: "Nom de la r\u00E9gion",
-      regionCode: "Code r\u00E9gion (ex: BKO)",
+      regionCode: "Code r\u00E9gion (ex : BKO)",
       masterEmail: "Email du master",
       masterPassword: "Mot de passe (min 6)",
     },
@@ -1804,13 +1804,13 @@ const fr = {
       noRegionsForMaster:
         "Aucune r\u00E9gion cr\u00E9\u00E9e. Ajoute au moins une r\u00E9gion \u00E0 l\u2019\u00E9tape 2, ou repasse en \\\"MASTER du pays\\\".",
       countryForceDeleteAdminWarning:
-        "Suppression forcee d un pays: les utilisateurs non-admin seront detaches, mais les comptes admin/master lies au pays doivent etre reassignes ou supprimes avant la suppression.",
+        "Suppression forcée d’un pays : les utilisateurs non-admin seront détachés, mais les comptes admin/master liés au pays doivent être réassignés ou supprimés avant la suppression.",
     },
     confirmations: {
       deleteCountry:
-        "Supprimer le pays \\\"{{name}}\\\" ? Cette action est d\u00E9finitive.",
+        "Supprimer le pays \\\"{{name}}\\\" ? Cette action est d\u00E9finitive.",
       deleteRegion:
-        "Supprimer la r\u00E9gion \\\"{{name}}\\\" ? Cette action est d\u00E9finitive.",
+        "Supprimer la r\u00E9gion \\\"{{name}}\\\" ? Cette action est d\u00E9finitive.",
     },
     errors: {
       countryEditValidation: "Nom et ISO2 (2 lettres) requis.",
@@ -1830,7 +1830,7 @@ const fr = {
       masterCreate: "Erreur cr\u00E9ation MASTER",
     },
     success: {
-      masterCreated: "MASTER cr\u00E9\u00E9 avec succ\u00E8s !",
+      masterCreated: "MASTER cr\u00E9\u00E9 avec succ\u00E8s !",
     },
   },
   agentServicesPage: {
@@ -1846,15 +1846,15 @@ const fr = {
     empty: "Aucun service assign\u00E9 pour le moment.",
     emptyValue: "\u2014",
     labels: {
-      budget: "Budget : {{amount}} {{currency}}",
-      budgetUnknown: "Budget : \u2014",
-      client: "Client :",
-      property: "Bien associ\u00E9 :",
+      budget: "Budget : {{amount}} {{currency}}",
+      budgetUnknown: "Budget : \u2014",
+      client: "Client :",
+      property: "Bien associ\u00E9 :",
       propertyValue: "{{title}} \u2014 {{city}}",
-      contactPerson: "Personne de contact :",
-      phone: "T\u00E9l\u00E9phone :",
-      address: "Adresse :",
-      createdAt: "Date cr\u00E9ation :",
+      contactPerson: "Personne de contact :",
+      phone: "T\u00E9l\u00E9phone :",
+      address: "Adresse :",
+      createdAt: "Date cr\u00E9ation :",
     },
     actions: {
       start: "D\u00E9marrer",
@@ -1875,9 +1875,9 @@ const fr = {
     title: "Modifier le mot de passe",
     subtitle: "Prot\u00E9gez votre compte.",
     context: {
-      title: "Protection de l'acc\u00E8s",
+      title: "Protection de l’acc\u00E8s",
       description:
-        "Mettez \u00E0 jour votre mot de passe d\u00E8s que vous d\u00E9tectez un risque ou apr\u00E8s un partage d'appareil.",
+        "Mettez \u00E0 jour votre mot de passe d\u00E8s que vous d\u00E9tectez un risque ou apr\u00E8s un partage d’appareil.",
     },
     labels: {
       currentPassword: "Mot de passe actuel",
@@ -1899,7 +1899,7 @@ const fr = {
       title: "Exigences du mot de passe",
       minLength: "Au moins 8 caract\u00E8res",
       matches: "La confirmation correspond au nouveau mot de passe",
-      differs: "Le nouveau mot de passe est diff\u00E9rent de l'actuel",
+      differs: "Le nouveau mot de passe est diff\u00E9rent de l’actuel",
       logoutNotice:
         "Apr\u00E8s la mise \u00E0 jour du mot de passe, vous serez d\u00E9connect\u00E9 puis invit\u00E9 \u00E0 vous reconnecter.",
     },
@@ -1919,18 +1919,18 @@ const fr = {
       },
       terms: {
         title: "Conditions",
-        description: "Relisez les r\u00E8gles d'utilisation de la plateforme.",
+        description: "Relisez les r\u00E8gles d’utilisation de la plateforme.",
       },
       support: {
         title: "Aide & Support",
-        description: "Contactez l'\u00E9quipe si vous suspectez un acc\u00E8s non autoris\u00E9.",
+        description: "Contactez l’\u00E9quipe si vous suspectez un acc\u00E8s non autoris\u00E9.",
       },
     },
     errors: {
       required: "Tous les champs sont requis.",
       tooShort: "Mot de passe trop court (minimum 8 caract\u00E8res).",
       mismatch: "Les mots de passe ne correspondent pas.",
-      sameAsCurrent: "Le nouveau mot de passe doit \u00EAtre diff\u00E9rent de l'actuel.",
+      sameAsCurrent: "Le nouveau mot de passe doit \u00EAtre diff\u00E9rent de l’actuel.",
       update: "Erreur de modification.",
     },
     success: {
@@ -1985,7 +1985,7 @@ const fr = {
       transactions: "{{count}} transaction",
       transactions_other: "{{count}} transactions",
     },
-    balance: "Solde actuel : {{amount}} {{currency}}",
+    balance: "Solde actuel : {{amount}} {{currency}}",
     currencyValue: "{{amount}} {{currency}}",
     chart: {
       revenues: "Revenus",
@@ -2029,8 +2029,8 @@ const fr = {
       count: "{{count}}",
     },
     badges: {
-      role: "R\u00F4le : {{role}}",
-      scope: "P\u00E9rim\u00E8tre : {{scope}}",
+      role: "R\u00F4le : {{role}}",
+      scope: "P\u00E9rim\u00E8tre : {{scope}}",
     },
     scope: {
       global: "Global",
@@ -2063,19 +2063,19 @@ const fr = {
       agents: "Agents",
       admins: "Admins",
       others: "Autres / Ajustements internes",
-      revenues: "Revenus : {{amount}} {{currency}}",
-      expenses: "D\u00E9penses : {{amount}} {{currency}}",
-      commissions: "Commissions : {{amount}} {{currency}}",
-      adjustments: "Ajustements : {{amount}} {{currency}}",
+      revenues: "Revenus : {{amount}} {{currency}}",
+      expenses: "D\u00E9penses : {{amount}} {{currency}}",
+      commissions: "Commissions : {{amount}} {{currency}}",
+      adjustments: "Ajustements : {{amount}} {{currency}}",
     },
   },
   homePage: {
     hero: {
-      badge: "Plateforme de confiance pour la diaspora et les residents locaux",
+      badge: "Plateforme de confiance pour la diaspora et les r\u00E9sidents locaux",
       titleLine1: "La confiance \u00E0 distance,",
       titleLine2: "la s\u00E9r\u00E9nit\u00E9 \u00E0 port\u00E9e de main.",
       description:
-        "Avec <0>Teranga</0>, la diaspora africaine et les residents locaux suivent et gerent explicitement leurs maisons, appartements, terrains, automobiles et locaux commerciaux, ainsi que leurs services, taches et projets avec transparence, fiabilite et une presence humaine sur le terrain.",
+        "Avec <0>Teranga</0>, la diaspora africaine et les r\u00E9sidents locaux suivent et g\u00E8rent explicitement leurs maisons, appartements, terrains, automobiles et locaux commerciaux, ainsi que leurs services, t\u00E2ches et projets avec transparence, fiabilit\u00E9 et une pr\u00E9sence humaine sur le terrain.",
       ctaLogin: "Se connecter",
       ctaRegister: "Cr\u00E9er un compte",
       stats: {
@@ -2088,8 +2088,8 @@ const fr = {
           text: "Des personnes de confiance, proches de vos projets.",
         },
         diaspora: {
-          label: "Ouverte a tous",
-          text: "Utilisable aussi bien depuis l'etranger que depuis les pays locaux.",
+          label: "Ouverte \u00E0 tous",
+          text: "Utilisable aussi bien depuis l’\u00E9tranger que depuis les pays locaux.",
         },
       },
       tagline:
@@ -2098,12 +2098,12 @@ const fr = {
     services: {
       title: "Nos services, votre tranquillit\u00E9",
       subtitle:
-        "Des solutions pour toute personne qui manque de temps : nous prenons en charge vos demandes sur le terrain avec suivi, preuves et responsabilite.",
+        "Des solutions pour toute personne qui manque de temps : nous prenons en charge vos demandes sur le terrain avec suivi, preuves et responsabilit\u00E9.",
       assetTypesTitle: "Types de biens pris en charge",
       cards: {
         realEstate: {
           title: "Gestion de biens",
-          desc: "Suivi de maisons, appartements, terrains, automobiles et locaux commerciaux : visites, etats des lieux, rapports photo et execution par un agent dedie sur place.",
+          desc: "Suivi de maisons, appartements, terrains, automobiles et locaux commerciaux : visites, \u00E9tats des lieux, rapports photo et ex\u00E9cution par un agent d\u00E9di\u00E9 sur place.",
         },
         personal: {
           title: "Services personnalis\u00E9s",
@@ -2111,44 +2111,44 @@ const fr = {
         },
         transparency: {
           title: "Transparence totale",
-          desc: "Photos, preuves, documents, transactions : acc\u00E8s instantan\u00E9 \u00E0 toutes vos informations, o\u00F9 que vous soyez.",
+          desc: "Photos, preuves, documents, transactions : acc\u00E8s instantan\u00E9 \u00E0 toutes vos informations, o\u00F9 que vous soyez.",
         },
       },
     },
     useCases: {
       title: "Une application utile pour tous",
       subtitle:
-        "Que vous soyez membre de la diaspora ou resident local, vous pouvez confier vos operations terrain a Teranga lorsque votre emploi du temps ne vous permet pas de tout faire vous-meme.",
+        "Que vous soyez membre de la diaspora ou r\u00E9sident local, vous pouvez confier vos op\u00E9rations terrain \u00E0 Teranga lorsque votre emploi du temps ne vous permet pas de tout faire vous-m\u00EAme.",
       cards: {
         service: {
           title: "Demander un service",
-          desc: "Courses, demarches, visites ou interventions terrain : nous executons et vous suivez en temps reel.",
+          desc: "Courses, d\u00E9marches, visites ou interventions terrain : nous ex\u00E9cutons et vous suivez en temps r\u00E9el.",
         },
         task: {
-          title: "Deleguer une tache",
-          desc: "Creez une tache avec vos consignes et recevez des preuves concretes de l'execution sur place.",
+          title: "D\u00E9l\u00E9guer une t\u00E2che",
+          desc: "Cr\u00E9ez une t\u00E2che avec vos consignes et recevez des preuves concr\u00E8tes de l’ex\u00E9cution sur place.",
         },
         project: {
           title: "Piloter un projet",
-          desc: "Suivez l'avancement de vos projets, les documents et les decisions sans etre physiquement present.",
+          desc: "Suivez l’avancement de vos projets, les documents et les d\u00E9cisions sans \u00EAtre physiquement pr\u00E9sent.",
         },
       },
     },
     impact: {
       title: "Notre ambition en Afrique",
       subtitle:
-        "Transformer la gestion des maisons, appartements, terrains, automobiles et locaux commerciaux avec un modele de service plus efficace, innovant et verifiable.",
+        "Transformer la gestion des maisons, appartements, terrains, automobiles et locaux commerciaux avec un mod\u00E8le de service plus efficace, innovant et v\u00E9rifiable.",
       points: {
-        p1: "Des operations plus rapides sur vos maisons, appartements, terrains, automobiles et locaux commerciaux grace a une coordination terrain + application.",
+        p1: "Des op\u00E9rations plus rapides sur vos maisons, appartements, terrains, automobiles et locaux commerciaux gr\u00E2ce \u00E0 une coordination terrain + application.",
         p2: "Une transparence continue avec preuves photo, rapports et historique des actions.",
-        p3: "Une execution fiable pour vos biens, services, taches et projets, meme quand vous n'avez pas le temps.",
+        p3: "Une ex\u00E9cution fiable pour vos biens, services, t\u00E2ches et projets, m\u00EAme quand vous n’avez pas le temps.",
       },
-      cta: "Voir l'aide et le support",
+      cta: "Voir l’aide et le support",
     },
     why: {
-      title: "Pourquoi choisir Teranga ?",
+      title: "Pourquoi choisir Teranga ?",
       subtitle:
-        "Parce qu'il ne s'agit pas seulement d'une application, mais d'un cadre de confiance pour piloter maisons, appartements, terrains, automobiles et locaux commerciaux avec des services executes de maniere moderne en Afrique.",
+        "Parce qu’il ne s’agit pas seulement d’une application, mais d’un cadre de confiance pour piloter maisons, appartements, terrains, automobiles et locaux commerciaux avec des services ex\u00E9cut\u00E9s de mani\u00E8re moderne en Afrique.",
       pillars: {
         clarity: {
           title: "Clart\u00E9",
@@ -2156,22 +2156,22 @@ const fr = {
         },
         credibility: {
           title: "Cr\u00E9dibilit\u00E9",
-          text: "Suivi documente, preuves visuelles, historique clair pour chaque type de bien : maison, appartement, terrain, automobile ou local commercial.",
+          text: "Suivi document\u00E9, preuves visuelles, historique clair pour chaque type de bien : maison, appartement, terrain, automobile ou local commercial.",
         },
         support: {
           title: "Accompagnement",
-          text: "Une \u00E9quipe \u00E0 taille humaine, disponible et \u00E0 l'\u00E9coute des r\u00E9alit\u00E9s de la diaspora.",
+          text: "Une \u00E9quipe \u00E0 taille humaine, disponible et \u00E0 l’\u00E9coute des r\u00E9alit\u00E9s de la diaspora.",
         },
       },
     },
     about: {
-      title: "Teranga : bien plus qu'un service",
+      title: "Teranga : bien plus qu’un service",
       subtitle:
-        "Une plateforme inspiree par la confiance et l'hospitalite, qui relie les besoins reels aux equipes terrain de facon structuree.",
+        "Une plateforme inspir\u00E9e par la confiance et l’hospitalit\u00E9, qui relie les besoins r\u00E9els aux \u00E9quipes terrain de fa\u00E7on structur\u00E9e.",
       paragraphs: {
         p1: "Le mot <0>Teranga</0> \u00E9voque chaleur humaine, confiance et respect. Notre plateforme reprend ces valeurs pour offrir une exp\u00E9rience moderne et rassurante.",
-        p2: "Vos maisons, appartements, terrains, automobiles et locaux commerciaux meritent une visibilite totale : photos, preuves, rapports, transactions, progression... tout est accessible en temps reel, depuis n'importe ou.",
-        p3: "Grace a nos agents certifies et a une interface claire, toute personne ayant un service, une tache ou un projet peut deleguer efficacement sans perdre le controle.",
+        p2: "Vos maisons, appartements, terrains, automobiles et locaux commerciaux m\u00E9ritent une visibilit\u00E9 totale : photos, preuves, rapports, transactions, progression... tout est accessible en temps r\u00E9el, depuis n’importe o\u00F9.",
+        p3: "Gr\u00E2ce \u00E0 nos agents certifi\u00E9s et \u00E0 une interface claire, toute personne ayant un service, une t\u00E2che ou un projet peut d\u00E9l\u00E9guer efficacement sans perdre le contr\u00F4le.",
       },
       cta: "Rejoindre Teranga",
     },
@@ -2192,7 +2192,7 @@ const fr = {
           placeholder: "Votre message...",
         },
         submit: "Envoyer le message",
-        success: "Merci ! Votre message a bien \u00E9t\u00E9 envoy\u00E9.",
+        success: "Merci ! Votre message a bien \u00E9t\u00E9 envoy\u00E9.",
       },
       info: {
         email: "contact@teranga-platform.com",
@@ -2217,18 +2217,18 @@ const fr = {
     kicker: "Conformit\u00E9 l\u00E9gale",
     title: "Mentions l\u00E9gales",
     subtitle:
-      "Un cadre l\u00E9gal clair pour identifier l'\u00E9diteur, les responsabilit\u00E9s et les canaux de contact officiels.",
+      "Un cadre l\u00E9gal clair pour identifier l’\u00E9diteur, les responsabilit\u00E9s et les canaux de contact officiels.",
     intro:
-      "Conform\u00E9ment aux dispositions de la loi n\u00B02004-575 du 21 juin 2004 pour la confiance dans l'\u00E9conomie num\u00E9rique (LCEN), il est pr\u00E9cis\u00E9 aux utilisateurs de l'application Teranga l'identit\u00E9 des diff\u00E9rents intervenants dans le cadre de sa r\u00E9alisation et de son suivi.",
+      "Conform\u00E9ment aux dispositions de la loi n\u00B02004-575 du 21 juin 2004 pour la confiance dans l’\u00E9conomie num\u00E9rique (LCEN), il est pr\u00E9cis\u00E9 aux utilisateurs de l’application Teranga l’identit\u00E9 des diff\u00E9rents intervenants dans le cadre de sa r\u00E9alisation et de son suivi.",
     summary: {
       title: "Points essentiels",
       subtitle:
         "Ces rep\u00E8res donnent une vue rapide du cadre l\u00E9gal avant la lecture d\u00E9taill\u00E9e.",
       cards: {
         publisher: {
-          title: "Identit\u00E9 de l'\u00E9diteur",
+          title: "Identit\u00E9 de l’\u00E9diteur",
           description:
-            "Les informations de l'entit\u00E9 op\u00E9ratrice sont publiques pour garantir la transparence.",
+            "Les informations de l’entit\u00E9 op\u00E9ratrice sont publiques pour garantir la transparence.",
         },
         responsibility: {
           title: "Responsabilit\u00E9 \u00E9ditoriale",
@@ -2238,7 +2238,7 @@ const fr = {
         compliance: {
           title: "Conformit\u00E9 et protection",
           description:
-            "La propri\u00E9t\u00E9 intellectuelle et les r\u00E8gles d'usage sont explicit\u00E9es pour prot\u00E9ger la plateforme.",
+            "La propri\u00E9t\u00E9 intellectuelle et les r\u00E8gles d’usage sont explicit\u00E9es pour prot\u00E9ger la plateforme.",
         },
       },
     },
@@ -2246,34 +2246,34 @@ const fr = {
       title: "Pages associ\u00E9es",
       security: "Ouvrir la page S\u00E9curit\u00E9 du compte",
       privacy: "Consulter la politique de confidentialit\u00E9",
-      terms: "Voir les conditions d'utilisation",
+      terms: "Voir les conditions d’utilisation",
       support: "Acc\u00E9der \u00E0 la page Aide & Support",
     },
     sections: {
       publisher: {
         title: "1. \u00C9diteur du site",
         details:
-          "<strong>Teranga Diaspora</strong><br/>Service de gestion de biens, projets et services pour la diaspora africaine.<br/>Si\u00E8ge social : Hamdallaye ACI 200, Bamako - Mali<br/>Email : contact@teranga-platform.com",
+          "<strong>Teranga Diaspora</strong><br/>Service de gestion de biens, projets et services pour la diaspora africaine.<br/>Si\u00E8ge social : Hamdallaye ACI 200, Bamako - Mali<br/>Email : contact@teranga-platform.com",
       },
       editorial: {
         title: "2. Responsabilit\u00E9 \u00E9ditoriale",
         details:
-          "Le responsable de la publication est joignable \u00E0 l'adresse : contact@teranga-platform.com",
+          "Le responsable de la publication est joignable \u00E0 l’adresse : contact@teranga-platform.com",
       },
       hosting: {
         title: "3. H\u00E9bergement",
         details:
-          "Application h\u00E9berg\u00E9e par : <strong>Netlify</strong><br/>https://www.netlify.com",
+          "Application h\u00E9berg\u00E9e par : <strong>Netlify</strong><br/>https://www.netlify.com",
       },
       ip: {
         title: "4. Propri\u00E9t\u00E9 intellectuelle",
         details:
-          "L'application Teranga, son contenu, sa marque et son logo sont prot\u00E9g\u00E9s par la l\u00E9gislation en vigueur. Toute reproduction sans autorisation est interdite.",
+          "L’application Teranga, son contenu, sa marque et son logo sont prot\u00E9g\u00E9s par la l\u00E9gislation en vigueur. Toute reproduction sans autorisation est interdite.",
       },
       contact: {
         title: "5. Contact",
         details:
-          "Pour toute question ou r\u00E9clamation, vous pouvez nous \u00E9crire \u00E0 :<br/><strong>contact@teranga-platform.com</strong>",
+          "Pour toute question ou r\u00E9clamation, vous pouvez nous \u00E9crire \u00E0 :<br/><strong>contact@teranga-platform.com</strong>",
       },
     },
   },
@@ -2281,7 +2281,7 @@ const fr = {
     seo: {
       title: "Politique de confidentialit\u00E9",
       description:
-        "Politique de confidentialit\u00E9 Teranga conforme au RGPD : donn\u00E9es collect\u00E9es, finalit\u00E9s, droits des utilisateurs, s\u00E9curit\u00E9 et dur\u00E9e de conservation.",
+        "Politique de confidentialit\u00E9 Teranga conforme au RGPD : donn\u00E9es collect\u00E9es, finalit\u00E9s, droits des utilisateurs, s\u00E9curit\u00E9 et dur\u00E9e de conservation.",
     },
     kicker: "Protection des donn\u00E9es",
     title: "Politique de confidentialit\u00E9 (RGPD)",
@@ -2290,7 +2290,7 @@ const fr = {
     subtitle:
       "Un cadre clair pour comprendre quelles donn\u00E9es sont utilis\u00E9es, pourquoi et avec quelles garanties.",
     summary: {
-      title: "L'essentiel \u00E0 retenir",
+      title: "L’essentiel \u00E0 retenir",
       subtitle:
         "Ces points r\u00E9sum\u00E9s vous permettent de v\u00E9rifier rapidement notre approche de protection des donn\u00E9es.",
       cards: {
@@ -2307,33 +2307,33 @@ const fr = {
         rights: {
           title: "Droits utilisateurs",
           description:
-            "Vous pouvez demander l'acc\u00E8s, la correction ou la suppression de vos donn\u00E9es selon le cadre l\u00E9gal.",
+            "Vous pouvez demander l’acc\u00E8s, la correction ou la suppression de vos donn\u00E9es selon le cadre l\u00E9gal.",
         },
       },
     },
     quickLinks: {
       title: "Acc\u00E8s rapides",
       security: "Renforcer la s\u00E9curit\u00E9 du compte",
-      terms: "Voir les conditions d'utilisation",
-      support: "Contacter l'aide et le support",
+      terms: "Voir les conditions d’utilisation",
+      support: "Contacter l’aide et le support",
     },
     sections: {
       collected: {
         title: "1. Donn\u00E9es collect\u00E9es",
         items: {
-          identification: "Donn\u00E9es d'identification : nom, pr\u00E9nom, email",
-          connection: "Donn\u00E9es de connexion : token, adresse IP, appareil",
-          services: "Donn\u00E9es li\u00E9es aux services : biens, projets, transactions",
-          evidence: "Preuves envoy\u00E9es : photos, vid\u00E9os, documents",
+          identification: "Donn\u00E9es d’identification : nom, pr\u00E9nom, email",
+          connection: "Donn\u00E9es de connexion : token, adresse IP, appareil",
+          services: "Donn\u00E9es li\u00E9es aux services : biens, projets, transactions",
+          evidence: "Preuves envoy\u00E9es : photos, vid\u00E9os, documents",
         },
       },
       purposes: {
         title: "2. Finalit\u00E9s du traitement",
-        lead: "Les donn\u00E9es sont utilis\u00E9es pour :",
+        lead: "Les donn\u00E9es sont utilis\u00E9es pour :",
         items: {
           account: "G\u00E9rer votre compte",
           execute: "Ex\u00E9cuter les services demand\u00E9s",
-          security: "Assurer la s\u00E9curit\u00E9 de l'application",
+          security: "Assurer la s\u00E9curit\u00E9 de l’application",
           tracking: "Suivre les projets, biens et transactions",
         },
       },
@@ -2350,27 +2350,27 @@ const fr = {
       rights: {
         title: "5. Vos droits (RGPD)",
         items: {
-          access: "Droit d'acc\u00E8s",
+          access: "Droit d’acc\u00E8s",
           rectification: "Droit de rectification",
           deletion: "Droit \u00E0 la suppression",
-          objection: "Droit d'opposition",
+          objection: "Droit d’opposition",
           portability: "Droit \u00E0 la portabilit\u00E9",
         },
         contact:
-          "Pour exercer vos droits : <br/><strong>contact@teranga-platform.com</strong>",
+          "Pour exercer vos droits : <br/><strong>contact@teranga-platform.com</strong>",
       },
     },
   },
   termsPage: {
     seo: {
-      title: "Conditions d'utilisation",
+      title: "Conditions d’utilisation",
       description:
-        "D\u00E9couvrez les conditions d'utilisation de Teranga : r\u00E8gles, responsabilit\u00E9s et fonctionnement de la plateforme d\u00E9di\u00E9e \u00E0 la diaspora.",
+        "D\u00E9couvrez les conditions d’utilisation de Teranga : r\u00E8gles, responsabilit\u00E9s et fonctionnement de la plateforme d\u00E9di\u00E9e \u00E0 la diaspora.",
     },
-    kicker: "Cadre d'utilisation",
-    title: "Conditions g\u00E9n\u00E9rales d'utilisation",
+    kicker: "Cadre d’utilisation",
+    title: "Conditions g\u00E9n\u00E9rales d’utilisation",
     intro:
-      "Les pr\u00E9sentes Conditions G\u00E9n\u00E9rales d'Utilisation (CGU) encadrent l'acc\u00E8s et l'utilisation de l'application Teranga par ses membres.",
+      "Les pr\u00E9sentes Conditions G\u00E9n\u00E9rales d’Utilisation (CGU) encadrent l’acc\u00E8s et l’utilisation de l’application Teranga par ses membres.",
     subtitle:
       "Un cadre commun pour garantir un usage responsable, transparent et s\u00E9curis\u00E9 de la plateforme.",
     summary: {
@@ -2381,7 +2381,7 @@ const fr = {
         commitments: {
           title: "Engagements utilisateur",
           description:
-            "Chaque utilisateur s'engage \u00E0 fournir des informations exactes et \u00E0 utiliser la plateforme de bonne foi.",
+            "Chaque utilisateur s’engage \u00E0 fournir des informations exactes et \u00E0 utiliser la plateforme de bonne foi.",
         },
         security: {
           title: "Protection du compte",
@@ -2389,7 +2389,7 @@ const fr = {
             "La confidentialit\u00E9 des identifiants reste sous votre responsabilit\u00E9 pour prot\u00E9ger vos op\u00E9rations.",
         },
         suspension: {
-          title: "Mesures en cas d'abus",
+          title: "Mesures en cas d’abus",
           description:
             "La plateforme peut suspendre un compte en cas de fraude ou de non-respect des r\u00E8gles.",
         },
@@ -2408,10 +2408,10 @@ const fr = {
           "Teranga permet aux membres de la diaspora de suivre leurs biens, projets, services et transactions \u00E0 distance en toute transparence.",
       },
       usage: {
-        title: "2. Utilisation de l'application",
+        title: "2. Utilisation de l’application",
         items: {
           accurateInfo:
-            "L'utilisateur s'engage \u00E0 fournir des informations exactes.",
+            "L’utilisateur s’engage \u00E0 fournir des informations exactes.",
           accountSecurity:
             "Il est responsable de la confidentialit\u00E9 de son compte.",
           fraud: "Tout usage frauduleux entra\u00EEne la suspension du compte.",
@@ -2420,17 +2420,17 @@ const fr = {
       agents: {
         title: "3. Agents & responsabilit\u00E9s",
         details:
-          "Les agents effectuent les services sur la base des demandes des clients et rendent compte via l'application (preuves, documents, rapports).",
+          "Les agents effectuent les services sur la base des demandes des clients et rendent compte via l’application (preuves, documents, rapports).",
       },
       suspension: {
         title: "4. Suspension / Suppression",
         details:
-          "Teranga peut suspendre un compte en cas d'abus, fraude ou violation des r\u00E8gles.",
+          "Teranga peut suspendre un compte en cas d’abus, fraude ou violation des r\u00E8gles.",
       },
       contact: {
         title: "5. Contact",
         details:
-          "Toute question peut \u00EAtre adress\u00E9e \u00E0 : <br/><strong>contact@teranga-platform.com</strong>",
+          "Toute question peut \u00EAtre adress\u00E9e \u00E0 : <br/><strong>contact@teranga-platform.com</strong>",
       },
     },
   },
@@ -2452,7 +2452,7 @@ const fr = {
     theme: {
       title: "Apparence",
       description:
-        "Choisissez le mode d'affichage de l'application. Le mode syst\u00E8me suit les pr\u00E9f\u00E9rences de votre appareil.",
+        "Choisissez le mode d’affichage de l’application. Le mode syst\u00E8me suit les pr\u00E9f\u00E9rences de votre appareil.",
       options: {
         light: "Clair",
         dark: "Sombre",
@@ -2463,7 +2463,7 @@ const fr = {
         dark: "Toujours afficher le th\u00E8me sombre.",
         system: "Suivre automatiquement le syst\u00E8me.",
       },
-      currentResolved: "Mode actif : {{mode}}",
+      currentResolved: "Mode actif : {{mode}}",
     },
     quick: {
       securityTitle: "S\u00E9curit\u00E9 du compte",
@@ -2471,13 +2471,13 @@ const fr = {
         "Mettez \u00E0 jour votre mot de passe et les param\u00E8tres de protection.",
       supportTitle: "Aide & Support",
       supportDesc:
-        "Acc\u00E9dez aux canaux d'assistance, au cadre de prise en charge et aux ressources de s\u00E9curit\u00E9.",
+        "Acc\u00E9dez aux canaux d’assistance, au cadre de prise en charge et aux ressources de s\u00E9curit\u00E9.",
       privacyTitle: "Politique de confidentialit\u00E9",
       privacyDesc: "Consultez la gestion des donn\u00E9es personnelles et vos droits.",
-      termsTitle: "Conditions d'utilisation",
+      termsTitle: "Conditions d’utilisation",
       termsDesc: "Relisez les r\u00E8gles et responsabilit\u00E9s de la plateforme.",
       legalTitle: "Mentions l\u00E9gales",
-      legalDesc: "Consultez les informations l\u00E9gales de l'\u00E9diteur et de la plateforme.",
+      legalDesc: "Consultez les informations l\u00E9gales de l’\u00E9diteur et de la plateforme.",
       open: "Ouvrir",
     },
     quickSection: {
@@ -2492,7 +2492,7 @@ const fr = {
     kicker: "Support utilisateur",
     title: "Aide & Support",
     subtitle:
-      "Un espace d'assistance clair pour vous accompagner sur vos services, t\u00E2ches et projets.",
+      "Un espace d’assistance clair pour vous accompagner sur vos services, t\u00E2ches et projets.",
     comingSoon: {
       title: "Centre support avanc\u00E9 en cours de pr\u00E9paration",
       description:
@@ -2501,7 +2501,7 @@ const fr = {
     highlights: {
       openToAll: "Accessible aux membres de la diaspora et aux r\u00E9sidents locaux",
       fieldAgents: "Interventions r\u00E9alis\u00E9es par des agents sur le terrain",
-      africaMission: "Objectif : rendre les services en Afrique plus efficaces et innovants",
+      africaMission: "Objectif : rendre les services en Afrique plus efficaces et innovants",
     },
     requestTypes: {
       title: "Demandes que nous prenons en charge",
@@ -2544,11 +2544,11 @@ const fr = {
       terms: {
         title: "Conditions",
         description:
-          "V\u00E9rifiez les r\u00E8gles d'utilisation et les engagements de la plateforme.",
+          "V\u00E9rifiez les r\u00E8gles d’utilisation et les engagements de la plateforme.",
       },
     },
     journey: {
-      title: "Comment l'assistance fonctionne",
+      title: "Comment l’assistance fonctionne",
       subtitle:
         "Un processus simple pour garder de la visibilit\u00E9 \u00E0 chaque \u00E9tape.",
       steps: {
@@ -2558,14 +2558,14 @@ const fr = {
             "Indiquez votre demande (service, t\u00E2che ou projet) avec les informations essentielles.",
         },
         step2: {
-          title: "2. Nous organisons l'intervention",
+          title: "2. Nous organisons l’intervention",
           description:
-            "L'\u00E9quipe support coordonne l'ex\u00E9cution sur le terrain selon votre priorit\u00E9.",
+            "L’\u00E9quipe support coordonne l’ex\u00E9cution sur le terrain selon votre priorit\u00E9.",
         },
         step3: {
           title: "3. Vous suivez et validez",
           description:
-            "Vous recevez un suivi document\u00E9 avec preuves et pouvez valider l'avancement.",
+            "Vous recevez un suivi document\u00E9 avec preuves et pouvez valider l’avancement.",
         },
       },
     },
@@ -2577,13 +2577,13 @@ const fr = {
         email: "contact@teranga-platform.com",
         phone: "+223 70 66 83 64 / +223 94 16 12 66",
         hours:
-          "Assistance prioritaire : r\u00E9ponse initiale sous 24 h selon la nature de la demande.",
+          "Assistance prioritaire : r\u00E9ponse initiale sous 24 h selon la nature de la demande.",
       },
       note:
-        "Pour acc\u00E9l\u00E9rer le traitement, pr\u00E9cisez le type de demande, la zone concern\u00E9e et le niveau d'urgence.",
+        "Pour acc\u00E9l\u00E9rer le traitement, pr\u00E9cisez le type de demande, la zone concern\u00E9e et le niveau d’urgence.",
       actionsTitle: "Acc\u00E8s rapide",
       actionsDescription:
-        "Connectez-vous pour cr\u00E9er ou suivre vos demandes directement dans l'application.",
+        "Connectez-vous pour cr\u00E9er ou suivre vos demandes directement dans l’application.",
       actions: {
         login: "Se connecter",
         register: "Cr\u00E9er un compte",
@@ -2594,7 +2594,7 @@ const fr = {
     loading: "Chargement\u2026",
     header: {
       title: "Gestion des produits",
-      connectedLabel: "Connect\u00E9 :",
+      connectedLabel: "Connect\u00E9 :",
     },
     buttons: {
       hideForm: "Masquer le formulaire",
@@ -2610,9 +2610,9 @@ const fr = {
     filters: {
       countryLabel: "Pays",
       countryAll: "Tous les pays",
-      regionLabel: "Region",
-      regionAll: "Toutes les regions",
-      reset: "Reinitialiser les filtres geo",
+      regionLabel: "Région",
+      regionAll: "Toutes les régions",
+      reset: "Réinitialiser les filtres géo",
     },
     form: {
       nameLabel: "Nom",
@@ -2621,10 +2621,10 @@ const fr = {
       stockLabel: "Stock",
       categoryLabel: "Cat\u00E9gorie",
       categoryNone: "\u2014 Sans cat\u00E9gorie \u2014",
-      countryLabel: "Perimetre pays",
+      countryLabel: "Périmètre pays",
       countryAll: "Tous les pays",
-      regionLabel: "Perimetre region",
-      regionAll: "Toutes les regions",
+      regionLabel: "Périmètre région",
+      regionAll: "Toutes les régions",
       descriptionLabel: "Description",
       coverLabel: "Image principale",
       coverAlt: "Pr\u00E9visualisation image principale",
@@ -2644,7 +2644,7 @@ const fr = {
       actions: "Actions",
       empty: "Aucun produit trouv\u00E9 pour ces crit\u00E8res.",
       noImage: "Pas d\u2019image",
-      id: "ID : #{{id}}",
+      id: "ID : #{{id}}",
       edit: "Modifier",
       delete: "Supprimer",
     },
@@ -2653,13 +2653,13 @@ const fr = {
       nameRequired: "Nom requis",
       priceRequired: "Prix requis",
       updateSuccess: "Produit mis \u00E0 jour",
-      createSuccess: "Produit ajout\u00E9 !",
+      createSuccess: "Produit ajout\u00E9 !",
       createSuccessAfterTimeout:
         "Produit ajout\u00E9 (confirmation apr\u00E8s un d\u00E9lai r\u00E9seau).",
       createPendingAfterTimeout:
-        "Le serveur prend plus de temps que pr\u00E9vu. V\u00E9rifiez la liste avant de relancer l'ajout.",
+        "Le serveur prend plus de temps que pr\u00E9vu. V\u00E9rifiez la liste avant de relancer l’ajout.",
       saveError: "Erreur sauvegarde",
-      deleteSuccess: "Produit supprim\u00E9 !",
+      deleteSuccess: "Produit supprim\u00E9 !",
       deleteError: "Erreur suppression",
     },
     lightbox: {
@@ -2731,7 +2731,7 @@ const fr = {
       adminBlocked: "Les administrateurs ne passent pas de commandes ici.",
       invalidQuantity: "Veuillez saisir une quantit\u00E9 valide (au moins 1).",
       outOfStock:
-        "Ce produit est actuellement en rupture de stock. Merci de contacter le service client pour plus d'informations.",
+        "Ce produit est actuellement en rupture de stock. Merci de contacter le service client pour plus d’informations.",
       overStock:
         "La quantit\u00E9 demand\u00E9e ({{requested}}) d\u00E9passe le stock disponible ({{available}}).\\n\\nMerci de contacter le service client pour ajuster votre commande ou organiser une commande sp\u00E9ciale.",
       orderSuccess: "Commande cr\u00E9\u00E9e pour {{quantity}} \u00D7 {{name}}",
@@ -2785,8 +2785,8 @@ const fr = {
       noDescription: "Aucune description disponible.",
     },
     meta: {
-      createdAt: "Cr\u00E9\u00E9 le :",
-      updatedAt: "Derni\u00E8re mise \u00E0 jour :",
+      createdAt: "Cr\u00E9\u00E9 le :",
+      updatedAt: "Derni\u00E8re mise \u00E0 jour :",
     },
     lightbox: {
       ariaLabel: "Images du produit {{name}}",
@@ -2853,14 +2853,14 @@ const fr = {
       servicePlaceholder: "\u2014 Choisir un service \u2014",
       typeLabel: "Type de t\u00E2che",
       titleLabel: "Titre de la t\u00E2che",
-      titlePlaceholder: "Ex : Inspection du bien \u00E0 Hamdallaye",
+      titlePlaceholder: "Ex : Inspection du bien \u00E0 Hamdallaye",
       descriptionLabel: "Description",
       descriptionPlaceholder:
         "Ajoutez des d\u00E9tails pour que l\u2019agent comprenne clairement la mission.",
       priorityLabel: "Priorit\u00E9",
       dueDateLabel: "Date d\u2019\u00E9ch\u00E9ance",
       estimatedCostLabel: "Co\u00FBt estim\u00E9",
-      estimatedCostPlaceholder: "Ex : 15 000",
+      estimatedCostPlaceholder: "Ex : 15 000",
       currencyLabel: "Devise",
       assignedLabel: "Assign\u00E9 \u00E0 (optionnel)",
       assignedPlaceholder: "\u2014 Aucun agent (pour l\u2019instant) \u2014",
@@ -2902,7 +2902,7 @@ const fr = {
     header: {
       kicker: "T\u00E2ches li\u00E9es \u00E0 un service",
       title: "T\u00E2ches du service #{{id}}",
-      titleWithName: "T\u00E2ches du service : {{name}}",
+      titleWithName: "T\u00E2ches du service : {{name}}",
       subtitle:
         "Visualisez les t\u00E2ches associ\u00E9es \u00E0 ce service et acc\u00E9dez aux preuves d\u00E9taill\u00E9es pour chaque action.",
       count: "{{count}} t\u00E2che li\u00E9e",
@@ -2984,8 +2984,8 @@ const fr = {
       filesSelected: "{{count}} fichier s\u00E9lectionn\u00E9.",
       filesSelected_other: "{{count}} fichiers s\u00E9lectionn\u00E9s.",
       existingSummary:
-        "Preuves existantes : {{existing}}/{{max}} \u2014 s\u00E9lectionn\u00E9es : {{selected}} \u2014 total apr\u00E8s upload : {{total}}",
-      evidenceLevelLabel: "Niveau d\u2019appr\u00E9ciation :",
+        "Preuves existantes : {{existing}}/{{max}} \u2014 s\u00E9lectionn\u00E9es : {{selected}} \u2014 total apr\u00E8s upload : {{total}}",
+      evidenceLevelLabel: "Niveau d\u2019appr\u00E9ciation :",
       batchInfo: "Envoi par lots de {{count}} fichier(s) pour plus de stabilit\u00E9.",
       notesLabel: "Notes (optionnel)",
       notesPlaceholder:
@@ -3002,7 +3002,7 @@ const fr = {
       maxEvidences: "Maximum {{max}} preuves autoris\u00E9es pour cette t\u00E2che.",
     },
     errors: {
-      upload: "Erreur lors de l'upload.",
+      upload: "Erreur lors de l’upload.",
       delete: "Erreur lors de la suppression.",
     },
     warnings: {
@@ -3165,7 +3165,7 @@ const fr = {
       accountSecurity: {
         title: "S\u00E9curit\u00E9 du compte",
         description:
-          "Mettez \u00E0 jour votre mot de passe et renforcez la protection d'acc\u00E8s \u00E0 votre compte Teranga.",
+          "Mettez \u00E0 jour votre mot de passe et renforcez la protection d’acc\u00E8s \u00E0 votre compte Teranga.",
       },
       settings: {
         title: "Param\u00E8tres",
@@ -3175,7 +3175,7 @@ const fr = {
       helpSupport: {
         title: "Aide & Support",
         description:
-          "Consultez l'assistance Teranga pour vos services, t\u00E2ches et projets : ressources, processus de support et contacts officiels.",
+          "Consultez l’assistance Teranga pour vos services, t\u00E2ches et projets : ressources, processus de support et contacts officiels.",
       },
       finance: {
         title: "Finances",
@@ -3223,7 +3223,7 @@ const fr = {
         title: "Notifications",
       },
       activities: {
-        title: "Centre d'activit\u00E9",
+        title: "Centre d’activit\u00E9",
       },
       fallback: {
         title: "Accueil",
@@ -3231,45 +3231,45 @@ const fr = {
     },
   },
   notifications: {
-    kicker: "Centre d'activite",
+    kicker: "Centre d’activité",
     title: "Notifications",
     subtitle:
-      "Suivez les nouvelles demandes, celles en cours et celles terminees en un seul endroit.",
+      "Suivez les nouvelles demandes, celles en cours et celles terminées en un seul endroit.",
     unreadCount: "{{count}} non lue",
     unreadCount_other: "{{count}} non lues",
     filterUnread: "Filtrer non lues",
-    resetUnreadFilter: "Reinitialiser filtre",
+    resetUnreadFilter: "Réinitialiser filtre",
     markAllRead: "Tout marquer comme lu",
     cleanupOld: "Nettoyer > 30j",
-    markReadSuccess: "Notification marquee comme lue.",
+    markReadSuccess: "Notification marquée comme lue.",
     markReadError: "Impossible de marquer cette notification comme lue.",
-    nothingToMark: "Aucune notification non lue a marquer.",
+    nothingToMark: "Aucune notification non lue à marquer.",
     markAllReadSuccess: "Toutes les notifications sont maintenant lues.",
     markAllReadError: "Erreur lors du marquage global des notifications.",
-    cleanupSuccess: "{{count}} notification supprimee du fil.",
-    cleanupSuccess_other: "{{count}} notifications supprimees du fil.",
+    cleanupSuccess: "{{count}} notification supprimée du fil.",
+    cleanupSuccess_other: "{{count}} notifications supprimées du fil.",
     cleanupError: "Erreur lors du nettoyage des notifications.",
     tabs: {
       new: "Nouvelles",
       inProgress: "En cours",
-      done: "Terminees",
+      done: "Terminées",
     },
     entities: {
       service: "Service",
-      task: "Tache",
+      task: "Tâche",
       order: "Commande",
       evidence: "Preuve",
       project: "Projet",
-      other: "Activite",
+      other: "Activité",
     },
     actions: {
-      created: "Cree",
-      assigned: "Assigne",
-      status_updated: "Statut mis a jour",
+      created: "Créé",
+      assigned: "Assigné",
+      status_updated: "Statut mis à jour",
     },
     messages: {
-      action: "{{entity}} : {{action}}",
-      status: "Statut : {{status}}",
+      action: "{{entity}} : {{action}}",
+      status: "Statut : {{status}}",
       evidenceCount: "{{count}} preuve ajoutee",
       evidenceCount_other: "{{count}} preuves ajoutees",
     },
@@ -3277,25 +3277,25 @@ const fr = {
     view: "Voir",
     delete: "Supprimer",
     markRead: "Marquer lu",
-    deleteSuccess: "Notification supprimee du fil.",
+    deleteSuccess: "Notification supprimée du fil.",
     deleteError: "Erreur lors de la suppression de la notification.",
     loading: "Chargement des notifications...",
     empty: "Aucune notification pour le moment.",
-    genericMessage: "Nouvelle activite detectee.",
+    genericMessage: "Nouvelle activité détectée.",
   },
   activities: {
-    kicker: "Centre d'activite",
-    title: "Centre d'activite",
+    kicker: "Centre d’activité",
+    title: "Centre d’activité",
     subtitle:
       "Parcourez la chronologie complete des actions dans votre espace.",
     filters: {
       label: "Filtres",
-      allEntities: "Toutes les entites",
+      allEntities: "Toutes les entités",
       allActions: "Toutes les actions",
       allDates: "Toutes les dates",
       last7Days: "7 derniers jours",
       last30Days: "30 derniers jours",
-      customRange: "Periode personnalisee",
+      customRange: "Période personnalisée",
       from: "Du",
       to: "Au",
     },
@@ -3303,51 +3303,51 @@ const fr = {
       all: "Tout",
       new: "Nouvelles",
       inProgress: "En cours",
-      done: "Terminees",
+      done: "Terminées",
     },
     progress: {
       new: "Nouvelles",
       in_progress: "En cours",
-      done: "Terminees",
+      done: "Terminées",
     },
     entities: {
       service: "Service",
-      task: "Tache",
+      task: "Tâche",
       order: "Commande",
       evidence: "Preuve",
       project: "Projet",
-      other: "Activite",
+      other: "Activité",
     },
     actions: {
-      created: "Cree",
-      assigned: "Assigne",
-      status_updated: "Statut mis a jour",
+      created: "Créé",
+      assigned: "Assigné",
+      status_updated: "Statut mis à jour",
     },
     messages: {
-      action: "{{entity}} : {{action}}",
-      status: "Statut : {{status}}",
+      action: "{{entity}} : {{action}}",
+      status: "Statut : {{status}}",
       evidenceCount: "{{count}} preuve ajoutee",
       evidenceCount_other: "{{count}} preuves ajoutees",
     },
     actor: {
       label: "Acteur",
-      unknown: "Systeme",
+      unknown: "Système",
     },
     validation: {
-      invalidDateRange: "La date de debut doit etre anterieure a la date de fin.",
+      invalidDateRange: "La date de début doit être antérieure a la date de fin.",
     },
     cleanupOld: "Nettoyer > 30j",
-    cleanupSuccess: "{{count}} activite supprimee du fil.",
-    cleanupSuccess_other: "{{count}} activites supprimees du fil.",
-    cleanupError: "Erreur lors du nettoyage des activites.",
+    cleanupSuccess: "{{count}} activité supprimée du fil.",
+    cleanupSuccess_other: "{{count}} activités supprimées du fil.",
+    cleanupError: "Erreur lors du nettoyage des activités.",
     view: "Voir",
     delete: "Supprimer",
-    deleteSuccess: "Activite supprimee du fil.",
-    deleteError: "Erreur lors de la suppression de l'activite.",
+    deleteSuccess: "Activité supprimée du fil.",
+    deleteError: "Erreur lors de la suppression de l’activité.",
     by: "par {{name}}",
-    loading: "Chargement des activites...",
-    empty: "Aucune activite pour le moment.",
-    genericMessage: "Nouvelle activite detectee.",
+    loading: "Chargement des activités...",
+    empty: "Aucune activité pour le moment.",
+    genericMessage: "Nouvelle activité détectée.",
   },
   labels: {
     property: {
