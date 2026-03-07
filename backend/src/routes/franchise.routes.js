@@ -5,6 +5,16 @@ const ctrl = require('../controllers/franchise.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
 const { requireScopeMatch } = require('../middleware/scope.middleware');
+const { validateBody } = require('../middleware/validate.middleware');
+const {
+  createFranchiseSchema,
+  updateFranchiseSchema,
+} = require('../validators/franchise.schemas');
+
+const NON_REGRESSIVE_VALIDATION_OPTIONS = {
+  allowUnknown: true,
+  stripUnknown: false,
+};
 
 /**
  * ============================================================
@@ -19,7 +29,21 @@ const { requireScopeMatch } = require('../middleware/scope.middleware');
 router.get('/masters', ctrl.listMasterCountries);
 
 router.get('/', auth, requireRoles('admin'), ctrl.list);
-router.post('/', auth, requireRoles('admin'), requireScopeMatch(), ctrl.create);
-router.put('/:id', auth, requireRoles('admin'), requireScopeMatch(), ctrl.update);
+router.post(
+  '/',
+  auth,
+  requireRoles('admin'),
+  validateBody(createFranchiseSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
+  requireScopeMatch(),
+  ctrl.create
+);
+router.put(
+  '/:id',
+  auth,
+  requireRoles('admin'),
+  validateBody(updateFranchiseSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
+  requireScopeMatch(),
+  ctrl.update
+);
 
 module.exports = router;

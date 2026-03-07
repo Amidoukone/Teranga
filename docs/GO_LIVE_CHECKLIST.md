@@ -3,6 +3,9 @@
 Date: 2026-02-20  
 Scope: `backend` + `frontend`
 
+Snapshot maturite actuelle (pour integrations futures):
+- `docs/MATURITY_STATUS_2026-03-07.md`
+
 ## 1) Security Gate (Blocker)
 
 Run these commands before any production deploy:

@@ -8,6 +8,16 @@ const ctrl = require('../controllers/transaction.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
 const upload = require('../middleware/uploadEvidence.middleware');
+const { validateBody } = require('../middleware/validate.middleware');
+const {
+  createTransactionSchema,
+  updateTransactionSchema,
+} = require('../validators/transaction.schemas');
+
+const NON_REGRESSIVE_VALIDATION_OPTIONS = {
+  allowUnknown: true,
+  stripUnknown: false,
+};
 
 /**
  * ROUTES TRANSACTIONS
@@ -87,6 +97,7 @@ router.post(
   auth,
   requireRoles('client', 'agent', 'admin'),
   upload.any(), // ✅ tolérant aux différents noms de champ fichier
+  validateBody(createTransactionSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
   ctrl.create
 );
 
@@ -95,6 +106,7 @@ router.put(
   auth,
   requireRoles('client', 'agent', 'admin'),
   upload.any(), // ✅ idem pour la mise à jour
+  validateBody(updateTransactionSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
   ctrl.update
 );
 
@@ -124,6 +136,7 @@ router.post(
   auth,
   requireRoles('client', 'agent', 'admin'),
   upload.any(),
+  validateBody(createTransactionSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
   injectOrderIdFromParam, // ⚠️ après multer si besoin (ici ok, multer remplit req.body mais on force orderId)
   ctrl.create
 );

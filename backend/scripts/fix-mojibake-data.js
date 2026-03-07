@@ -98,7 +98,7 @@ const JSON_TYPE_KEYS = new Set(['JSON', 'JSONB']);
 
 const UTF8_DECODER = new TextDecoder('utf-8', { fatal: true });
 const MOJIBAKE_PATTERN =
-  /(?:\u00C3|\u00C2|\u00E2\u20AC|\u00F0\u0178|\u00EF\u00B8|\uFFFD|\u00EF\u00BF\u00BD)/u;
+  /(?:[\u00C2-\u00C5\u00D0\u00D1]|\u00E2\u20AC|\u00F0\u0178|\u00EF\u00B8|\uFFFD|\u00EF\u00BF\u00BD)/u;
 
 // Unicode code point -> Windows-1252 byte value.
 const CP1252_EXTENDED_MAP = {

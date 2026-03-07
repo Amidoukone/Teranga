@@ -153,27 +153,26 @@ function Badge({ color = "gray", children }) {
 
 function Btn({ variant = "primary", size = "md", children, className = "", ...props }) {
   const styles = {
-    primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-400",
-    secondary: "bg-surface-main/80 text-text-primary hover:bg-surface-main/80 focus:ring-primary/20",
-    danger: "bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-400",
-    warning: "bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-400",
-    ghost:
-      "bg-surface-card border border-border text-text-secondary hover:bg-surface-main focus:ring-primary/20",
+    primary: "app-btn-primary",
+    secondary: "app-btn-neutral",
+    danger: "app-btn-danger",
+    warning: "app-btn-warning",
+    ghost: "app-btn-soft",
   };
 
   const sizeClasses = {
-    md: "px-3.5 py-2 text-sm",
-    sm: "px-3 py-1.5 text-xs",
-    xs: "px-2 py-1 text-[11px]",
+    md: "px-4 py-2.5 text-sm",
+    sm: "px-4 py-2 text-sm",
+    xs: "px-3 py-1.5 text-xs",
   };
 
   return (
     <button
       {...props}
       className={`
-        inline-flex items-center justify-center rounded-xl font-semibold shadow-sm
-        transition-all duration-150 
-        focus:outline-none focus:ring-2 focus:ring-offset-1 
+        inline-flex items-center justify-center whitespace-normal break-words rounded-lg font-semibold
+        transition-all duration-150
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
         disabled:opacity-60 disabled:cursor-not-allowed
         ${styles[variant]} ${sizeClasses[size]} ${className}
       `}
@@ -715,12 +714,14 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen bg-surface-main px-4 py-8">
       <div className="max-w-6xl mx-auto">
         {/* BACK */}
-        <button
+        <Btn
           onClick={() => navigate("/projects")}
-          className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary mb-4"
+          variant="ghost"
+          size="sm"
+          className="mb-4 gap-1"
         >
-          <span className="text-lg">{"<"}</span> {t("projectDetail.actions.backToProjects")}
-        </button>
+          <span className="text-base">{"<"}</span> {t("projectDetail.actions.backToProjects")}
+        </Btn>
 
         {/* CARD */}
         <div className="bg-surface-card shadow-lg rounded-3xl border border-border/70 p-6 md:p-8 space-y-10">
@@ -1034,7 +1035,7 @@ export default function ProjectDetailPage() {
                                     endDate: ph.endDate ? ph.endDate.slice(0, 10) : "",
                                   });
                                 }}
-                              >Edit</Btn>
+                              >{t("projects.actions.edit")}</Btn>
 
                               <Btn
                                 variant="danger"
@@ -1049,7 +1050,7 @@ export default function ProjectDetailPage() {
                                     notify(t("projectDetail.phases.alerts.deleteError"));
                                   }
                                 }}
-                              >Del</Btn>
+                              >{t("projects.actions.delete")}</Btn>
                             </div>
                           )}
                         </div>
@@ -1223,15 +1224,16 @@ export default function ProjectDetailPage() {
                       </div>
 
                       <div className="mt-2 flex items-center justify-end">
-                        <button
+                        <Btn
                           type="button"
+                          variant="ghost"
+                          size="xs"
                           onClick={() =>
                             setDocFilters({ q: "", kind: "", sort: "-createdAt" })
                           }
-                          className="text-[11px] text-text-secondary hover:text-text-primary"
                         >
                           {t("common.resetFilters")}
-                        </button>
+                        </Btn>
                       </div>
                     </div>
 
@@ -1356,7 +1358,7 @@ export default function ProjectDetailPage() {
                                 onClick={() => handleDeleteDocument(doc.id)}
                                 variant="danger"
                                 size="xs"
-                              >Del</Btn>
+                              >{t("projects.actions.delete")}</Btn>
                             )}
                           </div>
                         </div>

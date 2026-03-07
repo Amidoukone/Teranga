@@ -42,6 +42,44 @@ const PROJECT_STATUS_VALUES = [
   'cancelled',
 ];
 
+function Btn({
+  children,
+  type = 'button',
+  onClick,
+  disabled,
+  variant = 'primary',
+  size = 'md',
+  className = '',
+}) {
+  const base =
+    'inline-flex items-center justify-center whitespace-normal break-words rounded-lg font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60';
+
+  const sizes = {
+    md: 'px-4 py-2.5 text-sm',
+    sm: 'px-4 py-2 text-sm',
+    xs: 'px-3 py-1.5 text-xs',
+  }[size];
+
+  const variants = {
+    primary: 'app-btn-primary',
+    secondary: 'app-btn-neutral',
+    ghost: 'app-btn-soft',
+    warning: 'app-btn-warning',
+    danger: 'app-btn-danger',
+  }[variant];
+
+  return (
+    <button
+      type={type}
+      disabled={disabled}
+      onClick={onClick}
+      className={`${base} ${sizes} ${variants} ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
 /* ============================================================
    Sous-composant formulaire.
 ============================================================ */
@@ -174,22 +212,24 @@ function ProjectTransactionForm({ project, onClose, onSuccess }) {
 
         {/* Boutons */}
         <AdminActionsRow className="sm:col-span-2 mt-1 justify-end">
-          <button
+          <Btn
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-surface-main/80"
+            variant="ghost"
+            size="xs"
           >
             {t('projects.transaction.cancel')}
-          </button>
-          <button
+          </Btn>
+          <Btn
             type="submit"
             disabled={loading}
-            className="app-btn-primary px-4 py-2 text-xs"
+            variant="primary"
+            size="xs"
           >
             {loading
               ? t('projects.transaction.saving')
               : t('projects.transaction.save')}
-          </button>
+          </Btn>
         </AdminActionsRow>
       </form>
     </div>
@@ -480,15 +520,17 @@ export default function AdminProjectsPage() {
             )
           }
           actions={
-            <button
+            <Btn
               onClick={loadProjects}
               disabled={loading}
-              className="app-btn-primary w-full sm:w-auto px-4 py-2 text-sm shadow-sm text-center"
+              variant="primary"
+              size="sm"
+              className="w-full sm:w-auto text-center"
             >
               {loading
                 ? t('adminProjects.buttons.refreshLoading')
                 : t('adminProjects.buttons.refresh')}
-            </button>
+            </Btn>
           }
         />
 
@@ -556,12 +598,14 @@ export default function AdminProjectsPage() {
                 total: projects.length,
               })}
             </div>
-            <button
+            <Btn
               onClick={() => setFilters({ q: '', status: 'all', type: 'all' })}
-              className="w-full sm:w-auto px-3 py-1.5 bg-surface-main/80 rounded-md hover:bg-surface-main font-medium text-text-secondary text-center transition"
+              variant="ghost"
+              size="xs"
+              className="w-full sm:w-auto text-center"
             >
               {t('adminProjects.filters.reset')}
-            </button>
+            </Btn>
           </div>
         </AdminFilterBar>
 
@@ -705,18 +749,18 @@ export default function AdminProjectsPage() {
                           </select>
 
  {/* Contexte: administration des projets. */}
-                          <button
+                          <Btn
                             onClick={() =>
                               setOpenTrxProjectId(trxOpen ? null : p.id)
                             }
-                            className={`text-xs sm:text-sm px-3 py-1.5 text-center ${
-                              trxOpen ? 'app-btn-tonal-danger' : 'app-btn-tonal-success'
-                            }`}
+                            variant="ghost"
+                            size="xs"
+                            className="w-full text-center"
                           >
                             {trxOpen
                               ? t('adminProjects.actions.closeTransaction')
                               : t('adminProjects.actions.addTransaction')}
-                          </button>
+                          </Btn>
 
  {/* Contexte: administration des projets. */}
                           {trxOpen && (

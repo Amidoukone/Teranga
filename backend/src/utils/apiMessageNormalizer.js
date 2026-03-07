@@ -11,7 +11,7 @@ const TARGET_KEYS = new Set([
 ]);
 
 const MOJIBAKE_PATTERN =
-  /(?:\u00C3|\u00C2|\u00E2\u20AC|\u00F0\u0178|\u00EF\u00B8|\uFFFD|\u00EF\u00BF\u00BD)/;
+  /(?:[\u00C2-\u00C5\u00D0\u00D1]|\u00E2\u20AC|\u00F0\u0178|\u00EF\u00B8|\uFFFD|\u00EF\u00BF\u00BD)/;
 
 // Extra code points present in Windows-1252 but not in ISO-8859-1.
 const CP1252_EXTENDED_MAP = {
@@ -102,6 +102,12 @@ function decodeWindows1252AsUtf8(input) {
   }
 }
 
+function countMojibakeMarkers(value) {
+  if (typeof value !== 'string' || !value) return 0;
+  const globalPattern = new RegExp(MOJIBAKE_PATTERN.source, 'gu');
+  return (value.match(globalPattern) || []).length;
+}
+
 function fixMojibakeText(value) {
   if (typeof value !== 'string' || !value || !MOJIBAKE_PATTERN.test(value)) {
     return value;
@@ -110,8 +116,8 @@ function fixMojibakeText(value) {
   const decoded = decodeWindows1252AsUtf8(value);
   if (!decoded || decoded === value) return value;
 
-  const before = (value.match(new RegExp(MOJIBAKE_PATTERN, 'g')) || []).length;
-  const after = (decoded.match(new RegExp(MOJIBAKE_PATTERN, 'g')) || []).length;
+  const before = countMojibakeMarkers(value);
+  const after = countMojibakeMarkers(decoded);
   return after < before ? decoded : value;
 }
 
@@ -141,7 +147,8 @@ function isPlainObject(value) {
 
 function normalizeApiResponsePayload(value, parentKey = '', seen = new WeakSet()) {
   if (typeof value === 'string') {
-    return TARGET_KEYS.has(parentKey) ? normalizeMessageText(value) : value;
+    if (TARGET_KEYS.has(parentKey)) return normalizeMessageText(value);
+    return fixMojibakeText(value);
   }
 
   if (!value || typeof value !== 'object') return value;

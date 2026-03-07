@@ -73,7 +73,7 @@ async function makeUser({
 }) {
   const email = `${emailPrefix}_${Date.now()}_${Math.random()
     .toString(36)
-    .slice(2, 8)}@sprint2.local`;
+    .slice(2, 8)}@example.com`;
   const passwordHash = await bcrypt.hash(password, 10);
 
   const user = await db.User.create({
@@ -126,7 +126,7 @@ describe('Sprint 2 - auth/register/multi-country/permissions', () => {
     if (!dbReady) return;
 
     const res = await request(app).post('/api/auth/register').send({
-      email: `no_country_${Date.now()}@sprint2.local`,
+      email: `no_country_${Date.now()}@example.com`,
       password: 'Password123!',
       country: 'ZZ',
     });
@@ -140,7 +140,7 @@ describe('Sprint 2 - auth/register/multi-country/permissions', () => {
     const { country } = await makeCountry({ withMaster: false });
 
     const res = await request(app).post('/api/auth/register').send({
-      email: `blocked_${Date.now()}@sprint2.local`,
+      email: `blocked_${Date.now()}@example.com`,
       password: 'Password123!',
       countryId: country.id,
     });
@@ -154,7 +154,7 @@ describe('Sprint 2 - auth/register/multi-country/permissions', () => {
     const { country } = await makeCountry({ withMaster: true });
 
     const res = await request(app).post('/api/auth/register').send({
-      email: `ok_${Date.now()}@sprint2.local`,
+      email: `ok_${Date.now()}@example.com`,
       password: 'Password123!',
       countryId: country.id,
       language: 'fr',
@@ -163,6 +163,27 @@ describe('Sprint 2 - auth/register/multi-country/permissions', () => {
     expect(res.status).toBe(201);
     expect(res.body?.user?.role).toBe('client');
     expect(Number(res.body?.user?.countryId)).toBe(Number(country.id));
+  });
+
+  test('register rejects firstName/lastName containing digits', async () => {
+    if (!dbReady) return;
+    const { country } = await makeCountry({ withMaster: true });
+
+    const res = await request(app).post('/api/auth/register').send({
+      email: `bad_name_${Date.now()}@example.com`,
+      password: 'Password123!',
+      countryId: country.id,
+      firstName: 'Jean2',
+      lastName: 'Dupont9',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body?.error).toBe('Validation error');
+    const details = Array.isArray(res.body?.details) ? res.body.details : [];
+    const hasNameDigitError = details.some((d) =>
+      String(d?.message || '').includes('ne doit pas contenir de chiffres')
+    );
+    expect(hasNameDigitError).toBe(true);
   });
 
   test('master admin cannot create another admin', async () => {
@@ -182,7 +203,7 @@ describe('Sprint 2 - auth/register/multi-country/permissions', () => {
       .post('/api/users')
       .set('Authorization', `Bearer ${login.token}`)
       .send({
-        email: `new_admin_${Date.now()}@sprint2.local`,
+        email: `new_admin_${Date.now()}@example.com`,
         password: 'Admin123!',
         role: 'admin',
         firstName: 'New',
@@ -210,7 +231,7 @@ describe('Sprint 2 - auth/register/multi-country/permissions', () => {
       .post('/api/users')
       .set('Authorization', `Bearer ${login.token}`)
       .send({
-        email: `scoped_admin_${Date.now()}@sprint2.local`,
+        email: `scoped_admin_${Date.now()}@example.com`,
         password: 'Admin123!',
         role: 'admin',
         firstName: 'Scoped',
@@ -225,4 +246,3 @@ describe('Sprint 2 - auth/register/multi-country/permissions', () => {
     expect(Number(createRes.body?.user?.regionId)).toBe(Number(region.id));
   });
 });
-

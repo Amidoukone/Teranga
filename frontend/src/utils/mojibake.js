@@ -1,7 +1,7 @@
 // frontend/src/utils/mojibake.js
 
 const MOJIBAKE_PATTERN =
-  /(?:\u00C3|\u00C2|\u00E2\u20AC|\u00F0\u0178|\u00EF\u00B8|\uFFFD|\u00EF\u00BF\u00BD)/;
+  /(?:[\u00C2-\u00C5\u00D0\u00D1]|\u00E2\u20AC|\u00F0\u0178|\u00EF\u00B8|\uFFFD|\u00EF\u00BF\u00BD)/;
 
 // Extra code points present in Windows-1252 but not in ISO-8859-1.
 const CP1252_EXTENDED_MAP = {

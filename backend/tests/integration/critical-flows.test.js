@@ -5,6 +5,12 @@ const app = require('../../src/app');
 const db = require('../../models');
 
 let dbReady = false;
+const created = {
+  userIds: [],
+  countryIds: [],
+  regionIds: [],
+  franchiseIds: [],
+};
 
 async function checkDatabase() {
   try {
@@ -16,6 +22,42 @@ async function checkDatabase() {
   }
 }
 
+async function makeCountryWithMaster() {
+  for (let i = 0; i < 30; i += 1) {
+    const iso = `Y${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
+    try {
+      const country = await db.Country.create({
+        name: `IT-${Date.now()}-${iso}-${i}`,
+        isoCode: iso,
+        isActive: true,
+      });
+      created.countryIds.push(country.id);
+
+      const region = await db.Region.create({
+        name: `IT-Region-${Date.now()}-${i}`,
+        code: `ITR-${i}`,
+        countryId: country.id,
+        isActive: true,
+      });
+      created.regionIds.push(region.id);
+
+      const franchise = await db.Franchise.create({
+        type: 'MASTER',
+        status: 'active',
+        legalName: `IT Master ${Date.now()} ${i}`,
+        countryId: country.id,
+        regionId: null,
+      });
+      created.franchiseIds.push(franchise.id);
+
+      return { country, region, franchise };
+    } catch (err) {
+      if (err?.name !== 'SequelizeUniqueConstraintError') throw err;
+    }
+  }
+  throw new Error('Impossible de creer un pays de test unique');
+}
+
 describe('P2-T1 critical integration flows', () => {
   beforeAll(async () => {
     dbReady = await checkDatabase();
@@ -23,6 +65,23 @@ describe('P2-T1 critical integration flows', () => {
 
   afterAll(async () => {
     if (dbReady) {
+      if (created.userIds.length) {
+        await db.RefreshToken.destroy({ where: { userId: created.userIds } });
+        await db.RecoveryCode.destroy({ where: { userId: created.userIds } });
+        await db.PasswordResetToken.destroy({ where: { userId: created.userIds } });
+        await db.User.destroy({ where: { id: created.userIds } });
+      }
+
+      if (created.franchiseIds.length) {
+        await db.Franchise.destroy({ where: { id: created.franchiseIds } });
+      }
+      if (created.regionIds.length) {
+        await db.Region.destroy({ where: { id: created.regionIds } });
+      }
+      if (created.countryIds.length) {
+        await db.Country.destroy({ where: { id: created.countryIds } });
+      }
+
       await db.sequelize.close();
     }
   });
@@ -83,14 +142,18 @@ describe('P2-T1 critical integration flows', () => {
       return;
     }
 
-    const email = `test_${Date.now()}@teranga.local`;
+    const { country } = await makeCountryWithMaster();
+    const email = `test_${Date.now()}@example.com`;
     const password = 'Password123!';
 
     const registerRes = await request(app)
       .post('/api/auth/register')
-      .send({ email, password });
+      .send({ email, password, countryId: country.id });
 
     expect([200, 201]).toContain(registerRes.status);
+    if (registerRes.body?.user?.id) {
+      created.userIds.push(registerRes.body.user.id);
+    }
 
     const loginRes = await request(app)
       .post('/api/auth/login')

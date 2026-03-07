@@ -4,12 +4,22 @@ const Joi = require('joi');
 
 const email = Joi.string().email().trim().lowercase();
 const password = Joi.string().min(8);
+const noDigitNamePattern = /^(?!.*\p{N}).*$/u;
+const optionalNameWithoutDigits = Joi.string()
+  .trim()
+  .max(80)
+  .pattern(noDigitNamePattern)
+  .allow('', null)
+  .messages({
+    'string.pattern.base':
+      'Le nom ne doit pas contenir de chiffres',
+  });
 
 const registerSchema = Joi.object({
   email: email.required(),
   password: password.required(),
-  firstName: Joi.string().allow('', null),
-  lastName: Joi.string().allow('', null),
+  firstName: optionalNameWithoutDigits,
+  lastName: optionalNameWithoutDigits,
   phone: Joi.string().allow('', null),
   country: Joi.string().allow('', null),
   countryId: Joi.number().integer().allow(null),

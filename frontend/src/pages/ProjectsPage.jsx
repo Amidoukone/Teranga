@@ -87,25 +87,20 @@ function Btn({
   className = '',
 }) {
   const base =
-    'inline-flex items-center justify-center font-semibold rounded-xl shadow-sm transition-all duration-200 whitespace-normal break-words focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center whitespace-normal break-words rounded-lg font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60';
 
   const sizes = {
-    md: 'px-4 py-2 text-sm',
-    sm: 'px-3 py-1.5 text-sm',
-    xs: 'px-2 py-1 text-xs',
+    md: 'px-4 py-2.5 text-sm',
+    sm: 'px-4 py-2 text-sm',
+    xs: 'px-3 py-1.5 text-xs',
   }[size];
 
   const variants = {
-    primary:
-      'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white focus-visible:ring-blue-500',
-    secondary:
-      'bg-surface-main/80 hover:bg-surface-main text-text-secondary border border-border focus-visible:ring-border',
-    ghost:
-      'bg-surface-card hover:bg-surface-main border border-border text-text-secondary focus-visible:ring-border',
-    warning:
-      'bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-600 hover:to-amber-500 text-white focus-visible:ring-amber-500',
-    danger:
-      'bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-700 hover:to-rose-600 text-white focus-visible:ring-rose-500',
+    primary: 'app-btn-primary',
+    secondary: 'app-btn-neutral',
+    ghost: 'app-btn-soft',
+    warning: 'app-btn-warning',
+    danger: 'app-btn-danger',
   }[variant];
 
   return (
@@ -988,7 +983,7 @@ export default function ProjectsPage() {
                           onChange={(e) =>
                             handleStatusChange(p.id, e.target.value)
                           }
-                          className="max-w-[140px] rounded-md border border-border/80 bg-surface-card px-2 py-1 text-xs text-text-primary sm:text-sm"
+                          className="app-input-compact max-w-[148px]"
                         >
                           {projectStatusOptions.map((s) => (
                             <option key={s.value} value={s.value}>
@@ -1064,7 +1059,7 @@ export default function ProjectsPage() {
                         onChange={(e) =>
                           handleAssign(p.id, e.target.value)
                         }
-                        className="max-w-full rounded-lg border border-border/80 bg-surface-card px-2 py-1 text-xs text-text-primary sm:text-sm"
+                        className="app-input-compact max-w-full"
                       >
                         <option value="">
                           {t('projects.actions.assignAgentPlaceholder')}

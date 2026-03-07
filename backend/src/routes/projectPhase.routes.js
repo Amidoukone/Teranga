@@ -4,6 +4,16 @@ const router = require('express').Router();
 const ctrl = require('../controllers/projectPhase.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
+const { validateBody } = require('../middleware/validate.middleware');
+const {
+  createProjectPhaseSchema,
+  updateProjectPhaseSchema,
+} = require('../validators/projectPhase.schemas');
+
+const NON_REGRESSIVE_VALIDATION_OPTIONS = {
+  allowUnknown: true,
+  stripUnknown: false,
+};
 
 /* =========================================================
    🔹 Routes des phases de projet
@@ -33,7 +43,13 @@ function injectProjectId(req, _res, next) {
    ✅ Créer une phase
    - Client / Admin (règle 1h côté controller)
 ========================= */
-router.post('/', auth, requireRoles('client', 'admin'), ctrl.create);
+router.post(
+  '/',
+  auth,
+  requireRoles('client', 'admin'),
+  validateBody(createProjectPhaseSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
+  ctrl.create
+);
 
 /* =========================
    ✅ Liste des phases
@@ -63,7 +79,13 @@ router.get(
    ⚠️ Important: ton controller ne donne PAS d’accès agent.
    Si tu veux “agent toujours”, il faut modifier le controller.
 ========================= */
-router.put('/:id', auth, requireRoles('client', 'admin'), ctrl.update);
+router.put(
+  '/:id',
+  auth,
+  requireRoles('client', 'admin'),
+  validateBody(updateProjectPhaseSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
+  ctrl.update
+);
 
 /* =========================
    ✅ Suppression
