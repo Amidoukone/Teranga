@@ -61,6 +61,18 @@ const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || "localstorage")
   .toLowerCase()
   .trim();
 const USES_COOKIE_AUTH = AUTH_STORAGE_MODE === "cookie";
+const NOTIFICATION_SUMMARY_POLL_MS = (() => {
+  const raw = Number.parseInt(
+    String(process.env.REACT_APP_NOTIFICATION_SUMMARY_POLL_MS || ""),
+    10
+  );
+  if (!Number.isFinite(raw) || raw < 15000) return 60000;
+  return raw;
+})();
+
+function isDocumentVisible() {
+  return typeof document === "undefined" || document.visibilityState === "visible";
+}
 
 /* ============================================================================ */
 /* LINKS */
@@ -381,7 +393,7 @@ function NavBar() {
   });
   const unreadCount = notificationSummary?.unread || 0;
 
-  const loadNotificationSummary = useCallback(async () => {
+  const loadNotificationSummary = useCallback(async (options = {}) => {
     const hasSession = USES_COOKIE_AUTH
       ? Boolean(getLocalUser()) || hasSessionHint()
       : Boolean(getToken());
@@ -390,7 +402,7 @@ function NavBar() {
       return;
     }
     try {
-      const data = await getNotificationSummary();
+      const data = await getNotificationSummary(options);
       setNotificationSummary({
         unread: data?.unread ?? 0,
         byProgress: data?.byProgress || {},
@@ -488,15 +500,34 @@ function NavBar() {
 
   useEffect(() => {
     if (!user) return;
-    const interval = setInterval(() => {
+    function refreshIfVisible() {
+      if (!isDocumentVisible()) return;
       loadNotificationSummary();
-    }, 8000);
-    return () => clearInterval(interval);
+    }
+
+    const interval = setInterval(refreshIfVisible, NOTIFICATION_SUMMARY_POLL_MS);
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", refreshIfVisible);
+    }
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", refreshIfVisible);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("focus", refreshIfVisible);
+      }
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", refreshIfVisible);
+      }
+    };
   }, [user, loadNotificationSummary]);
 
   useEffect(() => {
     function onRefresh() {
-      loadNotificationSummary();
+      loadNotificationSummary({ force: true });
     }
     window.addEventListener("notifications:refresh", onRefresh);
     return () => window.removeEventListener("notifications:refresh", onRefresh);

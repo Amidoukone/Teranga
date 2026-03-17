@@ -48,9 +48,9 @@ export default function NotificationsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0 });
 
-  const loadSummary = useCallback(async () => {
+  const loadSummary = useCallback(async (options = {}) => {
     try {
-      const data = await getNotificationSummary();
+      const data = await getNotificationSummary(options);
       setSummary({
         unread: data?.unread ?? 0,
         byProgress: data?.byProgress || {},
@@ -102,7 +102,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     function onRefresh() {
-      loadSummary();
+      loadSummary({ force: true });
       loadItems();
     }
     if (typeof window !== "undefined") {

@@ -12,6 +12,7 @@ const {
   canAccessUserByScope,
   assertGlobalAdminOnly,
 } = require('../services/userAccess.service');
+const { invalidateAuthUserCache } = require('../services/authCache.service');
 const logger = require('../utils/logger');
 
 // ————————————————————————
@@ -721,6 +722,7 @@ exports.updateUser = async (req, res) => {
     }
 
     await u.update(updateData);
+    invalidateAuthUserCache(u.id);
 
     return res.json({ user: toSafeUser(u) });
   } catch (e) {
@@ -749,6 +751,7 @@ exports.deleteUser = async (req, res) => {
     }
 
     await u.destroy();
+    invalidateAuthUserCache(u.id);
     return res.json({ message: 'Utilisateur supprimé' });
   } catch (e) {
     return sendError(res, e, 'Erreur suppression utilisateur');

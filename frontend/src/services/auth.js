@@ -16,6 +16,7 @@ import { setLanguage, normalizeLanguage } from '../i18n';
 const TOKEN_KEY = 'teranga_token';
 const LEGACY_TOKEN_KEYS = ['token']; // compat héritée
 const USER_KEY = 'teranga_user';
+const USER_SYNCED_AT_KEY = 'teranga_user_synced_at';
 const CSRF_TOKEN_KEY = 'teranga_csrf_token';
 const CSRF_COOKIE = 'teranga_csrf';
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
@@ -26,6 +27,17 @@ const COOKIE_BEARER_FALLBACK_RAW = String(
 )
   .toLowerCase()
   .trim();
+const DEFAULT_ME_CACHE_TTL_MS = 15000;
+const ME_CACHE_TTL_MS = (() => {
+  const raw = Number.parseInt(
+    String(process.env.REACT_APP_AUTH_ME_CACHE_TTL_MS || ''),
+    10
+  );
+  if (!Number.isFinite(raw) || raw < 0) return DEFAULT_ME_CACHE_TTL_MS;
+  return raw;
+})();
+
+let meRequestPromise = null;
 
 function parseBooleanLike(value, fallback = false) {
   if (['1', 'true', 'yes', 'on'].includes(value)) return true;
@@ -115,6 +127,40 @@ function syncCsrfToken(data) {
   if (token) writeCsrfToken(token);
 }
 
+function readCachedUserSyncedAt() {
+  const raw = safeGet(USER_SYNCED_AT_KEY);
+  const parsed = Number.parseInt(String(raw || ''), 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function resolveMeCacheTtlMs(value) {
+  if (value === undefined || value === null || value === '') {
+    return ME_CACHE_TTL_MS;
+  }
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return ME_CACHE_TTL_MS;
+  return parsed;
+}
+
+function readFreshCachedUser(maxAgeMs = ME_CACHE_TTL_MS) {
+  const user = readCachedUser();
+  if (!user) return null;
+  if (maxAgeMs <= 0) return null;
+
+  const syncedAt = readCachedUserSyncedAt();
+  if (!syncedAt) return null;
+  if (Date.now() - syncedAt > maxAgeMs) return null;
+
+  return user;
+}
+
+function hasSessionForMeCache() {
+  if (isCookieAuthMode()) {
+    return Boolean(readCachedUser()) || hasCookieSessionHint();
+  }
+  return Boolean(readTokenAny()) || hasCookie(CSRF_COOKIE);
+}
+
 /** Acces localStorage safe (evite exceptions quota, disabled, SSR...) */
 function safeGet(key) {
   try {
@@ -173,10 +219,25 @@ function readCachedUser() {
     return null;
   }
 }
-function writeCachedUser(user) {
+function writeCachedUser(user, options = {}) {
+  const verifiedAt =
+    options?.verifiedAt === undefined
+      ? user
+        ? Date.now()
+        : null
+      : options.verifiedAt;
   try {
-    if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
-    else localStorage.removeItem(USER_KEY);
+    if (user) {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      if (verifiedAt !== null && verifiedAt !== undefined) {
+        localStorage.setItem(USER_SYNCED_AT_KEY, String(verifiedAt));
+      } else {
+        localStorage.removeItem(USER_SYNCED_AT_KEY);
+      }
+    } else {
+      localStorage.removeItem(USER_KEY);
+      localStorage.removeItem(USER_SYNCED_AT_KEY);
+    }
     notifyAuthChange();
   } catch {
     // noop
@@ -248,7 +309,23 @@ export async function login(payload) {
    - Si réseau KO → renvoie le user caché (si dispo) sinon {user:null}
    - Si 401 → clear tokens + cache et {user:null}
 ============================================================ */
-export async function me() {
+export async function me(options = {}) {
+  const force = options?.force === true;
+  const maxAgeMs = resolveMeCacheTtlMs(options?.maxAgeMs);
+
+  if (!force) {
+    const cachedUser = readFreshCachedUser(maxAgeMs);
+    if (cachedUser && hasSessionForMeCache()) {
+      syncLanguageFromUser(cachedUser);
+      return { user: cachedUser, cached: true };
+    }
+
+    if (meRequestPromise) {
+      return meRequestPromise;
+    }
+  }
+
+  const request = (async () => {
   if (!shouldUseLocalStorage()) {
     try {
       const { data } = await api.get('/auth/me', {
@@ -459,6 +536,17 @@ export async function me() {
 
     return { user: null };
   }
+  })();
+
+  meRequestPromise = request;
+
+  try {
+    return await request;
+  } finally {
+    if (meRequestPromise === request) {
+      meRequestPromise = null;
+    }
+  }
 }
 
 /* ============================================================
@@ -542,7 +630,7 @@ export function getLocalUser() {
 export function setLocalUser(patch) {
   const current = readCachedUser() || {};
   const next = typeof patch === 'function' ? patch(current) : { ...current, ...patch };
-  writeCachedUser(next);
+  writeCachedUser(next, { verifiedAt: readCachedUserSyncedAt() });
   return next;
 }
 

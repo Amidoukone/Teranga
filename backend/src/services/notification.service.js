@@ -2,11 +2,77 @@
 
 const { Op, Sequelize } = require("sequelize");
 const { Notification, User } = require("../../models");
+const DEFAULT_SUMMARY_CACHE_TTL_MS = 15000;
+const summaryCache = new Map();
+const summaryPending = new Map();
 
 function toSafeInt(v) {
   if (v === null || v === undefined || v === "") return null;
   const n = parseInt(String(v), 10);
   return Number.isNaN(n) ? null : n;
+}
+
+function getSummaryCacheTtlMs() {
+  const raw = Number.parseInt(
+    String(process.env.NOTIFICATION_SUMMARY_CACHE_TTL_MS || ""),
+    10
+  );
+  if (!Number.isFinite(raw) || raw < 0) return DEFAULT_SUMMARY_CACHE_TTL_MS;
+  return raw;
+}
+
+const SUMMARY_CACHE_TTL_MS = getSummaryCacheTtlMs();
+
+function normalizeSummary(result = {}) {
+  return {
+    unread: Number(result?.unread) || 0,
+    byProgress: { ...(result?.byProgress || {}) },
+  };
+}
+
+function readSummaryCache(userId) {
+  if (SUMMARY_CACHE_TTL_MS <= 0) return null;
+
+  const key = String(userId);
+  const entry = summaryCache.get(key);
+  if (!entry) return null;
+
+  if (entry.expiresAt <= Date.now()) {
+    summaryCache.delete(key);
+    return null;
+  }
+
+  return normalizeSummary(entry.value);
+}
+
+function writeSummaryCache(userId, result) {
+  const normalized = normalizeSummary(result);
+
+  if (SUMMARY_CACHE_TTL_MS > 0) {
+    summaryCache.set(String(userId), {
+      value: normalized,
+      expiresAt: Date.now() + SUMMARY_CACHE_TTL_MS,
+    });
+  }
+
+  return normalized;
+}
+
+function invalidateNotificationSummary(userIds = null) {
+  if (!userIds) {
+    summaryCache.clear();
+    summaryPending.clear();
+    return;
+  }
+
+  const ids = Array.isArray(userIds) ? userIds : [userIds];
+  for (const raw of ids) {
+    const userId = toSafeInt(raw);
+    if (!userId) continue;
+    const key = String(userId);
+    summaryCache.delete(key);
+    summaryPending.delete(key);
+  }
 }
 
 function normalizeRecipientIds(ids = []) {
@@ -172,7 +238,9 @@ async function createNotifications({
       entityId: null,
       ...nowPayload,
     }));
-    return Notification.bulkCreate(rows);
+    const created = await Notification.bulkCreate(rows);
+    invalidateNotificationSummary(ids);
+    return created;
   }
 
   const existing = await Notification.findAll({
@@ -219,6 +287,7 @@ async function createNotifications({
     ? await Notification.bulkCreate(creates)
     : [];
 
+  invalidateNotificationSummary(ids);
   return [...updatedRows, ...createdRows];
 }
 
@@ -270,6 +339,7 @@ async function updateNotificationsForEntity(entityType, entityId, patch = {}) {
   });
 
   await dedupeNotificationsForEntity(entityType, entityId);
+  invalidateNotificationSummary();
 
   return count;
 }
@@ -278,26 +348,44 @@ async function getNotificationSummary(userId) {
   const uid = toSafeInt(userId);
   if (!uid) return { unread: 0, byProgress: {} };
 
-  const unread = await Notification.count({
-    where: { userId: uid, status: "unread" },
-  });
+  const cached = readSummaryCache(uid);
+  if (cached) return cached;
 
-  const rows = await Notification.findAll({
-    attributes: [
-      "progress",
-      [Sequelize.fn("COUNT", Sequelize.col("id")), "count"],
-    ],
-    where: { userId: uid },
-    group: ["progress"],
-    raw: true,
-  });
+  const pendingKey = String(uid);
+  if (summaryPending.has(pendingKey)) {
+    return summaryPending.get(pendingKey);
+  }
 
-  const byProgress = rows.reduce((acc, row) => {
-    acc[row.progress] = Number(row.count) || 0;
-    return acc;
-  }, {});
+  const loadPromise = (async () => {
+    const unread = await Notification.count({
+      where: { userId: uid, status: "unread" },
+    });
 
-  return { unread, byProgress };
+    const rows = await Notification.findAll({
+      attributes: [
+        "progress",
+        [Sequelize.fn("COUNT", Sequelize.col("id")), "count"],
+      ],
+      where: { userId: uid },
+      group: ["progress"],
+      raw: true,
+    });
+
+    const byProgress = rows.reduce((acc, row) => {
+      acc[row.progress] = Number(row.count) || 0;
+      return acc;
+    }, {});
+
+    return writeSummaryCache(uid, { unread, byProgress });
+  })();
+
+  summaryPending.set(pendingKey, loadPromise);
+
+  try {
+    return await loadPromise;
+  } finally {
+    summaryPending.delete(pendingKey);
+  }
 }
 
 module.exports = {
@@ -306,4 +394,5 @@ module.exports = {
   updateNotificationsForEntity,
   computeProgress,
   getNotificationSummary,
+  invalidateNotificationSummary,
 };

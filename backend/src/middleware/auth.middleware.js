@@ -3,11 +3,49 @@
 const jwt = require('jsonwebtoken');
 const db = require('../../models');
 const logger = require('../utils/logger');
+const {
+  getCachedAuthUser,
+  setCachedAuthUser,
+  getCachedTokenStatus,
+  cacheAllowedToken,
+  cacheRevokedToken,
+} = require('../services/authCache.service');
 
 const COOKIE_ACCESS = 'teranga_access';
 const COOKIE_CSRF = 'teranga_csrf';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const CSRF_EXEMPT_PATHS = new Set(['/api/auth/logout', '/api/v1/auth/logout']);
+const AUTH_USER_ATTRIBUTES = ['id', 'role', 'country', 'countryId', 'regionId'];
+const USER_LOOKUP_OPTIONAL_ROUTES = new Set([
+  'GET /api/auth/me',
+  'GET /api/v1/auth/me',
+  'PATCH /api/auth/me',
+  'PATCH /api/v1/auth/me',
+  'POST /api/auth/logout',
+  'POST /api/v1/auth/logout',
+  'POST /api/auth/change-password',
+  'POST /api/v1/auth/change-password',
+  'POST /api/auth/recovery-codes/regenerate',
+  'POST /api/v1/auth/recovery-codes/regenerate',
+]);
+
+function toRouteKey(req) {
+  const method = String(req.method || 'GET').toUpperCase();
+  const path = String(req.originalUrl || req.url || '')
+    .split('?')[0]
+    .replace(/\/+$/, '') || '/';
+  return `${method} ${path}`;
+}
+
+function toAuthUserFromPayload(payload = {}) {
+  return {
+    id: payload.id ?? null,
+    role: payload.role ?? null,
+    country: payload.country ?? null,
+    countryId: payload.countryId ?? null,
+    regionId: payload.regionId ?? null,
+  };
+}
 
 module.exports = async function auth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -34,12 +72,45 @@ module.exports = async function auth(req, res, next) {
     req.authToken = token;
 
     if (payload?.jti) {
-      const blocked = await db.TokenBlacklist.findOne({ where: { jti: payload.jti } });
-      if (blocked) return res.status(401).json({ error: 'Token revoque' });
+      const cachedTokenStatus = getCachedTokenStatus(payload.jti);
+      if (cachedTokenStatus === true) {
+        return res.status(401).json({ error: 'Token revoque' });
+      }
+      if (cachedTokenStatus === null) {
+        const blocked = await db.TokenBlacklist.findOne({
+          where: { jti: payload.jti },
+          attributes: ['id', 'expiresAt'],
+          raw: true,
+        });
+        if (blocked) {
+          cacheRevokedToken(
+            payload.jti,
+            blocked.expiresAt || (payload?.exp ? new Date(payload.exp * 1000) : null)
+          );
+          return res.status(401).json({ error: 'Token revoque' });
+        }
+        cacheAllowedToken(
+          payload.jti,
+          payload?.exp ? new Date(payload.exp * 1000) : null
+        );
+      }
     }
 
-    const user = await db.User.findByPk(payload.id);
-    if (!user) return res.status(401).json({ error: 'Utilisateur introuvable' });
+    let user = null;
+    const routeKey = toRouteKey(req);
+    if (USER_LOOKUP_OPTIONAL_ROUTES.has(routeKey)) {
+      user = toAuthUserFromPayload(payload);
+    } else {
+      user =
+        getCachedAuthUser(payload.id) ||
+        setCachedAuthUser(
+          await db.User.findByPk(payload.id, {
+            attributes: AUTH_USER_ATTRIBUTES,
+            raw: true,
+          })
+        );
+      if (!user) return res.status(401).json({ error: 'Utilisateur introuvable' });
+    }
 
     req.user = {
       id: user.id,

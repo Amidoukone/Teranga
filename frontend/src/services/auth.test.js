@@ -101,6 +101,23 @@ test('me in cookie mode caches backend user response', async () => {
   expect(i18nMock.setLanguage).toHaveBeenCalledWith('fr');
 });
 
+test('me reuses fresh cached user without extra network call', async () => {
+  const { auth, apiMock, i18nMock } = setupModule('localstorage');
+  localStorage.setItem('teranga_token', 'jwt-token');
+  localStorage.setItem('token', 'jwt-token');
+  localStorage.setItem('teranga_user', JSON.stringify({ id: 22, language: 'fr' }));
+  localStorage.setItem('teranga_user_synced_at', String(Date.now()));
+
+  const result = await auth.me();
+
+  expect(result).toEqual({
+    user: { id: 22, language: 'fr' },
+    cached: true,
+  });
+  expect(apiMock.get).not.toHaveBeenCalled();
+  expect(i18nMock.setLanguage).toHaveBeenCalledWith('fr');
+});
+
 test('login in cookie mode strict does not persist JWT in localStorage', async () => {
   process.env.REACT_APP_COOKIE_BEARER_FALLBACK = 'false';
   const { auth, apiMock } = setupModule('cookie');

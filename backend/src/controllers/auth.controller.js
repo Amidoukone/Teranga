@@ -22,6 +22,7 @@ const {
   PasswordResetToken,
   Sequelize,
 } = require('../../models');
+const { cacheRevokedToken } = require('../services/authCache.service');
 
 // Durée de vie du token d'accès (configurable via env)
 const ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '1h';
@@ -283,6 +284,17 @@ async function revokeUserRefreshTokens(userId, req) {
     { revokedAt: new Date(), revokedByIp: req?.ip || null },
     { where: { userId, revokedAt: null } }
   );
+}
+
+async function blacklistAccessPayload(payload) {
+  if (!payload?.jti || !payload?.exp) return;
+
+  const expiresAt = new Date(payload.exp * 1000);
+  await TokenBlacklist.findOrCreate({
+    where: { jti: payload.jti },
+    defaults: { expiresAt },
+  });
+  cacheRevokedToken(payload.jti, expiresAt);
 }
 
 function shouldExposeResetDebug(req) {
@@ -824,13 +836,7 @@ exports.logout = async (req, res) => {
     if (accessToken) {
       try {
         const payload = jwt.verify(accessToken, process.env.JWT_SECRET);
-        if (payload?.jti && payload?.exp) {
-          const expiresAt = new Date(payload.exp * 1000);
-          await TokenBlacklist.findOrCreate({
-            where: { jti: payload.jti },
-            defaults: { expiresAt },
-          });
-        }
+        await blacklistAccessPayload(payload);
       } catch (err) {
         // ignore invalid token
       }
@@ -919,13 +925,7 @@ exports.changePassword = async (req, res) => {
     await revokeUserRefreshTokens(user.id, req);
 
     const payload = req.authTokenPayload;
-    if (payload?.jti && payload?.exp) {
-      const expiresAt = new Date(payload.exp * 1000);
-      await TokenBlacklist.findOrCreate({
-        where: { jti: payload.jti },
-        defaults: { expiresAt },
-      });
-    }
+    await blacklistAccessPayload(payload);
 
     clearAuthCookies(res);
 
@@ -939,7 +939,6 @@ exports.changePassword = async (req, res) => {
       .json({ error: 'Erreur lors du changement de mot de passe' });
   }
 };
-
 
 
 

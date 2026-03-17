@@ -6,6 +6,7 @@ const { getPagination } = require("../utils/pagination");
 const logger = require('../utils/logger');
 const {
   getNotificationSummary,
+  invalidateNotificationSummary,
 } = require("../services/notification.service");
 
 function toSafeInt(v) {
@@ -118,6 +119,8 @@ exports.markRead = async (req, res) => {
       await notif.update({ status: "read", readAt: new Date() });
     }
 
+    invalidateNotificationSummary(req.user.id);
+
     return res.json({
       message: "Notification marquée comme lue",
       notification: notif.toJSON ? notif.toJSON() : notif,
@@ -140,6 +143,8 @@ exports.markAllRead = async (req, res) => {
       { status: "read", readAt: new Date() },
       { where: { userId: req.user.id, status: "unread" } }
     );
+
+    invalidateNotificationSummary(req.user.id);
 
     return res.json({
       message: "Toutes les notifications ont été marquées comme lues",
@@ -169,6 +174,8 @@ exports.removeOne = async (req, res) => {
     if (!count) {
       return res.status(404).json({ error: "Notification introuvable" });
     }
+
+    invalidateNotificationSummary(req.user.id);
 
     return res.json({
       message: "Notification supprimée du fil d'actualité",
@@ -221,6 +228,8 @@ exports.cleanup = async (req, res) => {
     }
 
     const deleted = await Notification.destroy({ where });
+
+    invalidateNotificationSummary(req.user.id);
 
     return res.json({
       message: "Nettoyage des notifications termine",
