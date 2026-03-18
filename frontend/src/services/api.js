@@ -123,9 +123,11 @@ const COOKIE_BEARER_FALLBACK_RAW = String(
   process.env.REACT_APP_COOKIE_BEARER_FALLBACK || ''
 ).toLowerCase().trim();
 const TOKEN_STORAGE_KEYS = ['teranga_token', 'token'];
+const REFRESH_TOKEN_STORAGE_KEY = 'teranga_refresh_token';
 const USER_STORAGE_KEY = 'teranga_user';
 const CSRF_TOKEN_STORAGE_KEY = 'teranga_csrf_token';
 const CSRF_COOKIE_NAME = 'teranga_csrf';
+const COOKIE_BEARER_FALLBACK_ACTIVE_KEY = 'teranga_cookie_bearer_fallback_active';
 const IS_PROD_RUNTIME =
   String(process.env.NODE_ENV || 'development').trim().toLowerCase() ===
   'production';
@@ -151,9 +153,19 @@ function usesCookieAuth() {
   return AUTH_STORAGE_MODE === 'cookie';
 }
 
+function isRuntimeCookieBearerFallbackActive() {
+  return parseBooleanLike(
+    safeStorageGet(COOKIE_BEARER_FALLBACK_ACTIVE_KEY),
+    false
+  );
+}
+
 function usesCookieBearerFallback() {
   if (!usesCookieAuth()) return true;
-  return parseBooleanLike(COOKIE_BEARER_FALLBACK_RAW, true);
+  return (
+    parseBooleanLike(COOKIE_BEARER_FALLBACK_RAW, true) ||
+    isRuntimeCookieBearerFallbackActive()
+  );
 }
 
 function canUseStoredBearer() {
@@ -162,6 +174,7 @@ function canUseStoredBearer() {
 
 if (usesCookieAuth() && !usesCookieBearerFallback()) {
   TOKEN_STORAGE_KEYS.forEach((key) => safeStorageRemove(key));
+  safeStorageRemove(REFRESH_TOKEN_STORAGE_KEY);
 }
 
 /* ---------- Création instance Axios ---------- */
@@ -295,15 +308,20 @@ function hasRefreshSessionHint() {
         safeStorageGet('teranga_token') || safeStorageGet('token')
       )
     : null;
+  const storedRefreshToken = normalizeStoredToken(
+    safeStorageGet(REFRESH_TOKEN_STORAGE_KEY)
+  );
   const csrfCookie = normalizeStoredToken(getCookieValue(CSRF_COOKIE_NAME));
   const csrfStorage = normalizeStoredToken(safeStorageGet(CSRF_TOKEN_STORAGE_KEY));
-  return Boolean(storedToken || csrfCookie || csrfStorage);
+  return Boolean(storedToken || storedRefreshToken || csrfCookie || csrfStorage);
 }
 
 function clearStoredAuthSession() {
   TOKEN_STORAGE_KEYS.forEach((key) => safeStorageRemove(key));
+  safeStorageRemove(REFRESH_TOKEN_STORAGE_KEY);
   safeStorageRemove(USER_STORAGE_KEY);
   safeStorageRemove(CSRF_TOKEN_STORAGE_KEY);
+  safeStorageRemove(COOKIE_BEARER_FALLBACK_ACTIVE_KEY);
 }
 
 function persistRefreshedSession(data) {
@@ -316,6 +334,11 @@ function persistRefreshedSession(data) {
 
   const csrfToken = normalizeStoredToken(data?.csrfToken);
   if (csrfToken) safeStorageSet(CSRF_TOKEN_STORAGE_KEY, csrfToken);
+
+  const refreshedRefreshToken = normalizeStoredToken(data?.refreshToken);
+  if (refreshedRefreshToken) {
+    safeStorageSet(REFRESH_TOKEN_STORAGE_KEY, refreshedRefreshToken);
+  }
 }
 
 function clearAuthorizationHeader(config) {
@@ -343,9 +366,12 @@ async function refreshAccessSession() {
   if (refreshAccessPromise) return refreshAccessPromise;
 
   refreshAccessPromise = (async () => {
+    const refreshToken = normalizeStoredToken(
+      safeStorageGet(REFRESH_TOKEN_STORAGE_KEY)
+    );
     const { data } = await api.post(
       '/auth/refresh',
-      {},
+      refreshToken ? { refreshToken } : {},
       {
         skipAuthRedirect: true,
         silentAuth: true,

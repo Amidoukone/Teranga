@@ -228,6 +228,59 @@ test('cookie-only strict skips bearer injection and does not persist refreshed J
   expect(localStorage.getItem('teranga_csrf_token')).toBe('new-csrf');
 });
 
+test('runtime cookie bearer fallback injects stored token even when strict mode is configured', async () => {
+  process.env.REACT_APP_AUTH_STORAGE = 'cookie';
+  process.env.REACT_APP_COOKIE_BEARER_FALLBACK = 'false';
+  const { requestInterceptor } = setupApiModule({ keepEnv: true });
+  localStorage.setItem('teranga_cookie_bearer_fallback_active', '1');
+  localStorage.setItem('teranga_token', 'runtime-access');
+
+  const cfg = await requestInterceptor({
+    method: 'get',
+    url: '/orders',
+    headers: {},
+  });
+
+  expect(cfg.headers.Authorization).toBe('Bearer runtime-access');
+});
+
+test('auto-refresh uses stored refresh token and rotates it in fallback mode', async () => {
+  process.env.REACT_APP_AUTH_STORAGE = 'cookie';
+  process.env.REACT_APP_COOKIE_BEARER_FALLBACK = 'false';
+  const { responseErrorInterceptor, apiInstance } = setupApiModule();
+  localStorage.setItem('teranga_cookie_bearer_fallback_active', '1');
+  localStorage.setItem('teranga_refresh_token', 'refresh-seed');
+
+  apiInstance.post.mockResolvedValue({
+    data: {
+      token: 'new-access',
+      refreshToken: 'new-refresh',
+      csrfToken: 'new-csrf',
+    },
+  });
+  apiInstance.request.mockResolvedValue({ data: { ok: true } });
+
+  await responseErrorInterceptor({
+    response: { status: 401 },
+    config: { url: '/orders', method: 'get', headers: {} },
+  });
+
+  expect(apiInstance.post).toHaveBeenCalledWith(
+    '/auth/refresh',
+    { refreshToken: 'refresh-seed' },
+    expect.objectContaining({
+      skipAuthRedirect: true,
+      silentAuth: true,
+      skipAuthRefresh: true,
+      skipAuthHeader: true,
+    })
+  );
+  expect(localStorage.getItem('teranga_token')).toBe('new-access');
+  expect(localStorage.getItem('token')).toBe('new-access');
+  expect(localStorage.getItem('teranga_refresh_token')).toBe('new-refresh');
+  expect(localStorage.getItem('teranga_csrf_token')).toBe('new-csrf');
+});
+
 test('403 csrf invalid resyncs token via /auth/me then retries once', async () => {
   process.env.REACT_APP_AUTH_STORAGE = 'cookie';
   process.env.REACT_APP_COOKIE_BEARER_FALLBACK = 'false';

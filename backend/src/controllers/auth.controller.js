@@ -41,6 +41,7 @@ const RECOVERY_CODE_EXPIRES =
 const COOKIE_ACCESS = 'teranga_access';
 const COOKIE_REFRESH = 'teranga_refresh';
 const COOKIE_CSRF = 'teranga_csrf';
+const SESSION_FALLBACK_HEADER = 'x-teranga-session-fallback';
 const MANUAL_RESET_MESSAGE =
   "Mot de passe oublié ? Contactez l'admin ou le master de votre pays/région pour réinitialiser. Ensuite, vous pourrez le modifier dans votre compte.";
 
@@ -118,6 +119,17 @@ function buildCookieOptions({ maxAge, httpOnly = true } = {}) {
     sameSite,
     maxAge,
   };
+}
+
+function wantsSessionFallbackToken(req) {
+  const raw = String(
+    req?.get?.(SESSION_FALLBACK_HEADER) ||
+      req?.headers?.[SESSION_FALLBACK_HEADER] ||
+      ''
+  )
+    .trim()
+    .toLowerCase();
+  return ['1', 'true', 'yes', 'on', 'bearer'].includes(raw);
 }
 
 function hashToken(token) {
@@ -630,7 +642,7 @@ exports.login = async (req, res) => {
       csrfToken,
     });
 
-    return res.json({
+    const responseBody = {
       message: 'Connexion réussie',
       token,
       csrfToken,
@@ -644,7 +656,13 @@ exports.login = async (req, res) => {
         regionId: user.regionId ?? null,
       language: user.language || 'fr',
       },
-    });
+    };
+
+    if (wantsSessionFallbackToken(req)) {
+      responseBody.refreshToken = rawToken;
+    }
+
+    return res.json(responseBody);
   } catch (e) {
     logger.error('Erreur login:', e);
     return res.status(500).json({ error: 'Erreur lors de la connexion' });
@@ -684,10 +702,12 @@ exports.me = async (req, res) => {
       return res.status(404).json({ error: 'Utilisateur introuvable' });
     }
 
-    return res.json({
+    const responseBody = {
       user,
       csrfToken: req.cookies?.[COOKIE_CSRF] || null,
-    });
+    };
+
+    return res.json(responseBody);
   } catch (e) {
     logger.error('Erreur /auth/me:', e);
     return res.status(500).json({ error: 'Erreur' });
@@ -716,7 +736,7 @@ exports.updateMe = async (req, res) => {
 
     await user.update({ language: nextLanguage });
 
-    return res.json({
+    const responseBody = {
       user: {
         id: user.id,
         email: user.email,
@@ -727,7 +747,9 @@ exports.updateMe = async (req, res) => {
         regionId: user.regionId ?? null,
       language: user.language || 'fr',
       },
-    });
+    };
+
+    return res.json(responseBody);
   } catch (e) {
     logger.error('Erreur /auth/me PATCH:', e);
     return res.status(500).json({ error: 'Erreur lors de la mise à jour du profil' });
@@ -800,11 +822,17 @@ exports.refresh = async (req, res) => {
       csrfToken,
     });
 
-    return res.json({
+    const responseBody = {
       message: 'Token rafraîchi',
       token: newAccessToken,
       csrfToken,
-    });
+    };
+
+    if (req.body?.refreshToken || wantsSessionFallbackToken(req)) {
+      responseBody.refreshToken = rawToken;
+    }
+
+    return res.json(responseBody);
   } catch (e) {
     logger.error('Erreur refresh:', e);
     return res.status(500).json({ error: 'Erreur lors du refresh' });
@@ -816,8 +844,15 @@ exports.refresh = async (req, res) => {
 ====================================================== */
 exports.logout = async (req, res) => {
   try {
-    const rawRefresh = req.cookies?.[COOKIE_REFRESH] || null;
-    if (rawRefresh) {
+    const refreshCandidates = Array.from(
+      new Set(
+        [req.cookies?.[COOKIE_REFRESH], req.body?.refreshToken]
+          .map((value) => String(value || '').trim())
+          .filter(Boolean)
+      )
+    );
+
+    for (const rawRefresh of refreshCandidates) {
       const tokenHash = hashToken(rawRefresh);
       const stored = await RefreshToken.findOne({ where: { tokenHash } });
       if (stored && !stored.revokedAt) {
@@ -939,7 +974,3 @@ exports.changePassword = async (req, res) => {
       .json({ error: 'Erreur lors du changement de mot de passe' });
   }
 };
-
-
-
-

@@ -18,7 +18,9 @@ const LEGACY_TOKEN_KEYS = ['token']; // compat héritée
 const USER_KEY = 'teranga_user';
 const USER_SYNCED_AT_KEY = 'teranga_user_synced_at';
 const CSRF_TOKEN_KEY = 'teranga_csrf_token';
+const REFRESH_TOKEN_KEY = 'teranga_refresh_token';
 const CSRF_COOKIE = 'teranga_csrf';
+const COOKIE_BEARER_FALLBACK_ACTIVE_KEY = 'teranga_cookie_bearer_fallback_active';
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || 'localstorage')
   .toLowerCase()
   .trim();
@@ -49,9 +51,24 @@ function isCookieAuthMode() {
   return AUTH_STORAGE_MODE === 'cookie';
 }
 
+function isRuntimeCookieBearerFallbackActive() {
+  return parseBooleanLike(safeGet(COOKIE_BEARER_FALLBACK_ACTIVE_KEY), false);
+}
+
+function setRuntimeCookieBearerFallbackActive(active) {
+  if (active) {
+    safeSet(COOKIE_BEARER_FALLBACK_ACTIVE_KEY, '1');
+    return;
+  }
+  safeRemove(COOKIE_BEARER_FALLBACK_ACTIVE_KEY);
+}
+
 function isCookieBearerFallbackEnabled() {
   if (!isCookieAuthMode()) return true;
-  return parseBooleanLike(COOKIE_BEARER_FALLBACK_RAW, true);
+  return (
+    parseBooleanLike(COOKIE_BEARER_FALLBACK_RAW, true) ||
+    isRuntimeCookieBearerFallbackActive()
+  );
 }
 
 function shouldUseLocalStorage() {
@@ -72,7 +89,7 @@ function normalizeTokenValue(value) {
 
 /** Retourne le token depuis le nouveau key OU les anciens (puis migre). */
 function readTokenAny() {
-  if (!shouldUseLocalStorage()) return null;
+  if (!shouldUseLocalStorage() && !isCookieBearerFallbackEnabled()) return null;
   return readTokenFromStorage();
 }
 
@@ -94,6 +111,10 @@ function readTokenFromStorage() {
   return null;
 }
 
+function readRefreshToken() {
+  return normalizeTokenValue(safeGet(REFRESH_TOKEN_KEY));
+}
+
 /** Ecrit le token dans la nouvelle cle + (optionnel) legacy pour compat. */
 function writeTokenAll(token, { keepLegacy = true } = {}) {
   if (isCookieAuthMode() && !isCookieBearerFallbackEnabled()) {
@@ -105,12 +126,29 @@ function writeTokenAll(token, { keepLegacy = true } = {}) {
   if (keepLegacy) {
     for (const k of LEGACY_TOKEN_KEYS) safeSet(k, token);
   }
+  if (isCookieAuthMode() && !parseBooleanLike(COOKIE_BEARER_FALLBACK_RAW, true)) {
+    setRuntimeCookieBearerFallbackActive(true);
+  }
+}
+
+function writeRefreshToken(token) {
+  const normalized = normalizeTokenValue(token);
+  if (!normalized) {
+    safeRemove(REFRESH_TOKEN_KEY);
+    return;
+  }
+  safeSet(REFRESH_TOKEN_KEY, normalized);
+  if (isCookieAuthMode() && !parseBooleanLike(COOKIE_BEARER_FALLBACK_RAW, true)) {
+    setRuntimeCookieBearerFallbackActive(true);
+  }
 }
 
 /** Supprime le token de toutes les clés. */
 function removeTokenAll() {
   safeRemove(TOKEN_KEY);
   for (const k of LEGACY_TOKEN_KEYS) safeRemove(k);
+  safeRemove(REFRESH_TOKEN_KEY);
+  setRuntimeCookieBearerFallbackActive(false);
 }
 
 function writeCsrfToken(token) {
@@ -156,9 +194,14 @@ function readFreshCachedUser(maxAgeMs = ME_CACHE_TTL_MS) {
 
 function hasSessionForMeCache() {
   if (isCookieAuthMode()) {
-    return Boolean(readCachedUser()) || hasCookieSessionHint();
+    return (
+      Boolean(readCachedUser()) ||
+      hasCookieSessionHint() ||
+      Boolean(readTokenAny()) ||
+      Boolean(readRefreshToken())
+    );
   }
-  return Boolean(readTokenAny()) || hasCookie(CSRF_COOKIE);
+  return Boolean(readTokenAny()) || Boolean(readRefreshToken()) || hasCookie(CSRF_COOKIE);
 }
 
 /** Acces localStorage safe (evite exceptions quota, disabled, SSR...) */
@@ -171,7 +214,10 @@ function safeGet(key) {
 }
 function safeSet(key, val) {
   try {
-    const normalized = key === TOKEN_KEY || LEGACY_TOKEN_KEYS.includes(key)
+    const normalized =
+      key === TOKEN_KEY ||
+      key === REFRESH_TOKEN_KEY ||
+      LEGACY_TOKEN_KEYS.includes(key)
       ? normalizeTokenValue(val)
       : val;
     if (normalized == null) {
@@ -249,6 +295,75 @@ function syncLanguageFromUser(user) {
   if (lang) setLanguage(lang);
 }
 
+function shouldRequestSessionFallbackCapability() {
+  return isCookieAuthMode() && !parseBooleanLike(COOKIE_BEARER_FALLBACK_RAW, true);
+}
+
+async function refreshWithStoredRefreshToken() {
+  const refreshToken = readRefreshToken();
+  if (!refreshToken) return null;
+
+  const { data } = await api.post(
+    '/auth/refresh',
+    { refreshToken },
+    {
+      skipAuthRedirect: true,
+      silentAuth: true,
+      skipAuthRefresh: true,
+      skipAuthHeader: true,
+    }
+  );
+
+  if (data?.token) {
+    setRuntimeCookieBearerFallbackActive(true);
+    writeTokenAll(data.token, { keepLegacy: true });
+  }
+  writeRefreshToken(data?.refreshToken);
+  writeCsrfToken(data?.csrfToken);
+  return data;
+}
+
+async function ensureCookieSessionOrActivateBearerFallback(data) {
+  if (!isCookieAuthMode() || parseBooleanLike(COOKIE_BEARER_FALLBACK_RAW, true)) {
+    return;
+  }
+
+  const token = normalizeTokenValue(data?.token);
+  if (!token) return;
+
+  try {
+    const response = await api.get('/auth/me', {
+      skipAuthRedirect: true,
+      silentAuth: true,
+      skipAuthHeader: true,
+      skipAuthRefresh: true,
+      skipCsrfResync: true,
+    });
+    const verifiedData = response?.data;
+    syncCsrfToken(verifiedData);
+    if (verifiedData?.user) {
+      writeCachedUser(verifiedData.user);
+      syncLanguageFromUser(verifiedData.user);
+      return;
+    }
+  } catch (error) {
+    console.warn('AuthService cookie session verification warning:', {
+      status: error?.response?.status,
+      data: error?.response?.data,
+      msg: error?.message,
+    });
+  }
+
+  console.warn(
+    'AuthService cookie session verification warning:',
+    'falling back to local bearer token'
+  );
+  setRuntimeCookieBearerFallbackActive(true);
+  writeTokenAll(token, { keepLegacy: true });
+  writeRefreshToken(data?.refreshToken);
+  notifyAuthChange();
+}
+
 /* ============================================================
    🔹 Inscription d’un nouvel utilisateur
 ============================================================ */
@@ -269,7 +384,14 @@ export async function register(payload) {
 ============================================================ */
 export async function login(payload) {
   try {
-    const { data } = await api.post('/auth/login', payload);
+    const loginConfig = shouldRequestSessionFallbackCapability()
+      ? {
+          headers: {
+            'X-Teranga-Session-Fallback': 'bearer',
+          },
+        }
+      : undefined;
+    const { data } = await api.post('/auth/login', payload, loginConfig);
 
     if (!data?.token) {
       throw new Error('Token manquant dans la réponse du serveur');
@@ -284,6 +406,7 @@ export async function login(payload) {
  // - fallback optionnel: Bearer local si active explicitement
       if (isCookieBearerFallbackEnabled() && data?.token) {
         writeTokenAll(data.token, { keepLegacy: true });
+        writeRefreshToken(data?.refreshToken);
       } else {
         removeTokenAll();
       }
@@ -295,6 +418,8 @@ export async function login(payload) {
       writeCachedUser(data.user);
       syncLanguageFromUser(data.user);
     }
+
+    await ensureCookieSessionOrActivateBearerFallback(data);
 
     return data; // { token, user }
   } catch (error) {
@@ -361,6 +486,23 @@ export async function me(options = {}) {
             // fallback vers purge standard
           }
         }
+        if (readRefreshToken()) {
+          try {
+            await refreshWithStoredRefreshToken();
+            const { data } = await api.get('/auth/me', {
+              skipAuthRedirect: true,
+              silentAuth: true,
+            });
+            syncCsrfToken(data);
+            if (data?.user) {
+              writeCachedUser(data.user);
+              syncLanguageFromUser(data.user);
+              return data;
+            }
+          } catch {
+            // fallback vers purge standard
+          }
+        }
         // Nettoyage complet si token/cookie invalide
         removeTokenAll();
         clearCsrfToken();
@@ -400,6 +542,24 @@ export async function me(options = {}) {
 
   // Pas de token => tentative via cookie (utile si auth en mode cookie)
   if (!token) {
+    if (readRefreshToken()) {
+      try {
+        await refreshWithStoredRefreshToken();
+        const { data } = await api.get('/auth/me', {
+          skipAuthRedirect: true,
+          silentAuth: true,
+        });
+        syncCsrfToken(data);
+        if (data?.user) {
+          writeCachedUser(data.user);
+          syncLanguageFromUser(data.user);
+          return data;
+        }
+      } catch {
+        // on retombe sur les autres heuristiques
+      }
+    }
+
     const hasCsrf = hasCookie(CSRF_COOKIE);
     if (!hasCsrf) {
       const cached = readCachedUser();
@@ -591,7 +751,13 @@ export async function regenerateRecoveryCodes(payload) {
 ============================================================ */
 export async function logout() {
   try {
-    await api.post('/auth/logout', {}, { skipAuthRedirect: true, silentAuth: true });
+    await api.post(
+      '/auth/logout',
+      {
+        refreshToken: readRefreshToken() || undefined,
+      },
+      { skipAuthRedirect: true, silentAuth: true }
+    );
   } catch (e) {
     // Even if server-side logout fails, clear local state to avoid stale UI/session.
   }
@@ -647,9 +813,14 @@ export function getAuthHeader() {
 
 export function hasSessionHint() {
   if (isCookieAuthMode()) {
-    return Boolean(readCachedUser()) || hasCookieSessionHint();
+    return (
+      Boolean(readCachedUser()) ||
+      hasCookieSessionHint() ||
+      Boolean(readTokenAny()) ||
+      Boolean(readRefreshToken())
+    );
   }
-  return Boolean(readTokenAny());
+  return Boolean(readTokenAny()) || Boolean(readRefreshToken());
 }
 
 export function usesCookieAuth() {
