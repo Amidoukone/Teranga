@@ -100,6 +100,7 @@ app.use(
       'Content-Type',
       'Authorization',
       'X-CSRF-Token',
+      'X-Teranga-Session-Fallback',
       'X-Metrics-Token',
       'X-Observability-Token',
       'X-Request-Id',
