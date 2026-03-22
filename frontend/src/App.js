@@ -17,6 +17,7 @@ import ConfirmProvider from './components/ConfirmProvider';
 import { GeoProvider } from './contexts/GeoContext';
 import { getAnalyticsConsent, loadAnalytics } from './utils/analytics';
 import { installGlobalErrorHandlers } from './utils/errorReporter';
+import { scheduleIdleRoutePreload } from './utils/routePreload';
 import { getToken, getLocalUser, hasSessionHint, me } from './services/auth';
 import { GEO_SELECTION_CHANGED_EVENT } from './services/geo';
 import { normalizeRole } from './utils/role'; // ensure roles are canonical (admin/agent/client)
@@ -89,7 +90,7 @@ function ScrollToTop() {
 
   useEffect(() => {
     try {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     } catch {
       window.scrollTo(0, 0);
     }
@@ -104,6 +105,62 @@ function RouteLoadingFallback() {
       Chargement...
     </div>
   );
+}
+
+function getLikelyNextPaths(pathname, hasSession, role) {
+  const currentPath = String(pathname || '').trim() || '/';
+
+  if (!hasSession) {
+    if (currentPath === '/login') {
+      return ['/dashboard', '/register'];
+    }
+    if (currentPath === '/register') {
+      return ['/login', '/dashboard'];
+    }
+    if (
+      currentPath === '/' ||
+      currentPath === '/shop' ||
+      currentPath === '/help-support' ||
+      currentPath === '/legal' ||
+      currentPath === '/privacy' ||
+      currentPath === '/terms'
+    ) {
+      return ['/login', '/register'];
+    }
+    return ['/login'];
+  }
+
+  if (role === 'admin') {
+    return [
+      '/dashboard',
+      '/services',
+      '/notifications',
+      '/settings',
+      '/admin/services',
+      '/admin/users',
+      '/admin/properties',
+    ];
+  }
+
+  if (role === 'agent') {
+    return [
+      '/agent/services',
+      '/services',
+      '/notifications',
+      '/activities',
+      '/settings',
+    ];
+  }
+
+  return [
+    '/dashboard',
+    '/services',
+    '/tasks',
+    '/projects',
+    '/orders',
+    '/notifications',
+    '/settings',
+  ];
 }
 
 // ============================================================================
@@ -220,10 +277,12 @@ function PublicOnly({ children }) {
 export default function App() {
   const trackingId = 'G-5JVYGYHZ7Y';
   const { t } = useTranslation();
+  const location = useLocation();
   const [geoRefreshKey, setGeoRefreshKey] = useState(0);
   const [analyticsConsent, setAnalyticsConsent] = useState(() =>
     getAnalyticsConsent()
   );
+  const { hasSession, role } = getSession();
 
   useEffect(() => {
     if (analyticsConsent === 'granted') {
@@ -245,6 +304,15 @@ export default function App() {
     window.addEventListener(GEO_SELECTION_CHANGED_EVENT, onGeoChanged);
     return () => window.removeEventListener(GEO_SELECTION_CHANGED_EVENT, onGeoChanged);
   }, []);
+
+  useEffect(() => {
+    const candidatePaths = getLikelyNextPaths(location.pathname, hasSession, role)
+      .filter((path) => path && path !== location.pathname);
+
+    if (candidatePaths.length === 0) return undefined;
+
+    return scheduleIdleRoutePreload(candidatePaths);
+  }, [hasSession, role, location.pathname]);
 
   return (
     <ErrorBoundary>

@@ -10,6 +10,7 @@ import {
   Mail,
   CheckCircle2,
 } from "lucide-react";
+import { preloadRoute } from "../utils/routePreload";
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -63,6 +64,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
+    preloadRoute("/dashboard");
 
     try {
       await login({ email, password });

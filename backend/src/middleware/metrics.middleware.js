@@ -25,6 +25,21 @@ const metricsStore = {
     total: 0,
     max: 0,
   },
+  appDurationsMs: {
+    count: 0,
+    total: 0,
+    max: 0,
+  },
+  dbDurationsMs: {
+    count: 0,
+    total: 0,
+    max: 0,
+  },
+  dbQueries: {
+    requests: 0,
+    total: 0,
+    max: 0,
+  },
   latencyBuckets: {
     'lte_100': 0,
     'lte_300': 0,
@@ -36,6 +51,7 @@ const metricsStore = {
   },
   recentErrors: [],
   slowRequests: [],
+  routePerf: {},
   frontendErrors: {
     total: 0,
     recent: [],
@@ -112,6 +128,61 @@ function recordDuration(durationMs) {
   }
 }
 
+function recordNamedDuration(bucket, durationMs) {
+  if (!bucket || !Number.isFinite(durationMs)) return;
+  bucket.count += 1;
+  bucket.total += durationMs;
+  if (durationMs > bucket.max) {
+    bucket.max = durationMs;
+  }
+}
+
+function recordDbQueryCount(count) {
+  const normalized = Number.isFinite(count) && count >= 0 ? count : 0;
+  metricsStore.dbQueries.requests += 1;
+  metricsStore.dbQueries.total += normalized;
+  if (normalized > metricsStore.dbQueries.max) {
+    metricsStore.dbQueries.max = normalized;
+  }
+}
+
+function recordRoutePerf(routeKey, perf) {
+  const key = String(routeKey || '/');
+  const durationMs = Number.isFinite(perf?.durationMs) ? perf.durationMs : 0;
+  const appDurationMs = Number.isFinite(perf?.appDurationMs) ? perf.appDurationMs : 0;
+  const dbDurationMs = Number.isFinite(perf?.dbDurationMs) ? perf.dbDurationMs : 0;
+  const dbQueryCount = Number.isFinite(perf?.dbQueryCount) ? perf.dbQueryCount : 0;
+
+  const current =
+    metricsStore.routePerf[key] ||
+    {
+      count: 0,
+      totalMs: 0,
+      maxMs: 0,
+      appTotalMs: 0,
+      appMaxMs: 0,
+      dbTotalMs: 0,
+      dbMaxMs: 0,
+      dbQueryCountTotal: 0,
+      dbQueryCountMax: 0,
+    };
+
+  current.count += 1;
+  current.totalMs += durationMs;
+  current.appTotalMs += appDurationMs;
+  current.dbTotalMs += dbDurationMs;
+  current.dbQueryCountTotal += dbQueryCount;
+
+  if (durationMs > current.maxMs) current.maxMs = durationMs;
+  if (appDurationMs > current.appMaxMs) current.appMaxMs = appDurationMs;
+  if (dbDurationMs > current.dbMaxMs) current.dbMaxMs = dbDurationMs;
+  if (dbQueryCount > current.dbQueryCountMax) {
+    current.dbQueryCountMax = dbQueryCount;
+  }
+
+  metricsStore.routePerf[key] = current;
+}
+
 function recordLatencyBucket(durationMs) {
   if (!Number.isFinite(durationMs)) return;
 
@@ -180,6 +251,10 @@ function metricsMiddleware(req, res, next) {
 
   res.on('finish', () => {
     const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
+    const dbDurationMs = Number(req.requestPerf?.dbDurationMs || 0);
+    const dbQueryCount = Number(req.requestPerf?.dbQueryCount || 0);
+    const maxDbQueryMs = Number(req.requestPerf?.maxDbQueryMs || 0);
+    const appDurationMs = Math.max(0, durationMs - dbDurationMs);
     metricsStore.totals.requests += 1;
 
     const statusCode = res.statusCode;
@@ -198,7 +273,22 @@ function metricsMiddleware(req, res, next) {
     const routeMetricKey = incrementRouteCounter(resolvedPath);
 
     recordDuration(Number(durationMs.toFixed(2)));
+    recordNamedDuration(
+      metricsStore.appDurationsMs,
+      Number(appDurationMs.toFixed(2))
+    );
+    recordNamedDuration(
+      metricsStore.dbDurationsMs,
+      Number(dbDurationMs.toFixed(2))
+    );
+    recordDbQueryCount(dbQueryCount);
     recordLatencyBucket(durationMs);
+    recordRoutePerf(routeMetricKey, {
+      durationMs: Number(durationMs.toFixed(2)),
+      appDurationMs: Number(appDurationMs.toFixed(2)),
+      dbDurationMs: Number(dbDurationMs.toFixed(2)),
+      dbQueryCount,
+    });
 
     if (statusCode >= 500) {
       const errorEntry = {
@@ -207,6 +297,10 @@ function metricsMiddleware(req, res, next) {
         path: routeMetricKey,
         statusCode,
         durationMs: Number(durationMs.toFixed(2)),
+        appDurationMs: Number(appDurationMs.toFixed(2)),
+        dbDurationMs: Number(dbDurationMs.toFixed(2)),
+        dbQueryCount,
+        maxDbQueryMs: Number(maxDbQueryMs.toFixed(2)),
         timestamp: new Date().toISOString(),
       };
       metricsStore.recentErrors.unshift(errorEntry);
@@ -224,6 +318,10 @@ function metricsMiddleware(req, res, next) {
         path: routeMetricKey,
         statusCode,
         durationMs: Number(durationMs.toFixed(2)),
+        appDurationMs: Number(appDurationMs.toFixed(2)),
+        dbDurationMs: Number(dbDurationMs.toFixed(2)),
+        dbQueryCount,
+        maxDbQueryMs: Number(maxDbQueryMs.toFixed(2)),
         thresholdMs: slowThreshold,
         timestamp: new Date().toISOString(),
       };
@@ -283,6 +381,62 @@ function frontendErrorHandler(req, res) {
   return res.status(202).json({ accepted: true });
 }
 
+function toAveragedSummary(bucket) {
+  const count = Number(bucket?.count || 0);
+  const total = Number(bucket?.total || 0);
+  const max = Number(bucket?.max || 0);
+
+  return {
+    ...(bucket || {}),
+    avg: count > 0 ? Number((total / count).toFixed(2)) : 0,
+    max: Number(max.toFixed(2)),
+  };
+}
+
+function toDbQueriesSummary(bucket) {
+  const requests = Number(bucket?.requests || 0);
+  const total = Number(bucket?.total || 0);
+  const max = Number(bucket?.max || 0);
+
+  return {
+    ...(bucket || {}),
+    avgPerRequest: requests > 0 ? Number((total / requests).toFixed(2)) : 0,
+    maxPerRequest: Number(max.toFixed(2)),
+  };
+}
+
+function toTopSlowRoutes(limit = 10) {
+  return Object.entries(metricsStore.routePerf || {})
+    .map(([path, entry]) => {
+      const count = Number(entry?.count || 0);
+      const totalMs = Number(entry?.totalMs || 0);
+      const appTotalMs = Number(entry?.appTotalMs || 0);
+      const dbTotalMs = Number(entry?.dbTotalMs || 0);
+      const dbQueryCountTotal = Number(entry?.dbQueryCountTotal || 0);
+
+      return {
+        path,
+        count,
+        avgDurationMs: count > 0 ? Number((totalMs / count).toFixed(2)) : 0,
+        maxDurationMs: Number((entry?.maxMs || 0).toFixed(2)),
+        avgAppDurationMs: count > 0 ? Number((appTotalMs / count).toFixed(2)) : 0,
+        avgDbDurationMs: count > 0 ? Number((dbTotalMs / count).toFixed(2)) : 0,
+        maxDbDurationMs: Number((entry?.dbMaxMs || 0).toFixed(2)),
+        avgDbQueryCount: count > 0
+          ? Number((dbQueryCountTotal / count).toFixed(2))
+          : 0,
+        maxDbQueryCount: Number(entry?.dbQueryCountMax || 0),
+      };
+    })
+    .sort((a, b) => {
+      if (b.avgDurationMs !== a.avgDurationMs) {
+        return b.avgDurationMs - a.avgDurationMs;
+      }
+      return b.count - a.count;
+    })
+    .slice(0, limit);
+}
+
 function metricsHandler(req, res) {
   const token = process.env.METRICS_TOKEN;
   const isProd = (process.env.NODE_ENV || 'development') === 'production';
@@ -312,6 +466,10 @@ function metricsHandler(req, res) {
       ...metricsStore.durationsMs,
       avg: Number(avgDuration.toFixed(2)),
     },
+    appDurationsMs: toAveragedSummary(metricsStore.appDurationsMs),
+    dbDurationsMs: toAveragedSummary(metricsStore.dbDurationsMs),
+    dbQueries: toDbQueriesSummary(metricsStore.dbQueries),
+    topSlowRoutes: toTopSlowRoutes(),
   });
 }
 

@@ -55,6 +55,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import GeoSelector from "./GeoSelector";
 import LanguageSwitcher from "./LanguageSwitcher";
+import { preloadRoute } from "../utils/routePreload";
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || "localstorage")
@@ -650,6 +651,30 @@ function NavBar() {
     const current = links.find((l) => isActive(l.path));
     return current?.label || "";
   }, [links, isActive]);
+  const isLoginRoute = isActive("/login");
+  const isRegisterRoute = isActive("/register");
+  const warmRoute = useCallback((path) => {
+    if (!path) return;
+    preloadRoute(path);
+  }, []);
+  const withRouteWarmup = useCallback(
+    (path, handlers = {}) => ({
+      ...handlers,
+      onMouseEnter: (event) => {
+        handlers.onMouseEnter?.(event);
+        warmRoute(path);
+      },
+      onFocus: (event) => {
+        handlers.onFocus?.(event);
+        warmRoute(path);
+      },
+      onTouchStart: (event) => {
+        handlers.onTouchStart?.(event);
+        warmRoute(path);
+      },
+    }),
+    [warmRoute]
+  );
 
   const sections = useMemo(() => buildSections(role, links, t), [role, links, t]);
   const mobileSections = useMemo(
@@ -732,7 +757,7 @@ function NavBar() {
   const NotificationBell = (
     <Link
       to="/notifications"
-      onClick={handleOpenNotifications}
+      {...withRouteWarmup("/notifications", { onClick: handleOpenNotifications })}
       className="relative inline-flex items-center justify-center w-10 h-10 rounded-2xl border border-border/60 bg-surface-main/40 hover:bg-surface-main/70 transition focus:outline-none focus:ring-4 focus:ring-primary/10"
       aria-label={t("nav.notifications")}
       title={t("nav.notifications")}
@@ -757,26 +782,45 @@ function NavBar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-3">
           <Link
             to="/"
+            {...withRouteWarmup("/")}
             className="min-w-0 shrink flex items-center gap-2 text-primary font-semibold tracking-wide text-[1.05rem]"
           >
             {Logo}
             <span className="truncate max-[440px]:hidden">Teranga</span>
           </Link>
 
-          <div className="shrink-0 flex items-center justify-end gap-1.5 sm:gap-3 text-xs sm:text-sm">
+          <div className="shrink-0 flex items-center justify-end gap-2 sm:gap-3 text-xs sm:text-sm">
             <LanguageSwitcher compact className="shrink-0" />
-            <Link
-              to="/login"
-              className="whitespace-nowrap transition-colors duration-200 text-text-secondary hover:text-text-primary"
-            >
-              {t("nav.login")}
-            </Link>
-            <Link
-              to="/register"
-              className="whitespace-nowrap px-2.5 py-1.5 sm:px-4 sm:py-2 bg-primary text-white rounded-lg sm:rounded-xl font-semibold transition-colors duration-200 hover:bg-primary/90"
-            >
-              {t("nav.register")}
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/login"
+                {...withRouteWarmup("/login")}
+                className={[
+                  "inline-flex items-center justify-center whitespace-nowrap rounded-lg sm:rounded-xl border px-2.5 py-1.5 text-[0.78rem] font-semibold transition-all duration-200 sm:px-4 sm:py-2 sm:text-sm",
+                  isLoginRoute
+                    ? "border-primary bg-primary text-white shadow-sm shadow-primary/20"
+                    : "border-border/80 bg-surface-main/70 text-text-primary hover:border-primary/30 hover:bg-surface-main/95",
+                ].join(" ")}
+                aria-current={isLoginRoute ? "page" : undefined}
+              >
+                {t("nav.login")}
+              </Link>
+              <Link
+                to="/register"
+                {...withRouteWarmup("/register")}
+                className={[
+                  "inline-flex items-center justify-center whitespace-nowrap rounded-lg sm:rounded-xl border px-2.5 py-1.5 text-[0.78rem] font-semibold transition-all duration-200 sm:px-4 sm:py-2 sm:text-sm",
+                  isRegisterRoute
+                    ? "border-primary bg-primary text-white shadow-sm shadow-primary/20"
+                    : isLoginRoute
+                    ? "border-border/80 bg-surface-main/55 text-text-secondary hover:bg-surface-main/80 hover:text-text-primary"
+                    : "border-primary/20 bg-primary text-white shadow-sm shadow-primary/15 hover:bg-primary/90",
+                ].join(" ")}
+                aria-current={isRegisterRoute ? "page" : undefined}
+              >
+                {t("nav.register")}
+              </Link>
+            </div>
           </div>
         </div>
       </nav>
@@ -795,6 +839,7 @@ function NavBar() {
           <div className="flex items-center gap-3 min-w-0">
             <Link
               to="/"
+              {...withRouteWarmup("/")}
               className="flex items-center gap-2 text-primary font-semibold tracking-wide text-[1.05rem] shrink-0"
             >
               {Logo} Teranga
@@ -828,6 +873,7 @@ function NavBar() {
                 <Link
                   key={l.path}
                   to={l.path}
+                  {...withRouteWarmup(l.path)}
                   className={[clsTabBase, active ? clsTabActive : clsTabInactive].join(" ")}
                   aria-current={active ? "page" : undefined}
                 >
@@ -907,7 +953,9 @@ function NavBar() {
                                 <Link
                                   key={l.path}
                                   to={l.path}
-                                  onClick={() => setOpenDesktopMore(false)}
+                                  {...withRouteWarmup(l.path, {
+                                    onClick: () => setOpenDesktopMore(false),
+                                  })}
                                   className={[
                                     clsMenuItemBase,
                                     active ? clsMenuItemActive : clsMenuItemInactive,
@@ -1040,7 +1088,9 @@ function NavBar() {
                           <div className={clsSubSectionLabel}>{t("nav.sections.account")}</div>
                           <Link
                             to="/settings"
-                            onClick={() => setOpenUserMenu(false)}
+                            {...withRouteWarmup("/settings", {
+                              onClick: () => setOpenUserMenu(false),
+                            })}
                             className={clsAccountCard}
                             role="menuitem"
                           >
@@ -1124,6 +1174,7 @@ function NavBar() {
                   <Link
                     key={item.key}
                     to={item.path}
+                    {...withRouteWarmup(item.path)}
                     className={[
                       "flex-1 flex flex-col items-center py-1.5 rounded-xl text-[0.75rem] transition",
                       "focus:outline-none focus:ring-4 focus:ring-primary/10",
@@ -1244,7 +1295,9 @@ function NavBar() {
                           <Link
                             key={l.path}
                             to={l.path}
-                            onClick={() => setOpenMore(false)}
+                            {...withRouteWarmup(l.path, {
+                              onClick: () => setOpenMore(false),
+                            })}
                             className={[
                               clsMenuItemBase,
                               active ? clsMenuItemActive : clsMenuItemInactive,
@@ -1284,7 +1337,9 @@ function NavBar() {
                     <div className={clsSubSectionLabel}>{t("nav.sections.account")}</div>
                     <Link
                       to="/settings"
-                      onClick={() => setOpenMore(false)}
+                      {...withRouteWarmup("/settings", {
+                        onClick: () => setOpenMore(false),
+                      })}
                       className={clsAccountCard}
                     >
                       <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors duration-150 group-hover:bg-primary/15">

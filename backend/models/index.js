@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
 require('dotenv').config();
+const { recordSqlQuery } = require('../src/utils/requestPerf');
 
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
@@ -19,6 +20,24 @@ if (!config) {
 }
 
 const db = {};
+
+function sequelizeLogging(sql, timingMs) {
+  const roundedMs = Number.isFinite(Number(timingMs))
+    ? Number(Number(timingMs).toFixed(2))
+    : null;
+
+  if (roundedMs !== null) {
+    recordSqlQuery(sql, roundedMs);
+  }
+
+  if (!isProd) {
+    if (roundedMs !== null) {
+      console.log(`[sql ${roundedMs}ms] ${sql}`);
+      return;
+    }
+    console.log(sql);
+  }
+}
 
 function normalizeDatabaseUrl(urlValue, sequelizeConfig) {
   const raw = String(urlValue || '').trim();
@@ -74,12 +93,14 @@ const sequelize = config.use_env_variable
           ...(config.dialectOptions || {}),
           ...(normalized.extraDialectOptions || {}),
         },
-        logging: isProd ? false : console.log,
+        benchmark: true,
+        logging: sequelizeLogging,
       });
     })()
   : new Sequelize(config.database, config.username, config.password, {
       ...config,
-      logging: isProd ? false : console.log,
+      benchmark: true,
+      logging: sequelizeLogging,
     });
 
 /**

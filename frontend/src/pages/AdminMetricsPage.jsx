@@ -17,6 +17,14 @@ function formatMs(value) {
   return `${Math.round(value)} ms`;
 }
 
+function formatQueries(value) {
+  if (!Number.isFinite(value)) return '0';
+  if (Math.abs(value - Math.round(value)) < 0.01) {
+    return String(Math.round(value));
+  }
+  return value.toFixed(2);
+}
+
 function toEntries(data) {
   return Object.entries(data || {}).map(([key, val]) => ({
     key,
@@ -56,12 +64,22 @@ export default function AdminMetricsPage() {
 
   const totals = metrics?.totals || {};
   const durations = metrics?.durationsMs || {};
+  const appDurations = metrics?.appDurationsMs || {};
+  const dbDurations = metrics?.dbDurationsMs || {};
+  const dbQueries = metrics?.dbQueries || {};
   const sloLatency = metrics?.slo?.latency || {};
   const frontendErrors = metrics?.frontendErrors || { total: 0, recent: [] };
+  const topSlowRoutes = metrics?.topSlowRoutes || [];
 
   const statusEntries = useMemo(() => toEntries(metrics?.byStatus), [metrics]);
   const methodEntries = useMemo(() => toEntries(metrics?.byMethod), [metrics]);
-  const routeEntries = useMemo(() => toEntries(metrics?.byRoute), [metrics]);
+  const routeEntries = useMemo(
+    () =>
+      toEntries(metrics?.byRoute).sort(
+        (a, b) => Number(b.value || 0) - Number(a.value || 0)
+      ),
+    [metrics]
+  );
   const recentErrors = metrics?.recentErrors || [];
   const slowRequests = metrics?.slowRequests || [];
 
@@ -157,7 +175,49 @@ export default function AdminMetricsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-surface-card p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase text-text-muted">
+                {t('adminMetricsPage.cards.avgDbLatency')}
+              </p>
+              <p className="mt-2 text-2xl font-extrabold text-text-primary">
+                {formatMs(dbDurations.avg || 0)}
+              </p>
+              <p className="mt-1 text-xs text-text-muted">
+                {t('adminMetricsPage.cards.maxLatency', {
+                  value: formatMs(dbDurations.max || 0),
+                })}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-surface-card p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase text-text-muted">
+                {t('adminMetricsPage.cards.avgAppLatency')}
+              </p>
+              <p className="mt-2 text-2xl font-extrabold text-text-primary">
+                {formatMs(appDurations.avg || 0)}
+              </p>
+              <p className="mt-1 text-xs text-text-muted">
+                {t('adminMetricsPage.cards.maxLatency', {
+                  value: formatMs(appDurations.max || 0),
+                })}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-surface-card p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase text-text-muted">
+                {t('adminMetricsPage.cards.avgSqlQueries')}
+              </p>
+              <p className="mt-2 text-2xl font-extrabold text-text-primary">
+                {formatQueries(dbQueries.avgPerRequest || 0)}
+              </p>
+              <p className="mt-1 text-xs text-text-muted">
+                {t('adminMetricsPage.items.max', {
+                  value: formatQueries(dbQueries.maxPerRequest || 0),
+                })}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
             <div className="rounded-2xl border border-border bg-surface-card p-5 shadow-sm">
               <h2 className="text-sm font-semibold text-text-primary">
                 {t('adminMetricsPage.sections.httpStatus')}
@@ -214,9 +274,44 @@ export default function AdminMetricsPage() {
                 ))}
               </ul>
             </div>
+
+            <div className="rounded-2xl border border-border bg-surface-card p-5 shadow-sm">
+              <h2 className="text-sm font-semibold text-text-primary">
+                {t('adminMetricsPage.sections.slowRoutes')}
+              </h2>
+              <div className="mt-3 space-y-3 text-sm text-text-secondary">
+                {topSlowRoutes.length === 0 && (
+                  <p>{t('adminMetricsPage.emptyValue')}</p>
+                )}
+                {topSlowRoutes.map((entry) => (
+                  <div
+                    key={entry.path}
+                    className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2"
+                  >
+                    <p className="truncate font-semibold text-amber-700 dark:text-amber-300">
+                      {entry.path}
+                    </p>
+                    <p className="mt-1 text-xs">
+                      {t('adminMetricsPage.items.avg', {
+                        value: formatMs(entry.avgDurationMs),
+                      })}{' '}
+                      {" - "}{' '}
+                      {t('adminMetricsPage.items.db', {
+                        value: formatMs(entry.avgDbDurationMs),
+                      })}
+                    </p>
+                    <p className="text-xs">
+                      {t('adminMetricsPage.items.avgQueries', {
+                        count: formatQueries(entry.avgDbQueryCount),
+                      })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
             <div className="rounded-2xl border border-border bg-surface-card p-5 shadow-sm">
               <h2 className="text-sm font-semibold text-text-primary">
                 {t('adminMetricsPage.sections.recentErrors')}
@@ -237,6 +332,15 @@ export default function AdminMetricsPage() {
                       {t('adminMetricsPage.items.status', {
                         code: entry.statusCode,
                       })} {" - "} {formatMs(entry.durationMs)}
+                    </p>
+                    <p className="text-xs">
+                      {t('adminMetricsPage.items.db', {
+                        value: formatMs(entry.dbDurationMs || 0),
+                      })}{' '}
+                      {" - "}{' '}
+                      {t('adminMetricsPage.items.queries', {
+                        count: formatQueries(entry.dbQueryCount || 0),
+                      })}
                     </p>
                     <p className="text-xs text-rose-600 dark:text-rose-300/90">
                       {entry.timestamp}
@@ -265,6 +369,20 @@ export default function AdminMetricsPage() {
                     <p>
                       {formatMs(entry.durationMs)} {" - "} {t('adminMetricsPage.items.threshold', {
                         value: formatMs(entry.thresholdMs),
+                      })}
+                    </p>
+                    <p className="text-xs">
+                      {t('adminMetricsPage.items.db', {
+                        value: formatMs(entry.dbDurationMs || 0),
+                      })}{' '}
+                      {" - "}{' '}
+                      {t('adminMetricsPage.items.app', {
+                        value: formatMs(entry.appDurationMs || 0),
+                      })}
+                    </p>
+                    <p className="text-xs">
+                      {t('adminMetricsPage.items.queries', {
+                        count: formatQueries(entry.dbQueryCount || 0),
                       })}
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-300/90">
@@ -307,5 +425,3 @@ export default function AdminMetricsPage() {
     </div>
   );
 }
-
-
