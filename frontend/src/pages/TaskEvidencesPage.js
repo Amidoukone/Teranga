@@ -25,7 +25,7 @@ const FILE_BASE =
   (typeof window !== 'undefined' &&
   window.__TERANGA_API_BASE_URL
     ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
-    : 'http://localhost:5000');
+    : '');
 
 function toAbsUrl(path = '') {
   if (!path) return '';
