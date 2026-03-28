@@ -2072,6 +2072,12 @@ const en = {
     },
   },
   homePage: {
+    quickNav: {
+      useCases: "Use cases",
+      services: "Services",
+      why: "Why Teranga",
+      contact: "Contact",
+    },
     hero: {
       badge: "A trusted platform for diaspora and local residents",
       titleLine1: "Trust at a distance,",
@@ -2096,8 +2102,23 @@ const en = {
       },
       tagline:
         "Because distance should never keep you from what matters.",
+      visual: {
+        label: "Field support",
+        title: "Family assistance coordinated without losing visibility",
+        description:
+          "Groceries, urgent needs, and on-site delivery handled by Teranga with concrete updates at every step.",
+        proofBadge: "Photo proof + receipts",
+        highlights: {
+          errands: "Groceries and provisions handled",
+          emergency: "Urgent needs handled quickly",
+          proof: "Receipts and photos shared clearly",
+        },
+        imageAlt:
+          "A Teranga agent delivers provisions to a family in Mali with visible delivery proof.",
+      },
     },
     services: {
+      kicker: "Field + platform",
       title: "Our services, your peace of mind",
       subtitle:
         "Solutions for anyone short on time: we handle your field operations with tracking, evidence, and accountability.",
@@ -2116,8 +2137,22 @@ const en = {
           desc: "Photos, evidence, documents, transactions: instant access to all your information, wherever you are.",
         },
       },
+      visual: {
+        kicker: "Consolidated field view",
+        title: "Assets, tasks, proof, and transactions grouped into one flow",
+        description:
+          "Teranga centralizes asset visits, requested services, proof, documents, and transactions so every decision is backed by visible facts.",
+        points: {
+          p1: "Asset monitoring with visits, inspections, and photo proof.",
+          p2: "Task, service, and validation history in one place.",
+          p3: "A clearer way to decide even from a distance.",
+        },
+        imageAlt:
+          "A Teranga agent reviews several assets and services on a tablet in Mali.",
+      },
     },
     useCases: {
+      kicker: "Practical flows",
       title: "Useful for everyone",
       subtitle:
         "Whether you are in the diaspora or living locally, you can delegate field operations to Teranga when your schedule does not allow you to do everything yourself.",
@@ -2135,8 +2170,26 @@ const en = {
           desc: "Track project progress, documents, and key decisions without being physically present.",
         },
       },
+      gallery: {
+        service: {
+          eyebrow: "Administrative requests",
+          proof: "Tracked documents delivered with visibility",
+          alt: "A Teranga agent supports an administrative process and hands over documents in Mali.",
+        },
+        task: {
+          eyebrow: "Visits and checks",
+          proof: "Detailed photo inspection before a decision",
+          alt: "A Teranga agent inspects a property in Mali with a visual report.",
+        },
+        project: {
+          eyebrow: "Worksites and coordination",
+          proof: "Progress documented step by step",
+          alt: "A Teranga agent follows a construction project in Mali in front of a house under development.",
+        },
+      },
     },
     impact: {
+      kicker: "Long-term vision",
       title: "Our mission in Africa",
       subtitle:
         "Transform how houses, apartments, land, automobiles, and commercial spaces are managed with a service model that is more efficient, innovative, and verifiable.",
@@ -2148,6 +2201,7 @@ const en = {
       cta: "Open Help & Support",
     },
     why: {
+      kicker: "Trust framework",
       title: "Why choose Teranga?",
       subtitle:
         "Because it is not just an app, but a trusted framework to manage houses, apartments, land, automobiles, and commercial spaces while executing services in Africa in a modern way.",
@@ -2167,6 +2221,7 @@ const en = {
       },
     },
     about: {
+      kicker: "The Teranga spirit",
       title: "Teranga: more than a service",
       subtitle:
         "A platform inspired by trust and hospitality that connects real needs with structured field execution.",
@@ -2175,11 +2230,22 @@ const en = {
         p2: "Your houses, apartments, land, automobiles, and commercial spaces deserve total visibility: photos, evidence, reports, transactions, progress... everything is accessible in real time, from anywhere.",
         p3: "Thanks to certified agents and a clear interface, anyone with a service, task, or project can delegate efficiently without losing control.",
       },
+      trustLabel: "Trust framework",
+      trustTitle: "An experience designed to help you decide more calmly from afar",
+      trustPoints: {
+        p1: "Visual proof to understand the situation without guesswork.",
+        p2: "Documents, reports, and validations grouped in one place.",
+        p3: "An identifiable field team that executes clearly and reports back clearly.",
+      },
       cta: "Join Teranga",
     },
     contact: {
+      kicker: "Let's discuss your need",
       title: "Contact us",
       subtitle: "Our team replies with care within 24 hours.",
+      sideTitle: "Simple, human, and structured support",
+      sideText:
+        "Whether you are preparing a one-off request, an asset follow-up, or a broader project, we help you frame the next step clearly.",
       form: {
         name: {
           label: "Full name",
@@ -2205,6 +2271,10 @@ const en = {
         "We support you with listening, respect, and professionalism so every exchange is simple and reassuring.",
     },
     footer: {
+      note:
+        "Teranga connects diaspora members and local residents to reliable, clear, and well-documented field execution.",
+      sectionTitle: "Navigation",
+      resourcesTitle: "Resources",
       copyright:
         "\u00A9 {{year}} <0>Teranga</0> — All rights reserved.",
       links: {

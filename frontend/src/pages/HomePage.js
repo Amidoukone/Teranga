@@ -1,10 +1,3 @@
-// ============================================================================
-// HomePage.jsx Teranga Landing Page 2025
-// Option A - Apple Light Premium v2 (Ultra-clean, coherente avec NavBar A1-C)
-// - Style : Apple Light minimal, typographie equilibree, animations douces
-// - 100% compatible avec ta structure (routes /login, /register, ancres, etc.)
-// ============================================================================
-
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -19,14 +12,84 @@ import {
   MapPin,
   HeartHandshake,
   CheckCircle2,
+  Camera,
+  BadgeCheck,
+  FileText,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useTranslation, Trans } from "react-i18next";
-import { notify } from '../utils/notify';
+import { Trans, useTranslation } from "react-i18next";
+
+import heroFamilyImage from "../assets/images/hero-family-assistance-mali-teranga.png";
+import propertyManagementImage from "../assets/images/services-gestion-biens-teranga.png";
+import projectImage from "../assets/images/usecase-construction-projet-mali.png";
+import administrativeImage from "../assets/images/usecase-demarches-administratives-teranga.png";
+import inspectionImage from "../assets/images/usecase-inspection-immobiliere-teranga.png";
+import { notify } from "../utils/notify";
+
+function SectionHeader({ kicker, title, subtitle, align = "center" }) {
+  const isCentered = align === "center";
+
+  return (
+    <div className={isCentered ? "mx-auto max-w-5xl text-center" : "max-w-2xl text-left"}>
+      <div className={`inline-flex items-center gap-2 rounded-full border border-border/70 bg-surface-main/70 px-3 py-1 ${isCentered ? "mx-auto" : ""}`}>
+        <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+        <span className="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-blue-700 dark:text-blue-300">
+          {kicker}
+        </span>
+      </div>
+      <h2 className="mt-4 text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl md:text-4xl">
+        {title}
+      </h2>
+      <p className={`page-lead mt-4 text-base sm:text-lg md:text-xl ${isCentered ? "mx-auto max-w-3xl" : "max-w-2xl"}`}>
+        {subtitle}
+      </p>
+    </div>
+  );
+}
+
+function StoryCard({ title, desc, image, imageAlt, eyebrow, proof, icon: Icon }) {
+  return (
+    <motion.article
+      whileHover={{ y: -4, scale: 1.01 }}
+      transition={{ type: "spring", stiffness: 180, damping: 22 }}
+      className="group flex h-full flex-col overflow-hidden rounded-[28px] border border-border/70 bg-surface-card shadow-[0_14px_40px_-24px_rgba(15,23,42,0.18)]"
+    >
+      <div className="border-b border-border/70 bg-gradient-to-br from-slate-950/78 via-slate-900/64 to-slate-900/78 p-4 sm:p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <span className="inline-flex items-center rounded-full border border-white/16 bg-white/8 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-white/85 backdrop-blur">
+            {eyebrow}
+          </span>
+          <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/16 bg-white/10 text-white backdrop-blur">
+            <Icon size={20} />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center rounded-[24px] bg-black/15 p-2 sm:p-3">
+          <img
+            src={image}
+            alt={imageAlt}
+            loading="lazy"
+            decoding="async"
+            className="w-full rounded-[20px] object-contain transition duration-700 group-hover:scale-[1.02]"
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col p-6 sm:p-7">
+        <h3 className="text-lg font-semibold text-text-primary sm:text-xl">{title}</h3>
+        <p className="mt-2 flex-1 text-sm leading-relaxed text-text-secondary sm:text-base">{desc}</p>
+        <div className="mt-5 rounded-2xl border border-border/70 bg-surface-main/80 px-4 py-3 text-sm text-text-secondary">
+          {proof}
+        </div>
+      </div>
+    </motion.article>
+  );
+}
 
 export default function HomePage() {
   const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
+
   const supportedPropertyTypes = [
     "house",
     "apartment",
@@ -34,9 +97,11 @@ export default function HomePage() {
     "automobile",
     "commercial",
   ];
+
   const supportedPropertyTypeLabels = supportedPropertyTypes.map((type) =>
     t(`labels.property.types.${type}`, { defaultValue: type })
   );
+
   const heroStats = [
     {
       label: t("homePage.hero.stats.realTime.label"),
@@ -51,6 +116,44 @@ export default function HomePage() {
       text: t("homePage.hero.stats.diaspora.text"),
     },
   ];
+
+  const quickLinks = [
+    { href: "#usage", label: t("homePage.quickNav.useCases") },
+    { href: "#services", label: t("homePage.quickNav.services") },
+    { href: "#pourquoi", label: t("homePage.quickNav.why") },
+    { href: "#contact", label: t("homePage.quickNav.contact") },
+  ];
+
+  const useCaseCards = [
+    {
+      icon: Wrench,
+      title: t("homePage.useCases.cards.service.title"),
+      desc: t("homePage.useCases.cards.service.desc"),
+      image: administrativeImage,
+      imageAlt: t("homePage.useCases.gallery.service.alt"),
+      eyebrow: t("homePage.useCases.gallery.service.eyebrow"),
+      proof: t("homePage.useCases.gallery.service.proof"),
+    },
+    {
+      icon: ClipboardList,
+      title: t("homePage.useCases.cards.task.title"),
+      desc: t("homePage.useCases.cards.task.desc"),
+      image: inspectionImage,
+      imageAlt: t("homePage.useCases.gallery.task.alt"),
+      eyebrow: t("homePage.useCases.gallery.task.eyebrow"),
+      proof: t("homePage.useCases.gallery.task.proof"),
+    },
+    {
+      icon: FolderKanban,
+      title: t("homePage.useCases.cards.project.title"),
+      desc: t("homePage.useCases.cards.project.desc"),
+      image: projectImage,
+      imageAlt: t("homePage.useCases.gallery.project.alt"),
+      eyebrow: t("homePage.useCases.gallery.project.eyebrow"),
+      proof: t("homePage.useCases.gallery.project.proof"),
+    },
+  ];
+
   const serviceCards = [
     {
       icon: Home,
@@ -68,6 +171,13 @@ export default function HomePage() {
       desc: t("homePage.services.cards.transparency.desc"),
     },
   ];
+
+  const serviceVisualPoints = [
+    t("homePage.services.visual.points.p1"),
+    t("homePage.services.visual.points.p2"),
+    t("homePage.services.visual.points.p3"),
+  ];
+
   const pillars = [
     {
       title: t("homePage.why.pillars.clarity.title"),
@@ -82,28 +192,28 @@ export default function HomePage() {
       text: t("homePage.why.pillars.support.text"),
     },
   ];
-  const useCaseCards = [
-    {
-      icon: Wrench,
-      title: t("homePage.useCases.cards.service.title"),
-      desc: t("homePage.useCases.cards.service.desc"),
-    },
-    {
-      icon: ClipboardList,
-      title: t("homePage.useCases.cards.task.title"),
-      desc: t("homePage.useCases.cards.task.desc"),
-    },
-    {
-      icon: FolderKanban,
-      title: t("homePage.useCases.cards.project.title"),
-      desc: t("homePage.useCases.cards.project.desc"),
-    },
-  ];
+
   const impactPoints = [
     t("homePage.impact.points.p1"),
     t("homePage.impact.points.p2"),
     t("homePage.impact.points.p3"),
   ];
+
+  const aboutTrustPoints = [
+    {
+      icon: Camera,
+      text: t("homePage.about.trustPoints.p1"),
+    },
+    {
+      icon: FileText,
+      text: t("homePage.about.trustPoints.p2"),
+    },
+    {
+      icon: BadgeCheck,
+      text: t("homePage.about.trustPoints.p3"),
+    },
+  ];
+
   const contactFields = [
     {
       label: t("homePage.contact.form.name.label"),
@@ -116,6 +226,7 @@ export default function HomePage() {
       placeholder: t("homePage.contact.form.email.placeholder"),
     },
   ];
+
   const contactInfos = [
     { icon: Mail, text: t("homePage.contact.info.email") },
     { icon: Phone, text: t("homePage.contact.info.phone") },
@@ -123,196 +234,188 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-surface-main via-surface-card to-surface-main text-text-primary scroll-smooth">
+    <div className="min-h-screen scroll-smooth bg-gradient-to-br from-surface-main via-surface-card to-surface-main text-text-primary">
       <main className="flex-1">
-        {/* ========================================================================= */}
- {/* HERO - Apple Light (grands espaces / typographie premium) */}
-        {/* ========================================================================= */}
         <section
           id="accueil"
-          className="
-            flex flex-col items-center justify-center text-center
-            pt-20 sm:pt-24 pb-16 sm:pb-24 px-6 relative overflow-hidden
-          "
+          className="relative overflow-hidden px-6 pb-12 pt-8 sm:pb-16 sm:pt-12 lg:pb-24 lg:pt-18"
         >
-          {/* Halo premium */}
-          <div className="absolute -top-40 left-1/2 w-[860px] h-[860px] bg-blue-400/15 dark:bg-cyan-400/10 rounded-full blur-[140px] -translate-x-1/2 pointer-events-none" />
-
-          {/* Badge au-dessus du titre */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="relative mb-5"
-          >
-            <span
-              className="
-                inline-flex items-center gap-2 px-4 py-1.5 rounded-full
-                bg-surface-card/80 shadow-sm border border-border text-xs sm:text-sm
-                text-text-secondary
-              "
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-              {t("homePage.hero.badge")}
-            </span>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 35 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="max-w-4xl mx-auto relative"
-          >
-            <h1
-              className="
-                text-3xl sm:text-5xl md:text-6xl font-semibold text-text-primary
-                mb-6 leading-tight sm:leading-[1.15] tracking-tight
-              "
-            >
-              <span className="block text-blue-700 dark:text-blue-300">
-                {t("homePage.hero.titleLine1")}
-              </span>
-              <span className="block text-blue-700 dark:text-blue-300">
-                {t("homePage.hero.titleLine2")}
-              </span>
-            </h1>
-
-            <p
-              className="
-                text-text-secondary text-base sm:text-lg md:text-xl leading-relaxed
-                max-w-2xl mx-auto mb-10 sm:mb-12
-              "
-            >
-              <Trans
-                i18nKey="homePage.hero.description"
-                components={[<strong key="hero-strong" />]}
-              />
-            </p>
-
-            {/* CTA principal */}
-            <div className="flex flex-wrap justify-center gap-4 mt-2">
-              <Link
-                to="/login"
-                className="btn-primary rounded-full px-7 py-3 text-sm sm:text-base flex items-center gap-2"
-              >
-                {t("homePage.hero.ctaLogin")} <ArrowRight size={18} />
-              </Link>
-
-              <Link
-                to="/register"
-                className="btn-secondary rounded-full px-7 py-3 text-sm sm:text-base"
-              >
-                {t("homePage.hero.ctaRegister")}
-              </Link>
-            </div>
-          </motion.div>
-
- {/* Mini stats / bAAnAAfices rapides */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.35 }}
-            className="
-              mt-10 sm:mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6
-              max-w-3xl mx-auto text-text-secondary text-sm
-            "
-          >
-            {heroStats.map((item) => (
-              <div
-                key={item.label}
-                className="
-                  bg-surface-card/80 border border-border rounded-2xl px-4 py-3
-                  flex items-start gap-3 shadow-[0_4px_16px_rgba(15,23,42,0.06)]
-                "
-              >
-                <CheckCircle2 className="mt-0.5 text-blue-600" size={18} />
-                <div className="text-left">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                    {item.label}
-                  </p>
-                  <p className="text-xs text-text-muted mt-0.5">{item.text}</p>
-                </div>
-              </div>
-            ))}
-          </motion.div>
-
-          <p
-            className="
-              mt-8 sm:mt-10 text-text-muted text-xs sm:text-sm max-w-xl mx-auto
-              leading-relaxed tracking-wide
-            "
-          >
-            {t("homePage.hero.tagline")}
-          </p>
-        </section>
-
-        {/* ========================================================================= */}
- {/* POUR QUI / CAS D'USAGE */}
-        {/* ========================================================================= */}
-        <section
-          id="usage"
-          className="py-16 sm:py-20 px-6 bg-surface-main border-t border-border/70"
-        >
-          <div className="max-w-5xl mx-auto text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-text-primary mb-4">
-              {t("homePage.useCases.title")}
-            </h2>
-            <p className="text-text-secondary text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
-              {t("homePage.useCases.subtitle")}
-            </p>
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-full">
+            <div className="absolute left-1/2 top-[-11rem] h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-blue-500/12 blur-[120px]" />
+            <div className="absolute right-[-10rem] top-24 h-[22rem] w-[22rem] rounded-full bg-cyan-400/10 blur-[120px]" />
           </div>
 
-          <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
-            {useCaseCards.map(({ icon: Icon, title, desc }) => (
+          <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[34px] border border-border/70 bg-surface-card/75 p-4 shadow-[0_28px_70px_-34px_rgba(15,23,42,0.28)] backdrop-blur sm:rounded-[38px] sm:p-6 lg:p-8 xl:p-10">
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute left-[-6rem] top-[-5rem] h-56 w-56 rounded-full bg-amber-400/10 blur-[95px]" />
+              <div className="absolute bottom-[-7rem] right-[-4rem] h-64 w-64 rounded-full bg-blue-500/10 blur-[110px]" />
+            </div>
+
+            <div className="relative grid items-center gap-8 sm:gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12 xl:gap-16">
               <motion.div
-                key={title}
-                whileHover={{ y: -4, scale: 1.015 }}
-                transition={{ type: "spring", stiffness: 180, damping: 20 }}
-                className="
-                  bg-surface-card border border-border/70 rounded-3xl p-7 sm:p-8
-                  shadow-[0_10px_30px_rgba(15,23,42,0.06)]
-                  transition-all
-                "
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, ease: "easeOut" }}
+                className="mx-auto max-w-2xl text-center lg:mx-0 lg:max-w-xl lg:text-left xl:max-w-2xl"
               >
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/15 flex items-center justify-center mb-4">
-                  <Icon size={24} className="text-blue-600" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-medium text-text-primary mb-2">
-                  {title}
-                </h3>
-                <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
-                  {desc}
+                <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface-main/85 px-4 py-1.5 text-xs font-medium text-text-secondary shadow-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+                  {t("homePage.hero.badge")}
+                </span>
+
+                <h1 className="mt-5 text-[2.08rem] font-semibold leading-[1.02] tracking-[-0.045em] text-text-primary sm:mt-6 sm:text-[3rem] lg:text-[3.1rem] xl:text-[3.7rem]">
+                  <span className="block text-blue-700 dark:text-blue-300">
+                    {t("homePage.hero.titleLine1")}
+                  </span>
+                  <span className="mt-1.5 block text-text-primary dark:text-white">
+                    {t("homePage.hero.titleLine2")}
+                  </span>
+                </h1>
+
+                <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-text-secondary sm:mt-5 sm:text-[1.02rem] lg:mx-0 lg:max-w-2xl">
+                  <Trans
+                    i18nKey="homePage.hero.description"
+                    components={[<strong key="hero-strong" />]}
+                  />
                 </p>
+
+                <div className="mt-6 flex flex-wrap justify-center gap-3.5 sm:mt-7 sm:gap-4 lg:justify-start">
+                  <Link
+                    to="/login"
+                    className="btn-primary inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm sm:text-base"
+                  >
+                    {t("homePage.hero.ctaLogin")}
+                    <ArrowRight size={18} />
+                  </Link>
+
+                  <Link
+                    to="/register"
+                    className="btn-secondary rounded-full px-7 py-3 text-sm sm:text-base"
+                  >
+                    {t("homePage.hero.ctaRegister")}
+                  </Link>
+                </div>
+
+                <div className="mt-7 overflow-hidden rounded-[26px] border border-border/70 bg-surface-main/78 shadow-[0_16px_36px_-30px_rgba(15,23,42,0.28)]">
+                  <div className="grid divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                    {heroStats.map((item) => (
+                      <div key={item.label} className="px-4 py-4 text-left sm:px-5">
+                        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-text-muted">
+                          {item.label}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+                          {item.text}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-5 lg:max-w-lg">
+                  <p className="inline-flex items-center justify-center gap-2 rounded-full border border-border/70 bg-surface-main/60 px-4 py-2 text-sm leading-relaxed text-text-muted shadow-sm lg:justify-start">
+                    <span className="h-2 w-2 rounded-full bg-amber-400" />
+                    {t("homePage.hero.tagline")}
+                  </p>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 28 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.85, delay: 0.1, ease: "easeOut" }}
+                className="relative mx-auto w-full max-w-xl lg:max-w-none"
+              >
+                <div className="overflow-hidden rounded-[32px] border border-border/70 bg-surface-card/95 p-3 shadow-[0_34px_80px_-34px_rgba(15,23,42,0.34)] sm:p-4 lg:p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <span className="inline-flex items-center rounded-full border border-border/80 bg-surface-main/80 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-text-secondary">
+                      {t("homePage.hero.visual.label")}
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-blue-700 dark:text-blue-300">
+                      {t("homePage.hero.visual.proofBadge")}
+                    </span>
+                  </div>
+
+                  <div className="flex min-h-[18.5rem] items-center justify-center rounded-[28px] bg-gradient-to-br from-slate-950/82 via-slate-900/68 to-slate-900/82 p-2 sm:min-h-[24rem] sm:p-3 lg:min-h-[29rem] lg:p-4">
+                    <img
+                      src={heroFamilyImage}
+                      alt={t("homePage.hero.visual.imageAlt")}
+                      loading="eager"
+                      fetchPriority="high"
+                      decoding="async"
+                      className="max-h-[65vh] w-full rounded-[24px] object-contain"
+                    />
+                  </div>
+
+                  <div className="border-t border-border/60 px-2 pb-1 pt-4 sm:px-3 sm:pt-5 lg:px-2">
+                    <h2 className="text-base font-semibold leading-tight text-text-primary sm:text-[1.35rem]">
+                      {t("homePage.hero.visual.title")}
+                    </h2>
+                    <p className="mt-2 text-sm leading-relaxed text-text-secondary sm:text-base">
+                      {t("homePage.hero.visual.description")}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+
+          <nav className="relative mx-auto mt-5 flex max-w-5xl flex-wrap items-center justify-center gap-3">
+            {quickLinks.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="inline-flex items-center rounded-full border border-border/80 bg-surface-card/88 px-4 py-2 text-sm text-text-secondary shadow-sm transition hover:-translate-y-0.5 hover:bg-surface-main hover:text-text-primary"
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        </section>
+
+        <section
+          id="usage"
+          className="border-t border-border/70 bg-surface-main px-6 py-16 sm:py-20"
+        >
+          <SectionHeader
+            kicker={t("homePage.useCases.kicker")}
+            title={t("homePage.useCases.title")}
+            subtitle={t("homePage.useCases.subtitle")}
+          />
+
+          <div className="mx-auto mt-12 grid max-w-6xl gap-8 lg:grid-cols-3">
+            {useCaseCards.map((card, index) => (
+              <motion.div
+                key={card.title}
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 0.55, delay: index * 0.08 }}
+              >
+                <StoryCard {...card} />
               </motion.div>
             ))}
           </div>
         </section>
 
-        {/* ========================================================================= */}
- {/* SERVICES - Apple Cards + Animations + Shadow douce */}
-        {/* ========================================================================= */}
         <section
           id="services"
-          className="py-16 sm:py-20 px-6 bg-surface-card border-t border-border/70"
+          className="border-t border-border/70 bg-surface-card px-6 py-16 sm:py-20"
         >
-          <div className="max-w-5xl mx-auto text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-text-primary mb-4">
-              {t("homePage.services.title")}
-            </h2>
-            <p className="text-text-secondary text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
-              {t("homePage.services.subtitle")}
-            </p>
-          </div>
+          <SectionHeader
+            kicker={t("homePage.services.kicker")}
+            title={t("homePage.services.title")}
+            subtitle={t("homePage.services.subtitle")}
+          />
 
-          <div className="max-w-5xl mx-auto mb-8 sm:mb-10 text-center">
-            <p className="text-xs sm:text-sm uppercase tracking-wide font-semibold text-text-secondary">
+          <div className="mx-auto mt-8 max-w-5xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-muted sm:text-sm">
               {t("homePage.services.assetTypesTitle")}
             </p>
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
               {supportedPropertyTypeLabels.map((label, idx) => (
                 <span
                   key={`${label}-${idx}`}
-                  className="inline-flex items-center rounded-full border border-border/80 bg-surface-main/80 px-3 py-1 text-xs sm:text-sm text-text-secondary"
+                  className="inline-flex items-center rounded-full border border-border/80 bg-surface-main/80 px-3 py-1 text-xs text-text-secondary sm:text-sm"
                 >
                   {label}
                 </span>
@@ -320,197 +423,246 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
-            {serviceCards.map(({ icon: Icon, title, desc }) => (
-              <motion.div
-                key={title}
-                whileHover={{ y: -4, scale: 1.015 }}
-                transition={{ type: "spring", stiffness: 180, damping: 20 }}
-                className="
-                  bg-surface-main border border-border/70 rounded-3xl p-8 sm:p-10
-                  shadow-[0_10px_30px_rgba(15,23,42,0.08)]
-                  hover:shadow-[0_10px_35px_rgba(15,23,42,0.08)]
-                  transition-all flex flex-col items-center text-center
-                "
-              >
-                <div
-                  className="
-                    w-14 h-14 rounded-2xl bg-blue-500/15 flex items-center justify-center
-                    mb-5
-                  "
-                >
-                  <Icon size={32} className="text-blue-600" />
+          <div className="mx-auto mt-12 grid max-w-6xl gap-8 lg:grid-cols-[minmax(0,0.96fr)_minmax(0,1.04fr)]">
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{ duration: 0.6 }}
+              className="space-y-5"
+            >
+              <figure className="overflow-hidden rounded-[30px] border border-border/70 bg-surface-main shadow-[0_22px_55px_-28px_rgba(15,23,42,0.28)]">
+                <div className="flex items-center justify-center bg-gradient-to-br from-slate-950/80 via-slate-900/65 to-slate-900/78 p-3 sm:p-4">
+                  <img
+                    src={propertyManagementImage}
+                    alt={t("homePage.services.visual.imageAlt")}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full rounded-[24px] object-contain"
+                  />
                 </div>
-                <h3 className="text-lg sm:text-xl font-medium text-text-primary mb-3">
-                  {title}
+              </figure>
+
+              <div className="rounded-[30px] border border-border/70 bg-surface-main/85 p-6 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.32)] sm:p-7">
+                <p className="page-kicker">{t("homePage.services.visual.kicker")}</p>
+                <h3 className="mt-3 text-2xl font-semibold leading-tight text-text-primary">
+                  {t("homePage.services.visual.title")}
                 </h3>
-                <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
-                  {desc}
+                <p className="mt-3 text-sm leading-relaxed text-text-secondary sm:text-base">
+                  {t("homePage.services.visual.description")}
+                </p>
+
+                <div className="mt-5 grid gap-3">
+                  {serviceVisualPoints.map((point) => (
+                    <div key={point} className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 shrink-0 text-blue-600" size={18} />
+                      <p className="text-sm leading-relaxed text-text-secondary sm:text-base">
+                        {point}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            <div className="grid gap-5">
+              {serviceCards.map(({ icon: Icon, title, desc }, index) => (
+                <motion.div
+                  key={title}
+                  initial={{ opacity: 0, y: 28 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-80px" }}
+                  transition={{ duration: 0.55, delay: index * 0.08 }}
+                  whileHover={{ y: -3, scale: 1.01 }}
+                  className="flex h-full flex-col rounded-[28px] border border-border/70 bg-surface-main px-6 py-6 shadow-[0_14px_40px_-28px_rgba(15,23,42,0.25)] sm:px-7"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/12 text-blue-600">
+                    <Icon size={24} />
+                  </div>
+                  <h3 className="mt-5 text-lg font-semibold text-text-primary sm:text-xl">{title}</h3>
+                  <p className="mt-3 flex-1 text-sm leading-relaxed text-text-secondary sm:text-base">
+                    {desc}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="pourquoi"
+          className="bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-6 py-16 sm:py-20"
+        >
+          <SectionHeader
+            kicker={t("homePage.why.kicker")}
+            title={t("homePage.why.title")}
+            subtitle={t("homePage.why.subtitle")}
+          />
+
+          <div className="mx-auto mt-10 grid max-w-4xl gap-6 sm:grid-cols-3">
+            {pillars.map((item, index) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 0.5, delay: index * 0.08 }}
+                className="flex h-full flex-col rounded-3xl border border-border/70 bg-surface-card/90 px-5 py-5 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.24)]"
+              >
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-blue-500/20 bg-blue-500/10 text-xs font-semibold text-blue-700 dark:text-blue-300">
+                    {`0${index + 1}`}
+                  </span>
+                  <div className="h-px flex-1 bg-border/60" />
+                </div>
+                <h3 className="text-lg font-semibold text-text-primary">{item.title}</h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-text-secondary sm:text-base">
+                  {item.text}
                 </p>
               </motion.div>
             ))}
           </div>
         </section>
 
-        {/* ========================================================================= */}
- {/* POURQUOI TERANGA - 3 piliers (section courte et convaincante) */}
-        {/* ========================================================================= */}
-        <section
-          id="pourquoi"
-          className="py-16 sm:py-20 px-6 bg-gradient-to-br from-surface-main via-surface-card to-surface-main"
-        >
-          <div className="max-w-5xl mx-auto text-center mb-10 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-text-primary mb-4">
-              {t("homePage.why.title")}
-            </h2>
-            <p className="text-text-secondary text-base sm:text-lg max-w-3xl mx-auto leading-relaxed">
-              {t("homePage.why.subtitle")}
-            </p>
-          </div>
+        <section className="border-t border-border/70 bg-surface-main px-6 py-16 sm:py-20">
+          <div className="mx-auto grid max-w-5xl gap-6 rounded-[32px] border border-blue-500/20 bg-blue-500/10 p-7 sm:p-10 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+            <div>
+              <p className="page-kicker">{t("homePage.impact.kicker")}</p>
+              <h2 className="text-2xl font-semibold text-text-primary sm:text-3xl">
+                {t("homePage.impact.title")}
+              </h2>
+              <p className="mt-3 text-base leading-relaxed text-text-secondary sm:text-lg">
+                {t("homePage.impact.subtitle")}
+              </p>
 
-          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-sm">
-            {pillars.map((item) => (
-              <div
-                key={item.title}
-                className="
-                  bg-surface-card/80 border border-border rounded-2xl px-5 py-4
-                  shadow-[0_4px_16px_rgba(15,23,42,0.06)]
-                "
-              >
-                <h3 className="text-text-primary font-semibold mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-text-secondary leading-relaxed">{item.text}</p>
+              <div className="mt-6 grid gap-3">
+                {impactPoints.map((point) => (
+                  <div key={point} className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 shrink-0 text-blue-600" size={18} />
+                    <p className="text-sm leading-relaxed text-text-secondary sm:text-base">{point}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
 
-        {/* ========================================================================= */}
- {/* IMPACT */}
-        {/* ========================================================================= */}
-        <section
-          className="py-16 sm:py-20 px-6 bg-surface-main border-t border-border/70"
-        >
-          <div className="max-w-4xl mx-auto rounded-3xl border border-blue-500/25 bg-blue-500/10 p-7 sm:p-10">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-text-primary mb-3">
-              {t("homePage.impact.title")}
-            </h2>
-            <p className="text-text-secondary text-base sm:text-lg leading-relaxed mb-6">
-              {t("homePage.impact.subtitle")}
-            </p>
-
-            <div className="grid gap-3">
-              {impactPoints.map((point) => (
-                <div key={point} className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 text-blue-600" size={18} />
-                  <p className="text-sm sm:text-base text-text-secondary leading-relaxed">
-                    {point}
-                  </p>
-                </div>
-              ))}
+              <div className="mt-7">
+                <Link
+                  to="/help-support"
+                  className="btn-secondary inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm sm:text-base"
+                >
+                  {t("homePage.impact.cta")}
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
             </div>
 
-            <div className="mt-7">
-              <Link
-                to="/help-support"
-                className="btn-secondary rounded-full px-6 py-2.5 text-sm sm:text-base inline-flex items-center gap-2"
-              >
-                {t("homePage.impact.cta")} <ArrowRight size={16} />
-              </Link>
+            <div className="rounded-[28px] border border-blue-500/20 bg-surface-card/80 p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.25)]">
+              <p className="page-kicker">{t("homePage.about.trustLabel")}</p>
+              <h3 className="mt-3 text-xl font-semibold leading-tight text-text-primary">
+                {t("homePage.about.trustTitle")}
+              </h3>
+              <div className="mt-5 grid gap-4">
+                {aboutTrustPoints.map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-blue-500/12 text-blue-600">
+                      <Icon size={18} />
+                    </div>
+                    <p className="text-sm leading-relaxed text-text-secondary">{text}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ========================================================================= */}
- {/* A PROPOS - Apple Storytelling */}
-        {/* ========================================================================= */}
         <section
           id="apropos"
-          className="py-16 sm:py-20 px-6 bg-surface-card border-t border-border/70"
+          className="border-t border-border/70 bg-surface-card px-6 py-16 sm:py-20"
         >
-          <div className="max-w-5xl mx-auto text-center mb-10 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-text-primary mb-4">
-              {t("homePage.about.title")}
-            </h2>
-            <p className="text-text-secondary text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-              {t("homePage.about.subtitle")}
-            </p>
+          <SectionHeader
+            kicker={t("homePage.about.kicker")}
+            title={t("homePage.about.title")}
+            subtitle={t("homePage.about.subtitle")}
+          />
+
+          <div className="mx-auto mt-12 grid max-w-5xl gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{ duration: 0.6 }}
+              className="space-y-5 text-[15px] leading-relaxed text-text-secondary sm:text-base"
+            >
+              <p>
+                <Trans
+                  i18nKey="homePage.about.paragraphs.p1"
+                  components={[<strong key="about-strong" />]}
+                />
+              </p>
+              <p>{t("homePage.about.paragraphs.p2")}</p>
+              <p>{t("homePage.about.paragraphs.p3")}</p>
+            </motion.div>
+
+            <motion.aside
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{ duration: 0.6, delay: 0.08 }}
+              className="rounded-[30px] border border-border/70 bg-surface-main/85 p-6 shadow-[0_16px_42px_-30px_rgba(15,23,42,0.28)]"
+            >
+              <p className="page-kicker">{t("homePage.about.trustLabel")}</p>
+              <h3 className="mt-3 text-2xl font-semibold leading-tight text-text-primary">
+                {t("homePage.about.trustTitle")}
+              </h3>
+              <div className="mt-5 grid gap-4">
+                {aboutTrustPoints.map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-500/12 text-blue-600">
+                      <Icon size={18} />
+                    </div>
+                    <p className="text-sm leading-relaxed text-text-secondary">{text}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.aside>
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.6 }}
-            className="
-              max-w-3xl mx-auto text-text-secondary leading-relaxed
-              text-[15px] sm:text-base space-y-5 sm:space-y-6
-            "
-          >
-            <p>
-              <Trans
-                i18nKey="homePage.about.paragraphs.p1"
-                components={[<strong key="about-strong" />]}
-              />
-            </p>
-            <p>{t("homePage.about.paragraphs.p2")}</p>
-            <p>{t("homePage.about.paragraphs.p3")}</p>
-          </motion.div>
-
-          <div className="text-center mt-10 sm:mt-12">
+          <div className="mt-10 text-center sm:mt-12">
             <Link
               to="/register"
-              className="btn-primary rounded-full px-7 py-3 text-sm sm:text-base inline-flex items-center gap-2"
+              className="btn-primary inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm sm:text-base"
             >
-              {t("homePage.about.cta")} <HeartHandshake size={18} />
+              {t("homePage.about.cta")}
+              <HeartHandshake size={18} />
             </Link>
           </div>
         </section>
 
-        {/* ========================================================================= */}
- {/* CONTACT - Apple Form UI */}
-        {/* ========================================================================= */}
         <section
           id="contact"
-          className="py-16 sm:py-20 px-6 bg-surface-card border-t border-border/70"
+          className="border-t border-border/70 bg-surface-main px-6 py-16 sm:py-20"
         >
-          <div className="max-w-6xl mx-auto text-center mb-10 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-text-primary mb-4">
-              {t("homePage.contact.title")}
-            </h2>
-            <p className="text-text-secondary text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-              {t("homePage.contact.subtitle")}
-            </p>
-          </div>
+          <SectionHeader
+            kicker={t("homePage.contact.kicker")}
+            title={t("homePage.contact.title")}
+            subtitle={t("homePage.contact.subtitle")}
+          />
 
-          <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
-            {/* Formulaire */}
+          <div className="mx-auto mt-10 grid max-w-5xl gap-10 md:grid-cols-2">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
- // Meme comportement que ta version actuelle: notification simple cote client.
                 notify(t("homePage.contact.form.success"));
               }}
-              className="
-                bg-surface-main border border-border/70 rounded-3xl p-7 sm:p-8
-                shadow-sm flex flex-col gap-5
-              "
+              className="flex flex-col gap-5 rounded-[30px] border border-border/70 bg-surface-card p-7 shadow-sm sm:p-8"
             >
               {contactFields.map((input) => (
                 <div key={input.label} className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-text-secondary">
-                    {input.label}
-                  </label>
+                  <label className="text-sm font-medium text-text-secondary">{input.label}</label>
                   <input
                     type={input.type}
                     required
                     placeholder={input.placeholder}
-                    className="
-                      w-full border border-border rounded-xl px-3 py-2 text-sm
-                      focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none
-                      bg-surface-card
-                    "
+                    className="w-full rounded-xl border border-border bg-surface-main px-3 py-2 text-sm text-text-primary outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               ))}
@@ -523,34 +675,39 @@ export default function HomePage() {
                   required
                   rows={4}
                   placeholder={t("homePage.contact.form.message.placeholder")}
-                  className="
-                    w-full border border-border rounded-xl px-3 py-2 text-sm
-                    focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none
-                    bg-surface-card
-                  "
+                  className="w-full resize-none rounded-xl border border-border bg-surface-main px-3 py-2 text-sm text-text-primary outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <button
                 type="submit"
-                className="btn-primary rounded-full self-start px-6 py-2.5 text-sm shadow-sm"
+                className="btn-primary self-start rounded-full px-6 py-2.5 text-sm"
               >
                 {t("homePage.contact.form.submit")}
               </button>
             </form>
 
-            {/* Infos de contact */}
-            <div className="flex flex-col justify-center space-y-5 sm:space-y-6 text-text-secondary">
-              {contactInfos.map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center">
-                    <Icon className="text-blue-600" size={18} />
-                  </div>
-                  <p className="text-sm sm:text-base">{text}</p>
-                </div>
-              ))}
+            <div className="rounded-[30px] border border-border/70 bg-surface-card/85 p-6 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.22)] sm:p-7">
+              <p className="page-kicker">{t("homePage.contact.kicker")}</p>
+              <h3 className="mt-3 text-2xl font-semibold leading-tight text-text-primary">
+                {t("homePage.contact.sideTitle")}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-text-secondary sm:text-base">
+                {t("homePage.contact.sideText")}
+              </p>
 
-              <p className="text-sm text-text-muted leading-relaxed pt-2">
+              <div className="mt-6 flex flex-col space-y-5 text-text-secondary sm:space-y-6">
+                {contactInfos.map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/12 text-blue-600">
+                      <Icon size={18} />
+                    </div>
+                    <p className="text-sm sm:text-base">{text}</p>
+                  </div>
+                ))}
+              </div>
+
+              <p className="pt-6 text-sm leading-relaxed text-text-muted">
                 {t("homePage.contact.note")}
               </p>
             </div>
@@ -558,54 +715,93 @@ export default function HomePage() {
         </section>
       </main>
 
-      {/* ========================================================================= */}
- {/* FOOTER - Apple Minimal */}
-      {/* ========================================================================= */}
-      <footer className="border-t border-border/70 bg-surface-card/95 text-text-muted text-xs sm:text-sm py-6 px-6 mt-4">
-        <div
-          className="
-            max-w-6xl mx-auto flex flex-col sm:flex-row justify-between
-            items-center gap-4 text-center sm:text-left
-          "
-        >
-          <p className="max-w-full whitespace-nowrap leading-none">
-            <Trans
-              i18nKey="homePage.footer.copyright"
-              values={{ year: currentYear }}
-              components={[
-                <span
-                  key="footer-brand"
-                  className="text-blue-600 dark:text-blue-300 font-medium"
-                />,
-              ]}
-            />
-          </p>
+      <footer className="mt-4 border-t border-border/70 bg-surface-card/95 px-6 py-8 text-xs text-text-muted sm:text-sm">
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-end">
+          <div className="text-center lg:text-left">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-blue-700 dark:text-blue-300">
+              Teranga
+            </p>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-secondary">
+              {t("homePage.footer.note")}
+            </p>
+            <p className="mt-4 max-w-full whitespace-nowrap leading-none">
+              <Trans
+                i18nKey="homePage.footer.copyright"
+                values={{ year: currentYear }}
+                components={[
+                  <span
+                    key="footer-brand"
+                    className="font-medium text-blue-600 dark:text-blue-300"
+                  />,
+                ]}
+              />
+            </p>
+          </div>
 
-          <div className="flex gap-5 sm:gap-6">
-            <a
-              href="#accueil"
-              className="hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
-            >
-              {t("homePage.footer.links.home")}
-            </a>
-            <a
-              href="#services"
-              className="hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
-            >
-              {t("homePage.footer.links.services")}
-            </a>
-            <a
-              href="#apropos"
-              className="hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
-            >
-              {t("homePage.footer.links.about")}
-            </a>
-            <a
-              href="#contact"
-              className="hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
-            >
-              {t("homePage.footer.links.contact")}
-            </a>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="text-center sm:text-left">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-text-muted">
+                {t("homePage.footer.sectionTitle")}
+              </p>
+              <div className="mt-3 flex flex-wrap justify-center gap-4 sm:justify-start">
+                <a
+                  href="#accueil"
+                  className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
+                >
+                  {t("homePage.footer.links.home")}
+                </a>
+                <a
+                  href="#services"
+                  className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
+                >
+                  {t("homePage.footer.links.services")}
+                </a>
+                <a
+                  href="#apropos"
+                  className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
+                >
+                  {t("homePage.footer.links.about")}
+                </a>
+                <a
+                  href="#contact"
+                  className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
+                >
+                  {t("homePage.footer.links.contact")}
+                </a>
+              </div>
+            </div>
+
+            <div className="text-center sm:text-left">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-text-muted">
+                {t("homePage.footer.resourcesTitle")}
+              </p>
+              <div className="mt-3 flex flex-wrap justify-center gap-4 sm:justify-start">
+                <Link
+                  to="/help-support"
+                  className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
+                >
+                  {t("footer.links.helpSupport")}
+                </Link>
+                <Link
+                  to="/privacy"
+                  className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
+                >
+                  {t("footer.links.privacy")}
+                </Link>
+                <Link
+                  to="/terms"
+                  className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
+                >
+                  {t("footer.links.terms")}
+                </Link>
+                <Link
+                  to="/legal"
+                  className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
+                >
+                  {t("footer.links.legal")}
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </footer>

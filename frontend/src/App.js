@@ -278,6 +278,7 @@ export default function App() {
   const trackingId = 'G-5JVYGYHZ7Y';
   const { t } = useTranslation();
   const location = useLocation();
+  const hideGlobalFooter = location.pathname === '/';
   const [geoRefreshKey, setGeoRefreshKey] = useState(0);
   const [analyticsConsent, setAnalyticsConsent] = useState(() =>
     getAnalyticsConsent()
@@ -869,32 +870,33 @@ export default function App() {
             </div>
           </main>
 
-          {/* FOOTER */}
-          <footer className="border-t border-border/80 bg-surface-card/70 py-4 text-center text-sm text-text-secondary backdrop-blur">
-            <div className="mx-auto flex max-w-7xl flex-col items-center gap-2 px-4">
-              <div className="flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm">
-                <Link to="/help-support" className="text-text-secondary hover:text-text-primary">
-                  {t('footer.links.helpSupport')}
-                </Link>
-                <Link to="/privacy" className="text-text-secondary hover:text-text-primary">
-                  {t('footer.links.privacy')}
-                </Link>
-                <Link to="/terms" className="text-text-secondary hover:text-text-primary">
-                  {t('footer.links.terms')}
-                </Link>
-                <Link to="/legal" className="text-text-secondary hover:text-text-primary">
-                  {t('footer.links.legal')}
-                </Link>
+          {!hideGlobalFooter && (
+            <footer className="border-t border-border/80 bg-surface-card/70 py-4 text-center text-sm text-text-secondary backdrop-blur">
+              <div className="mx-auto flex max-w-7xl flex-col items-center gap-2 px-4">
+                <div className="flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm">
+                  <Link to="/help-support" className="text-text-secondary hover:text-text-primary">
+                    {t('footer.links.helpSupport')}
+                  </Link>
+                  <Link to="/privacy" className="text-text-secondary hover:text-text-primary">
+                    {t('footer.links.privacy')}
+                  </Link>
+                  <Link to="/terms" className="text-text-secondary hover:text-text-primary">
+                    {t('footer.links.terms')}
+                  </Link>
+                  <Link to="/legal" className="text-text-secondary hover:text-text-primary">
+                    {t('footer.links.legal')}
+                  </Link>
+                </div>
+                <p className="max-w-full whitespace-nowrap text-xs sm:text-sm leading-none">
+                  <Trans
+                    i18nKey="footer.copyright"
+                    values={{ year: new Date().getFullYear() }}
+                    components={{ brand: <span className="font-semibold text-primary" /> }}
+                  />
+                </p>
               </div>
-              <p className="max-w-full whitespace-nowrap text-xs sm:text-sm leading-none">
-                <Trans
-                  i18nKey="footer.copyright"
-                  values={{ year: new Date().getFullYear() }}
-                  components={{ brand: <span className="font-semibold text-primary" /> }}
-                />
-              </p>
-            </div>
-          </footer>
+            </footer>
+          )}
             </div>
           </GeoProvider>
         </ConfirmProvider>

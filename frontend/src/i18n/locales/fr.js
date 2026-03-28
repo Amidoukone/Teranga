@@ -2080,6 +2080,12 @@ const fr = {
     },
   },
   homePage: {
+    quickNav: {
+      useCases: "Cas d'usage",
+      services: "Services",
+      why: "Pourquoi Teranga",
+      contact: "Contact",
+    },
     hero: {
       badge: "Plateforme de confiance pour la diaspora et les r\u00E9sidents locaux",
       titleLine1: "La confiance \u00E0 distance,",
@@ -2104,8 +2110,23 @@ const fr = {
       },
       tagline:
         "Parce que la distance ne devrait jamais vous \u00E9loigner de ce qui compte.",
+      visual: {
+        label: "Accueil terrain",
+        title: "Assistance familiale suivie sans perdre le contr\u00F4le",
+        description:
+          "Courses, provisions, besoins urgents et livraison g\u00E9r\u00E9s par Teranga avec des retours concrets \u00E0 chaque \u00E9tape.",
+        proofBadge: "Preuves photo + tickets",
+        highlights: {
+          errands: "Courses et provisions prises en charge",
+          emergency: "Besoins urgents trait\u00E9s rapidement",
+          proof: "Factures et photos partag\u00E9es clairement",
+        },
+        imageAlt:
+          "Un agent Teranga remet des provisions \u00E0 une famille au Mali avec preuves de livraison visibles.",
+      },
     },
     services: {
+      kicker: "Terrain + application",
       title: "Nos services, votre tranquillit\u00E9",
       subtitle:
         "Des solutions pour toute personne qui manque de temps : nous prenons en charge vos demandes sur le terrain avec suivi, preuves et responsabilit\u00E9.",
@@ -2124,8 +2145,23 @@ const fr = {
           desc: "Photos, preuves, documents, transactions : acc\u00E8s instantan\u00E9 \u00E0 toutes vos informations, o\u00F9 que vous soyez.",
         },
       },
+      visual: {
+        kicker: "Vue terrain consolid\u00E9e",
+        title:
+          "Biens, t\u00E2ches, preuves et transactions regroup\u00E9s dans un seul parcours",
+        description:
+          "Teranga centralise les visites de biens, services demand\u00E9s, preuves, documents et transactions afin que chaque d\u00E9cision s'appuie sur des faits visibles.",
+        points: {
+          p1: "Suivi de biens avec visites, \u00E9tats des lieux et preuves photo.",
+          p2: "Historique des t\u00E2ches, services et validations au m\u00EAme endroit.",
+          p3: "Vision claire pour d\u00E9cider m\u00EAme \u00E0 distance.",
+        },
+        imageAlt:
+          "Un agent Teranga consulte une tablette pour suivre plusieurs biens et services au Mali.",
+      },
     },
     useCases: {
+      kicker: "Parcours pratiques",
       title: "Une application utile pour tous",
       subtitle:
         "Que vous soyez membre de la diaspora ou r\u00E9sident local, vous pouvez confier vos op\u00E9rations terrain \u00E0 Teranga lorsque votre emploi du temps ne vous permet pas de tout faire vous-m\u00EAme.",
@@ -2143,8 +2179,26 @@ const fr = {
           desc: "Suivez l’avancement de vos projets, les documents et les d\u00E9cisions sans \u00EAtre physiquement pr\u00E9sent.",
         },
       },
+      gallery: {
+        service: {
+          eyebrow: "D\u00E9marches et documents",
+          proof: "Documents suivis et remis avec visibilit\u00E9",
+          alt: "Un agent Teranga accompagne une d\u00E9marche administrative et remet des documents au Mali.",
+        },
+        task: {
+          eyebrow: "Visites et v\u00E9rifications",
+          proof: "Inspection photo d\u00E9taill\u00E9e avant d\u00E9cision",
+          alt: "Un agent Teranga inspecte un bien immobilier au Mali avec un rapport visuel.",
+        },
+        project: {
+          eyebrow: "Chantiers et coordination",
+          proof: "Avancement document\u00E9 \u00E9tape par \u00E9tape",
+          alt: "Un agent Teranga suit un chantier de construction au Mali devant une maison en cours de r\u00E9alisation.",
+        },
+      },
     },
     impact: {
+      kicker: "Vision long terme",
       title: "Notre ambition en Afrique",
       subtitle:
         "Transformer la gestion des maisons, appartements, terrains, automobiles et locaux commerciaux avec un mod\u00E8le de service plus efficace, innovant et v\u00E9rifiable.",
@@ -2156,6 +2210,7 @@ const fr = {
       cta: "Voir l’aide et le support",
     },
     why: {
+      kicker: "Cadre de confiance",
       title: "Pourquoi choisir Teranga ?",
       subtitle:
         "Parce qu’il ne s’agit pas seulement d’une application, mais d’un cadre de confiance pour piloter maisons, appartements, terrains, automobiles et locaux commerciaux avec des services ex\u00E9cut\u00E9s de mani\u00E8re moderne en Afrique.",
@@ -2175,6 +2230,7 @@ const fr = {
       },
     },
     about: {
+      kicker: "Esprit Teranga",
       title: "Teranga : bien plus qu’un service",
       subtitle:
         "Une plateforme inspir\u00E9e par la confiance et l’hospitalit\u00E9, qui relie les besoins r\u00E9els aux \u00E9quipes terrain de fa\u00E7on structur\u00E9e.",
@@ -2183,11 +2239,23 @@ const fr = {
         p2: "Vos maisons, appartements, terrains, automobiles et locaux commerciaux m\u00E9ritent une visibilit\u00E9 totale : photos, preuves, rapports, transactions, progression... tout est accessible en temps r\u00E9el, depuis n’importe o\u00F9.",
         p3: "Gr\u00E2ce \u00E0 nos agents certifi\u00E9s et \u00E0 une interface claire, toute personne ayant un service, une t\u00E2che ou un projet peut d\u00E9l\u00E9guer efficacement sans perdre le contr\u00F4le.",
       },
+      trustLabel: "Cadre de confiance",
+      trustTitle:
+        "Une exp\u00E9rience pens\u00E9e pour d\u00E9cider plus sereinement \u00E0 distance",
+      trustPoints: {
+        p1: "Des preuves visuelles pour comprendre la situation sans interpr\u00E9tation.",
+        p2: "Des documents, rapports et validations regroup\u00E9s dans un seul espace.",
+        p3: "Une \u00E9quipe terrain identifiable qui ex\u00E9cute et vous rend compte clairement.",
+      },
       cta: "Rejoindre Teranga",
     },
     contact: {
+      kicker: "Parlons de votre besoin",
       title: "Contactez-nous",
       subtitle: "Notre \u00E9quipe vous r\u00E9pond avec attention sous 24h.",
+      sideTitle: "Un accompagnement simple, humain et structur\u00E9",
+      sideText:
+        "Que vous pr\u00E9pariez une mission ponctuelle, un suivi de bien ou un projet plus large, nous vous aidons \u00E0 cadrer la suite avec clart\u00E9.",
       form: {
         name: {
           label: "Nom complet",
@@ -2213,6 +2281,10 @@ const fr = {
         "Nous vous accompagnons avec \u00E9coute, respect et professionnalisme, pour que chaque \u00E9change soit simple et rassurant.",
     },
     footer: {
+      note:
+        "Teranga relie la diaspora et les r\u00E9sidents locaux \u00E0 une ex\u00E9cution terrain fiable, claire et document\u00E9e.",
+      sectionTitle: "Navigation",
+      resourcesTitle: "Ressources",
       copyright:
         "\u00A9 {{year}} <0>Teranga</0> - Tous droits r\u00E9serv\u00E9s.",
       links: {
