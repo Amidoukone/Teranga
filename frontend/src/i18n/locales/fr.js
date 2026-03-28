@@ -2125,6 +2125,11 @@ const fr = {
           "Un agent Teranga remet des provisions \u00E0 une famille au Mali avec preuves de livraison visibles.",
       },
     },
+    lightbox: {
+      open: "Agrandir l'image",
+      close: "Fermer",
+      hint: "Cliquez \u00E0 l'ext\u00E9rieur ou appuyez sur Echap pour fermer.",
+    },
     services: {
       kicker: "Terrain + application",
       title: "Nos services, votre tranquillit\u00E9",

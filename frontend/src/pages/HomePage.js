@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -15,8 +16,10 @@ import {
   Camera,
   BadgeCheck,
   FileText,
+  Maximize2,
+  X,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Trans, useTranslation } from "react-i18next";
 
 import heroFamilyImage from "../assets/images/hero-family-assistance-mali-teranga.png";
@@ -47,7 +50,17 @@ function SectionHeader({ kicker, title, subtitle, align = "center" }) {
   );
 }
 
-function StoryCard({ title, desc, image, imageAlt, eyebrow, proof, icon: Icon }) {
+function StoryCard({
+  title,
+  desc,
+  image,
+  imageAlt,
+  eyebrow,
+  proof,
+  icon: Icon,
+  onOpenImage,
+  expandLabel,
+}) {
   return (
     <motion.article
       whileHover={{ y: -4, scale: 1.01 }}
@@ -64,15 +77,43 @@ function StoryCard({ title, desc, image, imageAlt, eyebrow, proof, icon: Icon })
           </div>
         </div>
 
-        <div className="flex items-center justify-center rounded-[24px] bg-black/15 p-2 sm:p-3">
-          <img
-            src={image}
-            alt={imageAlt}
-            loading="lazy"
-            decoding="async"
-            className="w-full rounded-[20px] object-contain transition duration-700 group-hover:scale-[1.02]"
-          />
-        </div>
+        {onOpenImage ? (
+          <button
+            type="button"
+            onClick={() =>
+              onOpenImage({
+                src: image,
+                alt: imageAlt,
+                kicker: eyebrow,
+                title,
+              })
+            }
+            className="group/image relative flex w-full cursor-zoom-in items-center justify-center rounded-[24px] bg-black/15 p-2 text-left sm:p-3"
+            aria-label={`${expandLabel} - ${title}`}
+          >
+            <img
+              src={image}
+              alt={imageAlt}
+              loading="lazy"
+              decoding="async"
+              className="w-full rounded-[20px] object-contain transition duration-700 group-hover/image:scale-[1.02]"
+            />
+            <span className="pointer-events-none absolute bottom-5 right-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/55 px-3 py-1.5 text-xs font-medium text-white/85 opacity-0 backdrop-blur transition group-hover/image:opacity-100">
+              <Maximize2 size={14} />
+              {expandLabel}
+            </span>
+          </button>
+        ) : (
+          <div className="flex items-center justify-center rounded-[24px] bg-black/15 p-2 sm:p-3">
+            <img
+              src={image}
+              alt={imageAlt}
+              loading="lazy"
+              decoding="async"
+              className="w-full rounded-[20px] object-contain transition duration-700 group-hover:scale-[1.02]"
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col p-6 sm:p-7">
@@ -86,9 +127,93 @@ function StoryCard({ title, desc, image, imageAlt, eyebrow, proof, icon: Icon })
   );
 }
 
+function ImageLightbox({ image, closeLabel, hint, onClose }) {
+  return (
+    <AnimatePresence>
+      {image ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/88 p-4 sm:p-6"
+          onClick={onClose}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur transition hover:bg-white/15"
+            aria-label={closeLabel}
+          >
+            <X size={18} />
+          </button>
+
+          <motion.figure
+            initial={{ opacity: 0, y: 18, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.98 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-6xl overflow-hidden rounded-[30px] border border-white/12 bg-slate-950/55 shadow-[0_32px_90px_-40px_rgba(15,23,42,0.75)] backdrop-blur"
+          >
+            <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4 text-white">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/70">
+                  {image.kicker}
+                </p>
+                <p className="mt-1 text-lg font-semibold leading-tight text-white sm:text-xl">
+                  {image.title}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="hidden rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm text-white transition hover:bg-white/15 sm:inline-flex"
+              >
+                {closeLabel}
+              </button>
+            </div>
+
+            <div className="flex max-h-[80vh] items-center justify-center p-3 sm:p-5">
+              <img
+                src={image.src}
+                alt={image.alt}
+                className="max-h-[72vh] w-auto max-w-full rounded-[24px] object-contain"
+              />
+            </div>
+
+            <div className="border-t border-white/10 px-5 py-4 text-sm leading-relaxed text-white/70">
+              {hint}
+            </div>
+          </motion.figure>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
 export default function HomePage() {
   const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
+  const [activeImage, setActiveImage] = useState(null);
+
+  useEffect(() => {
+    if (!activeImage || typeof document === "undefined") return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setActiveImage(null);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [activeImage]);
 
   const supportedPropertyTypes = [
     "house",
@@ -233,6 +358,8 @@ export default function HomePage() {
     { icon: MapPin, text: t("homePage.contact.info.address") },
   ];
 
+  const openImage = (config) => setActiveImage(config);
+
   return (
     <div className="min-h-screen scroll-smooth bg-gradient-to-br from-surface-main via-surface-card to-surface-main text-text-primary">
       <main className="flex-1">
@@ -335,16 +462,32 @@ export default function HomePage() {
                     </span>
                   </div>
 
-                  <div className="flex min-h-[18.5rem] items-center justify-center rounded-[28px] bg-gradient-to-br from-slate-950/82 via-slate-900/68 to-slate-900/82 p-2 sm:min-h-[24rem] sm:p-3 lg:min-h-[29rem] lg:p-4">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openImage({
+                        src: heroFamilyImage,
+                        alt: t("homePage.hero.visual.imageAlt"),
+                        kicker: t("homePage.hero.visual.label"),
+                        title: t("homePage.hero.visual.title"),
+                      })
+                    }
+                    className="group/image relative flex min-h-[18.5rem] w-full cursor-zoom-in items-center justify-center rounded-[28px] bg-gradient-to-br from-slate-950/82 via-slate-900/68 to-slate-900/82 p-2 text-left sm:min-h-[24rem] sm:p-3 lg:min-h-[29rem] lg:p-4"
+                    aria-label={`${t("homePage.lightbox.open")} - ${t("homePage.hero.visual.title")}`}
+                  >
                     <img
                       src={heroFamilyImage}
                       alt={t("homePage.hero.visual.imageAlt")}
                       loading="eager"
                       fetchPriority="high"
                       decoding="async"
-                      className="max-h-[65vh] w-full rounded-[24px] object-contain"
+                      className="max-h-[65vh] w-full rounded-[24px] object-contain transition duration-300 group-hover/image:scale-[1.01]"
                     />
-                  </div>
+                    <span className="pointer-events-none absolute bottom-5 right-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/55 px-3 py-1.5 text-xs font-medium text-white/85 opacity-0 backdrop-blur transition group-hover/image:opacity-100">
+                      <Maximize2 size={14} />
+                      {t("homePage.lightbox.open")}
+                    </span>
+                  </button>
 
                   <div className="border-t border-border/60 px-2 pb-1 pt-4 sm:px-3 sm:pt-5 lg:px-2">
                     <h2 className="text-base font-semibold leading-tight text-text-primary sm:text-[1.35rem]">
@@ -391,7 +534,11 @@ export default function HomePage() {
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.55, delay: index * 0.08 }}
               >
-                <StoryCard {...card} />
+                <StoryCard
+                  {...card}
+                  onOpenImage={openImage}
+                  expandLabel={t("homePage.lightbox.open")}
+                />
               </motion.div>
             ))}
           </div>
@@ -432,15 +579,31 @@ export default function HomePage() {
               className="space-y-5"
             >
               <figure className="overflow-hidden rounded-[30px] border border-border/70 bg-surface-main shadow-[0_22px_55px_-28px_rgba(15,23,42,0.28)]">
-                <div className="flex items-center justify-center bg-gradient-to-br from-slate-950/80 via-slate-900/65 to-slate-900/78 p-3 sm:p-4">
+                <button
+                  type="button"
+                  onClick={() =>
+                    openImage({
+                      src: propertyManagementImage,
+                      alt: t("homePage.services.visual.imageAlt"),
+                      kicker: t("homePage.services.visual.kicker"),
+                      title: t("homePage.services.visual.title"),
+                    })
+                  }
+                  className="group/image relative flex w-full cursor-zoom-in items-center justify-center bg-gradient-to-br from-slate-950/80 via-slate-900/65 to-slate-900/78 p-3 text-left sm:p-4"
+                  aria-label={`${t("homePage.lightbox.open")} - ${t("homePage.services.visual.title")}`}
+                >
                   <img
                     src={propertyManagementImage}
                     alt={t("homePage.services.visual.imageAlt")}
                     loading="lazy"
                     decoding="async"
-                    className="w-full rounded-[24px] object-contain"
+                    className="w-full rounded-[24px] object-contain transition duration-300 group-hover/image:scale-[1.01]"
                   />
-                </div>
+                  <span className="pointer-events-none absolute bottom-5 right-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/55 px-3 py-1.5 text-xs font-medium text-white/85 opacity-0 backdrop-blur transition group-hover/image:opacity-100">
+                    <Maximize2 size={14} />
+                    {t("homePage.lightbox.open")}
+                  </span>
+                </button>
               </figure>
 
               <div className="rounded-[30px] border border-border/70 bg-surface-main/85 p-6 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.32)] sm:p-7">
@@ -714,6 +877,13 @@ export default function HomePage() {
           </div>
         </section>
       </main>
+
+      <ImageLightbox
+        image={activeImage}
+        closeLabel={t("homePage.lightbox.close")}
+        hint={t("homePage.lightbox.hint")}
+        onClose={() => setActiveImage(null)}
+      />
 
       <footer className="mt-4 border-t border-border/70 bg-surface-card/95 px-6 py-8 text-xs text-text-muted sm:text-sm">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-end">

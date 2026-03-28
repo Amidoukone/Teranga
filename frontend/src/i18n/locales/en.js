@@ -2117,6 +2117,11 @@ const en = {
           "A Teranga agent delivers provisions to a family in Mali with visible delivery proof.",
       },
     },
+    lightbox: {
+      open: "Expand image",
+      close: "Close",
+      hint: "Click outside or press Escape to close.",
+    },
     services: {
       kicker: "Field + platform",
       title: "Our services, your peace of mind",
