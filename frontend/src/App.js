@@ -21,6 +21,7 @@ import { scheduleIdleRoutePreload } from './utils/routePreload';
 import { getToken, getLocalUser, hasSessionHint, me } from './services/auth';
 import { GEO_SELECTION_CHANGED_EVENT } from './services/geo';
 import { normalizeRole } from './utils/role'; // ensure roles are canonical (admin/agent/client)
+import { buildAuthFeedbackState } from './utils/authFeedback';
 
 // Contexte: routage et guardes d'acces.
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -429,12 +430,13 @@ export default function App() {
                     <Navigate
                       to="/login"
                       replace
-                      state={{
-                        errorMsg: t("auth.login.forgotInfo", {
+                      state={buildAuthFeedbackState(
+                        t("auth.login.forgotInfo", {
                           defaultValue:
                             "Mot de passe oubli\u00E9 ? Contactez l'admin ou le master de votre pays/r\u00E9gion pour le r\u00E9initialiser. Ensuite, vous pourrez le modifier dans votre compte.",
                         }),
-                      }}
+                        "info"
+                      )}
                     />
                   </>
                 </PublicOnly>
@@ -450,12 +452,13 @@ export default function App() {
                     <Navigate
                       to="/login"
                       replace
-                      state={{
-                        errorMsg: t("auth.login.forgotInfo", {
+                      state={buildAuthFeedbackState(
+                        t("auth.login.forgotInfo", {
                           defaultValue:
                             "Mot de passe oubli\u00E9 ? Contactez l'admin ou le master de votre pays/r\u00E9gion pour le r\u00E9initialiser. Ensuite, vous pourrez le modifier dans votre compte.",
                         }),
-                      }}
+                        "info"
+                      )}
                     />
                   </>
                 </PublicOnly>
@@ -471,12 +474,13 @@ export default function App() {
                     <Navigate
                       to="/login"
                       replace
-                      state={{
-                        errorMsg: t("auth.login.forgotInfo", {
+                      state={buildAuthFeedbackState(
+                        t("auth.login.forgotInfo", {
                           defaultValue:
                             "Mot de passe oubli\u00E9 ? Contactez l'admin ou le master de votre pays/r\u00E9gion pour le r\u00E9initialiser. Ensuite, vous pourrez le modifier dans votre compte.",
                         }),
-                      }}
+                        "info"
+                      )}
                     />
                   </>
                 </PublicOnly>

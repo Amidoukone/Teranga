@@ -97,6 +97,7 @@ const fr = {
       createAccount: "Cr\u00E9er un compte client",
       supportInfo: "Besoin d’un acc\u00E8s sp\u00E9cifique ? Contactez le support Teranga.",
       errorDefault: "\u00C9chec de connexion : identifiants incorrects.",
+      logoutSuccess: "Vous avez été déconnecté avec succès.",
     },
     register: {
       kicker: "Rejoignez Teranga",

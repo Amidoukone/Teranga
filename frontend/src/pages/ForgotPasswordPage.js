@@ -3,20 +3,19 @@ import { Link } from 'react-router-dom';
 import { Mail, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { forgotPassword } from '../services/auth';
+import AuthFeedbackBanner from '../components/AuthFeedbackBanner';
 
 export default function ForgotPasswordPage() {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [feedback, setFeedback] = useState(null);
   const [debugToken, setDebugToken] = useState('');
   const [debugUrl, setDebugUrl] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
+    setFeedback(null);
     setDebugToken('');
     setDebugUrl('');
     setLoading(true);
@@ -25,25 +24,29 @@ export default function ForgotPasswordPage() {
       const data = await forgotPassword({
         email: String(email || '').trim().toLowerCase(),
       });
-      setSuccessMsg(
-        data?.message ||
+      setFeedback({
+        type: 'success',
+        message:
+          data?.message ||
           t('auth.forgotPassword.success', {
             defaultValue:
               'Si un compte existe, un lien de r\u00E9initialisation a \u00E9t\u00E9 envoy\u00E9.',
-          })
-      );
+          }),
+      });
 
       const maybeToken = String(data?.debug?.resetToken || '').trim();
       const maybeUrl = String(data?.debug?.resetUrl || '').trim();
       if (maybeToken) setDebugToken(maybeToken);
       if (maybeUrl) setDebugUrl(maybeUrl);
     } catch (err) {
-      setErrorMsg(
-        err?.response?.data?.error ||
+      setFeedback({
+        type: 'error',
+        message:
+          err?.response?.data?.error ||
           t('auth.forgotPassword.error', {
             defaultValue: "Impossible d'envoyer la demande pour le moment.",
-          })
-      );
+          }),
+      });
     } finally {
       setLoading(false);
     }
@@ -62,16 +65,11 @@ export default function ForgotPasswordPage() {
           })}
         </p>
 
-        {errorMsg ? (
-          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/15 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
-            {errorMsg}
-          </div>
-        ) : null}
-        {successMsg ? (
-          <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
-            {successMsg}
-          </div>
-        ) : null}
+        <AuthFeedbackBanner
+          className="mb-4"
+          type={feedback?.type}
+          message={feedback?.message}
+        />
 
         {(debugToken || debugUrl) ? (
           <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/15 px-3 py-3 text-sm text-amber-800 dark:text-amber-300">

@@ -1,4 +1,5 @@
 const DEFAULT_TOKEN = 'e2e-token';
+const DEFAULT_PASSWORD = 'Password123!';
 
 function nowIso() {
   return new Date().toISOString();
@@ -89,6 +90,9 @@ function createInitialState(user, overrides = {}) {
   };
 
   return {
+    auth: {
+      password: DEFAULT_PASSWORD,
+    },
     session: {
       active: false,
       token: DEFAULT_TOKEN,
@@ -207,6 +211,7 @@ async function installApiMocks(page, options = {}) {
       user.lastName = body.lastName || user.lastName;
       user.email = body.email || user.email;
       user.country = body.country || user.country;
+      state.auth.password = body.password || state.auth.password;
       await fulfillJson(route, 201, {
         message: 'Compte cree avec succes',
         user,
@@ -220,10 +225,35 @@ async function installApiMocks(page, options = {}) {
         await fulfillJson(route, 401, { error: 'Identifiants invalides' });
         return;
       }
+      if (body.password !== state.auth.password) {
+        await fulfillJson(route, 401, { error: 'Identifiants invalides' });
+        return;
+      }
       state.session.active = true;
       await fulfillJson(route, 200, {
         token: state.session.token,
         user,
+      });
+      return;
+    }
+
+    if (method === 'POST' && path === '/auth/change-password') {
+      if (!isAuthenticatedRequest(request, state)) {
+        await fulfillJson(route, 401, { error: 'Non authentifie' });
+        return;
+      }
+
+      const body = parseRequestBody(request);
+      if (body.currentPassword !== state.auth.password) {
+        await fulfillJson(route, 400, {
+          error: 'Mot de passe actuel incorrect',
+        });
+        return;
+      }
+
+      state.auth.password = body.newPassword || state.auth.password;
+      await fulfillJson(route, 200, {
+        message: 'Mot de passe mis a jour',
       });
       return;
     }
@@ -487,6 +517,7 @@ async function seedAuthenticatedSession(page, user, token = DEFAULT_TOKEN) {
 
 module.exports = {
   DEFAULT_TOKEN,
+  DEFAULT_PASSWORD,
   createE2EUser,
   installApiMocks,
   seedAuthenticatedSession,

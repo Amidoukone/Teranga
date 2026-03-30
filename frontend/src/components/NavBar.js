@@ -56,6 +56,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import GeoSelector from "./GeoSelector";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { preloadRoute } from "../utils/routePreload";
+import { buildAuthFeedbackState } from "../utils/authFeedback";
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || "localstorage")
@@ -560,8 +561,11 @@ function NavBar() {
     setOpenUserMenu(false);
     await delay(100);
     await logout();
-    navigate("/login", { replace: true });
-  }, [navigate]);
+    navigate("/login", {
+      replace: true,
+      state: buildAuthFeedbackState(t("auth.login.logoutSuccess"), "success"),
+    });
+  }, [navigate, t]);
 
   const PUBLIC = [
     "/",

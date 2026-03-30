@@ -97,6 +97,7 @@ const en = {
       createAccount: "Create a client account",
       supportInfo: "Need specific access? Contact Teranga support.",
       errorDefault: "Login failed: invalid credentials.",
+      logoutSuccess: "You have been signed out successfully.",
     },
     register: {
       kicker: "Join Teranga",

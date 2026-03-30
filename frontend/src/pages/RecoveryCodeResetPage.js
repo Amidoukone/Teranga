@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Loader2, KeyRound, Mail, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { recoverWithCode } from '../services/auth';
+import AuthFeedbackBanner from '../components/AuthFeedbackBanner';
 
 export default function RecoveryCodeResetPage() {
   const { t } = useTranslation();
@@ -12,30 +13,30 @@ export default function RecoveryCodeResetPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [feedback, setFeedback] = useState(null);
   const [newCodes, setNewCodes] = useState([]);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
+    setFeedback(null);
     setNewCodes([]);
 
     if (!password || password.length < 8) {
-      setErrorMsg(
-        t('auth.recoveryCode.errors.passwordMin', {
+      setFeedback({
+        type: 'error',
+        message: t('auth.recoveryCode.errors.passwordMin', {
           defaultValue: 'Mot de passe trop court (minimum 8 caract\u00E8res).',
-        })
-      );
+        }),
+      });
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMsg(
-        t('auth.recoveryCode.errors.passwordMismatch', {
+      setFeedback({
+        type: 'error',
+        message: t('auth.recoveryCode.errors.passwordMismatch', {
           defaultValue: 'Les mots de passe ne correspondent pas.',
-        })
-      );
+        }),
+      });
       return;
     }
 
@@ -47,22 +48,26 @@ export default function RecoveryCodeResetPage() {
         password,
       });
 
-      setSuccessMsg(
-        data?.message ||
+      setFeedback({
+        type: 'success',
+        message:
+          data?.message ||
           t('auth.recoveryCode.success', {
             defaultValue: 'Mot de passe r\u00E9initialis\u00E9 avec succ\u00E8s.',
-          })
-      );
+          }),
+      });
 
       const codes = Array.isArray(data?.recoveryCodes) ? data.recoveryCodes : [];
       setNewCodes(codes);
     } catch (err) {
-      setErrorMsg(
-        err?.response?.data?.error ||
+      setFeedback({
+        type: 'error',
+        message:
+          err?.response?.data?.error ||
           t('auth.recoveryCode.error', {
             defaultValue: 'Impossible de r\u00E9initialiser le mot de passe.',
-          })
-      );
+          }),
+      });
     } finally {
       setLoading(false);
     }
@@ -86,17 +91,11 @@ export default function RecoveryCodeResetPage() {
           })}
         </p>
 
-        {errorMsg ? (
-          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/15 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
-            {errorMsg}
-          </div>
-        ) : null}
-
-        {successMsg ? (
-          <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
-            {successMsg}
-          </div>
-        ) : null}
+        <AuthFeedbackBanner
+          className="mb-4"
+          type={feedback?.type}
+          message={feedback?.message}
+        />
 
         {newCodes.length ? (
           <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/15 px-3 py-3">

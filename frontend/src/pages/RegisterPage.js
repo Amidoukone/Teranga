@@ -13,6 +13,8 @@ import {
   Lock,
 } from "lucide-react";
 import { getMasterCountries } from "../services/franchises";
+import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
+import { buildAuthFeedbackState } from "../utils/authFeedback";
 
 /* ==========================================================
    Suggestions de pays ISO2
@@ -149,7 +151,7 @@ export default function RegisterPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [feedback, setFeedback] = useState(null);
   const [masterCountries, setMasterCountries] = useState([]);
   const [masterLoading, setMasterLoading] = useState(true);
   const [masterError, setMasterError] = useState("");
@@ -263,11 +265,11 @@ export default function RegisterPage() {
   async function handleRegister(e) {
     e.preventDefault();
     setLoading(true);
-    setErrorMsg("");
+    setFeedback(null);
 
     const validationError = validate();
     if (validationError) {
-      setErrorMsg(validationError);
+      setFeedback({ type: "error", message: validationError });
       setLoading(false);
       return;
     }
@@ -286,13 +288,14 @@ export default function RegisterPage() {
       await register(payload);
 
       navigate("/login", {
-        state: {
-          successMsg: t("auth.register.success"),
-        },
+        state: buildAuthFeedbackState(t("auth.register.success"), "success"),
       });
     } catch (err) {
       const backendMsg = err?.response?.data?.error;
-      setErrorMsg(backendMsg || t("auth.register.errors.generic"));
+      setFeedback({
+        type: "error",
+        message: backendMsg || t("auth.register.errors.generic"),
+      });
     } finally {
       setLoading(false);
     }
@@ -323,12 +326,11 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {/* MESSAGE ERREUR */}
-        {errorMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-sm shadow-sm">
-            {errorMsg}
-          </div>
-        )}
+        <AuthFeedbackBanner
+          className="mb-4"
+          type={feedback?.type}
+          message={feedback?.message}
+        />
 
         {/* FORMULAIRE */}
         <form onSubmit={handleRegister} className="space-y-5">

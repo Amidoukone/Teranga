@@ -2,15 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { login, me } from "../services/auth";
 import { useTranslation } from "react-i18next";
-import {
-  Eye,
-  EyeOff,
-  Loader2,
-  Lock,
-  Mail,
-  CheckCircle2,
-} from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { preloadRoute } from "../utils/routePreload";
+import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
+import { readAuthFeedbackState } from "../utils/authFeedback";
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -21,8 +16,7 @@ export default function LoginPage() {
  // Aatats
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
+  const [feedback, setFeedback] = useState(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,15 +25,9 @@ export default function LoginPage() {
      Initialisation au montage.
   ========================================================== */
   useEffect(() => {
-    const msg = location.state?.successMsg;
-    const routeError = location.state?.errorMsg;
-    if (msg) {
-      setSuccessMsg(msg);
-    }
-    if (routeError) {
-      setErrorMsg(routeError);
-    }
-    if (msg || routeError) {
+    const routeFeedback = readAuthFeedbackState(location.state);
+    if (routeFeedback) {
+      setFeedback(routeFeedback);
       window.history.replaceState({}, "");
     }
   }, [location.state]);
@@ -63,7 +51,7 @@ export default function LoginPage() {
   async function handleLogin(e) {
     e.preventDefault();
     setLoading(true);
-    setErrorMsg("");
+    setFeedback(null);
     preloadRoute("/dashboard");
 
     try {
@@ -71,7 +59,10 @@ export default function LoginPage() {
       navigate("/dashboard");
     } catch (err) {
       const backendMsg = err?.response?.data?.error;
-      setErrorMsg(backendMsg || t("auth.login.errorDefault"));
+      setFeedback({
+        type: "error",
+        message: backendMsg || t("auth.login.errorDefault"),
+      });
     } finally {
       setLoading(false);
     }
@@ -100,20 +91,11 @@ export default function LoginPage() {
           <p className="page-lead mt-1">{t("auth.login.subtitle")}</p>
         </div>
 
- {/* ---------- MESSAGE DE SUCCES ---------- */}
-        {successMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-sm flex items-start gap-2 shadow-sm">
-            <CheckCircle2 className="w-5 h-5 mt-0.5" />
-            <span>{successMsg}</span>
-          </div>
-        )}
-
- {/* ---------- MESSAGE D'ERREUR ---------- */}
-        {errorMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-sm shadow-sm">
-            {errorMsg}
-          </div>
-        )}
+        <AuthFeedbackBanner
+          className="mb-4"
+          type={feedback?.type}
+          message={feedback?.message}
+        />
 
         {/* ---------- FORMULAIRE ---------- */}
         <form onSubmit={handleLogin} className="space-y-5">

@@ -15,6 +15,8 @@ import {
 import { changePassword, logout, me } from "../services/auth";
 import { useTranslation } from "react-i18next";
 import SettingsSubpageLayout from "../components/SettingsSubpageLayout";
+import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
+import { buildAuthFeedbackState } from "../utils/authFeedback";
 
 function PasswordField({
   id,
@@ -109,7 +111,7 @@ export default function ChangePasswordPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [feedback, setFeedback] = useState(null);
 
   const hasMinLength = newPassword.length >= 8;
   const matchesConfirm = confirm.length > 0 && newPassword === confirm;
@@ -139,25 +141,37 @@ export default function ChangePasswordPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setErrorMsg("");
+    setFeedback(null);
 
     if (!currentPassword || !newPassword) {
-      setErrorMsg(t("changePasswordPage.errors.required"));
+      setFeedback({
+        type: "error",
+        message: t("changePasswordPage.errors.required"),
+      });
       return;
     }
 
     if (newPassword.length < 8) {
-      setErrorMsg(t("changePasswordPage.errors.tooShort"));
+      setFeedback({
+        type: "error",
+        message: t("changePasswordPage.errors.tooShort"),
+      });
       return;
     }
 
     if (newPassword !== confirm) {
-      setErrorMsg(t("changePasswordPage.errors.mismatch"));
+      setFeedback({
+        type: "error",
+        message: t("changePasswordPage.errors.mismatch"),
+      });
       return;
     }
 
     if (newPassword === currentPassword) {
-      setErrorMsg(t("changePasswordPage.errors.sameAsCurrent"));
+      setFeedback({
+        type: "error",
+        message: t("changePasswordPage.errors.sameAsCurrent"),
+      });
       return;
     }
 
@@ -170,14 +184,15 @@ export default function ChangePasswordPage() {
       await logout().catch(() => null);
       navigate("/login", {
         replace: true,
-        state: {
-          successMsg: t("changePasswordPage.success.changedLogin"),
-        },
+        state: buildAuthFeedbackState(
+          t("changePasswordPage.success.changedLogin"),
+          "success"
+        ),
       });
     } catch (err) {
       const msg =
         err?.response?.data?.error || t("changePasswordPage.errors.update");
-      setErrorMsg(msg);
+      setFeedback({ type: "error", message: msg });
     } finally {
       setLoading(false);
     }
@@ -250,14 +265,11 @@ export default function ChangePasswordPage() {
             <p className="mt-1">{t("changePasswordPage.context.description")}</p>
           </div>
 
-          {errorMsg && (
-            <div
-              className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-              role="alert"
-            >
-              {errorMsg}
-            </div>
-          )}
+          <AuthFeedbackBanner
+            className="mb-4"
+            type={feedback?.type}
+            message={feedback?.message}
+          />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <PasswordField
@@ -266,7 +278,7 @@ export default function ChangePasswordPage() {
               value={currentPassword}
               onChange={(e) => {
                 setCurrentPassword(e.target.value);
-                if (errorMsg) setErrorMsg("");
+                if (feedback?.type === "error") setFeedback(null);
               }}
               show={showCurrentPassword}
               onToggleShow={() => setShowCurrentPassword((prev) => !prev)}
@@ -281,7 +293,7 @@ export default function ChangePasswordPage() {
               value={newPassword}
               onChange={(e) => {
                 setNewPassword(e.target.value);
-                if (errorMsg) setErrorMsg("");
+                if (feedback?.type === "error") setFeedback(null);
               }}
               show={showNewPassword}
               onToggleShow={() => setShowNewPassword((prev) => !prev)}
@@ -298,7 +310,7 @@ export default function ChangePasswordPage() {
               value={confirm}
               onChange={(e) => {
                 setConfirm(e.target.value);
-                if (errorMsg) setErrorMsg("");
+                if (feedback?.type === "error") setFeedback(null);
               }}
               show={showConfirmPassword}
               onToggleShow={() => setShowConfirmPassword((prev) => !prev)}
