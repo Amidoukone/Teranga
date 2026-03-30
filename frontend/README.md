@@ -26,11 +26,19 @@ Installs Playwright browser binaries (Chromium).
 ### `npm run e2e`
 
 Runs Playwright end-to-end tests for critical journeys:
-- auth (register + login)
+- auth feedback (login, logout success message, change password forced re-login)
 - services
 - tasks
 - notifications
 - orders
+
+### `npm run e2e:auth`
+
+Runs only the mocked Playwright auth smoke suite:
+- login
+- logout success feedback on the login page
+- change password forced re-login
+- login again with the new password
 
 ### `npm run e2e:integration`
 
@@ -45,11 +53,20 @@ Important:
 - never point test env variables to a production database
 
 Critical real flows covered:
-- auth (register + login)
+- auth (real API register + UI login/logout/change password)
 - services (read + create)
 - tasks (read + create)
 - notifications (read)
 - orders (read + create)
+
+### `npm run e2e:integration:auth`
+
+Runs only the real-backend auth smoke:
+- disposable user registration through the real API against the test DB
+- UI login to the dashboard
+- logout success feedback on the login page
+- change password forced re-login
+- login again with the new password
 
 ### `npm run e2e:integration:headed`
 

@@ -10,14 +10,77 @@ const E2E_CLIENT_PASSWORD =
 
 function buildRegisterPayload() {
   const ts = Date.now();
+  const alphaSuffix = String(ts)
+    .split('')
+    .map((digit) => String.fromCharCode(65 + (Number(digit) % 26)))
+    .join('');
   return {
-    firstName: 'E2E',
-    lastName: `Real${ts}`,
+    firstName: 'Ete',
+    lastName: `Real${alphaSuffix}`,
     email: `e2e.real.${ts}@example.com`,
     phone: '+22370000001',
     country: 'ML',
     password: E2E_CLIENT_PASSWORD,
   };
+}
+
+async function getMasterCountries(request) {
+  const response = await request.get(`${API_BASE_URL}/franchises/masters`);
+  const body = await response.json().catch(() => ({}));
+  expect(
+    response.ok(),
+    `API master countries failed: ${JSON.stringify(body)}`
+  ).toBeTruthy();
+  return Array.isArray(body?.countries) ? body.countries : [];
+}
+
+async function registerDisposableClient(request, overrides = {}) {
+  const countries = await getMasterCountries(request);
+  expect(
+    countries.length > 0,
+    'No active master country is available for integration auth tests.'
+  ).toBeTruthy();
+
+  const preferredIso = String(overrides?.preferredCountryIso || 'ML')
+    .trim()
+    .toUpperCase();
+  const targetCountry =
+    countries.find(
+      (country) =>
+        String(country?.isoCode || '').trim().toUpperCase() === preferredIso
+    ) || countries[0];
+
+  const payload = {
+    ...buildRegisterPayload(),
+    language: 'fr',
+    ...overrides,
+    countryId: overrides?.countryId ?? targetCountry?.id,
+  };
+
+  delete payload.country;
+  delete payload.preferredCountryIso;
+
+  const response = await request.post(`${API_BASE_URL}/auth/register`, {
+    data: payload,
+  });
+  const body = await response.json().catch(() => ({}));
+  expect(
+    response.ok(),
+    `API register failed: ${JSON.stringify(body)}`
+  ).toBeTruthy();
+
+  return {
+    payload,
+    body,
+    country: targetCountry,
+  };
+}
+
+async function seedUiPreferences(page, language = 'fr') {
+  await page.addInitScript(({ lang }) => {
+    localStorage.setItem('teranga_lang', lang);
+    localStorage.setItem('teranga_analytics_consent', 'denied');
+  }, { lang: language });
 }
 
 async function blockExternalTracking(page) {
@@ -71,6 +134,9 @@ module.exports = {
   E2E_CLIENT_PASSWORD,
   buildRegisterPayload,
   blockExternalTracking,
+  getMasterCountries,
   loginAsSeededClient,
+  registerDisposableClient,
+  seedUiPreferences,
   seedAuthenticatedSession,
 };

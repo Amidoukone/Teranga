@@ -1,6 +1,6 @@
 'use strict';
 
-const { Op } = require('sequelize');
+const { Op, literal } = require('sequelize');
 const {
   Service,
   Task,
@@ -54,6 +54,33 @@ const DASHBOARD_DEFAULTS = Object.freeze({
   },
   orderCounts: { total: 0, paid: 0, open: 0 },
 });
+
+function quoteIdentifier(identifier) {
+  return `\`${String(identifier || '').replace(/`/g, '')}\``;
+}
+
+function columnRef(alias, column) {
+  return `${quoteIdentifier(alias)}.${quoteIdentifier(column)}`;
+}
+
+function countDistinctSql(alias, conditionSql = '') {
+  const idRef = columnRef(alias, 'id');
+  if (!conditionSql) return `COUNT(DISTINCT ${idRef})`;
+  return `COUNT(DISTINCT CASE WHEN ${conditionSql} THEN ${idRef} END)`;
+}
+
+function sumCaseSql(conditionSql, valueSql) {
+  return `COALESCE(SUM(CASE WHEN ${conditionSql} THEN ${valueSql} ELSE 0 END), 0)`;
+}
+
+async function fetchAggregateRow(model, options) {
+  const rows = await model.findAll({
+    ...options,
+    raw: true,
+  });
+  if (!Array.isArray(rows) || !rows.length) return {};
+  return rows[0] || {};
+}
 
 async function loadDashboardSections(req) {
   const sectionLoaders = [
@@ -271,19 +298,25 @@ function orderBaseQueryForDashboard(req) {
 
 async function countServices(req) {
   const baseWhere = serviceWhereForDashboard(req);
-  const [total, active] = await Promise.all([
-    Service.count({ where: baseWhere }),
-    Service.count({
-      where: {
-        ...baseWhere,
-        status: { [Op.notIn]: ['completed', 'validated'] },
-      },
-    }),
-  ]);
+  const row = await fetchAggregateRow(Service, {
+    where: baseWhere,
+    attributes: [
+      [literal(countDistinctSql('Service')), 'total'],
+      [
+        literal(
+          countDistinctSql(
+            'Service',
+            `${columnRef('Service', 'status')} NOT IN ('completed', 'validated')`
+          )
+        ),
+        'active',
+      ],
+    ],
+  });
 
   return {
-    total: toNumber(total),
-    active: toNumber(active),
+    total: toNumber(row.total),
+    active: toNumber(row.active),
   };
 }
 
@@ -294,35 +327,38 @@ async function countTransactionsAndFinance(req) {
     attributes: [],
   }));
 
-  const [count, revenues, expenses, commissions, adjustments] = await Promise.all([
-    Transaction.count({
-      where: txWhere,
-      include: aggregateInclude,
-      distinct: true,
-    }),
-    Transaction.sum('amount', {
-      where: { ...txWhere, type: 'revenue' },
-      include: aggregateInclude,
-    }),
-    Transaction.sum('amount', {
-      where: { ...txWhere, type: 'expense' },
-      include: aggregateInclude,
-    }),
-    Transaction.sum('amount', {
-      where: { ...txWhere, type: 'commission' },
-      include: aggregateInclude,
-    }),
-    Transaction.sum('amount', {
-      where: { ...txWhere, type: 'adjustment' },
-      include: aggregateInclude,
-    }),
-  ]);
+  const typeColumn = columnRef('Transaction', 'type');
+  const amountColumn = columnRef('Transaction', 'amount');
+  const row = await fetchAggregateRow(Transaction, {
+    where: txWhere,
+    include: aggregateInclude,
+    subQuery: false,
+    attributes: [
+      [literal(countDistinctSql('Transaction')), 'count'],
+      [
+        literal(sumCaseSql(`${typeColumn} = 'revenue'`, amountColumn)),
+        'revenues',
+      ],
+      [
+        literal(sumCaseSql(`${typeColumn} = 'expense'`, amountColumn)),
+        'expenses',
+      ],
+      [
+        literal(sumCaseSql(`${typeColumn} = 'commission'`, amountColumn)),
+        'commissions',
+      ],
+      [
+        literal(sumCaseSql(`${typeColumn} = 'adjustment'`, amountColumn)),
+        'adjustments',
+      ],
+    ],
+  });
 
   const normalized = {
-    revenues: toNumber(revenues),
-    expenses: toNumber(expenses),
-    commissions: toNumber(commissions),
-    adjustments: toNumber(adjustments),
+    revenues: toNumber(row.revenues),
+    expenses: toNumber(row.expenses),
+    commissions: toNumber(row.commissions),
+    adjustments: toNumber(row.adjustments),
   };
 
   const financeSummary = {
@@ -335,7 +371,7 @@ async function countTransactionsAndFinance(req) {
   };
 
   return {
-    count: toNumber(count),
+    count: toNumber(row.count),
     financeSummary,
     financeWidgetSummary: {
       revenue: normalized.revenues,
@@ -352,84 +388,168 @@ async function countProperties(req) {
     return { total: 0, active: 0 };
   }
 
-  const [total, active] = await Promise.all([
-    Property.count({ where: baseWhere }),
-    Property.count({ where: { ...baseWhere, status: 'active' } }),
-  ]);
+  const row = await fetchAggregateRow(Property, {
+    where: baseWhere,
+    attributes: [
+      [literal(countDistinctSql('Property')), 'total'],
+      [
+        literal(
+          countDistinctSql(
+            'Property',
+            `${columnRef('Property', 'status')} = 'active'`
+          )
+        ),
+        'active',
+      ],
+    ],
+  });
 
-  return { total: toNumber(total), active: toNumber(active) };
+  return {
+    total: toNumber(row.total),
+    active: toNumber(row.active),
+  };
 }
 
 async function countTasks(req) {
   const { where, include } = taskBaseQueryForDashboard(req);
-  const countOpts = {
+  const row = await fetchAggregateRow(Task, {
     where,
     include,
-    distinct: true,
     subQuery: false,
-  };
-
-  const [total, created, inProgress, completed, validated] = await Promise.all([
-    Task.count(countOpts),
-    Task.count({ ...countOpts, where: { ...where, status: 'created' } }),
-    Task.count({ ...countOpts, where: { ...where, status: 'in_progress' } }),
-    Task.count({ ...countOpts, where: { ...where, status: 'completed' } }),
-    Task.count({ ...countOpts, where: { ...where, status: 'validated' } }),
-  ]);
+    attributes: [
+      [literal(countDistinctSql('Task')), 'total'],
+      [
+        literal(
+          countDistinctSql('Task', `${columnRef('Task', 'status')} = 'created'`)
+        ),
+        'created',
+      ],
+      [
+        literal(
+          countDistinctSql(
+            'Task',
+            `${columnRef('Task', 'status')} = 'in_progress'`
+          )
+        ),
+        'inProgress',
+      ],
+      [
+        literal(
+          countDistinctSql(
+            'Task',
+            `${columnRef('Task', 'status')} = 'completed'`
+          )
+        ),
+        'completed',
+      ],
+      [
+        literal(
+          countDistinctSql(
+            'Task',
+            `${columnRef('Task', 'status')} = 'validated'`
+          )
+        ),
+        'validated',
+      ],
+    ],
+  });
 
   return {
-    total: toNumber(total),
-    created: toNumber(created),
-    inProgress: toNumber(inProgress),
-    completed: toNumber(completed),
-    validated: toNumber(validated),
+    total: toNumber(row.total),
+    created: toNumber(row.created),
+    inProgress: toNumber(row.inProgress),
+    completed: toNumber(row.completed),
+    validated: toNumber(row.validated),
   };
 }
 
 async function countProjects(req) {
   const baseWhere = projectWhereForDashboard(req);
-
-  const [total, created, inProgress, completed, validated] = await Promise.all([
-    Project.count({ where: baseWhere }),
-    Project.count({ where: { ...baseWhere, status: 'created' } }),
-    Project.count({ where: { ...baseWhere, status: 'in_progress' } }),
-    Project.count({ where: { ...baseWhere, status: 'completed' } }),
-    Project.count({ where: { ...baseWhere, status: 'validated' } }),
-  ]);
+  const row = await fetchAggregateRow(Project, {
+    where: baseWhere,
+    attributes: [
+      [literal(countDistinctSql('Project')), 'total'],
+      [
+        literal(
+          countDistinctSql(
+            'Project',
+            `${columnRef('Project', 'status')} = 'created'`
+          )
+        ),
+        'created',
+      ],
+      [
+        literal(
+          countDistinctSql(
+            'Project',
+            `${columnRef('Project', 'status')} = 'in_progress'`
+          )
+        ),
+        'inProgress',
+      ],
+      [
+        literal(
+          countDistinctSql(
+            'Project',
+            `${columnRef('Project', 'status')} = 'completed'`
+          )
+        ),
+        'completed',
+      ],
+      [
+        literal(
+          countDistinctSql(
+            'Project',
+            `${columnRef('Project', 'status')} = 'validated'`
+          )
+        ),
+        'validated',
+      ],
+    ],
+  });
 
   return {
-    total: toNumber(total),
-    created: toNumber(created),
-    inProgress: toNumber(inProgress),
-    completed: toNumber(completed),
-    validated: toNumber(validated),
+    total: toNumber(row.total),
+    created: toNumber(row.created),
+    inProgress: toNumber(row.inProgress),
+    completed: toNumber(row.completed),
+    validated: toNumber(row.validated),
   };
 }
 
 async function countOrders(req) {
   const { where, include } = orderBaseQueryForDashboard(req);
-  const countOpts = {
+  const row = await fetchAggregateRow(Order, {
     where,
     include,
-    distinct: true,
-  };
-
-  const [total, paid, open] = await Promise.all([
-    Order.count(countOpts),
-    Order.count({ ...countOpts, where: { ...where, paymentStatus: 'paid' } }),
-    Order.count({
-      ...countOpts,
-      where: {
-        ...where,
-        status: { [Op.notIn]: ['delivered', 'cancelled', 'refunded'] },
-      },
-    }),
-  ]);
+    subQuery: false,
+    attributes: [
+      [literal(countDistinctSql('Order')), 'total'],
+      [
+        literal(
+          countDistinctSql(
+            'Order',
+            `${columnRef('Order', 'payment_status')} = 'paid'`
+          )
+        ),
+        'paid',
+      ],
+      [
+        literal(
+          countDistinctSql(
+            'Order',
+            `${columnRef('Order', 'status')} NOT IN ('delivered', 'cancelled', 'refunded')`
+          )
+        ),
+        'open',
+      ],
+    ],
+  });
 
   return {
-    total: toNumber(total),
-    paid: toNumber(paid),
-    open: toNumber(open),
+    total: toNumber(row.total),
+    paid: toNumber(row.paid),
+    open: toNumber(row.open),
   };
 }
 

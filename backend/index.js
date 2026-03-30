@@ -8,6 +8,7 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 const logger = require('./src/utils/logger');
 const app = require('./src/app');
 const { validateProdConfig } = require('./src/utils/validateProdConfig');
+const { composeSequelizeLogging } = require('./src/utils/sequelizeLogging');
 
 // Sequelize (models/index.js)
 const db = require('./models');
@@ -18,7 +19,10 @@ const bootstrapAdmin = require('./src/utils/bootstrapAdmin');
 
 // Activer les logs SQL si disponibles
 if (sequelize?.options) {
-  sequelize.options.logging = (msg) => logger.debug({ sql: msg });
+  sequelize.options.logging = composeSequelizeLogging(
+    sequelize.options.logging,
+    logger
+  );
 }
 
 /* ======================================================
