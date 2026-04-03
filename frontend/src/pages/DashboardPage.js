@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import {
+  ArrowUpRight,
   BarChart3,
   Building2,
   ClipboardList,
@@ -13,6 +14,8 @@ import {
   HandCoins,
   Landmark,
   Layers,
+  Mail,
+  MessageCircle,
   ShieldPlus,
   Users,
   UserCog,
@@ -391,12 +394,62 @@ export default function DashboardPage() {
   const firstName = user.firstName || user.email || '';
   const shortName =
     (firstName.split(' ')[0] || '').trim() || t("dashboard.careFallbackName");
+  const supportPhoneDisplay = '00223 70453345';
+  const supportPhoneWhatsapp = '22370453345';
+  const supportEmail = 'teranga.diaspora.platform@gmail.com';
+  const whatsappHref = `https://wa.me/${supportPhoneWhatsapp}?text=${encodeURIComponent(
+    t('dashboard.contactBar.whatsappPrefill')
+  )}`;
+  const emailHref = `mailto:${supportEmail}`;
   /* ============================================================================
      Rendu principal.
   =========================================================================== */
   return (
     <div className="app-page-wrap">
       <div className="mx-auto max-w-7xl rounded-3xl border border-border/70 bg-surface-card/92 px-4 py-6 shadow-2xl shadow-slate-300/20 dark:shadow-black/30 sm:px-6 sm:py-8 lg:px-8 space-y-8">
+        <section className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 px-4 py-4 shadow-sm dark:from-emerald-900/20 dark:via-teal-900/20 dark:to-cyan-900/20 sm:px-5 sm:py-5">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-emerald-500/20 blur-2xl" />
+          <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="min-w-0">
+              <span className="inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+                {t('dashboard.contactBar.badge')}
+              </span>
+              <h2 className="mt-2 text-lg font-bold tracking-tight text-emerald-900 dark:text-emerald-100 sm:text-xl">
+                {t('dashboard.contactBar.title')}
+              </h2>
+              <p className="mt-1 text-sm text-emerald-900/80 dark:text-emerald-100/90">
+                {t('dashboard.contactBar.subtitle')}
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/20 bg-white/70 px-2.5 py-1 font-semibold text-emerald-800 dark:border-emerald-300/30 dark:bg-black/20 dark:text-emerald-100">
+                  <MessageCircle size={15} />
+                  {supportPhoneDisplay}
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/20 bg-white/70 px-2.5 py-1 text-emerald-800 dark:border-emerald-300/30 dark:bg-black/20 dark:text-emerald-100">
+                  <Mail size={15} />
+                  {supportEmail}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href={whatsappHref}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-700/20 bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-700"
+              >
+                {t('dashboard.contactBar.whatsappCta')}
+                <ArrowUpRight size={15} />
+              </a>
+              <a
+                href={emailHref}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-700/30 bg-white/80 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:bg-white dark:bg-transparent dark:text-emerald-100 dark:hover:bg-emerald-900/30"
+              >
+                {t('dashboard.contactBar.emailCta')}
+              </a>
+            </div>
+          </div>
+        </section>
 
         {/* ------------------------------------------------------------------ */}
         {/* HEADER PREMIUM                                                    */}

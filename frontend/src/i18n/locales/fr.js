@@ -272,6 +272,15 @@ const fr = {
       descGlobal:
         "Synthèse de vos revenus et dépenses sur l’ensemble de vos opérations.",
     },
+    contactBar: {
+      badge: "WhatsApp Business",
+      title: "Canal de contact direct",
+      subtitle:
+        "Notre équipe vous répond rapidement via WhatsApp ou email.",
+      whatsappCta: "Contacter sur WhatsApp",
+      emailCta: "Envoyer un email",
+      whatsappPrefill: "Bonjour Teranga, je souhaite avoir une assistance.",
+    },
     quickView: {
       title: "Vue rapide",
       subtitle:
@@ -2279,8 +2288,8 @@ const fr = {
         success: "Merci ! Votre message a bien \u00E9t\u00E9 envoy\u00E9.",
       },
       info: {
-        email: "contact@teranga-platform.com",
-        phone: "+223 70 66 83 64 / +223 94 16 12 66",
+        email: "teranga.diaspora.platform@gmail.com",
+        phone: "00223 70453345",
         address: "Hamdallaye ACI 200, Bamako - Mali",
       },
       note:
@@ -2341,12 +2350,12 @@ const fr = {
       publisher: {
         title: "1. \u00C9diteur du site",
         details:
-          "<strong>Teranga Diaspora</strong><br/>Service de gestion de biens, projets et services pour la diaspora africaine.<br/>Si\u00E8ge social : Hamdallaye ACI 200, Bamako - Mali<br/>Email : contact@teranga-platform.com",
+          "<strong>Teranga Diaspora</strong><br/>Service de gestion de biens, projets et services pour la diaspora africaine.<br/>Si\u00E8ge social : Hamdallaye ACI 200, Bamako - Mali<br/>Email : teranga.diaspora.platform@gmail.com",
       },
       editorial: {
         title: "2. Responsabilit\u00E9 \u00E9ditoriale",
         details:
-          "Le responsable de la publication est joignable \u00E0 l’adresse : contact@teranga-platform.com",
+          "Le responsable de la publication est joignable \u00E0 l’adresse : teranga.diaspora.platform@gmail.com",
       },
       hosting: {
         title: "3. H\u00E9bergement",
@@ -2361,7 +2370,7 @@ const fr = {
       contact: {
         title: "5. Contact",
         details:
-          "Pour toute question ou r\u00E9clamation, vous pouvez nous \u00E9crire \u00E0 :<br/><strong>contact@teranga-platform.com</strong>",
+          "Pour toute question ou r\u00E9clamation, vous pouvez nous \u00E9crire \u00E0 :<br/><strong>teranga.diaspora.platform@gmail.com</strong>",
       },
     },
   },
@@ -2445,7 +2454,7 @@ const fr = {
           portability: "Droit \u00E0 la portabilit\u00E9",
         },
         contact:
-          "Pour exercer vos droits : <br/><strong>contact@teranga-platform.com</strong>",
+          "Pour exercer vos droits : <br/><strong>teranga.diaspora.platform@gmail.com</strong>",
       },
     },
   },
@@ -2518,7 +2527,7 @@ const fr = {
       contact: {
         title: "5. Contact",
         details:
-          "Toute question peut \u00EAtre adress\u00E9e \u00E0 : <br/><strong>contact@teranga-platform.com</strong>",
+          "Toute question peut \u00EAtre adress\u00E9e \u00E0 : <br/><strong>teranga.diaspora.platform@gmail.com</strong>",
       },
     },
   },
@@ -2662,8 +2671,8 @@ const fr = {
       description:
         "Pour les demandes urgentes ou sensibles, notre \u00E9quipe vous r\u00E9pond via les canaux officiels Teranga.",
       channels: {
-        email: "contact@teranga-platform.com",
-        phone: "+223 70 66 83 64 / +223 94 16 12 66",
+        email: "teranga.diaspora.platform@gmail.com",
+        phone: "00223 70453345",
         hours:
           "Assistance prioritaire : r\u00E9ponse initiale sous 24 h selon la nature de la demande.",
       },
