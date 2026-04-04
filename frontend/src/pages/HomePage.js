@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
+  ArrowUpRight,
   Home,
   Truck,
   Globe,
@@ -11,6 +12,7 @@ import {
   Mail,
   Phone,
   MapPin,
+  MessageCircle,
   HeartHandshake,
   CheckCircle2,
   Camera,
@@ -357,12 +359,65 @@ export default function HomePage() {
     { icon: Phone, text: t("homePage.contact.info.phone") },
     { icon: MapPin, text: t("homePage.contact.info.address") },
   ];
+  const supportPhoneDisplay = t("homePage.contact.info.phone");
+  const supportPhoneWhatsapp = supportPhoneDisplay
+    .replace(/[^\d]/g, "")
+    .replace(/^00/, "");
+  const supportEmail = t("homePage.contact.info.email");
+  const whatsappHref = `https://wa.me/${supportPhoneWhatsapp}?text=${encodeURIComponent(
+    t("dashboard.contactBar.whatsappPrefill")
+  )}`;
+  const emailHref = `mailto:${supportEmail}`;
 
   const openImage = (config) => setActiveImage(config);
 
   return (
     <div className="min-h-screen scroll-smooth bg-gradient-to-br from-surface-main via-surface-card to-surface-main text-text-primary">
       <main className="flex-1">
+        <section className="px-6 pt-6 sm:pt-8">
+          <div className="relative mx-auto flex max-w-6xl flex-col gap-4 overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 px-4 py-4 shadow-sm dark:from-emerald-900/20 dark:via-teal-900/20 dark:to-cyan-900/20 sm:px-5 sm:py-5 md:flex-row md:items-center md:justify-between">
+            <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-emerald-500/20 blur-2xl" />
+            <div className="relative min-w-0">
+              <span className="inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+                {t("dashboard.contactBar.badge")}
+              </span>
+              <h2 className="mt-2 text-lg font-bold tracking-tight text-emerald-900 dark:text-emerald-100 sm:text-xl">
+                {t("dashboard.contactBar.title")}
+              </h2>
+              <p className="mt-1 text-sm text-emerald-900/80 dark:text-emerald-100/90">
+                {t("dashboard.contactBar.subtitle")}
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/20 bg-white/70 px-2.5 py-1 font-semibold text-emerald-800 dark:border-emerald-300/30 dark:bg-black/20 dark:text-emerald-100">
+                  <MessageCircle size={15} />
+                  {supportPhoneDisplay}
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/20 bg-white/70 px-2.5 py-1 text-emerald-800 dark:border-emerald-300/30 dark:bg-black/20 dark:text-emerald-100">
+                  <Mail size={15} />
+                  {supportEmail}
+                </span>
+              </div>
+            </div>
+            <div className="relative flex flex-wrap items-center gap-2">
+              <a
+                href={whatsappHref}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-700/20 bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-700"
+              >
+                {t("dashboard.contactBar.whatsappCta")}
+                <ArrowUpRight size={15} />
+              </a>
+              <a
+                href={emailHref}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-700/30 bg-white/80 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:bg-white dark:bg-transparent dark:text-emerald-100 dark:hover:bg-emerald-900/30"
+              >
+                {t("dashboard.contactBar.emailCta")}
+              </a>
+            </div>
+          </div>
+        </section>
+
         <section
           id="accueil"
           className="relative overflow-hidden px-6 pb-12 pt-8 sm:pb-16 sm:pt-12 lg:pb-24 lg:pt-18"
