@@ -388,13 +388,15 @@ export default function HomePage() {
                 {t("dashboard.contactBar.subtitle")}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/20 bg-white/70 px-2.5 py-1 font-semibold text-emerald-800 dark:border-emerald-300/30 dark:bg-black/20 dark:text-emerald-100">
+                <span className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-emerald-600/20 bg-white/70 px-2.5 py-1 font-semibold text-emerald-800 dark:border-emerald-300/30 dark:bg-black/20 dark:text-emerald-100">
                   <MessageCircle size={15} />
                   {supportPhoneDisplay}
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/20 bg-white/70 px-2.5 py-1 text-emerald-800 dark:border-emerald-300/30 dark:bg-black/20 dark:text-emerald-100">
-                  <Mail size={15} />
-                  {supportEmail}
+                <span className="inline-flex max-w-full items-start gap-1.5 rounded-lg border border-emerald-600/20 bg-white/70 px-2.5 py-1 text-emerald-800 dark:border-emerald-300/30 dark:bg-black/20 dark:text-emerald-100">
+                  <Mail size={15} className="mt-0.5 shrink-0" />
+                  <span className="min-w-0 break-all leading-snug">
+                    {supportEmail}
+                  </span>
                 </span>
               </div>
             </div>

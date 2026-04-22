@@ -176,9 +176,9 @@ export default function HelpSupportPage() {
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div className="space-y-3">
             {supportChannels.map(({ icon: Icon, value }) => (
-              <div key={value} className="flex items-center gap-2 text-text-secondary">
-                <Icon size={16} className="text-blue-600" />
-                <span className="text-sm">{value}</span>
+              <div key={value} className="flex max-w-full items-start gap-2 text-text-secondary">
+                <Icon size={16} className="mt-0.5 shrink-0 text-blue-600" />
+                <span className="min-w-0 break-all text-sm leading-snug">{value}</span>
               </div>
             ))}
 
