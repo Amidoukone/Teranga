@@ -385,6 +385,7 @@ function NavBar() {
 
   // Mobile "Plus"
   const [openMore, setOpenMore] = useState(false);
+  const [mobileSelectActive, setMobileSelectActive] = useState(false);
 
   // Desktop dropdowns
   const [openDesktopMore, setOpenDesktopMore] = useState(false);
@@ -553,6 +554,53 @@ function NavBar() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined" || typeof window === "undefined") {
+      return undefined;
+    }
+
+    if (typeof window.matchMedia !== "function") {
+      setMobileSelectActive(false);
+      return undefined;
+    }
+
+    const media = window.matchMedia("(max-width: 767px)");
+
+    const syncMobileSelectState = () => {
+      if (!media.matches) {
+        setMobileSelectActive(false);
+        return;
+      }
+
+      const activeEl = document.activeElement;
+      setMobileSelectActive(activeEl instanceof HTMLSelectElement);
+    };
+
+    const handleFocusIn = () => syncMobileSelectState();
+    const handleFocusOut = () => {
+      window.setTimeout(syncMobileSelectState, 0);
+    };
+
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("focusout", handleFocusOut);
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", syncMobileSelectState);
+    } else {
+      media.addListener(syncMobileSelectState);
+    }
+
+    return () => {
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("focusout", handleFocusOut);
+      if (typeof media.removeEventListener === "function") {
+        media.removeEventListener("change", syncMobileSelectState);
+      } else {
+        media.removeListener(syncMobileSelectState);
+      }
+    };
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -1166,7 +1214,15 @@ function NavBar() {
       {/* ======================================================================== */}
  {/* BOTTOM NAV - MOBILE ONLY (COMPACT) */}
       {/* ======================================================================== */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent" aria-label="Navigation basse">
+      <nav
+        className={[
+          "fixed bottom-0 inset-x-0 z-50 md:hidden bg-transparent transition-all duration-200",
+          mobileSelectActive ? "pointer-events-none translate-y-3 opacity-0" : "pointer-events-auto opacity-100",
+        ].join(" ")}
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.5rem)" }}
+        aria-label="Navigation basse"
+        aria-hidden={mobileSelectActive}
+      >
         <div className="mx-auto w-full flex justify-center">
           <div className="w-full max-w-xs px-2 pb-2">
             <div className="bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl border border-border/70 rounded-2xl shadow-[0_12px_35px_-25px_rgba(15,23,42,0.6)] flex px-1 py-1 gap-1">
@@ -1180,7 +1236,7 @@ function NavBar() {
                     to={item.path}
                     {...withRouteWarmup(item.path)}
                     className={[
-                      "flex-1 flex flex-col items-center py-1.5 rounded-xl text-[0.75rem] transition",
+                      "flex-1 flex min-h-[52px] flex-col items-center justify-center py-1.5 rounded-xl text-[0.75rem] transition touch-manipulation",
                       "focus:outline-none focus:ring-4 focus:ring-primary/10",
                       active
                         ? "bg-primary/10 text-primary border border-border shadow-sm"
@@ -1198,7 +1254,7 @@ function NavBar() {
               <button
                 onClick={() => setOpenMore((v) => !v)}
                 className={[
-                  "flex-1 flex flex-col items-center py-1.5 rounded-xl text-[0.75rem] transition",
+                  "flex-1 flex min-h-[52px] flex-col items-center justify-center py-1.5 rounded-xl text-[0.75rem] transition touch-manipulation",
                   "focus:outline-none focus:ring-4 focus:ring-primary/10",
                   openMore
                     ? "bg-primary/10 text-primary border border-border shadow-sm"
@@ -1238,6 +1294,7 @@ function NavBar() {
               exit={{ opacity: 0, y: 80 }}
               transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className="fixed bottom-24 inset-x-0 z-50 flex justify-center px-4"
+              style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 5.75rem)" }}
               role="dialog"
               aria-modal="true"
               aria-label={t("nav.menu")}

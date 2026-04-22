@@ -18,6 +18,7 @@ import { GeoProvider } from './contexts/GeoContext';
 import { getAnalyticsConsent, loadAnalytics } from './utils/analytics';
 import { installGlobalErrorHandlers } from './utils/errorReporter';
 import { scheduleIdleRoutePreload } from './utils/routePreload';
+import { PUBLIC_HOME_SEO_FR } from './utils/publicSeo';
 import { getToken, getLocalUser, hasSessionHint, me } from './services/auth';
 import { GEO_SELECTION_CHANGED_EVENT } from './services/geo';
 import { normalizeRole } from './utils/role'; // ensure roles are canonical (admin/agent/client)
@@ -334,7 +335,7 @@ export default function App() {
           />
 
           <main className="flex-1 w-full">
-            <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            <div className="mobile-bottom-safe-space mx-auto w-full max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
               <Suspense fallback={<RouteLoadingFallback />}>
                 <Routes key={`geo-${geoRefreshKey}`}>
             {/* ============================= */}
@@ -345,8 +346,10 @@ export default function App() {
               element={
                 <>
                   <SetSeo
-                    title={t('seo.pages.home.title')}
-                    description={t('seo.pages.home.description')}
+                    title={PUBLIC_HOME_SEO_FR.title}
+                    description={PUBLIC_HOME_SEO_FR.description}
+                    language={PUBLIC_HOME_SEO_FR.language}
+                    ogLocale={PUBLIC_HOME_SEO_FR.ogLocale}
                   />
                   <HomePage />
                 </>
@@ -864,7 +867,12 @@ export default function App() {
               path="*"
               element={
                 <>
-                  <SetSeo title={t('seo.pages.fallback.title')} />
+                  <SetSeo
+                    title={PUBLIC_HOME_SEO_FR.title}
+                    description={PUBLIC_HOME_SEO_FR.description}
+                    language={PUBLIC_HOME_SEO_FR.language}
+                    ogLocale={PUBLIC_HOME_SEO_FR.ogLocale}
+                  />
                   <HomePage />
                 </>
               }

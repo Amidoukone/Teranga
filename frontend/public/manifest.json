@@ -1,12 +1,14 @@
 {
   "short_name": "Teranga",
-  "name": "Teranga — Diaspora & Services",
+  "name": "Teranga - Diaspora et services",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#0ea5e9",
   "background_color": "#ffffff",
-  "description": "Teranga — Plateforme moderne qui connecte la diaspora africaine à ses biens, projets et services.",
+  "description": "Teranga est la plateforme francophone qui connecte la diaspora africaine a ses biens, projets et services.",
   "icons": [
     {
       "src": "logo_32x32.png",

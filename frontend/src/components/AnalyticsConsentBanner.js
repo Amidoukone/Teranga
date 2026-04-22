@@ -32,7 +32,10 @@ export default function AnalyticsConsentBanner({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/80 bg-surface-card/95 px-4 py-4 shadow-2xl backdrop-blur sm:px-6">
+    <div
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/80 bg-surface-card/95 px-4 py-4 shadow-2xl backdrop-blur sm:px-6"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+    >
       <div className="mx-auto flex max-w-5xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="text-sm text-text-secondary">
           <p className="font-semibold text-text-primary">

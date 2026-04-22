@@ -303,6 +303,12 @@ html[data-theme="dark"] .disabled\:bg-blue-400:disabled {
     background-attachment: fixed;
   }
 
+  @supports (min-height: 100dvh) {
+    body {
+      min-height: 100dvh;
+    }
+  }
+
   html[data-theme="dark"] body {
     background-image:
       radial-gradient(circle at top, rgba(96, 165, 250, 0.16), transparent 45%),
@@ -392,6 +398,14 @@ html[data-theme="dark"] .disabled\:bg-blue-400:disabled {
     @apply text-primary hover:text-primary/80 transition;
   }
 
+  button,
+  a,
+  select,
+  input,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   table {
     @apply w-full border-separate border-spacing-0 text-sm text-text-secondary;
   }
@@ -410,6 +424,16 @@ html[data-theme="dark"] .disabled\:bg-blue-400:disabled {
 }
 
 @layer components {
+  .mobile-bottom-safe-space {
+    padding-bottom: 2rem;
+  }
+
+  @media (max-width: 767px) {
+    .mobile-bottom-safe-space {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 7rem);
+    }
+  }
+
   .surface-card {
     @apply rounded-2xl border border-border/80 bg-surface-card shadow-lg shadow-slate-900/10;
   }

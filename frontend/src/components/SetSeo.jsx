@@ -9,7 +9,7 @@ function setOrCreateMeta(selector, attr, value) {
   let tag = document.querySelector(selector);
 
   if (!tag) {
-    const match = selector.match(/meta\[(name|property)="([^"]+)"\]/);
+    const match = selector.match(/meta\[(name|property|http-equiv)="([^"]+)"\]/);
     if (match) {
       const [, key, val] = match;
       tag = document.createElement("meta");
@@ -21,7 +21,7 @@ function setOrCreateMeta(selector, attr, value) {
   if (tag) tag.setAttribute(attr, value);
 }
 
-export default function SetSeo({ title, description }) {
+export default function SetSeo({ title, description, language, ogLocale }) {
   const { t, i18n } = useTranslation();
 
   useEffect(() => {
@@ -33,11 +33,14 @@ export default function SetSeo({ title, description }) {
     document.title = finalTitle;
 
     setOrCreateMeta('meta[name="description"]', "content", finalDescription);
+    setOrCreateMeta('meta[name="language"]', "content", language);
+    setOrCreateMeta('meta[http-equiv="content-language"]', "content", language);
     setOrCreateMeta('meta[property="og:title"]', "content", finalTitle);
     setOrCreateMeta('meta[property="og:description"]', "content", finalDescription);
+    setOrCreateMeta('meta[property="og:locale"]', "content", ogLocale);
     setOrCreateMeta('meta[name="twitter:title"]', "content", finalTitle);
     setOrCreateMeta('meta[name="twitter:description"]', "content", finalDescription);
-  }, [title, description, t, i18n.language]);
+  }, [title, description, language, ogLocale, t, i18n.language]);
 
   return null;
 }
