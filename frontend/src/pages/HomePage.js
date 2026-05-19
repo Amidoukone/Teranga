@@ -13,7 +13,6 @@ import {
   Phone,
   MapPin,
   MessageCircle,
-  HeartHandshake,
   CheckCircle2,
   Camera,
   BadgeCheck,
@@ -26,10 +25,11 @@ import { Trans, useTranslation } from "react-i18next";
 
 import heroFamilyImage from "../assets/images/hero-family-assistance-mali-teranga.png";
 import propertyManagementImage from "../assets/images/services-gestion-biens-teranga.png";
-import projectImage from "../assets/images/usecase-construction-projet-mali.png";
-import administrativeImage from "../assets/images/usecase-demarches-administratives-teranga.png";
-import inspectionImage from "../assets/images/usecase-inspection-immobiliere-teranga.png";
-import { notify } from "../utils/notify";
+import proofServiceImage from "../assets/images/proof-service-teranga.png";
+import administrativeProofImage from "../assets/images/administrative-process-teranga.png";
+import inspectionProofImage from "../assets/images/site-inspection-teranga.png";
+import deliveryProofImage from "../assets/images/assisted-delivery-teranga.png";
+import projectProofImage from "../assets/images/project-followup-teranga.png";
 
 function SectionHeader({ kicker, title, subtitle, align = "center" }) {
   const isCentered = align === "center";
@@ -245,39 +245,96 @@ export default function HomePage() {
   ];
 
   const quickLinks = [
-    { href: "#usage", label: t("homePage.quickNav.useCases") },
+    { href: "#actions", label: t("homePage.quickNav.actions") },
+    { href: "#preuves", label: t("homePage.quickNav.proofs") },
     { href: "#services", label: t("homePage.quickNav.services") },
-    { href: "#pourquoi", label: t("homePage.quickNav.why") },
     { href: "#contact", label: t("homePage.quickNav.contact") },
   ];
 
-  const useCaseCards = [
+  const quickActions = [
     {
       icon: Wrench,
-      title: t("homePage.useCases.cards.service.title"),
-      desc: t("homePage.useCases.cards.service.desc"),
-      image: administrativeImage,
-      imageAlt: t("homePage.useCases.gallery.service.alt"),
-      eyebrow: t("homePage.useCases.gallery.service.eyebrow"),
-      proof: t("homePage.useCases.gallery.service.proof"),
+      title: t("homePage.quickActions.items.service.title"),
+      desc: t("homePage.quickActions.items.service.desc"),
+      prefill: t("homePage.quickActions.items.service.prefill"),
     },
     {
       icon: ClipboardList,
-      title: t("homePage.useCases.cards.task.title"),
-      desc: t("homePage.useCases.cards.task.desc"),
-      image: inspectionImage,
-      imageAlt: t("homePage.useCases.gallery.task.alt"),
-      eyebrow: t("homePage.useCases.gallery.task.eyebrow"),
-      proof: t("homePage.useCases.gallery.task.proof"),
+      title: t("homePage.quickActions.items.mission.title"),
+      desc: t("homePage.quickActions.items.mission.desc"),
+      prefill: t("homePage.quickActions.items.mission.prefill"),
+    },
+    {
+      icon: FileText,
+      title: t("homePage.quickActions.items.administrative.title"),
+      desc: t("homePage.quickActions.items.administrative.desc"),
+      prefill: t("homePage.quickActions.items.administrative.prefill"),
+    },
+    {
+      icon: Camera,
+      title: t("homePage.quickActions.items.construction.title"),
+      desc: t("homePage.quickActions.items.construction.desc"),
+      prefill: t("homePage.quickActions.items.construction.prefill"),
+    },
+    {
+      icon: Truck,
+      title: t("homePage.quickActions.items.delivery.title"),
+      desc: t("homePage.quickActions.items.delivery.desc"),
+      prefill: t("homePage.quickActions.items.delivery.prefill"),
     },
     {
       icon: FolderKanban,
-      title: t("homePage.useCases.cards.project.title"),
-      desc: t("homePage.useCases.cards.project.desc"),
-      image: projectImage,
-      imageAlt: t("homePage.useCases.gallery.project.alt"),
-      eyebrow: t("homePage.useCases.gallery.project.eyebrow"),
-      proof: t("homePage.useCases.gallery.project.proof"),
+      title: t("homePage.quickActions.items.project.title"),
+      desc: t("homePage.quickActions.items.project.desc"),
+      prefill: t("homePage.quickActions.items.project.prefill"),
+    },
+  ];
+
+  const proofCards = [
+    {
+      icon: BadgeCheck,
+      title: t("homePage.proofs.items.service.title"),
+      desc: t("homePage.proofs.items.service.desc"),
+      image: proofServiceImage,
+      imageAlt: t("homePage.proofs.items.service.alt"),
+      eyebrow: t("homePage.proofs.items.service.eyebrow"),
+      proof: t("homePage.proofs.items.service.proof"),
+    },
+    {
+      icon: FileText,
+      title: t("homePage.proofs.items.administrative.title"),
+      desc: t("homePage.proofs.items.administrative.desc"),
+      image: administrativeProofImage,
+      imageAlt: t("homePage.proofs.items.administrative.alt"),
+      eyebrow: t("homePage.proofs.items.administrative.eyebrow"),
+      proof: t("homePage.proofs.items.administrative.proof"),
+    },
+    {
+      icon: Camera,
+      title: t("homePage.proofs.items.inspection.title"),
+      desc: t("homePage.proofs.items.inspection.desc"),
+      image: inspectionProofImage,
+      imageAlt: t("homePage.proofs.items.inspection.alt"),
+      eyebrow: t("homePage.proofs.items.inspection.eyebrow"),
+      proof: t("homePage.proofs.items.inspection.proof"),
+    },
+    {
+      icon: Truck,
+      title: t("homePage.proofs.items.delivery.title"),
+      desc: t("homePage.proofs.items.delivery.desc"),
+      image: deliveryProofImage,
+      imageAlt: t("homePage.proofs.items.delivery.alt"),
+      eyebrow: t("homePage.proofs.items.delivery.eyebrow"),
+      proof: t("homePage.proofs.items.delivery.proof"),
+    },
+    {
+      icon: FolderKanban,
+      title: t("homePage.proofs.items.project.title"),
+      desc: t("homePage.proofs.items.project.desc"),
+      image: projectProofImage,
+      imageAlt: t("homePage.proofs.items.project.alt"),
+      eyebrow: t("homePage.proofs.items.project.eyebrow"),
+      proof: t("homePage.proofs.items.project.proof"),
     },
   ];
 
@@ -320,12 +377,6 @@ export default function HomePage() {
     },
   ];
 
-  const impactPoints = [
-    t("homePage.impact.points.p1"),
-    t("homePage.impact.points.p2"),
-    t("homePage.impact.points.p3"),
-  ];
-
   const aboutTrustPoints = [
     {
       icon: Camera,
@@ -341,19 +392,6 @@ export default function HomePage() {
     },
   ];
 
-  const contactFields = [
-    {
-      label: t("homePage.contact.form.name.label"),
-      type: "text",
-      placeholder: t("homePage.contact.form.name.placeholder"),
-    },
-    {
-      label: t("homePage.contact.form.email.label"),
-      type: "email",
-      placeholder: t("homePage.contact.form.email.placeholder"),
-    },
-  ];
-
   const contactInfos = [
     { icon: Mail, text: t("homePage.contact.info.email") },
     { icon: Phone, text: t("homePage.contact.info.phone") },
@@ -364,9 +402,12 @@ export default function HomePage() {
     .replace(/[^\d]/g, "")
     .replace(/^00/, "");
   const supportEmail = t("homePage.contact.info.email");
-  const whatsappHref = `https://wa.me/${supportPhoneWhatsapp}?text=${encodeURIComponent(
-    t("dashboard.contactBar.whatsappPrefill")
-  )}`;
+  const buildWhatsappHref = (message) =>
+    `https://wa.me/${supportPhoneWhatsapp}?text=${encodeURIComponent(message)}`;
+  const whatsappHref = buildWhatsappHref(t("dashboard.contactBar.whatsappPrefill"));
+  const heroWhatsappHref = buildWhatsappHref(
+    t("homePage.quickActions.items.service.prefill")
+  );
   const emailHref = `mailto:${supportEmail}`;
 
   const openImage = (config) => setActiveImage(config);
@@ -464,19 +505,31 @@ export default function HomePage() {
                 </p>
 
                 <div className="mt-6 flex flex-wrap justify-center gap-3.5 sm:mt-7 sm:gap-4 lg:justify-start">
-                  <Link
-                    to="/login"
+                  <a
+                    href={heroWhatsappHref}
+                    target="_blank"
+                    rel="noreferrer"
                     className="btn-primary inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm sm:text-base"
                   >
-                    {t("homePage.hero.ctaLogin")}
-                    <ArrowRight size={18} />
-                  </Link>
+                    {t("homePage.hero.ctaWhatsapp")}
+                    <ArrowUpRight size={18} />
+                  </a>
 
                   <Link
                     to="/register"
                     className="btn-secondary rounded-full px-7 py-3 text-sm sm:text-base"
                   >
                     {t("homePage.hero.ctaRegister")}
+                  </Link>
+                </div>
+
+                <div className="mt-4">
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-text-secondary transition hover:text-text-primary"
+                  >
+                    {t("homePage.hero.ctaLogin")}
+                    <ArrowRight size={16} />
                   </Link>
                 </div>
 
@@ -573,23 +626,70 @@ export default function HomePage() {
         </section>
 
         <section
-          id="usage"
+          id="actions"
           className="border-t border-border/70 bg-surface-main px-6 py-16 sm:py-20"
         >
           <SectionHeader
-            kicker={t("homePage.useCases.kicker")}
-            title={t("homePage.useCases.title")}
-            subtitle={t("homePage.useCases.subtitle")}
+            kicker={t("homePage.quickActions.kicker")}
+            title={t("homePage.quickActions.title")}
+            subtitle={t("homePage.quickActions.subtitle")}
+          />
+
+          <div className="mx-auto mt-12 grid max-w-6xl gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {quickActions.map(({ icon: Icon, title, desc, prefill }, index) => (
+              <motion.div
+                key={title}
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 0.55, delay: index * 0.08 }}
+                whileHover={{ y: -3, scale: 1.01 }}
+                className="flex h-full flex-col rounded-[28px] border border-border/70 bg-surface-card px-6 py-6 shadow-[0_14px_40px_-28px_rgba(15,23,42,0.2)] sm:px-7"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/12 text-emerald-700 dark:text-emerald-300">
+                  <Icon size={22} />
+                </div>
+                <h3 className="mt-5 text-lg font-semibold text-text-primary sm:text-xl">{title}</h3>
+                <p className="mt-3 flex-1 text-sm leading-relaxed text-text-secondary sm:text-base">
+                  {desc}
+                </p>
+                <a
+                  href={buildWhatsappHref(prefill)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-6 inline-flex items-center justify-between gap-3 rounded-2xl border border-emerald-600/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:bg-emerald-500/15 dark:text-emerald-100"
+                >
+                  <span>{t("homePage.quickActions.cta")}</span>
+                  <ArrowUpRight size={16} />
+                </a>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mx-auto mt-8 max-w-4xl rounded-[28px] border border-emerald-500/20 bg-emerald-500/8 px-6 py-5 text-center text-sm leading-relaxed text-text-secondary shadow-[0_16px_40px_-30px_rgba(16,185,129,0.3)] sm:text-base">
+            {t("homePage.quickActions.note")}
+          </div>
+        </section>
+
+        <section
+          id="preuves"
+          className="border-t border-border/70 bg-surface-card px-6 py-16 sm:py-20"
+        >
+          <SectionHeader
+            kicker={t("homePage.proofs.kicker")}
+            title={t("homePage.proofs.title")}
+            subtitle={t("homePage.proofs.subtitle")}
           />
 
           <div className="mx-auto mt-12 grid max-w-6xl gap-8 lg:grid-cols-3">
-            {useCaseCards.map((card, index) => (
+            {proofCards.map((card, index) => (
               <motion.div
                 key={card.title}
                 initial={{ opacity: 0, y: 28 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.55, delay: index * 0.08 }}
+                className={index === 4 ? "lg:col-span-3 xl:col-span-1" : ""}
               >
                 <StoryCard
                   {...card}
@@ -603,7 +703,7 @@ export default function HomePage() {
 
         <section
           id="services"
-          className="border-t border-border/70 bg-surface-card px-6 py-16 sm:py-20"
+          className="border-t border-border/70 bg-surface-main px-6 py-16 sm:py-20"
         >
           <SectionHeader
             kicker={t("homePage.services.kicker")}
@@ -711,7 +811,7 @@ export default function HomePage() {
 
         <section
           id="pourquoi"
-          className="bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-6 py-16 sm:py-20"
+          className="border-t border-border/70 bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-6 py-16 sm:py-20"
         >
           <SectionHeader
             kicker={t("homePage.why.kicker")}
@@ -744,122 +844,9 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="border-t border-border/70 bg-surface-main px-6 py-16 sm:py-20">
-          <div className="mx-auto grid max-w-5xl gap-6 rounded-[32px] border border-blue-500/20 bg-blue-500/10 p-7 sm:p-10 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
-            <div>
-              <p className="page-kicker">{t("homePage.impact.kicker")}</p>
-              <h2 className="text-2xl font-semibold text-text-primary sm:text-3xl">
-                {t("homePage.impact.title")}
-              </h2>
-              <p className="mt-3 text-base leading-relaxed text-text-secondary sm:text-lg">
-                {t("homePage.impact.subtitle")}
-              </p>
-
-              <div className="mt-6 grid gap-3">
-                {impactPoints.map((point) => (
-                  <div key={point} className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 shrink-0 text-blue-600" size={18} />
-                    <p className="text-sm leading-relaxed text-text-secondary sm:text-base">{point}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-7">
-                <Link
-                  to="/help-support"
-                  className="btn-secondary inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm sm:text-base"
-                >
-                  {t("homePage.impact.cta")}
-                  <ArrowRight size={16} />
-                </Link>
-              </div>
-            </div>
-
-            <div className="rounded-[28px] border border-blue-500/20 bg-surface-card/80 p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.25)]">
-              <p className="page-kicker">{t("homePage.about.trustLabel")}</p>
-              <h3 className="mt-3 text-xl font-semibold leading-tight text-text-primary">
-                {t("homePage.about.trustTitle")}
-              </h3>
-              <div className="mt-5 grid gap-4">
-                {aboutTrustPoints.map(({ icon: Icon, text }) => (
-                  <div key={text} className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-blue-500/12 text-blue-600">
-                      <Icon size={18} />
-                    </div>
-                    <p className="text-sm leading-relaxed text-text-secondary">{text}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="apropos"
-          className="border-t border-border/70 bg-surface-card px-6 py-16 sm:py-20"
-        >
-          <SectionHeader
-            kicker={t("homePage.about.kicker")}
-            title={t("homePage.about.title")}
-            subtitle={t("homePage.about.subtitle")}
-          />
-
-          <div className="mx-auto mt-12 grid max-w-5xl gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{ duration: 0.6 }}
-              className="space-y-5 text-[15px] leading-relaxed text-text-secondary sm:text-base"
-            >
-              <p>
-                <Trans
-                  i18nKey="homePage.about.paragraphs.p1"
-                  components={[<strong key="about-strong" />]}
-                />
-              </p>
-              <p>{t("homePage.about.paragraphs.p2")}</p>
-              <p>{t("homePage.about.paragraphs.p3")}</p>
-            </motion.div>
-
-            <motion.aside
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{ duration: 0.6, delay: 0.08 }}
-              className="rounded-[30px] border border-border/70 bg-surface-main/85 p-6 shadow-[0_16px_42px_-30px_rgba(15,23,42,0.28)]"
-            >
-              <p className="page-kicker">{t("homePage.about.trustLabel")}</p>
-              <h3 className="mt-3 text-2xl font-semibold leading-tight text-text-primary">
-                {t("homePage.about.trustTitle")}
-              </h3>
-              <div className="mt-5 grid gap-4">
-                {aboutTrustPoints.map(({ icon: Icon, text }) => (
-                  <div key={text} className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-500/12 text-blue-600">
-                      <Icon size={18} />
-                    </div>
-                    <p className="text-sm leading-relaxed text-text-secondary">{text}</p>
-                  </div>
-                ))}
-              </div>
-            </motion.aside>
-          </div>
-
-          <div className="mt-10 text-center sm:mt-12">
-            <Link
-              to="/register"
-              className="btn-primary inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm sm:text-base"
-            >
-              {t("homePage.about.cta")}
-              <HeartHandshake size={18} />
-            </Link>
-          </div>
-        </section>
-
         <section
           id="contact"
-          className="border-t border-border/70 bg-surface-main px-6 py-16 sm:py-20"
+          className="border-t border-border/70 bg-surface-card px-6 py-16 sm:py-20"
         >
           <SectionHeader
             kicker={t("homePage.contact.kicker")}
@@ -867,54 +854,52 @@ export default function HomePage() {
             subtitle={t("homePage.contact.subtitle")}
           />
 
-          <div className="mx-auto mt-10 grid max-w-5xl gap-10 md:grid-cols-2">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                notify(t("homePage.contact.form.success"));
-              }}
-              className="flex flex-col gap-5 rounded-[30px] border border-border/70 bg-surface-card p-7 shadow-sm sm:p-8"
-            >
-              {contactFields.map((input) => (
-                <div key={input.label} className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-text-secondary">{input.label}</label>
-                  <input
-                    type={input.type}
-                    required
-                    placeholder={input.placeholder}
-                    className="w-full rounded-xl border border-border bg-surface-main px-3 py-2 text-sm text-text-primary outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              ))}
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-text-secondary">
-                  {t("homePage.contact.form.message.label")}
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  placeholder={t("homePage.contact.form.message.placeholder")}
-                  className="w-full resize-none rounded-xl border border-border bg-surface-main px-3 py-2 text-sm text-text-primary outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="btn-primary self-start rounded-full px-6 py-2.5 text-sm"
-              >
-                {t("homePage.contact.form.submit")}
-              </button>
-            </form>
-
-            <div className="rounded-[30px] border border-border/70 bg-surface-card/85 p-6 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.22)] sm:p-7">
-              <p className="page-kicker">{t("homePage.contact.kicker")}</p>
+          <div className="mx-auto mt-10 grid max-w-5xl gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="rounded-[30px] border border-border/70 bg-surface-main/85 p-6 shadow-[0_16px_42px_-30px_rgba(15,23,42,0.22)] sm:p-8">
+              <p className="page-kicker">{t("homePage.about.trustLabel")}</p>
               <h3 className="mt-3 text-2xl font-semibold leading-tight text-text-primary">
                 {t("homePage.contact.sideTitle")}
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-text-secondary sm:text-base">
                 {t("homePage.contact.sideText")}
               </p>
+
+              <div className="mt-6 grid gap-4">
+                {aboutTrustPoints.map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-500/12 text-blue-600">
+                      <Icon size={18} />
+                    </div>
+                    <p className="text-sm leading-relaxed text-text-secondary sm:text-base">{text}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-7 flex flex-wrap gap-3">
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-primary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm"
+                >
+                  {t("homePage.contact.ctaWhatsapp")}
+                  <ArrowUpRight size={16} />
+                </a>
+                <a
+                  href={emailHref}
+                  className="btn-secondary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm"
+                >
+                  {t("homePage.contact.ctaEmail")}
+                  <Mail size={16} />
+                </a>
+              </div>
+            </div>
+
+            <div className="rounded-[30px] border border-border/70 bg-surface-main/90 p-6 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.22)] sm:p-7">
+              <p className="page-kicker">{t("homePage.contact.kicker")}</p>
+              <h3 className="mt-3 text-2xl font-semibold leading-tight text-text-primary">
+                {t("homePage.contact.infoTitle")}
+              </h3>
 
               <div className="mt-6 flex flex-col space-y-5 text-text-secondary sm:space-y-6">
                 {contactInfos.map(({ icon: Icon, text }) => (
@@ -984,7 +969,7 @@ export default function HomePage() {
                   {t("homePage.footer.links.services")}
                 </a>
                 <a
-                  href="#apropos"
+                  href="#pourquoi"
                   className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
                 >
                   {t("homePage.footer.links.about")}
@@ -1035,3 +1020,4 @@ export default function HomePage() {
     </div>
   );
 }
+

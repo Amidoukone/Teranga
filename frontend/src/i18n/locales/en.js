@@ -2083,6 +2083,8 @@ const en = {
   },
   homePage: {
     quickNav: {
+      actions: "Quick actions",
+      proofs: "Field proof",
       useCases: "Use cases",
       services: "Services",
       why: "Why Teranga",
@@ -2093,25 +2095,26 @@ const en = {
       titleLine1: "Trust at a distance,",
       titleLine2: "peace of mind within reach.",
       description:
-        "With <0>Teranga</0>, both diaspora members and local residents can explicitly track and manage houses, apartments, land, automobiles, and commercial spaces, alongside services, tasks, and projects with transparency, reliability, and a human presence on the ground.",
-      ctaLogin: "Sign in",
+        "With <0>Teranga</0>, you can launch a request quickly, track execution, and receive clear field proof without losing control.",
+      ctaWhatsapp: "Talk to Teranga",
       ctaRegister: "Create an account",
+      ctaLogin: "Access my space",
       stats: {
         realTime: {
           label: "Real-time tracking",
-          text: "Photos, evidence, and reports available anytime.",
+          text: "Photos, evidence, and reports available at any time.",
         },
         agents: {
           label: "Agents on the ground",
-          text: "Trusted people close to your projects.",
+          text: "Human execution that is guided, visible, and accountable.",
         },
         diaspora: {
-          label: "Open to everyone",
-          text: "Usable from abroad and from local countries as well.",
+          label: "Immediate action",
+          text: "Requests launched in a few clicks through WhatsApp Business.",
         },
       },
       tagline:
-        "Because distance should never keep you from what matters.",
+        "Less reading, more action, and more visibility from the field.",
       visual: {
         label: "Field support",
         title: "Family assistance coordinated without losing visibility",
@@ -2132,24 +2135,114 @@ const en = {
       close: "Close",
       hint: "Click outside or press Escape to close.",
     },
+    quickActions: {
+      kicker: "Concrete actions",
+      title: "Choose your need and we take it from there",
+      subtitle:
+        "Each action opens WhatsApp Business directly with a ready-to-send message to speed up your request.",
+      cta: "Open in WhatsApp",
+      note:
+        "One click is enough to explain your need, get fast guidance, and start the right Teranga support flow.",
+      items: {
+        service: {
+          title: "Request a service",
+          desc: "For a one-off or recurring need handled by Teranga.",
+          prefill:
+            "Hello Teranga, I would like to request a service. Here is my need:",
+        },
+        mission: {
+          title: "Assign a field mission",
+          desc: "For a specific on-site intervention or mission you want to delegate.",
+          prefill:
+            "Hello Teranga, I would like to assign a field mission. Here are the details:",
+        },
+        administrative: {
+          title: "Start an administrative process",
+          desc: "For files, formalities, and document handling.",
+          prefill:
+            "Hello Teranga, I would like to start an administrative process. Here is my request:",
+        },
+        construction: {
+          title: "Set up construction follow-up",
+          desc: "For site visits, checks, and structured construction reporting.",
+          prefill:
+            "Hello Teranga, I would like to set up construction follow-up. Here is the context:",
+        },
+        delivery: {
+          title: "Arrange assisted delivery",
+          desc: "For errands, purchases, transfers, or on-site deliveries.",
+          prefill:
+            "Hello Teranga, I would like to arrange an assisted delivery. Here is what needs to be delivered:",
+        },
+        project: {
+          title: "Start a personal project",
+          desc: "To frame a project, define milestones, and launch guided support.",
+          prefill:
+            "Hello Teranga, I would like to start a personal project. Here is my objective:",
+        },
+      },
+    },
+    proofs: {
+      kicker: "Field proof",
+      title: "Concrete work already carried out on the ground",
+      subtitle:
+        "A few documented examples to show how Teranga operates in the field.",
+      items: {
+        service: {
+          eyebrow: "Execution proof",
+          title: "Service completed with visual validation",
+          desc: "A field request handled with a concrete update, photo evidence, and confirmation of execution.",
+          proof: "Proof shared to confirm execution",
+          alt: "Visual proof of a service carried out by Teranga in the field.",
+        },
+        administrative: {
+          eyebrow: "Supported formalities",
+          title: "Administrative process tracked end to end",
+          desc: "Documents and administrative steps handled with clear visibility on progress.",
+          proof: "Structured document follow-up and delivery",
+          alt: "Proof of an administrative process supported by Teranga.",
+        },
+        inspection: {
+          eyebrow: "On-site control",
+          title: "Inspection and verification in the field",
+          desc: "Control visits and concrete observations to help you decide with more confidence.",
+          proof: "Visual findings shared quickly",
+          alt: "Proof of a site or construction inspection carried out by Teranga.",
+        },
+        delivery: {
+          eyebrow: "Assisted delivery",
+          title: "Purchase, errand, and delivery documented",
+          desc: "Clear logistics support with on-site delivery and visual feedback for reassurance.",
+          proof: "Delivery confirmed with field feedback",
+          alt: "Proof of an errand and medicine delivery completed by Teranga.",
+        },
+        project: {
+          eyebrow: "Project & worksite",
+          title: "Personal project supported with follow-up",
+          desc: "A clearer operating frame to launch a project and monitor important milestones.",
+          proof: "Documented and readable progress",
+          alt: "Proof of complex project and worksite follow-up by Teranga.",
+        },
+      },
+    },
     services: {
       kicker: "Field + platform",
       title: "Our services, your peace of mind",
       subtitle:
-        "Solutions for anyone short on time: we handle your field operations with tracking, evidence, and accountability.",
+        "Structured services to execute, track, and justify every intervention without adding friction to your day.",
       assetTypesTitle: "Supported asset types",
       cards: {
         realEstate: {
           title: "Asset management",
-          desc: "Tracking for houses, apartments, land, automobiles, and commercial spaces with visits, inspections, photo reports, and reliable on-site execution.",
+          desc: "Houses, apartments, land, automobiles, and commercial spaces with visits, findings, and photo reports.",
         },
         personal: {
           title: "Personalized services",
-          desc: "Errands, administrative tasks, worksites, personal missions… We handle it for you, in total confidence.",
+          desc: "Errands, missions, administrative actions, and one-off needs assigned to a field team.",
         },
         transparency: {
           title: "Full transparency",
-          desc: "Photos, evidence, documents, transactions: instant access to all your information, wherever you are.",
+          desc: "Photos, evidence, documents, and transactions centralized to help you decide faster.",
         },
       },
       visual: {
@@ -2217,9 +2310,9 @@ const en = {
     },
     why: {
       kicker: "Trust framework",
-      title: "Why choose Teranga?",
+      title: "Why choose Terang?",
       subtitle:
-        "Because it is not just an app, but a trusted framework to manage houses, apartments, land, automobiles, and commercial spaces while executing services in Africa in a modern way.",
+        "Because the goal is not only to inform, but to enable clear, modern, and verifiable execution.",
       pillars: {
         clarity: {
           title: "Clarity",
@@ -2227,7 +2320,7 @@ const en = {
         },
         credibility: {
           title: "Credibility",
-          text: "Documented tracking, visual proof, and clear history for every asset type: house, apartment, land, automobile, or commercial space.",
+          text: "Documented tracking, visual proof, and clear history for each field operation.",
         },
         support: {
           title: "Support",
@@ -2241,9 +2334,9 @@ const en = {
       subtitle:
         "A platform inspired by trust and hospitality that connects real needs with structured field execution.",
       paragraphs: {
-        p1: "The word <0>“Teranga”</0> evokes warmth, trust, and respect. Our platform embraces these values to deliver a modern and reassuring experience.",
-        p2: "Your houses, apartments, land, automobiles, and commercial spaces deserve total visibility: photos, evidence, reports, transactions, progress... everything is accessible in real time, from anywhere.",
-        p3: "Thanks to certified agents and a clear interface, anyone with a service, task, or project can delegate efficiently without losing control.",
+        p1: "The word <0>Teranga</0> evokes warmth, trust, and respect. Our platform embraces these values to deliver a modern and reassuring experience.",
+        p2: "Your assets, services, and projects deserve total visibility: photos, evidence, reports, transactions, and progress are available in real time.",
+        p3: "Thanks to certified agents and a clear interface, you can delegate efficiently without losing control.",
       },
       trustLabel: "Trust framework",
       trustTitle: "An experience designed to help you decide more calmly from afar",
@@ -2255,12 +2348,15 @@ const en = {
       cta: "Join Teranga",
     },
     contact: {
-      kicker: "Let's discuss your need",
-      title: "Contact us",
-      subtitle: "Our team replies with care within 24 hours.",
+      kicker: "Direct contact",
+      title: "A simple exchange to launch the next step",
+      subtitle: "WhatsApp Business remains the fastest channel to start your request.",
       sideTitle: "Simple, human, and structured support",
       sideText:
-        "Whether you are preparing a one-off request, an asset follow-up, or a broader project, we help you frame the next step clearly.",
+        "Choose a quick action or contact us directly to frame your need, validate feasibility, and organize the next step.",
+      infoTitle: "Teranga contact details",
+      ctaWhatsapp: "Write on WhatsApp",
+      ctaEmail: "Send an email",
       form: {
         name: {
           label: "Full name",
@@ -2280,10 +2376,10 @@ const en = {
       info: {
         email: "teranga.diaspora.platform@gmail.com",
         phone: "00223 70453345",
-        address: "Hamdallaye ACI 200, Bamako — Mali",
+        address: "Hamdallaye ACI 200, Bamako - Mali",
       },
       note:
-        "We support you with listening, respect, and professionalism so every exchange is simple and reassuring.",
+        "Based in Bamako, we support diaspora members and local residents with clear, human, and professional follow-up.",
     },
     footer: {
       note:
@@ -2291,7 +2387,7 @@ const en = {
       sectionTitle: "Navigation",
       resourcesTitle: "Resources",
       copyright:
-        "\u00A9 {{year}} <0>Teranga</0> — All rights reserved.",
+        "© {{year}} <0>Teranga</0> - All rights reserved.",
       links: {
         home: "Home",
         services: "Services",
@@ -3500,4 +3596,5 @@ const en = {
 };
 
 export default en;
+
 

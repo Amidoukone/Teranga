@@ -2091,85 +2091,178 @@ const fr = {
   },
   homePage: {
     quickNav: {
+      actions: "Actions rapides",
+      proofs: "Preuves terrain",
       useCases: "Cas d'usage",
       services: "Services",
       why: "Pourquoi Teranga",
       contact: "Contact",
     },
     hero: {
-      badge: "Plateforme de confiance pour la diaspora et les r\u00E9sidents locaux",
-      titleLine1: "La confiance \u00E0 distance,",
-      titleLine2: "la s\u00E9r\u00E9nit\u00E9 \u00E0 port\u00E9e de main.",
+      badge: "Plateforme de confiance pour la diaspora et les résidents locaux",
+      titleLine1: "La confiance à distance,",
+      titleLine2: "la sérénité à portée de main.",
       description:
-        "Avec <0>Teranga</0>, la diaspora africaine et les r\u00E9sidents locaux suivent et g\u00E8rent explicitement leurs maisons, appartements, terrains, automobiles et locaux commerciaux, ainsi que leurs services, t\u00E2ches et projets avec transparence, fiabilit\u00E9 et une pr\u00E9sence humaine sur le terrain.",
-      ctaLogin: "Se connecter",
-      ctaRegister: "Cr\u00E9er un compte",
+        "Avec <0>Teranga</0>, vous lancez rapidement une demande, vous suivez son exécution et vous recevez des preuves terrain claires sans perdre le contrôle.",
+      ctaWhatsapp: "Parler à Teranga",
+      ctaRegister: "Créer un compte",
+      ctaLogin: "Accéder à mon espace",
       stats: {
         realTime: {
-          label: "Suivi en temps r\u00E9el",
-          text: "Photos, preuves et rapports visibles \u00E0 tout moment.",
+          label: "Suivi en temps réel",
+          text: "Photos, preuves et rapports consultables à tout moment.",
         },
         agents: {
           label: "Agents sur le terrain",
-          text: "Des personnes de confiance, proches de vos projets.",
+          text: "Une exécution humaine, encadrée et identifiable.",
         },
         diaspora: {
-          label: "Ouverte \u00E0 tous",
-          text: "Utilisable aussi bien depuis l’\u00E9tranger que depuis les pays locaux.",
+          label: "Action immédiate",
+          text: "Des demandes lancées en quelques clics via WhatsApp Business.",
         },
       },
       tagline:
-        "Parce que la distance ne devrait jamais vous \u00E9loigner de ce qui compte.",
+        "Moins de lecture, plus d'action et plus de visibilité sur le terrain.",
       visual: {
         label: "Accueil terrain",
-        title: "Assistance familiale suivie sans perdre le contr\u00F4le",
+        title: "Assistance familiale suivie sans perdre le contrôle",
         description:
-          "Courses, provisions, besoins urgents et livraison g\u00E9r\u00E9s par Teranga avec des retours concrets \u00E0 chaque \u00E9tape.",
+          "Courses, provisions, besoins urgents et livraison gérés par Teranga avec des retours concrets à chaque étape.",
         proofBadge: "Preuves photo + tickets",
         highlights: {
           errands: "Courses et provisions prises en charge",
-          emergency: "Besoins urgents trait\u00E9s rapidement",
-          proof: "Factures et photos partag\u00E9es clairement",
+          emergency: "Besoins urgents traités rapidement",
+          proof: "Factures et photos partagées clairement",
         },
         imageAlt:
-          "Un agent Teranga remet des provisions \u00E0 une famille au Mali avec preuves de livraison visibles.",
+          "Un agent Teranga remet des provisions à une famille au Mali avec preuves de livraison visibles.",
       },
     },
     lightbox: {
       open: "Agrandir l'image",
       close: "Fermer",
-      hint: "Cliquez \u00E0 l'ext\u00E9rieur ou appuyez sur Echap pour fermer.",
+      hint: "Cliquez à l'extérieur ou appuyez sur Echap pour fermer.",
+    },
+    quickActions: {
+      kicker: "Actions concrètes",
+      title: "Choisissez votre besoin, nous prenons le relais",
+      subtitle:
+        "Chaque action ouvre directement WhatsApp Business avec un message prêt à envoyer pour accélérer votre demande.",
+      cta: "Ouvrir sur WhatsApp",
+      note:
+        "Un seul clic suffit pour expliquer votre besoin, obtenir une orientation rapide et lancer la bonne prise en charge avec Teranga.",
+      items: {
+        service: {
+          title: "Solliciter une prestation",
+          desc: "Pour un besoin ponctuel ou régulier pris en charge par Teranga.",
+          prefill:
+            "Bonjour Teranga, je souhaite solliciter une prestation. Voici mon besoin :",
+        },
+        mission: {
+          title: "Confier une mission terrain",
+          desc: "Pour déléguer une intervention ou une mission spécifique sur place.",
+          prefill:
+            "Bonjour Teranga, je souhaite confier une mission terrain. Voici les détails :",
+        },
+        administrative: {
+          title: "Lancer une démarche administrative",
+          desc: "Pour vos dossiers, formalités et remises de documents.",
+          prefill:
+            "Bonjour Teranga, je souhaite lancer une démarche administrative. Voici ma demande :",
+        },
+        construction: {
+          title: "Mettre en place un suivi de chantier",
+          desc: "Pour organiser des visites, contrôles et comptes rendus de chantier.",
+          prefill:
+            "Bonjour Teranga, je souhaite mettre en place un suivi de chantier. Voici le contexte :",
+        },
+        delivery: {
+          title: "Organiser une livraison assistée",
+          desc: "Pour des courses, achats, transferts ou livraisons sur le terrain.",
+          prefill:
+            "Bonjour Teranga, je souhaite organiser une livraison assistée. Voici ce qu'il faut livrer :",
+        },
+        project: {
+          title: "Démarrer un projet personnel",
+          desc: "Pour cadrer un projet, définir les étapes et lancer l'accompagnement.",
+          prefill:
+            "Bonjour Teranga, je souhaite démarrer un projet personnel. Voici mon objectif :",
+        },
+      },
+    },
+    proofs: {
+      kicker: "Preuves terrain",
+      title: "Des réalisations concrètes déjà effectuées",
+      subtitle:
+        "Quelques exemples d'interventions documentées pour montrer comment Teranga agit sur le terrain.",
+      items: {
+        service: {
+          eyebrow: "Preuve d'exécution",
+          title: "Service réalisé avec validation visuelle",
+          desc: "Une demande terrain prise en charge avec retour concret, photo et confirmation d'exécution.",
+          proof: "Preuves transmises pour confirmer l'exécution",
+          alt: "Preuve visuelle d'un service réalisé par Teranga sur le terrain.",
+        },
+        administrative: {
+          eyebrow: "Formalités accompagnées",
+          title: "Démarche administrative suivie de bout en bout",
+          desc: "Les documents et les étapes administratives sont pris en charge avec visibilité sur l'avancement.",
+          proof: "Suivi documentaire et remise structurée",
+          alt: "Preuve d'une démarche administrative accompagnée par Teranga.",
+        },
+        inspection: {
+          eyebrow: "Contrôle sur site",
+          title: "Inspection et vérification sur le terrain",
+          desc: "Des visites de contrôle et des observations concrètes pour décider avec plus de sérénité.",
+          proof: "Constats visuels partagés rapidement",
+          alt: "Preuve d'une inspection de chantier ou de site réalisée par Teranga.",
+        },
+        delivery: {
+          eyebrow: "Livraison assistée",
+          title: "Achat, course et livraison documentés",
+          desc: "Une prise en charge logistique claire avec livraison sur place et retour visuel pour rassurer le client.",
+          proof: "Livraison confirmée avec retour terrain",
+          alt: "Preuve d'une course et livraison de médicaments effectuée par Teranga.",
+        },
+        project: {
+          eyebrow: "Projet & chantier",
+          title: "Projet personnel accompagné avec suivi",
+          desc: "Un cadre de pilotage plus clair pour lancer un projet et suivre les avancées importantes.",
+          proof: "Avancement documenté et lisible",
+          alt: "Preuve de suivi de projet et de chantier complexe par Teranga.",
+        },
+      },
     },
     services: {
       kicker: "Terrain + application",
-      title: "Nos services, votre tranquillit\u00E9",
+      title: "Nos services, votre tranquillité",
       subtitle:
-        "Des solutions pour toute personne qui manque de temps : nous prenons en charge vos demandes sur le terrain avec suivi, preuves et responsabilit\u00E9.",
+        "Des services structurés pour exécuter, suivre et justifier chaque intervention sans alourdir votre quotidien.",
       assetTypesTitle: "Types de biens pris en charge",
       cards: {
         realEstate: {
           title: "Gestion de biens",
-          desc: "Suivi de maisons, appartements, terrains, automobiles et locaux commerciaux : visites, \u00E9tats des lieux, rapports photo et ex\u00E9cution par un agent d\u00E9di\u00E9 sur place.",
+          desc: "Maisons, appartements, terrains, automobiles et locaux commerciaux avec visites, constats et rapports photo.",
         },
         personal: {
-          title: "Services personnalis\u00E9s",
-          desc: "Courses, d\u00E9marches administratives, chantiers, missions personnelles... Nous g\u00E9rons pour vous, en toute confiance.",
+          title: "Services personnalisés",
+          desc: "Courses, missions, démarches administratives et besoins ponctuels confiés à une équipe terrain.",
         },
         transparency: {
           title: "Transparence totale",
-          desc: "Photos, preuves, documents, transactions : acc\u00E8s instantan\u00E9 \u00E0 toutes vos informations, o\u00F9 que vous soyez.",
+          desc: "Photos, preuves, documents et transactions centralisés pour décider plus vite.",
         },
       },
       visual: {
-        kicker: "Vue terrain consolid\u00E9e",
+        kicker: "Vue terrain consolidée",
         title:
-          "Biens, t\u00E2ches, preuves et transactions regroup\u00E9s dans un seul parcours",
+          "Biens, tâches, preuves et transactions regroupés dans un seul parcours",
         description:
-          "Teranga centralise les visites de biens, services demand\u00E9s, preuves, documents et transactions afin que chaque d\u00E9cision s'appuie sur des faits visibles.",
+          "Teranga centralise les visites de biens, services demandés, preuves, documents et transactions afin que chaque décision s'appuie sur des faits visibles.",
         points: {
-          p1: "Suivi de biens avec visites, \u00E9tats des lieux et preuves photo.",
-          p2: "Historique des t\u00E2ches, services et validations au m\u00EAme endroit.",
-          p3: "Vision claire pour d\u00E9cider m\u00EAme \u00E0 distance.",
+          p1: "Suivi de biens avec visites, états des lieux et preuves photo.",
+          p2: "Historique des tâches, services et validations au même endroit.",
+          p3: "Vision claire pour décider même à distance.",
         },
         imageAlt:
           "Un agent Teranga consulte une tablette pour suivre plusieurs biens et services au Mali.",
@@ -2179,36 +2272,36 @@ const fr = {
       kicker: "Parcours pratiques",
       title: "Une application utile pour tous",
       subtitle:
-        "Que vous soyez membre de la diaspora ou r\u00E9sident local, vous pouvez confier vos op\u00E9rations terrain \u00E0 Teranga lorsque votre emploi du temps ne vous permet pas de tout faire vous-m\u00EAme.",
+        "Que vous soyez membre de la diaspora ou résident local, vous pouvez confier vos opérations terrain à Teranga lorsque votre emploi du temps ne vous permet pas de tout faire vous-même.",
       cards: {
         service: {
           title: "Demander un service",
-          desc: "Courses, d\u00E9marches, visites ou interventions terrain : nous ex\u00E9cutons et vous suivez en temps r\u00E9el.",
+          desc: "Courses, démarches, visites ou interventions terrain : nous exécutons et vous suivez en temps réel.",
         },
         task: {
-          title: "D\u00E9l\u00E9guer une t\u00E2che",
-          desc: "Cr\u00E9ez une t\u00E2che avec vos consignes et recevez des preuves concr\u00E8tes de l’ex\u00E9cution sur place.",
+          title: "Déléguer une tâche",
+          desc: "Créez une tâche avec vos consignes et recevez des preuves concrètes de l'exécution sur place.",
         },
         project: {
           title: "Piloter un projet",
-          desc: "Suivez l’avancement de vos projets, les documents et les d\u00E9cisions sans \u00EAtre physiquement pr\u00E9sent.",
+          desc: "Suivez l'avancement de vos projets, les documents et les décisions sans être physiquement présent.",
         },
       },
       gallery: {
         service: {
-          eyebrow: "D\u00E9marches et documents",
-          proof: "Documents suivis et remis avec visibilit\u00E9",
-          alt: "Un agent Teranga accompagne une d\u00E9marche administrative et remet des documents au Mali.",
+          eyebrow: "Démarches et documents",
+          proof: "Documents suivis et remis avec visibilité",
+          alt: "Un agent Teranga accompagne une démarche administrative et remet des documents au Mali.",
         },
         task: {
-          eyebrow: "Visites et v\u00E9rifications",
-          proof: "Inspection photo d\u00E9taill\u00E9e avant d\u00E9cision",
+          eyebrow: "Visites et vérifications",
+          proof: "Inspection photo détaillée avant décision",
           alt: "Un agent Teranga inspecte un bien immobilier au Mali avec un rapport visuel.",
         },
         project: {
           eyebrow: "Chantiers et coordination",
-          proof: "Avancement document\u00E9 \u00E9tape par \u00E9tape",
-          alt: "Un agent Teranga suit un chantier de construction au Mali devant une maison en cours de r\u00E9alisation.",
+          proof: "Avancement documenté étape par étape",
+          alt: "Un agent Teranga suit un chantier de construction au Mali devant une maison en cours de réalisation.",
         },
       },
     },
@@ -2216,61 +2309,65 @@ const fr = {
       kicker: "Vision long terme",
       title: "Notre ambition en Afrique",
       subtitle:
-        "Transformer la gestion des maisons, appartements, terrains, automobiles et locaux commerciaux avec un mod\u00E8le de service plus efficace, innovant et v\u00E9rifiable.",
+        "Transformer la gestion des maisons, appartements, terrains, automobiles et locaux commerciaux avec un modèle de service plus efficace, innovant et vérifiable.",
       points: {
-        p1: "Des op\u00E9rations plus rapides sur vos maisons, appartements, terrains, automobiles et locaux commerciaux gr\u00E2ce \u00E0 une coordination terrain + application.",
+        p1: "Des opérations plus rapides sur vos maisons, appartements, terrains, automobiles et locaux commerciaux grâce à une coordination terrain + application.",
         p2: "Une transparence continue avec preuves photo, rapports et historique des actions.",
-        p3: "Une ex\u00E9cution fiable pour vos biens, services, t\u00E2ches et projets, m\u00EAme quand vous n’avez pas le temps.",
+        p3: "Une exécution fiable pour vos biens, services, tâches et projets, même quand vous n'avez pas le temps.",
       },
-      cta: "Voir l’aide et le support",
+      cta: "Voir l'aide et le support",
     },
     why: {
       kicker: "Cadre de confiance",
-      title: "Pourquoi choisir Teranga ?",
+      title: "Pourquoi choisir Teranga ?",
       subtitle:
-        "Parce qu’il ne s’agit pas seulement d’une application, mais d’un cadre de confiance pour piloter maisons, appartements, terrains, automobiles et locaux commerciaux avec des services ex\u00E9cut\u00E9s de mani\u00E8re moderne en Afrique.",
+        "Parce que l'objectif n'est pas seulement d'informer, mais de permettre une exécution claire, moderne et vérifiable.",
       pillars: {
         clarity: {
-          title: "Clart\u00E9",
-          text: "Une interface simple, lisible, pens\u00E9e pour le mobile, m\u00EAme avec peu de temps.",
+          title: "Clarté",
+          text: "Une interface simple, lisible, pensée pour le mobile, même avec peu de temps.",
         },
         credibility: {
-          title: "Cr\u00E9dibilit\u00E9",
-          text: "Suivi document\u00E9, preuves visuelles, historique clair pour chaque type de bien : maison, appartement, terrain, automobile ou local commercial.",
+          title: "Crédibilité",
+          text: "Suivi documenté, preuves visuelles et historique clair pour chaque opération terrain.",
         },
         support: {
           title: "Accompagnement",
-          text: "Une \u00E9quipe \u00E0 taille humaine, disponible et \u00E0 l’\u00E9coute des r\u00E9alit\u00E9s de la diaspora.",
+          text: "Une équipe à taille humaine, disponible et à l'écoute des réalités de la diaspora.",
         },
       },
     },
     about: {
       kicker: "Esprit Teranga",
-      title: "Teranga : bien plus qu’un service",
+      title: "Teranga : bien plus qu'un service",
       subtitle:
-        "Une plateforme inspir\u00E9e par la confiance et l’hospitalit\u00E9, qui relie les besoins r\u00E9els aux \u00E9quipes terrain de fa\u00E7on structur\u00E9e.",
+        "Une plateforme inspirée par la confiance et l'hospitalité, qui relie les besoins réels aux équipes terrain de façon structurée.",
       paragraphs: {
-        p1: "Le mot <0>Teranga</0> \u00E9voque chaleur humaine, confiance et respect. Notre plateforme reprend ces valeurs pour offrir une exp\u00E9rience moderne et rassurante.",
-        p2: "Vos maisons, appartements, terrains, automobiles et locaux commerciaux m\u00E9ritent une visibilit\u00E9 totale : photos, preuves, rapports, transactions, progression... tout est accessible en temps r\u00E9el, depuis n’importe o\u00F9.",
-        p3: "Gr\u00E2ce \u00E0 nos agents certifi\u00E9s et \u00E0 une interface claire, toute personne ayant un service, une t\u00E2che ou un projet peut d\u00E9l\u00E9guer efficacement sans perdre le contr\u00F4le.",
+        p1: "Le mot <0>Teranga</0> évoque chaleur humaine, confiance et respect. Notre plateforme reprend ces valeurs pour offrir une expérience moderne et rassurante.",
+        p2: "Vos biens, services et projets méritent une visibilité totale : photos, preuves, rapports, transactions et progression sont accessibles en temps réel.",
+        p3: "Grâce à nos agents certifiés et à une interface claire, vous pouvez déléguer efficacement sans perdre le contrôle.",
       },
       trustLabel: "Cadre de confiance",
       trustTitle:
-        "Une exp\u00E9rience pens\u00E9e pour d\u00E9cider plus sereinement \u00E0 distance",
+        "Une expérience pensée pour décider plus sereinement à distance",
       trustPoints: {
-        p1: "Des preuves visuelles pour comprendre la situation sans interpr\u00E9tation.",
-        p2: "Des documents, rapports et validations regroup\u00E9s dans un seul espace.",
-        p3: "Une \u00E9quipe terrain identifiable qui ex\u00E9cute et vous rend compte clairement.",
+        p1: "Des preuves visuelles pour comprendre la situation sans interprétation.",
+        p2: "Des documents, rapports et validations regroupés dans un seul espace.",
+        p3: "Une équipe terrain identifiable qui exécute et vous rend compte clairement.",
       },
       cta: "Rejoindre Teranga",
     },
     contact: {
-      kicker: "Parlons de votre besoin",
-      title: "Contactez-nous",
-      subtitle: "Notre \u00E9quipe vous r\u00E9pond avec attention sous 24h.",
-      sideTitle: "Un accompagnement simple, humain et structur\u00E9",
+      kicker: "Contact direct",
+      title: "Un échange simple pour lancer la suite",
+      subtitle:
+        "WhatsApp Business reste le canal le plus rapide pour démarrer votre demande.",
+      sideTitle: "Un accompagnement simple, humain et structuré",
       sideText:
-        "Que vous pr\u00E9pariez une mission ponctuelle, un suivi de bien ou un projet plus large, nous vous aidons \u00E0 cadrer la suite avec clart\u00E9.",
+        "Choisissez une action rapide ou contactez-nous directement pour cadrer votre besoin, valider la faisabilité et organiser la suite.",
+      infoTitle: "Coordonnées Teranga",
+      ctaWhatsapp: "Écrire sur WhatsApp",
+      ctaEmail: "Envoyer un email",
       form: {
         name: {
           label: "Nom complet",
@@ -2285,7 +2382,7 @@ const fr = {
           placeholder: "Votre message...",
         },
         submit: "Envoyer le message",
-        success: "Merci ! Votre message a bien \u00E9t\u00E9 envoy\u00E9.",
+        success: "Merci ! Votre message a bien été envoyé.",
       },
       info: {
         email: "teranga.diaspora.platform@gmail.com",
@@ -2293,19 +2390,19 @@ const fr = {
         address: "Hamdallaye ACI 200, Bamako - Mali",
       },
       note:
-        "Nous vous accompagnons avec \u00E9coute, respect et professionnalisme, pour que chaque \u00E9change soit simple et rassurant.",
+        "Basés à Bamako, nous accompagnons la diaspora et les résidents locaux avec un suivi clair, humain et professionnel.",
     },
     footer: {
       note:
-        "Teranga relie la diaspora et les r\u00E9sidents locaux \u00E0 une ex\u00E9cution terrain fiable, claire et document\u00E9e.",
+        "Teranga relie la diaspora et les résidents locaux à une exécution terrain fiable, claire et documentée.",
       sectionTitle: "Navigation",
       resourcesTitle: "Ressources",
       copyright:
-        "\u00A9 {{year}} <0>Teranga</0> - Tous droits r\u00E9serv\u00E9s.",
+        "© {{year}} <0>Teranga</0> - Tous droits réservés.",
       links: {
         home: "Accueil",
         services: "Services",
-        about: "\u00C0 propos",
+        about: "À propos",
         contact: "Contact",
       },
     },
@@ -3517,3 +3614,4 @@ const fr = {
 };
 
 export default fr;
+
