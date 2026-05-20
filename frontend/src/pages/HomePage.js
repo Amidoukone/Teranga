@@ -23,7 +23,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { Trans, useTranslation } from "react-i18next";
 
-import heroFamilyImage from "../assets/images/hero-family-assistance-mali-teranga.png";
+import heroSiteImage from "../assets/images/home-site-hero-teranga.png";
 import propertyManagementImage from "../assets/images/services-gestion-biens-teranga.png";
 import proofServiceImage from "../assets/images/proof-service-teranga.png";
 import administrativeProofImage from "../assets/images/administrative-process-teranga.png";
@@ -576,7 +576,7 @@ export default function HomePage() {
                     type="button"
                     onClick={() =>
                       openImage({
-                        src: heroFamilyImage,
+                        src: heroSiteImage,
                         alt: t("homePage.hero.visual.imageAlt"),
                         kicker: t("homePage.hero.visual.label"),
                         title: t("homePage.hero.visual.title"),
@@ -586,7 +586,7 @@ export default function HomePage() {
                     aria-label={`${t("homePage.lightbox.open")} - ${t("homePage.hero.visual.title")}`}
                   >
                     <img
-                      src={heroFamilyImage}
+                      src={heroSiteImage}
                       alt={t("homePage.hero.visual.imageAlt")}
                       loading="eager"
                       fetchPriority="high"

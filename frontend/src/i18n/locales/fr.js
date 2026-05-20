@@ -2124,24 +2124,24 @@ const fr = {
       tagline:
         "Moins de lecture, plus d'action et plus de visibilité sur le terrain.",
       visual: {
-        label: "Accueil terrain",
-        title: "Assistance familiale suivie sans perdre le contrôle",
+        label: "Accueil vitrine",
+        title: "Vos projets complexes au Mali, pilotés avec méthode",
         description:
-          "Courses, provisions, besoins urgents et livraison gérés par Teranga avec des retours concrets à chaque étape.",
-        proofBadge: "Preuves photo + tickets",
+          "Construction, aménagement, démarches administratives ou investissements : Teranga coordonne les intervenants, documente l'avancement et vous livre des preuves fiables à chaque étape.",
+        proofBadge: "Rapports + preuves",
         highlights: {
-          errands: "Courses et provisions prises en charge",
-          emergency: "Besoins urgents traités rapidement",
-          proof: "Factures et photos partagées clairement",
+          errands: "Planification claire du projet",
+          emergency: "Suivi terrain par des agents identifiés",
+          proof: "Photos, rapports et documents centralisés",
         },
         imageAlt:
-          "Un agent Teranga remet des provisions à une famille au Mali avec preuves de livraison visibles.",
+          "Visuel d'accueil Teranga montrant le suivi d'un projet de construction au Mali avec rapport de visite, preuves et progression documentée.",
       },
     },
     lightbox: {
       open: "Agrandir l'image",
       close: "Fermer",
-      hint: "Cliquez à l'extérieur ou appuyez sur Echap pour fermer.",
+      hint: "Cliquez à l'extérieur ou appuyez sur Échap pour fermer.",
     },
     quickActions: {
       kicker: "Actions concrètes",
@@ -3614,4 +3614,3 @@ const fr = {
 };
 
 export default fr;
-

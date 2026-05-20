@@ -2116,18 +2116,18 @@ const en = {
       tagline:
         "Less reading, more action, and more visibility from the field.",
       visual: {
-        label: "Field support",
-        title: "Family assistance coordinated without losing visibility",
+        label: "Showcase home",
+        title: "Complex projects in Mali, managed with structure",
         description:
-          "Groceries, urgent needs, and on-site delivery handled by Teranga with concrete updates at every step.",
-        proofBadge: "Photo proof + receipts",
+          "Construction, fit-out work, administrative steps, or investments: Teranga coordinates field contributors, documents progress, and delivers reliable proof at every stage.",
+        proofBadge: "Reports + proof",
         highlights: {
-          errands: "Groceries and provisions handled",
-          emergency: "Urgent needs handled quickly",
-          proof: "Receipts and photos shared clearly",
+          errands: "Clear project planning",
+          emergency: "Field follow-up by identified agents",
+          proof: "Photos, reports, and documents centralized",
         },
         imageAlt:
-          "A Teranga agent delivers provisions to a family in Mali with visible delivery proof.",
+          "Teranga showcase home visual showing construction project follow-up in Mali with a visit report, proof, and documented progress.",
       },
     },
     lightbox: {
@@ -3596,5 +3596,4 @@ const en = {
 };
 
 export default en;
-
 
