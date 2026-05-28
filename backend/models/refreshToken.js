@@ -4,7 +4,7 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class RefreshToken extends Model {
     static associate(models) {
-      // Association logique (pas besoin de FK DB côté PlanetScale)
+      // Association logique sans contrainte FK en base.
       RefreshToken.belongsTo(models.User, {
         foreignKey: 'userId',
         as: 'user',
@@ -75,7 +75,7 @@ module.exports = (sequelize, DataTypes) => {
       tableName: 'refresh_tokens',
 
       /**
-       * ✅ IMPORTANT (PlanetScale + tables en snake_case)
+       * IMPORTANT (tables en snake_case)
        * La DB a created_at / updated_at (pas createdAt / updatedAt).
        * Donc on active timestamps + underscored.
        */

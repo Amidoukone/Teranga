@@ -6,7 +6,7 @@ module.exports = {
     await queryInterface.addColumn('transactions', 'order_id', {
       type: Sequelize.INTEGER.UNSIGNED,
       allowNull: true,
-      // ❌ PlanetScale : pas de "references", ni onUpdate / onDelete
+      // Pas de "references", ni onUpdate / onDelete pour rester portable.
     });
 
     // Index pour améliorer les recherches

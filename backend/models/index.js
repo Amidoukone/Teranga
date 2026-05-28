@@ -5,6 +5,10 @@ const path = require('path');
 const Sequelize = require('sequelize');
 require('dotenv').config();
 const { recordSqlQuery } = require('../src/utils/requestPerf');
+const {
+  buildMysqlDialectOptions,
+  normalizeMysqlDatabaseUrl,
+} = require('../src/utils/mysqlConnectionOptions');
 
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
@@ -15,7 +19,7 @@ const allConfigs = require(configPath);
 const config = allConfigs[env];
 
 if (!config) {
-  console.error(`❌ Aucun config pour l'env "${env}"`);
+  console.error(`Aucun config pour l'env "${env}"`);
   process.exit(1);
 }
 
@@ -39,60 +43,21 @@ function sequelizeLogging(sql, timingMs) {
   }
 }
 
-function normalizeDatabaseUrl(urlValue, sequelizeConfig) {
-  const raw = String(urlValue || '').trim();
-  if (!raw) return { url: raw, extraDialectOptions: {} };
-
-  // mysql2 treats `ssl=<string>` as an SSL profile name.
-  // Some providers/docs suggest `ssl={"rejectUnauthorized":true}` in URL query,
-  // which arrives as string and breaks with:
-  // "Unknown SSL profile '{\"rejectUnauthorized\":true}'".
-  // We parse and lift it into dialectOptions.ssl object.
-  try {
-    const parsed = new URL(raw);
-    const sslParam = parsed.searchParams.get('ssl');
-
-    if (!sslParam) {
-      return { url: raw, extraDialectOptions: {} };
-    }
-
-    let sslObject = null;
-    try {
-      sslObject = JSON.parse(sslParam);
-    } catch (_err) {
-      sslObject = null;
-    }
-
-    if (sslObject && typeof sslObject === 'object' && !Array.isArray(sslObject)) {
-      parsed.searchParams.delete('ssl');
-      return {
-        url: parsed.toString(),
-        extraDialectOptions: {
-          ssl: {
-            ...(sequelizeConfig?.dialectOptions?.ssl || {}),
-            ...sslObject,
-          },
-        },
-      };
-    }
-  } catch (_err) {
-    // Keep original URL if parsing fails.
-  }
-
-  return { url: raw, extraDialectOptions: {} };
-}
-
 const sequelize = config.use_env_variable
   ? (() => {
       const rawUrl = process.env[config.use_env_variable];
-      const normalized = normalizeDatabaseUrl(rawUrl, config);
-
-      return new Sequelize(normalized.url, {
-        ...config,
-        dialectOptions: {
+      const normalized = normalizeMysqlDatabaseUrl(rawUrl, config);
+      const dialectOptions = buildMysqlDialectOptions({
+        env: process.env,
+        baseDialectOptions: {
           ...(config.dialectOptions || {}),
           ...(normalized.extraDialectOptions || {}),
         },
+      });
+
+      return new Sequelize(normalized.url, {
+        ...config,
+        dialectOptions,
         benchmark: true,
         logging: sequelizeLogging,
       });
@@ -104,21 +69,24 @@ const sequelize = config.use_env_variable
     });
 
 /**
- * ✅ IMPORTANT:
+ * IMPORTANT:
  * - Ne pas override showAllTables() en prod.
- * - PlanetScale est "safe" tant que tu n'utilises pas sequelize.sync().
- * - Tes migrations doivent pouvoir lire SequelizeMeta correctement.
+ * - En prod, ne pas utiliser sequelize.sync(); passer par les migrations.
+ * - Les migrations doivent pouvoir lire SequelizeMeta correctement.
  */
-
 fs.readdirSync(__dirname)
-  .filter((file) =>
-    file.indexOf('.') !== 0 &&
-    file !== basename &&
-    file.endsWith('.js') &&
-    !file.endsWith('.test.js')
+  .filter(
+    (file) =>
+      file.indexOf('.') !== 0 &&
+      file !== basename &&
+      file.endsWith('.js') &&
+      !file.endsWith('.test.js')
   )
   .forEach((file) => {
-    const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes);
+    const model = require(path.join(__dirname, file))(
+      sequelize,
+      Sequelize.DataTypes
+    );
     db[model.name] = model;
   });
 

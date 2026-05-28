@@ -5,7 +5,7 @@ module.exports = {
     await queryInterface.addColumn('evidences', 'order_id', {
       type: Sequelize.INTEGER.UNSIGNED,
       allowNull: true,
-      // ❌ Pas de "references" pour PlanetScale
+      // Pas de "references" pour rester portable.
     });
 
     await queryInterface.addIndex('evidences', ['order_id'], {

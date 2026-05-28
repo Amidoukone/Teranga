@@ -168,7 +168,7 @@ async function start() {
 
     if (isProd) {
       // En production (ex: Render), demarrer le serveur sans bloquer sur la DB.
-      // La DB peut etre en sleep (PlanetScale); on tente en boucle en background.
+      // La DB managee peut etre temporairement indisponible; retry en background.
       startServer();
       connectAndBootstrap({ exitOnFail: false }).catch((err) => {
         logger.error({ err }, 'db.connection.failed');

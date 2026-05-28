@@ -10,7 +10,7 @@ module.exports = {
         primaryKey: true
       },
 
-      // 🔗 Relations logiques (pas de FK en DB sur PlanetScale)
+      // Relations logiques, sans contrainte FK en base.
       serviceId: {
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: true

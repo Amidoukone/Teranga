@@ -50,7 +50,7 @@ module.exports = {
       },
 
       role: {
-        // ✅ IMPORTANT: On ne modifie pas l'ENUM en PlanetScale (risque)
+        // IMPORTANT: enum historique conserve pour eviter une migration risquee.
         // Le "master" est représenté comme un admin + scope country_id/region_id
         type: Sequelize.ENUM('client', 'agent', 'admin'),
         allowNull: false,

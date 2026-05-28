@@ -7,7 +7,7 @@ module.exports = {
     await queryInterface.addColumn('transactions', 'projectId', {
       type: Sequelize.INTEGER.UNSIGNED,
       allowNull: true,
-      // ❌ PlanetScale : pas de references / onDelete / onUpdate
+      // Pas de references / onDelete / onUpdate pour rester portable.
       comment: 'ID projet lié (relation logique vers projects.id)',
     });
 

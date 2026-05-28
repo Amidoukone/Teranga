@@ -90,7 +90,7 @@ module.exports = (sequelize, DataTypes) => {
       },
 
       role: {
-        // ❗ ENUM inchangé pour PlanetScale
+        // ENUM historique conserve pour eviter une migration risquee
         type: DataTypes.ENUM('client', 'agent', 'admin'),
         allowNull: false,
         defaultValue: 'client',

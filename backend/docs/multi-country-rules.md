@@ -1,45 +1,53 @@
-# Teranga – Règles Multi-pays & Franchise (PlanetScale Safe)
+# Teranga - Regles Multi-pays & Franchise
 
 ## Objectif
-Passer d’un système mono-pays (prod stable) à un système multi-pays / franchise
-sans casser l’existant, avec une stratégie additive + rétro-compatible.
+
+Passer d'un systeme mono-pays stable a un systeme multi-pays / franchise
+sans casser l'existant, avec une strategie additive et retro-compatible.
 
 ---
 
-## Principes DB (PlanetScale / Vitess)
-1. **Pas de contraintes FK en base**
-   - PlanetScale/Vitess gère mal certaines contraintes FK.
-   - Les relations sont **logiques** via Sequelize `belongsTo/hasMany`.
+## Principes DB MySQL
 
-2. **Migrations uniquement via branches PlanetScale**
-   - Toujours créer une branche (`dev-branche`)
-   - Appliquer les changements de schéma dessus
-   - Ouvrir une Deploy Request vers `main`
+1. **Relations logiques dans l'application**
+   - Les relations restent definies dans Sequelize avec `belongsTo` / `hasMany`.
+   - Les migrations actuelles n'ajoutent pas de contraintes FK en base afin de
+     rester compatibles avec l'historique PlanetScale et les imports MySQL.
 
-3. **Pas de `sequelize.sync()` en production**
-   - Le schéma est géré par migrations / PlanetScale
-   - `sync` doit rester désactivé
+2. **Migrations Sequelize uniquement**
+   - Le schema est gere par les fichiers dans `backend/migrations`.
+   - Appliquer les changements via `npm run db:migrate`.
+   - Ne pas utiliser `sequelize.sync()` en production.
+
+3. **Portabilite fournisseur**
+   - La production utilise `NODE_ENV=production` + `DATABASE_URL`.
+   - Les options SSL sont pilotees par `DB_SSL`, `DB_SSL_REJECT_UNAUTHORIZED`,
+     `DB_SSL_CA` ou `DB_SSL_CA_PATH`.
+   - Le code ne doit pas dependre d'un fournisseur MySQL specifique.
 
 ---
 
-## Règles de nommage (cohérence actuelle)
-Le projet est **hybride** (legacy + nouveaux modules) :
+## Regles de nommage
+
+Le projet est hybride (legacy + nouveaux modules) :
 
 - `countries`, `regions`, `franchises` : colonnes DB en `snake_case`
   - ex: `regions.country_id`
-- Tables core (legacy) : `camelCase` pour `countryId`, `regionId`
+- Tables core legacy : `camelCase` pour `countryId`, `regionId`
   - ex: `properties.countryId`
 - Commerce : `snake_case` dans `products` / `orders`
   - ex: `products.country_id`
 
 ### Consigne
-- Ne pas renommer les colonnes existantes (risque de régression)
+
+- Ne pas renommer les colonnes existantes sans migration dediee et testee.
 - Toujours utiliser `field:` dans Sequelize lorsque la DB est en `snake_case`.
 
 ---
 
-## Scope géographique (countryId / regionId)
-Les colonnes suivantes sont ajoutées et **restent nullable** pour rétro-compatibilité :
+## Scope geographique
+
+Les colonnes suivantes restent nullable pour retro-compatibilite :
 
 - `properties.countryId`, `properties.regionId`
 - `services.countryId`, `services.regionId`
@@ -53,35 +61,43 @@ Les colonnes suivantes sont ajoutées et **restent nullable** pour rétro-compat
 ---
 
 ## Seed / Backfill
-### Default actuel (Prod)
+
+### Default actuel
+
 - Pays: **Mali** (`iso_code = ML`)
-- Région: **Bamako** (`code = BKO`)
+- Region: **Bamako** (`code = BKO`)
 
-### Règle
-- Toute nouvelle colonne `countryId/regionId` est remplie par défaut
-  via un backfill (Mali/Bamako) pour conserver le comportement existant.
+### Regle
 
----
-
-## Index et unicité
-- `countries.iso_code` doit être UNIQUE
-- `regions` doit avoir un index UNIQUE sur `(country_id, code)`
-  afin d’éviter toute ambiguïté de code entre pays.
+Toute nouvelle colonne `countryId` / `regionId` doit etre remplie par defaut
+via un backfill Mali/Bamako lorsque c'est necessaire pour conserver le
+comportement existant.
 
 ---
 
-## Bonnes pratiques de déploiement
-1. Branch `dev-branche`
-2. Schema changes (tables + colonnes + index)
-3. Data backfill (INSERT IGNORE + UPDATE where NULL)
-4. Vérifications (comptes NULL à 0)
-5. Deploy Request vers `main`
-6. Backfill prod si non inclus
+## Index et unicite
+
+- `countries.iso_code` doit etre unique.
+- `regions` doit avoir un index unique sur `(country_id, code)` afin d'eviter
+  toute ambiguite de code entre pays.
 
 ---
 
-## À venir (phase Franchise)
-Quand les franchises seront activées :
-- Filtrage par `countryId/regionId` selon rôle (admin franchise / régional)
-- Héritage du scope depuis User/Franchise
-- Sélection du scope par header / subdomain (selon architecture)
+## Bonnes pratiques de deploiement
+
+1. Export ou backup avant changement.
+2. Migration schema : tables, colonnes, index.
+3. Data backfill : `INSERT IGNORE` + `UPDATE ... WHERE ... IS NULL`.
+4. Verification des comptes `NULL` et des index attendus.
+5. Deploiement backend Render.
+6. Verification `/api/ready`, login, tableaux de bord et creation de donnees.
+
+---
+
+## A venir
+
+Quand les franchises seront activees :
+
+- Filtrage par `countryId` / `regionId` selon role.
+- Heritage du scope depuis `User` / `Franchise`.
+- Selection du scope par header ou sous-domaine selon l'architecture retenue.

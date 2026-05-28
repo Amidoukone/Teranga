@@ -29,3 +29,20 @@ backend/uploads/
 # --- Backups texte/mojibake (hors code actif) ---
 *.bak*
 archive/mojibake/
+
+# --- Outils et dumps de migration DB locaux ---
+tools/migration/
+backups/
+*.sql
+*.sql.gz
+*.dump
+*.dump.gz
+*.backup
+
+# --- Certificats, cles et secrets locaux ---
+*.crt
+*.cer
+*.pem
+*.key
+*.p12
+*.pfx

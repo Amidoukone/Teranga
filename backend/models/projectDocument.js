@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
       },
 
-      // Relations (logique seulement – NO FK constraints for PlanetScale)
+      // Relations logiques seulement: pas de contrainte FK en base.
       projectId: {
         type: DataTypes.INTEGER.UNSIGNED,
         allowNull: false,

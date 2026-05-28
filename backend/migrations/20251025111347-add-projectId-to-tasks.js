@@ -5,7 +5,7 @@ module.exports = {
     await queryInterface.addColumn('tasks', 'projectId', {
       type: Sequelize.INTEGER.UNSIGNED,
       allowNull: true
-      // ❌ Pas de REFERENCES / onDelete / onUpdate sur PlanetScale
+      // Pas de REFERENCES / onDelete / onUpdate pour rester portable.
     });
   },
 

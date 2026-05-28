@@ -3,7 +3,7 @@
 /**
  * ✅ Migration : Ajout de la colonne phaseId dans la table project_documents
  * -------------------------------------------------------------
- * Version PlanetScale : SANS contrainte de clé étrangère
+ * Version portable MySQL : sans contrainte de cle etrangere
  * -------------------------------------------------------------
  */
 
@@ -13,7 +13,7 @@ module.exports = {
     await queryInterface.addColumn('project_documents', 'phaseId', {
       type: Sequelize.INTEGER.UNSIGNED,
       allowNull: true,
-      // ❌ PAS de "references", "onUpdate", "onDelete" sur PlanetScale
+      // Pas de "references", "onUpdate", "onDelete" pour rester portable.
       // optionnel : conservé, uniquement pour l'ordre des colonnes (MySQL)
       after: 'projectId',
     });

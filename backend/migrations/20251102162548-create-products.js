@@ -9,7 +9,7 @@ module.exports = {
         primaryKey: true,
       },
 
-      // 🔗 Relation catégorie (logic only, no FK because PlanetScale)
+      // Relation categorie logique uniquement, sans contrainte FK en base.
       category_id: {
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: true,

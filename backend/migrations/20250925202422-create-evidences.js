@@ -12,7 +12,7 @@ module.exports = {
 
       /* ============================================================
          🔗 Relations logiques
-         - PAS DE FOREIGN KEY car PlanetScale ne supporte pas les FK
+         - Pas de FOREIGN KEY pour garder le schema portable.
       ============================================================ */
       taskId: {
         type: Sequelize.INTEGER.UNSIGNED,

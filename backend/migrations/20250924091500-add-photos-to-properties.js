@@ -9,7 +9,7 @@ module.exports = {
     }
 
     await queryInterface.addColumn('properties', 'photos', {
-      type: Sequelize.DataTypes.JSON, // ✅ PlanetScale/MySQL supporte JSON
+      type: Sequelize.DataTypes.JSON, // MySQL supporte JSON
       allowNull: true
     });
   },

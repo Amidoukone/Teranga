@@ -56,6 +56,21 @@ function validateProdConfig(env = process.env) {
   if (!String(env.DATABASE_URL || '').trim()) {
     errors.push('DATABASE_URL must be configured in production');
   }
+  if (String(env.PLANETSCALE_DATABASE_URL || '').trim()) {
+    warnings.push(
+      'PLANETSCALE_DATABASE_URL is legacy and is not used by NODE_ENV=production; remove it after migration'
+    );
+  }
+  if (/planetscale|psdb\.cloud/i.test(String(env.DATABASE_URL || ''))) {
+    warnings.push(
+      'DATABASE_URL still looks like a PlanetScale connection string'
+    );
+  }
+  if (parseBooleanEnv(env.DB_SSL) === false) {
+    warnings.push(
+      'DB_SSL=false disables TLS for MySQL. Use only with a trusted private endpoint.'
+    );
+  }
 
   const allowDefaults =
     String(env.BOOTSTRAP_ADMIN_ALLOW_DEFAULTS || '')

@@ -36,7 +36,7 @@ module.exports = (sequelize, DataTypes) => {
 
       /**
        * 🌍 Multi-pays (associations logiques uniquement)
-       * - Pas de FK DB (PlanetScale friendly)
+       * - Pas de FK DB pour garder les imports MySQL portables
        * - Permet include: [{ model: Country, as: 'country' }]
        */
       if (models.Country) {

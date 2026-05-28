@@ -12,7 +12,7 @@ module.exports = {
       ownerId: {
         type: Sequelize.INTEGER.UNSIGNED,
         allowNull: false
-        // ❌ Pas de FK sur PlanetScale
+        // Pas de contrainte FK en base.
       },
 
       title: {

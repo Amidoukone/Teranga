@@ -62,4 +62,4 @@ node scripts/fix-mojibake-data.js --apply --silent
 - Default mode scans curated business fields only.
 - JSON fields are included by default because user text can exist in metadata and addresses.
 - Use `--all-text-fields` only when you need an exhaustive technical pass.
-- For Render one-off maintenance jobs (PlanetScale backend), prefer `*:silent` scripts to keep logs focused on summary lines.
+- For Render one-off maintenance jobs, prefer `*:silent` scripts to keep logs focused on summary lines.
