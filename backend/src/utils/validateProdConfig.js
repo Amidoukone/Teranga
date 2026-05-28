@@ -17,6 +17,17 @@ function normalizeList(raw) {
     .filter(Boolean);
 }
 
+function databaseUrlHostname(rawUrl) {
+  const value = String(rawUrl || '').trim();
+  if (!value) return '';
+
+  try {
+    return new URL(value).hostname;
+  } catch (_err) {
+    return value;
+  }
+}
+
 function validateProdConfig(env = process.env) {
   const errors = [];
   const warnings = [];
@@ -61,7 +72,7 @@ function validateProdConfig(env = process.env) {
       'PLANETSCALE_DATABASE_URL is legacy and is not used by NODE_ENV=production; remove it after migration'
     );
   }
-  if (/planetscale|psdb\.cloud/i.test(String(env.DATABASE_URL || ''))) {
+  if (/planetscale|psdb\.cloud/i.test(databaseUrlHostname(env.DATABASE_URL))) {
     warnings.push(
       'DATABASE_URL still looks like a PlanetScale connection string'
     );
