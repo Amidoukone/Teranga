@@ -134,6 +134,21 @@ function normalizeCountryInputToISO2(inputRaw = "", suggestions = []) {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^\+?\d{6,20}$/;
+
+function normalizePhone(value) {
+  const compact = String(value || "")
+    .trim()
+    .replace(/[\s().-]/g, "")
+    .replace(/[^\d+]/g, "");
+  const hasLeadingPlus = compact.startsWith("+");
+  const digits = compact.replace(/\D/g, "");
+  if (!digits) return "";
+  if (!hasLeadingPlus && digits.startsWith("00") && digits.length > 2) {
+    return `+${digits.slice(2)}`;
+  }
+  return hasLeadingPlus ? `+${digits}` : digits;
+}
 
 export default function RegisterPage() {
   const { t, i18n } = useTranslation();
@@ -242,12 +257,15 @@ export default function RegisterPage() {
     const firstName = String(form.firstName || "").trim();
     const lastName = String(form.lastName || "").trim();
     const email = String(form.email || "").trim().toLowerCase();
+    const phone = normalizePhone(form.phone);
     const password = String(form.password || "");
     const iso2 = String(countryISO2 || "").trim();
 
     if (!firstName) return t("auth.register.errors.firstName");
     if (!lastName) return t("auth.register.errors.lastName");
-    if (!email || !EMAIL_RE.test(email)) return t("auth.register.errors.email");
+    if (!phone && !email) return t("auth.register.errors.contact");
+    if (phone && !PHONE_RE.test(phone)) return t("auth.register.errors.phone");
+    if (email && !EMAIL_RE.test(email)) return t("auth.register.errors.email");
     if (!password || password.length < 8)
       return t("auth.register.errors.password");
     if (!iso2 || !/^[A-Z]{2}$/.test(iso2))
@@ -277,10 +295,10 @@ export default function RegisterPage() {
     try {
       const payload = {
         ...form,
-        email: String(form.email || "").trim().toLowerCase(),
+        email: String(form.email || "").trim().toLowerCase() || undefined,
         firstName: String(form.firstName || "").trim(),
         lastName: String(form.lastName || "").trim(),
-        phone: String(form.phone || "").trim() || undefined,
+        phone: normalizePhone(form.phone) || undefined,
         country: countryISO2, // multi-pays safe : ISO2 canonique
         language: i18n.language || "fr",
       };
@@ -351,19 +369,19 @@ export default function RegisterPage() {
               required: true,
             },
             {
-              field: "email",
-              label: t("auth.register.email"),
-              icon: Mail,
-              type: "email",
-              placeholder: t("auth.register.emailPlaceholder"),
-              required: true,
-            },
-            {
               field: "phone",
               label: t("auth.register.phone"),
               icon: Phone,
               type: "tel",
               placeholder: t("auth.register.phonePlaceholder"),
+              required: false,
+            },
+            {
+              field: "email",
+              label: t("auth.register.email"),
+              icon: Mail,
+              type: "email",
+              placeholder: t("auth.register.emailPlaceholder"),
               required: false,
             },
           ].map(

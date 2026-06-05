@@ -61,7 +61,7 @@ function getInitials(user) {
   const last = user.lastName || '';
   const initials = (first[0] || '') + (last[0] || '');
   if (initials.trim()) return initials.toUpperCase();
-  return (user.email?.[0] || '?').toUpperCase();
+  return (user.firstName?.[0] || user.phone?.[0] || user.email?.[0] || '?').toUpperCase();
 }
 
 /* ============================================================================
@@ -391,7 +391,7 @@ export default function DashboardPage() {
       ? t("dashboard.balance.descScope")
       : t("dashboard.balance.descGlobal");
 
-  const firstName = user.firstName || user.email || '';
+  const firstName = user.firstName || user.phone || user.email || '';
   const shortName =
     (firstName.split(' ')[0] || '').trim() || t("dashboard.careFallbackName");
   const supportPhoneDisplay = '00223 70453345';
@@ -464,7 +464,7 @@ export default function DashboardPage() {
             </div>
             <div className="min-w-0">
               <h1 className="text-2xl font-extrabold leading-snug text-text-primary truncate sm:text-3xl">
-                {t("dashboard.greeting", { name: user.firstName || user.email })}
+                {t("dashboard.greeting", { name: user.firstName || user.phone || user.email })}
               </h1>
  {/* Contexte: tableau de bord global. */}
               <p className="mt-2 text-sm text-text-secondary sm:text-base">

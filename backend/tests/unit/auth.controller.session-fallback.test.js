@@ -10,6 +10,7 @@ jest.mock('bcrypt', () => ({
 jest.mock('../../models', () => ({
   User: {
     findOne: jest.fn(),
+    findAll: jest.fn(),
     findByPk: jest.fn(),
     count: jest.fn(),
     update: jest.fn(),
@@ -100,6 +101,7 @@ describe('auth.controller session fallback', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     RefreshToken.create.mockResolvedValue({ id: 88 });
+    User.findAll.mockReset();
   });
 
   test('login exposes refresh token when fallback header is requested', async () => {
@@ -133,6 +135,51 @@ describe('auth.controller session fallback', () => {
       })
     );
     expect(res.cookie).toHaveBeenCalled();
+  });
+
+  test('login accepts a phone identifier', async () => {
+    bcrypt.compare.mockResolvedValue(true);
+    const update = jest.fn().mockResolvedValue(undefined);
+    User.findAll.mockResolvedValue([
+      {
+        id: 8,
+        email: null,
+        phone: '+22370000000',
+        passwordHash: 'hashed-password',
+        role: 'client',
+        countryId: null,
+        regionId: null,
+        language: 'fr',
+        firstName: 'Phone',
+        lastName: 'User',
+        update,
+      },
+    ]);
+
+    const req = makeReq({
+      body: { identifier: '00223 70 00 00 00', password: 'Password123!' },
+    });
+    const res = makeRes();
+
+    await controller.login(req, res);
+
+    expect(User.findAll).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { phone: '+22370000000' },
+        limit: 2,
+      })
+    );
+    expect(update).toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        token: expect.any(String),
+        user: expect.objectContaining({
+          id: 8,
+          email: null,
+          phone: '+22370000000',
+        }),
+      })
+    );
   });
 
   test('refresh rotates body refresh token and returns a new fallback token', async () => {

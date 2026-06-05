@@ -161,13 +161,19 @@
       "LoginRequest": {
         "type": "object",
         "required": [
-          "email",
           "password"
         ],
         "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Phone number or email address"
+          },
           "email": {
             "type": "string",
-            "format": "email"
+            "description": "Backward-compatible login identifier. May contain an email address or phone number."
+          },
+          "phone": {
+            "type": "string"
           },
           "password": {
             "type": "string",
@@ -180,7 +186,6 @@
         "type": "object",
         "required": [
           "id",
-          "email",
           "role"
         ],
         "properties": {
@@ -188,7 +193,16 @@
             "type": "number"
           },
           "email": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "firstName": {
             "type": [

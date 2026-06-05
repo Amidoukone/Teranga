@@ -182,7 +182,7 @@ async function ensureService(client, countryId, regionId) {
       description: FIXTURE.serviceDescription,
       contactPerson: `${client.firstName || ''} ${client.lastName || ''}`.trim(),
       contactPhone: FIXTURE.phone,
-      address: 'ACI 2000 - Bamako',
+      address: 'Sebenicoro - Bamako',
       budget: 25000,
       status: 'created',
       countryId,

@@ -18,7 +18,7 @@ function buildRegisterPayload() {
     firstName: 'Ete',
     lastName: `Real${alphaSuffix}`,
     email: `e2e.real.${ts}@example.com`,
-    phone: '+22370000001',
+    phone: `+2237${String(ts).slice(-7)}`,
     country: 'ML',
     password: E2E_CLIENT_PASSWORD,
   };

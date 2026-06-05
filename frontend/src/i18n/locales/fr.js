@@ -85,6 +85,8 @@ const fr = {
       subtitle: "Acc\u00E9dez \u00E0 votre espace s\u00E9curis\u00E9",
       emailLabel: "Adresse email",
       emailPlaceholder: "exemple@email.com",
+      identifierLabel: "Téléphone ou email",
+      identifierPlaceholder: "+223 70 00 00 00 ou exemple@email.com",
       passwordLabel: "Mot de passe",
       passwordPlaceholder: "********",
       passwordHide: "Masquer le mot de passe",
@@ -108,9 +110,9 @@ const fr = {
       firstNamePlaceholder: "Votre pr\u00E9nom",
       lastName: "Nom",
       lastNamePlaceholder: "Votre nom",
-      email: "Adresse email",
+      email: "Adresse email (optionnel)",
       emailPlaceholder: "exemple@email.com",
-      phone: "T\u00E9l\u00E9phone (optionnel)",
+      phone: "Téléphone",
       phonePlaceholder: "+223 70 00 00 00",
       countryLabel: "Pays (ISO2 ou nom)",
       countryPlaceholder: "ML, SN, CI... ou nom du pays",
@@ -136,6 +138,8 @@ const fr = {
       errors: {
         firstName: "Veuillez renseigner votre pr\u00E9nom.",
         lastName: "Veuillez renseigner votre nom.",
+        contact: "Veuillez renseigner un numéro de téléphone ou une adresse email.",
+        phone: "Numéro de téléphone invalide.",
         email: "Adresse email invalide.",
         password: "Le mot de passe doit contenir au moins 8 caract\u00E8res.",
         countryIso:
@@ -2387,7 +2391,7 @@ const fr = {
       info: {
         email: "teranga.diaspora.platform@gmail.com",
         phone: "00223 70453345",
-        address: "Hamdallaye ACI 200, Bamako - Mali",
+        address: "Sebenicoro, Bamako - Mali",
       },
       note:
         "Basés à Bamako, nous accompagnons la diaspora et les résidents locaux avec un suivi clair, humain et professionnel.",
@@ -2447,7 +2451,7 @@ const fr = {
       publisher: {
         title: "1. \u00C9diteur du site",
         details:
-          "<strong>Teranga Diaspora</strong><br/>Service de gestion de biens, projets et services pour la diaspora africaine.<br/>Si\u00E8ge social : Hamdallaye ACI 200, Bamako - Mali<br/>Email : teranga.diaspora.platform@gmail.com",
+          "<strong>Teranga Diaspora</strong><br/>Service de gestion de biens, projets et services pour la diaspora africaine.<br/>Si\u00E8ge social : Sebenicoro, Bamako - Mali<br/>Email : teranga.diaspora.platform@gmail.com",
       },
       editorial: {
         title: "2. Responsabilit\u00E9 \u00E9ditoriale",
@@ -3047,7 +3051,7 @@ const fr = {
       servicePlaceholder: "\u2014 Choisir un service \u2014",
       typeLabel: "Type de t\u00E2che",
       titleLabel: "Titre de la t\u00E2che",
-      titlePlaceholder: "Ex : Inspection du bien \u00E0 Hamdallaye",
+      titlePlaceholder: "Ex : Inspection du bien \u00E0 Sebenicoro",
       descriptionLabel: "Description",
       descriptionPlaceholder:
         "Ajoutez des d\u00E9tails pour que l\u2019agent comprenne clairement la mission.",

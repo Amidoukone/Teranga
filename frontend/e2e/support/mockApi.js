@@ -11,6 +11,7 @@ function createE2EUser(overrides = {}) {
     firstName: 'E2E',
     lastName: 'Client',
     email: 'e2e.client@teranga.test',
+    phone: '+22370000000',
     role: 'client',
     country: 'ML',
     countryId: 1,
@@ -36,7 +37,7 @@ function createInitialState(user, overrides = {}) {
     property: {
       id: 301,
       title: 'Villa E2E Bamako',
-      address: 'ACI 2000',
+      address: 'Sebenicoro',
     },
   };
 
@@ -210,6 +211,7 @@ async function installApiMocks(page, options = {}) {
       user.firstName = body.firstName || user.firstName;
       user.lastName = body.lastName || user.lastName;
       user.email = body.email || user.email;
+      user.phone = body.phone || user.phone;
       user.country = body.country || user.country;
       state.auth.password = body.password || state.auth.password;
       await fulfillJson(route, 201, {
@@ -221,7 +223,8 @@ async function installApiMocks(page, options = {}) {
 
     if (method === 'POST' && path === '/auth/login') {
       const body = parseRequestBody(request);
-      if (body.email && body.email !== user.email) {
+      const identifier = body.identifier || body.email || body.phone || '';
+      if (identifier && identifier !== user.email && identifier !== user.phone) {
         await fulfillJson(route, 401, { error: 'Identifiants invalides' });
         return;
       }

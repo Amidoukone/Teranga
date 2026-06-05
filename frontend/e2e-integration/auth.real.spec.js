@@ -12,7 +12,7 @@ async function loginUser(page, email, password) {
   await expect(page).toHaveURL(/\/login$/);
 
   const loginForm = page.locator('form').first();
-  await loginForm.locator('input[type="email"]').fill(email);
+  await loginForm.locator('input[type="text"]').fill(email);
   await loginForm.locator('input[type="password"]').fill(password);
   await loginForm.locator('button[type="submit"]').click();
 }

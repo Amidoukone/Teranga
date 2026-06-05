@@ -14,6 +14,7 @@ const {
 } = require('../services/userAccess.service');
 const { invalidateAuthUserCache } = require('../services/authCache.service');
 const logger = require('../utils/logger');
+const { normalizePhone, isValidPhone } = require('../utils/contactIdentity');
 
 // ————————————————————————
 // Helpers
@@ -53,6 +54,14 @@ function toTrimOrNull(v) {
   if (v === null || v === undefined) return null;
   const s = String(v).trim();
   return s.length ? s : null;
+}
+
+async function ensureUniquePhone(phone, excludeUserId = null) {
+  if (!phone) return null;
+  const existing = await User.findOne({ where: { phone } });
+  if (!existing) return null;
+  if (excludeUserId && Number(existing.id) === Number(excludeUserId)) return null;
+  return 'Téléphone déjà utilisé';
 }
 
 function toSafeUser(u) {
@@ -304,7 +313,7 @@ exports.createAgent = async (req, res) => {
     email = (email || '').toLowerCase().trim();
     firstName = (firstName || '').trim();
     lastName = (lastName || '').trim();
-    phone = (phone || '').trim();
+    phone = normalizePhone(phone);
 
     if (!email || !EMAIL_RE.test(email)) {
       return res.status(400).json({ error: 'Email requis ou invalide' });
@@ -313,6 +322,10 @@ exports.createAgent = async (req, res) => {
       return res
         .status(400)
         .json({ error: 'Mot de passe requis (6 caractères min.)' });
+    }
+
+    if (phone && !isValidPhone(phone)) {
+      return res.status(400).json({ error: 'Téléphone invalide' });
     }
 
     let countryIso2 = null;
@@ -325,6 +338,11 @@ exports.createAgent = async (req, res) => {
     const exists = await User.findOne({ where: { email } });
     if (exists) {
       return res.status(409).json({ error: 'Email déjà utilisé' });
+    }
+
+    const phoneConflict = await ensureUniquePhone(phone);
+    if (phoneConflict) {
+      return res.status(409).json({ error: phoneConflict });
     }
 
     const passwordHash = await bcrypt.hash(String(password), 10);
@@ -500,8 +518,12 @@ exports.createUser = async (req, res) => {
 
     // Validation minimale solide
     const cleanEmail = (email || '').toLowerCase().trim();
+    const cleanPhone = normalizePhone(phone);
     if (!cleanEmail || !EMAIL_RE.test(cleanEmail)) {
       return res.status(400).json({ error: 'Email invalide' });
+    }
+    if (cleanPhone && !isValidPhone(cleanPhone)) {
+      return res.status(400).json({ error: 'Téléphone invalide' });
     }
 
     const targetRole = String(role || '').trim().toLowerCase();
@@ -532,6 +554,11 @@ exports.createUser = async (req, res) => {
     const exists = await User.findOne({ where: { email: cleanEmail } });
     if (exists) {
       return res.status(409).json({ error: 'Email déjà utilisé' });
+    }
+
+    const phoneConflict = await ensureUniquePhone(cleanPhone);
+    if (phoneConflict) {
+      return res.status(409).json({ error: phoneConflict });
     }
 
     // Langue
@@ -566,7 +593,7 @@ exports.createUser = async (req, res) => {
       passwordHash,
       firstName: firstName?.trim() || null,
       lastName: lastName?.trim() || null,
-      phone: phone?.trim() || null,
+      phone: cleanPhone || null,
       language: normalizedLanguage || 'fr',
       country: normalizedCountry,
       role: targetRole,
@@ -700,10 +727,22 @@ exports.updateUser = async (req, res) => {
       nextRegionId = actorScope.regionId;
     }
 
+    const cleanPhone =
+      phone !== undefined ? normalizePhone(phone) : u.phone || null;
+    if (phone !== undefined) {
+      if (cleanPhone && !isValidPhone(cleanPhone)) {
+        return res.status(400).json({ error: 'Téléphone invalide' });
+      }
+      const phoneConflict = await ensureUniquePhone(cleanPhone, u.id);
+      if (phoneConflict) {
+        return res.status(409).json({ error: phoneConflict });
+      }
+    }
+
     const updateData = {
       firstName: firstName !== undefined ? (firstName?.trim() || null) : u.firstName,
       lastName: lastName !== undefined ? (lastName?.trim() || null) : u.lastName,
-      phone: phone !== undefined ? (phone?.trim() || null) : u.phone,
+      phone: phone !== undefined ? cleanPhone || null : u.phone,
       language: normalizedLanguage || u.language || 'fr',
       country: normalizedCountry,
       role: nextRole || u.role,

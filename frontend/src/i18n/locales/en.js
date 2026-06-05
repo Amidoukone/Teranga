@@ -85,6 +85,8 @@ const en = {
       subtitle: "Access your secure space",
       emailLabel: "Email address",
       emailPlaceholder: "name@email.com",
+      identifierLabel: "Phone or email",
+      identifierPlaceholder: "+223 70 00 00 00 or name@email.com",
       passwordLabel: "Password",
       passwordPlaceholder: "********",
       passwordHide: "Hide password",
@@ -108,9 +110,9 @@ const en = {
       firstNamePlaceholder: "Your first name",
       lastName: "Last name",
       lastNamePlaceholder: "Your last name",
-      email: "Email address",
+      email: "Email address (optional)",
       emailPlaceholder: "name@email.com",
-      phone: "Phone (optional)",
+      phone: "Phone",
       phonePlaceholder: "+223 70 00 00 00",
       countryLabel: "Country (ISO2 or name)",
       countryPlaceholder: "ML, SN, CI... or country name",
@@ -135,6 +137,8 @@ const en = {
       errors: {
         firstName: "Please enter your first name.",
         lastName: "Please enter your last name.",
+        contact: "Please enter a phone number or an email address.",
+        phone: "Invalid phone number.",
         email: "Invalid email address.",
         password: "Password must be at least 8 characters.",
         countryIso: "Please provide a valid country (ISO2: ML, SN, CI...).",
@@ -2376,7 +2380,7 @@ const en = {
       info: {
         email: "teranga.diaspora.platform@gmail.com",
         phone: "00223 70453345",
-        address: "Hamdallaye ACI 200, Bamako - Mali",
+        address: "Sebenicoro, Bamako - Mali",
       },
       note:
         "Based in Bamako, we support diaspora members and local residents with clear, human, and professional follow-up.",
@@ -2436,7 +2440,7 @@ const en = {
       publisher: {
         title: "1. Site publisher",
         details:
-          "<strong>Teranga Diaspora</strong><br/>Property, project, and services management for the African diaspora.<br/>Registered office: Hamdallaye ACI 200, Bamako - Mali<br/>Email: teranga.diaspora.platform@gmail.com",
+          "<strong>Teranga Diaspora</strong><br/>Property, project, and services management for the African diaspora.<br/>Registered office: Sebenicoro, Bamako - Mali<br/>Email: teranga.diaspora.platform@gmail.com",
       },
       editorial: {
         title: "2. Editorial responsibility",
@@ -3031,7 +3035,7 @@ const en = {
       servicePlaceholder: "— Select a service —",
       typeLabel: "Task type",
       titleLabel: "Task title",
-      titlePlaceholder: "e.g., Property inspection in Hamdallaye",
+      titlePlaceholder: "e.g., Property inspection in Sebenicoro",
       descriptionLabel: "Description",
       descriptionPlaceholder:
         "Add details so the agent clearly understands the task.",
@@ -3596,4 +3600,3 @@ const en = {
 };
 
 export default en;
-

@@ -23,6 +23,12 @@ const {
   Sequelize,
 } = require('../../models');
 const { cacheRevokedToken } = require('../services/authCache.service');
+const {
+  normalizeEmail: normalizeContactEmail,
+  isValidEmail,
+  normalizePhone,
+  isValidPhone,
+} = require('../utils/contactIdentity');
 
 // Durée de vie du token d'accès (configurable via env)
 const ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '1h';
@@ -54,7 +60,65 @@ const MANUAL_RESET_MESSAGE =
  * (espaces, majuscules, etc.)
  */
 function normalizeEmail(email) {
-  return String(email || '').trim().toLowerCase();
+  return normalizeContactEmail(email);
+}
+
+function toAuthUser(user) {
+  return {
+    id: user.id,
+    email: user.email || null,
+    phone: user.phone || null,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    countryId: user.countryId ?? null,
+    regionId: user.regionId ?? null,
+    language: user.language || 'fr',
+  };
+}
+
+async function assertUniqueAuthContact({ email, phone, excludeUserId = null }) {
+  const checks = [];
+  if (email) checks.push({ email });
+  if (phone) checks.push({ phone });
+  if (!checks.length) return null;
+
+  const whereClause =
+    checks.length === 1 ? checks[0] : { [Sequelize.Op.or]: checks };
+  const existing = await User.findOne({ where: whereClause });
+  if (!existing) return null;
+  if (excludeUserId && Number(existing.id) === Number(excludeUserId)) {
+    return null;
+  }
+
+  if (email && existing.email === email) return 'Email deja utilise';
+  if (phone && existing.phone === phone) return 'Telephone deja utilise';
+  return 'Identifiant deja utilise';
+}
+
+async function findUserByLoginIdentifier(rawIdentifier) {
+  const identifier = String(rawIdentifier || '').trim();
+  if (!identifier) return null;
+
+  if (isValidEmail(identifier)) {
+    return User.findOne({ where: { email: normalizeEmail(identifier) } });
+  }
+
+  const phone = normalizePhone(identifier);
+  if (!isValidPhone(phone)) return null;
+
+  const matches = await User.findAll({
+    where: { phone },
+    order: [['id', 'ASC']],
+    limit: 2,
+  });
+
+  if (matches.length > 1) {
+    logger.warn({ phone }, 'auth.login.ambiguous_phone_identifier');
+    return null;
+  }
+
+  return matches[0] || null;
 }
 
 const SUPPORTED_LANGS = new Set(['fr', 'en']);
@@ -470,14 +534,15 @@ exports.register = async (req, res) => {
   try {
     const rawEmail = req.body?.email;
     const rawPassword = req.body?.password;
+    const rawPhone = req.body?.phone;
 
     const email = normalizeEmail(rawEmail);
+    const phone = normalizePhone(rawPhone);
     const password = typeof rawPassword === 'string' ? rawPassword.trim() : '';
 
     const {
       firstName,
       lastName,
-      phone,
       country,
       countryId,
       language: rawLanguage,
@@ -485,8 +550,20 @@ exports.register = async (req, res) => {
     const language = normalizeLanguage(rawLanguage) || 'fr';
 
     // Champs requis
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email et mot de passe requis' });
+    if (!email && !phone) {
+      return res.status(400).json({ error: 'Email ou telephone requis' });
+    }
+
+    if (email && !isValidEmail(email)) {
+      return res.status(400).json({ error: 'Email invalide' });
+    }
+
+    if (phone && !isValidPhone(phone)) {
+      return res.status(400).json({ error: 'Telephone invalide' });
+    }
+
+    if (!password) {
+      return res.status(400).json({ error: 'Mot de passe requis' });
     }
 
     // (Optionnel) petite règle de complexité minimale
@@ -495,9 +572,14 @@ exports.register = async (req, res) => {
     }
 
     // Vérifie si l'email existe déjà
-    const exists = await User.findOne({ where: { email } });
+    const exists = email ? await User.findOne({ where: { email } }) : null;
     if (exists) {
       return res.status(400).json({ error: 'Email déjà utilisé' });
+    }
+
+    const contactConflict = await assertUniqueAuthContact({ email, phone });
+    if (contactConflict) {
+      return res.status(400).json({ error: contactConflict });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -527,7 +609,7 @@ exports.register = async (req, res) => {
     }
 
     const user = await User.create({
-      email,
+      email: email || null,
       passwordHash,
       firstName: firstName || null,
       lastName: lastName || null,
@@ -556,16 +638,7 @@ exports.register = async (req, res) => {
 
     return res.status(201).json({
       message: 'Utilisateur créé',
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        countryId: user.countryId ?? null,
-        regionId: user.regionId ?? null,
-        language: user.language || 'fr',
-      },
+      user: toAuthUser(user),
       recoveryCodes,
       recoveryCodesWarning,
     });
@@ -585,17 +658,17 @@ exports.register = async (req, res) => {
 ====================================================== */
 exports.login = async (req, res) => {
   try {
-    const rawEmail = req.body?.email;
+    const rawIdentifier = req.body?.identifier ?? req.body?.email ?? req.body?.phone;
     const rawPassword = req.body?.password;
 
-    const email = normalizeEmail(rawEmail);
+    const identifier = String(rawIdentifier || '').trim();
     const password = typeof rawPassword === 'string' ? rawPassword.trim() : '';
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email et mot de passe requis' });
+    if (!identifier || !password) {
+      return res.status(400).json({ error: 'Telephone/email et mot de passe requis' });
     }
 
-    const user = await User.findOne({ where: { email } });
+    const user = await findUserByLoginIdentifier(identifier);
     // Message unique pour éviter de "leaker" la présence de l'email
     if (!user) {
       return res.status(400).json({ error: 'Identifiants invalides' });
@@ -646,16 +719,7 @@ exports.login = async (req, res) => {
       message: 'Connexion réussie',
       token,
       csrfToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        countryId: user.countryId ?? null,
-        regionId: user.regionId ?? null,
-      language: user.language || 'fr',
-      },
+      user: toAuthUser(user),
     };
 
     if (wantsSessionFallbackToken(req)) {
@@ -687,6 +751,7 @@ exports.me = async (req, res) => {
       attributes: [
         'id',
         'email',
+        'phone',
         'firstName',
         'lastName',
         'role',
@@ -703,7 +768,7 @@ exports.me = async (req, res) => {
     }
 
     const responseBody = {
-      user,
+      user: toAuthUser(user),
       csrfToken: req.cookies?.[COOKIE_CSRF] || null,
     };
 
@@ -737,16 +802,7 @@ exports.updateMe = async (req, res) => {
     await user.update({ language: nextLanguage });
 
     const responseBody = {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        countryId: user.countryId ?? null,
-        regionId: user.regionId ?? null,
-      language: user.language || 'fr',
-      },
+      user: toAuthUser(user),
     };
 
     return res.json(responseBody);

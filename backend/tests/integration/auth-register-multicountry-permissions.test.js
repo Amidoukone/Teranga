@@ -165,6 +165,28 @@ describe('Sprint 2 - auth/register/multi-country/permissions', () => {
     expect(Number(res.body?.user?.countryId)).toBe(Number(country.id));
   });
 
+  test('register succeeds with phone only when country has active master', async () => {
+    if (!dbReady) return;
+    const { country } = await makeCountry({ withMaster: true });
+    const phone = `+2237${Date.now().toString().slice(-7)}`;
+
+    const res = await request(app).post('/api/auth/register').send({
+      phone,
+      password: 'Password123!',
+      countryId: country.id,
+      language: 'fr',
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body?.user?.email).toBeNull();
+    expect(res.body?.user?.phone).toBe(phone);
+    expect(res.body?.user?.role).toBe('client');
+    expect(Number(res.body?.user?.countryId)).toBe(Number(country.id));
+    if (res.body?.user?.id) {
+      created.userIds.push(res.body.user.id);
+    }
+  });
+
   test('register rejects firstName/lastName containing digits', async () => {
     if (!dbReady) return;
     const { country } = await makeCountry({ withMaster: true });

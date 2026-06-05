@@ -795,16 +795,16 @@ function NavBar() {
     const first = (user?.firstName || "").trim();
     const last = (user?.lastName || "").trim();
     const full = [first, last].filter(Boolean).join(" ").trim();
-    return full || user?.email || t("nav.userFallback");
-  }, [user?.email, user?.firstName, user?.lastName, t]);
+    return full || user?.phone || user?.email || t("nav.userFallback");
+  }, [user?.email, user?.firstName, user?.lastName, user?.phone, t]);
 
   const userInitial = useMemo(() => {
     const first = (user?.firstName || "").trim();
     const last = (user?.lastName || "").trim();
-    const base = first || last || user?.email || "?";
+    const base = first || last || user?.phone || user?.email || "?";
     const initial = String(base).trim().charAt(0);
     return (initial || "?").toUpperCase();
-  }, [user?.email, user?.firstName, user?.lastName]);
+  }, [user?.email, user?.firstName, user?.lastName, user?.phone]);
 
   const NotificationBell = (
     <Link
@@ -1122,9 +1122,10 @@ function NavBar() {
                             <div className="text-text-primary text-sm font-semibold tracking-wide truncate">
                               {userDisplay}
                             </div>
-                            {user?.email && user?.email !== userDisplay ? (
+                            {(user?.email || user?.phone) &&
+                            (user?.email || user?.phone) !== userDisplay ? (
                               <div className="text-text-muted text-[0.72rem] truncate mt-0.5">
-                                {user.email}
+                                {user.email || user.phone}
                               </div>
                             ) : null}
                             <div className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-surface-card/70 px-2 py-0.5 text-[0.68rem] uppercase tracking-wide text-text-muted">

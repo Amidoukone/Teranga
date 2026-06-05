@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { login, me } from "../services/auth";
 import { useTranslation } from "react-i18next";
-import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Phone } from "lucide-react";
 import { preloadRoute } from "../utils/routePreload";
 import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
 import { readAuthFeedbackState } from "../utils/authFeedback";
@@ -10,7 +10,7 @@ import { readAuthFeedbackState } from "../utils/authFeedback";
 export default function LoginPage() {
   const { t } = useTranslation();
   // Champs
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
 
  // Aatats
@@ -55,7 +55,7 @@ export default function LoginPage() {
     preloadRoute("/dashboard");
 
     try {
-      await login({ email, password });
+      await login({ identifier: String(identifier || "").trim(), password });
       navigate("/dashboard");
     } catch (err) {
       const backendMsg = err?.response?.data?.error;
@@ -100,22 +100,22 @@ export default function LoginPage() {
         {/* ---------- FORMULAIRE ---------- */}
         <form onSubmit={handleLogin} className="space-y-5">
 
-          {/* EMAIL */}
+          {/* IDENTIFIANT */}
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1">
-              {t("auth.login.emailLabel")}
+              {t("auth.login.identifierLabel")}
             </label>
 
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
 
               <input
-                type="email"
+                type="text"
                 className="w-full border border-border rounded-xl pl-10 pr-3 py-2 text-sm bg-surface-card text-text-primary 
                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder={t("auth.login.emailPlaceholder")}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t("auth.login.identifierPlaceholder")}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 autoFocus
                 required
               />

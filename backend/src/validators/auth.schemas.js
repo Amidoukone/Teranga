@@ -4,6 +4,9 @@ const Joi = require('joi');
 
 const email = Joi.string().email().trim().lowercase();
 const password = Joi.string().min(8);
+const optionalEmail = email.empty('').allow(null);
+const optionalPhone = Joi.string().trim().max(30).empty('').allow(null);
+const loginIdentifier = Joi.string().trim().max(255).empty('').allow(null);
 const noDigitNamePattern = /^(?!.*\p{N}).*$/u;
 const optionalNameWithoutDigits = Joi.string()
   .trim()
@@ -16,21 +19,31 @@ const optionalNameWithoutDigits = Joi.string()
   });
 
 const registerSchema = Joi.object({
-  email: email.required(),
+  email: optionalEmail,
   password: password.required(),
   firstName: optionalNameWithoutDigits,
   lastName: optionalNameWithoutDigits,
-  phone: Joi.string().allow('', null),
+  phone: optionalPhone,
   country: Joi.string().allow('', null),
   countryId: Joi.number().integer().allow(null),
   regionId: Joi.number().integer().allow(null),
   language: Joi.string().allow('', null),
-});
+})
+  .or('email', 'phone')
+  .messages({
+    'object.missing': 'Email ou telephone requis',
+  });
 
 const loginSchema = Joi.object({
-  email: email.required(),
+  identifier: loginIdentifier,
+  email: loginIdentifier,
+  phone: loginIdentifier,
   password: Joi.string().required(),
-});
+})
+  .or('identifier', 'email', 'phone')
+  .messages({
+    'object.missing': 'Telephone ou email requis',
+  });
 
 const forgotPasswordSchema = Joi.object({
   email: email.required(),

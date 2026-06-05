@@ -16,8 +16,8 @@ test.describe('E2E Auth', () => {
 
     await registerInputs.nth(0).fill('E2E');
     await registerInputs.nth(1).fill('Client');
-    await registerInputs.nth(2).fill(uniqueEmail);
-    await registerInputs.nth(3).fill('+22370000000');
+    await registerInputs.nth(2).fill('+22370000000');
+    await registerInputs.nth(3).fill(uniqueEmail);
     await registerInputs.nth(4).fill('ML');
     await registerInputs.nth(5).fill(password);
 
@@ -25,7 +25,7 @@ test.describe('E2E Auth', () => {
     await expect(page).toHaveURL(/\/login$/);
 
     const loginForm = page.locator('form').first();
-    await loginForm.locator('input[type="email"]').fill(uniqueEmail);
+    await loginForm.locator('input[type="text"]').fill(uniqueEmail);
     await loginForm.locator('input[type="password"]').fill(password);
     await loginForm.locator('button[type="submit"]').click();
 
