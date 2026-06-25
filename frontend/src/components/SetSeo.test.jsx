@@ -46,5 +46,13 @@ describe("SetSeo", () => {
       "content",
       "fr_FR"
     );
+    expect(document.querySelector('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      "https://www.teranga-diaspora.com/"
+    );
+    expect(document.querySelector('meta[property="og:url"]')).toHaveAttribute(
+      "content",
+      "https://www.teranga-diaspora.com/"
+    );
   });
 });

@@ -70,6 +70,10 @@ Expected public records for the Netlify frontend:
 - Apex/root domain `teranga-diaspora.com`: `A` record to `75.2.60.5`
 - `www.teranga-diaspora.com`: `CNAME` to `teranga.netlify.app`
 
+Netlify production domain setting:
+- Primary domain: `www.teranga-diaspora.com`
+- Domain alias/redirect: `teranga-diaspora.com` -> `https://www.teranga-diaspora.com`
+
 Current app endpoints:
 - Frontend: `https://www.teranga-diaspora.com`
 - Backend health: `https://teranga-backend.onrender.com/api/health`
@@ -89,6 +93,7 @@ Pass criteria:
 - Public DNS returns the expected apex `A` record and `www` CNAME
 - Backend health returns `200`
 - Local/default resolver is not returning NXDOMAIN for the primary `www` frontend domain
+- `https://www.teranga-diaspora.com` returns `200`, not a redirect back to `https://teranga-diaspora.com`
 
 ## 4) Release Runbook
 

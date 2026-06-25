@@ -1,5 +1,5 @@
 # ================================================================
-# robots.txt — Teranga (https://teranga-diaspora.com)
+# robots.txt — Teranga (https://www.teranga-diaspora.com)
 # Optimisation SEO Premium PRO 2025
 # Indexation contrôlée • Sécurité • Performance
 # ================================================================
@@ -42,7 +42,7 @@ Allow: /static/
 # 🗺️ Sitemap
 # indispensable pour Google Search Console
 # ==============================
-Sitemap: https://teranga-diaspora.com/sitemap.xml
+Sitemap: https://www.teranga-diaspora.com/sitemap.xml
 
 # ================================================================
 # ✨ Notes :

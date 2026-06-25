@@ -16,6 +16,7 @@ param(
   [string]$ExpectedWwwCname = "teranga.netlify.app",
   [string[]]$PublicDnsServers = @("8.8.8.8", "1.1.1.1"),
   [string]$FrontendUrl = "https://www.teranga-diaspora.com",
+  [string]$ExpectedFrontendHost = "www.teranga-diaspora.com",
   [string]$BackendHealthUrl = "https://teranga-backend.onrender.com/api/health",
   [switch]$StrictLocalResolver
 )
@@ -129,11 +130,32 @@ try {
 
 Write-Check "Frontend reachability through default resolver: $FrontendUrl"
 try {
-  $frontendResponse = Invoke-WebRequest -Uri $FrontendUrl -Method Head -TimeoutSec 20 -ErrorAction Stop
-  if ([int]$frontendResponse.StatusCode -ge 200 -and [int]$frontendResponse.StatusCode -lt 400) {
-    Write-Host "       OK frontend returned $($frontendResponse.StatusCode)"
+  $frontendResponse = Invoke-WebRequest `
+    -Uri $FrontendUrl `
+    -Method Head `
+    -MaximumRedirection 0 `
+    -TimeoutSec 20 `
+    -ErrorAction SilentlyContinue
+  $statusCode = [int]$frontendResponse.StatusCode
+  $location = [string]$frontendResponse.Headers.Location
+
+  if ($statusCode -ge 200 -and $statusCode -lt 300) {
+    Write-Host "       OK frontend returned $statusCode"
+  } elseif ($statusCode -ge 300 -and $statusCode -lt 400 -and $location) {
+    $redirectHost = ''
+    try {
+      $redirectHost = ([Uri]$location).Host
+    } catch {
+      $redirectHost = ''
+    }
+
+    if ($redirectHost -and $redirectHost -ne $ExpectedFrontendHost) {
+      Add-Failure "Frontend redirects $FrontendUrl to $location. Set $ExpectedFrontendHost as the primary domain in Netlify."
+    } else {
+      Add-Warning "Frontend returned redirect $statusCode to $location"
+    }
   } else {
-    Add-Warning "Frontend returned HTTP $($frontendResponse.StatusCode)"
+    Add-Warning "Frontend returned HTTP $statusCode"
   }
 } catch {
   $message = "Frontend check failed through the default resolver: $($_.Exception.Message)"
