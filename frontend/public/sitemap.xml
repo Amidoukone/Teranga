@@ -9,31 +9,31 @@
   <!-- ===================================================== -->
 
   <url>
-    <loc>https://teranga-diaspora.com/</loc>
+    <loc>https://www.teranga-diaspora.com/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/login</loc>
+    <loc>https://www.teranga-diaspora.com/login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/register</loc>
+    <loc>https://www.teranga-diaspora.com/register</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/shop</loc>
+    <loc>https://www.teranga-diaspora.com/shop</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/products</loc>
+    <loc>https://www.teranga-diaspora.com/products</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -43,19 +43,19 @@
   <!-- ===================================================== -->
 
   <url>
-    <loc>https://teranga-diaspora.com/legal</loc>
+    <loc>https://www.teranga-diaspora.com/legal</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/privacy</loc>
+    <loc>https://www.teranga-diaspora.com/privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/terms</loc>
+    <loc>https://www.teranga-diaspora.com/terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
@@ -66,43 +66,43 @@
   <!-- ===================================================== -->
 
   <url>
-    <loc>https://teranga-diaspora.com/dashboard</loc>
+    <loc>https://www.teranga-diaspora.com/dashboard</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/services</loc>
+    <loc>https://www.teranga-diaspora.com/services</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/projects</loc>
+    <loc>https://www.teranga-diaspora.com/projects</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/properties</loc>
+    <loc>https://www.teranga-diaspora.com/properties</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/transactions</loc>
+    <loc>https://www.teranga-diaspora.com/transactions</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/finance</loc>
+    <loc>https://www.teranga-diaspora.com/finance</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/orders</loc>
+    <loc>https://www.teranga-diaspora.com/orders</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
@@ -112,7 +112,7 @@
   <!-- ===================================================== -->
 
   <url>
-    <loc>https://teranga-diaspora.com/agent/services</loc>
+    <loc>https://www.teranga-diaspora.com/agent/services</loc>
     <changefreq>weekly</changefreq>
     <priority>0.4</priority>
   </url>
@@ -122,37 +122,37 @@
   <!-- ===================================================== -->
 
   <url>
-    <loc>https://teranga-diaspora.com/admin/projects</loc>
+    <loc>https://www.teranga-diaspora.com/admin/projects</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/admin/services</loc>
+    <loc>https://www.teranga-diaspora.com/admin/services</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/admin/users</loc>
+    <loc>https://www.teranga-diaspora.com/admin/users</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/admin/properties</loc>
+    <loc>https://www.teranga-diaspora.com/admin/properties</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/admin/catalog/categories</loc>
+    <loc>https://www.teranga-diaspora.com/admin/catalog/categories</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
 
   <url>
-    <loc>https://teranga-diaspora.com/admin/catalog/products</loc>
+    <loc>https://www.teranga-diaspora.com/admin/catalog/products</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>

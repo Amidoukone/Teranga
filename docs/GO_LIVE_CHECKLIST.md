@@ -58,7 +58,39 @@ Pass criteria:
 - Frontend tests green
 - Frontend production build green
 
-## 3) Release Runbook
+## 3) DNS and Domain Gate
+
+Run the production DNS diagnostic before and after domain changes:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/check-production-dns.ps1
+```
+
+Expected public records for the Netlify frontend:
+- Apex/root domain `teranga-diaspora.com`: `A` record to `75.2.60.5`
+- `www.teranga-diaspora.com`: `CNAME` to `teranga.netlify.app`
+
+Current app endpoints:
+- Frontend: `https://www.teranga-diaspora.com`
+- Backend health: `https://teranga-backend.onrender.com/api/health`
+
+If public DNS passes but Windows/Chrome shows `DNS_PROBE_FINISHED_NXDOMAIN`:
+- Flush Windows DNS cache: `ipconfig /flushdns`
+- Restart the router or change the router/adapter DNS resolver to a public resolver such as `1.1.1.1` or `8.8.8.8`
+- Retest both the default resolver and public resolvers:
+
+```powershell
+Resolve-DnsName teranga-diaspora.com
+Resolve-DnsName teranga-diaspora.com -Server 8.8.8.8
+Resolve-DnsName www.teranga-diaspora.com
+```
+
+Pass criteria:
+- Public DNS returns the expected apex `A` record and `www` CNAME
+- Backend health returns `200`
+- Local/default resolver is not returning NXDOMAIN for the primary `www` frontend domain
+
+## 4) Release Runbook
 
 1. Prepare environment
 - Verify production `.env` values on hosting platform
@@ -89,11 +121,12 @@ Pass criteria:
 - Keep previous frontend artifact available
 - Define rollback trigger: auth failure, >5xx spike, migration issue
 
-## 4) Go/No-Go Decision Template
+## 5) Go/No-Go Decision Template
 
 Mark each as PASS/FAIL:
 - Security gate: PASS / FAIL
 - Quality gate: PASS / FAIL
+- DNS and domain gate: PASS / FAIL
 - Smoke tests: PASS / FAIL
 - Rollback plan validated: PASS / FAIL
 
