@@ -5,7 +5,9 @@
  *
  * Règles fondamentales :
  * - Rôles techniques STRICTS :
- *   'client' | 'agent' | 'admin'
+ *   'client' | 'agent' | 'admin' | 'provider' | 'category_manager'
+ *   ('provider'/'category_manager' ajoutés par la migration Lot 1
+ *   20260724103000, voir docs/DEV_SPEC_TERANGA_v3.md section 0.6.c)
  *
  * - MASTER = admin AVEC scope (countryId ou regionId)
  * - ADMIN GLOBAL = admin SANS scope
@@ -13,7 +15,13 @@
  * 👉 "master" n'est PAS un rôle, mais un statut logique.
  */
 
-const VALID_ROLES = new Set(['client', 'agent', 'admin']);
+const VALID_ROLES = new Set([
+  'client',
+  'agent',
+  'admin',
+  'provider',
+  'category_manager',
+]);
 
 /* =========================================================
    🔧 Helpers internes (non cassants)

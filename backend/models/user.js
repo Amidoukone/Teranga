@@ -19,6 +19,15 @@ module.exports = (sequelize, DataTypes) => {
           as: 'providerProfile',
         });
       }
+
+      if (models.TradeCategory && models.CategoryManagerTradeCategory) {
+        User.belongsToMany(models.TradeCategory, {
+          through: models.CategoryManagerTradeCategory,
+          foreignKey: 'userId',
+          otherKey: 'tradeCategoryId',
+          as: 'managedTradeCategories',
+        });
+      }
     }
 
     /**

@@ -1,0 +1,48 @@
+'use strict';
+
+const router = require('express').Router();
+const ctrl = require('../controllers/provider.controller');
+const auth = require('../middleware/auth.middleware');
+const { requireRoles } = require('../middleware/roles.middleware');
+const { validateBody } = require('../middleware/validate.middleware');
+const {
+  createProviderSchema,
+  updateProviderStatusSchema,
+} = require('../validators/provider.schemas');
+const { createProviderContractSchema } = require('../validators/providerContract.schemas');
+
+/**
+ * ============================================================
+ * 🛠️ Routes Teranga Pro — Prestataires
+ * (docs/DEV_SPEC_TERANGA_v3.md section 3.3 — v1-only, voir app.js)
+ * ============================================================
+ * - POST   /providers            : candidature (rôle 'provider' uniquement)
+ * - GET    /providers            : liste scopée (admin, category_manager)
+ * - GET    /providers/:id        : fiche interne (admin, category_manager)
+ * - PATCH  /providers/:id/status : onboarding pending->probation->active
+ * - POST   /providers/:id/contracts : contrat de partenariat signé
+ * ============================================================
+ */
+
+router.post('/', auth, requireRoles('provider'), validateBody(createProviderSchema), ctrl.create);
+
+router.get('/', auth, requireRoles('admin', 'category_manager'), ctrl.list);
+router.get('/:id', auth, requireRoles('admin', 'category_manager'), ctrl.detail);
+
+router.patch(
+  '/:id/status',
+  auth,
+  requireRoles('admin', 'category_manager'),
+  validateBody(updateProviderStatusSchema),
+  ctrl.updateStatus
+);
+
+router.post(
+  '/:id/contracts',
+  auth,
+  requireRoles('category_manager', 'admin'),
+  validateBody(createProviderContractSchema),
+  ctrl.addContract
+);
+
+module.exports = router;

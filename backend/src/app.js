@@ -261,6 +261,15 @@ loadRouter('./routes/orderItem.routes', '/order-items', apiRouter);
 app.use('/api', apiRouter);
 app.use('/api/v1', apiRouter);
 
+// ✅ Teranga Pro (Lot 3, docs/DEV_SPEC_TERANGA_v3.md section 0.5) : toute
+// nouvelle route de ce chantier va exclusivement sous /api/v1, jamais sous
+// /api legacy — contrairement à apiRouter ci-dessus, v1OnlyRouter n'est PAS
+// monté sur /api.
+const v1OnlyRouter = express.Router();
+loadRouter('./routes/provider.routes', '/providers', v1OnlyRouter);
+loadRouter('./routes/tradeCategory.routes', '/trade-categories', v1OnlyRouter);
+app.use('/api/v1', v1OnlyRouter);
+
 /* ======================================================
    🔍 Healthcheck + Racine
    ====================================================== */

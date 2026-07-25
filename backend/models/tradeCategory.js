@@ -19,6 +19,15 @@ module.exports = (sequelize, DataTypes) => {
           as: 'services',
         });
       }
+
+      if (models.User && models.CategoryManagerTradeCategory) {
+        TradeCategory.belongsToMany(models.User, {
+          through: models.CategoryManagerTradeCategory,
+          foreignKey: 'tradeCategoryId',
+          otherKey: 'userId',
+          as: 'categoryManagers',
+        });
+      }
     }
   }
 

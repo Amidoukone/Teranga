@@ -135,6 +135,40 @@ dossier `features/`. Une réorganisation complète du repo existant n'est pas ju
 nouvelles features consomment les `services/` (clients API) et `contexts/` existants sans les
 dupliquer.
 
+### 0.7 Décisions Lot 3 (prises à l'implémentation, 2026-07-25)
+
+**a) Scope filière/géo du rôle `category_manager`** (différé au Lot 3 par la décision 0.6.c)
+- **Filière** : nouvelle table `category_manager_trade_categories` (`user_id`, `trade_category_id`,
+  clé composite, FK CASCADE), même pattern M:N que `provider_trade_categories` (Lot 1) — un
+  category_manager peut auditer plusieurs filières.
+- **Géo** : réutilise `users.countryId`/`users.regionId`, déjà en place pour le rôle `admin` scoped
+  (pas de second mécanisme, conforme à la section 8). Un category_manager **sans** scope géo est
+  considéré national pour sa/ses filière(s) — le modèle métier le définit d'abord par filière, le
+  scope géo est une restriction additionnelle optionnelle.
+- Autorisation centralisée dans `backend/src/utils/providerScope.js`
+  (`canManageProvider`/`getManageableProviderFilter`), utilisée par
+  `PATCH /providers/:id/status`, `POST /providers/:id/contracts` et `GET /providers`. Un admin
+  **global** passe toujours ; un admin **scoped** (= `country_admin` au sens section 5) est restreint
+  au pays de son scope (résolu depuis `providers.country_code` via `countries.iso_code`).
+
+**b) `roles.middleware.js` et `user.controller.js` bloquaient silencieusement les nouveaux rôles**
+`requireRoles()` filtrait ses arguments contre une whitelist figée à `client/agent/admin` (il aurait
+throw une erreur sur `requireRoles('provider', ...)`), et trois listes en dur dans
+`user.controller.js` (`createUser`, `updateUser`, `listByRole`) plus `user.schemas.js` empêchaient
+un admin d'assigner `provider`/`category_manager` à un compte. Corrigé au même régime que
+`agent`/`client` (pas de garde "global admin only" comme pour `admin`) : c'est le chemin par lequel
+un compte devient réellement `provider`/`category_manager` avant de pouvoir utiliser les endpoints
+ci-dessous.
+
+**c) Endpoint `GET /api/v1/providers` (liste) ajouté au-delà du tableau 3.3**
+La table 3.3 ne liste que `GET /providers/:id`. Sans endpoint de liste, un admin/category_manager
+ne peut pas découvrir les candidatures `pending` à traiter — la fonctionnalité "Onboarding admin"
+du Lot 3 (section 6) serait inutilisable en pratique. Ajouté avec le même scope que
+`GET /providers/:id`, filtrage `?status=`.
+
+**d) `provider_contracts`** créée conformément au schéma 3.1, FK physique vers `providers` (même
+justification que les tables Lot 1 : table neuve, vide à la création).
+
 ---
 
 ## 1. Objectifs de cette phase
@@ -440,12 +474,16 @@ rôles — étendre le système existant plutôt que d'en créer un second.
 - Mode data-light basique
 
 ### Lot 3 — Teranga Pro v1
-- Table `provider_contracts` (schéma `providers`/`trade_categories`/`provider_trade_categories` déjà
-  livré en Lot 1)
-- Endpoints API `/api/v1/providers`, `/api/v1/trade-categories` + validation Joi
-- Onboarding admin (statuts pending → probation → active)
-- Anonymisation DTO + tests de non-fuite (3.6)
-- Matching manuel (choix admin) avant auto-matching
+- ✅ Table `provider_contracts` (schéma `providers`/`trade_categories`/`provider_trade_categories`
+  déjà livré en Lot 1) — livré 2026-07-25
+- ✅ Endpoints API `/api/v1/providers` (+ liste, voir 0.7.c), `/api/v1/trade-categories` + validation
+  Joi — livré 2026-07-25, v1-only (0.5)
+- ✅ Onboarding admin (statuts pending → probation → active, machine à états dans
+  `src/constants/providerStatus.js`) — livré 2026-07-25
+- DTO d'anonymisation (`Provider.toPublicDTO()`) posé au Lot 1 ; pas encore consommé par un endpoint
+  client (aucun endpoint Lot 3 n'expose un provider à un client — voir 3.6, à activer au Lot 4
+  matching)
+- Matching manuel (choix admin) avant auto-matching : reste à faire (Lot 4)
 
 ### Lot 4 — Teranga Pro v2 / optimisation
 - Matching automatique via Distance Matrix (3.4)

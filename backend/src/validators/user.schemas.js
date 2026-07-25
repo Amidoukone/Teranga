@@ -7,7 +7,15 @@ const idSchema = Joi.alternatives().try(
   Joi.string().pattern(/^\d+$/)
 );
 
-const roleSchema = Joi.string().valid('client', 'agent', 'admin');
+// 'provider'/'category_manager' ajoutés au Lot 3 (docs/DEV_SPEC_TERANGA_v3.md
+// section 0.6.c) — même régime d'assignation que 'agent'/'client' côté admin.
+const roleSchema = Joi.string().valid(
+  'client',
+  'agent',
+  'admin',
+  'provider',
+  'category_manager'
+);
 
 const userBaseSchema = Joi.object({
   email: Joi.string().email().trim(),

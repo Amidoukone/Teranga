@@ -117,6 +117,197 @@
           }
         }
       }
+    },
+    "/trade-categories": {
+      "get": {
+        "summary": "List active trade categories (Teranga Pro)",
+        "responses": {
+          "200": {
+            "description": "Active trade categories",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeCategoryListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/providers": {
+      "post": {
+        "summary": "Submit a provider application (role 'provider' only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProviderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Provider profile created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not a provider-role account",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List providers within the caller's scope (admin, category_manager)",
+        "responses": {
+          "200": {
+            "description": "Scoped provider list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderListResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller has no manageable scope",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/providers/{id}/status": {
+      "patch": {
+        "summary": "Advance provider onboarding status (category_manager, admin)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProviderStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated provider",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProviderResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid status transition",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller does not manage this provider (scope mismatch)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Provider not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/providers/{id}/contracts": {
+      "post": {
+        "summary": "Register a signed partnership contract (category_manager, admin)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProviderContractRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Contract created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderContractResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller does not manage this provider (scope mismatch)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Provider not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -322,6 +513,142 @@
           }
         },
         "additionalProperties": true
+      },
+      "TradeCategory": {
+        "type": "object",
+        "required": ["id", "name", "slug"],
+        "properties": {
+          "id": { "type": "number" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "requiresCompany": { "type": "boolean" },
+          "defaultWarrantyDays": { "type": "number" },
+          "isActive": { "type": "boolean" }
+        },
+        "additionalProperties": true
+      },
+      "TradeCategoryListResponse": {
+        "type": "object",
+        "required": ["tradeCategories"],
+        "properties": {
+          "tradeCategories": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TradeCategory" }
+          }
+        },
+        "additionalProperties": true
+      },
+      "Provider": {
+        "type": "object",
+        "required": ["id", "userId", "type", "displayFirstName", "status"],
+        "properties": {
+          "id": { "type": "number" },
+          "userId": { "type": "number" },
+          "type": { "type": "string", "enum": ["independent", "company"] },
+          "legalName": { "type": ["string", "null"] },
+          "displayFirstName": { "type": "string" },
+          "rccmNumber": { "type": ["string", "null"] },
+          "phoneNumber": { "type": "string" },
+          "email": { "type": ["string", "null"] },
+          "countryCode": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "probation", "active", "suspended", "revoked"]
+          },
+          "averageRating": { "type": ["number", "null"] },
+          "completedMissionsCount": { "type": "number" },
+          "hasLiabilityInsurance": { "type": "boolean" },
+          "badgeCertified": { "type": "boolean" }
+        },
+        "additionalProperties": true
+      },
+      "ProviderResponse": {
+        "type": "object",
+        "required": ["provider"],
+        "properties": {
+          "provider": { "$ref": "#/components/schemas/Provider" }
+        },
+        "additionalProperties": true
+      },
+      "ProviderListResponse": {
+        "type": "object",
+        "required": ["providers", "pagination"],
+        "properties": {
+          "providers": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Provider" }
+          },
+          "pagination": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "CreateProviderRequest": {
+        "type": "object",
+        "required": ["type", "displayFirstName", "phoneNumber", "countryCode", "tradeCategoryIds"],
+        "properties": {
+          "type": { "type": "string", "enum": ["independent", "company"] },
+          "legalName": { "type": "string" },
+          "displayFirstName": { "type": "string" },
+          "rccmNumber": { "type": "string" },
+          "phoneNumber": { "type": "string" },
+          "email": { "type": "string" },
+          "countryCode": { "type": "string", "minLength": 2, "maxLength": 2 },
+          "hasLiabilityInsurance": { "type": "boolean" },
+          "insuranceExpiresAt": { "type": "string", "format": "date" },
+          "tradeCategoryIds": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateProviderStatusRequest": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["pending", "probation", "active", "suspended", "revoked"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProviderContract": {
+        "type": "object",
+        "required": ["id", "providerId", "commissionRate", "signedAt", "status"],
+        "properties": {
+          "id": { "type": "number" },
+          "providerId": { "type": "number" },
+          "commissionRate": { "type": "number" },
+          "nonCircumventionMonths": { "type": "number" },
+          "signedAt": { "type": "string", "format": "date-time" },
+          "documentUrl": { "type": ["string", "null"] },
+          "status": { "type": "string", "enum": ["active", "terminated"] }
+        },
+        "additionalProperties": true
+      },
+      "ProviderContractResponse": {
+        "type": "object",
+        "required": ["contract"],
+        "properties": {
+          "contract": { "$ref": "#/components/schemas/ProviderContract" }
+        },
+        "additionalProperties": true
+      },
+      "CreateProviderContractRequest": {
+        "type": "object",
+        "required": ["commissionRate", "signedAt"],
+        "properties": {
+          "commissionRate": { "type": "number", "minimum": 0, "maximum": 100 },
+          "nonCircumventionMonths": { "type": "number" },
+          "signedAt": { "type": "string", "format": "date-time" },
+          "documentUrl": { "type": "string" }
+        },
+        "additionalProperties": false
       }
     }
   }

@@ -29,6 +29,13 @@ module.exports = (sequelize, DataTypes) => {
           as: 'services',
         });
       }
+
+      if (models.ProviderContract) {
+        Provider.hasMany(models.ProviderContract, {
+          foreignKey: 'providerId',
+          as: 'contracts',
+        });
+      }
     }
 
     /**

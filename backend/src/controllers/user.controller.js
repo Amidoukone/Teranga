@@ -21,6 +21,11 @@ const { normalizePhone, isValidPhone } = require('../utils/contactIdentity');
 // ————————————————————————
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Rôles assignables via la gestion utilisateurs admin (createUser/updateUser/listByRole).
+// 'provider'/'category_manager' ajoutés au Lot 3 (docs/DEV_SPEC_TERANGA_v3.md section 0.6.c) :
+// même régime que 'agent'/'client' (pas de promotion admin-global-only comme pour 'admin').
+const ASSIGNABLE_ROLES = ['client', 'agent', 'admin', 'provider', 'category_manager'];
+
 const COUNTRY_NAME_TO_ISO2 = {
   mali: 'ML',
   'sénégal': 'SN',
@@ -383,7 +388,7 @@ exports.listByRole = async (req, res) => {
     }
 
     const role = String(req.query.role || '').trim().toLowerCase();
-    if (!['client', 'agent', 'admin'].includes(role)) {
+    if (!ASSIGNABLE_ROLES.includes(role)) {
       return res.status(400).json({ error: 'Rôle invalide' });
     }
 
@@ -527,7 +532,7 @@ exports.createUser = async (req, res) => {
     }
 
     const targetRole = String(role || '').trim().toLowerCase();
-    if (!['client', 'agent', 'admin'].includes(targetRole)) {
+    if (!ASSIGNABLE_ROLES.includes(targetRole)) {
       return res.status(400).json({ error: 'Rôle invalide' });
     }
 
@@ -670,7 +675,7 @@ exports.updateUser = async (req, res) => {
 
     // Si role est fourni, valider
     const nextRole = role !== undefined ? String(role || '').trim().toLowerCase() : null;
-    if (nextRole && !['client', 'agent', 'admin'].includes(nextRole)) {
+    if (nextRole && !ASSIGNABLE_ROLES.includes(nextRole)) {
       return res.status(400).json({ error: 'Rôle invalide' });
     }
 
