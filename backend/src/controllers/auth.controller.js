@@ -1030,3 +1030,21 @@ exports.changePassword = async (req, res) => {
       .json({ error: 'Erreur lors du changement de mot de passe' });
   }
 };
+
+/**
+ * Helpers de session ré-exportés pour d'autres flux qui doivent émettre une
+ * vraie session identique à /auth/login (ex. Lot 2, candidature de mission
+ * invité : docs/DEV_SPEC_TERANGA_v3.md). Aucun changement de comportement
+ * ici — ces fonctions existent déjà, on les rend simplement accessibles
+ * hors de ce module plutôt que de les dupliquer ailleurs.
+ */
+exports.signAccess = signAccess;
+exports.issueRefreshToken = issueRefreshToken;
+exports.issueCsrfToken = issueCsrfToken;
+exports.setAuthCookies = setAuthCookies;
+exports.toAuthUser = toAuthUser;
+exports.countryHasActiveMaster = countryHasActiveMaster;
+exports.resolveGeoScope = resolveGeoScope;
+exports.rotateRecoveryCodes = rotateRecoveryCodes;
+exports.parseDurationToMs = parseDurationToMs;
+exports.ACCESS_EXPIRES = ACCESS_EXPIRES;

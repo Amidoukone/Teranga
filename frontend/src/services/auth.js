@@ -378,6 +378,45 @@ export async function register(payload) {
 }
 
 /* ============================================================
+   🔹 Persistance de session partagée
+   - Utilisée par login() et par tout autre flux qui émet une session
+     identique à /auth/login (ex: demande de mission invitée, Lot 2)
+   - Stocke le JWT (localStorage ou cookie selon le mode), le CSRF token
+     et met le user en cache pour UX immédiate
+============================================================ */
+export async function persistSession(data) {
+  if (!data?.token) {
+    throw new Error('Token manquant dans la réponse du serveur');
+  }
+
+  if (shouldUseLocalStorage()) {
+ // Sauvegarde coherente du token (nouvelle + legacy pour compat)
+    writeTokenAll(data.token, { keepLegacy: true });
+  } else {
+ // Mode cookie:
+ // - strict (recommande en production): pas de JWT persiste en localStorage
+ // - fallback optionnel: Bearer local si active explicitement
+    if (isCookieBearerFallbackEnabled() && data?.token) {
+      writeTokenAll(data.token, { keepLegacy: true });
+      writeRefreshToken(data?.refreshToken);
+    } else {
+      removeTokenAll();
+    }
+  }
+  writeCsrfToken(data?.csrfToken);
+
+ // Cache user pour UX immediate
+  if (data.user) {
+    writeCachedUser(data.user);
+    syncLanguageFromUser(data.user);
+  }
+
+  await ensureCookieSessionOrActivateBearerFallback(data);
+
+  return data;
+}
+
+/* ============================================================
    🔹 Connexion (login)
    - Stocke le JWT dans localStorage (nouvelle + legacy key)
    - Met en cache le user pour UX immédiate
@@ -393,33 +432,7 @@ export async function login(payload) {
       : undefined;
     const { data } = await api.post('/auth/login', payload, loginConfig);
 
-    if (!data?.token) {
-      throw new Error('Token manquant dans la réponse du serveur');
-    }
-
-    if (shouldUseLocalStorage()) {
- // Sauvegarde coherente du token (nouvelle + legacy pour compat)
-      writeTokenAll(data.token, { keepLegacy: true });
-    } else {
- // Mode cookie:
- // - strict (recommande en production): pas de JWT persiste en localStorage
- // - fallback optionnel: Bearer local si active explicitement
-      if (isCookieBearerFallbackEnabled() && data?.token) {
-        writeTokenAll(data.token, { keepLegacy: true });
-        writeRefreshToken(data?.refreshToken);
-      } else {
-        removeTokenAll();
-      }
-    }
-    writeCsrfToken(data?.csrfToken);
-
- // Cache user pour UX immediate
-    if (data.user) {
-      writeCachedUser(data.user);
-      syncLanguageFromUser(data.user);
-    }
-
-    await ensureCookieSessionOrActivateBearerFallback(data);
+    await persistSession(data);
 
     return data; // { token, user }
   } catch (error) {

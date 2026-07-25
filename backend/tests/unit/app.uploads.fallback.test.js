@@ -27,6 +27,9 @@ const ROUTE_MODULES = [
   'product.routes',
   'order.routes',
   'orderItem.routes',
+  'provider.routes',
+  'tradeCategory.routes',
+  'missionRequest.routes',
 ];
 
 function mountMockRouters() {

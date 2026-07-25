@@ -1,6 +1,6 @@
 "use strict";
 
-const { Service, User, Property, Country, Sequelize, sequelize } = require("../../models");
+const { Service, User, Property, Country, TradeCategory, Sequelize, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const {
   SERVICE_STATUSES,
@@ -170,9 +170,28 @@ exports.create = async (req, res) => {
       clientId,
       countryId,
       regionId,
+      executionType,
+      tradeCategoryId,
     } = req.body || {};
 
     propertyId = toSafeInt(propertyId);
+
+    // 🛠️ Teranga Pro (Lot 2, docs/DEV_SPEC_TERANGA_v3.md section 3.2) : colonnes
+    // additives posées au Lot 1, câblées ici. Optionnelles, rétro-compatibles —
+    // une création sans ces champs se comporte exactement comme avant.
+    const normalizedExecutionType = ["agent", "provider"].includes(executionType)
+      ? executionType
+      : "agent";
+    const safeTradeCategoryId = toSafeInt(tradeCategoryId);
+    let tradeCategory = null;
+    if (safeTradeCategoryId) {
+      tradeCategory = await TradeCategory.findOne({
+        where: { id: safeTradeCategoryId, isActive: true },
+      });
+      if (!tradeCategory) {
+        return res.status(400).json({ error: "Filière invalide ou inactive" });
+      }
+    }
 
     type = canonicalizeServiceType(type, null);
     if (!type || !ALLOWED_TYPES.has(type))
@@ -272,6 +291,11 @@ exports.create = async (req, res) => {
       status: "created",
       countryId: resolvedCountryId,
       regionId: resolvedRegionId,
+      executionType: normalizedExecutionType,
+      tradeCategoryId: tradeCategory ? tradeCategory.id : null,
+      // Additive uniquement pour le nouveau flux (0.6.b) : une filière
+      // sélectionnée signale explicitement une mission Teranga Pro.
+      missionStatus: tradeCategory ? "CREATED" : null,
     });
 
     const full = await Service.findByPk(service.id, {

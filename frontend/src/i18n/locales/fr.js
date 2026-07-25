@@ -2108,6 +2108,7 @@ const fr = {
       titleLine2: "la sérénité à portée de main.",
       description:
         "Avec <0>Teranga</0>, vous lancez rapidement une demande, vous suivez son exécution et vous recevez des preuves terrain claires sans perdre le contrôle.",
+      ctaMissionRequest: "Faire une demande maintenant",
       ctaWhatsapp: "Parler à Teranga",
       ctaRegister: "Créer un compte",
       ctaLogin: "Accéder à mon espace",
@@ -2193,6 +2194,54 @@ const fr = {
             "Bonjour Teranga, je souhaite démarrer un projet personnel. Voici mon objectif :",
         },
       },
+    },
+    missionRequest: {
+      kicker: "Sans compte, en 1 minute",
+      title: "Décrivez votre besoin, on s'occupe du reste",
+      subtitle:
+        "Mission, service, livraison ou assistance : indiquez votre pays, votre besoin et votre numéro. Un compte est créé automatiquement pour suivre votre demande.",
+      kindToggle: {
+        tradeCategory: "Un métier / une filière",
+        classic: "Un service Teranga classique",
+      },
+      fields: {
+        tradeCategory: "Filière recherchée",
+        tradeCategoryPlaceholder: "Choisissez une filière",
+        serviceType: "Type de service",
+        serviceTypePlaceholder: "Choisissez un type de service",
+        country: "Pays",
+        countryPlaceholder: "Choisissez votre pays",
+        phone: "Numéro de téléphone",
+        phonePlaceholder: "+223 00 00 00 00",
+        pin: "Code secret (4 chiffres min.)",
+        pinPlaceholder: "Choisissez un code",
+        pinHint:
+          "Ce code vous permettra de retrouver votre demande plus tard, sur ce numéro. Pas de SMS envoyé pour l'instant : notez-le.",
+        firstName: "Votre prénom (optionnel)",
+        firstNamePlaceholder: "Comment vous appelez-vous ?",
+        title: "Votre besoin en une phrase",
+        titlePlaceholder: "Ex : Fuite d'eau dans la cuisine",
+        description: "Détails (optionnel)",
+        descriptionPlaceholder: "Décrivez votre besoin plus précisément",
+        address: "Adresse ou lieu (optionnel)",
+        addressPlaceholder: "Quartier, ville, point de repère",
+      },
+      submit: "Envoyer ma demande",
+      submitting: "Envoi en cours…",
+      loadError: "Impossible de charger le formulaire. Réessayez dans un instant.",
+      errors: {
+        required: "Merci de remplir les champs obligatoires.",
+        wrongPin:
+          "Ce numéro est déjà associé à une demande Teranga. Le code saisi est incorrect.",
+        generic: "Une erreur est survenue. Merci de réessayer.",
+      },
+      successNewAccount:
+        "Votre demande est envoyée et votre compte Teranga a été créé automatiquement.",
+      successExisting: "Votre demande est envoyée et rattachée à votre compte existant.",
+      successTitle: "Demande bien reçue !",
+      successReference: "Référence de votre demande : #{{id}}",
+      trackCta: "Suivre ma demande",
+      newRequestCta: "Faire une nouvelle demande",
     },
     proofs: {
       kicker: "Preuves terrain",

@@ -268,6 +268,7 @@ app.use('/api/v1', apiRouter);
 const v1OnlyRouter = express.Router();
 loadRouter('./routes/provider.routes', '/providers', v1OnlyRouter);
 loadRouter('./routes/tradeCategory.routes', '/trade-categories', v1OnlyRouter);
+loadRouter('./routes/missionRequest.routes', '/mission-requests', v1OnlyRouter);
 app.use('/api/v1', v1OnlyRouter);
 
 /* ======================================================

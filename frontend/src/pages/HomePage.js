@@ -23,6 +23,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { Trans, useTranslation } from "react-i18next";
 
+import MissionRequestForm from "../components/MissionRequestForm";
 import heroSiteImage from "../assets/images/home-site-hero-teranga.png";
 import propertyManagementImage from "../assets/images/services-gestion-biens-teranga.png";
 import proofServiceImage from "../assets/images/proof-service-teranga.png";
@@ -245,6 +246,7 @@ export default function HomePage() {
   ];
 
   const quickLinks = [
+    { href: "#demande", label: t("homePage.missionRequest.kicker") },
     { href: "#actions", label: t("homePage.quickNav.actions") },
     { href: "#preuves", label: t("homePage.quickNav.proofs") },
     { href: "#services", label: t("homePage.quickNav.services") },
@@ -506,10 +508,18 @@ export default function HomePage() {
 
                 <div className="mt-6 flex flex-wrap justify-center gap-3.5 sm:mt-7 sm:gap-4 lg:justify-start">
                   <a
+                    href="#demande"
+                    className="btn-primary inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm sm:text-base"
+                  >
+                    {t("homePage.hero.ctaMissionRequest")}
+                    <ArrowRight size={18} />
+                  </a>
+
+                  <a
                     href={heroWhatsappHref}
                     target="_blank"
                     rel="noreferrer"
-                    className="btn-primary inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm sm:text-base"
+                    className="btn-secondary inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm sm:text-base"
                   >
                     {t("homePage.hero.ctaWhatsapp")}
                     <ArrowUpRight size={18} />
@@ -623,6 +633,20 @@ export default function HomePage() {
               </a>
             ))}
           </nav>
+        </section>
+
+        <section
+          id="demande"
+          className="border-t border-border/70 bg-surface-card px-6 py-16 sm:py-20"
+        >
+          <SectionHeader
+            kicker={t("homePage.missionRequest.kicker")}
+            title={t("homePage.missionRequest.title")}
+            subtitle={t("homePage.missionRequest.subtitle")}
+          />
+          <div className="mt-12">
+            <MissionRequestForm />
+          </div>
         </section>
 
         <section

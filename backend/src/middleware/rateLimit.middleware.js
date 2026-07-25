@@ -61,10 +61,20 @@ const writeLimiter = buildRateLimiter({
   limiterName: 'write',
 });
 
+// Endpoint public (aucune auth) qui crée un compte + une mission par requête
+// réussie : surface d'abus plus sensible qu'un writeLimiter classique.
+const guestLimiter = buildRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: 'Trop de demandes depuis cette connexion. Reessayez plus tard.',
+  limiterName: 'guest_mission_request',
+});
+
 module.exports = {
   authLimiter,
   refreshLimiter,
   passwordResetLimiter,
   changePasswordLimiter,
   writeLimiter,
+  guestLimiter,
 };

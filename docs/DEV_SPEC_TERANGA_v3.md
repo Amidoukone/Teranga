@@ -169,6 +169,57 @@ du Lot 3 (section 6) serait inutilisable en pratique. Ajouté avec le même scop
 **d) `provider_contracts`** créée conformément au schéma 3.1, FK physique vers `providers` (même
 justification que les tables Lot 1 : table neuve, vide à la création).
 
+### 0.8 Décisions Lot 2 — homepage comme base d'interactions (2026-07-25)
+
+Extension du périmètre initial du Lot 2 : au-delà de la création de mission guidée *dans l'app*
+(section 4.1), la homepage publique (`frontend/src/pages/HomePage.js`) devient un point d'entrée de
+demande sans compte préalable, pour que Teranga soit utilisable dès le premier contact (objectif
+produit : "premier réflexe" pour un besoin de service en Afrique).
+
+**a) Pas d'OTP/SMS — compte auto-provisionné par téléphone + PIN choisi par le visiteur**
+Aucune passerelle SMS n'existe dans ce repo (vérifié : aucune trace Twilio/Africa's Talking/Orange/
+Vonage). Plutôt que de simuler un flux OTP non fonctionnel, le formulaire demande téléphone + un
+code (PIN, 4 caractères min. — volontairement plus permissif que les 8 caractères de
+`/auth/register`, cf. `missionRequest.schemas.js`) :
+- Numéro **nouveau** → compte `role='client'` créé avec ce PIN comme mot de passe réel (bcrypt),
+  session émise immédiatement (mêmes cookies/JWT que `/auth/login`), codes de récupération générés
+  (`rotateRecoveryCodes`, comme `/auth/register`).
+- Numéro **déjà connu** → le PIN doit correspondre (bcrypt.compare), sinon 401. **Jamais** de
+  connexion silencieuse sur un compte existant — un attaquant ne peut pas usurper une session en
+  soumettant le numéro de quelqu'un d'autre.
+- Nouveau endpoint public `POST /api/v1/mission-requests` (v1-only, `guestLimiter` : 15 req/15 min/IP)
+  dans `missionRequest.controller.js`, réutilisant les primitives déjà exportées de
+  `auth.controller.js` (`signAccess`, `issueRefreshToken`, `setAuthCookies`, `resolveGeoScope`,
+  `countryHasActiveMaster`, `rotateRecoveryCodes`) plutôt que de dupliquer la logique de session.
+
+**b) Deux familles de demande, aucune extension d'ENUM risquée**
+- *Filière/métier* (plombier, électricien, **livraison**...) → `executionType='provider'`,
+  `tradeCategoryId` posé, `missionStatus='CREATED'` (nouveau flux Lot 1/3). "Livraison" a été ajoutée
+  comme `trade_categories` (seeder `20260725150000-seed-livraison-trade-category.js`), pas comme
+  valeur d'ENUM `services.type` — cohérent avec la logique déjà posée au Lot 1/3 : les filières sont
+  des données, pas du schéma.
+- *Service classique* (course, démarche administrative, paiement, transfert d'argent, "Autre" =
+  assistance générale) → `executionType='agent'`, réutilise l'ENUM `services.type` existant tel quel.
+- `service.controller.js` (`create`, flux authentifié) a été étendu pour accepter ces mêmes champs
+  `executionType`/`tradeCategoryId` en option (rétro-compatible) : la homepage et l'app authentifiée
+  partagent désormais la même logique de création, pas deux implémentations parallèles.
+
+**c) Sélecteur pays** : réutilise `GET /franchises/masters` (déjà public, déjà utilisé par
+`RegisterPage`) — même règle "pays avec master actif" qu'à l'inscription, pas de nouveau mécanisme.
+
+**d) Portée volontairement limitée** : les 6 cartes WhatsApp existantes (`#actions`) ne sont pas
+modifiées dans cette passe — le nouveau formulaire (`#demande`) est une section additionnelle, mise
+en avant comme CTA principal du hero. Fusionner les deux (cartes qui pré-remplissent le formulaire
+par catégorie) est un bon candidat d'itération future, pas fait ici pour éviter un mapping forcé
+entre les 6 catégories marketing existantes et les filières/types réels.
+
+**e) Validé en navigateur réel** (pas seulement via tests API) : Laragon MySQL + `node index.js` +
+`npm start`, parcours complet driveé via Chrome — candidature filière ("Livraison") et candidature
+classique, session auto-émise visible immédiatement dans la navbar authentifiée, mission visible
+dans `/services`. Un bug réel n'aurait pas été détecté par les seuls tests d'intégration backend :
+le nouvel endpoint est v1-only mais l'instance axios frontend (`api.js`) cible `/api` (legacy) par
+défaut — corrigé en préfixant explicitement `/v1` dans `missionRequests.js`.
+
 ---
 
 ## 1. Objectifs de cette phase

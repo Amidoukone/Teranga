@@ -22,6 +22,8 @@ const createServiceSchema = Joi.object({
   currency: Joi.string().allow('', null).trim(),
   countryId: idSchema.allow(null),
   regionId: idSchema.allow(null),
+  executionType: Joi.string().valid('agent', 'provider').allow('', null),
+  tradeCategoryId: idSchema.allow(null),
 }).unknown(true);
 
 const updateServiceSchema = createServiceSchema;
