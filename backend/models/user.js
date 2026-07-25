@@ -12,6 +12,13 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
         as: 'recoveryCodes',
       });
+
+      if (models.Provider) {
+        User.hasOne(models.Provider, {
+          foreignKey: 'userId',
+          as: 'providerProfile',
+        });
+      }
     }
 
     /**
@@ -32,6 +39,14 @@ module.exports = (sequelize, DataTypes) => {
 
     get isGlobalAdmin() {
       return this.role === 'admin' && !this.countryId && !this.regionId;
+    }
+
+    get isProvider() {
+      return this.role === 'provider';
+    }
+
+    get isCategoryManager() {
+      return this.role === 'category_manager';
     }
   }
 
@@ -90,8 +105,10 @@ module.exports = (sequelize, DataTypes) => {
       },
 
       role: {
-        // ENUM historique conserve pour eviter une migration risquee
-        type: DataTypes.ENUM('client', 'agent', 'admin'),
+        // 'provider' et 'category_manager' ajoutés par la migration
+        // 20260724103000 (ALTER ENUM ALGORITHM=INSTANT), voir
+        // docs/DEV_SPEC_TERANGA_v3.md section 0.6.c.
+        type: DataTypes.ENUM('client', 'agent', 'admin', 'provider', 'category_manager'),
         allowNull: false,
         defaultValue: 'client',
       },

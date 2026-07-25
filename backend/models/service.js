@@ -1,5 +1,6 @@
 'use strict';
 const { Model } = require('sequelize');
+const { MISSION_STATUS_VALUES } = require('../src/constants/missionStatus');
 
 module.exports = (sequelize, DataTypes) => {
   class Service extends Model {
@@ -36,6 +37,32 @@ module.exports = (sequelize, DataTypes) => {
         Service.belongsTo(models.Region, {
           foreignKey: 'regionId',
           as: 'region',
+        });
+      }
+
+      /**
+       * 🛠️ Teranga Pro (Dev spec v3, associations logiques uniquement —
+       * providerId/tradeCategoryId ne portent pas de FK physique sur cette
+       * table historique, voir docs/DEV_SPEC_TERANGA_v3.md section 0.6.a)
+       */
+      if (models.Provider) {
+        Service.belongsTo(models.Provider, {
+          foreignKey: 'providerId',
+          as: 'provider',
+        });
+      }
+
+      if (models.TradeCategory) {
+        Service.belongsTo(models.TradeCategory, {
+          foreignKey: 'tradeCategoryId',
+          as: 'tradeCategory',
+        });
+      }
+
+      if (models.MissionStatusHistory) {
+        Service.hasMany(models.MissionStatusHistory, {
+          foreignKey: 'serviceId',
+          as: 'missionStatusHistory',
         });
       }
     }
@@ -91,6 +118,29 @@ module.exports = (sequelize, DataTypes) => {
        */
       countryId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
       regionId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+
+      /**
+       * ============================================================
+       * 🛠️ Teranga Pro / App (Dev spec v3 — Lot 1, non bloquant)
+       * ============================================================
+       * - executionType/providerId/tradeCategoryId/warrantyExpiresAt ajoutés
+       *   par migration 20260724103400-add-mission-fields-to-services.js
+       * - missionStatus est ADDITIF : ne remplace pas `status` legacy
+       *   ci-dessus. Synchronisation applicative prévue en Lot 2/3
+       *   (docs/DEV_SPEC_TERANGA_v3.md section 0.6.b) — non implémentée ici.
+       */
+      executionType: {
+        type: DataTypes.ENUM('agent', 'provider'),
+        allowNull: false,
+        defaultValue: 'agent',
+      },
+      providerId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+      tradeCategoryId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+      missionStatus: {
+        type: DataTypes.ENUM(...MISSION_STATUS_VALUES),
+        allowNull: true,
+      },
+      warrantyExpiresAt: { type: DataTypes.DATE, allowNull: true },
     },
     {
       sequelize,

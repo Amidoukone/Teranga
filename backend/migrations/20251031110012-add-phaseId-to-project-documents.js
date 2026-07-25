@@ -9,30 +9,47 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // 1️⃣ Ajout de la colonne phaseId (sans FK)
-    await queryInterface.addColumn('project_documents', 'phaseId', {
-      type: Sequelize.INTEGER.UNSIGNED,
-      allowNull: true,
-      // Pas de "references", "onUpdate", "onDelete" pour rester portable.
-      // optionnel : conservé, uniquement pour l'ordre des colonnes (MySQL)
-      after: 'projectId',
-    });
+    // Idempotent : create-project-documents.js (20251023231955) inclut déjà
+    // phaseId depuis une modification ultérieure de cette migration
+    // antérieure. Sur une base migrée pas-à-pas depuis le début (ex. prod),
+    // phaseId n'existait pas encore à ce stade et cette migration l'ajoutait
+    // réellement. Sur une base fraîche (ex. tests/CI), phaseId existe déjà
+    // en sortant de create-project-documents.js — on ne doit pas ré-ajouter
+    // la colonne/l'index dans ce cas.
+    const table = await queryInterface.describeTable('project_documents');
 
-    // 2️⃣ Index pour les filtres/jointures logiques
-    await queryInterface.addIndex('project_documents', ['phaseId'], {
-      name: 'idx_project_documents_phaseId',
-    });
+    if (!Object.prototype.hasOwnProperty.call(table, 'phaseId')) {
+      await queryInterface.addColumn('project_documents', 'phaseId', {
+        type: Sequelize.INTEGER.UNSIGNED,
+        allowNull: true,
+        // Pas de "references", "onUpdate", "onDelete" pour rester portable.
+        after: 'projectId',
+      });
+    }
 
-    console.log('✅ Colonne phaseId ajoutée à project_documents (sans FK)');
+    const indexes = await queryInterface.showIndex('project_documents');
+    const hasPhaseIdIndex = indexes.some(
+      (idx) => idx.name === 'idx_project_documents_phaseId'
+    );
+    if (!hasPhaseIdIndex) {
+      await queryInterface.addIndex('project_documents', ['phaseId'], {
+        name: 'idx_project_documents_phaseId',
+      });
+    }
   },
 
   async down(queryInterface) {
-    // 1️⃣ Suppression de l’index
-    await queryInterface.removeIndex('project_documents', 'idx_project_documents_phaseId');
+    const indexes = await queryInterface.showIndex('project_documents');
+    const hasPhaseIdIndex = indexes.some(
+      (idx) => idx.name === 'idx_project_documents_phaseId'
+    );
+    if (hasPhaseIdIndex) {
+      await queryInterface.removeIndex('project_documents', 'idx_project_documents_phaseId');
+    }
 
-    // 2️⃣ Suppression de la colonne
-    await queryInterface.removeColumn('project_documents', 'phaseId');
-
-    console.log('🧹 Colonne phaseId retirée de project_documents');
+    const table = await queryInterface.describeTable('project_documents');
+    if (Object.prototype.hasOwnProperty.call(table, 'phaseId')) {
+      await queryInterface.removeColumn('project_documents', 'phaseId');
+    }
   },
 };
