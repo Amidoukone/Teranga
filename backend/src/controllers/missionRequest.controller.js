@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const { Service, User, Property, TradeCategory } = require('../../models');
 const { normalizePhone, isValidPhone } = require('../utils/contactIdentity');
 const { notifyServiceCreated } = require('../services/serviceNotification.service');
+const { geocodeAddress } = require('../services/geocoding.service');
 const logger = require('../utils/logger');
 const {
   signAccess,
@@ -43,6 +44,8 @@ exports.create = async (req, res) => {
       title,
       description,
       address,
+      latitude: rawLatitude,
+      longitude: rawLongitude,
     } = req.body;
 
     const phone = normalizePhone(rawPhone);
@@ -114,6 +117,33 @@ exports.create = async (req, res) => {
       }
     }
 
+    const trimmedAddress = address ? String(address).trim() : null;
+
+    // Coordonnées dérivées quand un lieu est fourni (dette 0.5) : le frontend
+    // peut déjà les fournir (Places Autocomplete, dépose d'épingle), sinon on
+    // géocode l'adresse côté serveur. Rejet 400 si l'adresse fournie ne
+    // résout à aucune coordonnée valide — jamais de mission avec une adresse
+    // saisie mais des coordonnées nulles. Les types de demande sans lieu
+    // (paiement, transfert d'argent...) restent possibles sans adresse.
+    let latitude = rawLatitude != null ? Number(rawLatitude) : null;
+    let longitude = rawLongitude != null ? Number(rawLongitude) : null;
+
+    if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && trimmedAddress) {
+      const geocoded = await geocodeAddress(trimmedAddress, { countryIso: user.country });
+      if (!geocoded) {
+        return res.status(400).json({
+          error: 'Adresse introuvable. Veuillez préciser un lieu plus précis.',
+        });
+      }
+      latitude = geocoded.latitude;
+      longitude = geocoded.longitude;
+    }
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      latitude = null;
+      longitude = null;
+    }
+
     const executionType = tradeCategory ? 'provider' : 'agent';
     const service = await Service.create({
       clientId: user.id,
@@ -125,7 +155,9 @@ exports.create = async (req, res) => {
       description: description ? String(description).trim() : null,
       contactPerson: firstName || user.firstName || null,
       contactPhone: phone,
-      address: address ? String(address).trim() : null,
+      address: trimmedAddress,
+      latitude,
+      longitude,
       budget: null,
       currency: 'XOF',
       status: 'created',

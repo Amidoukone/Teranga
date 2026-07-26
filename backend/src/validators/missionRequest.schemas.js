@@ -25,7 +25,14 @@ const createMissionRequestSchema = Joi.object({
     .when('requestKind', { is: 'classic', then: Joi.required(), otherwise: Joi.forbidden() }),
   title: Joi.string().trim().min(3).max(150).required(),
   description: Joi.string().trim().max(2000).allow('', null),
+  // Adresse toujours optionnelle (types de demande "classique" sans lieu,
+  // ex. paiement/transfert d'argent) — mais quand elle est fournie, elle doit
+  // aboutir à des coordonnées valides (géocodage serveur, voir contrôleur),
+  // sinon la requête est rejetée plutôt que silencieusement acceptée sans
+  // coordonnées (docs/DEV_SPEC_TERANGA_v3.md section 0.5).
   address: Joi.string().trim().max(255).allow('', null),
+  latitude: Joi.number().min(-90).max(90),
+  longitude: Joi.number().min(-180).max(180),
 });
 
 module.exports = {

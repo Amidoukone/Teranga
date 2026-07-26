@@ -93,6 +93,19 @@ module.exports = (sequelize, DataTypes) => {
       contactPerson: { type: DataTypes.STRING, allowNull: true },
       contactPhone: { type: DataTypes.STRING, allowNull: true },
       address: { type: DataTypes.TEXT, allowNull: true },
+
+      /**
+       * ============================================================
+       * 🌍 Géolocalisation mission (Dev spec v3, section 0.5 / 4.3)
+       * ============================================================
+       * - Nullable en DB (historique sans coordonnées), mais requis par
+       *   Joi sur toute NOUVELLE création de mission à partir de ce lot.
+       * - Alimenté soit par Places Autocomplete (frontend), soit par un
+       *   géocodage serveur de `address` (voir geocoding.service.js).
+       */
+      latitude: { type: DataTypes.DECIMAL(10, 7), allowNull: true },
+      longitude: { type: DataTypes.DECIMAL(10, 7), allowNull: true },
+
       budget: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
       currency: {
         type: DataTypes.STRING(10),

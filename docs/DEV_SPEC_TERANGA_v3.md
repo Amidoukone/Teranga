@@ -220,6 +220,80 @@ dans `/services`. Un bug réel n'aurait pas été détecté par les seuls tests 
 le nouvel endpoint est v1-only mais l'instance axios frontend (`api.js`) cible `/api` (legacy) par
 défaut — corrigé en préfixant explicitement `/v1` dans `missionRequests.js`.
 
+### 0.9 Décisions Lot 1 — Google Maps Platform : clés, CSP, géocodage (2026-07-25)
+
+Dernier point du Lot 1 non traité ("Clés Google Maps + CSP", section 6) : projet Google Cloud
+**teranga-maps** (créé par l'utilisateur), 5 API activées (Maps JavaScript, Places, Geocoding,
+Directions, Distance Matrix), billing lié.
+
+**a) Deux clés séparées et restreintes** (conforme 4.3, pas d'exception) — l'onboarding par défaut
+de Google Maps Platform proposait une clé unique non restreinte avec "Enable all APIs" ; ignoré au
+profit d'une création manuelle :
+- `teranga-server-key` : restriction IP (CIDR outbound Render : `74.220.50.0/24`, `74.220.58.0/24`
+  — add-on IP statique Render), restriction API à Geocoding/Directions/Distance Matrix uniquement.
+  Variable `GOOGLE_MAPS_SERVER_KEY` (backend, Render).
+- `teranga-browser-key` : restriction HTTP referrer (`teranga-diaspora.com/*`,
+  `www.teranga-diaspora.com/*`, `localhost:3000/*` pour le dev), restriction API à Maps
+  JavaScript/Places uniquement. Variable `REACT_APP_GOOGLE_MAPS_BROWSER_KEY` (frontend, Netlify).
+- Les deux valeurs ont été posées dans `backend/.env.production` / `frontend/.env.production*`
+  (fichiers gitignorés, non commités) pour référence ; **restent à coller manuellement** dans les
+  dashboards Render (Environment) et Netlify (Site configuration → Environment variables) — aucun
+  accès direct à ces dashboards depuis cette session.
+
+**b) CSP + Permissions-Policy** (`frontend/public/_headers`) : la CSP autorisait déjà les domaines
+Google Maps implicitement via le wildcard `https:` existant sur `script-src`/`img-src`/`connect-src`
+(conservé pour ne pas casser ImageKit/autres ressources) — `maps.googleapis.com`/`maps.gstatic.com`
+ajoutés explicitement en plus, par transparence et pour documenter l'intention. **Bug corrigé au
+passage** : `Permissions-Policy: geolocation=()` interdisait toute géolocalisation device, y compris
+en same-origin — bloquant pour 4.3 (position de l'exécutant, "utiliser ma position"). Changé en
+`geolocation=(self)`. La CSP backend (`securityHeaders.middleware.js`, `default-src 'none'`) n'a pas
+été touchée : c'est une API JSON, elle ne sert jamais le SDK Maps directement.
+
+**c) `services.latitude`/`longitude`** (dette 0.5, jamais posées avant ce lot) : migration additive
+`20260725160000-add-geo-coordinates-to-services.js`, colonnes **nullables en DB** (`DECIMAL(10,7)`).
+L'historique n'a jamais eu de coordonnées ; un backfill géocodé ne peut pas garantir 100% de
+couverture sur des adresses en texte libre. L'obligation "coordonnées requises" est portée par la
+validation applicative (`missionRequest.controller.js`), pas par une contrainte NOT NULL
+rétroactive. Script de backfill + rapport d'orphelins : `scripts/backfill-service-geocoords.js`
+(géocode les missions existantes avec adresse mais sans coordonnées ; liste séparément les
+orphelines sans adresse et celles dont le géocodage échoue).
+
+**d) `geocoding.service.js` / `distanceMatrix.service.js`** (`backend/src/services/`) : wrappers
+`fetch` natif (Node 24, pas de dépendance `axios`/`node-fetch` ajoutée côté backend), clé serveur
+uniquement. `distanceMatrix.service.js` porte le **cache mémoire obligatoire** de la section 3.4
+(TTL 5 min, process unique Render — pas de Redis introduit pour ce seul besoin). Le moteur de
+matching complet (assignation auto/short-list) reste Lot 4 comme prévu ; ce lot pose seulement le
+service réutilisable.
+
+**e) Câblage `missionRequest.controller.js`** (le seul point d'entrée "création de mission" réellement
+en prod, cf. 0.8) : coordonnées **dérivées quand un lieu est fourni**, pas rendues obligatoires sur
+toute demande — les types de demande sans lieu (paiement, transfert d'argent...) restent possibles
+sans adresse, pour ne pas régresser le flux déjà validé en navigateur (0.8.e) ni les tests
+d'intégration existants (aucun n'envoie `address`). Quand une adresse est fournie sans
+latitude/longitude déjà résolues côté client, le backend géocode ; échec de géocodage → 400 (jamais
+de mission avec une adresse saisie mais des coordonnées nulles — c'est le sens strict retenu du
+critère d'acceptation section 7, plutôt qu'un blocage universel qui aurait cassé la création de
+missions "classiques" sans lieu). `service.controller.js` (flux authentifié) n'a pas été retouché
+dans ce lot : hors périmètre immédiat, l'endpoint `/api/v1/missions` dédié de la section 3.3 reste à
+construire.
+
+**f) Frontend : `frontend/src/features/mission-creation/`** — nouveau dossier scopé v3 (0.6.d) :
+`googleMapsLoader.js` (chargeur de script Google Maps sans dépendance npm
+`@googlemaps/js-api-loader`, CRA non éjecté — résout `null` si pas de clé configurée, dégradation
+gracieuse) et `LocationAutocompleteInput.jsx` (Places Autocomplete, reste un `<input>` texte simple
+tant que le SDK n'est pas chargé). Branché sur le champ adresse existant de `MissionRequestForm.jsx`
+(homepage `#demande`) : une suggestion sélectionnée pose directement `latitude`/`longitude` (pas de
+géocodage serveur nécessaire dans ce cas) ; un texte tapé librement sans sélection retombe sur le
+géocodage serveur à la soumission. La carte de suivi en direct (4.2) et l'étape 4 de création guidée
+multi-écrans (4.1) restent à construire — non couvertes par ce lot, qui se limite au point d'entrée
+homepage déjà en prod.
+
+**g) Tests** : `tests/unit/geocoding.service.test.js`, `tests/unit/distanceMatrix.service.test.js`
+(mock `fetch`, couvrent succès/`ZERO_RESULTS`/erreur réseau/cache) et deux tests ajoutés à
+`tests/integration/lot2-guest-mission.test.js` (coordonnées client acceptées telles quelles ; adresse
+sans coordonnées rejetée en 400 quand le géocodage serveur échoue). Suite complète (101 tests, 24
+fichiers) rejouée sans régression après migration sur les DB dev et test.
+
 ---
 
 ## 1. Objectifs de cette phase
@@ -516,13 +590,21 @@ rôles — étendre le système existant plutôt que d'en créer un second.
   `services.status` legacy (0.6.b) ; extension `evidences` (`evidence_phase`)
 - Tables `providers` (avec `user_id`), `trade_categories` (0.6.a, 0.6.c)
 - Routage `/api/v1` strict pour toute nouvelle route + plan de dépréciation `/api`
-- Clés Google Maps + CSP
+- ✅ Clés Google Maps + CSP (0.9) — livré 2026-07-25 : 5 API activées, 2 clés restreintes
+  (`teranga-server-key` IP, `teranga-browser-key` referrer), CSP explicite + fix
+  `Permissions-Policy: geolocation=(self)`. Reste à faire : coller les clés dans les dashboards
+  Render/Netlify (accès direct non disponible depuis cette session).
+- ✅ Colonnes `services.latitude`/`longitude` (0.5, 0.9.c) — livré 2026-07-25, nullables en DB
+  + script de backfill/rapport orphelins (`scripts/backfill-service-geocoords.js`)
 
 ### Lot 2 — Teranga App v1
-- Création de mission guidée (4.1)
-- Geocoding + Directions à la création
-- Suivi en direct par polling (4.2)
-- Mode data-light basique
+- Création de mission guidée (4.1) — non commencée (écran multi-étapes complet)
+- ⚠️ Geocoding partiellement câblé (0.9) — livré 2026-07-25 : `geocoding.service.js` +
+  `distanceMatrix.service.js` (avec cache obligatoire 3.4), câblés uniquement sur le point d'entrée
+  homepage déjà en prod (`missionRequest.controller.js`, voir 0.8). Directions/affichage tracé
+  restent à faire.
+- Suivi en direct par polling (4.2) — non commencée
+- Mode data-light basique — non commencée
 
 ### Lot 3 — Teranga Pro v1
 - ✅ Table `provider_contracts` (schéma `providers`/`trade_categories`/`provider_trade_categories`

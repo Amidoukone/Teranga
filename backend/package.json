@@ -11,6 +11,8 @@
     "data:fix-mojibake:apply": "node scripts/fix-mojibake-data.js --apply",
     "data:fix-mojibake:silent": "node scripts/fix-mojibake-data.js --dry-run --silent",
     "data:fix-mojibake:apply:silent": "node scripts/fix-mojibake-data.js --apply --silent",
+    "data:backfill-service-geocoords": "node scripts/backfill-service-geocoords.js --dry-run",
+    "data:backfill-service-geocoords:apply": "node scripts/backfill-service-geocoords.js",
     "db:create": "sequelize-cli db:create",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate-url": "node scripts/migrate-database-url.js",

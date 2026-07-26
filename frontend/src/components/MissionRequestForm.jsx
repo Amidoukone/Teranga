@@ -7,6 +7,7 @@ import { submitMissionRequest, getTradeCategories } from "../services/missionReq
 import { getMasterCountries } from "../services/franchises";
 import { persistSession } from "../services/auth";
 import AuthFeedbackBanner from "./AuthFeedbackBanner";
+import LocationAutocompleteInput from "../features/mission-creation/LocationAutocompleteInput";
 
 const CLASSIC_SERVICE_TYPES = ["errand", "administrative", "payment", "money_transfer", "other"];
 
@@ -31,6 +32,7 @@ export default function MissionRequestForm() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
+  const [coordinates, setCoordinates] = useState(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -72,6 +74,7 @@ export default function MissionRequestForm() {
     setTitle("");
     setDescription("");
     setAddress("");
+    setCoordinates(null);
   };
 
   const handleSubmit = async (event) => {
@@ -102,6 +105,8 @@ export default function MissionRequestForm() {
         title: title.trim(),
         description: description.trim() || undefined,
         address: address.trim() || undefined,
+        latitude: coordinates?.latitude,
+        longitude: coordinates?.longitude,
       };
       if (requestKind === "trade_category") {
         payload.tradeCategoryId = Number(tradeCategoryId);
@@ -309,12 +314,18 @@ export default function MissionRequestForm() {
 
         <div className="sm:col-span-2">
           <label className={labelClass}>{t("homePage.missionRequest.fields.address")}</label>
-          <input
-            type="text"
+          <LocationAutocompleteInput
             className={inputClass}
             placeholder={t("homePage.missionRequest.fields.addressPlaceholder")}
             value={address}
-            onChange={(e) => setAddress(e.target.value)}
+            onChange={(value) => {
+              setAddress(value);
+              setCoordinates(null);
+            }}
+            onPlaceSelected={({ address: resolvedAddress, latitude, longitude }) => {
+              setAddress(resolvedAddress);
+              setCoordinates({ latitude, longitude });
+            }}
           />
         </div>
       </div>

@@ -276,4 +276,48 @@ describe('Lot 2 — demande de mission invitée (homepage, POST /api/v1/mission-
 
     expect(res.status).toBe(400);
   });
+
+  test('client-supplied coordinates (Places Autocomplete) are stored as-is, no geocoding call', async () => {
+    if (!dbReady) return;
+    const country = await makeCountry();
+    const phone = `+2237${Date.now().toString().slice(-8)}`;
+
+    const res = await request(app).post('/api/v1/mission-requests').send({
+      phone,
+      pin: '1234',
+      countryId: country.id,
+      requestKind: 'classic',
+      serviceType: 'errand',
+      title: 'Course avec adresse geolocalisee',
+      address: 'Marche de Medine, Bamako',
+      latitude: 12.6392,
+      longitude: -8.0029,
+    });
+    trackResponse(res);
+
+    expect(res.status).toBe(201);
+    expect(Number(res.body.service.latitude)).toBeCloseTo(12.6392, 4);
+    expect(Number(res.body.service.longitude)).toBeCloseTo(-8.0029, 4);
+  });
+
+  test('an address without coordinates is rejected when server-side geocoding is unavailable', async () => {
+    if (!dbReady) return;
+    const country = await makeCountry();
+    const phone = `+2237${Date.now().toString().slice(-8)}`;
+
+    // GOOGLE_MAPS_SERVER_KEY absent en environnement de test : le géocodage
+    // échoue systématiquement, ce qui exerce le chemin de rejet 400 (jamais
+    // de mission avec une adresse saisie mais des coordonnées nulles).
+    const res = await request(app).post('/api/v1/mission-requests').send({
+      phone,
+      pin: '1234',
+      countryId: country.id,
+      requestKind: 'classic',
+      serviceType: 'errand',
+      title: 'Course avec adresse texte libre',
+      address: 'Quelque part a Bamako',
+    });
+
+    expect(res.status).toBe(400);
+  });
 });
