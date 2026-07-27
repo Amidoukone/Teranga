@@ -38,6 +38,7 @@ import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 import { Badge } from '../components/ui';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 /* ============================================================
    URLs API/fichiers (dev/prod).
@@ -129,6 +130,12 @@ export default function OrderDetailPage() {
   const [evidenceLightbox, setEvidenceLightbox] = useState({
     open: false,
     index: 0,
+  });
+  const evidenceLightboxRef = useRef(null);
+  useFocusTrap({
+    active: evidenceLightbox.open,
+    containerRef: evidenceLightboxRef,
+    onEscape: () => closeEvidenceLightbox(),
   });
 
   const isGlobalAdmin = isGlobalAdminUser(user);
@@ -1169,6 +1176,7 @@ export default function OrderDetailPage() {
       ============================================================ */}
       {evidenceLightbox.open && imageEvidences.length > 0 && (
         <div
+          ref={evidenceLightboxRef}
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4"
           onClick={closeEvidenceLightbox}
           role="dialog"

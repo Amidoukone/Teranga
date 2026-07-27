@@ -43,6 +43,7 @@ import { getDashboardSummary } from '../services/dashboard';
 import FinanceWidget from '../components/FinanceWidget';
 import api from '../services/api';
 import { getGeoParams } from '../services/geo';
+import { Badge } from '../components/ui';
 import {
   isGlobalAdminUser,
   isMasterUser,
@@ -482,17 +483,11 @@ export default function DashboardPage() {
                 <div className="text-xs font-medium text-text-secondary sm:text-sm">
                   {balanceLabel}
                 </div>
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[0.75rem] sm:text-xs font-semibold ${
-                    isPositiveBalance
-                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                      : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30'
-                  }`}
-                >
+                <Badge tone={isPositiveBalance ? 'success' : 'error'}>
                   {isPositiveBalance
                     ? t("dashboard.balance.positive")
                     : t("dashboard.balance.negative")}
-                </span>
+                </Badge>
               </div>
               <div
                 className={`mt-1 text-xl sm:text-2xl font-bold tracking-tight ${
