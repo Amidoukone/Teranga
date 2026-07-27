@@ -71,14 +71,19 @@ async function findBestRule({ countryId, regionId, tradeCategoryId, serviceType 
 
 /**
  * @param {object} params
- * @param {object} params.user - utilisateur demandeur (client authentifié), fournit countryId/regionId
+ * @param {object} params.user - utilisateur demandeur (client authentifié), sert de repli si
+ *   countryId/regionId ne sont pas fournis explicitement
  * @param {string} params.executionType - 'agent' | 'provider'
  * @param {number|null} params.tradeCategoryId - requis si executionType === 'provider'
  * @param {string|null} params.serviceType - requis si executionType === 'agent'
+ * @param {number|null} [params.countryId] - pays de DESTINATION de la mission (géocodé), prime sur
+ *   celui du compte — correction transfrontalière : le tarif suit où la mission a lieu, pas le
+ *   compte du demandeur (docs/DEV_SPEC_TERANGA_v3.md).
+ * @param {number|null} [params.regionId] - région de destination, même règle
  */
-async function estimateMission({ user, executionType, tradeCategoryId, serviceType }) {
-  const countryId = user?.countryId ?? null;
-  const regionId = user?.regionId ?? null;
+async function estimateMission({ user, executionType, tradeCategoryId, serviceType, countryId: explicitCountryId, regionId: explicitRegionId }) {
+  const countryId = explicitCountryId ?? user?.countryId ?? null;
+  const regionId = explicitRegionId ?? user?.regionId ?? null;
 
   if (!countryId) {
     return buildQuoteOnlyResponse({

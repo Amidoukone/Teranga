@@ -5,6 +5,7 @@ const { Service, User, Property, TradeCategory } = require('../../models');
 const { normalizePhone, isValidPhone } = require('../utils/contactIdentity');
 const { notifyServiceCreated } = require('../services/serviceNotification.service');
 const { geocodeAddress } = require('../services/geocoding.service');
+const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
 const logger = require('../utils/logger');
 const {
   signAccess,
@@ -121,15 +122,19 @@ exports.create = async (req, res) => {
 
     // Coordonnées dérivées quand un lieu est fourni (dette 0.5) : le frontend
     // peut déjà les fournir (Places Autocomplete, dépose d'épingle), sinon on
-    // géocode l'adresse côté serveur. Rejet 400 si l'adresse fournie ne
-    // résout à aucune coordonnée valide — jamais de mission avec une adresse
-    // saisie mais des coordonnées nulles. Les types de demande sans lieu
-    // (paiement, transfert d'argent...) restent possibles sans adresse.
+    // géocode l'adresse côté serveur — sans biais vers le pays du compte, une
+    // mission peut volontairement se situer dans un autre pays (client à
+    // Bamako demandant une mission à Abidjan). Rejet 400 si l'adresse fournie
+    // ne résout à aucune coordonnée valide — jamais de mission avec une
+    // adresse saisie mais des coordonnées nulles. Les types de demande sans
+    // lieu (paiement, transfert d'argent...) restent possibles sans adresse.
     let latitude = rawLatitude != null ? Number(rawLatitude) : null;
     let longitude = rawLongitude != null ? Number(rawLongitude) : null;
+    let geocodedCountryIso = null;
+    let geocodedAdminAreaName = null;
 
     if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && trimmedAddress) {
-      const geocoded = await geocodeAddress(trimmedAddress, { countryIso: user.country });
+      const geocoded = await geocodeAddress(trimmedAddress);
       if (!geocoded) {
         return res.status(400).json({
           error: 'Adresse introuvable. Veuillez préciser un lieu plus précis.',
@@ -137,11 +142,26 @@ exports.create = async (req, res) => {
       }
       latitude = geocoded.latitude;
       longitude = geocoded.longitude;
+      geocodedCountryIso = geocoded.countryIso;
+      geocodedAdminAreaName = geocoded.adminAreaName;
     }
 
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       latitude = null;
       longitude = null;
+    }
+
+    // La mission est routée/tarifée selon le pays/région où elle a réellement
+    // lieu (adresse géocodée), pas selon le pays du compte du demandeur — sauf
+    // absence de lieu (fallback sur le compte, cf. commentaire ci-dessus).
+    const missionGeoScope = await resolveMissionGeoScope({
+      countryIso: geocodedCountryIso,
+      adminAreaName: geocodedAdminAreaName,
+      fallbackCountryId: user.countryId,
+      fallbackRegionId: user.regionId,
+    });
+    if (missionGeoScope.error) {
+      return res.status(400).json({ error: missionGeoScope.error });
     }
 
     const executionType = tradeCategory ? 'provider' : 'agent';
@@ -161,8 +181,8 @@ exports.create = async (req, res) => {
       budget: null,
       currency: 'XOF',
       status: 'created',
-      countryId: user.countryId,
-      regionId: user.regionId,
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
       executionType,
       tradeCategoryId: tradeCategory ? tradeCategory.id : null,
       missionStatus: tradeCategory ? 'CREATED' : null,
@@ -180,8 +200,8 @@ exports.create = async (req, res) => {
       service,
       fullService,
       targetClientId: user.id,
-      countryId: user.countryId,
-      regionId: user.regionId,
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
     });
 
     const token = signAccess({

@@ -15,6 +15,7 @@ const {
 const { notifyServiceCreated, notifyServiceStatusUpdate } = require('../services/serviceNotification.service');
 const mediaUpload = require('../services/mediaUpload.service');
 const { canAccessGeoResource } = require('../utils/geoScope');
+const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
 const logger = require('../utils/logger');
 
 const MISSION_ATTACHMENT_LOCAL_FALLBACK_ENV_VAR = 'MISSION_ATTACHMENT_ALLOW_LOCAL_FALLBACK';
@@ -66,15 +67,53 @@ async function resolveTradeCategory(executionType, tradeCategoryId) {
 ============================================================ */
 exports.estimate = async (req, res) => {
   try {
-    const { executionType, tradeCategoryId, serviceType } = req.body;
+    const {
+      executionType,
+      tradeCategoryId,
+      serviceType,
+      address: rawAddress,
+      latitude: rawLatitude,
+      longitude: rawLongitude,
+    } = req.body;
 
     await resolveTradeCategory(executionType, tradeCategoryId);
+
+    // Estimation basée sur la destination réelle (adresse déjà saisie à l'étape Location du
+    // wizard) quand elle est disponible — jamais bloquant : un aperçu de prix qui échoue à se
+    // géolocaliser retombe simplement sur le scope du compte (voir mission.controller.js create
+    // pour la version stricte utilisée à la création effective).
+    const trimmedAddress = rawAddress ? String(rawAddress).trim() : null;
+    let latitude = rawLatitude != null ? Number(rawLatitude) : null;
+    let longitude = rawLongitude != null ? Number(rawLongitude) : null;
+    let geocodedCountryIso = null;
+    let geocodedAdminAreaName = null;
+
+    if (trimmedAddress) {
+      const geocoded = await geocodeAddress(trimmedAddress);
+      if (geocoded) {
+        geocodedCountryIso = geocoded.countryIso;
+        geocodedAdminAreaName = geocoded.adminAreaName;
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          latitude = geocoded.latitude;
+          longitude = geocoded.longitude;
+        }
+      }
+    }
+
+    const missionGeoScope = await resolveMissionGeoScope({
+      countryIso: geocodedCountryIso,
+      adminAreaName: geocodedAdminAreaName,
+      fallbackCountryId: req.user.countryId ?? null,
+      fallbackRegionId: req.user.regionId ?? null,
+    });
 
     const estimate = await estimateMission({
       user: req.user,
       executionType,
       tradeCategoryId: tradeCategoryId || null,
       serviceType: serviceType || null,
+      countryId: missionGeoScope.error ? null : missionGeoScope.countryId,
+      regionId: missionGeoScope.error ? null : missionGeoScope.regionId,
     });
 
     return res.status(200).json({ estimate });
@@ -118,12 +157,22 @@ exports.create = async (req, res) => {
       trimmedAddress = savedLocation.address;
       latitude = Number(savedLocation.latitude);
       longitude = Number(savedLocation.longitude);
-    } else if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && trimmedAddress) {
+    }
+
+    // Pays/région de destination (géocodés, best-effort) : la mission est routée/tarifée selon
+    // où elle a réellement lieu, pas selon le compte du client (correction transfrontalière —
+    // un client à Bamako doit pouvoir demander une mission à Abidjan). Sans biais vers le pays
+    // du compte, contrairement à l'ancien comportement.
+    let geocodedCountryIso = null;
+    let geocodedAdminAreaName = null;
+    const hadCoordinatesAlready = Number.isFinite(latitude) && Number.isFinite(longitude);
+
+    if (trimmedAddress && !hadCoordinatesAlready) {
       // Coordonnées dérivées quand un lieu est fourni sans être déjà résolues côté client
       // (dette 0.5, même règle que missionRequest.controller.js) : géocodage serveur, 400 si
       // l'adresse ne résout à rien — jamais de mission avec une adresse saisie mais des
       // coordonnées nulles.
-      const geocoded = await geocodeAddress(trimmedAddress, { countryIso: req.user.country });
+      const geocoded = await geocodeAddress(trimmedAddress);
       if (!geocoded) {
         return res.status(400).json({
           error: 'Adresse introuvable. Veuillez préciser un lieu plus précis.',
@@ -131,6 +180,17 @@ exports.create = async (req, res) => {
       }
       latitude = geocoded.latitude;
       longitude = geocoded.longitude;
+      geocodedCountryIso = geocoded.countryIso;
+      geocodedAdminAreaName = geocoded.adminAreaName;
+    } else if (trimmedAddress) {
+      // Coordonnées déjà résolues (lieu enregistré ou fournies par le client) : géocodage
+      // uniquement pour en déduire le pays/région, jamais bloquant ici puisqu'on a déjà des
+      // coordonnées valides.
+      const geocoded = await geocodeAddress(trimmedAddress);
+      if (geocoded) {
+        geocodedCountryIso = geocoded.countryIso;
+        geocodedAdminAreaName = geocoded.adminAreaName;
+      }
     }
 
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
@@ -138,11 +198,23 @@ exports.create = async (req, res) => {
       longitude = null;
     }
 
+    const missionGeoScope = await resolveMissionGeoScope({
+      countryIso: geocodedCountryIso,
+      adminAreaName: geocodedAdminAreaName,
+      fallbackCountryId: req.user.countryId ?? null,
+      fallbackRegionId: req.user.regionId ?? null,
+    });
+    if (missionGeoScope.error) {
+      return res.status(400).json({ error: missionGeoScope.error });
+    }
+
     const estimate = await estimateMission({
       user: req.user,
       executionType,
       tradeCategoryId: tradeCategory ? tradeCategory.id : null,
       serviceType: tradeCategory ? null : serviceType,
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
     });
 
     const service = await Service.create({
@@ -159,8 +231,8 @@ exports.create = async (req, res) => {
       budget: null,
       currency: estimate.currency,
       status: 'created',
-      countryId: req.user.countryId ?? null,
-      regionId: req.user.regionId ?? null,
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
       executionType,
       tradeCategoryId: tradeCategory ? tradeCategory.id : null,
       // Additive uniquement pour le nouveau flux (0.6.b) — même règle que
@@ -179,8 +251,8 @@ exports.create = async (req, res) => {
       service,
       fullService,
       targetClientId: req.user.id,
-      countryId: req.user.countryId ?? null,
-      regionId: req.user.regionId ?? null,
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
     });
 
     return res.status(201).json({

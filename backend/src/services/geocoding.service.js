@@ -60,10 +60,21 @@ async function geocodeAddress(address, { countryIso } = {}) {
       return null;
     }
 
+    const components = Array.isArray(result.address_components) ? result.address_components : [];
+    const countryComponent = components.find((c) => c.types?.includes('country'));
+    const adminAreaComponent = components.find((c) =>
+      c.types?.includes('administrative_area_level_1')
+    );
+
     return {
       latitude: location.lat,
       longitude: location.lng,
       formattedAddress: result.formatted_address || query,
+      // Résolus depuis address_components Google — utilisés pour router une mission
+      // vers le pays/région où elle a réellement lieu (docs/DEV_SPEC_TERANGA_v3.md,
+      // extension transfrontalière), pas vers le pays du compte du demandeur.
+      countryIso: countryComponent?.short_name || null,
+      adminAreaName: adminAreaComponent?.long_name || null,
     };
   } catch (err) {
     logger.warn({ err }, 'geocoding.service.request_failed');

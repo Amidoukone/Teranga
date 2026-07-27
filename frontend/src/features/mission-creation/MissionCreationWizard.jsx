@@ -100,6 +100,11 @@ export default function MissionCreationWizard() {
           executionType,
           tradeCategoryId: category.tradeCategoryId ? Number(category.tradeCategoryId) : undefined,
           serviceType: category.serviceType || undefined,
+          // Destination réelle de la mission (étape Location) : le tarif affiché doit refléter
+          // où la mission a lieu, pas le pays du compte (correction transfrontalière).
+          address: address.trim() || undefined,
+          latitude: coordinates?.latitude,
+          longitude: coordinates?.longitude,
         });
         setEstimate(data);
       } catch (_err) {
