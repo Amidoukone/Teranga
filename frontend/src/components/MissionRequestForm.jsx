@@ -8,8 +8,7 @@ import { getMasterCountries } from "../services/franchises";
 import { persistSession } from "../services/auth";
 import AuthFeedbackBanner from "./AuthFeedbackBanner";
 import LocationAutocompleteInput from "../features/mission-creation/LocationAutocompleteInput";
-
-const CLASSIC_SERVICE_TYPES = ["errand", "administrative", "payment", "money_transfer", "other"];
+import CategoryPicker from "../features/mission-creation/CategoryPicker";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500";
@@ -22,7 +21,7 @@ export default function MissionRequestForm() {
   const [countries, setCountries] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
 
-  const [requestKind, setRequestKind] = useState("trade_category");
+  const [requestKind, setRequestKind] = useState(null);
   const [tradeCategoryId, setTradeCategoryId] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [countryId, setCountryId] = useState("");
@@ -49,7 +48,6 @@ export default function MissionRequestForm() {
         if (cancelled) return;
         setTradeCategories(categories);
         setCountries(countryList);
-        if (categories[0]) setTradeCategoryId(String(categories[0].id));
         if (countryList[0]) setCountryId(String(countryList[0].id));
         setFeedback(null);
       } catch (_err) {
@@ -68,6 +66,9 @@ export default function MissionRequestForm() {
   const resetForNewRequest = () => {
     setResult(null);
     setFeedback(null);
+    setRequestKind(null);
+    setTradeCategoryId("");
+    setServiceType("");
     setPhone("");
     setPin("");
     setFirstName("");
@@ -77,11 +78,17 @@ export default function MissionRequestForm() {
     setCoordinates(null);
   };
 
+  const handleCategoryChange = (selection) => {
+    setRequestKind(selection.requestKind);
+    setTradeCategoryId(selection.tradeCategoryId || "");
+    setServiceType(selection.serviceType || "");
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setFeedback(null);
 
-    if (!phone.trim() || !pin.trim() || !countryId || !title.trim()) {
+    if (!requestKind || !phone.trim() || !pin.trim() || !countryId || !title.trim()) {
       setFeedback({ type: "error", message: t("homePage.missionRequest.errors.required") });
       return;
     }
@@ -174,67 +181,15 @@ export default function MissionRequestForm() {
         </div>
       ) : null}
 
-      <div className="mb-5 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setRequestKind("trade_category")}
-          className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-            requestKind === "trade_category"
-              ? "border-blue-600 bg-blue-600 text-white"
-              : "border-border bg-surface-main text-text-secondary"
-          }`}
-        >
-          {t("homePage.missionRequest.kindToggle.tradeCategory")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setRequestKind("classic")}
-          className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-            requestKind === "classic"
-              ? "border-blue-600 bg-blue-600 text-white"
-              : "border-border bg-surface-main text-text-secondary"
-          }`}
-        >
-          {t("homePage.missionRequest.kindToggle.classic")}
-        </button>
-      </div>
+      <label className={labelClass}>{t("homePage.missionRequest.chooseNeed")}</label>
+      <CategoryPicker
+        tradeCategories={tradeCategories}
+        loading={loadingOptions}
+        value={{ requestKind, tradeCategoryId, serviceType }}
+        onChange={handleCategoryChange}
+      />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {requestKind === "trade_category" ? (
-          <div className="sm:col-span-2">
-            <label className={labelClass}>{t("homePage.missionRequest.fields.tradeCategory")}</label>
-            <select
-              className={inputClass}
-              value={tradeCategoryId}
-              onChange={(e) => setTradeCategoryId(e.target.value)}
-              disabled={loadingOptions}
-            >
-              <option value="">{t("homePage.missionRequest.fields.tradeCategoryPlaceholder")}</option>
-              {tradeCategories.map((tc) => (
-                <option key={tc.id} value={tc.id}>
-                  {tc.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <div className="sm:col-span-2">
-            <label className={labelClass}>{t("homePage.missionRequest.fields.serviceType")}</label>
-            <select
-              className={inputClass}
-              value={serviceType}
-              onChange={(e) => setServiceType(e.target.value)}
-            >
-              <option value="">{t("homePage.missionRequest.fields.serviceTypePlaceholder")}</option>
-              {CLASSIC_SERVICE_TYPES.map((key) => (
-                <option key={key} value={key}>
-                  {t(`services.type.${key}`)}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className={labelClass}>{t("homePage.missionRequest.fields.country")}</label>
           <select

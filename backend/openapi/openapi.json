@@ -308,6 +308,330 @@
           }
         }
       }
+    },
+    "/missions/estimate": {
+      "post": {
+        "summary": "Compute an indicative price/delay estimate for a guided mission (role: client)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MissionEstimateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estimate",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissionEstimateResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid category selection",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/missions": {
+      "post": {
+        "summary": "Create a guided mission for the authenticated client (role: client)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateMissionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mission created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissionResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload or unresolvable address",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/missions/{id}/attachments": {
+      "post": {
+        "summary": "Attach an optional photo and/or voice note to a mission (owner client only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "photo": { "type": "string", "format": "binary" },
+                  "voiceNote": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Attachments created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissionAttachmentsResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller does not own this mission",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Mission not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/missions/{id}/assign": {
+      "post": {
+        "summary": "Manually assign a provider to a mission (admin only, manual assignment — auto-matching remains Lot 4)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AssignMissionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Provider assigned, mission transitioned to ASSIGNED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissionActionResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Mission not assignable in its current state, or provider invalid/inactive/wrong trade category",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "403": {
+            "description": "Mission outside caller's geographic scope",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/missions/{id}/status": {
+      "patch": {
+        "summary": "Transition mission status (section 2 state machine); allowed transitions depend on caller role",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateMissionStatusRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated mission",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissionActionResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid transition, or mission has no missionStatus (classic agent flow)",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "403": {
+            "description": "Caller is not allowed to trigger this transition",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/missions/{id}/location": {
+      "post": {
+        "summary": "Ping the assigned executor's current position (role: agent, provider)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MissionLocationPingRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Position recorded",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/MissionLocationPingResponse" } }
+            }
+          },
+          "400": {
+            "description": "Mission not in an active execution window",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          },
+          "403": {
+            "description": "Caller is not the assigned executor",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/missions/{id}/track": {
+      "get": {
+        "summary": "Live tracking feed for the mission owner (role: client) — status, latest position, ETA",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tracking snapshot",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/MissionTrackResponse" } }
+            }
+          },
+          "403": {
+            "description": "Caller does not own this mission",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/saved-locations": {
+      "get": {
+        "summary": "List the authenticated client's saved locations (role: client)",
+        "responses": {
+          "200": {
+            "description": "Saved locations",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SavedLocationListResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Save a favorite location (role: client)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateSavedLocationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Saved location created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SavedLocationResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mission-pricing-rules": {
+      "get": {
+        "summary": "List pricing rules within the caller's scope (admin, global or country/region-scoped)",
+        "responses": {
+          "200": {
+            "description": "Scoped pricing rules",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissionPricingRuleListResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a pricing rule (admin, global or country/region-scoped)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateMissionPricingRuleRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pricing rule created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissionPricingRuleResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller has no manageable scope for this country/region",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -649,6 +973,263 @@
           "documentUrl": { "type": "string" }
         },
         "additionalProperties": false
+      },
+      "MissionEstimateRequest": {
+        "type": "object",
+        "required": ["executionType"],
+        "properties": {
+          "executionType": { "type": "string", "enum": ["agent", "provider"] },
+          "tradeCategoryId": { "type": "number" },
+          "serviceType": {
+            "type": "string",
+            "enum": ["errand", "administrative", "payment", "money_transfer", "other"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "MissionEstimate": {
+        "type": "object",
+        "required": ["pricingMode", "currency", "estimatedDelayMinutes"],
+        "properties": {
+          "pricingMode": { "type": "string", "enum": ["fixed_estimate", "quote_only"] },
+          "currency": { "type": "string" },
+          "basePrice": { "type": ["number", "null"] },
+          "minPrice": { "type": ["number", "null"] },
+          "pricePerKm": { "type": "number" },
+          "estimatedDelayMinutes": { "type": "number" },
+          "note": { "type": "string" }
+        },
+        "additionalProperties": true
+      },
+      "MissionEstimateResponse": {
+        "type": "object",
+        "required": ["estimate"],
+        "properties": {
+          "estimate": { "$ref": "#/components/schemas/MissionEstimate" }
+        },
+        "additionalProperties": true
+      },
+      "CreateMissionRequest": {
+        "type": "object",
+        "required": ["executionType", "title"],
+        "properties": {
+          "executionType": { "type": "string", "enum": ["agent", "provider"] },
+          "tradeCategoryId": { "type": "number" },
+          "serviceType": {
+            "type": "string",
+            "enum": ["errand", "administrative", "payment", "money_transfer", "other"]
+          },
+          "title": { "type": "string", "minLength": 3, "maxLength": 150 },
+          "description": { "type": "string", "maxLength": 2000 },
+          "savedLocationId": { "type": "number" },
+          "address": { "type": "string", "maxLength": 255 },
+          "latitude": { "type": "number" },
+          "longitude": { "type": "number" }
+        },
+        "additionalProperties": false
+      },
+      "MissionResponse": {
+        "type": "object",
+        "required": ["message", "mission", "estimate"],
+        "properties": {
+          "message": { "type": "string" },
+          "mission": { "type": "object", "additionalProperties": true },
+          "estimate": { "$ref": "#/components/schemas/MissionEstimate" }
+        },
+        "additionalProperties": true
+      },
+      "MissionAttachmentsResponse": {
+        "type": "object",
+        "required": ["message", "attachments"],
+        "properties": {
+          "message": { "type": "string" },
+          "attachments": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+        },
+        "additionalProperties": true
+      },
+      "SavedLocation": {
+        "type": "object",
+        "required": ["id", "userId", "address", "latitude", "longitude"],
+        "properties": {
+          "id": { "type": "number" },
+          "userId": { "type": "number" },
+          "label": { "type": ["string", "null"] },
+          "address": { "type": "string" },
+          "latitude": { "type": "number" },
+          "longitude": { "type": "number" }
+        },
+        "additionalProperties": true
+      },
+      "SavedLocationListResponse": {
+        "type": "object",
+        "required": ["savedLocations"],
+        "properties": {
+          "savedLocations": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SavedLocation" }
+          }
+        },
+        "additionalProperties": true
+      },
+      "SavedLocationResponse": {
+        "type": "object",
+        "required": ["savedLocation"],
+        "properties": {
+          "savedLocation": { "$ref": "#/components/schemas/SavedLocation" }
+        },
+        "additionalProperties": true
+      },
+      "CreateSavedLocationRequest": {
+        "type": "object",
+        "required": ["address", "latitude", "longitude"],
+        "properties": {
+          "label": { "type": "string", "maxLength": 80 },
+          "address": { "type": "string", "maxLength": 255 },
+          "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+          "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+        },
+        "additionalProperties": false
+      },
+      "MissionPricingRule": {
+        "type": "object",
+        "required": ["id", "countryId", "pricingMode", "estimatedDelayMinutes"],
+        "properties": {
+          "id": { "type": "number" },
+          "countryId": { "type": "number" },
+          "regionId": { "type": ["number", "null"] },
+          "tradeCategoryId": { "type": ["number", "null"] },
+          "serviceType": { "type": ["string", "null"] },
+          "pricingMode": { "type": "string", "enum": ["fixed_estimate", "quote_only"] },
+          "basePrice": { "type": ["number", "null"] },
+          "minPrice": { "type": ["number", "null"] },
+          "pricePerKm": { "type": "number" },
+          "estimatedDelayMinutes": { "type": "number" },
+          "isActive": { "type": "boolean" }
+        },
+        "additionalProperties": true
+      },
+      "MissionPricingRuleListResponse": {
+        "type": "object",
+        "required": ["pricingRules"],
+        "properties": {
+          "pricingRules": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/MissionPricingRule" }
+          }
+        },
+        "additionalProperties": true
+      },
+      "MissionPricingRuleResponse": {
+        "type": "object",
+        "required": ["pricingRule"],
+        "properties": {
+          "pricingRule": { "$ref": "#/components/schemas/MissionPricingRule" }
+        },
+        "additionalProperties": true
+      },
+      "CreateMissionPricingRuleRequest": {
+        "type": "object",
+        "required": ["countryId", "pricingMode", "estimatedDelayMinutes"],
+        "properties": {
+          "countryId": { "type": "number" },
+          "regionId": { "type": "number" },
+          "tradeCategoryId": { "type": "number" },
+          "serviceType": {
+            "type": "string",
+            "enum": ["errand", "administrative", "payment", "money_transfer", "other"]
+          },
+          "pricingMode": { "type": "string", "enum": ["fixed_estimate", "quote_only"] },
+          "basePrice": { "type": "number", "minimum": 0 },
+          "minPrice": { "type": "number", "minimum": 0 },
+          "pricePerKm": { "type": "number", "minimum": 0 },
+          "estimatedDelayMinutes": { "type": "number", "minimum": 0 }
+        },
+        "additionalProperties": false
+      },
+      "AssignMissionRequest": {
+        "type": "object",
+        "required": ["providerId"],
+        "properties": {
+          "providerId": { "type": "number" }
+        },
+        "additionalProperties": false
+      },
+      "MissionActionResponse": {
+        "type": "object",
+        "required": ["mission"],
+        "properties": {
+          "message": { "type": "string" },
+          "mission": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": true
+      },
+      "UpdateMissionStatusRequest": {
+        "type": "object",
+        "required": ["toStatus"],
+        "properties": {
+          "toStatus": {
+            "type": "string",
+            "enum": [
+              "CREATED", "SEARCHING_EXECUTOR", "ASSIGNED", "EN_ROUTE", "ON_SITE", "IN_PROGRESS",
+              "COMPLETED", "VALIDATED", "CLOSED", "CANCELLED_BY_CLIENT", "NO_EXECUTOR_FOUND",
+              "DISPUTED", "RESOLVED_REFUND", "RESOLVED_REDO", "RESOLVED_CLOSED"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "MissionLocationPingRequest": {
+        "type": "object",
+        "required": ["latitude", "longitude"],
+        "properties": {
+          "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+          "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+        },
+        "additionalProperties": false
+      },
+      "MissionLocationPingResponse": {
+        "type": "object",
+        "required": ["message", "location"],
+        "properties": {
+          "message": { "type": "string" },
+          "location": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": true
+      },
+      "MissionTrackPosition": {
+        "type": "object",
+        "required": ["latitude", "longitude", "recordedAt"],
+        "properties": {
+          "latitude": { "type": "number" },
+          "longitude": { "type": "number" },
+          "recordedAt": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": true
+      },
+      "MissionTrackResponse": {
+        "type": "object",
+        "required": ["missionStatus", "status", "position", "etaMinutes"],
+        "properties": {
+          "missionStatus": { "type": ["string", "null"] },
+          "status": { "type": "string" },
+          "title": { "type": "string" },
+          "destination": {
+            "type": ["object", "null"],
+            "properties": {
+              "latitude": { "type": "number" },
+              "longitude": { "type": "number" },
+              "address": { "type": ["string", "null"] }
+            }
+          },
+          "position": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/MissionTrackPosition" },
+              { "type": "null" }
+            ]
+          },
+          "etaMinutes": { "type": ["number", "null"] }
+        },
+        "additionalProperties": true
       }
     }
   }

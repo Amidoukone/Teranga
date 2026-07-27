@@ -42,6 +42,9 @@ const HelpSupportPage = lazy(() => import('./pages/HelpSupportPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const PropertiesPage = lazy(() => import('./pages/PropertiesPage'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
+const MissionCreatePage = lazy(() => import('./pages/MissionCreatePage'));
+const MissionPricingAdminPage = lazy(() => import('./pages/MissionPricingAdminPage'));
+const MissionTrackingPage = lazy(() => import('./pages/MissionTrackingPage'));
 const ServiceTasksPage = lazy(() => import('./pages/ServiceTasksPage'));
 const ServiceTransactionsPage = lazy(() => import('./pages/ServiceTransactionsPage'));
 const TasksPage = lazy(() => import('./pages/TasksPage'));
@@ -548,6 +551,42 @@ export default function App() {
                   <>
                     <SetSeo title={t('seo.pages.services.title')} />
                     <ServicesPage />
+                  </>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/missions/new"
+              element={
+                <RequireAuth>
+                  <>
+                    <SetSeo title={t('seo.pages.missionCreate.title')} />
+                    <MissionCreatePage />
+                  </>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/admin/mission-pricing"
+              element={
+                <RequireAuth>
+                  <>
+                    <SetSeo title={t('seo.pages.missionPricingAdmin.title')} />
+                    <MissionPricingAdminPage />
+                  </>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/missions/:id/track"
+              element={
+                <RequireAuth>
+                  <>
+                    <SetSeo title={t('seo.pages.missionTracking.title')} />
+                    <MissionTrackingPage />
                   </>
                 </RequireAuth>
               }

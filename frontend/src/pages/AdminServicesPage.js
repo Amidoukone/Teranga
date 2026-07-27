@@ -5,6 +5,8 @@ import { me } from '../services/auth';
 import { normalizeRole, isMasterUser } from '../utils/role';
 import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
+import { listProviders } from '../services/providers';
+import { assignMissionProvider } from '../services/missions';
 import {
   AdminField,
   AdminFilterBar,
@@ -21,6 +23,7 @@ export default function AdminServicesPage() {
 
   const [services, setServices] = useState([]);
   const [agents, setAgents] = useState([]);
+  const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Filtres
@@ -91,6 +94,50 @@ export default function AdminServicesPage() {
   }, []);
 
   /* ============================================================
+     Charge les prestataires actifs assignables (missions Teranga Pro,
+     docs/DEV_SPEC_TERANGA_v3.md section 4.2 — assignation manuelle).
+  ============================================================ */
+  const loadProviders = useCallback(async () => {
+    try {
+      const list = await listProviders({ status: 'active' });
+      setProviders(list);
+    } catch (err) {
+      console.error('AdminServicesPage load providers error:', err);
+      setProviders([]);
+    }
+  }, []);
+
+  async function handleAssignProvider(serviceId, providerId) {
+    if (!providerId) return;
+    try {
+      await assignMissionProvider(serviceId, providerId);
+      await loadServices();
+    } catch (e) {
+      console.error('AdminServicesPage provider assignment error:', e);
+      notify(
+        e?.response?.data?.error ||
+          t('adminServicesPage.alerts.assignError')
+      );
+    }
+  }
+
+  function isProviderAssignableToMission(service, provider) {
+    if (!service || !provider) return false;
+    if (!Array.isArray(provider.tradeCategories)) return false;
+    return provider.tradeCategories.some(
+      (tc) => String(tc.id) === String(service.tradeCategoryId)
+    );
+  }
+
+  function getAssignableProviders(service) {
+    return providers.filter((p) => isProviderAssignableToMission(service, p));
+  }
+
+  function canAssignProvider(service) {
+    return ['CREATED', 'SEARCHING_EXECUTOR'].includes(service.missionStatus);
+  }
+
+  /* ============================================================
      Contexte: gestion des services.
      - PAS de countryId / regionId en query
      Charge la liste des services.
@@ -124,8 +171,9 @@ export default function AdminServicesPage() {
   useEffect(() => {
     if (isAdmin) {
       loadAgents();
+      loadProviders();
     }
-  }, [isAdmin, loadAgents]);
+  }, [isAdmin, loadAgents, loadProviders]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -469,31 +517,64 @@ export default function AdminServicesPage() {
                       </span>
                     </td>
 
-                    {/* Select agent */}
+                    {/* Select agent, ou prestataire pour les missions Teranga Pro (executionType='provider') */}
                     <td className="px-4 sm:px-5 py-3 align-top">
-                      <select
-                        disabled={!canReassign(s) || getAssignableAgents(s).length === 0}
-                        value={s.agent?.id || ''}
-                        onChange={(e) => handleAssign(s.id, e.target.value)}
-                        className={`w-full rounded-xl border px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          !canReassign(s) || getAssignableAgents(s).length === 0
-                            ? 'bg-surface-main text-text-muted border-border cursor-not-allowed'
-                            : 'bg-surface-card text-text-primary border-border'
-                        }`}
-                      >
-                        <option value="">
-                          {t('adminServicesPage.assign.placeholder')}
-                        </option>
-                        {getAssignableAgents(s).map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.firstName} {a.lastName} ({a.email})
-                          </option>
-                        ))}
-                      </select>
-                      {!canReassign(s) && (
-                        <p className="mt-1 text-[11px] text-text-muted">
-                          {t('adminServicesPage.assign.locked')}
-                        </p>
+                      {s.executionType === 'provider' ? (
+                        <>
+                          <select
+                            disabled={!canAssignProvider(s) || getAssignableProviders(s).length === 0}
+                            value={s.providerId || ''}
+                            onChange={(e) => handleAssignProvider(s.id, e.target.value)}
+                            className={`w-full rounded-xl border px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                              !canAssignProvider(s) || getAssignableProviders(s).length === 0
+                                ? 'bg-surface-main text-text-muted border-border cursor-not-allowed'
+                                : 'bg-surface-card text-text-primary border-border'
+                            }`}
+                          >
+                            <option value="">
+                              {t('adminServicesPage.assign.providerPlaceholder')}
+                            </option>
+                            {getAssignableProviders(s).map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.displayFirstName} (#{p.id})
+                              </option>
+                            ))}
+                          </select>
+                          {!canAssignProvider(s) && (
+                            <p className="mt-1 text-[11px] text-text-muted">
+                              {t('adminServicesPage.assign.providerLocked', {
+                                status: s.missionStatus,
+                              })}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <select
+                            disabled={!canReassign(s) || getAssignableAgents(s).length === 0}
+                            value={s.agent?.id || ''}
+                            onChange={(e) => handleAssign(s.id, e.target.value)}
+                            className={`w-full rounded-xl border px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                              !canReassign(s) || getAssignableAgents(s).length === 0
+                                ? 'bg-surface-main text-text-muted border-border cursor-not-allowed'
+                                : 'bg-surface-card text-text-primary border-border'
+                            }`}
+                          >
+                            <option value="">
+                              {t('adminServicesPage.assign.placeholder')}
+                            </option>
+                            {getAssignableAgents(s).map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.firstName} {a.lastName} ({a.email})
+                              </option>
+                            ))}
+                          </select>
+                          {!canReassign(s) && (
+                            <p className="mt-1 text-[11px] text-text-muted">
+                              {t('adminServicesPage.assign.locked')}
+                            </p>
+                          )}
+                        </>
                       )}
                     </td>
                   </tr>

@@ -40,6 +40,7 @@ const en = {
     agents: "Agents",
     users: "Users",
     clientProperties: "Client properties",
+    missionPricing: "Mission pricing",
     categories: "Categories",
     home: "Home",
     flow: "Flow",
@@ -255,6 +256,7 @@ const en = {
         notification: "this notification",
         activity: "this activity",
         transaction: "this transaction",
+        missionPricingRule: "this pricing rule",
       },
     },
   },
@@ -382,6 +384,7 @@ const en = {
     buttons: {
       hideForm: "Hide form",
       newService: "New service",
+      newGuidedMission: "New guided mission",
       refresh: "Refresh",
       refreshLoading: "Loading…",
       viewTasks: "View tasks",
@@ -1546,6 +1549,8 @@ const en = {
     assign: {
       placeholder: "— Choose an agent —",
       locked: "Reassignment disabled (service closed).",
+      providerPlaceholder: "— Choose a provider —",
+      providerLocked: "Assignment unavailable for this status ({{status}}).",
     },
     pagination: {
       prev: "← Previous",
@@ -2086,21 +2091,12 @@ const en = {
     },
   },
   homePage: {
-    quickNav: {
-      actions: "Quick actions",
-      proofs: "Field proof",
-      useCases: "Use cases",
-      services: "Services",
-      why: "Why Teranga",
-      contact: "Contact",
-    },
     hero: {
       badge: "A trusted platform for diaspora and local residents",
       titleLine1: "Trust at a distance,",
       titleLine2: "peace of mind within reach.",
       description:
         "With <0>Teranga</0>, you can launch a request quickly, track execution, and receive clear field proof without losing control.",
-      ctaMissionRequest: "Make a request now",
       ctaWhatsapp: "Talk to Teranga",
       ctaRegister: "Create an account",
       ctaLogin: "Access my space",
@@ -2118,89 +2114,12 @@ const en = {
           text: "Requests launched in a few clicks through WhatsApp Business.",
         },
       },
-      tagline:
-        "Less reading, more action, and more visibility from the field.",
-      visual: {
-        label: "Showcase home",
-        title: "Complex projects in Mali, managed with structure",
-        description:
-          "Construction, fit-out work, administrative steps, or investments: Teranga coordinates field contributors, documents progress, and delivers reliable proof at every stage.",
-        proofBadge: "Reports + proof",
-        highlights: {
-          errands: "Clear project planning",
-          emergency: "Field follow-up by identified agents",
-          proof: "Photos, reports, and documents centralized",
-        },
-        imageAlt:
-          "Teranga showcase home visual showing construction project follow-up in Mali with a visit report, proof, and documented progress.",
-      },
-    },
-    lightbox: {
-      open: "Expand image",
-      close: "Close",
-      hint: "Click outside or press Escape to close.",
-    },
-    quickActions: {
-      kicker: "Concrete actions",
-      title: "Choose your need and we take it from there",
-      subtitle:
-        "Each action opens WhatsApp Business directly with a ready-to-send message to speed up your request.",
-      cta: "Open in WhatsApp",
-      note:
-        "One click is enough to explain your need, get fast guidance, and start the right Teranga support flow.",
-      items: {
-        service: {
-          title: "Request a service",
-          desc: "For a one-off or recurring need handled by Teranga.",
-          prefill:
-            "Hello Teranga, I would like to request a service. Here is my need:",
-        },
-        mission: {
-          title: "Assign a field mission",
-          desc: "For a specific on-site intervention or mission you want to delegate.",
-          prefill:
-            "Hello Teranga, I would like to assign a field mission. Here are the details:",
-        },
-        administrative: {
-          title: "Start an administrative process",
-          desc: "For files, formalities, and document handling.",
-          prefill:
-            "Hello Teranga, I would like to start an administrative process. Here is my request:",
-        },
-        construction: {
-          title: "Set up construction follow-up",
-          desc: "For site visits, checks, and structured construction reporting.",
-          prefill:
-            "Hello Teranga, I would like to set up construction follow-up. Here is the context:",
-        },
-        delivery: {
-          title: "Arrange assisted delivery",
-          desc: "For errands, purchases, transfers, or on-site deliveries.",
-          prefill:
-            "Hello Teranga, I would like to arrange an assisted delivery. Here is what needs to be delivered:",
-        },
-        project: {
-          title: "Start a personal project",
-          desc: "To frame a project, define milestones, and launch guided support.",
-          prefill:
-            "Hello Teranga, I would like to start a personal project. Here is my objective:",
-        },
-      },
     },
     missionRequest: {
       kicker: "No account needed, 1 minute",
-      title: "Describe your need, we take it from there",
-      subtitle:
-        "Mission, service, delivery or assistance: tell us your country, your need and your phone number. An account is created automatically to track your request.",
-      kindToggle: {
-        tradeCategory: "A trade / specialty",
-        classic: "A classic Teranga service",
-      },
+      chooseNeed: "Choose your need",
+      loadingOptions: "Loading categories…",
       fields: {
-        tradeCategory: "Trade needed",
-        tradeCategoryPlaceholder: "Choose a trade",
-        serviceType: "Service type",
-        serviceTypePlaceholder: "Choose a service type",
         country: "Country",
         countryPlaceholder: "Choose your country",
         phone: "Phone number",
@@ -2233,197 +2152,13 @@ const en = {
       trackCta: "Track my request",
       newRequestCta: "Make a new request",
     },
-    proofs: {
-      kicker: "Field proof",
-      title: "Concrete work already carried out on the ground",
-      subtitle:
-        "A few documented examples to show how Teranga operates in the field.",
-      items: {
-        service: {
-          eyebrow: "Execution proof",
-          title: "Service completed with visual validation",
-          desc: "A field request handled with a concrete update, photo evidence, and confirmation of execution.",
-          proof: "Proof shared to confirm execution",
-          alt: "Visual proof of a service carried out by Teranga in the field.",
-        },
-        administrative: {
-          eyebrow: "Supported formalities",
-          title: "Administrative process tracked end to end",
-          desc: "Documents and administrative steps handled with clear visibility on progress.",
-          proof: "Structured document follow-up and delivery",
-          alt: "Proof of an administrative process supported by Teranga.",
-        },
-        inspection: {
-          eyebrow: "On-site control",
-          title: "Inspection and verification in the field",
-          desc: "Control visits and concrete observations to help you decide with more confidence.",
-          proof: "Visual findings shared quickly",
-          alt: "Proof of a site or construction inspection carried out by Teranga.",
-        },
-        delivery: {
-          eyebrow: "Assisted delivery",
-          title: "Purchase, errand, and delivery documented",
-          desc: "Clear logistics support with on-site delivery and visual feedback for reassurance.",
-          proof: "Delivery confirmed with field feedback",
-          alt: "Proof of an errand and medicine delivery completed by Teranga.",
-        },
-        project: {
-          eyebrow: "Project & worksite",
-          title: "Personal project supported with follow-up",
-          desc: "A clearer operating frame to launch a project and monitor important milestones.",
-          proof: "Documented and readable progress",
-          alt: "Proof of complex project and worksite follow-up by Teranga.",
-        },
-      },
-    },
-    services: {
-      kicker: "Field + platform",
-      title: "Our services, your peace of mind",
-      subtitle:
-        "Structured services to execute, track, and justify every intervention without adding friction to your day.",
-      assetTypesTitle: "Supported asset types",
-      cards: {
-        realEstate: {
-          title: "Asset management",
-          desc: "Houses, apartments, land, automobiles, and commercial spaces with visits, findings, and photo reports.",
-        },
-        personal: {
-          title: "Personalized services",
-          desc: "Errands, missions, administrative actions, and one-off needs assigned to a field team.",
-        },
-        transparency: {
-          title: "Full transparency",
-          desc: "Photos, evidence, documents, and transactions centralized to help you decide faster.",
-        },
-      },
-      visual: {
-        kicker: "Consolidated field view",
-        title: "Assets, tasks, proof, and transactions grouped into one flow",
-        description:
-          "Teranga centralizes asset visits, requested services, proof, documents, and transactions so every decision is backed by visible facts.",
-        points: {
-          p1: "Asset monitoring with visits, inspections, and photo proof.",
-          p2: "Task, service, and validation history in one place.",
-          p3: "A clearer way to decide even from a distance.",
-        },
-        imageAlt:
-          "A Teranga agent reviews several assets and services on a tablet in Mali.",
-      },
-    },
-    useCases: {
-      kicker: "Practical flows",
-      title: "Useful for everyone",
-      subtitle:
-        "Whether you are in the diaspora or living locally, you can delegate field operations to Teranga when your schedule does not allow you to do everything yourself.",
-      cards: {
-        service: {
-          title: "Request a service",
-          desc: "Errands, administrative actions, visits, or field interventions with clear updates in real time.",
-        },
-        task: {
-          title: "Delegate a task",
-          desc: "Create a task with clear instructions and receive concrete proof of execution on site.",
-        },
-        project: {
-          title: "Manage a project",
-          desc: "Track project progress, documents, and key decisions without being physically present.",
-        },
-      },
-      gallery: {
-        service: {
-          eyebrow: "Administrative requests",
-          proof: "Tracked documents delivered with visibility",
-          alt: "A Teranga agent supports an administrative process and hands over documents in Mali.",
-        },
-        task: {
-          eyebrow: "Visits and checks",
-          proof: "Detailed photo inspection before a decision",
-          alt: "A Teranga agent inspects a property in Mali with a visual report.",
-        },
-        project: {
-          eyebrow: "Worksites and coordination",
-          proof: "Progress documented step by step",
-          alt: "A Teranga agent follows a construction project in Mali in front of a house under development.",
-        },
-      },
-    },
-    impact: {
-      kicker: "Long-term vision",
-      title: "Our mission in Africa",
-      subtitle:
-        "Transform how houses, apartments, land, automobiles, and commercial spaces are managed with a service model that is more efficient, innovative, and verifiable.",
-      points: {
-        p1: "Faster operations on houses, apartments, land, automobiles, and commercial spaces through tighter coordination between the app and field teams.",
-        p2: "Continuous transparency with photos, reports, and full action history.",
-        p3: "Reliable execution for your assets, services, tasks, and projects even when you have no time.",
-      },
-      cta: "Open Help & Support",
-    },
-    why: {
-      kicker: "Trust framework",
-      title: "Why choose Terang?",
-      subtitle:
-        "Because the goal is not only to inform, but to enable clear, modern, and verifiable execution.",
-      pillars: {
-        clarity: {
-          title: "Clarity",
-          text: "A simple, readable interface designed for mobile use, even with little time.",
-        },
-        credibility: {
-          title: "Credibility",
-          text: "Documented tracking, visual proof, and clear history for each field operation.",
-        },
-        support: {
-          title: "Support",
-          text: "A human-sized team, available and attentive to the realities of the diaspora.",
-        },
-      },
-    },
-    about: {
-      kicker: "The Teranga spirit",
-      title: "Teranga: more than a service",
-      subtitle:
-        "A platform inspired by trust and hospitality that connects real needs with structured field execution.",
-      paragraphs: {
-        p1: "The word <0>Teranga</0> evokes warmth, trust, and respect. Our platform embraces these values to deliver a modern and reassuring experience.",
-        p2: "Your assets, services, and projects deserve total visibility: photos, evidence, reports, transactions, and progress are available in real time.",
-        p3: "Thanks to certified agents and a clear interface, you can delegate efficiently without losing control.",
-      },
-      trustLabel: "Trust framework",
-      trustTitle: "An experience designed to help you decide more calmly from afar",
-      trustPoints: {
-        p1: "Visual proof to understand the situation without guesswork.",
-        p2: "Documents, reports, and validations grouped in one place.",
-        p3: "An identifiable field team that executes clearly and reports back clearly.",
-      },
-      cta: "Join Teranga",
-    },
     contact: {
       kicker: "Direct contact",
-      title: "A simple exchange to launch the next step",
-      subtitle: "WhatsApp Business remains the fastest channel to start your request.",
-      sideTitle: "Simple, human, and structured support",
-      sideText:
-        "Choose a quick action or contact us directly to frame your need, validate feasibility, and organize the next step.",
+      title: "A question, a specific need?",
+      subtitle: "WhatsApp Business remains the fastest channel to reach our team directly.",
       infoTitle: "Teranga contact details",
       ctaWhatsapp: "Write on WhatsApp",
       ctaEmail: "Send an email",
-      form: {
-        name: {
-          label: "Full name",
-          placeholder: "Your name",
-        },
-        email: {
-          label: "Email address",
-          placeholder: "email@example.com",
-        },
-        message: {
-          label: "Message",
-          placeholder: "Your message...",
-        },
-        submit: "Send message",
-        success: "Thank you! Your message has been sent.",
-      },
       info: {
         email: "teranga.diaspora.platform@gmail.com",
         phone: "00223 70453345",
@@ -2435,16 +2170,170 @@ const en = {
     footer: {
       note:
         "Teranga connects diaspora members and local residents to reliable, clear, and well-documented field execution.",
-      sectionTitle: "Navigation",
       resourcesTitle: "Resources",
       copyright:
         "© {{year}} <0>Teranga</0> - All rights reserved.",
-      links: {
-        home: "Home",
-        services: "Services",
-        about: "About",
-        contact: "Contact",
+    },
+  },
+  missionCreation: {
+    wizard: {
+      steps: {
+        category: "Category",
+        location: "Location",
+        description: "Description",
+        confirm: "Confirmation",
       },
+      back: "Back",
+      next: "Next",
+      confirm: "Confirm mission",
+      submitting: "Creating…",
+    },
+    category: {
+      title: "What do you need?",
+      subtitle: "Choose a trade/specialty or a classic Teranga service.",
+    },
+    location: {
+      title: "Where should it happen?",
+      subtitle: "Enter an address, drop a pin on the map, or pick a saved location. This stays optional for needs with no location (payment, money transfer...).",
+      mapUnavailable: "Map unavailable right now — use the address field above.",
+      mapHint: "Click on the map or drag the pin to fine-tune the exact position.",
+      savedLocationsTitle: "Your saved locations",
+      addressLabel: "Address or location",
+      addressPlaceholder: "Neighborhood, city, landmark",
+      saveThisLocation: "Save this location for next time",
+      saveLocationLabelPlaceholder: "Location name (e.g. Home, Office)",
+    },
+    description: {
+      title: "Describe your need",
+      subtitle: "A short title, details if needed, and a photo or voice note to be well understood.",
+      titleLabel: "Your need in one sentence",
+      titlePlaceholder: "E.g.: Water leak in the kitchen",
+      descriptionLabel: "Details (optional)",
+      descriptionPlaceholder: "Describe your need in more detail",
+      photoLabel: "Photo (optional)",
+      addPhoto: "Add a photo",
+      removePhoto: "Remove photo",
+      voiceNote: {
+        label: "Voice note (optional)",
+        start: "Record a voice note",
+        stop: "Stop recording",
+        play: "Play",
+        pause: "Pause",
+        recorded: "Voice note recorded",
+        remove: "Remove voice note",
+        permissionDenied: "Microphone access denied or unavailable.",
+      },
+    },
+    confirm: {
+      title: "Confirm your request",
+      subtitle: "Review the details before sending. The price stays indicative and is confirmed on site.",
+      summaryCategory: "Category",
+      summaryTitle: "Need",
+      summaryLocation: "Location",
+      loadingEstimate: "Computing estimate…",
+      priceValue: "About {{amount}} {{currency}}",
+      startingFrom: "Starting from {{amount}} {{currency}}",
+      quoteOnly: "Price provided on quote",
+      estimatedDelay: "Estimated delay: {{minutes}} min",
+      estimateUnavailable: "Estimate unavailable right now.",
+    },
+    errors: {
+      loadOptions: "Could not load the options. Please try again shortly.",
+      stepIncomplete: "Please complete this step before continuing.",
+      submitFailed: "Something went wrong while creating the mission.",
+    },
+    success: {
+      message: "Your mission was created successfully.",
+      title: "Mission created!",
+      reference: "Your mission reference: #{{id}}",
+      trackCta: "Track my mission",
+      newRequestCta: "Create another mission",
+    },
+  },
+  missionPricingAdmin: {
+    kicker: "Teranga Pro — Admin",
+    title: "Mission pricing",
+    subtitleGlobal:
+      "Manage indicative price rules by country, region, and trade. These values are an adjustable starting point, not fixed rates.",
+    subtitleScoped: "Manage indicative price rules for {{country}}.",
+    form: {
+      country: "Country",
+      selectCountry: "Choose a country",
+      region: "Region (optional)",
+      countryWide: "Whole country",
+      category: "Category",
+      categoryMode: {
+        trade: "Trade",
+        classic: "Service type",
+        generic: "Generic (fallback)",
+      },
+      tradeCategory: "Trade",
+      selectTradeCategory: "Choose a trade",
+      serviceType: "Service type",
+      selectServiceType: "Choose a service type",
+      pricingMode: "Pricing mode",
+      pricingModeFixed: "Indicative price",
+      pricingModeQuote: "Quote only",
+      estimatedDelayMinutes: "Estimated delay (minutes)",
+      basePrice: "Base price",
+      minPrice: "Minimum price (optional, shows \"starting from\")",
+      pricePerKm: "Per-km surcharge (optional)",
+      submit: "Create rule",
+    },
+    table: {
+      country: "Country / Region",
+      category: "Category",
+      pricing: "Price",
+      delay: "Delay",
+      status: "Status",
+      genericCategory: "Generic",
+      active: "Active",
+      inactive: "Disabled",
+      edit: "Edit",
+      delete: "Disable",
+      save: "Save",
+      cancel: "Cancel",
+      empty: "No pricing rule yet.",
+    },
+    success: {
+      created: "Pricing rule created.",
+    },
+    errors: {
+      load: "Could not load pricing data.",
+      create: "Error while creating the rule.",
+      update: "Error while updating the rule.",
+      delete: "Error while disabling the rule.",
+    },
+  },
+  missionTracking: {
+    kicker: "Live tracking",
+    title: "Tracking your mission",
+    mapUnavailable: "Map unavailable right now.",
+    noPositionYet: "No position received yet — the executor hasn't started moving yet.",
+    eta: "Estimated arrival: {{minutes}} min",
+    validateCta: "Validate the mission",
+    cancelCta: "Cancel the mission",
+    backToServices: "Back to my services",
+    errors: {
+      load: "Could not load this mission's tracking.",
+      action: "Something went wrong. Please try again.",
+    },
+    status: {
+      CREATED: "Request created",
+      SEARCHING_EXECUTOR: "Looking for an executor",
+      ASSIGNED: "Executor assigned",
+      EN_ROUTE: "Executor en route",
+      ON_SITE: "Executor arrived on site",
+      IN_PROGRESS: "Mission in progress",
+      COMPLETED: "Mission completed — awaiting your validation",
+      VALIDATED: "Mission validated",
+      CLOSED: "Mission closed",
+      CANCELLED_BY_CLIENT: "Mission cancelled",
+      NO_EXECUTOR_FOUND: "No executor available",
+      DISPUTED: "Dispute in progress",
+      RESOLVED_REFUND: "Dispute resolved (refund)",
+      RESOLVED_REDO: "Dispute resolved (redo)",
+      RESOLVED_CLOSED: "Dispute closed",
     },
   },
   legalPage: {
@@ -3376,6 +3265,15 @@ const en = {
       },
       services: {
         title: "Services",
+      },
+      missionCreate: {
+        title: "New guided mission",
+      },
+      missionPricingAdmin: {
+        title: "Mission pricing",
+      },
+      missionTracking: {
+        title: "Mission tracking",
       },
       serviceTasks: {
         title: "Service tasks",

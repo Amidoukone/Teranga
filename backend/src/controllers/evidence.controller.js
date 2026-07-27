@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const { Evidence, Task, Service, Property, User, Order } = require("../../models");
 const { Op } = require("sequelize");
-const imagekit = require("../helpers/teranga-imagekit");
+const mediaUpload = require("../services/mediaUpload.service");
 
 // 🌍 Labels
 const { EVIDENCE_KINDS, getLabel } = require("../utils/labels");
@@ -22,11 +22,7 @@ const {
 const { emitEvent } = require("../services/activity.service");
 const logger = require('../utils/logger');
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
-const {
-  buildMediaStorageDiagnostics,
-  isImageKitConfigured,
-} = require("../utils/mediaStorageDiagnostics");
-const { evaluateLocalMediaFallback } = require("../utils/mediaStoragePolicy");
+const { buildMediaStorageDiagnostics } = require("../utils/mediaStorageDiagnostics");
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
 const EVIDENCE_MEDIA_STORAGE_ERROR_CODE = "EVIDENCE_MEDIA_STORAGE_UNAVAILABLE";
 const EVIDENCE_LOCAL_FALLBACK_ENV_VAR = "EVIDENCE_ALLOW_LOCAL_FALLBACK";
@@ -60,12 +56,7 @@ function toSafeInt(v) {
   return Number.isNaN(n) ? null : n;
 }
 
-function guessKind(mime) {
-  if (!mime) return "other";
-  if (mime.startsWith("image/")) return "photo";
-  if (mime === "application/pdf") return "document";
-  return "other";
-}
+const guessKind = mediaUpload.guessKind;
 
 function addLabels(evidence) {
   if (!evidence) return null;
@@ -105,96 +96,40 @@ async function mapWithConcurrency(items, limit, fn) {
 
 /* ======================================================
    Upload helpers (ImageKit + fallback local)
+   — mécanique déplacée vers services/mediaUpload.service.js pour être
+   réutilisée par le flux de pièces jointes de mission (section 4.1) ;
+   ces wrappers gardent le comportement et les noms exacts d'avant.
 ====================================================== */
 function isImageKitEnabled() {
-  return isImageKitConfigured(process.env);
+  return mediaUpload.isImageKitEnabled();
 }
 
 function resolveLocalFallbackPolicy() {
-  return evaluateLocalMediaFallback({
+  return mediaUpload.resolveLocalFallbackPolicy({
     moduleFallbackEnvVar: EVIDENCE_LOCAL_FALLBACK_ENV_VAR,
   });
 }
 
 function mediaStorageError() {
-  const err = new Error(
-    "Stockage des preuves indisponible. Configurez IMAGEKIT_* ou UPLOADS_ROOT persistant."
+  return mediaUpload.mediaStorageError(
+    "Stockage des preuves indisponible. Configurez IMAGEKIT_* ou UPLOADS_ROOT persistant.",
+    EVIDENCE_MEDIA_STORAGE_ERROR_CODE
   );
-  err.code = EVIDENCE_MEDIA_STORAGE_ERROR_CODE;
-  return err;
-}
-
-function sanitizeBasename(value) {
-  return String(value || "")
-    .replace(/[^a-zA-Z0-9._-]+/g, "_")
-    .replace(/^_+|_+$/g, "");
 }
 
 function buildEvidenceFileName(originalName, idx) {
-  const base = path.basename(originalName || "file");
-  const ext = path.extname(base || "").toLowerCase();
-  const nameOnly = base.slice(0, base.length - ext.length);
-  const safeBase = sanitizeBasename(nameOnly) || "file";
-  const safeExt = ext && ext.length <= 10 ? ext : "";
-  const salt = Math.random().toString(36).slice(2, 8);
-  const timestamp = Date.now();
-  return `evidence_${timestamp}_${salt}_${idx}_${safeBase}${safeExt}`;
-}
-
-function isRetryableError(err) {
-  const code = err?.code || err?.cause?.code;
-  const msg = String(err?.message || "").toLowerCase();
-  return (
-    code === "ECONNRESET" ||
-    code === "ETIMEDOUT" ||
-    code === "ECONNABORTED" ||
-    code === "EAI_AGAIN" ||
-    msg.includes("socket hang up") ||
-    msg.includes("econnreset")
-  );
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return mediaUpload.buildFileName("evidence", originalName, idx);
 }
 
 async function uploadToImageKitWithRetry(payload) {
-  const attempts = Math.max(1, EVIDENCE_UPLOAD_RETRIES + 1);
-  let lastError = null;
-
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    try {
-      return await imagekit.upload(payload);
-    } catch (err) {
-      lastError = err;
-      if (attempt >= attempts || !isRetryableError(err)) break;
-      const waitMs = EVIDENCE_UPLOAD_RETRY_BASE_MS * attempt;
-      await sleep(waitMs);
-    }
-  }
-
-  throw lastError;
-}
-
-async function ensureDir(dir) {
-  await fs.promises.mkdir(dir, { recursive: true });
+  return mediaUpload.uploadToImageKitWithRetry(payload, {
+    retries: EVIDENCE_UPLOAD_RETRIES,
+    retryBaseMs: EVIDENCE_UPLOAD_RETRY_BASE_MS,
+  });
 }
 
 async function saveEvidenceLocally(file, fileName) {
-  const uploadsRoot = resolveUploadsRoot();
-  const evidenceDir = path.join(uploadsRoot, "evidences");
-  await ensureDir(evidenceDir);
-
-  const safeName = sanitizeBasename(fileName || file?.originalname || "file");
-  const localName = safeName || buildEvidenceFileName(file?.originalname, 0);
-  const absolutePath = path.join(evidenceDir, localName);
-
-  await fs.promises.writeFile(absolutePath, file.buffer);
-
-  return {
-    url: `/uploads/evidences/${localName}`,
-    fileId: null,
-  };
+  return mediaUpload.saveFileLocally(file, fileName, { subfolder: "evidences" });
 }
 
 function resolveLocalUploadAbsolutePath(filePath) {

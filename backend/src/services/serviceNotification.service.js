@@ -4,6 +4,21 @@ const { getAdminRecipientIds, computeProgress } = require("./notification.servic
 const { emitEvent } = require("./activity.service");
 const logger = require("../utils/logger");
 
+// Résout l'utilisateur lié à un prestataire (providers.userId), pour inclure les missions
+// Teranga Pro dans les mêmes notifications de transition que le flux agent legacy
+// (docs/DEV_SPEC_TERANGA_v3.md section 4.2). Import tardif pour éviter un cycle de require
+// (models -> services -> ... -> models).
+async function resolveProviderUserId(providerId) {
+  if (!providerId) return null;
+  try {
+    const { Provider } = require("../../models");
+    const provider = await Provider.findByPk(providerId, { attributes: ["userId"] });
+    return provider?.userId ?? null;
+  } catch (_err) {
+    return null;
+  }
+}
+
 function uniqRecipients(values = []) {
   return Array.from(new Set(values.filter(Boolean)));
 }
@@ -80,10 +95,12 @@ async function notifyServiceStatusUpdate({ actorId, service, title, status }) {
       countryId: service.countryId,
       regionId: service.regionId,
     });
+    const providerUserId = await resolveProviderUserId(service.providerId);
     const recipients = uniqRecipients([
       ...adminIds,
       service.clientId,
       service.agentId,
+      providerUserId,
     ]);
 
     await emitEvent({

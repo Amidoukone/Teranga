@@ -50,6 +50,7 @@ import {
   ChevronRight,
   Check,
   Bell,
+  Banknote,
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -176,6 +177,7 @@ const ROLE_LINKS = {
     { path: "/admin/agents", labelKey: "nav.agents" },
     { path: "/admin/users", labelKey: "nav.users" },
     { path: "/admin/properties", labelKey: "nav.clientProperties" },
+    { path: "/admin/mission-pricing", labelKey: "nav.missionPricing" },
     { path: "/transactions", labelKey: "nav.transactions" },
     { path: "/finance", labelKey: "nav.finance" },
     ...COMMON_COMMERCE,
@@ -242,6 +244,7 @@ const ICON_BY_PATH_PREFIX = [
   { prefix: "/admin/users", icon: UserCog },
   { prefix: "/admin/properties", icon: Building2 },
   { prefix: "/admin/onboarding", icon: ShieldCheck },
+  { prefix: "/admin/mission-pricing", icon: Banknote },
 
   // Catalog / commerce
   { prefix: "/admin/catalog/categories", icon: Shapes },

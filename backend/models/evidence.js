@@ -22,6 +22,17 @@ module.exports = (sequelize, DataTypes) => {
         onDelete: 'SET NULL',
       });
 
+      // Pièces jointes de mission (docs/DEV_SPEC_TERANGA_v3.md section 4.1, étape 3) : une
+      // évidence peut être rattachée directement à une mission/service, indépendamment d'une
+      // tâche (aucune tâche n'existe encore au moment de la création guidée).
+      if (models.Service) {
+        Evidence.belongsTo(models.Service, {
+          foreignKey: 'serviceId',
+          as: 'service',
+          onDelete: 'SET NULL',
+        });
+      }
+
       // 🌍 Multi-pays (logique uniquement)
       if (models.Country) {
         Evidence.belongsTo(models.Country, {
@@ -43,6 +54,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       taskId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
       uploaderId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+      serviceId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
       orderId: {
         type: DataTypes.INTEGER.UNSIGNED,
         allowNull: true,
@@ -75,6 +87,7 @@ module.exports = (sequelize, DataTypes) => {
       indexes: [
         { fields: ['taskId'] },
         { fields: ['uploaderId'] },
+        { fields: ['serviceId'] },
         { fields: ['order_id'] },
         { fields: ['kind'] },
         { fields: ['countryId'] },

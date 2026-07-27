@@ -65,6 +65,16 @@ module.exports = (sequelize, DataTypes) => {
           as: 'missionStatusHistory',
         });
       }
+
+      // Pièces jointes de la création guidée (section 4.1, étape 3 : photo + note vocale) —
+      // alias distinct de Task.evidences pour rester lisible (deux chemins d'accès différents
+      // vers la même table evidences).
+      if (models.Evidence) {
+        Service.hasMany(models.Evidence, {
+          foreignKey: 'serviceId',
+          as: 'attachments',
+        });
+      }
     }
   }
 

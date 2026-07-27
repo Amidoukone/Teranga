@@ -1,6 +1,6 @@
 // frontend/src/pages/ServicesPage.jsx
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { me, getAuthHeader } from '../services/auth';
 import { getMyServices, createService } from '../services/services';
@@ -657,6 +657,12 @@ function Header({ showForm, setShowForm, loading, loadServices, totalCount, role
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        {user?.role === 'client' && (
+          <Link to="/missions/new" className="app-btn-primary w-full sm:w-auto rounded-lg px-4 py-2.5 text-sm text-center">
+            {t("services.buttons.newGuidedMission")}
+          </Link>
+        )}
+
         <button
           onClick={() => setShowForm((v) => !v)}
           className="app-btn-neutral w-full sm:w-auto"
