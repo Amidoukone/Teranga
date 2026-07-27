@@ -70,6 +70,18 @@ export const PROJECT_STATUSES = createLabelMap(
   PROJECT_STATUSES_BASE
 );
 
+const PROJECT_STATUS_TONE = {
+  created: 'neutral',
+  in_progress: 'info',
+  completed: 'success',
+  validated: 'success',
+  cancelled: 'error',
+};
+
+export function getProjectStatusTone(key) {
+  return PROJECT_STATUS_TONE[key] || 'neutral';
+}
+
 /* ============================================================
    🏡 Biens immobiliers
 ============================================================ */

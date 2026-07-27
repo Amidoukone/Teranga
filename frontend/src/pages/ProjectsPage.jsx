@@ -11,7 +11,7 @@ import {
 } from '../services/projects';
 import { createTransaction } from '../services/transactions';
 import api from '../services/api';
-import { applyLabels, CURRENCY_LABELS } from '../utils/labels';
+import { applyLabels, CURRENCY_LABELS, getProjectStatusTone } from '../utils/labels';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 
@@ -20,6 +20,7 @@ import { normalizeRole, isMasterUser } from '../utils/role';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 import LocationAutocompleteInput from '../features/mission-creation/LocationAutocompleteInput';
+import { Badge } from '../components/ui';
 
 /* ============================================================
    Module: gestion des projets.
@@ -33,14 +34,6 @@ const PROJECT_STATUS_VALUES = [
   'validated',
   'cancelled',
 ];
-
-const STATUS_STYLES = {
-  created: { bg: 'bg-surface-main/80', text: 'text-text-secondary', ring: 'ring-border' },
-  in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', ring: 'ring-blue-200' },
-  completed: { bg: 'bg-emerald-100', text: 'text-emerald-700', ring: 'ring-emerald-200' },
-  validated: { bg: 'bg-indigo-100', text: 'text-indigo-700', ring: 'ring-indigo-200' },
-  cancelled: { bg: 'bg-red-100', text: 'text-red-700', ring: 'ring-red-200' },
-};
 
 /* ============================================================
    ? Permissions
@@ -120,16 +113,7 @@ function Btn({
    Status Badge (premium)
 ============================================================ */
 function StatusBadge({ value, label }) {
-  const s = STATUS_STYLES[value] || STATUS_STYLES['created'];
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1 ${s.bg} ${s.text} ${s.ring}
-        ring-1 px-2.5 py-0.5 rounded-full text-xs font-medium`}
-    >
-      {label || value}
-    </span>
-  );
+  return <Badge tone={getProjectStatusTone(value)}>{label || value}</Badge>;
 }
 
 /* ============================================================

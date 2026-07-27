@@ -22,8 +22,10 @@ import {
   TRANSACTION_TYPES,
   TRANSACTION_STATUSES,
   PROJECT_STATUSES,
+  getProjectStatusTone,
 } from "../utils/labels";
 import { getTransactions, createTransaction } from "../services/transactions";
+import { Badge } from "../components/ui";
 import { normalizeRole, isMasterUser } from "../utils/role";
 import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
@@ -134,23 +136,6 @@ function formatBytes(bytes) {
 /* ============================================================
    UI Components
 ============================================================ */
-function Badge({ color = "gray", children }) {
-  const colors = {
-    blue: "bg-blue-100 text-blue-800 ring-blue-200",
-    green: "bg-emerald-100 text-emerald-800 ring-emerald-200",
-    yellow: "bg-amber-100 text-amber-800 ring-amber-200",
-    red: "bg-rose-100 text-rose-800 ring-rose-200",
-    gray: "bg-surface-main/80 text-text-primary ring-slate-200",
-  };
-  return (
-    <span
-      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ring-1 shadow-sm ${colors[color]}`}
-    >
-      {children}
-    </span>
-  );
-}
-
 function Btn({ variant = "primary", size = "md", children, className = "", ...props }) {
   const styles = {
     primary: "app-btn-primary",
@@ -750,23 +735,23 @@ export default function ProjectDetailPage() {
                     <option value="cancelled">{t("projects.status.cancelled")}</option>
                   </select>
                 ) : (
-                  <Badge color="blue">
+                  <Badge tone={getProjectStatusTone(project.status)}>
                     {t("projectDetail.labels.status", { status: statusLabel })}
                   </Badge>
                 )}
 
                 {isMaster && (
-                  <Badge color="yellow">{t("projectDetail.badges.master")}</Badge>
+                  <Badge tone="warning">{t("projectDetail.badges.master")}</Badge>
                 )}
 
-                <Badge color="green">
+                <Badge tone="success">
                   {t("projectDetail.labels.budget")}{" "}
                   {formatNumber(project.budget || 0)}{" "}
                   {t("projects.card.currency", { defaultValue: "XOF" })}
                 </Badge>
 
                 {isClient && (
-                  <Badge color={clientCanModifyOrDelete ? "yellow" : "gray"}>
+                  <Badge tone={clientCanModifyOrDelete ? "warning" : "neutral"}>
                     {clientCanModifyOrDelete
                       ? t("projectDetail.badges.editWindowAllowed", {
                           time: timeLeftText,
