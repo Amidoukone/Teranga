@@ -692,10 +692,11 @@ function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         {/* Recherche */}
         <div className="col-span-1 sm:col-span-2 lg:col-span-2">
-          <label className="mb-1 block text-xs font-medium text-text-secondary">
+          <label htmlFor="services-filter-search" className="mb-1 block text-xs font-medium text-text-secondary">
             {t("services.filters.searchLabel")}
           </label>
           <input
+            id="services-filter-search"
             placeholder={t("services.filters.searchPlaceholder")}
             value={filters.q}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
@@ -705,10 +706,11 @@ function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
 
         {/* Type */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">
+          <label htmlFor="services-filter-type" className="mb-1 block text-xs font-medium text-text-secondary">
             {t("services.filters.typeLabel")}
           </label>
           <select
+            id="services-filter-type"
             value={filters.type}
             onChange={(e) => setFilters({ ...filters, type: e.target.value })}
             className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
@@ -724,10 +726,11 @@ function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
 
         {/* Statut */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">
+          <label htmlFor="services-filter-status" className="mb-1 block text-xs font-medium text-text-secondary">
             {t("services.filters.statusLabel")}
           </label>
           <select
+            id="services-filter-status"
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
             className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
@@ -743,10 +746,11 @@ function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
 
         {/* Bien */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">
+          <label htmlFor="services-filter-property" className="mb-1 block text-xs font-medium text-text-secondary">
             {t("services.filters.propertyLabel")}
           </label>
           <select
+            id="services-filter-property"
             value={filters.property}
             onChange={(e) => setFilters({ ...filters, property: e.target.value })}
             className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
@@ -762,10 +766,11 @@ function Filters({ filters, setFilters, properties, filteredCount, onReset }) {
 
         {/* Tri */}
         <div className="col-span-1 sm:col-span-2 lg:col-span-2">
-          <label className="mb-1 block text-xs font-medium text-text-secondary">
+          <label htmlFor="services-filter-sort" className="mb-1 block text-xs font-medium text-text-secondary">
             {t("services.filters.sortLabel")}
           </label>
           <select
+            id="services-filter-sort"
             value={filters.sort}
             onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
             className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
@@ -832,10 +837,11 @@ function ServiceForm({
  {/* Contexte: gestion des services. */}
         {isAdminOrMaster && (
           <div className="col-span-1 sm:col-span-2">
-            <label className="block text-sm font-medium text-text-secondary mb-1">
+            <label htmlFor="service-form-client" className="block text-sm font-medium text-text-secondary mb-1">
               {t("services.form.clientLabel")} <span className="app-required">*</span>
             </label>
             <select
+              id="service-form-client"
               value={form.clientId}
               onChange={(e) =>
                 setForm({
@@ -859,10 +865,11 @@ function ServiceForm({
 
  {/* Contexte: gestion des services. */}
         <div className="col-span-1 sm:col-span-2">
-          <label className="block text-sm font-medium text-text-secondary mb-1">
+          <label htmlFor="service-form-property" className="block text-sm font-medium text-text-secondary mb-1">
             {t("services.form.propertyLabel")}
           </label>
           <select
+            id="service-form-property"
             value={form.propertyId}
             onChange={(e) => setForm({ ...form, propertyId: e.target.value })}
             disabled={isAdminOrMaster && !form.clientId}
@@ -919,10 +926,11 @@ function ServiceFormFields({ form, setForm }) {
     <>
       {/* Type */}
       <div className="w-full">
-        <label className="block text-sm font-medium text-text-secondary mb-1">
+        <label htmlFor="service-form-type" className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.typeLabel")}
         </label>
         <select
+          id="service-form-type"
           value={form.type}
           onChange={(e) => setForm({ ...form, type: e.target.value })}
           className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
@@ -937,10 +945,11 @@ function ServiceFormFields({ form, setForm }) {
 
       {/* Titre */}
       <div className="w-full">
-        <label className="block text-sm font-medium text-text-secondary mb-1">
+        <label htmlFor="service-form-title" className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.titleLabel")} <span className="app-required">*</span>
         </label>
         <input
+          id="service-form-title"
           placeholder={t("services.form.titlePlaceholder")}
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -951,10 +960,11 @@ function ServiceFormFields({ form, setForm }) {
 
       {/* Description */}
       <div className="col-span-1 sm:col-span-2 w-full">
-        <label className="block text-sm font-medium text-text-secondary mb-1">
+        <label htmlFor="service-form-description" className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.descriptionLabel")}
         </label>
         <textarea
+          id="service-form-description"
           placeholder={t("services.form.descriptionPlaceholder")}
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -965,10 +975,11 @@ function ServiceFormFields({ form, setForm }) {
 
       {/* Personne de contact */}
       <div className="w-full">
-        <label className="block text-sm font-medium text-text-secondary mb-1">
+        <label htmlFor="service-form-contact" className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.contactLabel")}
         </label>
         <input
+          id="service-form-contact"
           value={form.contactPerson}
           onChange={(e) => setForm({ ...form, contactPerson: e.target.value })}
           placeholder={t("services.form.contactPlaceholder")}
@@ -978,10 +989,11 @@ function ServiceFormFields({ form, setForm }) {
 
  {/* Contexte: gestion des services. */}
       <div className="w-full">
-        <label className="block text-sm font-medium text-text-secondary mb-1">
+        <label htmlFor="service-form-phone" className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.phoneLabel")}
         </label>
         <input
+          id="service-form-phone"
           value={form.contactPhone}
           onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
           placeholder="+223 70 00 00 00"
@@ -991,10 +1003,11 @@ function ServiceFormFields({ form, setForm }) {
 
       {/* Adresse */}
       <div className="col-span-1 sm:col-span-2 w-full">
-        <label className="block text-sm font-medium text-text-secondary mb-1">
+        <label htmlFor="service-form-address" className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.addressLabel")}
         </label>
         <input
+          id="service-form-address"
           value={form.address}
           onChange={(e) => setForm({ ...form, address: e.target.value })}
           placeholder={t("services.form.addressPlaceholder")}
@@ -1004,10 +1017,11 @@ function ServiceFormFields({ form, setForm }) {
 
       {/* Budget */}
       <div className="w-full">
-        <label className="block text-sm font-medium text-text-secondary mb-1">
+        <label htmlFor="service-form-budget" className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.budgetLabel")}
         </label>
         <input
+          id="service-form-budget"
           type="number"
           step="0.01"
           placeholder={t("services.form.budgetPlaceholder")}
@@ -1019,10 +1033,11 @@ function ServiceFormFields({ form, setForm }) {
 
       {/* Devise */}
       <div className="w-full">
-        <label className="block text-sm font-medium text-text-secondary mb-1">
+        <label htmlFor="service-form-currency" className="block text-sm font-medium text-text-secondary mb-1">
           {t("services.form.currencyLabel")}
         </label>
         <select
+          id="service-form-currency"
           value={form.currency}
           onChange={(e) => setForm({ ...form, currency: e.target.value })}
           className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"

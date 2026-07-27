@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { setNotifyHandler } from "../utils/notify";
 import { getFeedbackIcon, normalizeFeedbackType } from "../utils/feedback";
 
 const DEFAULT_DURATION_MS = 4200;
 
 function toneClasses(type) {
-  if (type === "success") return "border-emerald-200 bg-emerald-50 text-emerald-900";
-  if (type === "error") return "border-rose-200 bg-rose-50 text-rose-900";
-  if (type === "warning") return "border-amber-200 bg-amber-50 text-amber-900";
+  if (type === "success") return "app-alert-success";
+  if (type === "error") return "app-alert-error";
+  if (type === "warning") return "app-alert-warning";
   return "border-border bg-surface-card text-text-primary";
 }
 
 export default function ToastProvider({ children }) {
+  const { t } = useTranslation();
   const [toasts, setToasts] = useState([]);
 
   const removeToast = useCallback((id) => {
@@ -53,13 +55,13 @@ export default function ToastProvider({ children }) {
 
   const rendered = useMemo(
     () =>
-      toasts.map((t) => {
-        const icon = getFeedbackIcon(t.type);
+      toasts.map((toast) => {
+        const icon = getFeedbackIcon(toast.type);
         return (
           <div
-            key={t.id}
+            key={toast.id}
             role="status"
-            className={`pointer-events-auto rounded-xl border px-4 py-3 shadow-md backdrop-blur-sm ${toneClasses(t.type)}`}
+            className={`pointer-events-auto rounded-xl border px-4 py-3 shadow-md backdrop-blur-sm ${toneClasses(toast.type)}`}
           >
             <div className="flex items-start gap-3">
               {icon ? (
@@ -70,20 +72,20 @@ export default function ToastProvider({ children }) {
                   {icon}
                 </span>
               ) : null}
-              <p className="text-sm leading-5">{t.text}</p>
+              <p className="text-sm leading-5">{toast.text}</p>
               <button
                 type="button"
                 className="ml-auto text-xs opacity-70 hover:opacity-100"
-                onClick={() => removeToast(t.id)}
-                aria-label="Close notification"
+                onClick={() => removeToast(toast.id)}
+                aria-label={t("common.toast.close")}
               >
-                Fermer
+                {t("common.toast.close")}
               </button>
             </div>
           </div>
         );
       }),
-    [removeToast, toasts]
+    [removeToast, t, toasts]
   );
 
   return (

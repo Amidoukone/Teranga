@@ -670,6 +670,12 @@ html[data-theme="dark"] .disabled\:bg-blue-400:disabled {
     color: rgb(254 205 211);
   }
 
+  .dark .app-alert-warning {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(252, 211, 77, 0.22);
+    color: rgb(253 230 138);
+  }
+
   .dark .app-btn-success:disabled {
     background: rgba(16, 185, 129, 0.25);
     border-color: rgba(52, 211, 153, 0.14);
@@ -766,6 +772,12 @@ html[data-theme="dark"] .disabled\:bg-blue-400:disabled {
     background: rgba(244, 63, 94, 0.12);
     border-color: rgba(244, 63, 94, 0.25);
     color: rgb(190 24 93);
+  }
+
+  .app-alert-warning {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.28);
+    color: rgb(180 83 9);
   }
 
   .app-badge {
@@ -1162,22 +1174,4 @@ html[data-theme="dark"] .disabled\:bg-blue-400:disabled {
     box-shadow: none !important;
   }
 
-  /* Cover Apple-style hardcoded blue buttons used in some admin/agent pages */
-  .dark button[class*="bg-[#0a84ff]"],
-  .dark a[class*="bg-[#0a84ff]"],
-  .dark [role="button"][class*="bg-[#0a84ff]"] {
-    background: linear-gradient(
-      180deg,
-      rgba(59, 130, 246, 0.96),
-      rgba(37, 99, 235, 0.92)
-    ) !important;
-    color: rgb(248 250 252) !important;
-    border-color: rgba(147, 197, 253, 0.24) !important;
-  }
-
-  .dark button[class*="hover:bg-[#0066cc]"]:hover,
-  .dark a[class*="hover:bg-[#0066cc]"]:hover,
-  .dark [role="button"][class*="hover:bg-[#0066cc]"]:hover {
-    background: rgba(37, 99, 235, 0.96) !important;
-  }
 }

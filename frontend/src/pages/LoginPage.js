@@ -102,16 +102,17 @@ export default function LoginPage() {
 
           {/* IDENTIFIANT */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label htmlFor="login-identifier" className="block text-sm font-medium text-text-primary mb-1">
               {t("auth.login.identifierLabel")}
             </label>
 
             <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
+              <Phone aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
 
               <input
+                id="login-identifier"
                 type="text"
-                className="w-full border border-border rounded-xl pl-10 pr-3 py-2 text-sm bg-surface-card text-text-primary 
+                className="w-full border border-border rounded-xl pl-10 pr-3 py-2 text-sm bg-surface-card text-text-primary
                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 placeholder={t("auth.login.identifierPlaceholder")}
                 value={identifier}
@@ -124,14 +125,15 @@ export default function LoginPage() {
 
           {/* PASSWORD */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label htmlFor="login-password" className="block text-sm font-medium text-text-primary mb-1">
               {t("auth.login.passwordLabel")}
             </label>
 
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
+              <Lock aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
 
               <input
+                id="login-password"
                 type={showPassword ? "text" : "password"}
                 className="w-full border border-border rounded-xl pl-10 pr-10 py-2 text-sm bg-surface-card text-text-primary
                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"

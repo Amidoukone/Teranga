@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { setConfirmHandler } from "../utils/confirm";
+import Modal from "./ui/Modal";
 
 function normalizeOptions(options = {}, defaults = {}) {
   return {
@@ -13,6 +14,7 @@ export default function ConfirmProvider({ children }) {
   const { t } = useTranslation();
   const [queue, setQueue] = useState([]);
   const [active, setActive] = useState(null);
+  const cancelButtonRef = useRef(null);
 
   const showNext = useCallback(() => {
     setQueue((prev) => {
@@ -60,13 +62,18 @@ export default function ConfirmProvider({ children }) {
   return (
     <>
       {children}
-      {active && (
-        <div className="fixed inset-0 z-[1300] flex items-center justify-center bg-slate-900/45 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-surface-card p-5 shadow-xl">
-            <h3 className="text-lg font-semibold text-text-primary">{active.title}</h3>
+      <Modal
+        open={Boolean(active)}
+        onClose={() => resolveActive(false)}
+        title={active?.title}
+        initialFocusRef={cancelButtonRef}
+      >
+        {active && (
+          <>
             <p className="mt-2 text-sm text-text-secondary">{active.message}</p>
             <div className="mt-5 flex justify-end gap-2">
               <button
+                ref={cancelButtonRef}
                 type="button"
                 className="rounded-full border border-border bg-surface-card px-4 py-2 text-sm text-text-secondary hover:bg-surface-main/80"
                 onClick={() => resolveActive(false)}
@@ -78,16 +85,16 @@ export default function ConfirmProvider({ children }) {
                 className={`rounded-full px-4 py-2 text-sm text-white ${
                   active.danger
                     ? "bg-rose-600 hover:bg-rose-700"
-                    : "bg-[#0a84ff] hover:bg-[#0066cc]"
+                    : "bg-primary hover:bg-primary/90"
                 }`}
                 onClick={() => resolveActive(true)}
               >
                 {active.confirmText}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </>
   );
 }

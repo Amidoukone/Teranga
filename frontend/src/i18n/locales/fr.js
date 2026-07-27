@@ -262,6 +262,9 @@ const fr = {
         missionPricingRule: "cette règle de tarification",
       },
     },
+    toast: {
+      close: "Fermer la notification",
+    },
   },
   dashboard: {
     loading: "Chargement du tableau de bord...",

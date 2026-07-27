@@ -727,7 +727,7 @@ export default function ProductCatalogPage() {
                     {user && user.role !== 'admin' && (
                       <button
                         onClick={() => handleOrder(p)}
-                        className="mt-4 w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-xl shadow-sm bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition"
+                        className="mt-4 w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-xl shadow-sm btn-primary transition"
                       >
                         {t('productCatalogPage.card.order')}
                       </button>
@@ -790,7 +790,7 @@ export default function ProductCatalogPage() {
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800"
+                      className="app-btn-primary px-4 py-2 text-sm"
                     >
                       {t('productCatalogPage.order.confirm')}
                     </button>

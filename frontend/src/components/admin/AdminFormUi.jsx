@@ -1,3 +1,5 @@
+import { cloneElement, isValidElement, useId } from "react";
+
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
@@ -67,14 +69,23 @@ export function AdminStepForm({
 
 export function AdminField({
   label,
+  htmlFor,
   children,
   className = "",
   labelClassName = "",
 }) {
+  const generatedId = useId();
+  const fieldId = htmlFor || generatedId;
+  const control =
+    label && isValidElement(children)
+      ? cloneElement(children, { id: children.props.id || fieldId })
+      : children;
+
   return (
     <div className={className}>
       {label ? (
         <label
+          htmlFor={fieldId}
           className={cx(
             "mb-1 block text-xs font-medium text-text-secondary",
             labelClassName
@@ -83,7 +94,7 @@ export function AdminField({
           {label}
         </label>
       ) : null}
-      {children}
+      {control}
     </div>
   );
 }

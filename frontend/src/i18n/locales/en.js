@@ -259,6 +259,9 @@ const en = {
         missionPricingRule: "this pricing rule",
       },
     },
+    toast: {
+      close: "Close notification",
+    },
   },
   dashboard: {
     loading: "Loading dashboard…",
