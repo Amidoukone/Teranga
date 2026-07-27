@@ -69,6 +69,12 @@ export async function createProject(form = {}) {
       form?.agentId !== undefined && form.agentId !== ''
         ? Number(form.agentId)
         : undefined,
+
+    // Localisation (optionnelle, jamais bloquante)
+    address: form?.address || undefined,
+    city: form?.city || undefined,
+    latitude: form?.latitude ?? undefined,
+    longitude: form?.longitude ?? undefined,
   });
 
   const { data } = await api.post('/projects', payload, {
@@ -122,6 +128,20 @@ export async function updateProject(id, form = {}) {
       form.clientId === '' || form.clientId === null || form.clientId === undefined
         ? undefined
         : Number(form.clientId);
+  }
+
+  // Localisation (optionnelle, jamais bloquante)
+  if ('address' in form) {
+    payload.address = form.address || null;
+  }
+  if ('city' in form) {
+    payload.city = form.city || null;
+  }
+  if ('latitude' in form) {
+    payload.latitude = form.latitude ?? null;
+  }
+  if ('longitude' in form) {
+    payload.longitude = form.longitude ?? null;
   }
 
   const { data } = await api.put(`/projects/${id}`, payload, {

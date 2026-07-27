@@ -1,5 +1,9 @@
 'use strict';
 
+function toNullableNumber(v) {
+  return (v === '' || v === undefined || v === null) ? null : v;
+}
+
 module.exports = (sequelize, DataTypes) => {
   const Project = sequelize.define(
     'Project',
@@ -68,6 +72,40 @@ module.exports = (sequelize, DataTypes) => {
       regionId: {
         type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true,
+      },
+
+      /**
+       * ============================================================
+       * 🌍 Géolocalisation (NOUVEAU — non bloquant)
+       * ============================================================
+       * Même principe que services.latitude/longitude : optionnel, jamais
+       * requis pour créer/modifier un projet (voir migration
+       * 20260727120000-add-geo-coordinates-to-projects.js).
+       */
+      address: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+
+      city: {
+        type: DataTypes.STRING(150),
+        allowNull: true,
+      },
+
+      latitude: {
+        type: DataTypes.DECIMAL(10, 7),
+        allowNull: true,
+        set(v) {
+          this.setDataValue('latitude', toNullableNumber(v));
+        },
+      },
+
+      longitude: {
+        type: DataTypes.DECIMAL(10, 7),
+        allowNull: true,
+        set(v) {
+          this.setDataValue('longitude', toNullableNumber(v));
+        },
       },
     },
     {

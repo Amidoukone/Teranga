@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { normalizeRole, isMasterUser } from '../utils/role';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
+import LocationAutocompleteInput from '../features/mission-creation/LocationAutocompleteInput';
 
 /* ============================================================
    Module: gestion des projets.
@@ -358,6 +359,10 @@ export default function ProjectsPage() {
     budget: '',
     status: 'created',
     type: 'autre',
+    address: '',
+    city: '',
+    latitude: null,
+    longitude: null,
   });
 
   const [filters, setFilters] = useState({
@@ -595,6 +600,10 @@ export default function ProjectsPage() {
         type: p.type || 'autre',
         clientId: p.client?.id || '',
         agentId: p.agent?.id || '',
+        address: p.address || '',
+        city: p.city || '',
+        latitude: p.latitude ?? null,
+        longitude: p.longitude ?? null,
       });
       setShowForm(true);
     } else {
@@ -611,6 +620,10 @@ export default function ProjectsPage() {
       budget: '',
       status: 'created',
       type: 'autre',
+      address: '',
+      city: '',
+      latitude: null,
+      longitude: null,
     });
     setEditId(null);
     setShowForm(false);
@@ -905,6 +918,23 @@ export default function ProjectsPage() {
                 </select>
               </div>
             </FieldRow>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">
+                {t('projects.form.addressLabel')}
+              </label>
+              <LocationAutocompleteInput
+                className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
+                placeholder={t('projects.form.addressPlaceholder')}
+                value={form.address}
+                onChange={(value) =>
+                  setForm({ ...form, address: value, latitude: null, longitude: null })
+                }
+                onPlaceSelected={({ address, latitude, longitude }) =>
+                  setForm({ ...form, address, latitude, longitude })
+                }
+              />
+            </div>
 
             <div>
               <label className="mb-1 block text-xs font-medium text-text-secondary">

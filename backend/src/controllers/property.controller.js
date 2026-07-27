@@ -2,6 +2,7 @@
 
 const { Property, User, Country, Sequelize } = require('../../models');
 const { Op } = require('sequelize');
+const { geocodeAddress } = require('../services/geocoding.service');
 
 const {
   PROPERTY_TYPES,
@@ -562,6 +563,19 @@ exports.create = async (req, res) => {
         .json({ error: 'title, type, address, city sont requis' });
     }
 
+    // Géocodage non bloquant (docs/DEV_SPEC_TERANGA_v3.md, extension 0.5) : si l'adresse est
+    // fournie sans lat/lng déjà résolues, on tente le géocodage serveur — un échec ne bloque
+    // jamais la création/modification d'un bien, contrairement au flux mission.
+    let resolvedLatitude = toNullableNumber(latitude);
+    let resolvedLongitude = toNullableNumber(longitude);
+    if (resolvedLatitude === null || resolvedLongitude === null) {
+      const geocoded = await geocodeAddress(`${address}, ${city}`);
+      if (geocoded) {
+        resolvedLatitude = geocoded.latitude;
+        resolvedLongitude = geocoded.longitude;
+      }
+    }
+
     /* Owner resolution */
     let targetOwnerId = req.user.id;
     let targetOwner = req.user;
@@ -666,8 +680,8 @@ exports.create = async (req, res) => {
       address,
       city,
       postalCode: toTrimOrNull(postalCode),
-      latitude: toNullableNumber(latitude),
-      longitude: toNullableNumber(longitude),
+      latitude: resolvedLatitude,
+      longitude: resolvedLongitude,
       surfaceArea: toNullableNumber(surfaceArea),
       roomCount: toNullableNumber(roomCount),
       description: toTrimOrNull(description),
@@ -767,6 +781,22 @@ exports.update = async (req, res) => {
       updates.surfaceArea = toNullableNumber(body.surfaceArea);
     if (body.roomCount !== undefined)
       updates.roomCount = toNullableNumber(body.roomCount);
+
+    // Géocodage non bloquant : si l'adresse/ville change sans lat/lng explicites fournies
+    // dans la même requête, on tente de les redériver côté serveur (échec toléré).
+    const addressChanged = body.address !== undefined || body.city !== undefined;
+    const coordsProvided = body.latitude !== undefined || body.longitude !== undefined;
+    if (addressChanged && !coordsProvided) {
+      const nextAddress = updates.address ?? p.address;
+      const nextCity = updates.city ?? p.city;
+      if (nextAddress && nextCity) {
+        const geocoded = await geocodeAddress(`${nextAddress}, ${nextCity}`);
+        if (geocoded) {
+          updates.latitude = geocoded.latitude;
+          updates.longitude = geocoded.longitude;
+        }
+      }
+    }
 
     /* ========================================================
        Multi-country UPDATE

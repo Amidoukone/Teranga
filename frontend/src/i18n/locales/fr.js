@@ -521,6 +521,8 @@ const fr = {
       typeLabel: "Type",
       budgetLabel: "Budget",
       statusLabel: "Statut",
+      addressLabel: "Lieu (optionnel)",
+      addressPlaceholder: "Adresse ou ville du projet\u2026",
       descriptionLabel: "Description",
       descriptionPlaceholder: "D\u00E9crivez le projet\u2026",
       cancel: "Annuler",

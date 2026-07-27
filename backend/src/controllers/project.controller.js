@@ -15,6 +15,7 @@ const {
   computeProgress,
 } = require("../services/notification.service");
 const { emitEvent } = require("../services/activity.service");
+const { geocodeAddress } = require("../services/geocoding.service");
 const logger = require('../utils/logger');
 
 /* =========================================================
@@ -80,10 +81,37 @@ exports.create = async (req, res) => {
       regionId,
       country_id,
       region_id,
+
+      // Localisation (optionnelle, jamais bloquante — voir docs/DEV_SPEC_TERANGA_v3.md 0.5)
+      address,
+      city,
+      latitude: rawLatitude,
+      longitude: rawLongitude,
     } = req.body || {};
 
     if (!title || !type)
       return res.status(400).json({ error: "Titre et type requis" });
+
+    const trimmedAddress = address ? String(address).trim() : null;
+    const trimmedCity = city ? String(city).trim() : null;
+    let latitude = rawLatitude != null ? Number(rawLatitude) : null;
+    let longitude = rawLongitude != null ? Number(rawLongitude) : null;
+    if (
+      (!Number.isFinite(latitude) || !Number.isFinite(longitude)) &&
+      (trimmedAddress || trimmedCity)
+    ) {
+      const geocoded = await geocodeAddress(
+        [trimmedAddress, trimmedCity].filter(Boolean).join(', ')
+      );
+      if (geocoded) {
+        latitude = geocoded.latitude;
+        longitude = geocoded.longitude;
+      }
+    }
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      latitude = null;
+      longitude = null;
+    }
 
     /* -----------------------------
        Determination du client
@@ -166,6 +194,12 @@ exports.create = async (req, res) => {
       // Multi-pays (non destructif)
       countryId: finalCountryId,
       regionId: finalRegionId,
+
+      // Localisation (non bloquante)
+      address: trimmedAddress,
+      city: trimmedCity,
+      latitude,
+      longitude,
     });
 
     const full = await Project.findByPk(project.id, {
@@ -412,6 +446,28 @@ exports.update = async (req, res) => {
       ? toSafeInt(body.agentId ?? project.agentId)
       : project.agentId;
 
+    // Localisation (non bloquante) : re-géocode seulement si adresse/ville change
+    // sans lat/lng explicites fournies dans la même requête.
+    const addressChanged = body.address !== undefined || body.city !== undefined;
+    const coordsProvided = body.latitude !== undefined || body.longitude !== undefined;
+    let nextAddress = body.address !== undefined ? String(body.address).trim() || null : project.address;
+    let nextCity = body.city !== undefined ? String(body.city).trim() || null : project.city;
+    let nextLatitude = body.latitude !== undefined ? Number(body.latitude) : project.latitude;
+    let nextLongitude = body.longitude !== undefined ? Number(body.longitude) : project.longitude;
+    if (addressChanged && !coordsProvided && (nextAddress || nextCity)) {
+      const geocoded = await geocodeAddress(
+        [nextAddress, nextCity].filter(Boolean).join(', ')
+      );
+      if (geocoded) {
+        nextLatitude = geocoded.latitude;
+        nextLongitude = geocoded.longitude;
+      }
+    }
+    if (!Number.isFinite(Number(nextLatitude)) || !Number.isFinite(Number(nextLongitude))) {
+      nextLatitude = null;
+      nextLongitude = null;
+    }
+
     await project.update({
       title: body.title ?? project.title,
       type: body.type ?? project.type,
@@ -440,6 +496,12 @@ exports.update = async (req, res) => {
             ? nextRegionId
             : scope.regionId ?? nextRegionId)
         : project.regionId,
+
+      // Localisation (non bloquante)
+      address: nextAddress,
+      city: nextCity,
+      latitude: nextLatitude,
+      longitude: nextLongitude,
     });
 
     const updated = await Project.findByPk(project.id, {

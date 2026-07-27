@@ -19,6 +19,7 @@ import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
+import LocationAutocompleteInput from '../features/mission-creation/LocationAutocompleteInput';
 
 // ============================================================================
 // Contexte: gestion des biens.
@@ -184,6 +185,8 @@ export default function PropertiesPage() {
     surfaceArea: '',
     roomCount: '',
     description: '',
+    latitude: null,
+    longitude: null,
   });
 
   const [files, setFiles] = useState([]);
@@ -445,6 +448,8 @@ export default function PropertiesPage() {
       surfaceArea: '',
       roomCount: '',
       description: '',
+      latitude: null,
+      longitude: null,
     });
 
     previewUrls.forEach((u) => URL.revokeObjectURL(u));
@@ -479,6 +484,8 @@ export default function PropertiesPage() {
       surfaceArea: p.surfaceArea || '',
       roomCount: p.roomCount || '',
       description: p.description || '',
+      latitude: p.latitude ?? null,
+      longitude: p.longitude ?? null,
     });
   }
 
@@ -1186,12 +1193,15 @@ function PropertyEditor({
           {t('propertiesPage.form.labels.address')}{' '}
           <span className="text-red-500">*</span>
         </label>
-        <input
+        <LocationAutocompleteInput
+          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
           placeholder={t('propertiesPage.form.placeholders.address')}
           value={form.address}
-          onChange={(e) => setForm({ ...form, address: e.target.value })}
+          onChange={(value) => setForm({ ...form, address: value, latitude: null, longitude: null })}
+          onPlaceSelected={({ address, latitude, longitude }) =>
+            setForm({ ...form, address, latitude, longitude })
+          }
           required
-          className="w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary sm:text-base"
         />
       </div>
 

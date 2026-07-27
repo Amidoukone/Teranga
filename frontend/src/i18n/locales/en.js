@@ -518,6 +518,8 @@ const en = {
       typeLabel: "Type",
       budgetLabel: "Budget",
       statusLabel: "Status",
+      addressLabel: "Location (optional)",
+      addressPlaceholder: "Project address or city…",
       descriptionLabel: "Description",
       descriptionPlaceholder: "Describe the project…",
       cancel: "Cancel",
