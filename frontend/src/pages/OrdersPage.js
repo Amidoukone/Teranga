@@ -15,53 +15,15 @@ import PaginationBar from '../components/PaginationBar';
 import {
   canonicalizeOrderStatus,
   canonicalizePaymentStatus,
+  getOrderStatusTone,
+  getPaymentStatusTone,
 } from '../utils/labels';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 import { isGlobalAdminUser } from '../utils/role';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
-
-/* ============================================================
-   Module: suivi des commandes.
-============================================================ */
-function getOrderStatusStyle(status) {
-  const canon = canonicalizeOrderStatus(status);
-
-  switch (canon) {
-    case 'created':
-      return 'bg-surface-main/80 text-text-secondary border border-border';
-    case 'processing':
-      return 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30';
-    case 'shipped':
-      return 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30';
-    case 'delivered':
-      return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30';
-    case 'cancelled':
-      return 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30';
-    case 'refunded':
-      return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30';
-    default:
-      return 'bg-surface-main text-text-secondary border border-border/70';
-  }
-}
-
-function getPaymentStatusStyle(status) {
-  const canon = canonicalizePaymentStatus(status);
-
-  switch (canon) {
-    case 'paid':
-      return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30';
-    case 'partial':
-      return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30';
-    case 'unpaid':
-      return 'bg-surface-main/80 text-text-secondary border border-border';
-    case 'refunded':
-      return 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30';
-    default:
-      return 'bg-surface-main text-text-secondary border border-border/70';
-  }
-}
+import { Badge } from '../components/ui';
 
 /* ============================================================
    Sous-composant liste/historique.
@@ -776,8 +738,8 @@ export default function OrdersPage() {
               const orderStatusChip = getOrderStatusLabel(o.orderStatus);
               const paymentStatusChip = getPaymentStatusLabel(o.paymentStatus);
 
-              const orderStatusClass = getOrderStatusStyle(o.orderStatus);
-              const paymentStatusClass = getPaymentStatusStyle(o.paymentStatus);
+              const orderStatusTone = getOrderStatusTone(o.orderStatus);
+              const paymentStatusTone = getPaymentStatusTone(o.paymentStatus);
 
               return (
                 <div
@@ -851,17 +813,13 @@ export default function OrdersPage() {
 
                     {/* Statuts */}
                     <div className="flex flex-wrap gap-2 items-center">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${orderStatusClass}`}
-                      >
+                      <Badge tone={orderStatusTone}>
                         {t("orders.list.orderStatusLabel")} {orderStatusChip}
-                      </span>
+                      </Badge>
 
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${paymentStatusClass}`}
-                      >
+                      <Badge tone={paymentStatusTone}>
                         {t("orders.list.paymentStatusLabel")} {paymentStatusChip}
-                      </span>
+                      </Badge>
                     </div>
                   </div>
 

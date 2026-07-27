@@ -4,7 +4,7 @@
 // Contexte: gestion des biens.
 // ============================================================================
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   getProperties,
   createProperty,
@@ -20,6 +20,8 @@ import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 import LocationAutocompleteInput from '../features/mission-creation/LocationAutocompleteInput';
+import useFocusTrap from '../hooks/useFocusTrap';
+import { Badge } from '../components/ui';
 
 // ============================================================================
 // Contexte: gestion des biens.
@@ -121,6 +123,12 @@ function isPdfFileLike(file) {
   return ext === 'pdf' || mime === 'application/pdf' || mime === 'application/x-pdf';
 }
 
+const PROPERTY_STATUS_TONE = {
+  active: 'success',
+  sold: 'info',
+  inactive: 'readonly',
+};
+
 function getPropertyTypeFieldConfig(type, t) {
   if (type === 'land') {
     return {
@@ -208,6 +216,12 @@ export default function PropertiesPage() {
     open: false,
     images: [],
     index: 0,
+  });
+  const lightboxRef = useRef(null);
+  useFocusTrap({
+    active: lightbox.open,
+    containerRef: lightboxRef,
+    onEscape: () => closeLightbox(),
   });
 
   // Filtres
@@ -687,6 +701,12 @@ export default function PropertiesPage() {
  {/* Contexte: gestion des biens. */}
         {lightbox.open && (
           <div
+            ref={lightboxRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('propertiesPage.lightbox.title', {
+              defaultValue: 'Aperçu des photos',
+            })}
             className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm"
             onClick={(e) => {
               if (e.target === e.currentTarget) closeLightbox();
@@ -1536,9 +1556,9 @@ function PropertyList({
                   </p>
 
                   {p.status && (
-                    <p className="mt-1 inline-flex items-center rounded-full border border-border/70 bg-surface-main/60 px-2 py-0.5 text-[0.75rem] font-medium text-text-secondary">
+                    <Badge tone={PROPERTY_STATUS_TONE[p.status] || 'neutral'} className="mt-1">
                       {t('propertiesPage.list.status', { status: statusLabel })}
-                    </p>
+                    </Badge>
                   )}
 
                   <p className="mt-2 text-sm text-text-secondary line-clamp-3">

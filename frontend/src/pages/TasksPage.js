@@ -14,10 +14,12 @@ import {
   TASK_STATUSES,
   CURRENCY_LABELS,
   getServiceTypeLabel,
+  getTaskStatusTone,
   applyLabels,
 } from '../utils/labels';
 import { normalizeRole, isMasterUser } from '../utils/role';
 import { useTranslation } from 'react-i18next';
+import { Badge } from '../components/ui';
 import { getFeedbackIcon } from '../utils/feedback';
 
 const DEFAULT_FILTERS = {
@@ -871,23 +873,12 @@ function TaskList({
               </p>
             </div>
 
-            <div
-              className={`
-                mt-1 sm:mt-0 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold
-                whitespace-nowrap self-start
-                ${
-                  task.status === 'created'
-                    ? 'bg-surface-main/80 text-text-secondary'
-                    : task.status === 'in_progress'
-                    ? 'app-badge app-badge-info'
-                    : task.status === 'completed'
-                    ? 'app-badge app-badge-success'
-                    : 'app-badge app-badge-success'
-                }
-              `}
+            <Badge
+              tone={getTaskStatusTone(task.status)}
+              className="mt-1 self-start whitespace-nowrap text-xs sm:mt-0 sm:text-sm"
             >
               {TASK_STATUSES[task.status] || task.status || t('common.dash')}
-            </div>
+            </Badge>
           </div>
 
           {/* Meta infos */}

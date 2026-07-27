@@ -2,7 +2,7 @@
 // TaskEvidencesPage.jsx - VERSION PREMIUM 2025 (MASTER SAFE - PARTIE 1 / 2)
 // ============================================================================
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   uploadEvidences,
@@ -16,6 +16,7 @@ import { notify } from '../utils/notify';
 import { getFeedbackIcon } from '../utils/feedback';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 import { fixMojibakeText } from '../utils/mojibake';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 // ============================================================================
 // Contexte: preuves de tache.
@@ -213,6 +214,12 @@ export default function TaskEvidencesPage() {
   const [uploadProgress, setUploadProgress] = useState(null);
   const [user, setUser] = useState(null);
   const [lightbox, setLightbox] = useState(null);
+  const lightboxRef = useRef(null);
+  useFocusTrap({
+    active: Boolean(lightbox),
+    containerRef: lightboxRef,
+    onEscape: () => closeLightbox(),
+  });
 
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_evidences_showForm');
@@ -1078,13 +1085,26 @@ export default function TaskEvidencesPage() {
       ========================================================== */}
       {lightbox && (
         <div
+          ref={lightboxRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('taskEvidencesPage.lightbox.ariaLabel')}
           className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center px-4"
           onClick={closeLightbox}
         >
+          <button
+            type="button"
+            onClick={closeLightbox}
+            className="absolute top-6 right-6 bg-surface-card/90 hover:bg-surface-card text-text-primary rounded-full p-2 shadow-md text-xl"
+            aria-label={t('taskEvidencesPage.lightbox.close')}
+          >
+            {"×"}
+          </button>
           <img
             src={lightbox}
             alt=""
             className="max-w-full max-h-full rounded-xl shadow-2xl border border-white/20"
+            onClick={(e) => e.stopPropagation()}
           />
         </div>
       )}

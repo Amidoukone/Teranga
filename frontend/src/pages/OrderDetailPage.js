@@ -29,12 +29,15 @@ import { me } from '../services/auth';
 import {
   canonicalizeOrderStatus,
   canonicalizePaymentStatus,
+  getOrderStatusTone,
+  getPaymentStatusTone,
 } from '../utils/labels';
 import { isGlobalAdminUser } from '../utils/role';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
+import { Badge } from '../components/ui';
 
 /* ============================================================
    URLs API/fichiers (dev/prod).
@@ -530,6 +533,8 @@ export default function OrderDetailPage() {
     `orders.payment.${canonicalizePaymentStatus(order.paymentStatus)}`,
     { defaultValue: order.paymentStatus }
   );
+  const orderStatusTone = getOrderStatusTone(order.orderStatus);
+  const paymentStatusTone = getPaymentStatusTone(order.paymentStatus);
 
   const statusStepKey = mapStatusToStepKey(order.orderStatus);
   const activeStepIndex = ORDER_STEP_DEFS.findIndex((s) => s.key === statusStepKey);
@@ -606,12 +611,12 @@ export default function OrderDetailPage() {
             </h3>
 
             <div className="flex flex-wrap gap-2 mb-3">
-              <span className="px-2.5 py-1 rounded-full bg-surface-card border border-border text-xs font-semibold">
+              <Badge tone={orderStatusTone} className="font-semibold">
                 {t("orderDetail.labels.orderStatus")} {orderStatusLabel}
-              </span>
-              <span className="px-2.5 py-1 rounded-full bg-surface-card border border-border text-xs font-semibold">
+              </Badge>
+              <Badge tone={paymentStatusTone} className="font-semibold">
                 {t("orderDetail.labels.paymentStatus")} {paymentStatusLabel}
-              </span>
+              </Badge>
             </div>
 
             <div className="flex items-center gap-2">

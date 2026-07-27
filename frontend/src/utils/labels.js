@@ -396,6 +396,44 @@ export function canonicalizePaymentStatus(key) {
   return 'unpaid';
 }
 
+// Correspondance statut -> tonalité du composant <Badge> (src/components/ui) —
+// un seul mapping partagé, pas une copie par écran (OrdersPage, OrderDetailPage, ...).
+const ORDER_STATUS_TONE = {
+  created: 'neutral',
+  processing: 'info',
+  shipped: 'info',
+  delivered: 'success',
+  cancelled: 'error',
+  refunded: 'warning',
+};
+
+const PAYMENT_STATUS_TONE = {
+  paid: 'success',
+  partial: 'warning',
+  unpaid: 'neutral',
+  refunded: 'error',
+};
+
+export function getOrderStatusTone(key) {
+  return ORDER_STATUS_TONE[canonicalizeOrderStatus(key)] || 'neutral';
+}
+
+export function getPaymentStatusTone(key) {
+  return PAYMENT_STATUS_TONE[canonicalizePaymentStatus(key)] || 'neutral';
+}
+
+const TASK_STATUS_TONE = {
+  created: 'neutral',
+  in_progress: 'info',
+  completed: 'success',
+  validated: 'success',
+  cancelled: 'error',
+};
+
+export function getTaskStatusTone(key) {
+  return TASK_STATUS_TONE[key] || 'neutral';
+}
+
 /**
  * ✅ Canonicalise un statut de transaction
  * (absorbe anciens statuts UI)
