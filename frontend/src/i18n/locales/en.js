@@ -2139,8 +2139,15 @@ const en = {
         titlePlaceholder: "E.g.: Water leak in the kitchen",
         description: "Details (optional)",
         descriptionPlaceholder: "Describe your need in more detail",
-        address: "Address or location (optional)",
+        address: "Where should the mission take place? (optional)",
         addressPlaceholder: "Neighborhood, city, landmark",
+        addressHint:
+          "Can be different from where you are — useful for helping remotely (family, property, project elsewhere).",
+      },
+      identity: {
+        title: "Your contact details",
+        hint: "So we can send you updates on your request and create your secure client space.",
+        countryHint: "Used for your account — it doesn't need to match the mission's country.",
       },
       submit: "Send my request",
       submitting: "Sending…",

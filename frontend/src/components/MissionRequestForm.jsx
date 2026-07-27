@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Loader2 } from "lucide-react";
 
 import { submitMissionRequest, getTradeCategories } from "../services/missionRequests";
 import { getMasterCountries } from "../services/franchises";
@@ -9,10 +8,10 @@ import { persistSession } from "../services/auth";
 import AuthFeedbackBanner from "./AuthFeedbackBanner";
 import LocationAutocompleteInput from "../features/mission-creation/LocationAutocompleteInput";
 import CategoryPicker from "../features/mission-creation/CategoryPicker";
+import { Button, FormField } from "./ui";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500";
-const labelClass = "mb-1 block text-sm font-medium text-text-primary";
 
 export default function MissionRequestForm() {
   const { t } = useTranslation();
@@ -83,6 +82,12 @@ export default function MissionRequestForm() {
     setTradeCategoryId(selection.tradeCategoryId || "");
     setServiceType(selection.serviceType || "");
   };
+
+  // Révélation progressive : un choix à la fois plutôt qu'un mur de champs
+  // (design thinking — réduire la charge cognitive, cf. section 12.2 du BM
+  // "création de mission en moins de 60 secondes").
+  const showDetails = Boolean(requestKind);
+  const showIdentity = showDetails && title.trim().length >= 3;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -181,118 +186,146 @@ export default function MissionRequestForm() {
         </div>
       ) : null}
 
-      <label className={labelClass}>{t("homePage.missionRequest.chooseNeed")}</label>
-      <CategoryPicker
-        tradeCategories={tradeCategories}
-        loading={loadingOptions}
-        value={{ requestKind, tradeCategoryId, serviceType }}
-        onChange={handleCategoryChange}
-      />
+      <fieldset className="m-0 border-0 p-0">
+        <legend className="mb-1 block px-0 text-sm font-medium text-text-primary">
+          {t("homePage.missionRequest.chooseNeed")}
+        </legend>
+        <CategoryPicker
+          tradeCategories={tradeCategories}
+          loading={loadingOptions}
+          value={{ requestKind, tradeCategoryId, serviceType }}
+          onChange={handleCategoryChange}
+        />
+      </fieldset>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <label className={labelClass}>{t("homePage.missionRequest.fields.country")}</label>
-          <select
-            className={inputClass}
-            value={countryId}
-            onChange={(e) => setCountryId(e.target.value)}
-            disabled={loadingOptions}
+      {showDetails ? (
+        <div className="mt-5 space-y-4 border-t border-border/60 pt-5">
+          <FormField label={t("homePage.missionRequest.fields.title")} required>
+            <input
+              type="text"
+              className={inputClass}
+              placeholder={t("homePage.missionRequest.fields.titlePlaceholder")}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              autoFocus
+              required
+            />
+          </FormField>
+
+          <FormField
+            label={t("homePage.missionRequest.fields.address")}
+            hint={t("homePage.missionRequest.fields.addressHint")}
           >
-            <option value="">{t("homePage.missionRequest.fields.countryPlaceholder")}</option>
-            {countries.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
+            <LocationAutocompleteInput
+              className={inputClass}
+              placeholder={t("homePage.missionRequest.fields.addressPlaceholder")}
+              value={address}
+              onChange={(value) => {
+                setAddress(value);
+                setCoordinates(null);
+              }}
+              onPlaceSelected={({ address: resolvedAddress, latitude, longitude }) => {
+                setAddress(resolvedAddress);
+                setCoordinates({ latitude, longitude });
+              }}
+            />
+          </FormField>
 
-        <div>
-          <label className={labelClass}>{t("homePage.missionRequest.fields.phone")}</label>
-          <input
-            type="tel"
-            className={inputClass}
-            placeholder={t("homePage.missionRequest.fields.phonePlaceholder")}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-          />
+          <FormField label={t("homePage.missionRequest.fields.description")}>
+            <textarea
+              className={`${inputClass} min-h-[88px]`}
+              placeholder={t("homePage.missionRequest.fields.descriptionPlaceholder")}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </FormField>
         </div>
+      ) : null}
 
-        <div>
-          <label className={labelClass}>{t("homePage.missionRequest.fields.pin")}</label>
-          <input
-            type="password"
-            inputMode="numeric"
-            className={inputClass}
-            placeholder={t("homePage.missionRequest.fields.pinPlaceholder")}
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            minLength={4}
-            required
-          />
-          <p className="mt-1 text-xs text-text-muted">{t("homePage.missionRequest.fields.pinHint")}</p>
+      {showIdentity ? (
+        <div className="mt-5 space-y-4 border-t border-border/60 pt-5">
+          <div>
+            <p className="text-sm font-medium text-text-primary">
+              {t("homePage.missionRequest.identity.title")}
+            </p>
+            <p className="mt-1 text-xs text-text-muted">
+              {t("homePage.missionRequest.identity.hint")}
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label={t("homePage.missionRequest.fields.phone")} required>
+              <input
+                type="tel"
+                className={inputClass}
+                placeholder={t("homePage.missionRequest.fields.phonePlaceholder")}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+            </FormField>
+
+            <FormField
+              label={t("homePage.missionRequest.fields.pin")}
+              hint={t("homePage.missionRequest.fields.pinHint")}
+              required
+            >
+              <input
+                type="password"
+                inputMode="numeric"
+                className={inputClass}
+                placeholder={t("homePage.missionRequest.fields.pinPlaceholder")}
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                minLength={4}
+                required
+              />
+            </FormField>
+          </div>
+
+          <FormField label={t("homePage.missionRequest.fields.firstName")}>
+            <input
+              type="text"
+              className={inputClass}
+              placeholder={t("homePage.missionRequest.fields.firstNamePlaceholder")}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+            />
+          </FormField>
+
+          <FormField
+            label={t("homePage.missionRequest.fields.country")}
+            hint={t("homePage.missionRequest.identity.countryHint")}
+          >
+            <select
+              className={inputClass}
+              value={countryId}
+              onChange={(e) => setCountryId(e.target.value)}
+              disabled={loadingOptions}
+            >
+              <option value="">{t("homePage.missionRequest.fields.countryPlaceholder")}</option>
+              {countries.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </FormField>
+
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            loading={submitting}
+            disabled={loadingOptions}
+            className="w-full rounded-full sm:w-auto"
+          >
+            {submitting
+              ? t("homePage.missionRequest.submitting")
+              : t("homePage.missionRequest.submit")}
+          </Button>
         </div>
-
-        <div className="sm:col-span-2">
-          <label className={labelClass}>{t("homePage.missionRequest.fields.firstName")}</label>
-          <input
-            type="text"
-            className={inputClass}
-            placeholder={t("homePage.missionRequest.fields.firstNamePlaceholder")}
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-          />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label className={labelClass}>{t("homePage.missionRequest.fields.title")}</label>
-          <input
-            type="text"
-            className={inputClass}
-            placeholder={t("homePage.missionRequest.fields.titlePlaceholder")}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label className={labelClass}>{t("homePage.missionRequest.fields.description")}</label>
-          <textarea
-            className={`${inputClass} min-h-[88px]`}
-            placeholder={t("homePage.missionRequest.fields.descriptionPlaceholder")}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label className={labelClass}>{t("homePage.missionRequest.fields.address")}</label>
-          <LocationAutocompleteInput
-            className={inputClass}
-            placeholder={t("homePage.missionRequest.fields.addressPlaceholder")}
-            value={address}
-            onChange={(value) => {
-              setAddress(value);
-              setCoordinates(null);
-            }}
-            onPlaceSelected={({ address: resolvedAddress, latitude, longitude }) => {
-              setAddress(resolvedAddress);
-              setCoordinates({ latitude, longitude });
-            }}
-          />
-        </div>
-      </div>
-
-      <button
-        type="submit"
-        disabled={submitting || loadingOptions}
-        className="btn-primary mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm disabled:opacity-60 sm:w-auto"
-      >
-        {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
-        {submitting ? t("homePage.missionRequest.submitting") : t("homePage.missionRequest.submit")}
-      </button>
+      ) : null}
     </form>
   );
 }

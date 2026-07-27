@@ -2147,8 +2147,15 @@ const fr = {
         titlePlaceholder: "Ex : Fuite d'eau dans la cuisine",
         description: "Détails (optionnel)",
         descriptionPlaceholder: "Décrivez votre besoin plus précisément",
-        address: "Adresse ou lieu (optionnel)",
+        address: "Où doit avoir lieu la mission ? (optionnel)",
         addressPlaceholder: "Quartier, ville, point de repère",
+        addressHint:
+          "Peut être différent de là où vous êtes — utile pour une aide à distance (famille, bien, projet ailleurs).",
+      },
+      identity: {
+        title: "Vos coordonnées",
+        hint: "Pour vous envoyer le suivi de votre demande et créer votre espace client sécurisé.",
+        countryHint: "Utilisé pour votre compte — pas besoin que ce soit le pays de la mission.",
       },
       submit: "Envoyer ma demande",
       submitting: "Envoi en cours…",
