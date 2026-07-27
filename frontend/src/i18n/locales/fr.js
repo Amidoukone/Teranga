@@ -2210,6 +2210,7 @@ const fr = {
       next: "Suivant",
       confirm: "Confirmer la mission",
       submitting: "Création en cours…",
+      stepAnnouncement: "Étape {{current}} sur {{total}}",
     },
     category: {
       title: "Quel est votre besoin ?",

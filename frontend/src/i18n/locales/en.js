@@ -2199,6 +2199,7 @@ const en = {
       next: "Next",
       confirm: "Confirm mission",
       submitting: "Creating…",
+      stepAnnouncement: "Step {{current}} of {{total}}",
     },
     category: {
       title: "What do you need?",

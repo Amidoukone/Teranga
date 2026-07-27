@@ -7,7 +7,17 @@ export default function WizardProgress({ currentStep }) {
   const { t } = useTranslation();
 
   return (
-    <div className="mx-auto mb-6 flex max-w-xl items-center justify-between">
+    <div
+      role="progressbar"
+      aria-valuenow={currentStep}
+      aria-valuemin={1}
+      aria-valuemax={STEP_KEYS.length}
+      aria-label={t("missionCreation.wizard.stepAnnouncement", {
+        current: currentStep,
+        total: STEP_KEYS.length,
+      })}
+      className="mx-auto mb-6 flex max-w-xl items-center justify-between"
+    >
       {STEP_KEYS.map((key, index) => {
         const stepNumber = index + 1;
         const isDone = stepNumber < currentStep;
@@ -25,7 +35,7 @@ export default function WizardProgress({ currentStep }) {
                     : "border-border text-text-muted"
                 }`}
               >
-                {isDone ? <Check size={14} /> : stepNumber}
+                {isDone ? <Check size={14} aria-hidden="true" /> : stepNumber}
               </span>
               <span
                 className={`hidden text-[0.68rem] font-medium sm:block ${

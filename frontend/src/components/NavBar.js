@@ -12,7 +12,7 @@
 // - Aucune fonctionnalite supprimee
 // ============================================================================
 
-import { useEffect, useState, useCallback, useMemo, memo } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo, memo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { me, logout, getLocalUser, getToken, hasSessionHint } from "../services/auth";
 import { normalizeRole } from "../utils/roles";
@@ -58,6 +58,7 @@ import GeoSelector from "./GeoSelector";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { preloadRoute } from "../utils/routePreload";
 import { buildAuthFeedbackState } from "../utils/authFeedback";
+import useFocusTrap from "../hooks/useFocusTrap";
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 const AUTH_STORAGE_MODE = (process.env.REACT_APP_AUTH_STORAGE || "localstorage")
@@ -393,6 +394,27 @@ function NavBar() {
   // Desktop dropdowns
   const [openDesktopMore, setOpenDesktopMore] = useState(false);
   const [openUserMenu, setOpenUserMenu] = useState(false);
+
+  // Piège de focus clavier (Tab reste dans le menu ouvert, focus initial sur le
+  // premier item, focus restauré au déclencheur à la fermeture) — un par menu.
+  const desktopMoreMenuRef = useRef(null);
+  const userMenuRef = useRef(null);
+  const mobileMorePanelRef = useRef(null);
+  useFocusTrap({
+    active: openDesktopMore,
+    containerRef: desktopMoreMenuRef,
+    onEscape: () => setOpenDesktopMore(false),
+  });
+  useFocusTrap({
+    active: openUserMenu,
+    containerRef: userMenuRef,
+    onEscape: () => setOpenUserMenu(false),
+  });
+  useFocusTrap({
+    active: openMore,
+    containerRef: mobileMorePanelRef,
+    onEscape: () => setOpenMore(false),
+  });
   const [notificationSummary, setNotificationSummary] = useState({
     unread: 0,
     byProgress: {},
@@ -545,19 +567,6 @@ function NavBar() {
     setOpenDesktopMore(false);
     setOpenUserMenu(false);
   }, [location.pathname]);
-
-  // ESC closes dropdowns (pro UX)
-  useEffect(() => {
-    function onKeyDown(e) {
-      if (e.key === "Escape") {
-        setOpenMore(false);
-        setOpenDesktopMore(false);
-        setOpenUserMenu(false);
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
 
   useEffect(() => {
     if (typeof document === "undefined" || typeof window === "undefined") {
@@ -964,6 +973,7 @@ function NavBar() {
                       aria-hidden="true"
                     />
                     <motion.div
+                      ref={desktopMoreMenuRef}
                       id="desktop-more-menu"
                       initial={{ opacity: 0, y: 8, scale: 0.985 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1027,16 +1037,17 @@ function NavBar() {
                                           : "text-text-secondary group-hover:text-text-primary",
                                       ].join(" ")}
                                     >
-                                      <Icon size={16} />
+                                      <Icon size={16} aria-hidden="true" />
                                     </span>
                                   ) : null}
                                   <span className="flex-1">{l.label}</span>
                                   {active ? (
-                                    <Check size={16} className="text-primary" />
+                                    <Check size={16} className="text-primary" aria-hidden="true" />
                                   ) : (
                                     <ChevronRight
                                       size={15}
                                       className="text-text-muted transition-transform duration-150 group-hover:translate-x-0.5"
+                                      aria-hidden="true"
                                     />
                                   )}
                                 </Link>
@@ -1104,6 +1115,7 @@ function NavBar() {
                       aria-hidden="true"
                     />
                     <motion.div
+                      ref={userMenuRef}
                       id="user-menu"
                       initial={{ opacity: 0, y: 8, scale: 0.985 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1162,7 +1174,7 @@ function NavBar() {
                               </span>
                             </span>
                             <span className="mt-1 text-text-muted transition-transform duration-150 group-hover:translate-x-0.5">
-                              <ChevronRight size={15} />
+                              <ChevronRight size={15} aria-hidden="true" />
                             </span>
                           </Link>
                         </div>
@@ -1176,7 +1188,7 @@ function NavBar() {
                             role="menuitem"
                           >
                             <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-300 transition-colors duration-150 group-hover:bg-red-500/15">
-                              <LogOut size={16} />
+                              <LogOut size={16} aria-hidden="true" />
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block text-sm font-semibold text-text-primary">
@@ -1187,7 +1199,7 @@ function NavBar() {
                               </span>
                             </span>
                             <span className="text-red-500/80 transition-transform duration-150 group-hover:translate-x-0.5">
-                              <ChevronRight size={15} />
+                              <ChevronRight size={15} aria-hidden="true" />
                             </span>
                           </button>
                         </div>
@@ -1292,6 +1304,7 @@ function NavBar() {
             />
 
             <motion.div
+              ref={mobileMorePanelRef}
               id="navbar-more-panel"
               initial={{ opacity: 0, y: 80 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1378,16 +1391,17 @@ function NavBar() {
                                     : "text-text-secondary group-hover:text-text-primary",
                                 ].join(" ")}
                               >
-                                <Icon size={16} />
+                                <Icon size={16} aria-hidden="true" />
                               </span>
                             ) : null}
                             <span className="flex-1">{l.label}</span>
                             {active ? (
-                              <Check size={16} className="text-primary" />
+                              <Check size={16} className="text-primary" aria-hidden="true" />
                             ) : (
                               <ChevronRight
                                 size={15}
                                 className="text-text-muted transition-transform duration-150 group-hover:translate-x-0.5"
+                                aria-hidden="true"
                               />
                             )}
                           </Link>
@@ -1419,7 +1433,7 @@ function NavBar() {
                         </span>
                       </span>
                       <span className="mt-1 text-text-muted transition-transform duration-150 group-hover:translate-x-0.5">
-                        <ChevronRight size={15} />
+                        <ChevronRight size={15} aria-hidden="true" />
                       </span>
                     </Link>
                   </div>
@@ -1432,7 +1446,7 @@ function NavBar() {
                       aria-label={t("nav.logout")}
                     >
                       <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-300 transition-colors duration-150 group-hover:bg-red-500/15">
-                        <LogOut size={15} />
+                        <LogOut size={15} aria-hidden="true" />
                       </span>
                       <span className="min-w-0 flex-1 text-left">
                         <span className="block text-sm font-semibold text-text-primary">
@@ -1443,7 +1457,7 @@ function NavBar() {
                         </span>
                       </span>
                       <span className="text-red-500/80 transition-transform duration-150 group-hover:translate-x-0.5">
-                        <ChevronRight size={15} />
+                        <ChevronRight size={15} aria-hidden="true" />
                       </span>
                     </button>
                   </div>
