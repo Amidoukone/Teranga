@@ -265,6 +265,10 @@ export const PRODUCT_STATUSES = createLabelMap(
   PRODUCT_STATUSES_BASE
 );
 
+export function getStockTone(stock) {
+  return Number(stock) > 0 ? 'success' : 'error';
+}
+
 /**
  * IMPORTANT : Statuts de commande canoniques = EXACTEMENT ceux de la DB
  * Backend (ENUM): 'created','paid','processing','shipped','delivered','cancelled','refunded'

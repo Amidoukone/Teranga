@@ -5,17 +5,19 @@
 // + compat multi-pays / master (backend-driven)
 // ============================================================
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProducts } from '../services/products';
 import { getCategories } from '../services/categories';
 import { createOrder } from '../services/orders';
 import { me } from '../services/auth';
-import { formatCurrency } from '../utils/labels';
+import { formatCurrency, getStockTone } from '../utils/labels';
 import PaginationBar from '../components/PaginationBar';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
+import { Badge } from '../components/ui';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 /* ============================================================
    URLs API/fichiers (dev/prod).
@@ -126,6 +128,9 @@ export default function ProductCatalogPage() {
   // Lightbox premium
   const [previewProduct, setPreviewProduct] = useState(null);
   const [previewIndex, setPreviewIndex] = useState(0);
+
+  const orderModalRef = useRef(null);
+  const previewLightboxRef = useRef(null);
 
   // Filtres + tri
   const [search, setSearch] = useState('');
@@ -252,6 +257,18 @@ export default function ProductCatalogPage() {
     setPreviewProduct(null);
     setPreviewIndex(0);
   }
+
+  useFocusTrap({
+    active: creating && Boolean(selectedProduct),
+    containerRef: orderModalRef,
+    onEscape: () => setCreating(false),
+  });
+
+  useFocusTrap({
+    active: Boolean(previewProduct),
+    containerRef: previewLightboxRef,
+    onEscape: () => closePreview(),
+  });
 
   function goPrev(e) {
     if (e) e.stopPropagation();
@@ -422,11 +439,11 @@ export default function ProductCatalogPage() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4">
-        <div className="max-w-md w-full bg-surface-card border border-rose-500/30 shadow-xl rounded-3xl px-6 py-6">
-          <h1 className="text-lg font-bold text-rose-700 dark:text-rose-300 mb-2">
+        <div className="max-w-md w-full bg-surface-card border border-red-500/30 shadow-xl rounded-3xl px-6 py-6">
+          <h1 className="text-lg font-bold text-red-700 mb-2">
             {t('productCatalogPage.error.title')}
           </h1>
-          <p className="text-sm text-rose-700 dark:text-rose-300 mb-4 break-words">{error}</p>
+          <p className="text-sm text-red-700 mb-4 break-words">{error}</p>
           <p className="text-xs text-text-muted">
             {t('productCatalogPage.error.subtitle')}
           </p>
@@ -706,19 +723,13 @@ export default function ProductCatalogPage() {
                           <p className="text-[11px] uppercase text-text-muted">
                             {t('productCatalogPage.card.stockLabel')}
                           </p>
-                          <p
-                            className={`text-xs font-semibold ${
-                              p.stock > 0
-                                ? 'text-emerald-600'
-                                : 'text-rose-600'
-                            }`}
-                          >
+                          <Badge tone={getStockTone(p.stock)} className="text-[11px]">
                             {p.stock > 0
                               ? t('productCatalogPage.card.stockAvailable', {
                                   count: p.stock,
                                 })
                               : t('productCatalogPage.card.stockOut')}
-                          </p>
+                          </Badge>
                         </div>
                       )}
                     </div>
@@ -743,8 +754,20 @@ export default function ProductCatalogPage() {
             Contexte: catalogue des produits.
         ============================================================ */}
         {creating && selectedProduct && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 px-4">
-            <div className="relative w-full max-w-sm rounded-2xl border border-border bg-surface-card shadow-2xl">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 px-4"
+            onClick={() => setCreating(false)}
+          >
+            <div
+              ref={orderModalRef}
+              className="relative w-full max-w-sm rounded-2xl border border-border bg-surface-card shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-label={t('productCatalogPage.order.title', {
+                name: selectedProduct.name,
+              })}
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={() => setCreating(false)}
                 className="absolute top-3 right-3 text-text-muted hover:text-text-primary"
@@ -810,6 +833,7 @@ export default function ProductCatalogPage() {
 
           return (
             <div
+              ref={previewLightboxRef}
               className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4"
               onClick={closePreview}
               role="dialog"
