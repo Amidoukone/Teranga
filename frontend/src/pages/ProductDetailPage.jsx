@@ -7,12 +7,14 @@
 // ============================================================
 
 /* eslint-disable jsx-a11y/img-redundant-alt */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getProductById } from '../services/products';
-import { formatCurrency } from '../utils/labels';
+import { formatCurrency, getStockTone } from '../utils/labels';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
+import { Badge } from '../components/ui';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 /* ============================================================
    URLs API/fichiers (dev/prod).
@@ -102,6 +104,13 @@ export default function ProductDetailPage() {
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const lightboxRef = useRef(null);
+
+  useFocusTrap({
+    active: lightboxOpen,
+    containerRef: lightboxRef,
+    onEscape: () => setLightboxOpen(false),
+  });
 
   /* ============================================================
      Lightbox medias plein ecran.
@@ -171,8 +180,8 @@ export default function ProductDetailPage() {
   if (error) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-4">
-        <div className="max-w-md w-full bg-surface-card border border-rose-500/30 rounded-2xl shadow-lg p-6 text-center">
-          <p className="text-rose-700 dark:text-rose-300 text-base sm:text-lg mb-4 break-words">
+        <div className="max-w-md w-full bg-surface-card border border-red-500/30 rounded-2xl shadow-lg p-6 text-center">
+          <p className="text-red-700 text-base sm:text-lg mb-4 break-words">
             {error}
           </p>
 
@@ -400,17 +409,13 @@ export default function ProductDetailPage() {
                     <p className="text-[11px] uppercase text-text-muted">
                       {t('productDetailPage.info.stockLabel')}
                     </p>
-                    <p
-                      className={`text-sm font-semibold ${
-                        stock > 0 ? 'text-emerald-600' : 'text-rose-600'
-                      }`}
-                    >
+                    <Badge tone={getStockTone(stock)} className="text-xs">
                       {stock > 0
                         ? t('productDetailPage.info.stockAvailable', {
                             count: stock,
                           })
                         : t('productDetailPage.info.stockOut')}
-                    </p>
+                    </Badge>
                   </div>
                 )}
               </div>
@@ -459,6 +464,7 @@ export default function ProductDetailPage() {
       ============================================================ */}
       {lightboxOpen && hasImages && (
         <div
+          ref={lightboxRef}
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4"
           onClick={closeLightbox}
           role="dialog"
