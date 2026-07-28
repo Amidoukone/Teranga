@@ -484,6 +484,7 @@ export default function ProjectsPage() {
 
     return () => {
       isMounted.current = false;
+      initStartedRef.current = false;
     };
   }, [loadForUser, loadClients, loadAgents, navigate, t]);
 
