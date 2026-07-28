@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/img-redundant-alt */
 // frontend/src/pages/AdminProductsPage.jsx
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   getProducts,
   createProduct,
@@ -17,6 +17,7 @@ import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
+import useFocusTrap from "../hooks/useFocusTrap";
 
 /* ============================================================
    URLs API/fichiers (dev/prod).
@@ -235,6 +236,26 @@ export default function AdminProductsPage() {
       index: (lb.index + 1) % imgs.length,
     }));
   }
+
+  const lightboxRef = useRef(null);
+  useFocusTrap({
+    active: lightbox.open,
+    containerRef: lightboxRef,
+    onEscape: () => closeLightbox(),
+  });
+
+  useEffect(() => {
+    if (!lightbox.open) return;
+
+    function onKey(e) {
+      if (e.key === "ArrowRight") goNext();
+      if (e.key === "ArrowLeft") goPrev();
+    }
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lightbox.open, lightbox.index]);
 
   /* ============================================================
      INIT
@@ -1140,8 +1161,10 @@ export default function AdminProductsPage() {
       {lightbox.open && lightbox.product && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4 select-none">
           <div
+            ref={lightboxRef}
             className="relative bg-black rounded-2xl max-w-3xl w-full border border-border overflow-hidden"
             role="dialog"
+            aria-modal="true"
             aria-label={t("adminProductsPage.lightbox.ariaLabel")}
           >
             {/* Bouton fermer */}
