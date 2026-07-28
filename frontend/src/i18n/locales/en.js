@@ -70,8 +70,8 @@ const en = {
     },
   },
   footer: {
-    copyright:
-      "\u00A9 {{year}} <brand>Teranga Diaspora</brand>. All rights reserved.",
+    copyrightPrefix: "\u00A9 {{year}}",
+    copyrightSuffix: ". All rights reserved.",
     links: {
       helpSupport: "Help & Support",
       privacy: "Privacy",
@@ -1665,6 +1665,7 @@ const en = {
       typeUnknown: "Unknown type",
     },
     lightbox: {
+      ariaLabel: "Property photo preview",
       close: "Close preview",
       prev: "Previous image",
       next: "Next image",

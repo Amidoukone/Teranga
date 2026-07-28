@@ -5,7 +5,7 @@
 
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
-import { useTranslation, Trans } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 
 import NavBar from './components/NavBar';
 import Analytics from './components/Analytics';
@@ -939,11 +939,9 @@ export default function App() {
                   </Link>
                 </div>
                 <p className="max-w-full whitespace-nowrap text-xs sm:text-sm leading-none">
-                  <Trans
-                    i18nKey="footer.copyright"
-                    values={{ year: new Date().getFullYear() }}
-                    components={{ brand: <span className="font-semibold text-primary" /> }}
-                  />
+                  {t('footer.copyrightPrefix', { year: new Date().getFullYear() })}{' '}
+                  <span className="font-semibold text-primary">Teranga Diaspora</span>
+                  {t('footer.copyrightSuffix')}
                 </p>
               </div>
             </footer>
