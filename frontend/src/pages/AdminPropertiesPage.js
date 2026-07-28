@@ -7,7 +7,7 @@
 // 100% fonctionnel, aucune regression, meme logique, design modernise.
 // ============================================================================
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   getAllProperties,
@@ -20,6 +20,7 @@ import { me } from '../services/auth';
 import { normalizeRole } from '../utils/role';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 function normalizePath(path = '') {
   if (!path) return '';
@@ -242,12 +243,12 @@ export default function AdminPropertiesPage() {
     images: [],
     index: 0,
   });
+  const lightboxRef = useRef(null);
 
   useEffect(() => {
     if (!lightbox.open) return;
 
     function onKey(e) {
-      if (e.key === 'Escape') closeLightbox();
       if (e.key === 'ArrowRight') nextImage();
       if (e.key === 'ArrowLeft') prevImage();
     }
@@ -256,6 +257,12 @@ export default function AdminPropertiesPage() {
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lightbox.open, lightbox.index]);
+
+  useFocusTrap({
+    active: lightbox.open,
+    containerRef: lightboxRef,
+    onEscape: () => closeLightbox(),
+  });
 
   // ==========================================================================
   // Initialisation (auth + clients + biens)
@@ -870,7 +877,7 @@ export default function AdminPropertiesPage() {
                           key={`${mediaPath}-${i}`}
                           className={`relative w-20 h-20 border rounded-xl overflow-hidden ${
                             markedForRemoval
-                              ? 'border-red-400 opacity-60'
+                              ? 'border-red-500 opacity-60'
                               : 'border-border'
                           } bg-surface-main`}
                         >
@@ -1130,10 +1137,14 @@ export default function AdminPropertiesPage() {
         {/* LIGHTBOX */}
         {lightbox.open && (
           <div
+            ref={lightboxRef}
             className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
             onClick={(e) => {
               if (e.target === e.currentTarget) closeLightbox();
             }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('adminPropertiesPage.lightbox.ariaLabel')}
           >
             <button
               onClick={closeLightbox}
