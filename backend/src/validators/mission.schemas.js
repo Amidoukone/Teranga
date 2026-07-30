@@ -49,12 +49,16 @@ const createMissionSchema = Joi.object({
 });
 
 /**
- * Assignation manuelle d'un prestataire (docs/DEV_SPEC_TERANGA_v3.md section 4.2/3.3) — pas de
- * short-list/Distance Matrix ici, ça reste le moteur de matching automatique du Lot 4.
+ * Assignation manuelle (docs/DEV_SPEC_TERANGA_v3.md section 4.2/3.3) — pas de short-list/Distance
+ * Matrix ici, ça reste le moteur de matching automatique du Lot 4. `providerId` (exécutant filière)
+ * et `agentId` (superviseur, voir section 8 de ce chantier) sont indépendants : absent = ne pas
+ * toucher ce champ, `null` = désassigner, nombre = assigner/réassigner. Au moins l'un des deux doit
+ * être fourni.
  */
 const assignMissionSchema = Joi.object({
-  providerId: idSchema.required(),
-});
+  providerId: idSchema.allow(null),
+  agentId: idSchema.allow(null),
+}).or('providerId', 'agentId');
 
 /**
  * Transition de statut (section 2). Les permissions fines (qui peut déclencher quelle transition)

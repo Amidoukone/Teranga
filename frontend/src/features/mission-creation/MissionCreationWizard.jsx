@@ -146,6 +146,16 @@ export default function MissionCreationWizard() {
     setSavedLocationId(null);
   };
 
+  // Distinct de handleAddressChange (qui efface les coordonnées quand l'utilisateur tape un
+  // nouveau texte libre) : ici adresse ET coordonnées sont connues simultanément et cohérentes
+  // (géolocalisation + géocodage inverse côté LocationStep), donc posées ensemble sans s'effacer
+  // l'une l'autre.
+  const handleCurrentLocationResolved = ({ latitude, longitude, address: resolvedAddress }) => {
+    setCoordinates({ latitude, longitude });
+    setAddress(resolvedAddress || '');
+    setSavedLocationId(null);
+  };
+
   const resetWizard = () => {
     setStep(1);
     setCategory({ requestKind: null, tradeCategoryId: "", serviceType: "" });
@@ -177,8 +187,10 @@ export default function MissionCreationWizard() {
 
       if (savedLocationId) {
         payload.savedLocationId = savedLocationId;
-      } else if (address.trim()) {
-        payload.address = address.trim();
+      } else if (address.trim() || coordinates?.latitude != null) {
+        // Le clic "position actuelle"/dépose d'épingle pose des coordonnées sans forcément
+        // renseigner l'adresse — ne pas les perdre silencieusement au moment de l'envoi.
+        if (address.trim()) payload.address = address.trim();
         if (coordinates?.latitude != null) payload.latitude = coordinates.latitude;
         if (coordinates?.longitude != null) payload.longitude = coordinates.longitude;
       }
@@ -278,6 +290,7 @@ export default function MissionCreationWizard() {
           onAddressChange={handleAddressChange}
           onPlaceSelected={handlePlaceSelected}
           onMapPositionChange={handleMapPositionChange}
+          onCurrentLocationResolved={handleCurrentLocationResolved}
           savedLocations={savedLocations}
           loadingSavedLocations={loadingSavedLocations}
           onSelectSavedLocation={handleSelectSavedLocation}

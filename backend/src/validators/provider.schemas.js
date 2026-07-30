@@ -4,6 +4,7 @@ const Joi = require('joi');
 const { PROVIDER_STATUS_VALUES } = require('../constants/providerStatus');
 
 const createProviderSchema = Joi.object({
+  userId: Joi.number().integer().positive(),
   type: Joi.string().valid('independent', 'company').required(),
   legalName: Joi.string().trim().max(150).allow('', null),
   displayFirstName: Joi.string().trim().min(2).max(80).required(),

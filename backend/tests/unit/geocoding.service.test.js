@@ -1,6 +1,6 @@
 'use strict';
 
-const { geocodeAddress } = require('../../src/services/geocoding.service');
+const { geocodeAddress, reverseGeocode } = require('../../src/services/geocoding.service');
 
 describe('geocoding.service.geocodeAddress', () => {
   const originalFetch = global.fetch;
@@ -100,6 +100,67 @@ describe('geocoding.service.geocodeAddress', () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('network down'));
 
     const result = await geocodeAddress('Bamako');
+    expect(result).toBeNull();
+  });
+});
+
+describe('geocoding.service.reverseGeocode', () => {
+  const originalFetch = global.fetch;
+  const originalKey = process.env.GOOGLE_MAPS_SERVER_KEY;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    process.env.GOOGLE_MAPS_SERVER_KEY = originalKey;
+  });
+
+  test('returns null without throwing when no API key is configured', async () => {
+    delete process.env.GOOGLE_MAPS_SERVER_KEY;
+    const result = await reverseGeocode(12.6392, -8.0029);
+    expect(result).toBeNull();
+  });
+
+  test('returns null for non-finite coordinates without calling the API', async () => {
+    process.env.GOOGLE_MAPS_SERVER_KEY = 'test-key';
+    global.fetch = jest.fn();
+    const result = await reverseGeocode(NaN, undefined);
+    expect(result).toBeNull();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('parses a successful reverse-geocoding response into a formatted address', async () => {
+    process.env.GOOGLE_MAPS_SERVER_KEY = 'test-key';
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'OK',
+        results: [{ formatted_address: 'Al Abrar, Medersa Kairabougou, Bamako, Mali' }],
+      }),
+    });
+
+    const result = await reverseGeocode(12.575, -8.0673);
+    expect(result).toBe('Al Abrar, Medersa Kairabougou, Bamako, Mali');
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('latlng=12.575%2C-8.0673'),
+      expect.any(Object)
+    );
+  });
+
+  test('returns null when the API reports ZERO_RESULTS', async () => {
+    process.env.GOOGLE_MAPS_SERVER_KEY = 'test-key';
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'ZERO_RESULTS', results: [] }),
+    });
+
+    const result = await reverseGeocode(0, 0);
+    expect(result).toBeNull();
+  });
+
+  test('returns null when the HTTP call fails', async () => {
+    process.env.GOOGLE_MAPS_SERVER_KEY = 'test-key';
+    global.fetch = jest.fn().mockRejectedValue(new Error('network down'));
+
+    const result = await reverseGeocode(12.6392, -8.0029);
     expect(result).toBeNull();
   });
 });

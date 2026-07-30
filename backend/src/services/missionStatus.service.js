@@ -12,8 +12,11 @@ const { sequelize, MissionStatusHistory } = require('../../models');
 const TRANSITIONS = {
   CREATED: ['SEARCHING_EXECUTOR'],
   SEARCHING_EXECUTOR: ['ASSIGNED', 'NO_EXECUTOR_FOUND'],
-  ASSIGNED: ['EN_ROUTE', 'CANCELLED_BY_CLIENT'],
-  EN_ROUTE: ['ON_SITE', 'CANCELLED_BY_CLIENT'],
+  // 'SEARCHING_EXECUTOR' ajouté depuis ASSIGNED/EN_ROUTE (additif) : seule arête retour, pour
+  // journaliser la désassignation complète d'un exécutant (admin), voir mission.controller.js
+  // exports.assign.
+  ASSIGNED: ['EN_ROUTE', 'CANCELLED_BY_CLIENT', 'SEARCHING_EXECUTOR'],
+  EN_ROUTE: ['ON_SITE', 'CANCELLED_BY_CLIENT', 'SEARCHING_EXECUTOR'],
   ON_SITE: ['IN_PROGRESS'],
   IN_PROGRESS: ['COMPLETED'],
   COMPLETED: ['VALIDATED', 'DISPUTED'],

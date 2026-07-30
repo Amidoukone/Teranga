@@ -4,8 +4,9 @@
 // section 4.1 + 3.3). Distinct de missionRequest.controller.js (point d'entrée invité de la
 // homepage, Lot 2) : ici pas de bootstrap de compte, le client a déjà une session.
 
+const { Op } = require('sequelize');
 const { Service, User, TradeCategory, SavedLocation, Evidence, Provider, ExecutorLocation } = require('../../models');
-const { geocodeAddress } = require('../services/geocoding.service');
+const { geocodeAddress, reverseGeocode } = require('../services/geocoding.service');
 const { getDistanceMatrix } = require('../services/distanceMatrix.service');
 const { estimateMission } = require('../services/priceEstimate.service');
 const {
@@ -16,6 +17,7 @@ const { notifyServiceCreated, notifyServiceStatusUpdate } = require('../services
 const mediaUpload = require('../services/mediaUpload.service');
 const { canAccessGeoResource } = require('../utils/geoScope');
 const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
+const { getPagination } = require('../utils/pagination');
 const logger = require('../utils/logger');
 
 const MISSION_ATTACHMENT_LOCAL_FALLBACK_ENV_VAR = 'MISSION_ATTACHMENT_ALLOW_LOCAL_FALLBACK';
@@ -61,6 +63,29 @@ async function resolveTradeCategory(executionType, tradeCategoryId) {
   }
   return tradeCategory;
 }
+
+/* ============================================================
+   GET /api/v1/missions/reverse-geocode — coordonnées -> adresse lisible, utilisé par l'étape
+   Lieu du wizard (bouton "Utiliser ma position actuelle") : la clé navigateur est restreinte à
+   Maps JavaScript/Places (jamais Geocoding), ce géocodage doit donc passer par le backend
+   (clé serveur). Best-effort : ne bloque jamais la capture des coordonnées côté client.
+============================================================ */
+exports.reverseGeocodeLocation = async (req, res) => {
+  try {
+    const latitude = Number(req.query.latitude);
+    const longitude = Number(req.query.longitude);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return res.status(400).json({ error: 'latitude/longitude invalides' });
+    }
+
+    const address = await reverseGeocode(latitude, longitude);
+    return res.json({ address });
+  } catch (e) {
+    logger.error({ err: e }, 'mission.reverseGeocodeLocation.failed');
+    return res.status(500).json({ error: 'Erreur lors du géocodage inverse' });
+  }
+};
 
 /* ============================================================
    POST /api/v1/missions/estimate — aucune écriture DB
@@ -228,7 +253,7 @@ exports.create = async (req, res) => {
       address: trimmedAddress,
       latitude,
       longitude,
-      budget: null,
+      budget: estimate.basePrice ?? estimate.minPrice ?? null,
       currency: estimate.currency,
       status: 'created',
       countryId: missionGeoScope.countryId,
@@ -381,14 +406,32 @@ exports.addAttachments = async (req, res) => {
   }
 };
 
+async function findActiveProviderForTradeCategory(providerId, tradeCategoryId) {
+  return Provider.findOne({
+    where: { id: providerId, status: 'active' },
+    include: [
+      {
+        model: TradeCategory,
+        as: 'tradeCategories',
+        where: { id: tradeCategoryId },
+        required: true,
+        attributes: [],
+      },
+    ],
+  });
+}
+
 /* ============================================================
-   POST /api/v1/missions/:id/assign — assignation manuelle (admin), section 4.2/3.3.
-   Pas de short-list ni de calcul Distance Matrix ici : le moteur de matching automatique
-   reste le Lot 4 (docs/DEV_SPEC_TERANGA_v3.md section 3.4/section 6).
+   POST /api/v1/missions/:id/assign — assignation/réassignation/désassignation (admin), section
+   4.2/3.3 + extension "superviseur agent" (voir docs internes de ce chantier — un agent peut être
+   posé en plus d'un prestataire sur une mission filière, sans jamais piloter la machine à états :
+   voir exports.updateStatus). Body : { providerId?, agentId? }, chaque clé indépendante — absente
+   = inchangé, null = désassigner, nombre = assigner/réassigner. Pas de short-list ni de calcul
+   Distance Matrix ici : le moteur de matching automatique reste le Lot 4 (section 3.4/section 6).
 ============================================================ */
 exports.assign = async (req, res) => {
   try {
-    const { providerId } = req.body;
+    const { providerId, agentId } = req.body;
 
     let service = await Service.findByPk(req.params.id);
     if (!service) return res.status(404).json({ error: 'Mission introuvable' });
@@ -397,55 +440,105 @@ exports.assign = async (req, res) => {
       return res.status(403).json({ error: 'Mission hors scope géographique' });
     }
 
-    if (!['CREATED', 'SEARCHING_EXECUTOR'].includes(service.missionStatus)) {
+    if (!service.missionStatus) {
       return res.status(400).json({
-        error: "Cette mission ne peut pas être assignée dans son état actuel",
+        error: 'Cette mission utilise le flux classique agent (voir /services/assign)',
       });
     }
 
-    const provider = await Provider.findOne({
-      where: { id: providerId, status: 'active' },
-      include: [
-        {
-          model: TradeCategory,
-          as: 'tradeCategories',
-          where: { id: service.tradeCategoryId },
-          required: true,
-          attributes: [],
-        },
-      ],
-    });
-    if (!provider) {
-      return res.status(400).json({
-        error: 'Prestataire invalide, inactif, ou ne couvrant pas cette filière',
-      });
+    let directUpdates = {};
+    let shouldNotify = false;
+
+    // --- Agent superviseur : jamais un moteur de statut, modifiable à tout stade. ---
+    if (agentId !== undefined) {
+      if (agentId === null) {
+        directUpdates.agentId = null;
+      } else {
+        const agent = await User.findByPk(agentId);
+        if (!agent || agent.role !== 'agent') {
+          return res.status(400).json({ error: "agentId invalide : ce n'est pas un agent" });
+        }
+        if (!canAccessGeoResource(service, agent)) {
+          return res.status(403).json({ error: 'Agent hors scope géographique' });
+        }
+        directUpdates.agentId = agent.id;
+      }
+      shouldNotify = true;
     }
 
-    if (service.missionStatus === 'CREATED') {
-      service = await transitionMissionStatus({
+    // --- Prestataire : exécutant, pilote la machine à états. ---
+    if (providerId !== undefined) {
+      if (providerId === null) {
+        if (['CREATED', 'SEARCHING_EXECUTOR'].includes(service.missionStatus)) {
+          // Déjà sans prestataire — no-op sur ce champ.
+        } else if (['ASSIGNED', 'EN_ROUTE'].includes(service.missionStatus)) {
+          service = await transitionMissionStatus({
+            service,
+            toStatus: 'SEARCHING_EXECUTOR',
+            actorType: 'admin',
+            actorId: req.user.id,
+            extraFields: { providerId: null, ...directUpdates },
+          });
+          directUpdates = {};
+          shouldNotify = true;
+        } else {
+          return res.status(400).json({
+            error:
+              'Impossible de désassigner à ce stade, réassignez directement un autre prestataire',
+          });
+        }
+      } else {
+        const provider = await findActiveProviderForTradeCategory(providerId, service.tradeCategoryId);
+        if (!provider) {
+          return res.status(400).json({
+            error: 'Prestataire invalide, inactif, ou ne couvrant pas cette filière',
+          });
+        }
+
+        if (['CREATED', 'SEARCHING_EXECUTOR'].includes(service.missionStatus)) {
+          if (service.missionStatus === 'CREATED') {
+            service = await transitionMissionStatus({
+              service,
+              toStatus: 'SEARCHING_EXECUTOR',
+              actorType: 'system',
+              actorId: null,
+            });
+          }
+          service = await transitionMissionStatus({
+            service,
+            toStatus: 'ASSIGNED',
+            actorType: 'admin',
+            actorId: req.user.id,
+            extraFields: { providerId: provider.id, ...directUpdates },
+          });
+          directUpdates = {};
+        } else if (['ASSIGNED', 'EN_ROUTE', 'ON_SITE', 'IN_PROGRESS'].includes(service.missionStatus)) {
+          // Réassignation vers un autre exécutant : pas de transition d'état, un nouvel exécutant
+          // prend la suite immédiatement.
+          directUpdates.providerId = provider.id;
+        } else {
+          return res.status(400).json({
+            error: 'Cette mission ne peut pas être (ré)assignée dans son état actuel',
+          });
+        }
+        shouldNotify = true;
+      }
+    }
+
+    if (Object.keys(directUpdates).length > 0) {
+      await service.update(directUpdates);
+    }
+
+    if (shouldNotify) {
+      await notifyServiceStatusUpdate({
+        actorId: req.user.id,
         service,
-        toStatus: 'SEARCHING_EXECUTOR',
-        actorType: 'system',
-        actorId: null,
+        title: MISSION_STATUS_LABELS[service.missionStatus] || 'Mission mise à jour',
+        status: service.status,
       });
     }
 
-    service = await transitionMissionStatus({
-      service,
-      toStatus: 'ASSIGNED',
-      actorType: 'admin',
-      actorId: req.user.id,
-      extraFields: { providerId: provider.id },
-    });
-
-    await notifyServiceStatusUpdate({
-      actorId: req.user.id,
-      service,
-      title: MISSION_STATUS_LABELS.ASSIGNED,
-      status: service.status,
-    });
-
-    return res.status(200).json({ message: 'Prestataire assigné', mission: service });
+    return res.status(200).json({ message: 'Assignation mise à jour', mission: service });
   } catch (e) {
     if (e.status) return res.status(e.status).json({ error: e.message });
     logger.error({ err: e }, 'mission.assign.failed');
@@ -471,8 +564,14 @@ exports.updateStatus = async (req, res) => {
       allowed =
         String(service.clientId) === String(req.user.id) && CLIENT_TRIGGERABLE.includes(toStatus);
     } else if (req.user.role === 'agent') {
+      // Supervision passive (voir exports.assign) : un agent posé comme superviseur sur une
+      // mission filière (executionType='provider') ne pilote jamais la machine à états — seul
+      // le prestataire assigné le peut. Un agent ne déclenche des transitions que sur les
+      // missions dont il est réellement l'exécutant (executionType='agent').
       allowed =
-        String(service.agentId) === String(req.user.id) && EXECUTOR_TRIGGERABLE.includes(toStatus);
+        service.executionType === 'agent' &&
+        String(service.agentId) === String(req.user.id) &&
+        EXECUTOR_TRIGGERABLE.includes(toStatus);
     } else if (req.user.role === 'provider') {
       const provider = await findProviderForUser(req.user.id);
       allowed =
@@ -567,7 +666,27 @@ exports.track = async (req, res) => {
   try {
     const service = await Service.findByPk(req.params.id);
     if (!service) return res.status(404).json({ error: 'Mission introuvable' });
-    if (String(service.clientId) !== String(req.user.id)) {
+
+    let isExecutor = false;
+
+    if (req.user.role === 'client') {
+      if (String(service.clientId) !== String(req.user.id)) {
+        return res.status(403).json({ error: 'Accès interdit pour cette mission' });
+      }
+    } else if (req.user.role === 'agent') {
+      if (String(service.agentId) !== String(req.user.id)) {
+        return res.status(403).json({ error: 'Accès interdit pour cette mission' });
+      }
+      // Supervision passive (voir exports.updateStatus) : un agent ne pilote la mission que s'il
+      // en est réellement l'exécutant (executionType='agent'), sinon simple lecture superviseur.
+      isExecutor = service.executionType === 'agent';
+    } else if (req.user.role === 'provider') {
+      const provider = await findProviderForUser(req.user.id);
+      if (!provider || String(service.providerId) !== String(provider.id)) {
+        return res.status(403).json({ error: 'Accès interdit pour cette mission' });
+      }
+      isExecutor = true;
+    } else {
       return res.status(403).json({ error: 'Accès interdit pour cette mission' });
     }
 
@@ -595,6 +714,11 @@ exports.track = async (req, res) => {
       missionStatus: service.missionStatus,
       status: service.status,
       title: service.title,
+      budget: service.budget,
+      currency: service.currency,
+      executionType: service.executionType,
+      viewerRole: req.user.role,
+      isExecutor,
       destination:
         Number.isFinite(destLat) && Number.isFinite(destLng)
           ? { latitude: destLat, longitude: destLng, address: service.address }
@@ -611,5 +735,46 @@ exports.track = async (req, res) => {
   } catch (e) {
     logger.error({ err: e }, 'mission.track.failed');
     return res.status(500).json({ error: 'Erreur lors de la récupération du suivi' });
+  }
+};
+
+/* ============================================================
+   GET /api/v1/missions/mine — missions filière assignées au compte connecté (agent superviseur
+   ou exécutant, provider exécutant). Les missions classiques (executionType='agent',
+   missionStatus toujours null) restent sur /services/agent/services — non dupliquées ici.
+============================================================ */
+exports.mine = async (req, res) => {
+  try {
+    const { limit, offset, page } = getPagination(req);
+
+    let where;
+    if (req.user.role === 'agent') {
+      where = { agentId: req.user.id, missionStatus: { [Op.ne]: null } };
+    } else if (req.user.role === 'provider') {
+      const provider = await findProviderForUser(req.user.id);
+      if (!provider) {
+        return res.json({ missions: [], pagination: { page, limit, offset, total: 0 } });
+      }
+      where = { providerId: provider.id };
+    } else {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
+    const { rows, count } = await Service.findAndCountAll({
+      where,
+      include: [
+        { model: User, as: 'client', attributes: ['id', 'firstName', 'lastName', 'phone'] },
+        { model: TradeCategory, as: 'tradeCategory', attributes: ['id', 'name'] },
+      ],
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset,
+      distinct: true,
+    });
+
+    return res.json({ missions: rows, pagination: { page, limit, offset, total: count } });
+  } catch (e) {
+    logger.error({ err: e }, 'mission.mine.failed');
+    return res.status(500).json({ error: 'Erreur lors de la récupération de vos missions' });
   }
 };

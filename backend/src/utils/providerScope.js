@@ -117,4 +117,4 @@ async function getManageableProviderFilter(user) {
   return { deny: true };
 }
 
-module.exports = { canManageProvider, getManageableProviderFilter };
+module.exports = { canManageProvider, getManageableProviderFilter, isProviderInGeoScope };

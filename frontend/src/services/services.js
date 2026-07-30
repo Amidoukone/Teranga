@@ -41,6 +41,15 @@ export async function getAllServicesAdmin(params = {}) {
 }
 
 /**
+ * Detail d'un service (client proprietaire, agent assigne, admin)
+ * GET /api/services/:id
+ */
+export async function getServiceById(id) {
+  const { data } = await api.get(`/services/${id}`);
+  return data.service;
+}
+
+/**
  * Creer un service (client ou admin)
  * POST /api/services
  */

@@ -9,6 +9,7 @@ const fr = {
     agent: "AGENT",
     client: "CLIENT",
     master: "MASTER",
+    provider: "PRESTATAIRE",
   },
   nav: {
     login: "Connexion",
@@ -38,6 +39,8 @@ const fr = {
     adminServices: "Pilotage services",
     metrics: "Pilotage",
     agents: "Agents",
+    providers: "Prestataires",
+    myMissions: "Mes missions",
     users: "Utilisateurs",
     clientProperties: "Biens des clients",
     missionPricing: "Tarification des missions",
@@ -270,6 +273,14 @@ const fr = {
     loading: "Chargement du tableau de bord...",
     greeting: "Bonjour, {{name}}",
     roleLabel: "Rôle :",
+    provider: {
+      greeting: "Bonjour, {{name}}",
+      subtitle: "Voici un apercu de vos missions assignees.",
+      totalLabel: "Missions au total",
+      activeLabel: "En cours",
+      completedLabel: "Terminees",
+      cta: "Voir mes missions",
+    },
     careFallbackName: "Nous",
     careLine: "{{firstName}}, nous veillons sur tout ce qui compte pour vous.",
     balance: {
@@ -349,6 +360,7 @@ const fr = {
         adminServices: "Gestion services",
         users: "Utilisateurs",
         agents: "Agents",
+        providers: "Prestataires",
         properties: "Biens",
         projects: "Projets",
         orders: "Commandes",
@@ -1540,6 +1552,8 @@ const fr = {
     loadedCount_other: "{{count}} services charg\u00E9s pour cette page",
     alerts: {
       assignError: "Erreur lors de l\u2019assignation",
+      budgetUpdateError: "Erreur lors de la mise \u00e0 jour du prix",
+      budgetUpdateSuccess: "Prix mis \u00e0 jour",
     },
     table: {
       headers: {
@@ -1555,18 +1569,120 @@ const fr = {
       emptyValue: "\u2014",
       unassigned: "Non assign\u00E9",
       statusUnknown: "Statut inconnu",
+      editBudget: "Modifier",
+      saveBudget: "Enregistrer",
+      cancelBudget: "Annuler",
+      budgetPlaceholder: "Prix",
     },
     assign: {
       placeholder: "\u2014 Choisir un agent \u2014",
       locked: "R\u00E9assignation d\u00E9sactiv\u00E9e (service cl\u00F4tur\u00E9).",
       providerPlaceholder: "\u2014 Choisir un prestataire \u2014",
+      providerUnassign: "\u2014 D\u00e9sassigner le prestataire \u2014",
       providerLocked: "Assignation indisponible pour ce statut ({{status}}).",
+      supervisorPlaceholder: "\u2014 Assigner un agent superviseur \u2014",
+      supervisorUnassign: "\u2014 Retirer le superviseur \u2014",
     },
     pagination: {
       prev: "\u2190 Pr\u00E9c\u00E9dent",
       next: "Suivant \u2192",
       offsetLabel: "Offset :",
       limitLabel: "Limite :",
+    },
+  },
+  adminProvidersPage: {
+    title: "Gestion des prestataires",
+    subtitle:
+      "Créez des comptes entreprise ou ouvrier indépendant, faites progresser leur statut d'onboarding, puis assignez-leur des missions filière depuis la page Services.",
+    loading: "Chargement…",
+    loadingProviders: "Chargement des prestataires…",
+    badges: {
+      master: "MASTER",
+      admin: "ADMINISTRATEUR",
+    },
+    account: {
+      title: "1. Compte du prestataire",
+      hint: "Identifiants de connexion (email/mot de passe) que le prestataire utilisera pour se connecter à Teranga.",
+    },
+    profile: {
+      title: "2. Fiche prestataire",
+      hint: "Informations professionnelles internes, jamais affichées telles quelles au client.",
+    },
+    form: {
+      firstNameLabel: "Prénom *",
+      lastNameLabel: "Nom *",
+      emailLabel: "Email (compte) *",
+      passwordLabel: "Mot de passe (≥ 6) *",
+      phoneLabel: "Téléphone (compte)",
+      countryLabel: "Pays (ISO2) *",
+      typeLabel: "Type de prestataire *",
+      typeIndependent: "Ouvrier indépendant",
+      typeCompany: "Entreprise",
+      legalNameLabel: "Raison sociale *",
+      rccmNumberLabel: "Numéro RCCM *",
+      displayFirstNameLabel: "Nom affiché au client *",
+      businessPhoneLabel: "Téléphone professionnel *",
+      businessEmailLabel: "Email professionnel",
+      hasLiabilityInsuranceLabel: "Assurance responsabilité civile",
+      insuranceExpiresAtLabel: "Expiration de l'assurance",
+      tradeCategoriesLabel: "Filières couvertes *",
+      tradeCategoriesEmpty: "Aucune filière active pour le moment.",
+    },
+    validation: {
+      firstNameRequired: "Prénom requis",
+      lastNameRequired: "Nom requis",
+      emailInvalid: "Email invalide",
+      passwordRequired: "Mot de passe requis (6 caractères min.)",
+      countryInvalid: "Code pays ISO2 requis (ex : ML, FR)",
+      displayFirstNameRequired: "Nom affiché requis",
+      businessPhoneRequired: "Téléphone professionnel requis",
+      legalNameRequired: "Raison sociale requise pour une entreprise",
+      rccmNumberRequired: "Numéro RCCM requis pour une entreprise",
+      tradeCategoriesRequired: "Sélectionnez au moins une filière",
+    },
+    buttons: {
+      refresh: "Rafraîchir",
+      creating: "Création…",
+      createProvider: "Créer le prestataire",
+    },
+    alerts: {
+      createSuccess: "Prestataire créé avec succès",
+      createUserError: "Erreur lors de la création du compte",
+      createProfileError:
+        "Compte créé (id {{userId}}) mais la fiche prestataire a échoué : {{error}}",
+      statusUpdateSuccess: "Statut mis à jour",
+      statusUpdateError: "Erreur lors du changement de statut",
+    },
+    filters: {
+      statusLabel: "Statut",
+      statusAll: "Tous les statuts",
+    },
+    table: {
+      title: "Liste des prestataires",
+      empty: "Aucun prestataire pour ce filtre.",
+      headers: {
+        name: "Nom",
+        account: "Compte",
+        tradeCategories: "Filières",
+        status: "Statut",
+        actions: "Actions",
+      },
+      emptyValue: "—",
+      typeIndependent: "Indépendant",
+      typeCompany: "Entreprise",
+    },
+    status: {
+      pending: "En attente",
+      probation: "Probation",
+      active: "Actif",
+      suspended: "Suspendu",
+      revoked: "Révoqué",
+    },
+    actions: {
+      toProbation: "Passer en probation",
+      toActive: "Activer",
+      toSuspended: "Suspendre",
+      toRevoked: "Révoquer",
     },
   },
   adminPropertiesPage: {
@@ -2222,6 +2338,10 @@ const fr = {
       subtitle: "Indiquez une adresse, déposez une épingle sur la carte, ou choisissez un lieu enregistré. Ce champ reste optionnel pour les besoins sans lieu (paiement, transfert d'argent...).",
       mapUnavailable: "Carte indisponible pour le moment — utilisez le champ adresse ci-dessus.",
       mapHint: "Cliquez sur la carte ou faites glisser le repère pour ajuster la position exacte.",
+      useCurrentLocation: "Utiliser ma position actuelle",
+      locating: "Localisation en cours...",
+      geolocationUnsupported: "La géolocalisation n'est pas disponible sur cet appareil.",
+      geolocationError: "Impossible d'obtenir votre position. Vérifiez les autorisations de localisation.",
       savedLocationsTitle: "Vos lieux enregistrés",
       addressLabel: "Adresse ou lieu",
       addressPlaceholder: "Quartier, ville, point de repère",
@@ -2339,6 +2459,14 @@ const fr = {
     validateCta: "Valider la mission",
     cancelCta: "Annuler la mission",
     backToServices: "Retour à mes services",
+    backToMyMissions: "Retour à mes missions",
+    supervisorReadOnly: "Vous supervisez cette mission — seul le prestataire assigné peut faire progresser son statut.",
+    executorCta: {
+      EN_ROUTE: "Je suis en route",
+      ON_SITE: "Je suis arrivé sur place",
+      IN_PROGRESS: "Démarrer la mission",
+      COMPLETED: "Marquer comme terminée",
+    },
     errors: {
       load: "Impossible de charger le suivi de cette mission.",
       action: "Une erreur est survenue. Réessayez.",
@@ -2359,6 +2487,42 @@ const fr = {
       RESOLVED_REFUND: "Litige résolu (remboursement)",
       RESOLVED_REDO: "Litige résolu (reprise de la mission)",
       RESOLVED_CLOSED: "Litige clôturé",
+    },
+  },
+  myMissionsPage: {
+    title: "Mes missions",
+    subtitle: "Missions filière qui vous sont assignées — exécution ou supervision.",
+    loading: "Chargement…",
+    empty: "Aucune mission assignée pour le moment.",
+    missionFallback: "Mission #{{id}}",
+    tradeCategoryUnknown: "Filière inconnue",
+    clientLabel: "Client :",
+    buttons: {
+      refresh: "Rafraîchir",
+    },
+    errors: {
+      load: "Impossible de charger vos missions.",
+    },
+  },
+  serviceDetailPage: {
+    loading: "Chargement…",
+    fallbackTitle: "Service #{{id}}",
+    typeUnknown: "Type inconnu",
+    backToServices: "Retour aux services",
+    labels: {
+      address: "Adresse",
+      budget: "Budget",
+      client: "Client",
+      agent: "Agent",
+      createdAt: "Créé le",
+    },
+    buttons: {
+      viewTasks: "Voir les tâches",
+      viewTransactions: "Voir les transactions",
+    },
+    errors: {
+      load: "Impossible de charger ce service.",
+      forbidden: "Vous n'avez pas accès à ce service.",
     },
   },
   legalPage: {
@@ -3307,6 +3471,12 @@ const fr = {
       missionTracking: {
         title: "Suivi de mission",
       },
+      myMissions: {
+        title: "Mes missions",
+      },
+      serviceDetail: {
+        title: "Detail du service",
+      },
       serviceTasks: {
         title: "T\u00E2ches du service",
       },
@@ -3360,6 +3530,9 @@ const fr = {
       },
       adminAgents: {
         title: "Agents",
+      },
+      adminProviders: {
+        title: "Prestataires",
       },
       adminServices: {
         title: "Gestion des services",

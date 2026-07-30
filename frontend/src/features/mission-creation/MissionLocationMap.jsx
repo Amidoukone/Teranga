@@ -23,6 +23,14 @@ export default function MissionLocationMap({ latitude, longitude, onPositionChan
   const markerRef = useRef(null);
   const onPositionChangeRef = useRef(onPositionChange);
   onPositionChangeRef.current = onPositionChange;
+  // Le SDK Google Maps se charge de façon asynchrone (loadGoogleMaps()) ; si la position
+  // change (ex. géolocalisation) avant que ce chargement se termine, l'effet d'initialisation
+  // ci-dessous ne doit pas utiliser les valeurs `latitude`/`longitude` figées au tout premier
+  // rendu (fermeture de useEffect à deps []) mais bien les valeurs les plus récentes au moment
+  // où la carte est réellement créée — sinon la carte s'initialise sur Bamako par défaut, sans
+  // repère, alors que la position a bien été obtenue.
+  const positionRef = useRef({ latitude, longitude });
+  positionRef.current = { latitude, longitude };
   const [mapsAvailable, setMapsAvailable] = useState(null);
 
   useEffect(() => {
@@ -36,8 +44,9 @@ export default function MissionLocationMap({ latitude, longitude, onPositionChan
       }
       setMapsAvailable(true);
 
-      const hasPosition = Number.isFinite(latitude) && Number.isFinite(longitude);
-      const center = hasPosition ? { lat: latitude, lng: longitude } : DEFAULT_CENTER;
+      const { latitude: initialLatitude, longitude: initialLongitude } = positionRef.current;
+      const hasPosition = Number.isFinite(initialLatitude) && Number.isFinite(initialLongitude);
+      const center = hasPosition ? { lat: initialLatitude, lng: initialLongitude } : DEFAULT_CENTER;
 
       const map = new maps.Map(containerRef.current, {
         center,

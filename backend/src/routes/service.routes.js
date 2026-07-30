@@ -91,4 +91,11 @@ router.post('/agent/services/:id/start', auth, requireRoles('agent'), useHandler
 // 🔹 Agent termine un service
 router.post('/agent/services/:id/complete', auth, requireRoles('agent'), useHandler('completeService'));
 
+/* ======================================================
+   🔎 DÉTAIL (client propriétaire, agent assigné, admin)
+   Placé en dernier : "/:id" est un segment générique qui capturerait "/me" s'il était
+   enregistré avant lui.
+====================================================== */
+router.get('/:id', auth, requireRoles('client', 'agent', 'admin'), useHandler('getById'));
+
 module.exports = router;

@@ -51,6 +51,7 @@ import {
   Check,
   Bell,
   Banknote,
+  Briefcase,
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -151,10 +152,23 @@ const ROLE_LINKS = {
     { path: "/activities", labelKey: "nav.activities" },
     { path: "/projects", labelKey: "nav.projects" },
     { path: "/agent/services", labelKey: "nav.services" },
+    { path: "/missions/mine", labelKey: "nav.myMissions" },
     { path: "/tasks", labelKey: "nav.tasks" },
     { path: "/transactions", labelKey: "nav.transactions" },
     { path: "/finance", labelKey: "nav.finance" },
     ...COMMON_COMMERCE,
+    SETTINGS_LINK,
+    ACCOUNT_SECURITY_LINK,
+    HELP_SUPPORT_LINK,
+    PRIVACY_LINK,
+    TERMS_LINK,
+    LEGAL_LINK,
+  ],
+  provider: [
+    { path: "/dashboard", labelKey: "nav.dashboard" },
+    { path: "/notifications", labelKey: "nav.notifications" },
+    { path: "/activities", labelKey: "nav.activities" },
+    { path: "/missions/mine", labelKey: "nav.myMissions" },
     SETTINGS_LINK,
     ACCOUNT_SECURITY_LINK,
     HELP_SUPPORT_LINK,
@@ -176,6 +190,7 @@ const ROLE_LINKS = {
     { path: "/admin/services", labelKey: "nav.adminServices" },
     { path: "/admin/metrics", labelKey: "nav.metrics" },
     { path: "/admin/agents", labelKey: "nav.agents" },
+    { path: "/admin/providers", labelKey: "nav.providers" },
     { path: "/admin/users", labelKey: "nav.users" },
     { path: "/admin/properties", labelKey: "nav.clientProperties" },
     { path: "/admin/mission-pricing", labelKey: "nav.missionPricing" },
@@ -208,6 +223,10 @@ const BOTTOM_LINKS = {
     { key: "agentServices", path: "/agent/services", labelKey: "nav.services", icon: Wrench },
     { key: "transactions", path: "/transactions", labelKey: "nav.flow", icon: ReceiptEuro },
   ],
+  provider: [
+    { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
+    { key: "myMissions", path: "/missions/mine", labelKey: "nav.myMissions", icon: Briefcase },
+  ],
   admin: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
     { key: "adminServices", path: "/admin/services", labelKey: "nav.services", icon: BarChart3 },
@@ -227,6 +246,7 @@ const ICON_BY_PATH_PREFIX = [
   { prefix: "/properties", icon: Building2 },
   { prefix: "/services", icon: Wrench },
   { prefix: "/agent/services", icon: Wrench },
+  { prefix: "/missions/mine", icon: Briefcase },
   { prefix: "/tasks", icon: ClipboardList },
   { prefix: "/transactions", icon: ReceiptEuro },
   { prefix: "/finance", icon: CreditCard },
@@ -242,6 +262,7 @@ const ICON_BY_PATH_PREFIX = [
   { prefix: "/admin/services", icon: BarChart3 },
   { prefix: "/admin/metrics", icon: BarChart3 },
   { prefix: "/admin/agents", icon: Users },
+  { prefix: "/admin/providers", icon: Briefcase },
   { prefix: "/admin/users", icon: UserCog },
   { prefix: "/admin/properties", icon: Building2 },
   { prefix: "/admin/onboarding", icon: ShieldCheck },
@@ -288,6 +309,7 @@ function buildSections(role, links, t) {
     ...byPrefix("/properties"),
     ...byPrefix("/services"),
     ...byPrefix("/tasks"),
+    ...(role === "provider" || role === "agent" ? byPrefix("/missions/mine") : []),
   ]);
 
   pushSection(t("nav.sections.finance"), [
@@ -304,6 +326,7 @@ function buildSections(role, links, t) {
       byPath("/admin/services"),
       byPath("/admin/metrics"),
       byPath("/admin/agents"),
+      byPath("/admin/providers"),
       byPath("/admin/users"),
       byPath("/admin/properties"),
       byPath("/admin/catalog/categories"),
@@ -652,6 +675,7 @@ function NavBar() {
     if (isAdmin && !isGlobalAdmin) return t("roles.master");
     if (role === "admin") return t("roles.admin");
     if (role === "agent") return t("roles.agent");
+    if (role === "provider") return t("roles.provider");
     return t("roles.client");
   }, [user, isAdmin, isGlobalAdmin, role, t]);
 

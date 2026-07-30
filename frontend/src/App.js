@@ -45,6 +45,8 @@ const ServicesPage = lazy(() => import('./pages/ServicesPage'));
 const MissionCreatePage = lazy(() => import('./pages/MissionCreatePage'));
 const MissionPricingAdminPage = lazy(() => import('./pages/MissionPricingAdminPage'));
 const MissionTrackingPage = lazy(() => import('./pages/MissionTrackingPage'));
+const MyMissionsPage = lazy(() => import('./pages/MyMissionsPage'));
+const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'));
 const ServiceTasksPage = lazy(() => import('./pages/ServiceTasksPage'));
 const ServiceTransactionsPage = lazy(() => import('./pages/ServiceTransactionsPage'));
 const TasksPage = lazy(() => import('./pages/TasksPage'));
@@ -64,6 +66,7 @@ const AgentServicesPage = lazy(() => import('./pages/AgentServicesPage'));
 
 // Contexte: routage et guardes d'acces.
 const AdminAgentsPage = lazy(() => import('./pages/AdminAgentsPage'));
+const AdminProvidersPage = lazy(() => import('./pages/AdminProvidersPage'));
 const AdminServicesPage = lazy(() => import('./pages/AdminServicesPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AdminPropertiesPage = lazy(() => import('./pages/AdminPropertiesPage'));
@@ -593,6 +596,32 @@ export default function App() {
             />
 
             <Route
+              path="/missions/mine"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['agent', 'provider']}>
+                    <>
+                      <SetSeo title={t('seo.pages.myMissions.title')} />
+                      <MyMissionsPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/services/:id"
+              element={
+                <RequireAuth>
+                  <>
+                    <SetSeo title={t('seo.pages.serviceDetail.title')} />
+                    <ServiceDetailPage />
+                  </>
+                </RequireAuth>
+              }
+            />
+
+            <Route
               path="/services/:id/tasks"
               element={
                 <RequireAuth>
@@ -823,6 +852,20 @@ export default function App() {
                     <>
                       <SetSeo title={t('seo.pages.adminAgents.title')} />
                       <AdminAgentsPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/admin/providers"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['admin']}>
+                    <>
+                      <SetSeo title={t('seo.pages.adminProviders.title')} />
+                      <AdminProvidersPage />
                     </>
                   </RequireRole>
                 </RequireAuth>

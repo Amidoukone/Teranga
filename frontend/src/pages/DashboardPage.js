@@ -35,6 +35,7 @@ import {
   getAllServicesAdmin,
   getAgentServices,
 } from '../services/services';
+import { getMyMissions } from '../services/missions';
 import {
   getTransactions,
   getFinancialSummary,
@@ -117,6 +118,11 @@ export default function DashboardPage() {
 
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [providerMissionSummary, setProviderMissionSummary] = useState({
+    total: 0,
+    active: 0,
+    completed: 0,
+  });
 
   /* ---------------------------------------------------------------------- */
   /* INITIALISATION                                                       */
@@ -148,6 +154,28 @@ export default function DashboardPage() {
     setStatsLoading(true);
     try {
       const role = normalizeRole(u.role);
+
+      // Portail prestataire : périmètre volontairement restreint aux missions (voir plan
+      // "Portail prestataire") — pas de finance/propriétés/tâches/projets/commandes pour ce rôle,
+      // donc pas la peine d'appeler getDashboardSummary()/les modules legacy pour ce cas.
+      if (role === 'provider') {
+        try {
+          const data = await getMyMissions();
+          const missions = data?.missions || [];
+          const active = missions.filter((m) =>
+            ['ASSIGNED', 'EN_ROUTE', 'ON_SITE', 'IN_PROGRESS'].includes(m.missionStatus)
+          ).length;
+          const completed = missions.filter((m) =>
+            ['COMPLETED', 'VALIDATED', 'CLOSED'].includes(m.missionStatus)
+          ).length;
+          setProviderMissionSummary({ total: missions.length, active, completed });
+        } catch (err) {
+          console.error('DashboardPage load provider missions error:', err);
+          setProviderMissionSummary({ total: 0, active: 0, completed: 0 });
+        }
+        return;
+      }
+
       const showPropertiesModule = role !== 'agent';
 
       try {
@@ -378,6 +406,62 @@ export default function DashboardPage() {
   }
 
   const roleKey = normalizeRole(user.role);
+
+  // Portail prestataire : bloc autonome, volontairement séparé du tableau de bord
+  // admin/client/agent (finance/modules hors périmètre pour ce rôle — voir plan "Portail
+  // prestataire"). Ne réutilise pas FinanceWidget/ModuleCard.
+  if (roleKey === 'provider') {
+    const providerFirstName = user.firstName || user.phone || user.email || '';
+    return (
+      <div className="app-page-wrap">
+        <div className="mx-auto max-w-4xl rounded-3xl border border-border/70 bg-surface-card/92 px-4 py-6 shadow-2xl shadow-slate-300/20 dark:shadow-black/30 sm:px-6 sm:py-8 lg:px-8 space-y-6">
+          <div>
+            <p className="page-kicker">{t('roles.provider')}</p>
+            <h1 className="app-page-headline">
+              {t('dashboard.provider.greeting', { name: providerFirstName })}
+            </h1>
+            <p className="mt-1 text-sm text-text-secondary">{t('dashboard.provider.subtitle')}</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="rounded-2xl border border-border/70 bg-surface-main/60 p-5">
+              <div className="text-xs font-medium uppercase tracking-wide text-text-muted">
+                {t('dashboard.provider.totalLabel')}
+              </div>
+              <div className="mt-1 text-2xl font-semibold text-text-primary">
+                {statsLoading ? '…' : providerMissionSummary.total}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-surface-main/60 p-5">
+              <div className="text-xs font-medium uppercase tracking-wide text-text-muted">
+                {t('dashboard.provider.activeLabel')}
+              </div>
+              <div className="mt-1 text-2xl font-semibold text-text-primary">
+                {statsLoading ? '…' : providerMissionSummary.active}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-surface-main/60 p-5">
+              <div className="text-xs font-medium uppercase tracking-wide text-text-muted">
+                {t('dashboard.provider.completedLabel')}
+              </div>
+              <div className="mt-1 text-2xl font-semibold text-text-primary">
+                {statsLoading ? '…' : providerMissionSummary.completed}
+              </div>
+            </div>
+          </div>
+
+          <Link
+            to="/missions/mine"
+            className="app-btn-primary inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium shadow-sm"
+          >
+            <Briefcase size={16} />
+            {t('dashboard.provider.cta')}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const isGlobalAdmin = isGlobalAdminUser(user);
   const isMaster = isMasterUser(user);
   const isPositiveBalance = stats.balance >= 0;
@@ -754,6 +838,11 @@ export default function DashboardPage() {
                       to="/admin/agents"
                       label={t("dashboard.quickAccess.admin.agents")}
                       icon={UserCog}
+                    />
+                    <QuickLink
+                      to="/admin/providers"
+                      label={t("dashboard.quickAccess.admin.providers")}
+                      icon={Briefcase}
                     />
                     <QuickLink
                       to="/properties"

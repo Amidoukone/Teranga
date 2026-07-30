@@ -37,9 +37,13 @@ export function loadGoogleMaps() {
 
     const script = document.createElement('script');
     script.id = SCRIPT_ID;
+    // Pas de `loading=async` : ce mode exige d'appeler google.maps.importLibrary()
+    // pour peupler google.maps.Map/Marker, alors que MissionLocationMap.jsx,
+    // MissionTrackingMap.jsx et LocationAutocompleteInput.jsx utilisent le style
+    // classique (`new maps.Map(...)`) qui suppose un namespace déjà rempli au chargement.
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
       apiKey
-    )}&libraries=places&loading=async`;
+    )}&libraries=places`;
     script.async = true;
     script.defer = true;
     script.onload = () => resolve(window.google?.maps || null);

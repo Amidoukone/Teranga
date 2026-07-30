@@ -9,6 +9,7 @@ const en = {
     agent: "AGENT",
     client: "CLIENT",
     master: "MASTER",
+    provider: "PROVIDER",
   },
   nav: {
     login: "Sign in",
@@ -38,6 +39,8 @@ const en = {
     adminServices: "Service management",
     metrics: "Monitoring",
     agents: "Agents",
+    providers: "Providers",
+    myMissions: "My missions",
     users: "Users",
     clientProperties: "Client properties",
     missionPricing: "Mission pricing",
@@ -267,6 +270,14 @@ const en = {
     loading: "Loading dashboard…",
     greeting: "Hello, {{name}}",
     roleLabel: "Role:",
+    provider: {
+      greeting: "Hello, {{name}}",
+      subtitle: "Here is an overview of your assigned missions.",
+      totalLabel: "Total missions",
+      activeLabel: "Active",
+      completedLabel: "Completed",
+      cta: "View my missions",
+    },
     careFallbackName: "We",
     careLine: "{{firstName}}, we’re watching over what matters to you.",
     balance: {
@@ -347,6 +358,7 @@ const en = {
         adminServices: "Service management",
         users: "Users",
         agents: "Agents",
+        providers: "Providers",
         properties: "Properties",
         projects: "Projects",
         orders: "Orders",
@@ -1535,6 +1547,8 @@ const en = {
     loadedCount_other: "{{count}} services loaded for this page",
     alerts: {
       assignError: "Error during assignment",
+      budgetUpdateError: "Error while updating the price",
+      budgetUpdateSuccess: "Price updated",
     },
     table: {
       headers: {
@@ -1550,18 +1564,120 @@ const en = {
       emptyValue: "—",
       unassigned: "Unassigned",
       statusUnknown: "Unknown status",
+      editBudget: "Edit",
+      saveBudget: "Save",
+      cancelBudget: "Cancel",
+      budgetPlaceholder: "Price",
     },
     assign: {
       placeholder: "— Choose an agent —",
       locked: "Reassignment disabled (service closed).",
       providerPlaceholder: "— Choose a provider —",
+      providerUnassign: "— Unassign the provider —",
       providerLocked: "Assignment unavailable for this status ({{status}}).",
+      supervisorPlaceholder: "— Assign a supervising agent —",
+      supervisorUnassign: "— Remove the supervisor —",
     },
     pagination: {
       prev: "← Previous",
       next: "Next →",
       offsetLabel: "Offset:",
       limitLabel: "Limit:",
+    },
+  },
+  adminProvidersPage: {
+    title: "Provider management",
+    subtitle:
+      "Create company or independent-worker accounts, progress their onboarding status, then assign them trade missions from the Services page.",
+    loading: "Loading…",
+    loadingProviders: "Loading providers…",
+    badges: {
+      master: "MASTER",
+      admin: "ADMINISTRATOR",
+    },
+    account: {
+      title: "1. Provider account",
+      hint: "Login credentials (email/password) the provider will use to sign in to Teranga.",
+    },
+    profile: {
+      title: "2. Provider profile",
+      hint: "Internal professional information, never shown as-is to the client.",
+    },
+    form: {
+      firstNameLabel: "First name *",
+      lastNameLabel: "Last name *",
+      emailLabel: "Email (account) *",
+      passwordLabel: "Password (≥ 6) *",
+      phoneLabel: "Phone (account)",
+      countryLabel: "Country (ISO2) *",
+      typeLabel: "Provider type *",
+      typeIndependent: "Independent worker",
+      typeCompany: "Company",
+      legalNameLabel: "Legal name *",
+      rccmNumberLabel: "RCCM number *",
+      displayFirstNameLabel: "Name shown to client *",
+      businessPhoneLabel: "Business phone *",
+      businessEmailLabel: "Business email",
+      hasLiabilityInsuranceLabel: "Liability insurance",
+      insuranceExpiresAtLabel: "Insurance expiry",
+      tradeCategoriesLabel: "Covered trade categories *",
+      tradeCategoriesEmpty: "No active trade category yet.",
+    },
+    validation: {
+      firstNameRequired: "First name is required",
+      lastNameRequired: "Last name is required",
+      emailInvalid: "Invalid email",
+      passwordRequired: "Password required (min. 6 characters).",
+      countryInvalid: "ISO2 country code required (e.g., ML, FR)",
+      displayFirstNameRequired: "Display name is required",
+      businessPhoneRequired: "Business phone is required",
+      legalNameRequired: "Legal name is required for a company",
+      rccmNumberRequired: "RCCM number is required for a company",
+      tradeCategoriesRequired: "Select at least one trade category",
+    },
+    buttons: {
+      refresh: "Refresh",
+      creating: "Creating…",
+      createProvider: "Create provider",
+    },
+    alerts: {
+      createSuccess: "Provider created successfully",
+      createUserError: "Error creating the account",
+      createProfileError:
+        "Account created (id {{userId}}) but the provider profile failed: {{error}}",
+      statusUpdateSuccess: "Status updated",
+      statusUpdateError: "Error updating status",
+    },
+    filters: {
+      statusLabel: "Status",
+      statusAll: "All statuses",
+    },
+    table: {
+      title: "Provider list",
+      empty: "No providers for this filter.",
+      headers: {
+        name: "Name",
+        account: "Account",
+        tradeCategories: "Trade categories",
+        status: "Status",
+        actions: "Actions",
+      },
+      emptyValue: "—",
+      typeIndependent: "Independent",
+      typeCompany: "Company",
+    },
+    status: {
+      pending: "Pending",
+      probation: "Probation",
+      active: "Active",
+      suspended: "Suspended",
+      revoked: "Revoked",
+    },
+    actions: {
+      toProbation: "Move to probation",
+      toActive: "Activate",
+      toSuspended: "Suspend",
+      toRevoked: "Revoke",
     },
   },
   adminPropertiesPage: {
@@ -2211,6 +2327,10 @@ const en = {
       subtitle: "Enter an address, drop a pin on the map, or pick a saved location. This stays optional for needs with no location (payment, money transfer...).",
       mapUnavailable: "Map unavailable right now — use the address field above.",
       mapHint: "Click on the map or drag the pin to fine-tune the exact position.",
+      useCurrentLocation: "Use my current location",
+      locating: "Locating...",
+      geolocationUnsupported: "Geolocation isn't available on this device.",
+      geolocationError: "Couldn't get your position. Check your location permissions.",
       savedLocationsTitle: "Your saved locations",
       addressLabel: "Address or location",
       addressPlaceholder: "Neighborhood, city, landmark",
@@ -2328,6 +2448,14 @@ const en = {
     validateCta: "Validate the mission",
     cancelCta: "Cancel the mission",
     backToServices: "Back to my services",
+    backToMyMissions: "Back to my missions",
+    supervisorReadOnly: "You are supervising this mission — only the assigned provider can move its status forward.",
+    executorCta: {
+      EN_ROUTE: "I'm on my way",
+      ON_SITE: "I've arrived on site",
+      IN_PROGRESS: "Start the mission",
+      COMPLETED: "Mark as completed",
+    },
     errors: {
       load: "Could not load this mission's tracking.",
       action: "Something went wrong. Please try again.",
@@ -2348,6 +2476,42 @@ const en = {
       RESOLVED_REFUND: "Dispute resolved (refund)",
       RESOLVED_REDO: "Dispute resolved (redo)",
       RESOLVED_CLOSED: "Dispute closed",
+    },
+  },
+  myMissionsPage: {
+    title: "My missions",
+    subtitle: "Trade missions assigned to you — execution or supervision.",
+    loading: "Loading…",
+    empty: "No mission assigned yet.",
+    missionFallback: "Mission #{{id}}",
+    tradeCategoryUnknown: "Unknown trade category",
+    clientLabel: "Client:",
+    buttons: {
+      refresh: "Refresh",
+    },
+    errors: {
+      load: "Unable to load your missions.",
+    },
+  },
+  serviceDetailPage: {
+    loading: "Loading…",
+    fallbackTitle: "Service #{{id}}",
+    typeUnknown: "Unknown type",
+    backToServices: "Back to services",
+    labels: {
+      address: "Address",
+      budget: "Budget",
+      client: "Client",
+      agent: "Agent",
+      createdAt: "Created on",
+    },
+    buttons: {
+      viewTasks: "View tasks",
+      viewTransactions: "View transactions",
+    },
+    errors: {
+      load: "Unable to load this service.",
+      forbidden: "You don't have access to this service.",
     },
   },
   legalPage: {
@@ -3289,6 +3453,12 @@ const en = {
       missionTracking: {
         title: "Mission tracking",
       },
+      myMissions: {
+        title: "My missions",
+      },
+      serviceDetail: {
+        title: "Service detail",
+      },
       serviceTasks: {
         title: "Service tasks",
       },
@@ -3342,6 +3512,9 @@ const en = {
       },
       adminAgents: {
         title: "Agents",
+      },
+      adminProviders: {
+        title: "Providers",
       },
       adminServices: {
         title: "Service management",

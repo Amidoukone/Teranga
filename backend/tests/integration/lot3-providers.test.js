@@ -268,6 +268,101 @@ describe('Lot 3 — Teranga Pro (providers, trade-categories, onboarding)', () =
     expect(contractRes.body.contract.providerId).toBe(providerId);
   });
 
+  test('a global admin can onboard a provider on behalf of a provider-role account', async () => {
+    if (!dbReady) return;
+    const country = await makeCountry();
+    const tc = await makeTradeCategory();
+
+    const { user: providerUser } = await makeUser({
+      emailPrefix: 'admin_onboard',
+      role: 'provider',
+      countryId: country.id,
+    });
+    const { user: globalAdmin, password: globalAdminPassword } = await makeUser({
+      emailPrefix: 'global_admin',
+      role: 'admin',
+    });
+    const { token: adminToken } = await loginAndGetToken(globalAdmin.email, globalAdminPassword);
+
+    const res = await request(app)
+      .post('/api/v1/providers')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(
+        providerPayload({
+          userId: providerUser.id,
+          countryCode: country.isoCode,
+          tradeCategoryIds: [tc.id],
+        })
+      );
+
+    expect(res.status).toBe(201);
+    expect(res.body.provider.userId).toBe(providerUser.id);
+    created.providerIds.push(res.body.provider.id);
+  });
+
+  test('admin onboarding a provider without userId, or targeting a non-provider account, is rejected', async () => {
+    if (!dbReady) return;
+    const country = await makeCountry();
+    const tc = await makeTradeCategory();
+
+    const { user: clientUser } = await makeUser({ emailPrefix: 'not_provider', role: 'client', countryId: country.id });
+    const { user: globalAdmin, password: globalAdminPassword } = await makeUser({
+      emailPrefix: 'global_admin2',
+      role: 'admin',
+    });
+    const { token: adminToken } = await loginAndGetToken(globalAdmin.email, globalAdminPassword);
+
+    const missingUserId = await request(app)
+      .post('/api/v1/providers')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(providerPayload({ countryCode: country.isoCode, tradeCategoryIds: [tc.id] }));
+    expect(missingUserId.status).toBe(400);
+
+    const wrongRole = await request(app)
+      .post('/api/v1/providers')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(
+        providerPayload({
+          userId: clientUser.id,
+          countryCode: country.isoCode,
+          tradeCategoryIds: [tc.id],
+        })
+      );
+    expect(wrongRole.status).toBe(400);
+  });
+
+  test('a country-scoped admin cannot onboard a provider outside their own country', async () => {
+    if (!dbReady) return;
+    const providerCountry = await makeCountry();
+    const otherCountry = await makeCountry();
+    const tc = await makeTradeCategory();
+
+    const { user: providerUser } = await makeUser({
+      emailPrefix: 'scoped_onboard',
+      role: 'provider',
+      countryId: providerCountry.id,
+    });
+    const { user: scopedAdmin, password: scopedAdminPassword } = await makeUser({
+      emailPrefix: 'scoped_admin2',
+      role: 'admin',
+      countryId: otherCountry.id,
+    });
+    const { token: scopedAdminToken } = await loginAndGetToken(scopedAdmin.email, scopedAdminPassword);
+
+    const res = await request(app)
+      .post('/api/v1/providers')
+      .set('Authorization', `Bearer ${scopedAdminToken}`)
+      .send(
+        providerPayload({
+          userId: providerUser.id,
+          countryCode: providerCountry.isoCode,
+          tradeCategoryIds: [tc.id],
+        })
+      );
+
+    expect(res.status).toBe(403);
+  });
+
   test('a country-scoped admin from a different country cannot manage the provider', async () => {
     if (!dbReady) return;
     const providerCountry = await makeCountry();

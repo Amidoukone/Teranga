@@ -16,6 +16,22 @@ export async function estimateMission(payload) {
 }
 
 /**
+ * GET /api/v1/missions/reverse-geocode — coordonnées -> adresse lisible (bouton "Utiliser ma
+ * position actuelle" de l'étape Lieu). Passe par le backend (clé serveur) : la clé navigateur
+ * est restreinte à Maps JavaScript/Places, jamais Geocoding. Retourne `null` en best-effort.
+ */
+export async function reverseGeocodeLocation({ latitude, longitude }) {
+  try {
+    const { data } = await api.get('/v1/missions/reverse-geocode', {
+      params: { latitude, longitude },
+    });
+    return data?.address || null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+/**
  * POST /api/v1/missions — crée la mission guidée.
  */
 export async function createMission(payload) {
@@ -60,10 +76,23 @@ export async function updateMissionStatus(missionId, toStatus) {
 }
 
 /**
- * POST /api/v1/missions/:id/assign — assignation manuelle d'un prestataire (admin), section 4.2.
- * Pas de short-list/auto-matching ici (Lot 4).
+ * POST /api/v1/missions/:id/assign — assignation/réassignation/désassignation (admin), section
+ * 4.2 + superviseur agent. `providerId`/`agentId` indépendants : omis = inchangé, `null` =
+ * désassigner, nombre = assigner/réassigner. Pas de short-list/auto-matching ici (Lot 4).
  */
-export async function assignMissionProvider(missionId, providerId) {
-  const { data } = await api.post(`/v1/missions/${missionId}/assign`, { providerId });
+export async function updateMissionAssignment(missionId, { providerId, agentId } = {}) {
+  const payload = {};
+  if (providerId !== undefined) payload.providerId = providerId;
+  if (agentId !== undefined) payload.agentId = agentId;
+  const { data } = await api.post(`/v1/missions/${missionId}/assign`, payload);
+  return data;
+}
+
+/**
+ * GET /api/v1/missions/mine — missions filière assignées au compte connecté (agent superviseur ou
+ * exécutant, provider exécutant). Les missions classiques agent restent sur getAgentServices().
+ */
+export async function getMyMissions(params = {}) {
+  const { data } = await api.get('/v1/missions/mine', { params });
   return data;
 }

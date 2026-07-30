@@ -2,7 +2,12 @@
 
 const { Provider, ProviderContract, TradeCategory, User } = require('../../models');
 const { getPagination } = require('../utils/pagination');
-const { canManageProvider, getManageableProviderFilter } = require('../utils/providerScope');
+const {
+  canManageProvider,
+  getManageableProviderFilter,
+  isProviderInGeoScope,
+} = require('../utils/providerScope');
+const { isGlobalAdmin } = require('../utils/geoScope');
 const {
   PROVIDER_STATUS_VALUES,
   isValidProviderStatusTransition,
@@ -33,14 +38,47 @@ function findProviderById(id) {
 ============================================================ */
 exports.create = async (req, res) => {
   try {
-    if (req.user?.role !== 'provider') {
+    let targetUserId;
+
+    if (req.user?.role === 'provider') {
+      // Auto-candidature (13.5) : le compte crée sa propre fiche.
+      targetUserId = req.user.id;
+    } else if (req.user?.role === 'admin') {
+      // Onboarding par un admin/master au nom d'un compte déjà créé avec le
+      // rôle 'provider' (entreprise ou ouvrier indépendant recruté directement
+      // par Teranga plutôt qu'auto-candidat).
+      targetUserId = Number(req.body.userId);
+      if (!targetUserId) {
+        return res.status(400).json({
+          error: "userId requis : créer d'abord le compte avec le rôle 'provider'",
+        });
+      }
+
+      const targetUser = await User.findByPk(targetUserId);
+      if (!targetUser || targetUser.role !== 'provider') {
+        return res.status(400).json({
+          error: "Le compte cible doit exister avec le rôle 'provider'",
+        });
+      }
+
+      if (!isGlobalAdmin(req.user)) {
+        const inScope = await isProviderInGeoScope(req.user, {
+          countryCode: req.body.countryCode,
+        });
+        if (!inScope) {
+          return res.status(403).json({
+            error: 'Pays hors du périmètre géographique de cet administrateur',
+          });
+        }
+      }
+    } else {
       return res.status(403).json({
         error:
-          "Seul un compte avec le rôle 'provider' peut déposer une candidature prestataire",
+          "Seul un compte avec le rôle 'provider', ou un admin au nom d'un tel compte, peut créer un profil prestataire",
       });
     }
 
-    const existing = await Provider.findOne({ where: { userId: req.user.id } });
+    const existing = await Provider.findOne({ where: { userId: targetUserId } });
     if (existing) {
       return res.status(409).json({ error: 'Un profil prestataire existe déjà pour ce compte' });
     }
@@ -76,7 +114,7 @@ exports.create = async (req, res) => {
     }
 
     const provider = await Provider.create({
-      userId: req.user.id,
+      userId: targetUserId,
       type,
       legalName: legalName || null,
       displayFirstName,
@@ -121,7 +159,10 @@ exports.list = async (req, res) => {
 
     if (filter.countryCodes) where.countryCode = filter.countryCodes;
 
-    const include = [{ model: TradeCategory, as: 'tradeCategories', through: { attributes: [] } }];
+    const include = [
+      { model: TradeCategory, as: 'tradeCategories', through: { attributes: [] } },
+      { model: User, as: 'user', attributes: ['id', 'email', 'phone', 'role'] },
+    ];
     if (filter.tradeCategoryIds) {
       include[0].where = { id: filter.tradeCategoryIds };
       include[0].required = true;

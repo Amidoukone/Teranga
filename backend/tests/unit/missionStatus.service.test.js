@@ -45,6 +45,15 @@ describe('missionStatus.service', () => {
     expect(isValidTransition('CLOSED', 'CREATED')).toBe(false);
   });
 
+  test('isValidTransition allows the additive "unassign" edge back to SEARCHING_EXECUTOR', () => {
+    expect(isValidTransition('ASSIGNED', 'SEARCHING_EXECUTOR')).toBe(true);
+    expect(isValidTransition('EN_ROUTE', 'SEARCHING_EXECUTOR')).toBe(true);
+    // Pas d'arête retour depuis ON_SITE/IN_PROGRESS — désassignation refusée à ce stade
+    // (voir mission.controller.js exports.assign).
+    expect(isValidTransition('ON_SITE', 'SEARCHING_EXECUTOR')).toBe(false);
+    expect(isValidTransition('IN_PROGRESS', 'SEARCHING_EXECUTOR')).toBe(false);
+  });
+
   test('every transition target is a real key in LEGACY_STATUS_MAP or an untouched branch', () => {
     const untouched = [
       'CANCELLED_BY_CLIENT',

@@ -25,6 +25,8 @@ export function normalizeRole(rawRole) {
   const r = String(rawRole).toLowerCase();
   if (r.includes('admin')) return 'admin';
   if (r.includes('agent')) return 'agent';
+  if (r.includes('category_manager')) return 'category_manager';
+  if (r.includes('provider')) return 'provider';
   return 'client';
 }
 

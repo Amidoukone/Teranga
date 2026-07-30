@@ -6,7 +6,8 @@ import { normalizeRole, isMasterUser } from '../utils/role';
 import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 import { listProviders } from '../services/providers';
-import { assignMissionProvider } from '../services/missions';
+import { updateMissionAssignment } from '../services/missions';
+import { updateService } from '../services/services';
 import {
   AdminField,
   AdminFilterBar,
@@ -25,6 +26,11 @@ export default function AdminServicesPage() {
   const [agents, setAgents] = useState([]);
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Édition inline du prix (budget) d'une mission par l'admin.
+  const [editingBudgetId, setEditingBudgetId] = useState(null);
+  const [budgetDraft, setBudgetDraft] = useState('');
+  const [savingBudget, setSavingBudget] = useState(false);
 
   // Filtres
   const [status, setStatus] = useState('all');
@@ -108,12 +114,24 @@ export default function AdminServicesPage() {
   }, []);
 
   async function handleAssignProvider(serviceId, providerId) {
-    if (!providerId) return;
     try {
-      await assignMissionProvider(serviceId, providerId);
+      await updateMissionAssignment(serviceId, { providerId: providerId || null });
       await loadServices();
     } catch (e) {
       console.error('AdminServicesPage provider assignment error:', e);
+      notify(
+        e?.response?.data?.error ||
+          t('adminServicesPage.alerts.assignError')
+      );
+    }
+  }
+
+  async function handleAssignSupervisor(serviceId, agentId) {
+    try {
+      await updateMissionAssignment(serviceId, { agentId: agentId || null });
+      await loadServices();
+    } catch (e) {
+      console.error('AdminServicesPage supervisor assignment error:', e);
       notify(
         e?.response?.data?.error ||
           t('adminServicesPage.alerts.assignError')
@@ -133,8 +151,13 @@ export default function AdminServicesPage() {
     return providers.filter((p) => isProviderAssignableToMission(service, p));
   }
 
-  function canAssignProvider(service) {
-    return ['CREATED', 'SEARCHING_EXECUTOR'].includes(service.missionStatus);
+  // Statuts non terminaux : le backend reste l'arbitre final des règles fines (ex. désassignation
+  // refusée après ON_SITE) — ce gate ne fait qu'éviter d'afficher les contrôles sur une mission
+  // manifestement close.
+  function canModifyProviderSlot(service) {
+    return ['CREATED', 'SEARCHING_EXECUTOR', 'ASSIGNED', 'EN_ROUTE', 'ON_SITE', 'IN_PROGRESS'].includes(
+      service.missionStatus
+    );
   }
 
   /* ============================================================
@@ -204,6 +227,35 @@ export default function AdminServicesPage() {
   /* ============================================================
      Roles admin/master et perimetre d'acces.
   ============================================================ */
+  function startEditBudget(service) {
+    setEditingBudgetId(service.id);
+    setBudgetDraft(service.budget === null || service.budget === undefined ? '' : String(service.budget));
+  }
+
+  function cancelEditBudget() {
+    setEditingBudgetId(null);
+    setBudgetDraft('');
+  }
+
+  async function saveBudget(serviceId) {
+    setSavingBudget(true);
+    try {
+      await updateService(serviceId, { budget: budgetDraft });
+      await loadServices();
+      setEditingBudgetId(null);
+      setBudgetDraft('');
+      notify.success(t('adminServicesPage.alerts.budgetUpdateSuccess'));
+    } catch (e) {
+      console.error('AdminServicesPage budget update error:', e);
+      notify(
+        e?.response?.data?.error ||
+          t('adminServicesPage.alerts.budgetUpdateError')
+      );
+    } finally {
+      setSavingBudget(false);
+    }
+  }
+
   function displayUser(u) {
     if (!u) return t('adminServicesPage.table.emptyValue');
     const name = [u.firstName, u.lastName].filter(Boolean).join(' ');
@@ -472,12 +524,53 @@ export default function AdminServicesPage() {
                         {s.title ||
                           t('adminServicesPage.table.serviceFallback', { id: s.id })}
                       </div>
-                      <div className="mt-0.5 text-xs text-text-muted">
-                        {s.type || t('adminServicesPage.table.typeUnknown')} - {' '}
-                        {t('adminServicesPage.table.budgetLabel')}{' '}
-                        <span className="font-medium text-text-secondary">
-                          {formatBudget(s)}
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
+                        <span>
+                          {s.type || t('adminServicesPage.table.typeUnknown')} -{' '}
+                          {t('adminServicesPage.table.budgetLabel')}
                         </span>
+                        {editingBudgetId === s.id ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              autoFocus
+                              value={budgetDraft}
+                              onChange={(e) => setBudgetDraft(e.target.value)}
+                              placeholder={t('adminServicesPage.table.budgetPlaceholder')}
+                              className="w-24 rounded-lg border border-border bg-surface-card px-2 py-1 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <button
+                              type="button"
+                              disabled={savingBudget}
+                              onClick={() => saveBudget(s.id)}
+                              className="rounded-lg bg-blue-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                            >
+                              {t('adminServicesPage.table.saveBudget')}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={savingBudget}
+                              onClick={cancelEditBudget}
+                              className="rounded-lg border border-border px-2 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface-main disabled:opacity-60"
+                            >
+                              {t('adminServicesPage.table.cancelBudget')}
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="font-medium text-text-secondary">
+                              {formatBudget(s)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => startEditBudget(s)}
+                              className="rounded-lg border border-border px-2 py-0.5 text-[11px] font-medium text-blue-700 hover:bg-blue-500/10 dark:text-blue-300"
+                            >
+                              {t('adminServicesPage.table.editBudget')}
+                            </button>
+                          </span>
+                        )}
                       </div>
                       {s.description && (
                         <div className="mt-1 text-xs text-text-muted line-clamp-2">
@@ -517,37 +610,60 @@ export default function AdminServicesPage() {
                       </span>
                     </td>
 
-                    {/* Select agent, ou prestataire pour les missions Teranga Pro (executionType='provider') */}
+                    {/* Select agent, ou prestataire + superviseur pour les missions Teranga Pro (executionType='provider') */}
                     <td className="px-4 sm:px-5 py-3 align-top">
                       {s.executionType === 'provider' ? (
-                        <>
-                          <select
-                            disabled={!canAssignProvider(s) || getAssignableProviders(s).length === 0}
-                            value={s.providerId || ''}
-                            onChange={(e) => handleAssignProvider(s.id, e.target.value)}
-                            className={`w-full rounded-xl border px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                              !canAssignProvider(s) || getAssignableProviders(s).length === 0
-                                ? 'bg-surface-main text-text-muted border-border cursor-not-allowed'
-                                : 'bg-surface-card text-text-primary border-border'
-                            }`}
-                          >
-                            <option value="">
-                              {t('adminServicesPage.assign.providerPlaceholder')}
-                            </option>
-                            {getAssignableProviders(s).map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.displayFirstName} (#{p.id})
+                        <div className="space-y-2.5">
+                          <div>
+                            <select
+                              disabled={!canModifyProviderSlot(s) || getAssignableProviders(s).length === 0}
+                              value={s.providerId || ''}
+                              onChange={(e) => handleAssignProvider(s.id, e.target.value)}
+                              className={`w-full rounded-xl border px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                !canModifyProviderSlot(s) || getAssignableProviders(s).length === 0
+                                  ? 'bg-surface-main text-text-muted border-border cursor-not-allowed'
+                                  : 'bg-surface-card text-text-primary border-border'
+                              }`}
+                            >
+                              <option value="">
+                                {s.providerId
+                                  ? t('adminServicesPage.assign.providerUnassign')
+                                  : t('adminServicesPage.assign.providerPlaceholder')}
                               </option>
-                            ))}
-                          </select>
-                          {!canAssignProvider(s) && (
-                            <p className="mt-1 text-[11px] text-text-muted">
-                              {t('adminServicesPage.assign.providerLocked', {
-                                status: s.missionStatus,
-                              })}
-                            </p>
-                          )}
-                        </>
+                              {getAssignableProviders(s).map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.displayFirstName} (#{p.id})
+                                </option>
+                              ))}
+                            </select>
+                            {!canModifyProviderSlot(s) && (
+                              <p className="mt-1 text-[11px] text-text-muted">
+                                {t('adminServicesPage.assign.providerLocked', {
+                                  status: s.missionStatus,
+                                })}
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <select
+                              value={s.agentId || ''}
+                              onChange={(e) => handleAssignSupervisor(s.id, e.target.value)}
+                              className="w-full rounded-xl border px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-surface-card text-text-primary border-border"
+                            >
+                              <option value="">
+                                {s.agentId
+                                  ? t('adminServicesPage.assign.supervisorUnassign')
+                                  : t('adminServicesPage.assign.supervisorPlaceholder')}
+                              </option>
+                              {getAssignableAgents(s).map((a) => (
+                                <option key={a.id} value={a.id}>
+                                  {a.firstName} {a.lastName} ({a.email})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
                       ) : (
                         <>
                           <select

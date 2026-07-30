@@ -49,7 +49,14 @@ async function notifyServiceCreated({
       message: service.title ? `Service: ${service.title}` : "Service créé",
       progress: computeProgress("service", "created"),
       entityStatus: "created",
-      metadata: { serviceId: service.id, title: service.title || null },
+      metadata: {
+        serviceId: service.id,
+        title: service.title || null,
+        // Permet au clic frontend (NotificationsPage/ActivityCenterPage) de distinguer une
+        // mission filière (ouvre /missions/:id/track) d'un service classique (ouvre
+        // /services/:id), sans requête supplémentaire.
+        missionStatus: service.missionStatus || null,
+      },
       countryId,
       regionId,
       notificationMode: "create",
@@ -78,7 +85,14 @@ async function notifyServiceAssigned({ actorId, service }) {
         : "Un service vous a été assigné",
       progress: computeProgress("service", service.status),
       entityStatus: service.status,
-      metadata: { serviceId: service.id, title: service.title || null },
+      metadata: {
+        serviceId: service.id,
+        title: service.title || null,
+        // Permet au clic frontend (NotificationsPage/ActivityCenterPage) de distinguer une
+        // mission filière (ouvre /missions/:id/track) d'un service classique (ouvre
+        // /services/:id), sans requête supplémentaire.
+        missionStatus: service.missionStatus || null,
+      },
       countryId: service.countryId,
       regionId: service.regionId,
       excludeRecipientId: null,
@@ -113,7 +127,14 @@ async function notifyServiceStatusUpdate({ actorId, service, title, status }) {
       message: service.title ? `Service: ${service.title}` : null,
       progress: computeProgress("service", status),
       entityStatus: status,
-      metadata: { serviceId: service.id, title: service.title || null },
+      metadata: {
+        serviceId: service.id,
+        title: service.title || null,
+        // Permet au clic frontend (NotificationsPage/ActivityCenterPage) de distinguer une
+        // mission filière (ouvre /missions/:id/track) d'un service classique (ouvre
+        // /services/:id), sans requête supplémentaire.
+        missionStatus: service.missionStatus || null,
+      },
       countryId: service.countryId,
       regionId: service.regionId,
       notificationMode: "update",

@@ -13,6 +13,7 @@ import { useLocale } from "../i18n/useLocale";
 import { formatStatus } from "../utils/labels";
 import { normalizeRole } from "../utils/role";
 import { notify } from "../utils/notify";
+import { resolveNotificationLink } from "../utils/notificationLink";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 const PROGRESS_TABS = [
@@ -227,28 +228,7 @@ export default function ActivityCenterPage() {
   }, []);
 
   const resolveLink = useCallback(
-    (n) => {
-      if (!n) return "/dashboard";
-      if (n.entityType === "order") return n.entityId ? `/orders/${n.entityId}` : "/orders";
-      if (n.entityType === "project") return n.entityId ? `/projects/${n.entityId}` : "/projects";
-      if (n.entityType === "task") {
-        const serviceId = n?.metadata?.serviceId;
-        if (serviceId) return `/services/${serviceId}/tasks`;
-        return "/tasks";
-      }
-      if (n.entityType === "service") {
-        const serviceId = n?.metadata?.serviceId || n?.entityId;
-        if (serviceId) return `/services/${serviceId}/tasks`;
-        return currentUserRole === "agent" ? "/agent/services" : "/services";
-      }
-      if (n.entityType === "evidence") {
-        const taskId = n?.metadata?.taskId;
-        const orderId = n?.metadata?.orderId;
-        if (taskId) return `/tasks/${taskId}/evidences`;
-        if (orderId) return `/orders/${orderId}`;
-      }
-      return "/dashboard";
-    },
+    (n) => resolveNotificationLink(n, currentUserRole),
     [currentUserRole]
   );
 

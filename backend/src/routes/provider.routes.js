@@ -16,7 +16,8 @@ const { createProviderContractSchema } = require('../validators/providerContract
  * 🛠️ Routes Teranga Pro — Prestataires
  * (docs/DEV_SPEC_TERANGA_v3.md section 3.3 — v1-only, voir app.js)
  * ============================================================
- * - POST   /providers            : candidature (rôle 'provider' uniquement)
+ * - POST   /providers            : candidature (rôle 'provider') ou onboarding par un admin
+ *                                   au nom d'un compte déjà 'provider' (userId requis)
  * - GET    /providers            : liste scopée (admin, category_manager)
  * - GET    /providers/:id        : fiche interne (admin, category_manager)
  * - PATCH  /providers/:id/status : onboarding pending->probation->active
@@ -24,7 +25,13 @@ const { createProviderContractSchema } = require('../validators/providerContract
  * ============================================================
  */
 
-router.post('/', auth, requireRoles('provider'), validateBody(createProviderSchema), ctrl.create);
+router.post(
+  '/',
+  auth,
+  requireRoles('provider', 'admin'),
+  validateBody(createProviderSchema),
+  ctrl.create
+);
 
 router.get('/', auth, requireRoles('admin', 'category_manager'), ctrl.list);
 router.get('/:id', auth, requireRoles('admin', 'category_manager'), ctrl.detail);

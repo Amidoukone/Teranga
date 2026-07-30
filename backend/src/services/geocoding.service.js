@@ -84,4 +84,58 @@ async function geocodeAddress(address, { countryIso } = {}) {
   }
 }
 
-module.exports = { geocodeAddress };
+/**
+ * Géocodage inverse (coordonnées -> adresse lisible) — même endpoint/clé serveur que
+ * geocodeAddress ci-dessus. Utilisé par la création de mission guidée quand l'utilisateur
+ * choisit "Utiliser ma position actuelle" (navigator.geolocation) : la clé navigateur est
+ * volontairement restreinte à Maps JavaScript/Places (jamais Geocoding, voir en-tête de
+ * fichier), donc ce géocodage doit passer par le backend et non par un appel client-side au
+ * SDK Google Maps.
+ *
+ * Retourne `null` en best-effort (adresse introuvable, clé absente, erreur réseau) : ne doit
+ * jamais bloquer la capture des coordonnées elles-mêmes.
+ */
+async function reverseGeocode(latitude, longitude) {
+  const apiKey = process.env.GOOGLE_MAPS_SERVER_KEY;
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+  if (!apiKey) {
+    logger.warn('geocoding.service.missing_api_key');
+    return null;
+  }
+
+  const params = new URLSearchParams({ latlng: `${latitude},${longitude}`, key: apiKey });
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${GEOCODE_ENDPOINT}?${params.toString()}`, {
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      logger.warn('geocoding.service.reverse_http_error', { status: response.status });
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (data.status !== 'OK' || !data.results?.length) {
+      if (data.status !== 'ZERO_RESULTS') {
+        logger.warn('geocoding.service.reverse_api_error', { status: data.status });
+      }
+      return null;
+    }
+
+    return data.results[0].formatted_address || null;
+  } catch (err) {
+    logger.warn({ err }, 'geocoding.service.reverse_request_failed');
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+module.exports = { geocodeAddress, reverseGeocode };

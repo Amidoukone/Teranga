@@ -290,6 +290,252 @@ describe('Suivi en direct — assignation, statut, position, track (docs section
     expect(validatedRes.body.mission.status).toBe('validated');
   });
 
+  test('provider can be reassigned to a different active provider while ASSIGNED, no status regression', async () => {
+    if (!dbReady) return;
+    const mission = await createProviderMission({ clientToken, tradeCategoryId: tradeCategory.id });
+
+    const { user: providerAUser } = await makeUser({ role: 'provider', countryId: country.id });
+    const providerA = await makeActiveProvider({
+      userId: providerAUser.id,
+      countryCode: country.isoCode,
+      tradeCategoryId: tradeCategory.id,
+    });
+    const { user: providerBUser } = await makeUser({ role: 'provider', countryId: country.id });
+    const providerB = await makeActiveProvider({
+      userId: providerBUser.id,
+      countryCode: country.isoCode,
+      tradeCategoryId: tradeCategory.id,
+    });
+
+    await request(app)
+      .post(`/api/v1/missions/${mission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ providerId: providerA.id })
+      .expect(200);
+
+    const reassignRes = await request(app)
+      .post(`/api/v1/missions/${mission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ providerId: providerB.id });
+
+    expect(reassignRes.status).toBe(200);
+    expect(reassignRes.body.mission.providerId).toBe(providerB.id);
+    expect(reassignRes.body.mission.missionStatus).toBe('ASSIGNED');
+  });
+
+  test('unassigning the provider while ASSIGNED rolls back to SEARCHING_EXECUTOR and is journaled', async () => {
+    if (!dbReady) return;
+    const mission = await createProviderMission({ clientToken, tradeCategoryId: tradeCategory.id });
+    const { user: providerUser } = await makeUser({ role: 'provider', countryId: country.id });
+    const provider = await makeActiveProvider({
+      userId: providerUser.id,
+      countryCode: country.isoCode,
+      tradeCategoryId: tradeCategory.id,
+    });
+
+    await request(app)
+      .post(`/api/v1/missions/${mission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ providerId: provider.id })
+      .expect(200);
+
+    const unassignRes = await request(app)
+      .post(`/api/v1/missions/${mission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ providerId: null });
+
+    expect(unassignRes.status).toBe(200);
+    expect(unassignRes.body.mission.providerId).toBeNull();
+    expect(unassignRes.body.mission.missionStatus).toBe('SEARCHING_EXECUTOR');
+
+    const history = await db.MissionStatusHistory.findAll({
+      where: { serviceId: mission.id },
+      order: [['createdAt', 'ASC']],
+    });
+    expect(history.map((h) => h.toStatus)).toEqual([
+      'SEARCHING_EXECUTOR',
+      'ASSIGNED',
+      'SEARCHING_EXECUTOR',
+    ]);
+
+    // Peut être réassigné après désassignation.
+    const reassignRes = await request(app)
+      .post(`/api/v1/missions/${mission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ providerId: provider.id });
+    expect(reassignRes.status).toBe(200);
+    expect(reassignRes.body.mission.missionStatus).toBe('ASSIGNED');
+  });
+
+  test('unassigning the provider is rejected once the mission is IN_PROGRESS', async () => {
+    if (!dbReady) return;
+    const mission = await createProviderMission({ clientToken, tradeCategoryId: tradeCategory.id });
+    const { user: providerUser, password: providerPassword } = await makeUser({
+      role: 'provider',
+      countryId: country.id,
+    });
+    const provider = await makeActiveProvider({
+      userId: providerUser.id,
+      countryCode: country.isoCode,
+      tradeCategoryId: tradeCategory.id,
+    });
+    const providerToken = await loginAndGetToken(providerUser.email, providerPassword);
+
+    await request(app)
+      .post(`/api/v1/missions/${mission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ providerId: provider.id })
+      .expect(200);
+    await request(app)
+      .patch(`/api/v1/missions/${mission.id}/status`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ toStatus: 'EN_ROUTE' })
+      .expect(200);
+    await request(app)
+      .patch(`/api/v1/missions/${mission.id}/status`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ toStatus: 'ON_SITE' })
+      .expect(200);
+    await request(app)
+      .patch(`/api/v1/missions/${mission.id}/status`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ toStatus: 'IN_PROGRESS' })
+      .expect(200);
+
+    const unassignRes = await request(app)
+      .post(`/api/v1/missions/${mission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ providerId: null });
+
+    expect(unassignRes.status).toBe(400);
+  });
+
+  test('admin can assign an agent as a passive supervisor alongside the provider; supervisor cannot trigger executor transitions', async () => {
+    if (!dbReady) return;
+    const mission = await createProviderMission({ clientToken, tradeCategoryId: tradeCategory.id });
+    const { user: providerUser, password: providerPassword } = await makeUser({
+      role: 'provider',
+      countryId: country.id,
+    });
+    const provider = await makeActiveProvider({
+      userId: providerUser.id,
+      countryCode: country.isoCode,
+      tradeCategoryId: tradeCategory.id,
+    });
+    const providerToken = await loginAndGetToken(providerUser.email, providerPassword);
+    const { user: supervisorAgent, password: supervisorPassword } = await makeUser({
+      role: 'agent',
+      countryId: country.id,
+    });
+    const supervisorToken = await loginAndGetToken(supervisorAgent.email, supervisorPassword);
+
+    await request(app)
+      .post(`/api/v1/missions/${mission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ providerId: provider.id })
+      .expect(200);
+
+    const historyBefore = await db.MissionStatusHistory.count({ where: { serviceId: mission.id } });
+
+    const supervisorRes = await request(app)
+      .post(`/api/v1/missions/${mission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ agentId: supervisorAgent.id });
+
+    expect(supervisorRes.status).toBe(200);
+    expect(supervisorRes.body.mission.agentId).toBe(supervisorAgent.id);
+    expect(supervisorRes.body.mission.providerId).toBe(provider.id);
+
+    // Poser un superviseur n'est pas une transition d'état : aucune ligne d'historique ajoutée.
+    const historyAfter = await db.MissionStatusHistory.count({ where: { serviceId: mission.id } });
+    expect(historyAfter).toBe(historyBefore);
+
+    // Le superviseur ne peut pas déclencher les transitions exécutant — seul le prestataire le peut.
+    const supervisorAttempt = await request(app)
+      .patch(`/api/v1/missions/${mission.id}/status`)
+      .set('Authorization', `Bearer ${supervisorToken}`)
+      .send({ toStatus: 'EN_ROUTE' });
+    expect(supervisorAttempt.status).toBe(403);
+
+    const providerAttempt = await request(app)
+      .patch(`/api/v1/missions/${mission.id}/status`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ toStatus: 'EN_ROUTE' });
+    expect(providerAttempt.status).toBe(200);
+
+    // Le superviseur peut néanmoins consulter le suivi (lecture seule).
+    const supervisorTrack = await request(app)
+      .get(`/api/v1/missions/${mission.id}/track`)
+      .set('Authorization', `Bearer ${supervisorToken}`);
+    expect(supervisorTrack.status).toBe(200);
+    expect(supervisorTrack.body.isExecutor).toBe(false);
+    expect(supervisorTrack.body.viewerRole).toBe('agent');
+
+    // Retirer le superviseur, à tout moment, sans incidence sur missionStatus.
+    const removeSupervisorRes = await request(app)
+      .post(`/api/v1/missions/${mission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ agentId: null });
+    expect(removeSupervisorRes.status).toBe(200);
+    expect(removeSupervisorRes.body.mission.agentId).toBeNull();
+    expect(removeSupervisorRes.body.mission.missionStatus).toBe('EN_ROUTE');
+  });
+
+  test('GET /mine scopes results to the requesting agent/provider account', async () => {
+    if (!dbReady) return;
+    const mission = await createProviderMission({ clientToken, tradeCategoryId: tradeCategory.id });
+    const { user: providerUser, password: providerPassword } = await makeUser({
+      role: 'provider',
+      countryId: country.id,
+    });
+    const provider = await makeActiveProvider({
+      userId: providerUser.id,
+      countryCode: country.isoCode,
+      tradeCategoryId: tradeCategory.id,
+    });
+    const providerToken = await loginAndGetToken(providerUser.email, providerPassword);
+    const { user: supervisorAgent, password: supervisorPassword } = await makeUser({
+      role: 'agent',
+      countryId: country.id,
+    });
+    const supervisorToken = await loginAndGetToken(supervisorAgent.email, supervisorPassword);
+
+    await request(app)
+      .post(`/api/v1/missions/${mission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ providerId: provider.id, agentId: supervisorAgent.id })
+      .expect(200);
+
+    const providerMineRes = await request(app)
+      .get('/api/v1/missions/mine')
+      .set('Authorization', `Bearer ${providerToken}`);
+    expect(providerMineRes.status).toBe(200);
+    expect(providerMineRes.body.missions.some((m) => m.id === mission.id)).toBe(true);
+
+    const supervisorMineRes = await request(app)
+      .get('/api/v1/missions/mine')
+      .set('Authorization', `Bearer ${supervisorToken}`);
+    expect(supervisorMineRes.status).toBe(200);
+    expect(supervisorMineRes.body.missions.some((m) => m.id === mission.id)).toBe(true);
+
+    // Un autre provider sans mission assignée ne voit rien.
+    const { user: otherProviderUser, password: otherProviderPassword } = await makeUser({
+      role: 'provider',
+      countryId: country.id,
+    });
+    await makeActiveProvider({
+      userId: otherProviderUser.id,
+      countryCode: country.isoCode,
+      tradeCategoryId: tradeCategory.id,
+    });
+    const otherProviderToken = await loginAndGetToken(otherProviderUser.email, otherProviderPassword);
+    const otherMineRes = await request(app)
+      .get('/api/v1/missions/mine')
+      .set('Authorization', `Bearer ${otherProviderToken}`);
+    expect(otherMineRes.status).toBe(200);
+    expect(otherMineRes.body.missions.some((m) => m.id === mission.id)).toBe(false);
+  });
+
   test('a classic (agent-type) mission has no missionStatus and cannot use the status transition endpoint', async () => {
     if (!dbReady) return;
     const missionRes = await request(app)

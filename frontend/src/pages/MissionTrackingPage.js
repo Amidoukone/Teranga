@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Loader2, Clock, MapPin } from "lucide-react";
+import { Loader2, Clock, MapPin, Wallet } from "lucide-react";
 
 import { getMissionTrack, updateMissionStatus } from "../services/missions";
 import MissionTrackingMap from "../features/mission-tracking/MissionTrackingMap";
@@ -24,6 +24,16 @@ const TERMINAL_STATUSES = [
   "RESOLVED_REDO",
   "RESOLVED_CLOSED",
 ];
+
+// Action suivante pour un exécutant (agent ou prestataire) — supervision passive : un agent
+// superviseur (isExecutor=false) ne voit jamais ces boutons, voir mission.controller.js
+// updateStatus.
+const EXECUTOR_NEXT_STATUS = {
+  ASSIGNED: "EN_ROUTE",
+  EN_ROUTE: "ON_SITE",
+  ON_SITE: "IN_PROGRESS",
+  IN_PROGRESS: "COMPLETED",
+};
 
 function isDocumentVisible() {
   return typeof document === "undefined" || document.visibilityState === "visible";
@@ -141,6 +151,16 @@ export default function MissionTrackingPage() {
           </p>
         ) : null}
 
+        {track.budget != null ? (
+          <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-text-primary">
+            <Wallet size={14} />
+            {track.budget}{" "}
+            {t(`currency.${String(track.currency || "XOF").toUpperCase()}`, {
+              defaultValue: String(track.currency || "XOF").toUpperCase(),
+            })}
+          </p>
+        ) : null}
+
         {!track.position ? (
           <p className="mt-3 text-sm text-text-muted">{t("missionTracking.noPositionYet")}</p>
         ) : null}
@@ -152,7 +172,7 @@ export default function MissionTrackingPage() {
         ) : null}
 
         <div className="mt-5 flex flex-wrap gap-3">
-          {track.missionStatus === "COMPLETED" ? (
+          {track.viewerRole === "client" && track.missionStatus === "COMPLETED" ? (
             <button
               type="button"
               onClick={() => handleTransition("VALIDATED")}
@@ -163,7 +183,7 @@ export default function MissionTrackingPage() {
             </button>
           ) : null}
 
-          {["ASSIGNED", "EN_ROUTE"].includes(track.missionStatus) ? (
+          {track.viewerRole === "client" && ["ASSIGNED", "EN_ROUTE"].includes(track.missionStatus) ? (
             <button
               type="button"
               onClick={() => handleTransition("CANCELLED_BY_CLIENT")}
@@ -174,8 +194,28 @@ export default function MissionTrackingPage() {
             </button>
           ) : null}
 
-          <Link to="/services" className="btn-secondary rounded-full px-6 py-2.5 text-sm">
-            {t("missionTracking.backToServices")}
+          {track.viewerRole !== "client" && track.isExecutor && EXECUTOR_NEXT_STATUS[track.missionStatus] ? (
+            <button
+              type="button"
+              onClick={() => handleTransition(EXECUTOR_NEXT_STATUS[track.missionStatus])}
+              disabled={actionState?.type === "loading"}
+              className="btn-primary rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
+            >
+              {t(`missionTracking.executorCta.${EXECUTOR_NEXT_STATUS[track.missionStatus]}`)}
+            </button>
+          ) : null}
+
+          {track.viewerRole !== "client" && !track.isExecutor ? (
+            <p className="text-sm text-text-muted">{t("missionTracking.supervisorReadOnly")}</p>
+          ) : null}
+
+          <Link
+            to={track.viewerRole === "client" ? "/services" : "/missions/mine"}
+            className="btn-secondary rounded-full px-6 py-2.5 text-sm"
+          >
+            {track.viewerRole === "client"
+              ? t("missionTracking.backToServices")
+              : t("missionTracking.backToMyMissions")}
           </Link>
         </div>
       </div>

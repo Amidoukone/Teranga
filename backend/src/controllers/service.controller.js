@@ -956,6 +956,47 @@ exports.completeService = async (req, res) => {
   }
 };
 
+/* ============================================================
+   🔎 DÉTAIL D'UN SERVICE — client propriétaire, agent assigné, ou admin (scope géo).
+   Utilisé par le clic sur une notification/activité de type "service" (voir
+   serviceNotification.service.js) pour ouvrir le service lui-même plutôt que ses tâches,
+   puisque tous les services n'ont pas forcément de tâches associées.
+============================================================ */
+exports.getById = async (req, res) => {
+  try {
+    const id = toSafeInt(req.params.id);
+    const service = await Service.findByPk(id, {
+      include: [
+        { model: User, as: "client", attributes: ["id", "firstName", "lastName", "email", "phone"] },
+        { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email", "phone"] },
+      ],
+    });
+
+    if (!service) return res.status(404).json({ error: "Service introuvable" });
+
+    if (req.user.role === "admin") {
+      if (!canAccessByGeoScope(req.user, service)) {
+        return res.status(403).json({ error: "Service hors scope géographique" });
+      }
+    } else if (req.user.role === "client") {
+      if (service.clientId !== req.user.id) {
+        return res.status(403).json({ error: "Non autorisé" });
+      }
+    } else if (req.user.role === "agent") {
+      if (service.agentId !== req.user.id) {
+        return res.status(403).json({ error: "Non autorisé" });
+      }
+    } else {
+      return res.status(403).json({ error: "Non autorisé" });
+    }
+
+    return res.json({ service: addLabels(service) });
+  } catch (e) {
+    logger.error({ err: e }, "service.getById.failed");
+    return res.status(500).json({ error: "Erreur lors de la récupération du service" });
+  }
+};
+
 
 
 

@@ -28,6 +28,10 @@ router.post(
   ctrl.estimate
 );
 
+// Géocodage inverse (bouton "Utiliser ma position actuelle", étape Lieu du wizard) — clé
+// serveur uniquement, jamais la clé navigateur (restreinte à Maps JavaScript/Places).
+router.get('/reverse-geocode', auth, requireRoles('client'), ctrl.reverseGeocodeLocation);
+
 router.post('/', auth, requireRoles('client'), validateBody(createMissionSchema), ctrl.create);
 
 router.post(
@@ -65,7 +69,12 @@ router.post(
   ctrl.pingLocation
 );
 
-// Flux de suivi consommé par le client (carte + statut + ETA).
-router.get('/:id/track', auth, requireRoles('client'), ctrl.track);
+// Flux de suivi (carte + statut + ETA) — client propriétaire, agent (exécutant ou superviseur
+// passif), prestataire exécutant. Permissions fines + scope vérifiés dans le contrôleur.
+router.get('/:id/track', auth, requireRoles('client', 'agent', 'provider'), ctrl.track);
+
+// "Mes missions" — agent (missions filière où il est superviseur/exécutant) ou prestataire
+// (ses missions assignées). Les missions classiques agent restent sur /services/agent/services.
+router.get('/mine', auth, requireRoles('agent', 'provider'), ctrl.mine);
 
 module.exports = router;
