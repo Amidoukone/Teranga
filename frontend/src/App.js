@@ -72,6 +72,7 @@ const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AdminPropertiesPage = lazy(() => import('./pages/AdminPropertiesPage'));
 const AdminProjectsPage = lazy(() => import('./pages/AdminProjectsPage'));
 const AdminCategoriesPage = lazy(() => import('./pages/AdminCategoriesPage'));
+const AdminTradeCategoriesPage = lazy(() => import('./pages/AdminTradeCategoriesPage'));
 const AdminProductsPage = lazy(() => import('./pages/AdminProductsPage'));
 const AdminMetricsPage = lazy(() => import('./pages/AdminMetricsPage'));
 
@@ -922,6 +923,20 @@ export default function App() {
                     <>
                       <SetSeo title={t('seo.pages.adminCategories.title')} />
                       <AdminCategoriesPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/admin/trade-categories"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['admin']}>
+                    <>
+                      <SetSeo title={t('seo.pages.adminTradeCategories.title')} />
+                      <AdminTradeCategoriesPage />
                     </>
                   </RequireRole>
                 </RequireAuth>

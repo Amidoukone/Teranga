@@ -40,6 +40,7 @@ const fr = {
     metrics: "Pilotage",
     agents: "Agents",
     providers: "Prestataires",
+    tradeCategories: "Filières",
     myMissions: "Mes missions",
     users: "Utilisateurs",
     clientProperties: "Biens des clients",
@@ -263,6 +264,7 @@ const fr = {
         activity: "cette activité",
         transaction: "cette transaction",
         missionPricingRule: "cette règle de tarification",
+        tradeCategory: "cette filière",
       },
     },
     toast: {
@@ -1627,6 +1629,7 @@ const fr = {
       insuranceExpiresAtLabel: "Expiration de l'assurance",
       tradeCategoriesLabel: "Filières couvertes *",
       tradeCategoriesEmpty: "Aucune filière active pour le moment.",
+      tradeCategoriesEmptyLink: "Créer une filière",
     },
     validation: {
       firstNameRequired: "Prénom requis",
@@ -1841,6 +1844,58 @@ const fr = {
     alerts: {
       updated: "Cat\u00E9gorie mise \u00E0 jour.",
       created: "Cat\u00E9gorie ajout\u00E9e.",
+    },
+  },
+  adminTradeCategoriesPage: {
+    title: "Gestion des filières",
+    loading: "Chargement…",
+    loadingTradeCategories: "Chargement des filières…",
+    empty: "Aucune filière trouvée.",
+    searchPlaceholder: "Rechercher une filière par nom…",
+    labels: {
+      connectedAs: "Connecté en tant que {{email}} ({{role}})",
+      scope: "Scope :",
+      countryId: "Pays #{{id}}",
+      regionId: "Région #{{id}}",
+    },
+    badges: {
+      master: "MASTER",
+      active: "Active",
+      inactive: "Inactive",
+      requiresCompany: "Entreprise requise",
+    },
+    buttons: {
+      hideForm: "Masquer le formulaire",
+      showForm: "Nouvelle filière",
+      refresh: "Rafraîchir",
+      cancel: "Annuler",
+      saving: "Enregistrement…",
+      update: "Mettre à jour",
+      create: "Ajouter",
+    },
+    form: {
+      nameLabel: "Nom de la filière *",
+      namePlaceholder: "Ex : Plomberie",
+      warrantyLabel: "Garantie par défaut (jours)",
+      requiresCompanyLabel: "Réservée aux prestataires entreprise",
+      isActiveLabel: "Filière active (visible à la création de mission)",
+    },
+    table: {
+      edit: "Modifier",
+      delete: "Supprimer",
+      warranty: "Garantie par défaut : {{count}} jour",
+      warranty_other: "Garantie par défaut : {{count}} jours",
+    },
+    errors: {
+      sessionLoad: "Erreur lors du chargement de la session.",
+      load: "Erreur lors du chargement des filières.",
+      nameRequired: "Le nom est requis.",
+      save: "Erreur lors de l’enregistrement de la filière.",
+      delete: "Erreur lors de la suppression.",
+    },
+    alerts: {
+      updated: "Filière mise à jour.",
+      created: "Filière ajoutée.",
     },
   },
   adminMetricsPage: {
@@ -3545,6 +3600,9 @@ const fr = {
       },
       adminCategories: {
         title: "Cat\u00E9gories",
+      },
+      adminTradeCategories: {
+        title: "Fili\u00E8res",
       },
       adminProducts: {
         title: "Produits (admin)",

@@ -6,7 +6,7 @@
 // de sa filiere (executionType='provider').
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { me } from '../services/auth';
 import { normalizeRole, isMasterUser } from '../utils/role';
@@ -508,7 +508,15 @@ export default function AdminProvidersPage() {
               </p>
               {tradeCategories.length === 0 ? (
                 <p className="text-xs text-text-muted italic">
-                  {t('adminProvidersPage.form.tradeCategoriesEmpty')}
+                  {t('adminProvidersPage.form.tradeCategoriesEmpty')}{' '}
+                  <Link
+                    to="/admin/trade-categories"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="not-italic text-blue-600 underline hover:text-blue-700 dark:text-blue-400"
+                  >
+                    {t('adminProvidersPage.form.tradeCategoriesEmptyLink')}
+                  </Link>
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">

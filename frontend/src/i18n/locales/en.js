@@ -40,6 +40,7 @@ const en = {
     metrics: "Monitoring",
     agents: "Agents",
     providers: "Providers",
+    tradeCategories: "Trade categories",
     myMissions: "My missions",
     users: "Users",
     clientProperties: "Client properties",
@@ -260,6 +261,7 @@ const en = {
         activity: "this activity",
         transaction: "this transaction",
         missionPricingRule: "this pricing rule",
+        tradeCategory: "this trade category",
       },
     },
     toast: {
@@ -1622,6 +1624,7 @@ const en = {
       insuranceExpiresAtLabel: "Insurance expiry",
       tradeCategoriesLabel: "Covered trade categories *",
       tradeCategoriesEmpty: "No active trade category yet.",
+      tradeCategoriesEmptyLink: "Create a trade category",
     },
     validation: {
       firstNameRequired: "First name is required",
@@ -1836,6 +1839,58 @@ const en = {
     alerts: {
       updated: "Category updated.",
       created: "Category added.",
+    },
+  },
+  adminTradeCategoriesPage: {
+    title: "Manage trade categories",
+    loading: "Loading…",
+    loadingTradeCategories: "Loading trade categories…",
+    empty: "No trade category found.",
+    searchPlaceholder: "Search a trade category by name…",
+    labels: {
+      connectedAs: "Connected as {{email}} ({{role}})",
+      scope: "Scope:",
+      countryId: "Country #{{id}}",
+      regionId: "Region #{{id}}",
+    },
+    badges: {
+      master: "MASTER",
+      active: "Active",
+      inactive: "Inactive",
+      requiresCompany: "Company only",
+    },
+    buttons: {
+      hideForm: "Hide form",
+      showForm: "New trade category",
+      refresh: "Refresh",
+      cancel: "Cancel",
+      saving: "Saving…",
+      update: "Update",
+      create: "Add",
+    },
+    form: {
+      nameLabel: "Trade category name *",
+      namePlaceholder: "E.g. Plumbing",
+      warrantyLabel: "Default warranty (days)",
+      requiresCompanyLabel: "Restricted to company providers",
+      isActiveLabel: "Active (visible when creating a mission)",
+    },
+    table: {
+      edit: "Edit",
+      delete: "Delete",
+      warranty: "Default warranty: {{count}} day",
+      warranty_other: "Default warranty: {{count}} days",
+    },
+    errors: {
+      sessionLoad: "Error loading session.",
+      load: "Error loading trade categories.",
+      nameRequired: "Name is required.",
+      save: "Error saving trade category.",
+      delete: "Error deleting trade category.",
+    },
+    alerts: {
+      updated: "Trade category updated.",
+      created: "Trade category created.",
     },
   },
   adminMetricsPage: {
@@ -3527,6 +3582,9 @@ const en = {
       },
       adminCategories: {
         title: "Categories",
+      },
+      adminTradeCategories: {
+        title: "Trade categories",
       },
       adminProducts: {
         title: "Products (admin)",
