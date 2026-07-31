@@ -28,6 +28,22 @@ module.exports = (sequelize, DataTypes) => {
           as: 'categoryManagers',
         });
       }
+
+      // Scope géo (associations logiques uniquement, pas de FK DB — même pattern que
+      // Service.belongsTo(Country/Region), voir models/service.js) : NULL = filière globale.
+      if (models.Country) {
+        TradeCategory.belongsTo(models.Country, {
+          foreignKey: 'countryId',
+          as: 'country',
+        });
+      }
+
+      if (models.Region) {
+        TradeCategory.belongsTo(models.Region, {
+          foreignKey: 'regionId',
+          as: 'region',
+        });
+      }
     }
   }
 
@@ -53,13 +69,33 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: true,
         field: 'is_active',
       },
+      // NULL = filière globale (visible/disponible partout, comportement historique des 7
+      // filières par défaut). countryId seul = disponible dans tout le pays. countryId +
+      // regionId = limitée à cette région. Un master (admin scopé) ne peut créer/gérer que des
+      // filières dans SON propre périmètre (voir tradeCategory.controller.js) ; seul l'admin
+      // global peut créer une filière globale ou choisir un périmètre arbitraire.
+      countryId: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
+        field: 'country_id',
+      },
+      regionId: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
+        field: 'region_id',
+      },
     },
     {
       sequelize,
       modelName: 'TradeCategory',
       tableName: 'trade_categories',
       underscored: true,
-      indexes: [{ fields: ['slug'], unique: true }, { fields: ['is_active'] }],
+      indexes: [
+        { fields: ['slug'], unique: true },
+        { fields: ['is_active'] },
+        { fields: ['country_id'] },
+        { fields: ['region_id'] },
+      ],
     }
   );
 

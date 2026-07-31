@@ -2,9 +2,15 @@
 import api from './api';
 
 // GET /api/v1/trade-categories — public, filières actives (docs/DEV_SPEC_TERANGA_v3.md section 3.3).
-// v1-only (section 0.5) : préfixe explicite /v1.
-export async function listTradeCategories() {
-  const { data } = await api.get('/v1/trade-categories');
+// v1-only (section 0.5) : préfixe explicite /v1. countryId/regionId optionnels : filtrent les
+// filières scopées à un pays/région (voir tradeCategory.controller.js buildScopeOr) — les
+// filières globales sont toujours incluses. Sans ces paramètres, seules les filières globales
+// sont renvoyées (comportement historique pour un visiteur anonyme).
+export async function listTradeCategories({ countryId, regionId } = {}) {
+  const params = {};
+  if (countryId) params.countryId = countryId;
+  if (regionId) params.regionId = regionId;
+  const { data } = await api.get('/v1/trade-categories', { params });
   return data?.tradeCategories || [];
 }
 

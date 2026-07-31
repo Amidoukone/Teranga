@@ -27,9 +27,15 @@ export async function submitMissionRequest(payload) {
 }
 
 /**
- * Filières actives (Teranga Pro) — public, GET /api/v1/trade-categories
+ * Filières actives (Teranga Pro) — public, GET /api/v1/trade-categories.
+ * countryId/regionId optionnels (scope du compte client s'il est connecté, cf.
+ * MissionCreationWizard.jsx) : renvoie les filières globales + celles scopées à ce
+ * pays/région — sans ces paramètres (visiteur anonyme), uniquement les filières globales.
  */
-export async function getTradeCategories() {
-  const { data } = await api.get('/v1/trade-categories', { skipAuthHeader: true });
+export async function getTradeCategories({ countryId, regionId } = {}) {
+  const params = {};
+  if (countryId) params.countryId = countryId;
+  if (regionId) params.regionId = regionId;
+  const { data } = await api.get('/v1/trade-categories', { params, skipAuthHeader: true });
   return data?.tradeCategories || [];
 }

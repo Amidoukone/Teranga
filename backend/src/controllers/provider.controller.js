@@ -7,7 +7,7 @@ const {
   getManageableProviderFilter,
   isProviderInGeoScope,
 } = require('../utils/providerScope');
-const { isGlobalAdmin } = require('../utils/geoScope');
+const { isGlobalAdmin, getCountryIdByIso } = require('../utils/geoScope');
 const {
   PROVIDER_STATUS_VALUES,
   isValidProviderStatusTransition,
@@ -101,6 +101,24 @@ exports.create = async (req, res) => {
     });
     if (tradeCategories.length !== new Set(tradeCategoryIds).size) {
       return res.status(400).json({ error: 'Une ou plusieurs filières sont invalides ou inactives' });
+    }
+
+    // Cohérence géo filière <-> prestataire : une filière scopée à un pays (créée par un master,
+    // voir tradeCategory.controller.js) ne peut être offerte que par un prestataire basé dans ce
+    // même pays — sinon on pourrait assigner ce prestataire à une mission dont le pays est
+    // dérivé de la filière (voir resolveMissionGeoScope.js tradeCategoryScope) sans jamais la
+    // couvrir réellement (voir aussi isProviderCountryMatchesMission dans mission.controller.js).
+    const scopedCategories = tradeCategories.filter((tc) => tc.countryId);
+    if (scopedCategories.length) {
+      const providerCountryId = await getCountryIdByIso(countryCode);
+      const mismatched = scopedCategories.find(
+        (tc) => !providerCountryId || Number(tc.countryId) !== Number(providerCountryId)
+      );
+      if (mismatched) {
+        return res.status(400).json({
+          error: `La filière "${mismatched.name}" est réservée à un autre pays que celui du prestataire`,
+        });
+      }
     }
 
     const requiresCompany = tradeCategories.some((tc) => tc.requiresCompany);

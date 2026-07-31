@@ -159,6 +159,9 @@ exports.create = async (req, res) => {
       adminAreaName: geocodedAdminAreaName,
       fallbackCountryId: user.countryId,
       fallbackRegionId: user.regionId,
+      tradeCategoryScope: tradeCategory
+        ? { countryId: tradeCategory.countryId, regionId: tradeCategory.regionId }
+        : null,
     });
     if (missionGeoScope.error) {
       return res.status(400).json({ error: missionGeoScope.error });

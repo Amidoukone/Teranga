@@ -1863,6 +1863,8 @@ const fr = {
       active: "Active",
       inactive: "Inactive",
       requiresCompany: "Entreprise requise",
+      global: "Globale",
+      readOnly: "Lecture seule",
     },
     buttons: {
       hideForm: "Masquer le formulaire",
@@ -1879,6 +1881,11 @@ const fr = {
       warrantyLabel: "Garantie par défaut (jours)",
       requiresCompanyLabel: "Réservée aux prestataires entreprise",
       isActiveLabel: "Filière active (visible à la création de mission)",
+      countryLabel: "Pays",
+      countryGlobalOption: "Aucun (filière globale, visible partout)",
+      regionLabel: "Région",
+      regionWholeCountryOption: "Aucune (disponible dans tout le pays)",
+      masterScopeNotice: "Cette filière sera automatiquement limitée à votre périmètre : {{scope}}.",
     },
     table: {
       edit: "Modifier",

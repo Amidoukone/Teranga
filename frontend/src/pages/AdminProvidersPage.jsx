@@ -13,7 +13,7 @@ import { normalizeRole, isMasterUser } from '../utils/role';
 import { notify } from '../utils/notify';
 import { createUser } from '../services/users';
 import { listProviders, createProvider, updateProviderStatus } from '../services/providers';
-import { listTradeCategories } from '../services/tradeCategories';
+import { listTradeCategoriesAdmin } from '../services/tradeCategories';
 import { AdminField, AdminPageHeader } from '../components/admin/AdminFormUi';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -112,8 +112,12 @@ export default function AdminProvidersPage() {
 
   const loadTradeCategories = useCallback(async () => {
     try {
-      const list = await listTradeCategories();
-      setTradeCategories(list);
+      // listTradeCategoriesAdmin() (auth) plutôt que le catalogue public : renvoie les filières
+      // globales + celles du périmètre du master connecté (jamais celles d'un autre pays/région,
+      // voir tradeCategory.controller.js listForAdmin) — filtré aux actives ici, la page de
+      // gestion (AdminTradeCategoriesPage) reste seule à afficher les inactives.
+      const list = await listTradeCategoriesAdmin();
+      setTradeCategories((list || []).filter((tc) => tc.isActive));
     } catch (err) {
       console.error('AdminProvidersPage load trade categories error:', err);
       setTradeCategories([]);
@@ -539,6 +543,11 @@ export default function AdminProvidersPage() {
                         />
                         {tc.name}
                         {tc.requiresCompany ? ' 🏢' : ''}
+                        {tc.region?.name
+                          ? ` · ${tc.region.name}`
+                          : tc.country?.isoCode
+                          ? ` · ${tc.country.isoCode}`
+                          : ''}
                       </label>
                     );
                   })}

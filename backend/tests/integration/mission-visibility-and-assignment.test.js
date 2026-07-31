@@ -85,9 +85,15 @@ async function makeRegion(countryId, name) {
   return region;
 }
 
-async function makeTradeCategory() {
+async function makeTradeCategory({ countryId = null, regionId = null } = {}) {
   const slug = `mission-vis-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  const tc = await db.TradeCategory.create({ name: `Filiere ${slug}`, slug, isActive: true });
+  const tc = await db.TradeCategory.create({
+    name: `Filiere ${slug}`,
+    slug,
+    isActive: true,
+    countryId,
+    regionId,
+  });
   created.tradeCategoryIds.push(tc.id);
   return tc;
 }
@@ -354,5 +360,72 @@ describe('Visibilité et assignation des missions filière (scope géo)', () => 
 
     expect(okAssignRes.status).toBe(200);
     expect(okAssignRes.body.mission.providerId).toBe(localProvider.id);
+  });
+
+  test("une mission créée avec une filière scopée à une région hérite de CETTE région, même si le géocodage de l'adresse pointerait ailleurs — le master de cette région la voit toujours", async () => {
+    if (!dbReady) return;
+
+    const scopedTradeCategory = await makeTradeCategory({
+      countryId: country.id,
+      regionId: regionB.id,
+    });
+
+    const { user: clientUser, password: clientPassword } = await makeUser({
+      emailPrefix: 'client_scoped_category',
+      role: 'client',
+      countryId: country.id,
+      regionId: regionA.id,
+    });
+    const clientToken = await loginAndGetToken(clientUser.email, clientPassword);
+
+    // L'adresse géocode vers Region A (pas Region B) : si le scope de la filière n'était pas
+    // prioritaire, la mission finirait à tort en Region A.
+    mockGeocodeResponse({
+      lat: 5.4,
+      lng: -4.0,
+      countryIso: country.isoCode,
+      countryName: country.name,
+      adminAreaName: regionA.name,
+    });
+
+    const createRes = await request(app)
+      .post('/api/v1/missions')
+      .set('Authorization', `Bearer ${clientToken}`)
+      .send({
+        executionType: 'provider',
+        tradeCategoryId: scopedTradeCategory.id,
+        title: 'Mission avec filiere scopee a Region B',
+        address: 'Adresse geocodee en Region A (trompeuse)',
+      });
+
+    expect(createRes.status).toBe(201);
+    const missionId = createRes.body.mission.id;
+    created.serviceIds.push(missionId);
+    // Le scope de la filière l'emporte sur le géocodage de l'adresse.
+    expect(createRes.body.mission.countryId).toBe(country.id);
+    expect(createRes.body.mission.regionId).toBe(regionB.id);
+
+    const { user: masterUser, password: masterPassword } = await makeUser({
+      emailPrefix: 'master_scoped_category',
+      role: 'admin',
+      countryId: country.id,
+      regionId: regionB.id,
+    });
+    const masterToken = await loginAndGetToken(masterUser.email, masterPassword);
+
+    const listRes = await request(app)
+      .get('/api/v1/services')
+      .set('Authorization', `Bearer ${masterToken}`);
+
+    expect(listRes.status).toBe(200);
+    const ids = (listRes.body.services || []).map((s) => s.id);
+    expect(ids).toContain(missionId);
+
+    // Le client, lui aussi, voit toujours sa propre mission malgré le scope différent.
+    const clientListRes = await request(app)
+      .get('/api/v1/services/me')
+      .set('Authorization', `Bearer ${clientToken}`);
+    const clientIds = (clientListRes.body.services || []).map((s) => s.id);
+    expect(clientIds).toContain(missionId);
   });
 });

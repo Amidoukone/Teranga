@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { getTradeCategories } from "../../services/missionRequests";
 import { listSavedLocations, createSavedLocation } from "../../services/savedLocations";
 import { estimateMission, createMission, uploadMissionAttachments } from "../../services/missions";
+import { me } from "../../services/auth";
 import AuthFeedbackBanner from "../../components/AuthFeedbackBanner";
 import WizardProgress from "./WizardProgress";
 import CategoryStep from "./steps/CategoryStep";
@@ -49,8 +50,21 @@ export default function MissionCreationWizard() {
     let cancelled = false;
     (async () => {
       try {
+        // Le scope du compte (countryId/regionId) filtre les filières proposées à l'étape
+        // Catégorie — la destination réelle n'est pas encore connue à ce stade du wizard
+        // (adresse saisie à l'étape suivante), voir tradeCategory.controller.js buildScopeOr.
+        // Best-effort : si `me()` échoue, on retombe sur le catalogue global (comportement
+        // précédent), jamais bloquant pour le wizard.
+        let userScope = {};
+        try {
+          const { user } = await me();
+          userScope = { countryId: user?.countryId, regionId: user?.regionId };
+        } catch (_meErr) {
+          userScope = {};
+        }
+
         const [categories, locations] = await Promise.all([
-          getTradeCategories(),
+          getTradeCategories(userScope),
           listSavedLocations(),
         ]);
         if (cancelled) return;

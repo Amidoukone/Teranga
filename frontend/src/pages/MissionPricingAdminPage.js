@@ -7,6 +7,7 @@ import { me } from "../services/auth";
 import { getCountries } from "../services/countries";
 import { getRegions } from "../services/regions";
 import { getTradeCategories } from "../services/missionRequests";
+import { listTradeCategoriesAdmin } from "../services/tradeCategories";
 import {
   listMissionPricingRules,
   createMissionPricingRule,
@@ -44,6 +45,11 @@ export default function MissionPricingAdminPage() {
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
   const [tradeCategories, setTradeCategories] = useState([]);
+  // Catalogue complet (toutes filières visibles par cet admin/master, cf.
+  // tradeCategory.controller.js listForAdmin), utilisé UNIQUEMENT pour afficher le nom de la
+  // filière de chaque règle existante dans le tableau — `tradeCategories` ci-dessus reste, lui,
+  // filtré dynamiquement par le pays/région choisi dans le formulaire de création.
+  const [allTradeCategories, setAllTradeCategories] = useState([]);
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState(null);
@@ -66,16 +72,16 @@ export default function MissionPricingAdminPage() {
         }
         setUser(u);
 
-        const [countryList, regionList, tradeCategoryList, ruleList] = await Promise.all([
+        const [countryList, regionList, ruleList, allTradeCategoryList] = await Promise.all([
           getCountries(),
           getRegions(),
-          getTradeCategories(),
           listMissionPricingRules(),
+          listTradeCategoriesAdmin(),
         ]);
         setCountries(countryList);
         setRegions(regionList);
-        setTradeCategories(tradeCategoryList);
         setRules(ruleList);
+        setAllTradeCategories(allTradeCategoryList || []);
 
         setForm((f) => ({
           ...f,
@@ -96,6 +102,28 @@ export default function MissionPricingAdminPage() {
     [regions, form.countryId]
   );
 
+  // Filières disponibles pour le pays/région actuellement sélectionné dans le formulaire
+  // (globales + celles scopées à ce pays/région, cf. AdminTradeCategoriesPage.jsx) : une règle
+  // de tarification est toujours créée pour un pays précis, le catalogue de filières doit donc
+  // suivre CE choix plutôt que le périmètre du compte admin connecté.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getTradeCategories({
+          countryId: form.countryId || undefined,
+          regionId: form.regionId || undefined,
+        });
+        if (!cancelled) setTradeCategories(list);
+      } catch (_err) {
+        if (!cancelled) setTradeCategories([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [form.countryId, form.regionId]);
+
   const countryNameById = useMemo(() => {
     const map = new Map();
     countries.forEach((c) => map.set(String(c.id), c.name));
@@ -110,9 +138,9 @@ export default function MissionPricingAdminPage() {
 
   const tradeCategoryNameById = useMemo(() => {
     const map = new Map();
-    tradeCategories.forEach((tc) => map.set(String(tc.id), tc.name));
+    allTradeCategories.forEach((tc) => map.set(String(tc.id), tc.name));
     return map;
-  }, [tradeCategories]);
+  }, [allTradeCategories]);
 
   const categoryLabel = (rule) => {
     if (rule.tradeCategoryId) return tradeCategoryNameById.get(String(rule.tradeCategoryId)) || "—";

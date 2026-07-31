@@ -1858,6 +1858,8 @@ const en = {
       active: "Active",
       inactive: "Inactive",
       requiresCompany: "Company only",
+      global: "Global",
+      readOnly: "Read only",
     },
     buttons: {
       hideForm: "Hide form",
@@ -1874,6 +1876,11 @@ const en = {
       warrantyLabel: "Default warranty (days)",
       requiresCompanyLabel: "Restricted to company providers",
       isActiveLabel: "Active (visible when creating a mission)",
+      countryLabel: "Country",
+      countryGlobalOption: "None (global trade category, visible everywhere)",
+      regionLabel: "Region",
+      regionWholeCountryOption: "None (available across the whole country)",
+      masterScopeNotice: "This trade category will automatically be limited to your scope: {{scope}}.",
     },
     table: {
       edit: "Edit",

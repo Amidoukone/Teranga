@@ -1,5 +1,5 @@
 // frontend/src/pages/AdminTradeCategoriesPage.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   listTradeCategoriesAdmin,
@@ -7,8 +7,10 @@ import {
   updateTradeCategory,
   deleteTradeCategory,
 } from "../services/tradeCategories";
+import { getCountries } from "../services/countries";
+import { getRegions } from "../services/regions";
 import { me } from "../services/auth";
-import { normalizeRole, isMasterUser } from "../utils/role";
+import { normalizeRole, isMasterUser, isGlobalAdminUser } from "../utils/role";
 import { notify } from "../utils/notify";
 import { getFeedbackIcon } from "../utils/feedback";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
@@ -21,11 +23,15 @@ import {
   AdminRowActions,
 } from "../components/admin/AdminFormUi";
 
-// Gestion des filières (trade categories) Teranga Pro — contrairement aux régions/catégories
-// commerce, l'écriture est ouverte au super admin ET au master : la filière n'est pas une
-// ressource scopée par pays/région (voir backend/src/routes/tradeCategory.routes.js,
-// requireAdmin plutôt que requireGlobalAdmin) — un master doit pouvoir en créer pour onboarder
-// ses prestataires localement (voir AdminProvidersPage.jsx).
+// Gestion des filières (trade categories) Teranga Pro, scopées par pays/région (voir
+// backend/src/controllers/tradeCategory.controller.js) : un master (admin scopé) hérite
+// TOUJOURS de son propre périmètre à la création — jamais d'un pays/région choisi dans le
+// formulaire, il ne peut donc éditer/supprimer que SES filières. Seul l'admin global peut
+// choisir un périmètre arbitraire ou laisser vide pour une filière globale (le catalogue par
+// défaut, visible partout). Sans ce scope, une filière "par défaut" créée par un master
+// apparaissait partout et une mission qui l'utilisait ne pouvait pas être routée de façon
+// fiable vers le bon master (voir mission.controller.js / resolveMissionGeoScope.js
+// tradeCategoryScope).
 
 function isTruthyId(v) {
   if (v === null || v === undefined) return false;
@@ -35,11 +41,33 @@ function isTruthyId(v) {
   return true;
 }
 
+// Miroir client de geoScope.js canAccessGeoResource() : un master ne peut gérer que les
+// filières de SON périmètre exact (jamais les globales, jamais un autre pays/région).
+function canManageTradeCategory(user, tc, globalAdmin) {
+  if (globalAdmin) return true;
+  if (!isTruthyId(tc?.countryId)) return false;
+
+  const userRegionId = user?.regionId ?? null;
+  const userCountryId = user?.countryId ?? null;
+
+  if (isTruthyId(userRegionId)) {
+    if (String(tc.regionId) === String(userRegionId)) return true;
+    if (!isTruthyId(tc.regionId) && isTruthyId(userCountryId) && String(tc.countryId) === String(userCountryId)) {
+      return true;
+    }
+    return false;
+  }
+  if (isTruthyId(userCountryId)) return String(tc.countryId) === String(userCountryId);
+  return false;
+}
+
 const DEFAULT_FORM = {
   name: "",
   requiresCompany: false,
   defaultWarrantyDays: "0",
   isActive: true,
+  countryId: "",
+  regionId: "",
 };
 
 export default function AdminTradeCategoriesPage() {
@@ -47,6 +75,8 @@ export default function AdminTradeCategoriesPage() {
   const { confirmDelete } = useDeleteConfirm();
   const [user, setUser] = useState(null);
   const [tradeCategories, setTradeCategories] = useState([]);
+  const [countries, setCountries] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -56,6 +86,27 @@ export default function AdminTradeCategoriesPage() {
   const [search, setSearch] = useState("");
 
   const isMaster = useMemo(() => isMasterUser(user), [user]);
+  const globalAdmin = useMemo(() => isGlobalAdminUser(user), [user]);
+
+  const regionsForCountry = useMemo(
+    () => regions.filter((r) => String(r.countryId) === String(form.countryId)),
+    [regions, form.countryId]
+  );
+
+  const loadTradeCategories = useCallback(async () => {
+    setLoading(true);
+    setErrorMsg("");
+    try {
+      const rows = await listTradeCategoriesAdmin();
+      setTradeCategories(rows || []);
+    } catch (err) {
+      console.error("AdminTradeCategoriesPage load error:", err);
+      setErrorMsg(t("adminTradeCategoriesPage.errors.load"));
+      notify(t("adminTradeCategoriesPage.errors.load"));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
 
   useEffect(() => {
     let mounted = true;
@@ -75,6 +126,15 @@ export default function AdminTradeCategoriesPage() {
         }
         setUser(current);
         await loadTradeCategories();
+
+        // Pays/régions uniquement nécessaires pour l'admin global (sélecteur de périmètre) : un
+        // master hérite toujours du sien, aucun appel supplémentaire nécessaire pour lui.
+        if (isGlobalAdminUser(current)) {
+          const [countryList, regionList] = await Promise.all([getCountries(), getRegions()]);
+          if (!mounted) return;
+          setCountries(countryList || []);
+          setRegions(regionList || []);
+        }
       } catch (err) {
         console.error("AdminTradeCategoriesPage init error:", err);
         if (!mounted) return;
@@ -88,21 +148,6 @@ export default function AdminTradeCategoriesPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function loadTradeCategories() {
-    setLoading(true);
-    setErrorMsg("");
-    try {
-      const rows = await listTradeCategoriesAdmin();
-      setTradeCategories(rows || []);
-    } catch (err) {
-      console.error("AdminTradeCategoriesPage load error:", err);
-      setErrorMsg(t("adminTradeCategoriesPage.errors.load"));
-      notify(t("adminTradeCategoriesPage.errors.load"));
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function resetForm() {
     setForm(DEFAULT_FORM);
@@ -124,6 +169,13 @@ export default function AdminTradeCategoriesPage() {
       defaultWarrantyDays: Number(form.defaultWarrantyDays) || 0,
       isActive: Boolean(form.isActive),
     };
+
+    // countryId/regionId : uniquement pour l'admin global — un master ne peut jamais choisir de
+    // périmètre, le backend l'ignorerait de toute façon (il hérite du sien systématiquement).
+    if (globalAdmin) {
+      payload.countryId = form.countryId ? Number(form.countryId) : null;
+      payload.regionId = form.regionId ? Number(form.regionId) : null;
+    }
 
     try {
       setSaving(true);
@@ -301,6 +353,57 @@ export default function AdminTradeCategoriesPage() {
               />
             </AdminField>
 
+            {globalAdmin ? (
+              <>
+                <AdminField
+                  label={t("adminTradeCategoriesPage.form.countryLabel")}
+                  labelClassName="text-sm font-medium text-text-primary"
+                >
+                  <select
+                    value={form.countryId}
+                    onChange={(e) =>
+                      setForm({ ...form, countryId: e.target.value, regionId: "" })
+                    }
+                    className="app-input"
+                  >
+                    <option value="">{t("adminTradeCategoriesPage.form.countryGlobalOption")}</option>
+                    {countries.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </AdminField>
+
+                <AdminField
+                  label={t("adminTradeCategoriesPage.form.regionLabel")}
+                  labelClassName="text-sm font-medium text-text-primary"
+                >
+                  <select
+                    value={form.regionId}
+                    onChange={(e) => setForm({ ...form, regionId: e.target.value })}
+                    disabled={!form.countryId}
+                    className="app-input disabled:opacity-60"
+                  >
+                    <option value="">{t("adminTradeCategoriesPage.form.regionWholeCountryOption")}</option>
+                    {regionsForCountry.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </AdminField>
+              </>
+            ) : (
+              <p className="sm:col-span-2 text-xs text-text-muted italic">
+                {t("adminTradeCategoriesPage.form.masterScopeNotice", {
+                  scope: isTruthyId(user.regionId)
+                    ? t("adminTradeCategoriesPage.labels.regionId", { id: user.regionId })
+                    : t("adminTradeCategoriesPage.labels.countryId", { id: user.countryId }),
+                })}
+              </p>
+            )}
+
             <AdminField label="" labelClassName="text-sm font-medium text-text-primary">
               <label className="flex items-center gap-2 text-sm text-text-primary">
                 <input
@@ -364,67 +467,87 @@ export default function AdminTradeCategoriesPage() {
           </p>
         ) : (
           <div className="space-y-3">
-            {filteredTradeCategories.map((c) => (
-              <div
-                key={c.id}
-                className="bg-surface-card border border-border rounded-2xl shadow-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface-main hover:shadow-md transition"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base sm:text-lg font-semibold text-text-primary break-words">
-                      {c.name}
-                    </h3>
-                    <span
-                      className={`app-badge text-[0.7rem] ${
-                        c.isActive ? "app-badge-success" : "app-badge-warning"
-                      }`}
-                    >
-                      {c.isActive
-                        ? t("adminTradeCategoriesPage.badges.active")
-                        : t("adminTradeCategoriesPage.badges.inactive")}
-                    </span>
-                    {c.requiresCompany && (
-                      <span className="app-badge app-badge-info text-[0.7rem]">
-                        {t("adminTradeCategoriesPage.badges.requiresCompany")}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-text-secondary mt-1 break-words">
-                    {t("adminTradeCategoriesPage.table.warranty", {
-                      count: c.defaultWarrantyDays || 0,
-                    })}
-                  </p>
-                </div>
+            {filteredTradeCategories.map((c) => {
+              const canManage = canManageTradeCategory(user, c, globalAdmin);
+              const scopeLabel = c.region?.name
+                ? c.region.name
+                : c.country?.name
+                ? c.country.name
+                : t("adminTradeCategoriesPage.badges.global");
 
-                <AdminRowActions
-                  className="justify-end sm:flex-nowrap"
-                  itemClassName="px-3 py-1.5 text-xs sm:text-sm rounded-xl shadow-sm"
-                  actions={[
-                    {
-                      key: "edit-trade-category",
-                      label: t("adminTradeCategoriesPage.table.edit"),
-                      onClick: () => {
-                        setForm({
-                          name: c.name || "",
-                          requiresCompany: Boolean(c.requiresCompany),
-                          defaultWarrantyDays: String(c.defaultWarrantyDays ?? 0),
-                          isActive: Boolean(c.isActive),
-                        });
-                        setEditing(c);
-                        setShowForm(true);
-                      },
-                      buttonClassName: "app-btn-warning",
-                    },
-                    {
-                      key: "delete-trade-category",
-                      label: t("adminTradeCategoriesPage.table.delete"),
-                      onClick: () => handleDelete(c.id),
-                      buttonClassName: "app-btn-danger",
-                    },
-                  ]}
-                />
-              </div>
-            ))}
+              return (
+                <div
+                  key={c.id}
+                  className="bg-surface-card border border-border rounded-2xl shadow-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface-main hover:shadow-md transition"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base sm:text-lg font-semibold text-text-primary break-words">
+                        {c.name}
+                      </h3>
+                      <span
+                        className={`app-badge text-[0.7rem] ${
+                          c.isActive ? "app-badge-success" : "app-badge-warning"
+                        }`}
+                      >
+                        {c.isActive
+                          ? t("adminTradeCategoriesPage.badges.active")
+                          : t("adminTradeCategoriesPage.badges.inactive")}
+                      </span>
+                      <span className="app-badge text-[0.7rem] bg-surface-main text-text-secondary border-border">
+                        {scopeLabel}
+                      </span>
+                      {c.requiresCompany && (
+                        <span className="app-badge app-badge-info text-[0.7rem]">
+                          {t("adminTradeCategoriesPage.badges.requiresCompany")}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-text-secondary mt-1 break-words">
+                      {t("adminTradeCategoriesPage.table.warranty", {
+                        count: c.defaultWarrantyDays || 0,
+                      })}
+                    </p>
+                  </div>
+
+                  {canManage ? (
+                    <AdminRowActions
+                      className="justify-end sm:flex-nowrap"
+                      itemClassName="px-3 py-1.5 text-xs sm:text-sm rounded-xl shadow-sm"
+                      actions={[
+                        {
+                          key: "edit-trade-category",
+                          label: t("adminTradeCategoriesPage.table.edit"),
+                          onClick: () => {
+                            setForm({
+                              name: c.name || "",
+                              requiresCompany: Boolean(c.requiresCompany),
+                              defaultWarrantyDays: String(c.defaultWarrantyDays ?? 0),
+                              isActive: Boolean(c.isActive),
+                              countryId: c.countryId ? String(c.countryId) : "",
+                              regionId: c.regionId ? String(c.regionId) : "",
+                            });
+                            setEditing(c);
+                            setShowForm(true);
+                          },
+                          buttonClassName: "app-btn-warning",
+                        },
+                        {
+                          key: "delete-trade-category",
+                          label: t("adminTradeCategoriesPage.table.delete"),
+                          onClick: () => handleDelete(c.id),
+                          buttonClassName: "app-btn-danger",
+                        },
+                      ]}
+                    />
+                  ) : (
+                    <span className="text-xs text-text-muted italic self-start sm:self-center">
+                      {t("adminTradeCategoriesPage.badges.readOnly")}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

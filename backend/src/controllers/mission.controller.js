@@ -102,7 +102,7 @@ exports.estimate = async (req, res) => {
       longitude: rawLongitude,
     } = req.body;
 
-    await resolveTradeCategory(executionType, tradeCategoryId);
+    const tradeCategory = await resolveTradeCategory(executionType, tradeCategoryId);
 
     // Estimation basée sur la destination réelle (adresse déjà saisie à l'étape Location du
     // wizard) quand elle est disponible — jamais bloquant : un aperçu de prix qui échoue à se
@@ -131,6 +131,9 @@ exports.estimate = async (req, res) => {
       adminAreaName: geocodedAdminAreaName,
       fallbackCountryId: req.user.countryId ?? null,
       fallbackRegionId: req.user.regionId ?? null,
+      tradeCategoryScope: tradeCategory
+        ? { countryId: tradeCategory.countryId, regionId: tradeCategory.regionId }
+        : null,
     });
 
     const estimate = await estimateMission({
@@ -229,6 +232,9 @@ exports.create = async (req, res) => {
       adminAreaName: geocodedAdminAreaName,
       fallbackCountryId: req.user.countryId ?? null,
       fallbackRegionId: req.user.regionId ?? null,
+      tradeCategoryScope: tradeCategory
+        ? { countryId: tradeCategory.countryId, regionId: tradeCategory.regionId }
+        : null,
     });
     if (missionGeoScope.error) {
       return res.status(400).json({ error: missionGeoScope.error });

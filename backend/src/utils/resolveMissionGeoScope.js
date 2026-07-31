@@ -79,6 +79,14 @@ async function matchRegionByName(countryId, adminAreaName) {
  * @param {number|null} params.fallbackCountryId - pays du compte, utilisé si aucune adresse (types de
  *   mission sans lieu, ex. paiement/transfert d'argent — voir décision 0.9.e)
  * @param {number|null} params.fallbackRegionId - région du compte, même fallback
+ * @param {{countryId: number|null, regionId: number|null}|null} params.tradeCategoryScope - si la
+ *   filière choisie est scopée à un pays/région (voir tradeCategory.controller.js), ce scope est
+ *   AUTORITAIRE et prioritaire sur le géocodage de l'adresse : le wizard fait choisir la filière
+ *   AVANT le lieu, donc une filière déjà limitée à une région donnée définit sans ambiguïté la
+ *   destination de la mission — plus fiable que le rapprochement best-effort du nom de région
+ *   Google (voir matchRegionByName ci-dessus), et garantit que le master propriétaire de cette
+ *   filière voit toujours la mission qui en découle. Une filière globale (countryId null) laisse
+ *   le comportement existant (géocodage de l'adresse) inchangé.
  * @returns {Promise<{countryId: number|null, regionId: number|null}|{error: string}>}
  */
 async function resolveMissionGeoScope({
@@ -86,7 +94,19 @@ async function resolveMissionGeoScope({
   adminAreaName,
   fallbackCountryId = null,
   fallbackRegionId = null,
+  tradeCategoryScope = null,
 }) {
+  if (tradeCategoryScope?.countryId) {
+    const hasMaster = await countryHasActiveMaster(tradeCategoryScope.countryId);
+    if (!hasMaster) {
+      return { error: 'Nos services ne sont pas disponibles pour le moment dans ce pays.' };
+    }
+    return {
+      countryId: tradeCategoryScope.countryId,
+      regionId: tradeCategoryScope.regionId ?? null,
+    };
+  }
+
   if (!countryIso) {
     return { countryId: fallbackCountryId, regionId: fallbackRegionId };
   }
