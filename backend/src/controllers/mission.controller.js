@@ -16,6 +16,7 @@ const {
 const { notifyServiceCreated, notifyServiceStatusUpdate } = require('../services/serviceNotification.service');
 const mediaUpload = require('../services/mediaUpload.service');
 const { canAccessGeoResource } = require('../utils/geoScope');
+const { isProviderCountryMatchesMission } = require('../utils/providerScope');
 const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
 const { getPagination } = require('../utils/pagination');
 const logger = require('../utils/logger');
@@ -492,6 +493,15 @@ exports.assign = async (req, res) => {
         if (!provider) {
           return res.status(400).json({
             error: 'Prestataire invalide, inactif, ou ne couvrant pas cette filière',
+          });
+        }
+
+        // Couverture géographique : indépendant du scope de l'admin qui assigne (un admin
+        // global n'a pas de restriction de scope, cf. isGlobalAdmin) — c'est le prestataire qui
+        // doit couvrir le PAYS de destination réel de la mission, jamais l'inverse.
+        if (!(await isProviderCountryMatchesMission(service, provider))) {
+          return res.status(400).json({
+            error: 'Ce prestataire ne couvre pas le pays de destination de cette mission',
           });
         }
 

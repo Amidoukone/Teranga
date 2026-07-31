@@ -1,13 +1,7 @@
 'use strict';
 
 jest.mock('../../models', () => ({
-  Region: { findOne: jest.fn() },
-  Sequelize: {
-    and: jest.fn((...args) => ({ __and: args })),
-    where: jest.fn((...args) => ({ __where: args })),
-    fn: jest.fn((...args) => ({ __fn: args })),
-    col: jest.fn((...args) => ({ __col: args })),
-  },
+  Region: { findAll: jest.fn() },
 }));
 
 jest.mock('../../src/controllers/auth.controller', () => ({
@@ -39,7 +33,7 @@ describe('resolveMissionGeoScope', () => {
   test('resolves the destination country from a geocoded ISO, ignoring the account scope', async () => {
     resolveGeoScope.mockResolvedValue({ countryId: 3, countryIso: 'CI' });
     countryHasActiveMaster.mockResolvedValue(true);
-    Region.findOne.mockResolvedValue({ id: 42 });
+    Region.findAll.mockResolvedValue([{ id: 42, name: 'Lagunes' }]);
 
     const result = await resolveMissionGeoScope({
       countryIso: 'CI',
@@ -53,6 +47,21 @@ describe('resolveMissionGeoScope', () => {
     expect(result).toEqual({ countryId: 3, regionId: 42 });
   });
 
+  test('resolves the region via normalized/fuzzy match when Google\'s name does not match exactly', async () => {
+    resolveGeoScope.mockResolvedValue({ countryId: 3, countryIso: 'ML' });
+    countryHasActiveMaster.mockResolvedValue(true);
+    Region.findAll.mockResolvedValue([{ id: 7, name: 'Kayes' }, { id: 8, name: 'Ségou' }]);
+
+    const result = await resolveMissionGeoScope({
+      countryIso: 'ML',
+      adminAreaName: 'Région de Kayes',
+      fallbackCountryId: null,
+      fallbackRegionId: null,
+    });
+
+    expect(result).toEqual({ countryId: 3, regionId: 7 });
+  });
+
   test('region stays null (best-effort) when no adminAreaName or no match found', async () => {
     resolveGeoScope.mockResolvedValue({ countryId: 3, countryIso: 'CI' });
     countryHasActiveMaster.mockResolvedValue(true);
@@ -64,7 +73,7 @@ describe('resolveMissionGeoScope', () => {
       fallbackRegionId: 2,
     });
 
-    expect(Region.findOne).not.toHaveBeenCalled();
+    expect(Region.findAll).not.toHaveBeenCalled();
     expect(result).toEqual({ countryId: 3, regionId: null });
   });
 

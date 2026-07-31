@@ -117,4 +117,26 @@ async function getManageableProviderFilter(user) {
   return { deny: true };
 }
 
-module.exports = { canManageProvider, getManageableProviderFilter, isProviderInGeoScope };
+/**
+ * Vérifie qu'un prestataire COUVRE effectivement le pays de destination d'une mission —
+ * indépendant du scope de l'admin qui assigne (voir mission.controller.js exports.assign).
+ * Sans ce contrôle, un admin global (non restreint par isGlobalAdmin) pouvait assigner
+ * n'importe quel prestataire, y compris hors de son pays de couverture, à une mission située
+ * n'importe où : findActiveProviderForTradeCategory() ne vérifie que le statut/la filière.
+ * Le modèle Provider ne porte qu'un countryCode (pas de regionId), donc la granularité de
+ * vérification reste au niveau pays.
+ */
+async function isProviderCountryMatchesMission(service, provider) {
+  if (!service?.countryId) return true; // mission sans destination connue : pas de contrainte fiable
+  if (!provider?.countryCode) return false;
+
+  const providerCountryId = await getCountryIdByIso(provider.countryCode);
+  return providerCountryId != null && Number(providerCountryId) === Number(service.countryId);
+}
+
+module.exports = {
+  canManageProvider,
+  getManageableProviderFilter,
+  isProviderInGeoScope,
+  isProviderCountryMatchesMission,
+};

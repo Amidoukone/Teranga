@@ -135,7 +135,15 @@ function applyGeoScope(where = {}, user, options = {}) {
 
   const { countryId, regionId } = getUserGeoScope(user);
 
-  if (regionId) return { ...where, regionId };
+  if (regionId) {
+    // Même filet de sécurité que canAccessGeoResource() : une ressource dont la région
+    // n'a pas pu être résolue (regionId NULL) mais dont le pays correspond reste incluse,
+    // au lieu de disparaître silencieusement de la liste du master régional.
+    if (!countryId) return { ...where, regionId };
+    const andFilters = Array.isArray(where[Op.and]) ? [...where[Op.and]] : [];
+    andFilters.push({ [Op.or]: [{ regionId }, { regionId: null, countryId }] });
+    return { ...where, [Op.and]: andFilters };
+  }
   if (countryId) return { ...where, countryId };
 
   // ✅ On conserve exactement la logique existante (anti-régression)
@@ -209,7 +217,15 @@ function canAccessGeoResource(resource, user) {
   const resRegion = resource?.regionId ?? resource?.region_id ?? null;
   const resCountry = resource?.countryId ?? resource?.country_id ?? null;
 
-  if (regionId) return String(resRegion) === String(regionId);
+  if (regionId) {
+    if (String(resRegion) === String(regionId)) return true;
+    // Filet de sécurité : une ressource dont la région n'a pas pu être résolue
+    // (ex. missions guidées géocodées, cf. resolveMissionGeoScope.js — correspondance
+    // de nom de région best-effort) reste visible pour un master régional tant que le
+    // PAYS correspond, plutôt que de disparaître pour tout le monde sauf l'admin global.
+    if (!resRegion && countryId && String(resCountry) === String(countryId)) return true;
+    return false;
+  }
   if (countryId) return String(resCountry) === String(countryId);
 
   return false;

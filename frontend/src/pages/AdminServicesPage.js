@@ -142,9 +142,19 @@ export default function AdminServicesPage() {
   function isProviderAssignableToMission(service, provider) {
     if (!service || !provider) return false;
     if (!Array.isArray(provider.tradeCategories)) return false;
-    return provider.tradeCategories.some(
+    const hasTradeCategory = provider.tradeCategories.some(
       (tc) => String(tc.id) === String(service.tradeCategoryId)
     );
+    if (!hasTradeCategory) return false;
+
+    // Couverture géographique : le backend refuse désormais l'assignation d'un prestataire
+    // dont le pays ne couvre pas la destination réelle de la mission (mission.controller.js
+    // assign()) — filtré ici aussi pour ne pas proposer un choix qui échouera à l'envoi.
+    const missionCountryIso = service.country?.isoCode;
+    if (missionCountryIso && provider.countryCode) {
+      return String(provider.countryCode).toUpperCase() === String(missionCountryIso).toUpperCase();
+    }
+    return true;
   }
 
   function getAssignableProviders(service) {

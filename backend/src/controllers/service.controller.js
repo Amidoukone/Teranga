@@ -381,7 +381,17 @@ exports.listClient = async (req, res) => {
       where = { ...where, [Op.and]: andWhere };
     }
 
-    where = applyServiceGeoScope(where, req.user);
+    // Le scope géo (applyServiceGeoScope) sert à restreindre un admin/master à SON
+    // périmètre quand il liste les services d'autrui. Pour un client, `where.clientId`
+    // ci-dessus restreint déjà strictement à ses propres missions : y ajouter un filtre
+    // géo dessus n'apporte aucune sécurité supplémentaire et peut au contraire masquer
+    // ses propres missions au client si leur pays/région de destination (résolu par
+    // géocodage, cf. resolveMissionGeoScope.js) diffère du pays/région de son compte —
+    // notamment pour une mission transfrontalière ou une mission dont la région n'a pas
+    // pu être résolue avec certitude.
+    if (req.user.role === "admin") {
+      where = applyServiceGeoScope(where, req.user);
+    }
 
     const { rows, count } = await Service.findAndCountAll({
       where,
@@ -477,6 +487,12 @@ exports.listAll = async (req, res) => {
         { model: User, as: "creator", attributes: ["id", "firstName", "lastName", "email"] },
         { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
         { model: Property, as: "property", attributes: ["id", "title", "city", "address"] },
+        // Pays de destination réel de la mission (résolu par géocodage à la création,
+        // cf. resolveMissionGeoScope.js) — permet au frontend de ne proposer, dans le
+        // sélecteur de prestataire d'une mission filière, que les prestataires couvrant
+        // effectivement ce pays (voir AdminServicesPage.js / mission.controller.js assign()
+        // qui applique la même règle côté backend).
+        { model: Country, as: "country", attributes: ["id", "isoCode", "name"] },
       ],
       order: buildServiceOrder(sort),
       limit,
