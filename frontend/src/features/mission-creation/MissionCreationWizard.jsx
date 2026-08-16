@@ -34,6 +34,11 @@ export default function MissionCreationWizard() {
   const [saveThisLocation, setSaveThisLocation] = useState(false);
   const [newLocationLabel, setNewLocationLabel] = useState("");
 
+  // Retrait — uniquement pour la filière livraison (docs/DEV_SPEC_TERANGA_v6_PHASE3.md §1.2),
+  // état distinct de address/coordinates (qui restent la dépose).
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [pickupCoordinates, setPickupCoordinates] = useState(null);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState(null);
@@ -88,6 +93,15 @@ export default function MissionCreationWizard() {
 
   const executionType = category.requestKind === "trade_category" ? "provider" : "agent";
 
+  const selectedTradeCategorySlug = category.tradeCategoryId
+    ? tradeCategories.find((tc) => String(tc.id) === String(category.tradeCategoryId))?.slug || null
+    : null;
+
+  // Livraison (colis) et Mobilité (passager) : capture d'un second lieu (départ), même mécanisme
+  // partagé — docs/DEV_SPEC_TERANGA_v7_PHASE4.md §1.2 étend la Phase 3 Lot 1.
+  const requiresPickup = selectedTradeCategorySlug === "livraison" || selectedTradeCategorySlug === "mobilite";
+  const isMobilite = selectedTradeCategorySlug === "mobilite";
+
   const categoryLabel = category.tradeCategoryId
     ? tradeCategories.find((tc) => String(tc.id) === String(category.tradeCategoryId))?.name || ""
     : category.serviceType
@@ -119,6 +133,8 @@ export default function MissionCreationWizard() {
           address: address.trim() || undefined,
           latitude: coordinates?.latitude,
           longitude: coordinates?.longitude,
+          pickupLatitude: pickupCoordinates?.latitude,
+          pickupLongitude: pickupCoordinates?.longitude,
         });
         setEstimate(data);
       } catch (_err) {
@@ -170,6 +186,20 @@ export default function MissionCreationWizard() {
     setSavedLocationId(null);
   };
 
+  const handlePickupAddressChange = (value) => {
+    setPickupAddress(value);
+    setPickupCoordinates(null);
+  };
+
+  const handlePickupPlaceSelected = ({ address: resolvedAddress, latitude, longitude }) => {
+    setPickupAddress(resolvedAddress);
+    setPickupCoordinates({ latitude, longitude });
+  };
+
+  const handlePickupMapPositionChange = ({ latitude, longitude }) => {
+    setPickupCoordinates({ latitude, longitude });
+  };
+
   const resetWizard = () => {
     setStep(1);
     setCategory({ requestKind: null, tradeCategoryId: "", serviceType: "" });
@@ -178,6 +208,8 @@ export default function MissionCreationWizard() {
     setSavedLocationId(null);
     setSaveThisLocation(false);
     setNewLocationLabel("");
+    setPickupAddress("");
+    setPickupCoordinates(null);
     setTitle("");
     setDescription("");
     setPhoto(null);
@@ -207,6 +239,12 @@ export default function MissionCreationWizard() {
         if (address.trim()) payload.address = address.trim();
         if (coordinates?.latitude != null) payload.latitude = coordinates.latitude;
         if (coordinates?.longitude != null) payload.longitude = coordinates.longitude;
+      }
+
+      if (requiresPickup) {
+        if (pickupAddress.trim()) payload.pickupAddress = pickupAddress.trim();
+        if (pickupCoordinates?.latitude != null) payload.pickupLatitude = pickupCoordinates.latitude;
+        if (pickupCoordinates?.longitude != null) payload.pickupLongitude = pickupCoordinates.longitude;
       }
 
       const data = await createMission(payload);
@@ -312,6 +350,13 @@ export default function MissionCreationWizard() {
           onToggleSaveThisLocation={setSaveThisLocation}
           newLocationLabel={newLocationLabel}
           onLocationLabelChange={setNewLocationLabel}
+          requiresPickup={requiresPickup}
+          isMobilite={isMobilite}
+          pickupAddress={pickupAddress}
+          pickupCoordinates={pickupCoordinates}
+          onPickupAddressChange={handlePickupAddressChange}
+          onPickupPlaceSelected={handlePickupPlaceSelected}
+          onPickupMapPositionChange={handlePickupMapPositionChange}
         />
       ) : null}
 
@@ -332,7 +377,13 @@ export default function MissionCreationWizard() {
         <ConfirmStep
           estimate={estimate}
           loadingEstimate={loadingEstimate}
-          summary={{ categoryLabel, title, address }}
+          summary={{
+            categoryLabel,
+            title,
+            address,
+            pickupAddress: requiresPickup ? pickupAddress : "",
+            isMobilite,
+          }}
         />
       ) : null}
 

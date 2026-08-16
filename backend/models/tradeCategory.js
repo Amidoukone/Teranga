@@ -84,6 +84,18 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         field: 'region_id',
       },
+      // Seuils de professionnalisme (docs/DEV_SPEC_TERANGA_v4_PHASE0.md §1) — NULL = filière
+      // jamais vérifiée par le job d'alerte (pas de valeur par défaut arbitraire imposée).
+      intakeThresholdMinutes: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: true,
+        field: 'intake_threshold_minutes',
+      },
+      alertThresholdMinutes: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: true,
+        field: 'alert_threshold_minutes',
+      },
     },
     {
       sequelize,

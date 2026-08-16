@@ -30,6 +30,8 @@ const estimateMissionSchema = Joi.object({
   address: Joi.string().trim().max(255).allow('', null),
   latitude: Joi.number().min(-90).max(90),
   longitude: Joi.number().min(-180).max(180),
+  pickupLatitude: Joi.number().min(-90).max(90),
+  pickupLongitude: Joi.number().min(-180).max(180),
 });
 
 /**
@@ -46,6 +48,12 @@ const createMissionSchema = Joi.object({
   address: Joi.string().trim().max(255).allow('', null),
   latitude: Joi.number().min(-90).max(90),
   longitude: Joi.number().min(-180).max(180),
+  // Retrait — structure seulement ici (optionnel pour Joi) ; l'obligation "requis pour la
+  // filière livraison" est une règle métier vérifiée dans le contrôleur, pas dans le schéma
+  // (docs/DEV_SPEC_TERANGA_v6_PHASE3.md §1.1).
+  pickupAddress: Joi.string().trim().max(255).allow('', null),
+  pickupLatitude: Joi.number().min(-90).max(90),
+  pickupLongitude: Joi.number().min(-180).max(180),
 });
 
 /**
@@ -68,6 +76,9 @@ const updateMissionStatusSchema = Joi.object({
   toStatus: Joi.string()
     .valid(...MISSION_STATUS_VALUES)
     .required(),
+  // Réconciliation cash à la remise (docs/DEV_SPEC_TERANGA_v6_PHASE3.md §5) — optionnel, ignoré
+  // hors transition COMPLETED filière livraison (règle métier vérifiée dans le contrôleur).
+  collectedAmount: Joi.number().min(0).allow(null),
 });
 
 /**
@@ -78,10 +89,21 @@ const missionLocationSchema = Joi.object({
   longitude: Joi.number().min(-180).max(180).required(),
 });
 
+/**
+ * Demande de déplacement interne, Cas 1 (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §4.2) — position
+ * actuelle de l'exécutant (retrait), adresse optionnelle (affichage seulement).
+ */
+const logisticsRequestSchema = Joi.object({
+  latitude: Joi.number().min(-90).max(90).required(),
+  longitude: Joi.number().min(-180).max(180).required(),
+  address: Joi.string().trim().max(255).allow('', null),
+});
+
 module.exports = {
   estimateMissionSchema,
   createMissionSchema,
   assignMissionSchema,
   updateMissionStatusSchema,
   missionLocationSchema,
+  logisticsRequestSchema,
 };

@@ -35,7 +35,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       action: {
-        type: DataTypes.ENUM('created', 'assigned', 'status_updated'),
+        type: DataTypes.ENUM('created', 'assigned', 'status_updated', 'threshold_alert'),
         allowNull: false,
         defaultValue: 'created',
       },

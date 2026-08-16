@@ -8,6 +8,7 @@ const { validateBody } = require('../middleware/validate.middleware');
 const {
   createProviderSchema,
   updateProviderStatusSchema,
+  updateMyAvailabilitySchema,
 } = require('../validators/provider.schemas');
 const { createProviderContractSchema } = require('../validators/providerContract.schemas');
 
@@ -32,6 +33,18 @@ router.post(
   validateBody(createProviderSchema),
   ctrl.create
 );
+
+// Chemins littéraux — déclarés avant '/:id' pour ne jamais être capturés par le paramètre
+// (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §3).
+router.get('/me', auth, requireRoles('provider'), ctrl.me);
+router.patch(
+  '/me/availability',
+  auth,
+  requireRoles('provider'),
+  validateBody(updateMyAvailabilitySchema),
+  ctrl.updateMyAvailability
+);
+router.get('/available', auth, requireRoles('admin', 'category_manager'), ctrl.listAvailable);
 
 router.get('/', auth, requireRoles('admin', 'category_manager'), ctrl.list);
 router.get('/:id', auth, requireRoles('admin', 'category_manager'), ctrl.detail);

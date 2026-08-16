@@ -33,6 +33,13 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: true,
         field: 'is_active',
       },
+      // Numéro de contact affiché sur les annonces immobilières sans région précise
+      // (docs/BRAINSTORM_ECOSYSTEME_TERANGA.md §7) — fallback si la région n'en a pas.
+      contactPhone: {
+        type: DataTypes.STRING(30),
+        allowNull: true,
+        field: 'contact_phone',
+      },
     },
     {
       sequelize,

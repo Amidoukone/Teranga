@@ -14,6 +14,9 @@ const {
   ACTIVE_STATUSES,
 } = require('../services/missionStatus.service');
 const { notifyServiceCreated, notifyServiceStatusUpdate } = require('../services/serviceNotification.service');
+const { recalcProviderBadge } = require('../services/providerBadge.service');
+const { getAdminRecipientIds } = require('../services/notification.service');
+const { emitEvent } = require('../services/activity.service');
 const mediaUpload = require('../services/mediaUpload.service');
 const { canAccessGeoResource } = require('../utils/geoScope');
 const { isProviderCountryMatchesMission } = require('../utils/providerScope');
@@ -46,6 +49,17 @@ const MISSION_STATUS_LABELS = {
 const CLIENT_TRIGGERABLE = ['CANCELLED_BY_CLIENT', 'VALIDATED'];
 // Transitions que l'exécutant assigné (agent ou prestataire) peut déclencher (section 2).
 const EXECUTOR_TRIGGERABLE = ['EN_ROUTE', 'ON_SITE', 'IN_PROGRESS', 'COMPLETED'];
+// Transitions gérées exclusivement par le parcours de litige structuré
+// (docs/DEV_SPEC_TERANGA_v4_PHASE0.md §2) — jamais via ce PATCH générique, même pour un admin,
+// pour qu'une résolution ne puisse jamais se faire sans motif/preuve (ouverture) ou sans
+// justification écrite (résolution). Voir dispute.controller.js.
+const DISPUTE_MANAGED_STATUSES = ['DISPUTED', 'RESOLVED_REFUND', 'RESOLVED_REDO', 'RESOLVED_CLOSED'];
+
+// Filières nécessitant un point de départ distinct de la destination — colis à retirer
+// (livraison) ou passager à prendre en charge (mobilité, Teranga Taxi, docs/DEV_SPEC_TERANGA_v7_PHASE4.md
+// §1.1). Même mécanisme de capture/dispatch pour les deux, seul le libellé change côté client.
+const PICKUP_REQUIRED_SLUGS = ['livraison', 'mobilite'];
+exports.PICKUP_REQUIRED_SLUGS = PICKUP_REQUIRED_SLUGS;
 
 async function findProviderForUser(userId) {
   return Provider.findOne({ where: { userId } });
@@ -100,6 +114,8 @@ exports.estimate = async (req, res) => {
       address: rawAddress,
       latitude: rawLatitude,
       longitude: rawLongitude,
+      pickupLatitude: rawPickupLatitude,
+      pickupLongitude: rawPickupLongitude,
     } = req.body;
 
     const tradeCategory = await resolveTradeCategory(executionType, tradeCategoryId);
@@ -111,6 +127,8 @@ exports.estimate = async (req, res) => {
     const trimmedAddress = rawAddress ? String(rawAddress).trim() : null;
     let latitude = rawLatitude != null ? Number(rawLatitude) : null;
     let longitude = rawLongitude != null ? Number(rawLongitude) : null;
+    const pickupLatitude = rawPickupLatitude != null ? Number(rawPickupLatitude) : null;
+    const pickupLongitude = rawPickupLongitude != null ? Number(rawPickupLongitude) : null;
     let geocodedCountryIso = null;
     let geocodedAdminAreaName = null;
 
@@ -143,6 +161,10 @@ exports.estimate = async (req, res) => {
       serviceType: serviceType || null,
       countryId: missionGeoScope.error ? null : missionGeoScope.countryId,
       regionId: missionGeoScope.error ? null : missionGeoScope.regionId,
+      destinationLatitude: latitude,
+      destinationLongitude: longitude,
+      pickupLatitude,
+      pickupLongitude,
     });
 
     return res.status(200).json({ estimate });
@@ -168,6 +190,9 @@ exports.create = async (req, res) => {
       address: rawAddress,
       latitude: rawLatitude,
       longitude: rawLongitude,
+      pickupAddress: rawPickupAddress,
+      pickupLatitude: rawPickupLatitude,
+      pickupLongitude: rawPickupLongitude,
     } = req.body;
 
     const tradeCategory = await resolveTradeCategory(executionType, tradeCategoryId);
@@ -227,6 +252,37 @@ exports.create = async (req, res) => {
       longitude = null;
     }
 
+    // Retrait — obligatoire pour livraison et mobilité (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §1.1,
+    // qui étend la règle posée en Phase 3 Lot 1). Ne pilote jamais le pays/région de la mission
+    // (la dépose le fait déjà ci-dessus) : c'est uniquement une seconde position, jamais
+    // géocodée pour en dériver un scope.
+    let pickupAddress = rawPickupAddress ? String(rawPickupAddress).trim() : null;
+    let pickupLatitude = rawPickupLatitude != null ? Number(rawPickupLatitude) : null;
+    let pickupLongitude = rawPickupLongitude != null ? Number(rawPickupLongitude) : null;
+
+    if (pickupAddress && (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude))) {
+      const geocodedPickup = await geocodeAddress(pickupAddress);
+      if (!geocodedPickup) {
+        return res.status(400).json({
+          error: 'Adresse de retrait introuvable. Veuillez préciser un lieu plus précis.',
+        });
+      }
+      pickupLatitude = geocodedPickup.latitude;
+      pickupLongitude = geocodedPickup.longitude;
+    }
+
+    if (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude)) {
+      pickupLatitude = null;
+      pickupLongitude = null;
+      pickupAddress = null;
+    }
+
+    if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug) && (pickupLatitude === null || pickupLongitude === null)) {
+      return res.status(400).json({
+        error: 'Le point de départ est obligatoire pour cette filière',
+      });
+    }
+
     const missionGeoScope = await resolveMissionGeoScope({
       countryIso: geocodedCountryIso,
       adminAreaName: geocodedAdminAreaName,
@@ -247,6 +303,10 @@ exports.create = async (req, res) => {
       serviceType: tradeCategory ? null : serviceType,
       countryId: missionGeoScope.countryId,
       regionId: missionGeoScope.regionId,
+      destinationLatitude: latitude,
+      destinationLongitude: longitude,
+      pickupLatitude,
+      pickupLongitude,
     });
 
     const service = await Service.create({
@@ -254,6 +314,9 @@ exports.create = async (req, res) => {
       agentId: null,
       createdById: req.user.id,
       propertyId: null,
+      pickupAddress,
+      pickupLatitude,
+      pickupLongitude,
       type: tradeCategory ? 'other' : serviceType,
       title: String(title).trim(),
       description: description ? String(description).trim() : null,
@@ -511,6 +574,20 @@ exports.assign = async (req, res) => {
           });
         }
 
+        // Fenêtre d'acceptation (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2) — uniquement filière
+        // Mobilité, NULL partout ailleurs (comportement inchangé pour les autres filières).
+        let acceptanceDeadlineAt = null;
+        if (service.tradeCategoryId) {
+          const tradeCategory = await TradeCategory.findByPk(service.tradeCategoryId, {
+            attributes: ['slug'],
+          });
+          // Dispatch partagé (docs/DEV_SPEC_TERANGA_v6_PHASE3.md §3) : la fenêtre d'acceptation
+          // n'est pas spécifique à Mobilité, seule cette condition la limitait artificiellement.
+          if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug)) {
+            acceptanceDeadlineAt = new Date(Date.now() + 90 * 1000);
+          }
+        }
+
         if (['CREATED', 'SEARCHING_EXECUTOR'].includes(service.missionStatus)) {
           if (service.missionStatus === 'CREATED') {
             service = await transitionMissionStatus({
@@ -525,13 +602,14 @@ exports.assign = async (req, res) => {
             toStatus: 'ASSIGNED',
             actorType: 'admin',
             actorId: req.user.id,
-            extraFields: { providerId: provider.id, ...directUpdates },
+            extraFields: { providerId: provider.id, acceptanceDeadlineAt, ...directUpdates },
           });
           directUpdates = {};
         } else if (['ASSIGNED', 'EN_ROUTE', 'ON_SITE', 'IN_PROGRESS'].includes(service.missionStatus)) {
           // Réassignation vers un autre exécutant : pas de transition d'état, un nouvel exécutant
           // prend la suite immédiatement.
           directUpdates.providerId = provider.id;
+          directUpdates.acceptanceDeadlineAt = acceptanceDeadlineAt;
         } else {
           return res.status(400).json({
             error: 'Cette mission ne peut pas être (ré)assignée dans son état actuel',
@@ -563,19 +641,105 @@ exports.assign = async (req, res) => {
 };
 
 /* ============================================================
+   POST /api/v1/missions/:id/accept — le prestataire assigné confirme la course dans la fenêtre
+   d'acceptation (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2). Aucun changement de statut, juste la
+   levée de la fenêtre — la mission continue normalement ensuite via updateStatus.
+============================================================ */
+exports.accept = async (req, res) => {
+  try {
+    const service = await Service.findByPk(req.params.id);
+    if (!service) return res.status(404).json({ error: 'Mission introuvable' });
+
+    const provider = await findProviderForUser(req.user.id);
+    if (!provider || String(service.providerId) !== String(provider.id)) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+    if (!service.acceptanceDeadlineAt) {
+      return res.status(400).json({ error: 'Aucune acceptation en attente pour cette mission' });
+    }
+
+    await service.update({ acceptanceDeadlineAt: null });
+    return res.status(200).json({ mission: service });
+  } catch (e) {
+    logger.error({ err: e }, 'mission.accept.failed');
+    return res.status(500).json({ error: "Erreur lors de l'acceptation" });
+  }
+};
+
+/* ============================================================
+   POST /api/v1/missions/:id/decline — le prestataire assigné refuse (docs/DEV_SPEC_TERANGA_v5_PHASE2.md
+   §5.2). Retour à SEARCHING_EXECUTOR, notifie le master (réaffectation nécessaire).
+============================================================ */
+exports.decline = async (req, res) => {
+  try {
+    const service = await Service.findByPk(req.params.id);
+    if (!service) return res.status(404).json({ error: 'Mission introuvable' });
+
+    const provider = await findProviderForUser(req.user.id);
+    if (!provider || String(service.providerId) !== String(provider.id)) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
+    const updated = await transitionMissionStatus({
+      service,
+      toStatus: 'SEARCHING_EXECUTOR',
+      actorType: 'provider',
+      actorId: req.user.id,
+      extraFields: { providerId: null, acceptanceDeadlineAt: null },
+    });
+
+    try {
+      const masters = await getAdminRecipientIds({
+        countryId: updated.countryId,
+        regionId: updated.regionId,
+      });
+      if (masters.length > 0) {
+        await emitEvent({
+          recipients: masters,
+          actorId: req.user.id,
+          entityType: 'service',
+          entityId: updated.id,
+          action: 'status_updated',
+          title: 'Course refusée — réaffectation nécessaire',
+          message: `Mission #${updated.id} refusée par le chauffeur assigné.`,
+          countryId: updated.countryId,
+          regionId: updated.regionId,
+          notificationMode: 'create',
+        });
+      }
+    } catch (err) {
+      logger.warn('Notification refus course échouée:', err?.message || err);
+    }
+
+    return res.status(200).json({ mission: updated });
+  } catch (e) {
+    logger.error({ err: e }, 'mission.decline.failed');
+    return res.status(500).json({ error: 'Erreur lors du refus' });
+  }
+};
+
+/* ============================================================
    PATCH /api/v1/missions/:id/status — transition de statut (section 2).
 ============================================================ */
 exports.updateStatus = async (req, res) => {
   try {
-    const { toStatus } = req.body;
+    const { toStatus, collectedAmount: rawCollectedAmount } = req.body;
     const service = await Service.findByPk(req.params.id);
     if (!service) return res.status(404).json({ error: 'Mission introuvable' });
+
+    // Sous-mission mobilité interne (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §4) : clientId n'est
+    // qu'une association technique héritée de la mission mère, jamais un vrai droit d'accès —
+    // un client ne doit jamais pouvoir agir sur une sous-mission qui lui est invisible.
+    if (service.parentServiceId && req.user.role === 'client') {
+      return res.status(403).json({ error: 'Accès interdit pour cette transition' });
+    }
 
     let allowed = false;
     let actorType = req.user.role;
 
     if (req.user.role === 'admin') {
-      allowed = canAccessGeoResource(service, req.user);
+      allowed =
+        !DISPUTE_MANAGED_STATUSES.includes(toStatus) && canAccessGeoResource(service, req.user);
     } else if (req.user.role === 'client') {
       allowed =
         String(service.clientId) === String(req.user.id) && CLIENT_TRIGGERABLE.includes(toStatus);
@@ -594,13 +758,20 @@ exports.updateStatus = async (req, res) => {
         Boolean(provider) &&
         String(service.providerId) === String(provider.id) &&
         EXECUTOR_TRIGGERABLE.includes(toStatus);
+      // Fenêtre d'acceptation en attente (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2) : le
+      // prestataire doit confirmer via /accept avant de pouvoir faire progresser la mission.
+      if (allowed && service.acceptanceDeadlineAt) {
+        return res.status(400).json({
+          error: "Confirmez d'abord la course (voir POST .../accept) avant de la faire progresser",
+        });
+      }
     }
 
     if (!allowed) {
       return res.status(403).json({ error: 'Accès interdit pour cette transition' });
     }
 
-    const updated = await transitionMissionStatus({
+    let updated = await transitionMissionStatus({
       service,
       toStatus,
       actorType,
@@ -613,6 +784,78 @@ exports.updateStatus = async (req, res) => {
       title: MISSION_STATUS_LABELS[toStatus] || 'Statut de mission mis à jour',
       status: updated.status,
     });
+
+    // Clôture automatique des sous-missions mobilité interne à la confirmation de dépose
+    // (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §4.3) — pas de client à faire valider. La réputation du
+    // chauffeur (bloc ci-dessous) ne s'applique volontairement pas ici : `toStatus` reste
+    // 'COMPLETED', pas 'VALIDATED' — un déplacement interne n'est pas une mission client à
+    // valoriser dans le compteur public.
+    if (toStatus === 'COMPLETED' && updated.parentServiceId) {
+      updated = await transitionMissionStatus({
+        service: updated,
+        toStatus: 'VALIDATED',
+        actorType: 'system',
+        actorId: null,
+      });
+    }
+
+    // Réconciliation cash à la remise, filière livraison uniquement (docs/DEV_SPEC_TERANGA_v6_PHASE3.md
+    // §5) — `toStatus` (pas `updated.missionStatus`, qui peut avoir été recascadé ci-dessus) est la
+    // transition réellement demandée par l'exécutant. Jamais bloquant : un écart notifie le master,
+    // rien de plus.
+    if (toStatus === 'COMPLETED' && rawCollectedAmount != null && !updated.parentServiceId) {
+      const collectedAmount = Number(rawCollectedAmount);
+      if (Number.isFinite(collectedAmount)) {
+        try {
+          const tradeCategory = updated.tradeCategoryId
+            ? await TradeCategory.findByPk(updated.tradeCategoryId, { attributes: ['slug'] })
+            : null;
+          if (tradeCategory?.slug === 'livraison') {
+            await updated.update({ collectedAmount });
+            const budget = updated.budget != null ? Number(updated.budget) : null;
+            if (budget != null && Math.abs(collectedAmount - budget) > 1) {
+              const masters = await getAdminRecipientIds({
+                countryId: updated.countryId,
+                regionId: updated.regionId,
+              });
+              if (masters.length > 0) {
+                await emitEvent({
+                  recipients: masters,
+                  actorId: req.user.id,
+                  entityType: 'service',
+                  entityId: updated.id,
+                  action: 'status_updated',
+                  title: 'Écart de montant collecté',
+                  message: `Mission #${updated.id} : montant collecté (${collectedAmount}) différent du montant attendu (${budget}).`,
+                  countryId: updated.countryId,
+                  regionId: updated.regionId,
+                  notificationMode: 'create',
+                });
+              }
+            }
+          }
+        } catch (err) {
+          logger.warn('Réconciliation cash échouée:', err?.message || err);
+        }
+      }
+    }
+
+    // Réputation (docs/DEV_SPEC_TERANGA_v4_PHASE0.md §3.2) — VALIDATED est le signal de succès
+    // fiable (le client confirme), contrairement à CLOSED qui n'est pas systématiquement atteint
+    // dans ce système ; completedMissionsCount n'était incrémenté nulle part avant ce lot.
+    if (updated.providerId && ['VALIDATED', 'CLOSED'].includes(toStatus)) {
+      try {
+        if (toStatus === 'VALIDATED') {
+          await Provider.increment('completedMissionsCount', {
+            by: 1,
+            where: { id: updated.providerId },
+          });
+        }
+        await recalcProviderBadge(updated.providerId);
+      } catch (err) {
+        logger.warn('Mise à jour réputation prestataire échouée:', err?.message || err);
+      }
+    }
 
     return res.status(200).json({ mission: updated });
   } catch (e) {
@@ -676,12 +919,128 @@ exports.pingLocation = async (req, res) => {
 };
 
 /* ============================================================
+   POST /api/v1/missions/:id/logistics-request — un exécutant (agent ou prestataire) en mission
+   active demande un déplacement interne (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §4.2). Crée une
+   sous-mission filière Mobilité, invisible du client (clientId hérité = association technique
+   uniquement, jamais notifié). Ne bloque jamais la mission mère si aucun chauffeur n'est trouvé
+   ensuite (§4.4) — c'est le job de la Phase 0/mission mère qui continue son cours normalement.
+============================================================ */
+exports.requestLogistics = async (req, res) => {
+  try {
+    const parentService = await Service.findByPk(req.params.id);
+    if (!parentService) return res.status(404).json({ error: 'Mission introuvable' });
+
+    let isExecutor = false;
+    if (req.user.role === 'agent') {
+      isExecutor =
+        parentService.executionType === 'agent' &&
+        String(parentService.agentId) === String(req.user.id);
+    } else if (req.user.role === 'provider') {
+      const provider = await findProviderForUser(req.user.id);
+      isExecutor = Boolean(provider) && String(parentService.providerId) === String(provider.id);
+    }
+    if (!isExecutor) return res.status(403).json({ error: 'Accès interdit' });
+
+    if (!ACTIVE_STATUSES.includes(parentService.missionStatus)) {
+      return res.status(400).json({
+        error: "Cette mission n'est pas dans une fenêtre d'exécution active",
+      });
+    }
+
+    // Une seule sous-mission logistique active à la fois par mission mère — évite les doublons
+    // en cas de double-clic, pas une vraie règle métier au-delà de ça.
+    const existingActive = await Service.findOne({
+      where: {
+        parentServiceId: parentService.id,
+        missionStatus: { [Op.notIn]: ['VALIDATED', 'CLOSED', 'CANCELLED_BY_CLIENT', 'NO_EXECUTOR_FOUND'] },
+      },
+    });
+    if (existingActive) {
+      return res.status(200).json({ mission: existingActive });
+    }
+
+    const mobiliteCategory = await TradeCategory.findOne({
+      where: { slug: 'mobilite', isActive: true },
+    });
+    if (!mobiliteCategory) {
+      return res.status(503).json({ error: 'Filière Mobilité indisponible pour le moment' });
+    }
+
+    const { latitude, longitude, address } = req.body;
+
+    const childService = await Service.create({
+      clientId: parentService.clientId,
+      agentId: null,
+      createdById: req.user.id,
+      propertyId: null,
+      parentServiceId: parentService.id,
+      type: 'other',
+      title: `Déplacement — mission #${parentService.id}`,
+      address: parentService.address,
+      latitude: parentService.latitude,
+      longitude: parentService.longitude,
+      pickupAddress: address || null,
+      pickupLatitude: latitude,
+      pickupLongitude: longitude,
+      status: 'created',
+      countryId: parentService.countryId,
+      regionId: parentService.regionId,
+      executionType: 'provider',
+      tradeCategoryId: mobiliteCategory.id,
+      missionStatus: 'CREATED',
+    });
+
+    const activated = await transitionMissionStatus({
+      service: childService,
+      toStatus: 'SEARCHING_EXECUTOR',
+      actorType: 'system',
+      actorId: null,
+    });
+
+    try {
+      const masters = await getAdminRecipientIds({
+        countryId: parentService.countryId,
+        regionId: parentService.regionId,
+      });
+      if (masters.length > 0) {
+        await emitEvent({
+          recipients: masters,
+          actorId: req.user.id,
+          entityType: 'service',
+          entityId: activated.id,
+          action: 'created',
+          title: 'Déplacement interne demandé',
+          message: `Un exécutant demande un transport pour la mission #${parentService.id}.`,
+          metadata: { parentServiceId: parentService.id },
+          countryId: parentService.countryId,
+          regionId: parentService.regionId,
+          notificationMode: 'create',
+        });
+      }
+    } catch (err) {
+      logger.warn('Notification demande logistique échouée:', err?.message || err);
+    }
+
+    return res.status(201).json({ mission: activated });
+  } catch (e) {
+    logger.error({ err: e }, 'mission.requestLogistics.failed');
+    return res.status(500).json({ error: 'Erreur lors de la demande de transport' });
+  }
+};
+
+/* ============================================================
    GET /api/v1/missions/:id/track — suivi en direct (client propriétaire), section 4.2.
 ============================================================ */
 exports.track = async (req, res) => {
   try {
     const service = await Service.findByPk(req.params.id);
     if (!service) return res.status(404).json({ error: 'Mission introuvable' });
+
+    // Sous-mission mobilité interne, jamais accessible à un client même via clientId hérité
+    // (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §4) — même garde que updateStatus.
+    if (service.parentServiceId && req.user.role === 'client') {
+      return res.status(403).json({ error: 'Accès interdit pour cette mission' });
+    }
 
     let isExecutor = false;
 
@@ -726,7 +1085,32 @@ exports.track = async (req, res) => {
       }
     }
 
+    // Slug filière — sert uniquement à l'affichage conditionnel côté client (ex. réconciliation
+    // cash livraison §5, plaque visible Mobilité §2 — docs/DEV_SPEC_TERANGA_v7_PHASE4.md), jamais
+    // à une règle de permission.
+    let tradeCategorySlug = null;
+    if (service.tradeCategoryId) {
+      const tradeCategoryRecord = await TradeCategory.findByPk(service.tradeCategoryId, {
+        attributes: ['slug'],
+      });
+      tradeCategorySlug = tradeCategoryRecord?.slug || null;
+    }
+
+    // Réputation visible (docs/DEV_SPEC_TERANGA_v4_PHASE0.md §3.1) — signal de réassurance montré
+    // au moment où le client sait qui est affecté, pas un outil de sélection (l'affectation reste
+    // manuelle, admin/master). toPublicDTO() garantit l'anonymisation (jamais phone/email/legal_name).
+    // Plaque visible uniquement pour Teranga Taxi (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §2) — le
+    // client attend physiquement un véhicule identifiable, contrairement aux autres filières.
+    let provider = null;
+    if (service.providerId) {
+      const providerRecord = await Provider.findByPk(service.providerId);
+      provider = providerRecord
+        ? providerRecord.toPublicDTO({ includePlate: tradeCategorySlug === 'mobilite' })
+        : null;
+    }
+
     return res.status(200).json({
+      tradeCategorySlug,
       missionStatus: service.missionStatus,
       status: service.status,
       title: service.title,
@@ -735,6 +1119,12 @@ exports.track = async (req, res) => {
       executionType: service.executionType,
       viewerRole: req.user.role,
       isExecutor,
+      parentServiceId: service.parentServiceId || null,
+      acceptanceDeadlineAt: service.acceptanceDeadlineAt || null,
+      provider,
+      pickupAddress: service.pickupAddress || null,
+      pickupLatitude: service.pickupLatitude != null ? Number(service.pickupLatitude) : null,
+      pickupLongitude: service.pickupLongitude != null ? Number(service.pickupLongitude) : null,
       destination:
         Number.isFinite(destLat) && Number.isFinite(destLng)
           ? { latitude: destLat, longitude: destLng, address: service.address }

@@ -52,6 +52,8 @@ import {
   Bell,
   Banknote,
   Briefcase,
+  AlertTriangle,
+  Phone,
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -188,9 +190,12 @@ const ROLE_LINKS = {
     { path: "/services", labelKey: "nav.services" },
     { path: "/tasks", labelKey: "nav.tasks" },
     { path: "/admin/services", labelKey: "nav.adminServices" },
+    { path: "/admin/phone-orders", labelKey: "nav.phoneOrders" },
     { path: "/admin/metrics", labelKey: "nav.metrics" },
     { path: "/admin/agents", labelKey: "nav.agents" },
     { path: "/admin/providers", labelKey: "nav.providers" },
+    { path: "/admin/disputes", labelKey: "nav.disputes" },
+    { path: "/admin/property-listings", labelKey: "nav.propertyListings" },
     { path: "/admin/trade-categories", labelKey: "nav.tradeCategories" },
     { path: "/admin/users", labelKey: "nav.users" },
     { path: "/admin/properties", labelKey: "nav.clientProperties" },
@@ -261,9 +266,12 @@ const ICON_BY_PATH_PREFIX = [
   // Admin
   { prefix: "/admin/projects", icon: FolderKanban },
   { prefix: "/admin/services", icon: BarChart3 },
+  { prefix: "/admin/phone-orders", icon: Phone },
   { prefix: "/admin/metrics", icon: BarChart3 },
   { prefix: "/admin/agents", icon: Users },
   { prefix: "/admin/providers", icon: Briefcase },
+  { prefix: "/admin/disputes", icon: AlertTriangle },
+  { prefix: "/admin/property-listings", icon: Home },
   { prefix: "/admin/trade-categories", icon: Wrench },
   { prefix: "/admin/users", icon: UserCog },
   { prefix: "/admin/properties", icon: Building2 },
@@ -329,6 +337,8 @@ function buildSections(role, links, t) {
       byPath("/admin/metrics"),
       byPath("/admin/agents"),
       byPath("/admin/providers"),
+      byPath("/admin/disputes"),
+      byPath("/admin/property-listings"),
       byPath("/admin/trade-categories"),
       byPath("/admin/users"),
       byPath("/admin/properties"),

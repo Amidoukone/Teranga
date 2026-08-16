@@ -25,6 +25,13 @@ export default function LocationStep({
   onToggleSaveThisLocation,
   newLocationLabel,
   onLocationLabelChange,
+  requiresPickup,
+  isMobilite,
+  pickupAddress,
+  pickupCoordinates,
+  onPickupAddressChange,
+  onPickupPlaceSelected,
+  onPickupMapPositionChange,
 }) {
   const { t } = useTranslation();
   const [locating, setLocating] = useState(false);
@@ -80,8 +87,50 @@ export default function LocationStep({
         </div>
       ) : null}
 
+      {requiresPickup ? (
+        <div className="mt-5 rounded-xl border border-border bg-surface-main/60 p-4">
+          <h3 className="text-sm font-semibold text-text-primary">
+            {isMobilite
+              ? t("missionCreation.location.departureTitle")
+              : t("missionCreation.location.pickupTitle")}
+          </h3>
+          <p className="mt-1 text-xs text-text-secondary">
+            {isMobilite
+              ? t("missionCreation.location.departureSubtitle")
+              : t("missionCreation.location.pickupSubtitle")}
+          </p>
+          <div className="mt-3">
+            <label className={labelClass}>
+              {isMobilite
+                ? t("missionCreation.location.departureAddressLabel")
+                : t("missionCreation.location.pickupAddressLabel")}
+            </label>
+            <LocationAutocompleteInput
+              className={inputClass}
+              placeholder={t("missionCreation.location.pickupAddressPlaceholder")}
+              value={pickupAddress}
+              onChange={onPickupAddressChange}
+              onPlaceSelected={onPickupPlaceSelected}
+            />
+          </div>
+          <div className="mt-3">
+            <MissionLocationMap
+              latitude={pickupCoordinates?.latitude}
+              longitude={pickupCoordinates?.longitude}
+              onPositionChange={onPickupMapPositionChange}
+            />
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-5">
-        <label className={labelClass}>{t("missionCreation.location.addressLabel")}</label>
+        <label className={labelClass}>
+          {requiresPickup
+            ? isMobilite
+              ? t("missionCreation.location.destinationTitle")
+              : t("missionCreation.location.dropoffTitle")
+            : t("missionCreation.location.addressLabel")}
+        </label>
         <LocationAutocompleteInput
           className={inputClass}
           placeholder={t("missionCreation.location.addressPlaceholder")}

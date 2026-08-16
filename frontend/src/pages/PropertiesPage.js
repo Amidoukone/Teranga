@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 import LocationAutocompleteInput from '../features/mission-creation/LocationAutocompleteInput';
+import MissionLocationMap from '../features/mission-creation/MissionLocationMap';
 import useFocusTrap from '../hooks/useFocusTrap';
 import { Badge } from '../components/ui';
 
@@ -1223,6 +1224,18 @@ function PropertyEditor({
           }
           required
         />
+      </div>
+
+      {/* Position sur carte */}
+      <div className="w-full">
+        <MissionLocationMap
+          latitude={form.latitude}
+          longitude={form.longitude}
+          onPositionChange={({ latitude, longitude }) => setForm({ ...form, latitude, longitude })}
+        />
+        <p className="mt-1.5 text-xs text-text-muted">
+          {t('propertiesPage.form.mapHint')}
+        </p>
       </div>
 
       {/* Ville */}

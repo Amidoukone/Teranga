@@ -78,6 +78,16 @@ module.exports = (sequelize, DataTypes) => {
       // 🌍 Scope géographique
       countryId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
       regionId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+
+      // 📍 Position au moment de l'upload (docs/DEV_SPEC_TERANGA_v4_PHASE0.md §4) — best-effort,
+      // jamais bloquant. locationFlag qualifie l'écart avec la position de la ressource liée.
+      latitude: { type: DataTypes.DECIMAL(10, 7), allowNull: true },
+      longitude: { type: DataTypes.DECIMAL(10, 7), allowNull: true },
+      locationFlag: {
+        type: DataTypes.ENUM('ok', 'distant', 'unknown'),
+        allowNull: true,
+        defaultValue: 'unknown',
+      },
     },
     {
       sequelize,

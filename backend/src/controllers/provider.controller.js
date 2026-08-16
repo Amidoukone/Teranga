@@ -93,6 +93,9 @@ exports.create = async (req, res) => {
       countryCode,
       hasLiabilityInsurance,
       insuranceExpiresAt,
+      plateNumber,
+      circulationCardNumber,
+      circulationCardVerified,
       tradeCategoryIds,
     } = req.body;
 
@@ -142,6 +145,9 @@ exports.create = async (req, res) => {
       countryCode,
       hasLiabilityInsurance: Boolean(hasLiabilityInsurance),
       insuranceExpiresAt: insuranceExpiresAt || null,
+      plateNumber: plateNumber || null,
+      circulationCardNumber: circulationCardNumber || null,
+      circulationCardVerified: Boolean(circulationCardVerified),
     });
 
     await provider.addTradeCategories(tradeCategories);
@@ -151,6 +157,76 @@ exports.create = async (req, res) => {
   } catch (e) {
     logger.error({ err: e }, 'provider.create.failed');
     return res.status(500).json({ error: 'Erreur lors de la création du profil prestataire' });
+  }
+};
+
+/* ============================================================
+   MOI — prestataire authentifié, sa propre fiche (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §3).
+============================================================ */
+exports.me = async (req, res) => {
+  try {
+    const provider = await Provider.findOne({ where: { userId: req.user.id } });
+    if (!provider) return res.status(404).json({ error: 'Profil prestataire introuvable' });
+
+    return res.json({ provider });
+  } catch (e) {
+    logger.error({ err: e }, 'provider.me.failed');
+    return res.status(500).json({ error: 'Erreur lors de la récupération du profil' });
+  }
+};
+
+/* ============================================================
+   DISPONIBILITÉ — le prestataire déclare son propre statut (docs/DEV_SPEC_TERANGA_v5_PHASE2.md
+   §3.2). Pas de restriction filière : inoffensif pour un prestataire hors Mobilité.
+============================================================ */
+exports.updateMyAvailability = async (req, res) => {
+  try {
+    const provider = await Provider.findOne({ where: { userId: req.user.id } });
+    if (!provider) return res.status(404).json({ error: 'Profil prestataire introuvable' });
+
+    provider.availabilityStatus = req.body.availabilityStatus;
+    await provider.save();
+
+    return res.json({ provider });
+  } catch (e) {
+    logger.error({ err: e }, 'provider.updateMyAvailability.failed');
+    return res.status(500).json({ error: 'Erreur lors de la mise à jour de la disponibilité' });
+  }
+};
+
+/* ============================================================
+   DISPONIBLES — admin/master, scope géo, filière Mobilité, statut active + available
+   (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §3.3) — alimente la vue de dispatch (Lot 5).
+============================================================ */
+exports.listAvailable = async (req, res) => {
+  try {
+    const filter = await getManageableProviderFilter(req.user);
+    if (filter.deny) return res.status(403).json({ error: 'Accès interdit' });
+
+    const where = { status: 'active', availabilityStatus: 'available' };
+    if (filter.countryCodes) where.countryCode = filter.countryCodes;
+
+    const include = [
+      {
+        model: TradeCategory,
+        as: 'tradeCategories',
+        through: { attributes: [] },
+        where: { slug: 'mobilite' },
+        required: true,
+      },
+    ];
+
+    const providers = await Provider.findAll({
+      where,
+      include,
+      attributes: ['id', 'displayFirstName', 'plateNumber', 'averageRating', 'badgeCertified', 'countryCode'],
+      order: [['displayFirstName', 'ASC']],
+    });
+
+    return res.json({ providers });
+  } catch (e) {
+    logger.error({ err: e }, 'provider.list_available.failed');
+    return res.status(500).json({ error: 'Erreur lors de la récupération des chauffeurs disponibles' });
   }
 };
 
@@ -226,7 +302,9 @@ exports.detail = async (req, res) => {
 ============================================================ */
 exports.updateStatus = async (req, res) => {
   try {
-    const provider = await Provider.findByPk(req.params.id);
+    const provider = await Provider.findByPk(req.params.id, {
+      include: [{ model: TradeCategory, as: 'tradeCategories', attributes: ['slug'] }],
+    });
     if (!provider) return res.status(404).json({ error: 'Prestataire introuvable' });
 
     if (!(await canManageProvider(req.user, provider))) {
@@ -238,6 +316,22 @@ exports.updateStatus = async (req, res) => {
       return res.status(400).json({
         error: `Transition invalide : ${provider.status} -> ${nextStatus}`,
       });
+    }
+
+    // Checklist onboarding chauffeur (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §2.3) — un prestataire
+    // couvrant la filière Mobilité ne peut pas passer actif sans plaque, carte de circulation
+    // vérifiée et assurance. Ne concerne pas les autres filières.
+    const coversMobilite = (provider.tradeCategories || []).some((tc) => tc.slug === 'mobilite');
+    if (nextStatus === 'active' && coversMobilite) {
+      const missing = [];
+      if (!provider.plateNumber) missing.push('plaque d\'immatriculation');
+      if (!provider.circulationCardVerified) missing.push('carte de circulation vérifiée');
+      if (!provider.hasLiabilityInsurance) missing.push('assurance');
+      if (missing.length > 0) {
+        return res.status(400).json({
+          error: `Checklist chauffeur incomplète pour la filière Mobilité : ${missing.join(', ')}`,
+        });
+      }
     }
 
     provider.status = nextStatus;

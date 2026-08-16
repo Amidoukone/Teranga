@@ -16,6 +16,8 @@ const updateRegionSchema = Joi.object({
   name: Joi.string().trim().min(2).max(120),
   code: Joi.string().trim().max(30).allow('', null),
   isActive: Joi.boolean(),
+  // Numéro de contact pour la marketplace immobilière (docs/BRAINSTORM_ECOSYSTEME_TERANGA.md §7).
+  contactPhone: Joi.string().trim().max(30).allow('', null),
 });
 
 module.exports = {

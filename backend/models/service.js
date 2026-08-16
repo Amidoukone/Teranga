@@ -164,6 +164,26 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       warrantyExpiresAt: { type: DataTypes.DATE, allowNull: true },
+      // Idempotence du job d'alerte de seuil (docs/DEV_SPEC_TERANGA_v4_PHASE0.md §1.2) —
+      // réinitialisée à chaque transition de statut par missionStatus.service.js.
+      thresholdAlertSentAt: { type: DataTypes.DATE, allowNull: true },
+
+      // Sous-mission mobilité interne, Cas 1 (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §4) —
+      // `address`/`latitude`/`longitude` ci-dessus restent la DÉPOSE, ces colonnes portent le
+      // RETRAIT. `parentServiceId` rattache la sous-mission à la mission mère (association
+      // logique, invisible du client).
+      parentServiceId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+      pickupAddress: { type: DataTypes.STRING(255), allowNull: true },
+      pickupLatitude: { type: DataTypes.DECIMAL(10, 7), allowNull: true },
+      pickupLongitude: { type: DataTypes.DECIMAL(10, 7), allowNull: true },
+
+      // Fenêtre d'acceptation du dispatch mobilité (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2) —
+      // posée uniquement pour la filière Mobilité, NULL partout ailleurs.
+      acceptanceDeadlineAt: { type: DataTypes.DATE, allowNull: true },
+
+      // Réconciliation cash à la remise, filière livraison (docs/DEV_SPEC_TERANGA_v6_PHASE3.md
+      // §5) — déclaré par l'exécutant à la transition COMPLETED, NULL partout ailleurs.
+      collectedAmount: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
     },
     {
       sequelize,

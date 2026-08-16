@@ -1,12 +1,36 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Mail, MessageCircle, Phone, MapPin } from "lucide-react";
+import { ArrowUpRight, Mail, MessageCircle, Phone, MapPin, Home, ArrowRight } from "lucide-react";
 import { Trans, useTranslation } from "react-i18next";
 
 import MissionRequestForm from "../components/MissionRequestForm";
+import { listPropertyListings } from "../services/propertyListings";
+import { getFileUrl } from "../services/api";
+
+function listingPhotoUrl(listing) {
+  const first = Array.isArray(listing?.photos) ? listing.photos[0] : null;
+  const path = typeof first === "string" ? first : first?.url;
+  return path ? getFileUrl(path) : "";
+}
 
 export default function HomePage() {
   const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
+  const [featuredListings, setFeaturedListings] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    listPropertyListings()
+      .then((rows) => {
+        if (active) setFeaturedListings((rows || []).slice(0, 3));
+      })
+      .catch(() => {
+        if (active) setFeaturedListings([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const heroStats = [
     {
@@ -160,6 +184,75 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {featuredListings.length > 0 ? (
+          <section
+            id="immobilier"
+            className="border-t border-border/70 bg-surface-main px-6 py-14 sm:py-16"
+          >
+            <div className="mx-auto max-w-5xl">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold tracking-tight text-text-primary sm:text-2xl">
+                    {t("homePage.propertyListings.title")}
+                  </h2>
+                  <p className="mt-1 text-sm text-text-secondary">
+                    {t("homePage.propertyListings.subtitle")}
+                  </p>
+                </div>
+                <Link
+                  to="/immobilier"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:underline dark:text-blue-300"
+                >
+                  {t("homePage.propertyListings.viewAll")}
+                  <ArrowRight size={14} />
+                </Link>
+              </div>
+
+              <div className="mt-6 grid gap-5 sm:grid-cols-3">
+                {featuredListings.map((listing) => {
+                  const photo = listingPhotoUrl(listing);
+                  return (
+                    <Link
+                      key={listing.id}
+                      to={`/immobilier/${listing.id}`}
+                      className="group overflow-hidden rounded-2xl border border-border bg-surface-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                    >
+                      <div className="aspect-[4/3] w-full overflow-hidden bg-surface-main">
+                        {photo ? (
+                          <img
+                            src={photo}
+                            alt={listing.title}
+                            className="h-full w-full object-cover transition group-hover:scale-105"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-text-muted">
+                            <Home size={28} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="truncate text-sm font-semibold text-text-primary">
+                          {listing.title}
+                        </h3>
+                        <p className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
+                          <MapPin size={12} />
+                          {listing.neighborhood ? `${listing.neighborhood}, ` : ""}
+                          {listing.city}
+                          {listing.country ? `, ${listing.country}` : ""}
+                        </p>
+                        <p className="mt-2 text-sm font-bold text-text-primary">
+                          {listing.price} {listing.currency}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <section
           id="contact"

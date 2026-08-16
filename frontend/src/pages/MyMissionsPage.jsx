@@ -10,6 +10,14 @@ import { useTranslation } from 'react-i18next';
 import { me } from '../services/auth';
 import { normalizeRole } from '../utils/role';
 import { getMyMissions } from '../services/missions';
+import { getMyProvider, updateMyAvailability } from '../services/providers';
+
+const AVAILABILITY_VALUES = ['available', 'busy', 'offline'];
+const AVAILABILITY_TONE = {
+  available: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30',
+  busy: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+  offline: 'bg-surface-main text-text-secondary border border-border',
+};
 
 function displayClient(client) {
   if (!client) return null;
@@ -43,6 +51,8 @@ export default function MyMissionsPage() {
   const [missions, setMissions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [provider, setProvider] = useState(null);
+  const [savingAvailability, setSavingAvailability] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -64,6 +74,11 @@ export default function MyMissionsPage() {
         }
 
         setIsAllowed(true);
+
+        if (role === 'provider') {
+          const myProvider = await getMyProvider();
+          if (active) setProvider(myProvider);
+        }
       } catch (e) {
         navigate('/login');
       }
@@ -93,6 +108,18 @@ export default function MyMissionsPage() {
   useEffect(() => {
     if (isAllowed) loadMissions();
   }, [isAllowed, loadMissions]);
+
+  async function handleAvailabilityChange(availabilityStatus) {
+    setSavingAvailability(true);
+    try {
+      const updated = await updateMyAvailability(availabilityStatus);
+      setProvider(updated);
+    } catch (e) {
+      console.error('MyMissionsPage update availability error:', e);
+    } finally {
+      setSavingAvailability(false);
+    }
+  }
 
   if (isAllowed === null) {
     return (
@@ -126,6 +153,31 @@ export default function MyMissionsPage() {
             {error}
           </div>
         )}
+
+        {provider ? (
+          <div className="mb-6 rounded-2xl border border-border bg-surface-main/60 px-4 py-3">
+            <p className="mb-2 text-xs font-medium text-text-secondary">
+              {t('myMissionsPage.availability.label')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {AVAILABILITY_VALUES.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={savingAvailability}
+                  onClick={() => handleAvailabilityChange(value)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition disabled:opacity-60 ${
+                    provider.availabilityStatus === value
+                      ? AVAILABILITY_TONE[value]
+                      : 'border border-border text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {t(`myMissionsPage.availability.${value}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {!loading && missions.length === 0 && !error ? (
           <p className="text-center text-text-muted italic py-10">{t('myMissionsPage.empty')}</p>

@@ -273,6 +273,7 @@ loadRouter('./routes/missionRequest.routes', '/mission-requests', v1OnlyRouter);
 loadRouter('./routes/mission.routes', '/missions', v1OnlyRouter);
 loadRouter('./routes/savedLocation.routes', '/saved-locations', v1OnlyRouter);
 loadRouter('./routes/missionPricingRule.routes', '/mission-pricing-rules', v1OnlyRouter);
+loadRouter('./routes/propertyListing.routes', '/property-listings', v1OnlyRouter);
 app.use('/api/v1', v1OnlyRouter);
 
 /* ======================================================

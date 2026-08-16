@@ -9,6 +9,7 @@
 
 const { MissionPricingRule, Country } = require('../../models');
 const logger = require('../utils/logger');
+const { haversineDistanceMeters } = require('../utils/evidenceProximity');
 
 const FALLBACK_CURRENCY = 'XOF';
 const FALLBACK_DELAY_MINUTES = 120;
@@ -26,13 +27,31 @@ function buildQuoteOnlyResponse({ currency, estimatedDelayMinutes, note }) {
   };
 }
 
-function buildFixedEstimateResponse(rule, currency) {
+// Surcharge distance (docs/DEV_SPEC_TERANGA_v6_PHASE3.md §2) : n'ajoute rien si retrait/dépose
+// ou pricePerKm manquent — comportement forfait fixe inchangé pour toutes les autres filières.
+function computeDistanceSurcharge(rule, { pickupLatitude, pickupLongitude, destinationLatitude, destinationLongitude }) {
+  const pricePerKm = rule.pricePerKm != null ? Number(rule.pricePerKm) : 0;
+  if (!pricePerKm) return { distanceKm: null, surcharge: 0 };
+
+  const hasPickup = Number.isFinite(pickupLatitude) && Number.isFinite(pickupLongitude);
+  const hasDestination = Number.isFinite(destinationLatitude) && Number.isFinite(destinationLongitude);
+  if (!hasPickup || !hasDestination) return { distanceKm: null, surcharge: 0 };
+
+  const distanceKm = haversineDistanceMeters(pickupLatitude, pickupLongitude, destinationLatitude, destinationLongitude) / 1000;
+  return { distanceKm, surcharge: pricePerKm * distanceKm };
+}
+
+function buildFixedEstimateResponse(rule, currency, distanceParams = {}) {
+  const { distanceKm, surcharge } = computeDistanceSurcharge(rule, distanceParams);
+  const basePrice = rule.basePrice != null ? Number(rule.basePrice) : null;
+
   return {
     pricingMode: 'fixed_estimate',
     currency,
-    basePrice: rule.basePrice != null ? Number(rule.basePrice) : null,
+    basePrice: basePrice != null ? basePrice + surcharge : null,
     minPrice: rule.minPrice != null ? Number(rule.minPrice) : null,
     pricePerKm: rule.pricePerKm != null ? Number(rule.pricePerKm) : 0,
+    distanceKm: distanceKm != null ? Number(distanceKm.toFixed(2)) : null,
     estimatedDelayMinutes: rule.estimatedDelayMinutes,
     note:
       rule.minPrice != null && Number(rule.minPrice) === Number(rule.basePrice)
@@ -80,8 +99,23 @@ async function findBestRule({ countryId, regionId, tradeCategoryId, serviceType 
  *   celui du compte — correction transfrontalière : le tarif suit où la mission a lieu, pas le
  *   compte du demandeur (docs/DEV_SPEC_TERANGA_v3.md).
  * @param {number|null} [params.regionId] - région de destination, même règle
+ * @param {number|null} [params.destinationLatitude] - dépose, pour la surcharge distance (§2)
+ * @param {number|null} [params.destinationLongitude]
+ * @param {number|null} [params.pickupLatitude] - retrait, pour la surcharge distance (§2)
+ * @param {number|null} [params.pickupLongitude]
  */
-async function estimateMission({ user, executionType, tradeCategoryId, serviceType, countryId: explicitCountryId, regionId: explicitRegionId }) {
+async function estimateMission({
+  user,
+  executionType,
+  tradeCategoryId,
+  serviceType,
+  countryId: explicitCountryId,
+  regionId: explicitRegionId,
+  destinationLatitude,
+  destinationLongitude,
+  pickupLatitude,
+  pickupLongitude,
+}) {
   const countryId = explicitCountryId ?? user?.countryId ?? null;
   const regionId = explicitRegionId ?? user?.regionId ?? null;
 
@@ -116,7 +150,12 @@ async function estimateMission({ user, executionType, tradeCategoryId, serviceTy
       return buildQuoteOnlyResponse({ currency, estimatedDelayMinutes: rule.estimatedDelayMinutes });
     }
 
-    return buildFixedEstimateResponse(rule, currency);
+    return buildFixedEstimateResponse(rule, currency, {
+      pickupLatitude,
+      pickupLongitude,
+      destinationLatitude,
+      destinationLongitude,
+    });
   } catch (err) {
     logger.warn({ err }, 'priceEstimate.service.failed');
     return buildQuoteOnlyResponse({

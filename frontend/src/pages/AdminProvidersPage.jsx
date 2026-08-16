@@ -20,6 +20,14 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const STATUS_VALUES = ['pending', 'probation', 'active', 'suspended', 'revoked'];
 
+// Disponibilité déclarative (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §3) — affichée seulement pour les
+// prestataires couvrant la filière Mobilité (badge inline dans la colonne filières).
+const AVAILABILITY_BADGE_TONE = {
+  available: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  busy: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+  offline: 'bg-surface-main text-text-muted border border-border',
+};
+
 // Miroir de backend/src/constants/providerStatus.js (PROVIDER_STATUS_TRANSITIONS) — pas de
 // module partage front/back dans ce repo, meme convention que AdminServicesPage (etats de mission
 // dupliques cote UI).
@@ -53,6 +61,9 @@ const INITIAL_FORM = {
   businessEmail: '',
   hasLiabilityInsurance: false,
   insuranceExpiresAt: '',
+  plateNumber: '',
+  circulationCardNumber: '',
+  circulationCardVerified: false,
   tradeCategoryIds: [],
 };
 
@@ -242,6 +253,9 @@ export default function AdminProvidersPage() {
         countryCode: form.country.trim().toUpperCase(),
         hasLiabilityInsurance: form.hasLiabilityInsurance,
         insuranceExpiresAt: form.insuranceExpiresAt || null,
+        plateNumber: form.plateNumber || null,
+        circulationCardNumber: form.circulationCardNumber || null,
+        circulationCardVerified: form.circulationCardVerified,
         tradeCategoryIds: form.tradeCategoryIds,
       });
 
@@ -282,6 +296,16 @@ export default function AdminProvidersPage() {
       ...STATUS_VALUES.map((s) => ({ value: s, label: t(`adminProvidersPage.status.${s}`) })),
     ],
     [t]
+  );
+
+  // Checklist chauffeur (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §2) — affichée seulement si la
+  // filière Mobilité est sélectionnée, condition à passer au statut 'active' côté backend.
+  const coversMobilite = useMemo(
+    () =>
+      tradeCategories.some(
+        (tc) => tc.slug === 'mobilite' && form.tradeCategoryIds.includes(tc.id)
+      ),
+    [tradeCategories, form.tradeCategoryIds]
   );
 
   function statusBadgeClass(status) {
@@ -557,6 +581,41 @@ export default function AdminProvidersPage() {
                 <p className="text-xs text-rose-600 mt-1">{errors.tradeCategoryIds}</p>
               )}
             </div>
+
+            {coversMobilite ? (
+              <div className="mt-4 grid grid-cols-1 gap-4 rounded-xl border border-border bg-surface-main/60 p-4 sm:grid-cols-3">
+                <p className="sm:col-span-3 text-xs font-medium text-text-secondary">
+                  {t('adminProvidersPage.form.driverChecklistTitle')}
+                </p>
+                <AdminField label={t('adminProvidersPage.form.plateNumberLabel')}>
+                  <input
+                    type="text"
+                    className="app-input"
+                    value={form.plateNumber}
+                    onChange={(e) => handleChange('plateNumber', e.target.value)}
+                  />
+                </AdminField>
+                <AdminField label={t('adminProvidersPage.form.circulationCardNumberLabel')}>
+                  <input
+                    type="text"
+                    className="app-input"
+                    value={form.circulationCardNumber}
+                    onChange={(e) => handleChange('circulationCardNumber', e.target.value)}
+                  />
+                </AdminField>
+                <div className="flex items-end pb-1">
+                  <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={form.circulationCardVerified}
+                      onChange={(e) => handleChange('circulationCardVerified', e.target.checked)}
+                      className="h-4 w-4 rounded border-border text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>{t('adminProvidersPage.form.circulationCardVerifiedLabel')}</span>
+                  </label>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="flex justify-end">
@@ -644,6 +703,17 @@ export default function AdminProvidersPage() {
                       {Array.isArray(p.tradeCategories) && p.tradeCategories.length > 0
                         ? p.tradeCategories.map((tc) => tc.name).join(', ')
                         : t('adminProvidersPage.table.emptyValue')}
+                      {Array.isArray(p.tradeCategories) && p.tradeCategories.some((tc) => tc.slug === 'mobilite') ? (
+                        <div className="mt-1">
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                              AVAILABILITY_BADGE_TONE[p.availabilityStatus] || AVAILABILITY_BADGE_TONE.offline
+                            }`}
+                          >
+                            {t(`adminProvidersPage.availability.${p.availabilityStatus || 'offline'}`)}
+                          </span>
+                        </div>
+                      ) : null}
                     </td>
                     <td className="px-4 sm:px-5 py-3 align-top">
                       <span

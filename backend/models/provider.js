@@ -42,14 +42,18 @@ module.exports = (sequelize, DataTypes) => {
      * DTO public (13.6.1/13.7 de la spec) : ne jamais renvoyer phone_number,
      * email ou legal_name à un client. À utiliser explicitement dans les
      * serializers/contrôleurs qui exposent un provider à un rôle 'client'.
+     * `includePlate` (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §2) : réservé aux missions filière
+     * Mobilité, où le client attend physiquement un véhicule identifiable — jamais activé
+     * ailleurs (anonymisation stricte inchangée pour les autres filières).
      */
-    toPublicDTO() {
+    toPublicDTO({ includePlate = false } = {}) {
       return {
         id: this.id,
         displayFirstName: this.displayFirstName,
         averageRating: this.averageRating,
         completedMissionsCount: this.completedMissionsCount,
         badgeCertified: this.badgeCertified,
+        ...(includePlate ? { plateNumber: this.plateNumber } : {}),
       };
     }
   }
@@ -106,6 +110,14 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 0,
         field: 'completed_missions_count',
       },
+      // docs/DEV_SPEC_TERANGA_v4_PHASE0.md §2.3 — incrémenté seulement pour resolution
+      // 'refund'/'redo', jamais pour 'closed' (litige non fondé).
+      disputesAgainstCount: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0,
+        field: 'disputes_against_count',
+      },
 
       hasLiabilityInsurance: {
         type: DataTypes.BOOLEAN,
@@ -124,6 +136,31 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: false,
         field: 'badge_certified',
+      },
+
+      // Checklist onboarding chauffeur (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §2) — conformité
+      // arrêté municipal Bamako n°067/M-DB. Concerne uniquement les prestataires couvrant la
+      // filière Mobilité, mais posé génériquement (inoffensif pour les autres filières).
+      plateNumber: { type: DataTypes.STRING(20), allowNull: true, field: 'plate_number' },
+      circulationCardNumber: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        field: 'circulation_card_number',
+      },
+      circulationCardVerified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        field: 'circulation_card_verified',
+      },
+
+      // Disponibilité déclarative (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §3) — pas de GPS continu,
+      // juste une présence déclarée par le prestataire lui-même.
+      availabilityStatus: {
+        type: DataTypes.ENUM('available', 'busy', 'offline'),
+        allowNull: false,
+        defaultValue: 'offline',
+        field: 'availability_status',
       },
     },
     {

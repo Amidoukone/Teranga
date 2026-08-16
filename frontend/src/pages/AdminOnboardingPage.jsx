@@ -78,11 +78,13 @@ export default function AdminOnboardingPage() {
     name: "",
     isoCode: "",
     isActive: true,
+    contactPhone: "",
   });
   const [regionDraft, setRegionDraft] = useState({
     name: "",
     code: "",
     isActive: true,
+    contactPhone: "",
   });
 
   // ========================================================================
@@ -228,6 +230,7 @@ export default function AdminOnboardingPage() {
       name: country.name || "",
       isoCode: country.isoCode || "",
       isActive: Boolean(country.isActive),
+      contactPhone: country.contactPhone || "",
     });
   }
 
@@ -246,6 +249,7 @@ export default function AdminOnboardingPage() {
         name: trimmedName,
         isoCode: trimmedIso,
         isActive: countryDraft.isActive,
+        contactPhone: countryDraft.contactPhone.trim(),
       });
       setEditingCountryId(null);
       await loadCountries();
@@ -298,6 +302,7 @@ export default function AdminOnboardingPage() {
       name: region.name || "",
       code: region.code || "",
       isActive: Boolean(region.isActive),
+      contactPhone: region.contactPhone || "",
     });
   }
 
@@ -316,6 +321,7 @@ export default function AdminOnboardingPage() {
         name: trimmedName,
         code: trimmedCode || null,
         isActive: regionDraft.isActive,
+        contactPhone: regionDraft.contactPhone.trim(),
       });
       setEditingRegionId(null);
       await loadRegions();
@@ -573,6 +579,17 @@ export default function AdminOnboardingPage() {
                             }
                             className="w-full border border-border rounded-lg p-2 text-xs bg-surface-card text-text-primary"
                           />
+                          <input
+                            value={countryDraft.contactPhone}
+                            onChange={(e) =>
+                              setCountryDraft((d) => ({
+                                ...d,
+                                contactPhone: e.target.value,
+                              }))
+                            }
+                            placeholder={t("adminOnboardingPage.form.contactPhonePlaceholder")}
+                            className="w-full border border-border rounded-lg p-2 text-xs bg-surface-card text-text-primary"
+                          />
                           <label className="flex items-center gap-2 text-xs text-text-secondary">
                             <input
                               type="checkbox"
@@ -689,6 +706,17 @@ export default function AdminOnboardingPage() {
                                 code: e.target.value,
                               }))
                             }
+                            className="app-input-compact w-full p-2"
+                          />
+                          <input
+                            value={regionDraft.contactPhone}
+                            onChange={(e) =>
+                              setRegionDraft((d) => ({
+                                ...d,
+                                contactPhone: e.target.value,
+                              }))
+                            }
+                            placeholder={t("adminOnboardingPage.form.contactPhonePlaceholder")}
                             className="app-input-compact w-full p-2"
                           />
                           <label className="flex items-center gap-2 text-xs text-text-secondary">

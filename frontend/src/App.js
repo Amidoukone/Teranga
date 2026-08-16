@@ -67,7 +67,12 @@ const AgentServicesPage = lazy(() => import('./pages/AgentServicesPage'));
 // Contexte: routage et guardes d'acces.
 const AdminAgentsPage = lazy(() => import('./pages/AdminAgentsPage'));
 const AdminProvidersPage = lazy(() => import('./pages/AdminProvidersPage'));
+const AdminDisputesPage = lazy(() => import('./pages/AdminDisputesPage'));
+const AdminPropertyListingsPage = lazy(() => import('./pages/AdminPropertyListingsPage'));
+const PropertyListingsPage = lazy(() => import('./pages/PropertyListingsPage'));
+const PropertyListingDetailPage = lazy(() => import('./pages/PropertyListingDetailPage'));
 const AdminServicesPage = lazy(() => import('./pages/AdminServicesPage'));
+const AdminPhoneOrderPage = lazy(() => import('./pages/AdminPhoneOrderPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AdminPropertiesPage = lazy(() => import('./pages/AdminPropertiesPage'));
 const AdminProjectsPage = lazy(() => import('./pages/AdminProjectsPage'));
@@ -372,6 +377,11 @@ export default function App() {
                 </>
               }
             />
+
+            {/* Marketplace immobilière — publique, sans auth (docs/BRAINSTORM_ECOSYSTEME_TERANGA.md §7).
+                Chemin littéral déclaré avant ':id' pour ne jamais être capturé par le paramètre. */}
+            <Route path="/immobilier" element={<PropertyListingsPage />} />
+            <Route path="/immobilier/:id" element={<PropertyListingDetailPage />} />
 
             <Route
               path="/products/:id"
@@ -874,6 +884,34 @@ export default function App() {
             />
 
             <Route
+              path="/admin/disputes"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['admin']}>
+                    <>
+                      <SetSeo title={t('seo.pages.adminDisputes.title')} />
+                      <AdminDisputesPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/admin/property-listings"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['admin']}>
+                    <>
+                      <SetSeo title={t('seo.pages.adminPropertyListings.title')} />
+                      <AdminPropertyListingsPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
               path="/admin/services"
               element={
                 <RequireAuth>
@@ -881,6 +919,20 @@ export default function App() {
                     <>
                       <SetSeo title={t('seo.pages.adminServices.title')} />
                       <AdminServicesPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/admin/phone-orders"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['admin']}>
+                    <>
+                      <SetSeo title={t('seo.pages.adminPhoneOrders.title')} />
+                      <AdminPhoneOrderPage />
                     </>
                   </RequireRole>
                 </RequireAuth>

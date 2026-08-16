@@ -41,6 +41,39 @@ function asEvidenceArray(data) {
   return [];
 }
 
+const EVIDENCE_GEOLOCATION_TIMEOUT_MS = 4000;
+
+/**
+ * Position au moment de l'upload d'une preuve (docs/DEV_SPEC_TERANGA_v4_PHASE0.md §4.2) —
+ * best-effort strict : permission refusée, GPS indisponible, timeout ou navigateur sans
+ * support renvoient simplement null, ne bloquent et ne font jamais échouer l'upload.
+ * `maximumAge` permet de réutiliser une position récente déjà obtenue par le navigateur
+ * (uploads successifs sur une même tâche) sans re-attendre un nouveau fix GPS à chaque fois.
+ */
+function getBestEffortPosition() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+    const timer = setTimeout(() => resolve(null), EVIDENCE_GEOLOCATION_TIMEOUT_MS);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        clearTimeout(timer);
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(null);
+      },
+      { enableHighAccuracy: true, timeout: EVIDENCE_GEOLOCATION_TIMEOUT_MS, maximumAge: 60000 }
+    );
+  });
+}
+
 /* ============================================================
    PREUVES LIEES AUX TACHES
    ============================================================ */
@@ -65,6 +98,12 @@ export async function uploadEvidences(taskId, files = [], notes = '') {
 
   // Champ canonique: "files" (et backend tolerant via anyCompat())
   appendFiles(formData, files, 'files');
+
+  const position = await getBestEffortPosition();
+  if (position) {
+    formData.append('latitude', String(position.latitude));
+    formData.append('longitude', String(position.longitude));
+  }
 
   const { data } = await api.post(`/tasks/${taskId}/evidences`, formData, {
     // Ne pas definir 'Content-Type' ici ! Axios le gere.

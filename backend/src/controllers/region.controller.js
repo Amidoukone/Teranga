@@ -235,7 +235,7 @@ exports.update = async (req, res) => {
       });
     }
 
-    const { name, code, isActive } = req.body || {};
+    const { name, code, isActive, contactPhone } = req.body || {};
 
     if (name !== undefined) {
       region.name = toTrimOrNull(name) || region.name;
@@ -248,6 +248,12 @@ exports.update = async (req, res) => {
 
     if (isActive !== undefined) {
       region.isActive = Boolean(isActive);
+    }
+
+    // Numéro de contact affiché sur les annonces immobilières de cette région
+    // (docs/BRAINSTORM_ECOSYSTEME_TERANGA.md §7) — '' efface le numéro.
+    if (contactPhone !== undefined) {
+      region.contactPhone = toTrimOrNull(contactPhone);
     }
 
     await region.save();

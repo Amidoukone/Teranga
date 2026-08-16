@@ -14,6 +14,11 @@ const createProviderSchema = Joi.object({
   countryCode: Joi.string().trim().uppercase().length(2).required(),
   hasLiabilityInsurance: Joi.boolean(),
   insuranceExpiresAt: Joi.date().iso().allow(null),
+  // Checklist chauffeur (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §2) — pertinent seulement pour la
+  // filière Mobilité, mais accepté génériquement (inoffensif pour les autres filières).
+  plateNumber: Joi.string().trim().max(20).allow('', null),
+  circulationCardNumber: Joi.string().trim().max(50).allow('', null),
+  circulationCardVerified: Joi.boolean(),
   tradeCategoryIds: Joi.array()
     .items(Joi.number().integer().positive())
     .min(1)
@@ -26,7 +31,12 @@ const updateProviderStatusSchema = Joi.object({
     .required(),
 });
 
+const updateMyAvailabilitySchema = Joi.object({
+  availabilityStatus: Joi.string().valid('available', 'busy', 'offline').required(),
+});
+
 module.exports = {
   createProviderSchema,
   updateProviderStatusSchema,
+  updateMyAvailabilitySchema,
 };

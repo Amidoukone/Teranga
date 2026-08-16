@@ -43,7 +43,7 @@ function getCanonicalUrl() {
   return `${CANONICAL_ORIGIN}${pathname}`;
 }
 
-export default function SetSeo({ title, description, language, ogLocale }) {
+export default function SetSeo({ title, description, language, ogLocale, image }) {
   const { t, i18n } = useTranslation();
 
   useEffect(() => {
@@ -68,7 +68,17 @@ export default function SetSeo({ title, description, language, ogLocale }) {
     setOrCreateMeta('meta[property="og:url"]', "content", canonicalUrl);
     setOrCreateMeta('meta[name="twitter:title"]', "content", finalTitle);
     setOrCreateMeta('meta[name="twitter:description"]', "content", finalDescription);
-  }, [title, description, language, ogLocale, t, i18n.language]);
+    // Image de partage (ex. annonce immobilière) — voir limite connue : ces balises sont posées
+    // côté client (useEffect), donc invisibles pour les robots Facebook/TikTok/WhatsApp qui
+    // n'exécutent pas JavaScript et ne lisent que le HTML statique initial. Fonctionne pour un
+    // visiteur réel (onglet/titre corrects) mais pas pour un aperçu de lien généré par un bot,
+    // sans rendu côté serveur.
+    if (image) {
+      setOrCreateMeta('meta[property="og:image"]', "content", image);
+      setOrCreateMeta('meta[name="twitter:image"]', "content", image);
+      setOrCreateMeta('meta[name="twitter:card"]', "content", "summary_large_image");
+    }
+  }, [title, description, language, ogLocale, image, t, i18n.language]);
 
   return null;
 }

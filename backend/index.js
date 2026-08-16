@@ -16,6 +16,9 @@ const { sequelize } = db;
 
 // Ajout du bootstrap admin
 const bootstrapAdmin = require('./src/utils/bootstrapAdmin');
+const { startMissionThresholdJob } = require('./src/jobs/missionThresholdCheck.job');
+const { startDisputeEscalationJob } = require('./src/jobs/disputeEscalation.job');
+const { startLogisticsAcceptanceJob } = require('./src/jobs/logisticsAcceptance.job');
 
 // Activer les logs SQL si disponibles
 if (sequelize?.options) {
@@ -185,4 +188,12 @@ async function start() {
 }
 
 start();
+
+// Scheduler des seuils de professionnalisme (docs/DEV_SPEC_TERANGA_v4_PHASE0.md §1.2) — jamais
+// en environnement de test, les suites Jest n'ont pas besoin d'un job tournant en tâche de fond.
+if ((process.env.NODE_ENV || 'development') !== 'test') {
+  startMissionThresholdJob();
+  startDisputeEscalationJob();
+  startLogisticsAcceptanceJob();
+}
 

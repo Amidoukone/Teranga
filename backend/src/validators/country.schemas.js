@@ -16,6 +16,8 @@ const updateCountrySchema = Joi.object({
   currency: Joi.string().trim().uppercase().max(10).allow('', null),
   defaultLanguage: Joi.string().trim().lowercase().max(10).allow('', null),
   isActive: Joi.boolean(),
+  // Numéro de contact pour la marketplace immobilière (docs/BRAINSTORM_ECOSYSTEME_TERANGA.md §7).
+  contactPhone: Joi.string().trim().max(30).allow('', null),
 });
 
 module.exports = {

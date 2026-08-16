@@ -23,6 +23,7 @@ const { emitEvent } = require("../services/activity.service");
 const logger = require('../utils/logger');
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
 const { buildMediaStorageDiagnostics } = require("../utils/mediaStorageDiagnostics");
+const { resolveLocationFlag } = require("../utils/evidenceProximity");
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
 const EVIDENCE_MEDIA_STORAGE_ERROR_CODE = "EVIDENCE_MEDIA_STORAGE_UNAVAILABLE";
 const EVIDENCE_LOCAL_FALLBACK_ENV_VAR = "EVIDENCE_ALLOW_LOCAL_FALLBACK";
@@ -54,6 +55,12 @@ function toSafeInt(v) {
   if (v === null || v === undefined || v === "") return null;
   const n = parseInt(String(v), 10);
   return Number.isNaN(n) ? null : n;
+}
+
+function toSafeFloat(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number.parseFloat(String(v));
+  return Number.isFinite(n) ? n : null;
 }
 
 const guessKind = mediaUpload.guessKind;
@@ -210,14 +217,14 @@ async function loadTaskForAcl(taskId) {
 
   if (t.serviceId) {
     const svc = await Service.findByPk(t.serviceId, {
-      attributes: ["id", "clientId", "agentId", "countryId", "regionId"],
+      attributes: ["id", "clientId", "agentId", "countryId", "regionId", "latitude", "longitude"],
     });
     t.service = svc ? (svc.toJSON ? svc.toJSON() : svc) : null;
   }
 
   if (t.propertyId) {
     const prop = await Property.findByPk(t.propertyId, {
-      attributes: ["id", "ownerId", "countryId", "regionId"],
+      attributes: ["id", "ownerId", "countryId", "regionId", "latitude", "longitude"],
     });
     t.property = prop ? (prop.toJSON ? prop.toJSON() : prop) : null;
   }
@@ -394,6 +401,20 @@ exports.create = async (req, res) => {
       }
     }
 
+    // 📍 Position de la preuve (docs/DEV_SPEC_TERANGA_v4_PHASE0.md §4) — best-effort côté
+    // client, jamais requise. Comparée à la position connue de la mission (prioritaire) ou du
+    // bien lié à la tâche, pour qualifier locationFlag. Ne bloque jamais l'upload.
+    const evidenceLatitude = toSafeFloat(req.body?.latitude);
+    const evidenceLongitude = toSafeFloat(req.body?.longitude);
+    const targetLatitude = task?.service?.latitude ?? task?.property?.latitude ?? null;
+    const targetLongitude = task?.service?.longitude ?? task?.property?.longitude ?? null;
+    const locationFlag = resolveLocationFlag({
+      evidenceLatitude,
+      evidenceLongitude,
+      targetLatitude,
+      targetLongitude,
+    });
+
     const imageKitEnabled = isImageKitEnabled();
     const fallbackPolicy = resolveLocalFallbackPolicy();
     const allowLocalFallback = fallbackPolicy.allowLocalFallback;
@@ -492,6 +513,11 @@ exports.create = async (req, res) => {
             // 🌍 multi-pays (héritage strict)
             countryId: geoCountryId,
             regionId: geoRegionId,
+
+            // 📍 position + qualification de proximité (best-effort, jamais bloquant)
+            latitude: evidenceLatitude,
+            longitude: evidenceLongitude,
+            locationFlag,
           });
 
           return { ok: true, id: created.id };

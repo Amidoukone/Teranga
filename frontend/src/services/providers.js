@@ -24,3 +24,34 @@ export async function updateProviderStatus(id, status) {
   const { data } = await api.patch(`/v1/providers/${id}/status`, { status });
   return data?.provider;
 }
+
+/**
+ * GET /api/v1/providers/me — fiche du prestataire authentifié (docs/DEV_SPEC_TERANGA_v5_PHASE2.md
+ * §3). Renvoie null si aucun profil prestataire n'existe pour ce compte (jamais une erreur bloquante).
+ */
+export async function getMyProvider() {
+  try {
+    const { data } = await api.get('/v1/providers/me');
+    return data?.provider || null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+/**
+ * PATCH /api/v1/providers/me/availability — le prestataire déclare son propre statut
+ * ('available'|'busy'|'offline'), docs/DEV_SPEC_TERANGA_v5_PHASE2.md §3.2.
+ */
+export async function updateMyAvailability(availabilityStatus) {
+  const { data } = await api.patch('/v1/providers/me/availability', { availabilityStatus });
+  return data?.provider;
+}
+
+/**
+ * GET /api/v1/providers/available — admin/master, chauffeurs disponibles dans le scope
+ * géographique (filière Mobilité, statut active + available), docs/DEV_SPEC_TERANGA_v5_PHASE2.md §3.3.
+ */
+export async function listAvailableProviders() {
+  const { data } = await api.get('/v1/providers/available');
+  return data?.providers || [];
+}

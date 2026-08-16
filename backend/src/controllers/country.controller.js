@@ -243,7 +243,7 @@ exports.update = async (req, res) => {
     const country = await Country.findByPk(id);
     if (!country) return res.status(404).json({ error: 'Pays introuvable' });
 
-    const { name, isoCode, currency, defaultLanguage, isActive } = req.body || {};
+    const { name, isoCode, currency, defaultLanguage, isActive, contactPhone } = req.body || {};
 
     if (name !== undefined) {
       country.name = toTrimOrNull(name) || country.name;
@@ -281,6 +281,12 @@ exports.update = async (req, res) => {
 
     if (isActive !== undefined) {
       country.isActive = Boolean(isActive);
+    }
+
+    // Numéro de contact affiché sur les annonces immobilières sans région précise
+    // (docs/BRAINSTORM_ECOSYSTEME_TERANGA.md §7) — '' efface le numéro.
+    if (contactPhone !== undefined) {
+      country.contactPhone = toTrimOrNull(contactPhone);
     }
 
     await country.save();

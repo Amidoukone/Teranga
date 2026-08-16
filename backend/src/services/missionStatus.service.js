@@ -82,6 +82,10 @@ async function transitionMissionStatus({ service, toStatus, actorType, actorId, 
       {
         missionStatus: toStatus,
         ...(legacyStatus ? { status: legacyStatus } : {}),
+        // Toute transition remet le compteur d'alerte à zéro (docs/DEV_SPEC_TERANGA_v4_PHASE0.md
+        // §1.2) : une mission qui vient de bouger a par définition droit à une nouvelle fenêtre
+        // avant la prochaine alerte, même si l'étape précédente en avait déjà déclenché une.
+        thresholdAlertSentAt: null,
         ...extraFields,
       },
       { transaction: t }
