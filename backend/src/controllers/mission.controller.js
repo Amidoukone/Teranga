@@ -116,9 +116,12 @@ exports.estimate = async (req, res) => {
       longitude: rawLongitude,
       pickupLatitude: rawPickupLatitude,
       pickupLongitude: rawPickupLongitude,
+      requestedVehicleType: rawRequestedVehicleType,
     } = req.body;
 
     const tradeCategory = await resolveTradeCategory(executionType, tradeCategoryId);
+    const requestedVehicleType =
+      tradeCategory?.slug === 'mobilite' ? rawRequestedVehicleType || 'motorcycle' : null;
 
     // Estimation basée sur la destination réelle (adresse déjà saisie à l'étape Location du
     // wizard) quand elle est disponible — jamais bloquant : un aperçu de prix qui échoue à se
@@ -165,6 +168,7 @@ exports.estimate = async (req, res) => {
       destinationLongitude: longitude,
       pickupLatitude,
       pickupLongitude,
+      requestedVehicleType,
     });
 
     return res.status(200).json({ estimate });
@@ -193,9 +197,12 @@ exports.create = async (req, res) => {
       pickupAddress: rawPickupAddress,
       pickupLatitude: rawPickupLatitude,
       pickupLongitude: rawPickupLongitude,
+      requestedVehicleType: rawRequestedVehicleType,
     } = req.body;
 
     const tradeCategory = await resolveTradeCategory(executionType, tradeCategoryId);
+    const requestedVehicleType =
+      tradeCategory?.slug === 'mobilite' ? rawRequestedVehicleType || 'motorcycle' : null;
 
     let trimmedAddress = rawAddress ? String(rawAddress).trim() : null;
     let latitude = rawLatitude != null ? Number(rawLatitude) : null;
@@ -307,6 +314,7 @@ exports.create = async (req, res) => {
       destinationLongitude: longitude,
       pickupLatitude,
       pickupLongitude,
+      requestedVehicleType,
     });
 
     const service = await Service.create({
@@ -317,6 +325,7 @@ exports.create = async (req, res) => {
       pickupAddress,
       pickupLatitude,
       pickupLongitude,
+      requestedVehicleType,
       type: tradeCategory ? 'other' : serviceType,
       title: String(title).trim(),
       description: description ? String(description).trim() : null,
@@ -1123,6 +1132,7 @@ exports.track = async (req, res) => {
       acceptanceDeadlineAt: service.acceptanceDeadlineAt || null,
       provider,
       pickupAddress: service.pickupAddress || null,
+      requestedVehicleType: service.requestedVehicleType || null,
       pickupLatitude: service.pickupLatitude != null ? Number(service.pickupLatitude) : null,
       pickupLongitude: service.pickupLongitude != null ? Number(service.pickupLongitude) : null,
       destination:

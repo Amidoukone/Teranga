@@ -46,6 +46,12 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         field: 'service_type',
       },
+      vehicleType: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+        field: 'vehicle_type',
+        validate: { isIn: [['motorcycle', 'car']] },
+      },
       pricingMode: {
         type: DataTypes.ENUM('fixed_estimate', 'quote_only'),
         allowNull: false,

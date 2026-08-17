@@ -47,6 +47,11 @@ jest.mock("react-i18next", () => ({
         "homePage.missionRequest.successReference": `Référence #${opts?.id}`,
         "homePage.missionRequest.trackCta": "Suivre",
         "homePage.missionRequest.newRequestCta": "Nouvelle demande",
+        "missionCreation.location.departureTitle": "Point de départ",
+        "missionCreation.location.destinationTitle": "Destination",
+        "missionCreation.location.pickupTitle": "Point de retrait",
+        "missionCreation.location.dropoffTitle": "Point de dépose",
+        "missionCreation.location.pickupAddressPlaceholder": "Adresse de départ",
         "services.type.errand": "Course",
         "services.type.administrative": "Démarche",
         "services.type.payment": "Paiement",
@@ -127,6 +132,43 @@ describe("MissionRequestForm (révélation progressive)", () => {
         requestKind: "classic",
         serviceType: "errand",
         countryId: 5,
+      })
+    );
+    expect(await screen.findByText("Demande reçue")).toBeInTheDocument();
+  });
+
+  test("préselectionne Taxi et soumet départ et destination sans compte préalable", async () => {
+    getTradeCategories.mockResolvedValue([{ id: 8, name: "Mobilité", slug: "mobilite" }]);
+    submitMissionRequest.mockResolvedValue({
+      isNewAccount: true,
+      service: { id: 84, missionStatus: "CREATED" },
+      user: { id: 2 },
+    });
+    persistSession.mockResolvedValue(undefined);
+
+    render(
+      <MissionRequestForm
+        initialTradeCategorySlug="mobilite"
+        initialTitle="Course Teranga Taxi"
+      />
+    );
+
+    expect(await screen.findByText("Point de départ")).toBeInTheDocument();
+    expect(screen.getByText("Destination")).toBeInTheDocument();
+    await userEvent.type(screen.getByPlaceholderText("Adresse de départ"), "Sébénikoro, Bamako");
+    await userEvent.type(screen.getByPlaceholderText("Quartier, ville"), "ACI 2000, Bamako");
+    await userEvent.type(screen.getByPlaceholderText("+223..."), "+22370000084");
+    await userEvent.type(screen.getAllByPlaceholderText("Code")[0], "1234");
+    await userEvent.click(screen.getByRole("button", { name: "Envoyer ma demande" }));
+
+    await waitFor(() => expect(submitMissionRequest).toHaveBeenCalledTimes(1));
+    expect(submitMissionRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestKind: "trade_category",
+        tradeCategoryId: 8,
+        title: "Course Teranga Taxi",
+        pickupAddress: "Sébénikoro, Bamako",
+        address: "ACI 2000, Bamako",
       })
     );
     expect(await screen.findByText("Demande reçue")).toBeInTheDocument();

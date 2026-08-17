@@ -33,6 +33,7 @@ export default function AdminPhoneOrderPage() {
   const [category, setCategory] = useState({ requestKind: null, tradeCategoryId: "", serviceType: "" });
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [requestedVehicleType, setRequestedVehicleType] = useState("motorcycle");
 
   const [address, setAddress] = useState("");
   const [coordinates, setCoordinates] = useState(null);
@@ -85,6 +86,7 @@ export default function AdminPhoneOrderPage() {
     setCategory({ requestKind: null, tradeCategoryId: "", serviceType: "" });
     setTitle("");
     setDescription("");
+    setRequestedVehicleType("motorcycle");
     setAddress("");
     setCoordinates(null);
     setPickupAddress("");
@@ -110,6 +112,7 @@ export default function AdminPhoneOrderPage() {
       };
       if (category.tradeCategoryId) payload.tradeCategoryId = Number(category.tradeCategoryId);
       else payload.serviceType = category.serviceType;
+      if (isMobilite) payload.requestedVehicleType = requestedVehicleType;
 
       if (address.trim()) payload.address = address.trim();
       if (coordinates?.latitude != null) payload.latitude = coordinates.latitude;
@@ -227,9 +230,26 @@ export default function AdminPhoneOrderPage() {
               tradeCategories={tradeCategories}
               loading={loadingOptions}
               value={category}
-              onChange={setCategory}
+              onChange={(value) => {
+                setCategory(value);
+                setRequestedVehicleType("motorcycle");
+              }}
             />
           </div>
+
+          {isMobilite ? (
+            <div className="mt-5">
+              <label className={labelClass}>{t("adminPhoneOrder.vehicleLabel")}</label>
+              <select
+                className={inputClass}
+                value={requestedVehicleType}
+                onChange={(event) => setRequestedVehicleType(event.target.value)}
+              >
+                <option value="motorcycle">{t("adminPhoneOrder.vehicle.motorcycle")}</option>
+                <option value="car">{t("adminPhoneOrder.vehicle.car")}</option>
+              </select>
+            </div>
+          ) : null}
 
           <div className="mt-5">
             <label className={labelClass}>{t("adminPhoneOrder.titleLabel")}</label>

@@ -13,7 +13,7 @@ import { Button, FormField } from "./ui";
 const inputClass =
   "w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500";
 
-export default function MissionRequestForm() {
+export default function MissionRequestForm({ initialTradeCategorySlug = null, initialTitle = "" }) {
   const { t } = useTranslation();
 
   const [tradeCategories, setTradeCategories] = useState([]);
@@ -27,10 +27,12 @@ export default function MissionRequestForm() {
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [firstName, setFirstName] = useState("");
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
   const [coordinates, setCoordinates] = useState(null);
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [pickupCoordinates, setPickupCoordinates] = useState(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -48,7 +50,23 @@ export default function MissionRequestForm() {
         setTradeCategories(categories);
         setCountries(countryList);
         if (countryList[0]) setCountryId(String(countryList[0].id));
-        setFeedback(null);
+        if (initialTradeCategorySlug) {
+          const initialCategory = categories.find((tc) => tc.slug === initialTradeCategorySlug);
+          if (initialCategory) {
+            setRequestKind("trade_category");
+            setTradeCategoryId(String(initialCategory.id));
+            setServiceType("");
+            setTitle(initialTitle);
+            setFeedback(null);
+          } else {
+            setFeedback({
+              type: "error",
+              message: t("homePage.missionRequest.errors.serviceUnavailable"),
+            });
+          }
+        } else {
+          setFeedback(null);
+        }
       } catch (_err) {
         if (!cancelled) {
           setFeedback({ type: "error", message: t("homePage.missionRequest.loadError") });
@@ -60,27 +78,42 @@ export default function MissionRequestForm() {
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [initialTitle, initialTradeCategorySlug, t]);
+
+  const selectedTradeCategory = tradeCategoryId
+    ? tradeCategories.find((tc) => String(tc.id) === String(tradeCategoryId))
+    : null;
+  const selectedTradeCategorySlug = selectedTradeCategory?.slug || null;
+  const requiresPickup =
+    selectedTradeCategorySlug === "livraison" || selectedTradeCategorySlug === "mobilite";
+  const isMobilite = selectedTradeCategorySlug === "mobilite";
 
   const resetForNewRequest = () => {
     setResult(null);
     setFeedback(null);
-    setRequestKind(null);
-    setTradeCategoryId("");
+    const initialCategory = initialTradeCategorySlug
+      ? tradeCategories.find((tc) => tc.slug === initialTradeCategorySlug)
+      : null;
+    setRequestKind(initialCategory ? "trade_category" : null);
+    setTradeCategoryId(initialCategory ? String(initialCategory.id) : "");
     setServiceType("");
     setPhone("");
     setPin("");
     setFirstName("");
-    setTitle("");
+    setTitle(initialTitle);
     setDescription("");
     setAddress("");
     setCoordinates(null);
+    setPickupAddress("");
+    setPickupCoordinates(null);
   };
 
   const handleCategoryChange = (selection) => {
     setRequestKind(selection.requestKind);
     setTradeCategoryId(selection.tradeCategoryId || "");
     setServiceType(selection.serviceType || "");
+    setPickupAddress("");
+    setPickupCoordinates(null);
   };
 
   // Révélation progressive : un choix à la fois plutôt qu'un mur de champs
@@ -105,6 +138,13 @@ export default function MissionRequestForm() {
       setFeedback({ type: "error", message: t("homePage.missionRequest.errors.required") });
       return;
     }
+    if (
+      requiresPickup &&
+      (!(pickupAddress.trim() || pickupCoordinates) || !(address.trim() || coordinates))
+    ) {
+      setFeedback({ type: "error", message: t("homePage.missionRequest.errors.locationsRequired") });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -124,6 +164,11 @@ export default function MissionRequestForm() {
         payload.tradeCategoryId = Number(tradeCategoryId);
       } else {
         payload.serviceType = serviceType;
+      }
+      if (requiresPickup) {
+        payload.pickupAddress = pickupAddress.trim() || undefined;
+        payload.pickupLatitude = pickupCoordinates?.latitude;
+        payload.pickupLongitude = pickupCoordinates?.longitude;
       }
 
       const data = await submitMissionRequest(payload);
@@ -159,8 +204,19 @@ export default function MissionRequestForm() {
         <p className="mt-2 text-sm text-text-secondary">
           {t("homePage.missionRequest.successReference", { id: result.service?.id })}
         </p>
+        {result.estimate?.basePrice != null ? (
+          <p className="mt-2 text-sm font-semibold text-text-primary">
+            {t("homePage.missionRequest.estimatedPrice", {
+              amount: Math.round(Number(result.estimate.basePrice)),
+              currency: result.estimate.currency,
+            })}
+          </p>
+        ) : null}
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link to="/services" className="btn-primary rounded-full px-6 py-2.5 text-sm">
+          <Link
+            to={result.service?.missionStatus ? `/missions/${result.service.id}/track` : "/services"}
+            className="btn-primary rounded-full px-6 py-2.5 text-sm"
+          >
             {t("homePage.missionRequest.trackCta")}
           </Link>
           <button
@@ -190,12 +246,22 @@ export default function MissionRequestForm() {
         <legend className="mb-1 block px-0 text-sm font-medium text-text-primary">
           {t("homePage.missionRequest.chooseNeed")}
         </legend>
-        <CategoryPicker
-          tradeCategories={tradeCategories}
-          loading={loadingOptions}
-          value={{ requestKind, tradeCategoryId, serviceType }}
-          onChange={handleCategoryChange}
-        />
+        {initialTradeCategorySlug ? (
+          selectedTradeCategory ? (
+            <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm font-semibold text-blue-800 dark:text-blue-200">
+              {selectedTradeCategory.name}
+            </div>
+          ) : loadingOptions ? (
+            <CategoryPicker loading value={{ requestKind, tradeCategoryId, serviceType }} />
+          ) : null
+        ) : (
+          <CategoryPicker
+            tradeCategories={tradeCategories}
+            loading={loadingOptions}
+            value={{ requestKind, tradeCategoryId, serviceType }}
+            onChange={handleCategoryChange}
+          />
+        )}
       </fieldset>
 
       {showDetails ? (
@@ -212,9 +278,42 @@ export default function MissionRequestForm() {
             />
           </FormField>
 
+          {requiresPickup ? (
+            <FormField
+              label={
+                isMobilite
+                  ? t("missionCreation.location.departureTitle")
+                  : t("missionCreation.location.pickupTitle")
+              }
+              required
+            >
+              <LocationAutocompleteInput
+                className={inputClass}
+                placeholder={t("missionCreation.location.pickupAddressPlaceholder")}
+                value={pickupAddress}
+                onChange={(value) => {
+                  setPickupAddress(value);
+                  setPickupCoordinates(null);
+                }}
+                onPlaceSelected={({ address: resolvedAddress, latitude, longitude }) => {
+                  setPickupAddress(resolvedAddress);
+                  setPickupCoordinates({ latitude, longitude });
+                }}
+                required
+              />
+            </FormField>
+          ) : null}
+
           <FormField
-            label={t("homePage.missionRequest.fields.address")}
-            hint={t("homePage.missionRequest.fields.addressHint")}
+            label={
+              requiresPickup
+                ? isMobilite
+                  ? t("missionCreation.location.destinationTitle")
+                  : t("missionCreation.location.dropoffTitle")
+                : t("homePage.missionRequest.fields.address")
+            }
+            hint={requiresPickup ? undefined : t("homePage.missionRequest.fields.addressHint")}
+            required={requiresPickup}
           >
             <LocationAutocompleteInput
               className={inputClass}
@@ -228,6 +327,7 @@ export default function MissionRequestForm() {
                 setAddress(resolvedAddress);
                 setCoordinates({ latitude, longitude });
               }}
+              required={requiresPickup}
             />
           </FormField>
 

@@ -1530,6 +1530,11 @@ const fr = {
     kicker: "Canal opérateur",
     title: "Nouvelle course par téléphone",
     subtitle: "Saisissez une course au nom d'un appelant qui n'a pas l'application.",
+    vehicleLabel: "Véhicule demandé",
+    vehicle: {
+      motorcycle: "Moto",
+      car: "Voiture",
+    },
     countryLabel: "Pays",
     selectCountry: "Choisir un pays",
     phoneLabel: "Téléphone de l'appelant",
@@ -2326,6 +2331,16 @@ const fr = {
     },
   },
   homePage: {
+    quickServices: {
+      taxi: {
+        title: "Teranga Taxi",
+        subtitle: "Commander une course",
+      },
+      delivery: {
+        title: "Livraison",
+        subtitle: "Envoyer un colis",
+      },
+    },
     propertyListings: {
       title: "Annonces immobilières",
       subtitle: "Maisons, appartements et terrains vérifiés par Teranga.",
@@ -2391,6 +2406,8 @@ const fr = {
         required: "Merci de remplir les champs obligatoires.",
         wrongPin:
           "Ce numéro est déjà associé à une demande Teranga. Le code saisi est incorrect.",
+        locationsRequired: "Le point de départ et la destination sont obligatoires.",
+        serviceUnavailable: "Ce service n'est pas encore disponible dans votre zone.",
         generic: "Une erreur est survenue. Merci de réessayer.",
       },
       successNewAccount:
@@ -2398,6 +2415,7 @@ const fr = {
       successExisting: "Votre demande est envoyée et rattachée à votre compte existant.",
       successTitle: "Demande bien reçue !",
       successReference: "Référence de votre demande : #{{id}}",
+      estimatedPrice: "Prix estimé : {{amount}} {{currency}}",
       trackCta: "Suivre ma demande",
       newRequestCta: "Faire une nouvelle demande",
     },
@@ -2423,6 +2441,94 @@ const fr = {
       resourcesTitle: "Ressources",
       copyright:
         "© {{year}} <0>Teranga</0> - Tous droits réservés.",
+    },
+  },
+  publicTransportOrder: {
+    backHome: "Retour à l'accueil",
+    noAccountHint: "Aucun compte préalable nécessaire : votre espace est créé automatiquement.",
+    taxi: {
+      seoTitle: "Commander un Teranga Taxi",
+      seoDescription: "Commandez une course Teranga Taxi avec départ, destination et suivi.",
+      title: "Commander un Teranga Taxi",
+      subtitle:
+        "Indiquez votre point de départ et votre destination. Le tarif est estimé selon la distance routière.",
+      defaultTitle: "Course Teranga Taxi",
+    },
+    delivery: {
+      seoTitle: "Commander une livraison Teranga",
+      seoDescription: "Commandez une livraison avec retrait, destination et suivi.",
+      title: "Commander une livraison",
+      subtitle:
+        "Indiquez le point de retrait et la destination du colis. Le tarif est estimé selon la distance routière.",
+      defaultTitle: "Livraison de colis",
+    },
+  },
+  mobilityBooking: {
+    loadingMap: "Chargement de la carte…",
+    mapUnavailable: "Carte indisponible pour le moment. Vous pouvez toujours saisir les lieux.",
+    mapHint: "Cliquez sur la carte pour placer : {{point}}.",
+    currentPosition: "Ma position actuelle",
+    point: {
+      pickup: "le point de départ",
+      destination: "la destination",
+    },
+    vehicle: {
+      title: "Quel véhicule souhaitez-vous ?",
+      motorcycle: {
+        label: "Moto",
+        hint: "Rapide et économique",
+        missionTitle: "Course Teranga en moto",
+      },
+      car: {
+        label: "Voiture",
+        hint: "Plus de confort et de place",
+        missionTitle: "Course Teranga en voiture",
+      },
+    },
+    pickupLabel: "Point de départ",
+    pickupPlaceholder: "Quartier, rue ou point de repère",
+    destinationLabel: "Destination",
+    destinationPlaceholder: "Où souhaitez-vous aller ?",
+    useCurrentLocation: "Utiliser ma position actuelle",
+    locating: "Localisation en cours…",
+    estimateCta: "Voir le trajet et le prix",
+    estimateTitle: "Estimation de votre course",
+    price: "Environ {{amount}} {{currency}}",
+    quoteOnly: "Un opérateur vous confirmera le prix",
+    duration: "{{minutes}} min de trajet",
+    connectedAs: "Vous commandez avec votre compte {{name}}. Aucune inscription n'est nécessaire.",
+    book: {
+      motorcycle: "Commander cette moto",
+      car: "Commander cette voiture",
+    },
+    callUs: "Ou appelez Teranga : {{phone}}",
+    identity: {
+      title: "Comment vous joindre ?",
+      hint: "Ces informations sont demandées seulement au moment de commander. Si le numéro existe déjà, saisissez son PIN.",
+      phone: "Téléphone",
+      pin: "PIN Teranga",
+      firstName: "Prénom (optionnel)",
+      firstNamePlaceholder: "Votre prénom",
+      country: "Pays",
+    },
+    errors: {
+      unavailable: "Teranga Mobilité n'est pas encore disponible dans cette zone.",
+      load: "Impossible de préparer la commande. Réessayez dans un instant.",
+      locations: "Indiquez le point de départ et la destination.",
+      estimate: "Impossible de calculer le prix pour le moment.",
+      geolocationUnsupported: "La géolocalisation n'est pas disponible sur cet appareil.",
+      geolocation: "Impossible d'obtenir votre position. Vérifiez l'autorisation de localisation.",
+      identity: "Saisissez votre téléphone et votre PIN pour commander.",
+      wrongPin: "Ce numéro existe déjà, mais le PIN saisi est incorrect.",
+      clientAccountRequired: "Vous êtes connecté avec un compte professionnel. Utilisez un compte client pour commander.",
+      submit: "Impossible d'enregistrer la course. Réessayez dans un instant.",
+    },
+    success: {
+      message: "Votre course a été enregistrée. Teranga recherche maintenant un chauffeur.",
+      title: "Course confirmée",
+      reference: "Référence #{{id}}",
+      track: "Suivre ma course",
+      newRide: "Nouvelle course",
     },
   },
   missionCreation: {
@@ -2535,6 +2641,12 @@ const fr = {
       selectTradeCategory: "Choisissez une filière",
       serviceType: "Type de service",
       selectServiceType: "Choisissez un type de service",
+      vehicle: "Véhicule Mobilité",
+      vehicleType: {
+        all: "Tous les véhicules (tarif de repli)",
+        motorcycle: "Moto",
+        car: "Voiture",
+      },
       pricingMode: "Mode de tarification",
       pricingModeFixed: "Prix indicatif",
       pricingModeQuote: "Sur devis",

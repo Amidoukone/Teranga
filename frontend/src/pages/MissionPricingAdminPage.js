@@ -29,6 +29,7 @@ const EMPTY_FORM = {
   categoryMode: "generic",
   tradeCategoryId: "",
   serviceType: "",
+  vehicleType: "",
   pricingMode: "fixed_estimate",
   basePrice: "",
   minPrice: "",
@@ -143,7 +144,12 @@ export default function MissionPricingAdminPage() {
   }, [allTradeCategories]);
 
   const categoryLabel = (rule) => {
-    if (rule.tradeCategoryId) return tradeCategoryNameById.get(String(rule.tradeCategoryId)) || "—";
+    if (rule.tradeCategoryId) {
+      const tradeLabel = tradeCategoryNameById.get(String(rule.tradeCategoryId)) || "—";
+      return rule.vehicleType
+        ? `${tradeLabel} — ${t(`missionPricingAdmin.form.vehicleType.${rule.vehicleType}`)}`
+        : tradeLabel;
+    }
     if (rule.serviceType) return t(`services.type.${rule.serviceType}`);
     return t("missionPricingAdmin.table.genericCategory");
   };
@@ -164,6 +170,9 @@ export default function MissionPricingAdminPage() {
       };
       if (form.categoryMode === "trade") payload.tradeCategoryId = Number(form.tradeCategoryId);
       if (form.categoryMode === "classic") payload.serviceType = form.serviceType;
+      if (form.categoryMode === "trade" && form.vehicleType) {
+        payload.vehicleType = form.vehicleType;
+      }
 
       const created = await createMissionPricingRule(payload);
       setRules((prev) => [created, ...prev]);
@@ -224,6 +233,11 @@ export default function MissionPricingAdminPage() {
       setFeedback({ type: "error", message: backendMessage || t("missionPricingAdmin.errors.delete") });
     }
   };
+
+  const selectedTradeCategory = tradeCategories.find(
+    (tc) => String(tc.id) === String(form.tradeCategoryId)
+  );
+  const isMobilityPricing = selectedTradeCategory?.slug === "mobilite";
 
   if (loading) {
     return (
@@ -297,7 +311,15 @@ export default function MissionPricingAdminPage() {
               <button
                 key={mode}
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, categoryMode: mode, tradeCategoryId: "", serviceType: "" }))}
+                onClick={() =>
+                  setForm((f) => ({
+                    ...f,
+                    categoryMode: mode,
+                    tradeCategoryId: "",
+                    serviceType: "",
+                    vehicleType: "",
+                  }))
+                }
                 className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                   form.categoryMode === mode
                     ? "border-blue-600 bg-blue-600 text-white"
@@ -316,7 +338,9 @@ export default function MissionPricingAdminPage() {
             <select
               className={inputClass}
               value={form.tradeCategoryId}
-              onChange={(e) => setForm((f) => ({ ...f, tradeCategoryId: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, tradeCategoryId: e.target.value, vehicleType: "" }))
+              }
               required
             >
               <option value="">{t("missionPricingAdmin.form.selectTradeCategory")}</option>
@@ -325,6 +349,23 @@ export default function MissionPricingAdminPage() {
                   {tc.name}
                 </option>
               ))}
+            </select>
+          </div>
+        ) : null}
+
+        {form.categoryMode === "trade" && isMobilityPricing ? (
+          <div className="sm:col-span-2">
+            <label className={labelClass}>{t("missionPricingAdmin.form.vehicle")}</label>
+            <select
+              className={inputClass}
+              value={form.vehicleType}
+              onChange={(e) => setForm((f) => ({ ...f, vehicleType: e.target.value }))}
+            >
+              <option value="">{t("missionPricingAdmin.form.vehicleType.all")}</option>
+              <option value="motorcycle">
+                {t("missionPricingAdmin.form.vehicleType.motorcycle")}
+              </option>
+              <option value="car">{t("missionPricingAdmin.form.vehicleType.car")}</option>
             </select>
           </div>
         ) : null}

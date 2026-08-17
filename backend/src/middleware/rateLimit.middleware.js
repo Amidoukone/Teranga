@@ -70,6 +70,16 @@ const guestLimiter = buildRateLimiter({
   limiterName: 'guest_mission_request',
 });
 
+// Les interactions avec la carte peuvent produire plusieurs estimations ou
+// geocodages avant une seule commande. Elles gardent donc un quota distinct de
+// l'endpoint public qui cree reellement le compte et la mission.
+const publicQuoteLimiter = buildRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: 'Trop de consultations depuis cette connexion. Reessayez plus tard.',
+  limiterName: 'public_mission_quote',
+});
+
 module.exports = {
   authLimiter,
   refreshLimiter,
@@ -77,4 +87,5 @@ module.exports = {
   changePasswordLimiter,
   writeLimiter,
   guestLimiter,
+  publicQuoteLimiter,
 };

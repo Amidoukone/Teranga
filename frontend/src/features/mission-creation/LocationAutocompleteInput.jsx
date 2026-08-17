@@ -20,6 +20,7 @@ export default function LocationAutocompleteInput({
   className,
   placeholder,
   required,
+  onFocus,
 }) {
   const inputRef = useRef(null);
   const autocompleteRef = useRef(null);
@@ -67,6 +68,7 @@ export default function LocationAutocompleteInput({
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onFocus={onFocus}
       autoComplete="off"
       required={required}
     />

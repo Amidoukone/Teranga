@@ -26,6 +26,27 @@ export async function submitMissionRequest(payload) {
   return data;
 }
 
+/** Aperçu public Taxi/Livraison : aucune session et aucune écriture. */
+export async function estimateMissionRequest(payload) {
+  const { data } = await api.post('/v1/mission-requests/estimate', payload, {
+    skipAuthHeader: true,
+    skipAuthRefresh: true,
+    skipAuthRedirect: true,
+  });
+  return data;
+}
+
+/** Coordonnées GPS -> libellé lisible, via la clé Google serveur. */
+export async function reverseGeocodeMissionRequestLocation({ latitude, longitude }) {
+  const { data } = await api.get('/v1/mission-requests/reverse-geocode', {
+    params: { latitude, longitude },
+    skipAuthHeader: true,
+    skipAuthRefresh: true,
+    skipAuthRedirect: true,
+  });
+  return data?.address || null;
+}
+
 /**
  * Filières actives (Teranga Pro) — public, GET /api/v1/trade-categories.
  * countryId/regionId optionnels (scope du compte client s'il est connecté, cf.

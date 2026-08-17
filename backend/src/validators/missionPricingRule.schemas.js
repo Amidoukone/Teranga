@@ -15,6 +15,7 @@ const createMissionPricingRuleSchema = Joi.object({
   serviceType: Joi.string()
     .valid(...Object.keys(SERVICE_TYPES))
     .allow(null),
+  vehicleType: Joi.string().valid('motorcycle', 'car').allow(null),
   pricingMode: Joi.string().valid('fixed_estimate', 'quote_only').required(),
   basePrice: Joi.number().min(0).allow(null),
   minPrice: Joi.number().min(0).allow(null),
@@ -25,6 +26,9 @@ const createMissionPricingRuleSchema = Joi.object({
     return helpers.message(
       'Renseignez au maximum une catégorie : tradeCategoryId OU serviceType, pas les deux.'
     );
+  }
+  if (value.vehicleType && !value.tradeCategoryId) {
+    return helpers.message('vehicleType nécessite une filière tradeCategoryId.');
   }
   return value;
 });

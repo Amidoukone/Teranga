@@ -3,6 +3,8 @@
 const Joi = require('joi');
 const { SERVICE_TYPES } = require('../utils/labels');
 
+const vehicleTypeSchema = Joi.string().valid('motorcycle', 'car');
+
 /**
  * Candidature/demande invitée depuis la homepage (docs/DEV_SPEC_TERANGA_v3.md,
  * Lot 2). `pin` est volontairement plus court que le mot de passe exigé par
@@ -33,8 +35,28 @@ const createMissionRequestSchema = Joi.object({
   address: Joi.string().trim().max(255).allow('', null),
   latitude: Joi.number().min(-90).max(90),
   longitude: Joi.number().min(-180).max(180),
+  // Point de retrait/départ pour Livraison et Mobilité. L'obligation dépend du slug de la
+  // filière et reste donc contrôlée dans le contrôleur après chargement de TradeCategory.
+  pickupAddress: Joi.string().trim().max(255).allow('', null),
+  pickupLatitude: Joi.number().min(-90).max(90),
+  pickupLongitude: Joi.number().min(-180).max(180),
+  requestedVehicleType: vehicleTypeSchema,
+});
+
+// Aperçu public sans écriture : aucune identité n'est nécessaire pour voir le prix d'un trajet.
+const estimateMissionRequestSchema = Joi.object({
+  countryId: Joi.number().integer().positive().required(),
+  tradeCategoryId: Joi.number().integer().positive().required(),
+  requestedVehicleType: vehicleTypeSchema.default('motorcycle'),
+  address: Joi.string().trim().max(255).allow('', null),
+  latitude: Joi.number().min(-90).max(90),
+  longitude: Joi.number().min(-180).max(180),
+  pickupAddress: Joi.string().trim().max(255).allow('', null),
+  pickupLatitude: Joi.number().min(-90).max(90),
+  pickupLongitude: Joi.number().min(-180).max(180),
 });
 
 module.exports = {
   createMissionRequestSchema,
+  estimateMissionRequestSchema,
 };

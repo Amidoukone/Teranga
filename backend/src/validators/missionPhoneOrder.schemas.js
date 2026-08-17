@@ -33,6 +33,7 @@ const phoneOrderSchema = Joi.object({
   pickupAddress: Joi.string().trim().max(255).allow('', null),
   pickupLatitude: Joi.number().min(-90).max(90),
   pickupLongitude: Joi.number().min(-180).max(180),
+  requestedVehicleType: Joi.string().valid('motorcycle', 'car'),
 });
 
 module.exports = {

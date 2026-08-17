@@ -4,7 +4,8 @@ const bcrypt = require('bcrypt');
 const { Service, User, Property, TradeCategory } = require('../../models');
 const { normalizePhone, isValidPhone } = require('../utils/contactIdentity');
 const { notifyServiceCreated } = require('../services/serviceNotification.service');
-const { geocodeAddress } = require('../services/geocoding.service');
+const { geocodeAddress, reverseGeocode } = require('../services/geocoding.service');
+const { estimateMission } = require('../services/priceEstimate.service');
 const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
 const logger = require('../utils/logger');
 const {
@@ -19,6 +20,141 @@ const {
   parseDurationToMs,
   ACCESS_EXPIRES,
 } = require('./auth.controller');
+
+const PICKUP_REQUIRED_SLUGS = ['livraison', 'mobilite'];
+
+function resolveRequestedVehicleType(tradeCategory, requestedVehicleType) {
+  if (tradeCategory?.slug !== 'mobilite') return null;
+  return requestedVehicleType || 'motorcycle';
+}
+
+/**
+ * Aperçu public du trajet — aucune identité et aucune écriture. Le pays est fourni par le
+ * catalogue public (champ masqué quand un seul pays est disponible), puis la destination réelle
+ * peut affiner le scope si Google renvoie son pays/région.
+ */
+exports.estimate = async (req, res) => {
+  try {
+    const {
+      countryId,
+      tradeCategoryId,
+      requestedVehicleType: rawRequestedVehicleType,
+      address: rawAddress,
+      latitude: rawLatitude,
+      longitude: rawLongitude,
+      pickupAddress: rawPickupAddress,
+      pickupLatitude: rawPickupLatitude,
+      pickupLongitude: rawPickupLongitude,
+    } = req.body;
+
+    const tradeCategory = await TradeCategory.findOne({
+      where: { id: tradeCategoryId, isActive: true },
+    });
+    if (!tradeCategory) return res.status(400).json({ error: 'Filière invalide ou inactive' });
+
+    let address = rawAddress ? String(rawAddress).trim() : null;
+    let latitude = rawLatitude != null ? Number(rawLatitude) : null;
+    let longitude = rawLongitude != null ? Number(rawLongitude) : null;
+    let pickupAddress = rawPickupAddress ? String(rawPickupAddress).trim() : null;
+    let pickupLatitude = rawPickupLatitude != null ? Number(rawPickupLatitude) : null;
+    let pickupLongitude = rawPickupLongitude != null ? Number(rawPickupLongitude) : null;
+    let geocodedCountryIso = null;
+    let geocodedAdminAreaName = null;
+
+    if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && address) {
+      const geocoded = await geocodeAddress(address);
+      if (!geocoded) return res.status(400).json({ error: 'Destination introuvable' });
+      latitude = geocoded.latitude;
+      longitude = geocoded.longitude;
+      address = geocoded.formattedAddress || address;
+      geocodedCountryIso = geocoded.countryIso;
+      geocodedAdminAreaName = geocoded.adminAreaName;
+    }
+
+    if (
+      (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude)) &&
+      pickupAddress
+    ) {
+      const geocodedPickup = await geocodeAddress(pickupAddress);
+      if (!geocodedPickup) return res.status(400).json({ error: 'Point de départ introuvable' });
+      pickupLatitude = geocodedPickup.latitude;
+      pickupLongitude = geocodedPickup.longitude;
+      pickupAddress = geocodedPickup.formattedAddress || pickupAddress;
+    }
+
+    if (
+      PICKUP_REQUIRED_SLUGS.includes(tradeCategory.slug) &&
+      (!Number.isFinite(latitude) ||
+        !Number.isFinite(longitude) ||
+        !Number.isFinite(pickupLatitude) ||
+        !Number.isFinite(pickupLongitude))
+    ) {
+      return res.status(400).json({
+        error: 'Le point de départ et la destination doivent être placés sur la carte',
+      });
+    }
+
+    const missionGeoScope = await resolveMissionGeoScope({
+      countryIso: geocodedCountryIso,
+      adminAreaName: geocodedAdminAreaName,
+      fallbackCountryId: countryId,
+      fallbackRegionId: null,
+      tradeCategoryScope: {
+        countryId: tradeCategory.countryId,
+        regionId: tradeCategory.regionId,
+      },
+    });
+    if (missionGeoScope.error) return res.status(400).json({ error: missionGeoScope.error });
+
+    const requestedVehicleType = resolveRequestedVehicleType(
+      tradeCategory,
+      rawRequestedVehicleType
+    );
+    const estimate = await estimateMission({
+      user: null,
+      executionType: 'provider',
+      tradeCategoryId: tradeCategory.id,
+      serviceType: null,
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
+      destinationLatitude: latitude,
+      destinationLongitude: longitude,
+      pickupLatitude,
+      pickupLongitude,
+      requestedVehicleType,
+    });
+
+    return res.status(200).json({
+      estimate: { ...estimate, requestedVehicleType },
+      pickup: { address: pickupAddress, latitude: pickupLatitude, longitude: pickupLongitude },
+      destination: { address, latitude, longitude },
+    });
+  } catch (e) {
+    logger.error({ err: e }, 'missionRequest.estimate.failed');
+    return res.status(500).json({ error: "Erreur lors du calcul de l'estimation" });
+  }
+};
+
+exports.reverseGeocodeLocation = async (req, res) => {
+  try {
+    const latitude = Number(req.query.latitude);
+    const longitude = Number(req.query.longitude);
+    if (
+      !Number.isFinite(latitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      !Number.isFinite(longitude) ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      return res.status(400).json({ error: 'latitude/longitude invalides' });
+    }
+    return res.json({ address: await reverseGeocode(latitude, longitude) });
+  } catch (e) {
+    logger.error({ err: e }, 'missionRequest.reverse_geocode.failed');
+    return res.status(500).json({ error: 'Erreur lors du géocodage inverse' });
+  }
+};
 
 /**
  * Demande de mission/service invitée depuis la homepage (docs/DEV_SPEC_TERANGA_v3.md,
@@ -47,6 +183,10 @@ exports.create = async (req, res) => {
       address,
       latitude: rawLatitude,
       longitude: rawLongitude,
+      pickupAddress: rawPickupAddress,
+      pickupLatitude: rawPickupLatitude,
+      pickupLongitude: rawPickupLongitude,
+      requestedVehicleType: rawRequestedVehicleType,
     } = req.body;
 
     const phone = normalizePhone(rawPhone);
@@ -61,6 +201,29 @@ exports.create = async (req, res) => {
       });
       if (!tradeCategory) {
         return res.status(400).json({ error: 'Filière invalide ou inactive' });
+      }
+    }
+
+    // Rejeter les commandes Taxi/Livraison incomplètes avant toute création automatique de
+    // compte. Cela évite de laisser un compte orphelin lorsqu'un visiteur oublie un des lieux.
+    if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug)) {
+      const hasDestination =
+        Boolean(String(address || '').trim()) ||
+        (rawLatitude != null &&
+          rawLongitude != null &&
+          Number.isFinite(Number(rawLatitude)) &&
+          Number.isFinite(Number(rawLongitude)));
+      const hasPickup =
+        Boolean(String(rawPickupAddress || '').trim()) ||
+        (rawPickupLatitude != null &&
+          rawPickupLongitude != null &&
+          Number.isFinite(Number(rawPickupLatitude)) &&
+          Number.isFinite(Number(rawPickupLongitude)));
+
+      if (!hasPickup || !hasDestination) {
+        return res.status(400).json({
+          error: 'Le point de départ et la destination sont obligatoires pour cette filière',
+        });
       }
     }
 
@@ -151,6 +314,39 @@ exports.create = async (req, res) => {
       longitude = null;
     }
 
+    let pickupAddress = rawPickupAddress ? String(rawPickupAddress).trim() : null;
+    let pickupLatitude = rawPickupLatitude != null ? Number(rawPickupLatitude) : null;
+    let pickupLongitude = rawPickupLongitude != null ? Number(rawPickupLongitude) : null;
+
+    if (
+      pickupAddress &&
+      (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude))
+    ) {
+      const geocodedPickup = await geocodeAddress(pickupAddress);
+      if (!geocodedPickup) {
+        return res.status(400).json({
+          error: 'Adresse de départ introuvable. Veuillez préciser un lieu plus précis.',
+        });
+      }
+      pickupLatitude = geocodedPickup.latitude;
+      pickupLongitude = geocodedPickup.longitude;
+    }
+
+    if (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude)) {
+      pickupAddress = null;
+      pickupLatitude = null;
+      pickupLongitude = null;
+    }
+
+    if (
+      PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug) &&
+      (pickupLatitude === null || pickupLongitude === null)
+    ) {
+      return res.status(400).json({
+        error: 'Le point de départ est obligatoire pour cette filière',
+      });
+    }
+
     // La mission est routée/tarifée selon le pays/région où elle a réellement
     // lieu (adresse géocodée), pas selon le pays du compte du demandeur — sauf
     // absence de lieu (fallback sur le compte, cf. commentaire ci-dessus).
@@ -168,6 +364,24 @@ exports.create = async (req, res) => {
     }
 
     const executionType = tradeCategory ? 'provider' : 'agent';
+    const requestedVehicleType = resolveRequestedVehicleType(
+      tradeCategory,
+      rawRequestedVehicleType
+    );
+    const estimate = await estimateMission({
+      user,
+      executionType,
+      tradeCategoryId: tradeCategory ? tradeCategory.id : null,
+      serviceType: tradeCategory ? null : serviceType,
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
+      destinationLatitude: latitude,
+      destinationLongitude: longitude,
+      pickupLatitude,
+      pickupLongitude,
+      requestedVehicleType,
+    });
+
     const service = await Service.create({
       clientId: user.id,
       agentId: null,
@@ -178,11 +392,15 @@ exports.create = async (req, res) => {
       description: description ? String(description).trim() : null,
       contactPerson: firstName || user.firstName || null,
       contactPhone: phone,
+      pickupAddress,
+      pickupLatitude,
+      pickupLongitude,
+      requestedVehicleType,
       address: trimmedAddress,
       latitude,
       longitude,
-      budget: null,
-      currency: 'XOF',
+      budget: estimate.basePrice ?? estimate.minPrice ?? null,
+      currency: estimate.currency,
       status: 'created',
       countryId: missionGeoScope.countryId,
       regionId: missionGeoScope.regionId,
@@ -233,6 +451,7 @@ exports.create = async (req, res) => {
       user: toAuthUser(user),
       isNewAccount,
       recoveryCodes,
+      estimate,
       service: fullService,
     });
   } catch (e) {

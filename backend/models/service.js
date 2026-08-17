@@ -176,6 +176,12 @@ module.exports = (sequelize, DataTypes) => {
       pickupAddress: { type: DataTypes.STRING(255), allowNull: true },
       pickupLatitude: { type: DataTypes.DECIMAL(10, 7), allowNull: true },
       pickupLongitude: { type: DataTypes.DECIMAL(10, 7), allowNull: true },
+      requestedVehicleType: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+        field: 'requested_vehicle_type',
+        validate: { isIn: [['motorcycle', 'car']] },
+      },
 
       // Fenêtre d'acceptation du dispatch mobilité (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2) —
       // posée uniquement pour la filière Mobilité, NULL partout ailleurs.

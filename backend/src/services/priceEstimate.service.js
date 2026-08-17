@@ -35,8 +35,6 @@ async function computeDistanceSurcharge(
   { pickupLatitude, pickupLongitude, destinationLatitude, destinationLongitude }
 ) {
   const pricePerKm = rule.pricePerKm != null ? Number(rule.pricePerKm) : 0;
-  if (!pricePerKm) return { distanceKm: null, surcharge: 0 };
-
   const hasPickup = Number.isFinite(pickupLatitude) && Number.isFinite(pickupLongitude);
   const hasDestination = Number.isFinite(destinationLatitude) && Number.isFinite(destinationLongitude);
   if (!hasPickup || !hasDestination) return { distanceKm: null, surcharge: 0 };
@@ -49,7 +47,11 @@ async function computeDistanceSurcharge(
     [{ lat: destinationLatitude, lng: destinationLongitude }],
     { mode: 'driving' }
   );
-  const roadDistanceMeters = matrix?.rows?.[0]?.[0]?.distanceMeters;
+  const routeElement = matrix?.rows?.[0]?.[0];
+  const roadDistanceMeters = routeElement?.distanceMeters;
+  const durationMinutes = Number.isFinite(routeElement?.durationSeconds)
+    ? Math.max(1, Math.round(routeElement.durationSeconds / 60))
+    : null;
 
   if (Number.isFinite(roadDistanceMeters)) {
     distanceKm = roadDistanceMeters / 1000;
@@ -64,11 +66,16 @@ async function computeDistanceSurcharge(
       ) / 1000;
   }
 
-  return { distanceKm, distanceSource, surcharge: pricePerKm * distanceKm };
+  return {
+    distanceKm,
+    distanceSource,
+    durationMinutes,
+    surcharge: pricePerKm * distanceKm,
+  };
 }
 
 async function buildFixedEstimateResponse(rule, currency, distanceParams = {}) {
-  const { distanceKm, distanceSource, surcharge } = await computeDistanceSurcharge(
+  const { distanceKm, distanceSource, durationMinutes, surcharge } = await computeDistanceSurcharge(
     rule,
     distanceParams
   );
@@ -82,6 +89,7 @@ async function buildFixedEstimateResponse(rule, currency, distanceParams = {}) {
     pricePerKm: rule.pricePerKm != null ? Number(rule.pricePerKm) : 0,
     distanceKm: distanceKm != null ? Number(distanceKm.toFixed(2)) : null,
     distanceSource: distanceKm != null ? distanceSource : null,
+    durationMinutes,
     estimatedDelayMinutes: rule.estimatedDelayMinutes,
     note:
       rule.minPrice != null && Number(rule.minPrice) === Number(rule.basePrice)
@@ -90,20 +98,43 @@ async function buildFixedEstimateResponse(rule, currency, distanceParams = {}) {
   };
 }
 
-async function findBestRule({ countryId, regionId, tradeCategoryId, serviceType }) {
+async function findRuleAtScope({ countryId, regionId, categoryWhere, vehicleType }) {
+  const sharedWhere = { countryId, regionId, isActive: true, ...categoryWhere };
+
+  // Une grille Moto/Voiture explicite prime. Les anciennes règles sans type restent un repli
+  // compatible et permettent une activation progressive sans casser les tarifs Phase 4.
+  if (vehicleType) {
+    const exact = await MissionPricingRule.findOne({
+      where: { ...sharedWhere, vehicleType },
+    });
+    if (exact) return exact;
+  }
+
+  return MissionPricingRule.findOne({
+    where: { ...sharedWhere, vehicleType: null },
+  });
+}
+
+async function findBestRule({ countryId, regionId, tradeCategoryId, serviceType, vehicleType }) {
   const categoryWhere = tradeCategoryId
     ? { tradeCategoryId, serviceType: null }
     : { serviceType, tradeCategoryId: null };
 
   if (regionId) {
-    const regional = await MissionPricingRule.findOne({
-      where: { countryId, regionId, isActive: true, ...categoryWhere },
+    const regional = await findRuleAtScope({
+      countryId,
+      regionId,
+      categoryWhere,
+      vehicleType,
     });
     if (regional) return regional;
   }
 
-  const countryWide = await MissionPricingRule.findOne({
-    where: { countryId, regionId: null, isActive: true, ...categoryWhere },
+  const countryWide = await findRuleAtScope({
+    countryId,
+    regionId: null,
+    categoryWhere,
+    vehicleType,
   });
   if (countryWide) return countryWide;
 
@@ -113,6 +144,7 @@ async function findBestRule({ countryId, regionId, tradeCategoryId, serviceType 
       regionId: null,
       tradeCategoryId: null,
       serviceType: null,
+      vehicleType: null,
       isActive: true,
     },
   });
@@ -133,6 +165,7 @@ async function findBestRule({ countryId, regionId, tradeCategoryId, serviceType 
  * @param {number|null} [params.destinationLongitude]
  * @param {number|null} [params.pickupLatitude] - retrait, pour la surcharge distance (§2)
  * @param {number|null} [params.pickupLongitude]
+ * @param {'motorcycle'|'car'|null} [params.requestedVehicleType]
  */
 async function estimateMission({
   user,
@@ -145,6 +178,7 @@ async function estimateMission({
   destinationLongitude,
   pickupLatitude,
   pickupLongitude,
+  requestedVehicleType = null,
 }) {
   const countryId = explicitCountryId ?? user?.countryId ?? null;
   const regionId = explicitRegionId ?? user?.regionId ?? null;
@@ -166,6 +200,7 @@ async function estimateMission({
       regionId,
       tradeCategoryId: executionType === 'provider' ? tradeCategoryId : null,
       serviceType: executionType === 'agent' ? serviceType : null,
+      vehicleType: executionType === 'provider' ? requestedVehicleType : null,
     });
 
     if (!rule) {

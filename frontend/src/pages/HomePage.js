@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Mail, MessageCircle, Phone, MapPin, Home, ArrowRight } from "lucide-react";
+import { ArrowUpRight, Mail, MessageCircle, Phone, MapPin, Home, ArrowRight, CarFront, Truck } from "lucide-react";
 import { Trans, useTranslation } from "react-i18next";
 
 import MissionRequestForm from "../components/MissionRequestForm";
@@ -145,6 +145,40 @@ export default function HomePage() {
           </div>
 
           <div className="relative mx-auto mt-8 max-w-xl">
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <Link
+                to="/taxi"
+                className="group flex items-center gap-3 rounded-2xl border border-border/70 bg-surface-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                  <CarFront size={20} />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-text-primary">
+                    {t("homePage.quickServices.taxi.title")}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-text-secondary">
+                    {t("homePage.quickServices.taxi.subtitle")}
+                  </span>
+                </span>
+              </Link>
+              <Link
+                to="/livraison"
+                className="group flex items-center gap-3 rounded-2xl border border-border/70 bg-surface-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
+                  <Truck size={20} />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-text-primary">
+                    {t("homePage.quickServices.delivery.title")}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-text-secondary">
+                    {t("homePage.quickServices.delivery.subtitle")}
+                  </span>
+                </span>
+              </Link>
+            </div>
             <MissionRequestForm />
           </div>
 

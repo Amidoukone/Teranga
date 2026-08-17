@@ -71,6 +71,7 @@ const AdminDisputesPage = lazy(() => import('./pages/AdminDisputesPage'));
 const AdminPropertyListingsPage = lazy(() => import('./pages/AdminPropertyListingsPage'));
 const PropertyListingsPage = lazy(() => import('./pages/PropertyListingsPage'));
 const PropertyListingDetailPage = lazy(() => import('./pages/PropertyListingDetailPage'));
+const PublicTransportOrderPage = lazy(() => import('./pages/PublicTransportOrderPage'));
 const AdminServicesPage = lazy(() => import('./pages/AdminServicesPage'));
 const AdminPhoneOrderPage = lazy(() => import('./pages/AdminPhoneOrderPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
@@ -382,6 +383,14 @@ export default function App() {
                 Chemin littéral déclaré avant ':id' pour ne jamais être capturé par le paramètre. */}
             <Route path="/immobilier" element={<PropertyListingsPage />} />
             <Route path="/immobilier/:id" element={<PropertyListingDetailPage />} />
+            <Route
+              path="/taxi"
+              element={<PublicTransportOrderPage serviceSlug="mobilite" />}
+            />
+            <Route
+              path="/livraison"
+              element={<PublicTransportOrderPage serviceSlug="livraison" />}
+            />
 
             <Route
               path="/products/:id"

@@ -134,6 +134,39 @@ describe('priceEstimate.service.estimateMission', () => {
     expect(result.estimatedDelayMinutes).toBe(90);
   });
 
+  test('prefers a vehicle-specific mobility rule and falls back to the shared rule', async () => {
+    if (!dbReady) return;
+    const country = await makeCountry('XOF');
+    const tradeCategory = await makeTradeCategory();
+    await makeRule({
+      countryId: country.id,
+      tradeCategoryId: tradeCategory.id,
+      basePrice: 1500,
+    });
+    await makeRule({
+      countryId: country.id,
+      tradeCategoryId: tradeCategory.id,
+      vehicleType: 'car',
+      basePrice: 3000,
+    });
+
+    const car = await estimateMission({
+      user: { countryId: country.id, regionId: null },
+      executionType: 'provider',
+      tradeCategoryId: tradeCategory.id,
+      requestedVehicleType: 'car',
+    });
+    const motorcycle = await estimateMission({
+      user: { countryId: country.id, regionId: null },
+      executionType: 'provider',
+      tradeCategoryId: tradeCategory.id,
+      requestedVehicleType: 'motorcycle',
+    });
+
+    expect(car.basePrice).toBe(3000);
+    expect(motorcycle.basePrice).toBe(1500);
+  });
+
   test('prefers a region-specific override over the country-wide rule for the same category', async () => {
     if (!dbReady) return;
     const country = await makeCountry('XOF');

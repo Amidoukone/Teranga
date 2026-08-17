@@ -16,6 +16,7 @@ const created = {
   franchiseIds: [],
   tradeCategoryIds: [],
   serviceIds: [],
+  ruleIds: [],
 };
 
 async function checkDatabase() {
@@ -73,6 +74,18 @@ async function makeTradeCategory() {
   return tc;
 }
 
+async function findOrCreatePickupCategory(slug) {
+  const existing = await db.TradeCategory.findOne({ where: { slug } });
+  if (existing) return existing;
+  const category = await db.TradeCategory.create({
+    name: slug === 'mobilite' ? 'Mobilité' : 'Livraison / Courses',
+    slug,
+    isActive: true,
+  });
+  created.tradeCategoryIds.push(category.id);
+  return category;
+}
+
 function trackResponse(res) {
   if (res.body?.user?.id) created.userIds.push(res.body.user.id);
   if (res.body?.service?.id) created.serviceIds.push(res.body.service.id);
@@ -89,6 +102,9 @@ describe('Lot 2 — demande de mission invitée (homepage, POST /api/v1/mission-
 
     if (created.serviceIds.length) {
       await db.Service.destroy({ where: { id: created.serviceIds } });
+    }
+    if (created.ruleIds.length) {
+      await db.MissionPricingRule.destroy({ where: { id: created.ruleIds } });
     }
     if (created.userIds.length) {
       await db.RecoveryCode.destroy({ where: { userId: created.userIds } });
@@ -153,6 +169,109 @@ describe('Lot 2 — demande de mission invitée (homepage, POST /api/v1/mission-
       .set('Authorization', `Bearer ${res.body.token}`);
     expect(me.status).toBe(200);
     expect(me.body.user.id).toBe(res.body.user.id);
+  });
+
+  test.each([
+    ['mobilite', 'Course Taxi publique'],
+    ['livraison', 'Livraison publique'],
+  ])(
+    'guest can directly order %s with pickup, destination and a distance estimate',
+    async (slug, title) => {
+      if (!dbReady) return;
+      const country = await makeCountry();
+      const tradeCategory = await findOrCreatePickupCategory(slug);
+      const rule = await db.MissionPricingRule.create({
+        countryId: country.id,
+        tradeCategoryId: tradeCategory.id,
+        pricingMode: 'fixed_estimate',
+        basePrice: 1000,
+        pricePerKm: 100,
+        estimatedDelayMinutes: 45,
+        isActive: true,
+      });
+      created.ruleIds.push(rule.id);
+      const phone = `+2237${Date.now().toString().slice(-7)}${slug === 'mobilite' ? '1' : '2'}`;
+
+      const res = await request(app).post('/api/v1/mission-requests').send({
+        phone,
+        pin: '1234',
+        firstName: 'Awa',
+        countryId: country.id,
+        requestKind: 'trade_category',
+        tradeCategoryId: tradeCategory.id,
+        title,
+        pickupAddress: 'Point de départ, Bamako',
+        pickupLatitude: 12.6392,
+        pickupLongitude: -8.0029,
+        address: 'Destination, Bamako',
+        latitude: 12.6205,
+        longitude: -7.9895,
+        ...(slug === 'mobilite' ? { requestedVehicleType: 'car' } : {}),
+      });
+      trackResponse(res);
+
+      expect(res.status).toBe(201);
+      expect(res.body.isNewAccount).toBe(true);
+      expect(res.body.service.missionStatus).toBe('CREATED');
+      expect(res.body.service.pickupAddress).toBe('Point de départ, Bamako');
+      expect(Number(res.body.service.pickupLatitude)).toBeCloseTo(12.6392, 4);
+      expect(Number(res.body.service.latitude)).toBeCloseTo(12.6205, 4);
+      expect(Number(res.body.service.budget)).toBeGreaterThan(1000);
+      expect(res.body.estimate.distanceKm).toBeGreaterThan(0);
+      expect(res.body.service.requestedVehicleType).toBe(slug === 'mobilite' ? 'car' : null);
+    }
+  );
+
+  test('public Taxi estimate returns a vehicle-specific price without creating an account', async () => {
+    if (!dbReady) return;
+    const country = await makeCountry();
+    const tradeCategory = await findOrCreatePickupCategory('mobilite');
+    const rule = await db.MissionPricingRule.create({
+      countryId: country.id,
+      tradeCategoryId: tradeCategory.id,
+      vehicleType: 'car',
+      pricingMode: 'fixed_estimate',
+      basePrice: 3000,
+      pricePerKm: 100,
+      estimatedDelayMinutes: 30,
+      isActive: true,
+    });
+    created.ruleIds.push(rule.id);
+    const usersBefore = await db.User.count();
+
+    const res = await request(app).post('/api/v1/mission-requests/estimate').send({
+      countryId: country.id,
+      tradeCategoryId: tradeCategory.id,
+      requestedVehicleType: 'car',
+      pickupLatitude: 12.6392,
+      pickupLongitude: -8.0029,
+      latitude: 12.6205,
+      longitude: -7.9895,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.estimate.requestedVehicleType).toBe('car');
+    expect(res.body.estimate.basePrice).toBeGreaterThan(3000);
+    expect(await db.User.count()).toBe(usersBefore);
+  });
+
+  test('guest Taxi order without pickup and destination is rejected before account creation', async () => {
+    if (!dbReady) return;
+    const country = await makeCountry();
+    const tradeCategory = await findOrCreatePickupCategory('mobilite');
+    const phone = `+2237${Date.now().toString().slice(-8)}`;
+
+    const res = await request(app).post('/api/v1/mission-requests').send({
+      phone,
+      pin: '1234',
+      countryId: country.id,
+      requestKind: 'trade_category',
+      tradeCategoryId: tradeCategory.id,
+      title: 'Course incomplète',
+    });
+
+    expect(res.status).toBe(400);
+    expect(await db.User.count({ where: { phone } })).toBe(0);
   });
 
   test('returning phone with the correct pin reuses the same account for a classic request', async () => {

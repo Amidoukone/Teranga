@@ -13,6 +13,7 @@ import {
   CreditCard,
   Banknote,
   HelpCircle,
+  CarFront,
 } from "lucide-react";
 
 // Grille de sélection de catégorie partagée entre le formulaire invité de la homepage
@@ -30,6 +31,7 @@ const TRADE_CATEGORY_ICONS = {
   peinture: Paintbrush,
   climatisation: Snowflake,
   livraison: Truck,
+  mobilite: CarFront,
 };
 
 const CLASSIC_TYPE_ICONS = {
