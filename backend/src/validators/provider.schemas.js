@@ -35,8 +35,17 @@ const updateMyAvailabilitySchema = Joi.object({
   availabilityStatus: Joi.string().valid('available', 'busy', 'offline').required(),
 });
 
+const updateMyLiveLocationSchema = Joi.object({
+  vehicleId: Joi.number().integer().positive().required(),
+  latitude: Joi.number().min(-90).max(90).required(),
+  longitude: Joi.number().min(-180).max(180).required(),
+  accuracyMeters: Joi.number().min(0).max(10000).allow(null),
+  headingDegrees: Joi.number().min(0).max(360).allow(null),
+});
+
 module.exports = {
   createProviderSchema,
   updateProviderStatusSchema,
   updateMyAvailabilitySchema,
+  updateMyLiveLocationSchema,
 };

@@ -5,10 +5,25 @@
 // homepage, Lot 2) : ici pas de bootstrap de compte, le client a déjà une session.
 
 const { Op } = require('sequelize');
-const { Service, User, TradeCategory, SavedLocation, Evidence, Provider, ExecutorLocation } = require('../../models');
+const {
+  Service,
+  User,
+  TradeCategory,
+  SavedLocation,
+  Evidence,
+  Provider,
+  ProviderLiveLocation,
+  Vehicle,
+  ExecutorLocation,
+} = require('../../models');
 const { geocodeAddress, reverseGeocode } = require('../services/geocoding.service');
 const { getDistanceMatrix } = require('../services/distanceMatrix.service');
 const { estimateMission } = require('../services/priceEstimate.service');
+const { findEligibleVehicleForProvider } = require('../services/mobilityCompliance.service');
+const {
+  isLocationFresh,
+  upsertProviderLiveLocation,
+} = require('../services/providerPresence.service');
 const {
   transitionMissionStatus,
   ACTIVE_STATUSES,
@@ -500,6 +515,19 @@ async function findActiveProviderForTradeCategory(providerId, tradeCategoryId) {
   });
 }
 
+async function releaseMobilityProviderIfEligible(providerId) {
+  if (!providerId) return false;
+  const provider = await Provider.findByPk(providerId, {
+    include: [{ model: ProviderLiveLocation, as: 'liveLocation', required: false }],
+  });
+  if (!provider?.liveLocation || !isLocationFresh(provider.liveLocation)) return false;
+  const [released] = await Provider.update(
+    { availabilityStatus: 'available' },
+    { where: { id: provider.id, availabilityStatus: 'busy' } }
+  );
+  return released === 1;
+}
+
 /* ============================================================
    POST /api/v1/missions/:id/assign — assignation/réassignation/désassignation (admin), section
    4.2/3.3 + extension "superviseur agent" (voir docs internes de ce chantier — un agent peut être
@@ -509,8 +537,9 @@ async function findActiveProviderForTradeCategory(providerId, tradeCategoryId) {
    Distance Matrix ici : le moteur de matching automatique reste le Lot 4 (section 3.4/section 6).
 ============================================================ */
 exports.assign = async (req, res) => {
+  let reservedMobilityProviderId = null;
   try {
-    const { providerId, agentId } = req.body;
+    const { providerId, agentId, vehicleId } = req.body;
 
     let service = await Service.findByPk(req.params.id);
     if (!service) return res.status(404).json({ error: 'Mission introuvable' });
@@ -525,8 +554,18 @@ exports.assign = async (req, res) => {
       });
     }
 
+    const tradeCategory = service.tradeCategoryId
+      ? await TradeCategory.findByPk(service.tradeCategoryId, { attributes: ['slug'] })
+      : null;
+    const isMobility = tradeCategory?.slug === 'mobilite';
+    if (vehicleId !== undefined && !isMobility) {
+      return res.status(400).json({ error: 'vehicleId est reserve aux courses Mobilite' });
+    }
+
     let directUpdates = {};
     let shouldNotify = false;
+    let mobilityProviderToRelease = null;
+    let mobilityAssignmentGuard = null;
 
     // --- Agent superviseur : jamais un moteur de statut, modifiable à tout stade. ---
     if (agentId !== undefined) {
@@ -548,15 +587,20 @@ exports.assign = async (req, res) => {
     // --- Prestataire : exécutant, pilote la machine à états. ---
     if (providerId !== undefined) {
       if (providerId === null) {
+        mobilityProviderToRelease = isMobility ? service.providerId : null;
         if (['CREATED', 'SEARCHING_EXECUTOR'].includes(service.missionStatus)) {
-          // Déjà sans prestataire — no-op sur ce champ.
+          // Deja sans prestataire : supprimer aussi un eventuel vehicule devenu orphelin.
+          if (service.vehicleId) {
+            directUpdates.vehicleId = null;
+            shouldNotify = true;
+          }
         } else if (['ASSIGNED', 'EN_ROUTE'].includes(service.missionStatus)) {
           service = await transitionMissionStatus({
             service,
             toStatus: 'SEARCHING_EXECUTOR',
             actorType: 'admin',
             actorId: req.user.id,
-            extraFields: { providerId: null, ...directUpdates },
+            extraFields: { providerId: null, vehicleId: null, ...directUpdates },
           });
           directUpdates = {};
           shouldNotify = true;
@@ -582,14 +626,85 @@ exports.assign = async (req, res) => {
             error: 'Ce prestataire ne couvre pas le pays de destination de cette mission',
           });
         }
+        if (
+          isMobility &&
+          service.providerId &&
+          String(service.providerId) !== String(provider.id)
+        ) {
+          mobilityProviderToRelease = service.providerId;
+        }
+
+        let assignedVehicle = null;
+        if (isMobility) {
+          const canAssignFromCurrentState = [
+            'CREATED',
+            'SEARCHING_EXECUTOR',
+            'ASSIGNED',
+            'EN_ROUTE',
+            'ON_SITE',
+            'IN_PROGRESS',
+          ].includes(service.missionStatus);
+          if (!canAssignFromCurrentState) {
+            return res.status(400).json({
+              error: 'Cette mission ne peut pas etre (re)assignee dans son etat actuel',
+            });
+          }
+          if (provider.availabilityStatus !== 'available') {
+            return res.status(400).json({ error: "Ce chauffeur n'est plus disponible" });
+          }
+          const eligibility = await findEligibleVehicleForProvider({
+            provider,
+            requestedVehicleType: service.requestedVehicleType || 'motorcycle',
+            vehicleId: vehicleId || null,
+          });
+          if (!eligibility.vehicle) {
+            const issues = [...eligibility.driverIssues, ...eligibility.vehicleIssues];
+            return res.status(400).json({
+              error: `Chauffeur ou vehicule non conforme : ${issues.join(', ')}`,
+              complianceIssues: issues,
+            });
+          }
+          assignedVehicle = eligibility.vehicle;
+
+          const liveLocation = await ProviderLiveLocation.findOne({
+            where: { providerId: provider.id, vehicleId: assignedVehicle.id },
+          });
+          if (!liveLocation || !isLocationFresh(liveLocation)) {
+            return res.status(400).json({
+              error: 'La position GPS du chauffeur est absente ou perimee',
+            });
+          }
+
+          const activeMissionCount = await Service.count({
+            where: {
+              id: { [Op.ne]: service.id },
+              providerId: provider.id,
+              missionStatus: { [Op.in]: ACTIVE_STATUSES },
+            },
+          });
+          if (activeMissionCount > 0) {
+            return res.status(409).json({ error: 'Ce chauffeur a deja une course en cours' });
+          }
+          const [reserved] = await Provider.update(
+            { availabilityStatus: 'busy' },
+            {
+              where: {
+                id: provider.id,
+                status: 'active',
+                availabilityStatus: 'available',
+              },
+            }
+          );
+          if (reserved !== 1) {
+            return res.status(409).json({ error: "Ce chauffeur vient d'etre reserve" });
+          }
+          reservedMobilityProviderId = provider.id;
+        }
 
         // Fenêtre d'acceptation (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2) — uniquement filière
         // Mobilité, NULL partout ailleurs (comportement inchangé pour les autres filières).
         let acceptanceDeadlineAt = null;
         if (service.tradeCategoryId) {
-          const tradeCategory = await TradeCategory.findByPk(service.tradeCategoryId, {
-            attributes: ['slug'],
-          });
           // Dispatch partagé (docs/DEV_SPEC_TERANGA_v6_PHASE3.md §3) : la fenêtre d'acceptation
           // n'est pas spécifique à Mobilité, seule cette condition la limitait artificiellement.
           if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug)) {
@@ -611,14 +726,26 @@ exports.assign = async (req, res) => {
             toStatus: 'ASSIGNED',
             actorType: 'admin',
             actorId: req.user.id,
-            extraFields: { providerId: provider.id, acceptanceDeadlineAt, ...directUpdates },
+            extraFields: {
+              providerId: provider.id,
+              vehicleId: assignedVehicle?.id || null,
+              acceptanceDeadlineAt,
+              ...directUpdates,
+            },
           });
           directUpdates = {};
         } else if (['ASSIGNED', 'EN_ROUTE', 'ON_SITE', 'IN_PROGRESS'].includes(service.missionStatus)) {
           // Réassignation vers un autre exécutant : pas de transition d'état, un nouvel exécutant
           // prend la suite immédiatement.
           directUpdates.providerId = provider.id;
+          directUpdates.vehicleId = assignedVehicle?.id || null;
           directUpdates.acceptanceDeadlineAt = acceptanceDeadlineAt;
+          if (isMobility) {
+            mobilityAssignmentGuard = {
+              providerId: service.providerId,
+              missionStatus: service.missionStatus,
+            };
+          }
         } else {
           return res.status(400).json({
             error: 'Cette mission ne peut pas être (ré)assignée dans son état actuel',
@@ -629,7 +756,27 @@ exports.assign = async (req, res) => {
     }
 
     if (Object.keys(directUpdates).length > 0) {
-      await service.update(directUpdates);
+      if (mobilityAssignmentGuard) {
+        const [updatedRows] = await Service.update(directUpdates, {
+          where: {
+            id: service.id,
+            providerId: mobilityAssignmentGuard.providerId,
+            missionStatus: mobilityAssignmentGuard.missionStatus,
+          },
+        });
+        if (updatedRows !== 1) {
+          throw Object.assign(
+            new Error('Cette course vient deja d etre affectee par un autre operateur'),
+            { status: 409 }
+          );
+        }
+        await service.reload();
+      } else {
+        await service.update(directUpdates);
+      }
+    }
+    if (mobilityProviderToRelease) {
+      await releaseMobilityProviderIfEligible(mobilityProviderToRelease);
     }
 
     if (shouldNotify) {
@@ -643,6 +790,24 @@ exports.assign = async (req, res) => {
 
     return res.status(200).json({ message: 'Assignation mise à jour', mission: service });
   } catch (e) {
+    if (reservedMobilityProviderId) {
+      try {
+        const activeMissionCount = await Service.count({
+          where: {
+            providerId: reservedMobilityProviderId,
+            missionStatus: { [Op.in]: ACTIVE_STATUSES },
+          },
+        });
+        if (activeMissionCount === 0) {
+          await releaseMobilityProviderIfEligible(reservedMobilityProviderId);
+        }
+      } catch (releaseError) {
+        logger.error(
+          { err: releaseError, providerId: reservedMobilityProviderId },
+          'mission.assign.release_reservation.failed'
+        );
+      }
+    }
     if (e.status) return res.status(e.status).json({ error: e.message });
     logger.error({ err: e }, 'mission.assign.failed');
     return res.status(500).json({ error: "Erreur lors de l'assignation" });
@@ -663,11 +828,51 @@ exports.accept = async (req, res) => {
     if (!provider || String(service.providerId) !== String(provider.id)) {
       return res.status(403).json({ error: 'Accès interdit' });
     }
+    if (provider.status !== 'active') {
+      return res.status(400).json({ error: "Le chauffeur n'est plus actif" });
+    }
     if (!service.acceptanceDeadlineAt) {
       return res.status(400).json({ error: 'Aucune acceptation en attente pour cette mission' });
     }
 
-    await service.update({ acceptanceDeadlineAt: null });
+    const tradeCategory = service.tradeCategoryId
+      ? await TradeCategory.findByPk(service.tradeCategoryId, { attributes: ['slug'] })
+      : null;
+    if (tradeCategory?.slug === 'mobilite') {
+      if (!service.vehicleId) {
+        return res.status(400).json({ error: 'Aucun vehicule conforme attache a cette course' });
+      }
+      const eligibility = await findEligibleVehicleForProvider({
+        provider,
+        requestedVehicleType: service.requestedVehicleType || 'motorcycle',
+        vehicleId: service.vehicleId,
+      });
+      if (!eligibility.vehicle) {
+        const issues = [...eligibility.driverIssues, ...eligibility.vehicleIssues];
+        return res.status(400).json({
+          error: `La conformite doit etre retablie avant d'accepter : ${issues.join(', ')}`,
+          complianceIssues: issues,
+        });
+      }
+    }
+
+    const [accepted] = await Service.update(
+      { acceptanceDeadlineAt: null },
+      {
+        where: {
+          id: service.id,
+          providerId: provider.id,
+          missionStatus: 'ASSIGNED',
+          acceptanceDeadlineAt: { [Op.gte]: new Date() },
+        },
+      }
+    );
+    if (accepted !== 1) {
+      return res.status(409).json({
+        error: "L'offre a expire ou la course a deja change d'affectation",
+      });
+    }
+    await service.reload();
     return res.status(200).json({ mission: service });
   } catch (e) {
     logger.error({ err: e }, 'mission.accept.failed');
@@ -694,8 +899,10 @@ exports.decline = async (req, res) => {
       toStatus: 'SEARCHING_EXECUTOR',
       actorType: 'provider',
       actorId: req.user.id,
-      extraFields: { providerId: null, acceptanceDeadlineAt: null },
+      extraFields: { providerId: null, vehicleId: null, acceptanceDeadlineAt: null },
     });
+
+    await releaseMobilityProviderIfEligible(provider.id);
 
     try {
       const masters = await getAdminRecipientIds({
@@ -866,6 +1073,10 @@ exports.updateStatus = async (req, res) => {
       }
     }
 
+    if (updated.providerId && ['COMPLETED', 'CANCELLED_BY_CLIENT'].includes(toStatus)) {
+      await releaseMobilityProviderIfEligible(updated.providerId);
+    }
+
     return res.status(200).json({ mission: updated });
   } catch (e) {
     if (e.status) return res.status(e.status).json({ error: e.message });
@@ -881,7 +1092,7 @@ exports.updateStatus = async (req, res) => {
 ============================================================ */
 exports.pingLocation = async (req, res) => {
   try {
-    const { latitude, longitude } = req.body;
+    const { latitude, longitude, accuracyMeters, headingDegrees } = req.body;
     const service = await Service.findByPk(req.params.id);
     if (!service) return res.status(404).json({ error: 'Mission introuvable' });
 
@@ -919,6 +1130,17 @@ exports.pingLocation = async (req, res) => {
       longitude,
       recordedAt: new Date(),
     });
+
+    if (executorType === 'provider' && service.vehicleId) {
+      await upsertProviderLiveLocation({
+        providerId: executorId,
+        vehicleId: service.vehicleId,
+        latitude,
+        longitude,
+        accuracyMeters,
+        headingDegrees,
+      });
+    }
 
     return res.status(201).json({ message: 'Position enregistrée', location });
   } catch (e) {
@@ -1111,11 +1333,18 @@ exports.track = async (req, res) => {
     // Plaque visible uniquement pour Teranga Taxi (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §2) — le
     // client attend physiquement un véhicule identifiable, contrairement aux autres filières.
     let provider = null;
+    let vehicle = null;
     if (service.providerId) {
       const providerRecord = await Provider.findByPk(service.providerId);
       provider = providerRecord
-        ? providerRecord.toPublicDTO({ includePlate: tradeCategorySlug === 'mobilite' })
+        ? providerRecord.toPublicDTO({
+            includePlate: tradeCategorySlug === 'mobilite' && !service.vehicleId,
+          })
         : null;
+    }
+    if (tradeCategorySlug === 'mobilite' && service.vehicleId) {
+      const vehicleRecord = await Vehicle.findByPk(service.vehicleId);
+      vehicle = vehicleRecord ? vehicleRecord.toPublicDTO() : null;
     }
 
     return res.status(200).json({
@@ -1131,6 +1360,7 @@ exports.track = async (req, res) => {
       parentServiceId: service.parentServiceId || null,
       acceptanceDeadlineAt: service.acceptanceDeadlineAt || null,
       provider,
+      vehicle,
       pickupAddress: service.pickupAddress || null,
       requestedVehicleType: service.requestedVehicleType || null,
       pickupLatitude: service.pickupLatitude != null ? Number(service.pickupLatitude) : null,

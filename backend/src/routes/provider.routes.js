@@ -2,6 +2,7 @@
 
 const router = require('express').Router();
 const ctrl = require('../controllers/provider.controller');
+const vehicleCtrl = require('../controllers/vehicle.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
 const { validateBody } = require('../middleware/validate.middleware');
@@ -9,8 +10,14 @@ const {
   createProviderSchema,
   updateProviderStatusSchema,
   updateMyAvailabilitySchema,
+  updateMyLiveLocationSchema,
 } = require('../validators/provider.schemas');
 const { createProviderContractSchema } = require('../validators/providerContract.schemas');
+const {
+  createVehicleSchema,
+  updateVehicleSchema,
+  updateDriverComplianceSchema,
+} = require('../validators/vehicle.schemas');
 
 /**
  * ============================================================
@@ -37,6 +44,19 @@ router.post(
 // Chemins littéraux — déclarés avant '/:id' pour ne jamais être capturés par le paramètre
 // (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §3).
 router.get('/me', auth, requireRoles('provider'), ctrl.me);
+router.get(
+  '/me/dispatch-presence',
+  auth,
+  requireRoles('provider'),
+  ctrl.getMyDispatchPresence
+);
+router.post(
+  '/me/live-location',
+  auth,
+  requireRoles('provider'),
+  validateBody(updateMyLiveLocationSchema),
+  ctrl.updateMyLiveLocation
+);
 router.patch(
   '/me/availability',
   auth,
@@ -47,6 +67,33 @@ router.patch(
 router.get('/available', auth, requireRoles('admin', 'category_manager'), ctrl.listAvailable);
 
 router.get('/', auth, requireRoles('admin', 'category_manager'), ctrl.list);
+router.get(
+  '/:id/vehicles',
+  auth,
+  requireRoles('admin', 'category_manager'),
+  vehicleCtrl.list
+);
+router.post(
+  '/:id/vehicles',
+  auth,
+  requireRoles('admin', 'category_manager'),
+  validateBody(createVehicleSchema),
+  vehicleCtrl.create
+);
+router.patch(
+  '/:id/vehicles/:vehicleId',
+  auth,
+  requireRoles('admin', 'category_manager'),
+  validateBody(updateVehicleSchema),
+  vehicleCtrl.update
+);
+router.patch(
+  '/:id/driver-compliance',
+  auth,
+  requireRoles('admin', 'category_manager'),
+  validateBody(updateDriverComplianceSchema),
+  ctrl.updateDriverCompliance
+);
 router.get('/:id', auth, requireRoles('admin', 'category_manager'), ctrl.detail);
 
 router.patch(

@@ -58,26 +58,48 @@ function isValidTransition(fromStatus, toStatus) {
  * @param {object} [params.extraFields] - champs additionnels à écrire dans la même transaction
  *   (ex. { providerId } lors d'une assignation)
  */
-async function transitionMissionStatus({ service, toStatus, actorType, actorId, extraFields = {} }) {
-  const fromStatus = service.missionStatus;
-
-  if (!fromStatus) {
-    throw Object.assign(
-      new Error("Cette mission n'utilise pas le suivi de statut (flux classique agent)"),
-      { status: 400 }
-    );
-  }
-
-  if (!isValidTransition(fromStatus, toStatus)) {
-    throw Object.assign(
-      new Error(`Transition invalide : ${fromStatus} -> ${toStatus}`),
-      { status: 400 }
-    );
-  }
-
-  const legacyStatus = LEGACY_STATUS_MAP[toStatus];
-
+async function transitionMissionStatus({
+  service,
+  toStatus,
+  actorType,
+  actorId,
+  extraFields = {},
+  expectedFields = {},
+}) {
   return sequelize.transaction(async (t) => {
+    // Le verrou empêche deux opérateurs/jobs de faire partir simultanément la
+    // même mission depuis un état devenu périmé entre la lecture et l'écriture.
+    await service.reload({ transaction: t, lock: true });
+    const fromStatus = service.missionStatus;
+
+    for (const [field, expectedValue] of Object.entries(expectedFields)) {
+      const actualValue = service[field];
+      const actualComparable = actualValue instanceof Date ? actualValue.getTime() : actualValue;
+      const expectedComparable =
+        expectedValue instanceof Date ? expectedValue.getTime() : expectedValue;
+      if (actualComparable !== expectedComparable) {
+        throw Object.assign(new Error('La mission a change depuis sa derniere lecture'), {
+          status: 409,
+          code: 'STALE_MISSION_TRANSITION',
+        });
+      }
+    }
+
+    if (!fromStatus) {
+      throw Object.assign(
+        new Error("Cette mission n'utilise pas le suivi de statut (flux classique agent)"),
+        { status: 400 }
+      );
+    }
+
+    if (!isValidTransition(fromStatus, toStatus)) {
+      throw Object.assign(
+        new Error(`Transition invalide : ${fromStatus} -> ${toStatus}`),
+        { status: 400 }
+      );
+    }
+
+    const legacyStatus = LEGACY_STATUS_MAP[toStatus];
     await service.update(
       {
         missionStatus: toStatus,

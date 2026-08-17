@@ -10,7 +10,12 @@ import { useTranslation } from 'react-i18next';
 import { me } from '../services/auth';
 import { normalizeRole } from '../utils/role';
 import { getMyMissions } from '../services/missions';
-import { getMyProvider, updateMyAvailability } from '../services/providers';
+import {
+  getMyDispatchPresence,
+  getMyProvider,
+  updateMyAvailability,
+  updateMyLiveLocation,
+} from '../services/providers';
 
 const AVAILABILITY_VALUES = ['available', 'busy', 'offline'];
 const AVAILABILITY_TONE = {
@@ -52,7 +57,10 @@ export default function MyMissionsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [provider, setProvider] = useState(null);
+  const [dispatchPresence, setDispatchPresence] = useState(null);
+  const [activeVehicleId, setActiveVehicleId] = useState('');
   const [savingAvailability, setSavingAvailability] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -76,8 +84,17 @@ export default function MyMissionsPage() {
         setIsAllowed(true);
 
         if (role === 'provider') {
-          const myProvider = await getMyProvider();
-          if (active) setProvider(myProvider);
+          const [myProvider, presence] = await Promise.all([
+            getMyProvider(),
+            getMyDispatchPresence().catch(() => null),
+          ]);
+          if (active) {
+            setProvider(myProvider);
+            setDispatchPresence(presence);
+            setActiveVehicleId(
+              presence?.liveLocation?.vehicleId || presence?.eligibleVehicles?.[0]?.id || ''
+            );
+          }
         }
       } catch (e) {
         navigate('/login');
@@ -111,15 +128,73 @@ export default function MyMissionsPage() {
 
   async function handleAvailabilityChange(availabilityStatus) {
     setSavingAvailability(true);
+    setAvailabilityError(null);
     try {
+      if (availabilityStatus === 'available' && dispatchPresence?.eligibleVehicles?.length) {
+        if (!activeVehicleId) throw new Error(t('myMissionsPage.errors.vehicleRequired'));
+        if (!navigator.geolocation) {
+          throw new Error(t('myMissionsPage.errors.geolocationUnsupported'));
+        }
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 12000,
+            maximumAge: 5000,
+          });
+        });
+        const locationResult = await updateMyLiveLocation({
+          vehicleId: Number(activeVehicleId),
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracyMeters: position.coords.accuracy ?? null,
+          headingDegrees: position.coords.heading ?? null,
+        });
+        setDispatchPresence((current) => ({
+          ...current,
+          liveLocation: locationResult.location,
+        }));
+      }
       const updated = await updateMyAvailability(availabilityStatus);
       setProvider(updated);
     } catch (e) {
       console.error('MyMissionsPage update availability error:', e);
+      setAvailabilityError(
+        e?.response?.data?.error ||
+          (e?.code ? t('myMissionsPage.errors.geolocationError') : e?.message) ||
+          t('myMissionsPage.errors.availability')
+      );
     } finally {
       setSavingAvailability(false);
     }
   }
+
+  useEffect(() => {
+    if (
+      provider?.availabilityStatus !== 'available' ||
+      !activeVehicleId ||
+      !navigator.geolocation
+    ) {
+      return undefined;
+    }
+    let lastSentAt = 0;
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const now = Date.now();
+        if (now - lastSentAt < 15000) return;
+        lastSentAt = now;
+        updateMyLiveLocation({
+          vehicleId: Number(activeVehicleId),
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracyMeters: position.coords.accuracy ?? null,
+          headingDegrees: position.coords.heading ?? null,
+        }).catch(() => {});
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [activeVehicleId, provider?.availabilityStatus]);
 
   if (isAllowed === null) {
     return (
@@ -176,6 +251,33 @@ export default function MyMissionsPage() {
                 </button>
               ))}
             </div>
+            {dispatchPresence?.eligibleVehicles?.length ? (
+              <div className="mt-3 max-w-sm">
+                <label className="mb-1 block text-xs font-medium text-text-secondary">
+                  {t('myMissionsPage.availability.activeVehicle')}
+                </label>
+                <select
+                  className="app-input"
+                  value={activeVehicleId}
+                  disabled={provider.availabilityStatus === 'busy'}
+                  onChange={(event) => setActiveVehicleId(event.target.value)}
+                >
+                  {dispatchPresence.eligibleVehicles.map((vehicle) => (
+                    <option key={vehicle.id} value={vehicle.id}>
+                      {vehicle.brand} {vehicle.model} · {vehicle.plateNumber}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-text-muted">
+                  {dispatchPresence.liveLocation?.isFresh
+                    ? t('myMissionsPage.availability.gpsFresh')
+                    : t('myMissionsPage.availability.gpsRequired')}
+                </p>
+              </div>
+            ) : null}
+            {availabilityError ? (
+              <p className="mt-3 text-xs text-rose-600 dark:text-rose-300">{availabilityError}</p>
+            ) : null}
           </div>
         ) : null}
 

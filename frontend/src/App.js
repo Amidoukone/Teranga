@@ -67,6 +67,7 @@ const AgentServicesPage = lazy(() => import('./pages/AgentServicesPage'));
 // Contexte: routage et guardes d'acces.
 const AdminAgentsPage = lazy(() => import('./pages/AdminAgentsPage'));
 const AdminProvidersPage = lazy(() => import('./pages/AdminProvidersPage'));
+const AdminProviderMobilityPage = lazy(() => import('./pages/AdminProviderMobilityPage'));
 const AdminDisputesPage = lazy(() => import('./pages/AdminDisputesPage'));
 const AdminPropertyListingsPage = lazy(() => import('./pages/AdminPropertyListingsPage'));
 const PropertyListingsPage = lazy(() => import('./pages/PropertyListingsPage'));
@@ -893,6 +894,20 @@ export default function App() {
             />
 
             <Route
+              path="/admin/providers/:id/mobility"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['admin']}>
+                    <>
+                      <SetSeo title={t('seo.pages.adminProviders.title')} />
+                      <AdminProviderMobilityPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
               path="/admin/disputes"
               element={
                 <RequireAuth>
@@ -936,6 +951,19 @@ export default function App() {
 
             <Route
               path="/admin/phone-orders"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['admin']}>
+                    <>
+                      <SetSeo title={t('seo.pages.adminPhoneOrders.title')} />
+                      <AdminPhoneOrderPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/admin/taxi-dispatch"
               element={
                 <RequireAuth>
                   <RequireRole allow={['admin']}>

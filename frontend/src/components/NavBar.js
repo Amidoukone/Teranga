@@ -190,7 +190,7 @@ const ROLE_LINKS = {
     { path: "/services", labelKey: "nav.services" },
     { path: "/tasks", labelKey: "nav.tasks" },
     { path: "/admin/services", labelKey: "nav.adminServices" },
-    { path: "/admin/phone-orders", labelKey: "nav.phoneOrders" },
+    { path: "/admin/taxi-dispatch", labelKey: "nav.phoneOrders" },
     { path: "/admin/metrics", labelKey: "nav.metrics" },
     { path: "/admin/agents", labelKey: "nav.agents" },
     { path: "/admin/providers", labelKey: "nav.providers" },
@@ -266,7 +266,7 @@ const ICON_BY_PATH_PREFIX = [
   // Admin
   { prefix: "/admin/projects", icon: FolderKanban },
   { prefix: "/admin/services", icon: BarChart3 },
-  { prefix: "/admin/phone-orders", icon: Phone },
+  { prefix: "/admin/taxi-dispatch", icon: Phone },
   { prefix: "/admin/metrics", icon: BarChart3 },
   { prefix: "/admin/agents", icon: Users },
   { prefix: "/admin/providers", icon: Briefcase },

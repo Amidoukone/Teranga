@@ -36,6 +36,20 @@ module.exports = (sequelize, DataTypes) => {
           as: 'contracts',
         });
       }
+
+      if (models.Vehicle) {
+        Provider.hasMany(models.Vehicle, {
+          foreignKey: 'providerId',
+          as: 'vehicles',
+        });
+      }
+
+      if (models.ProviderLiveLocation) {
+        Provider.hasOne(models.ProviderLiveLocation, {
+          foreignKey: 'providerId',
+          as: 'liveLocation',
+        });
+      }
     }
 
     /**
@@ -53,6 +67,7 @@ module.exports = (sequelize, DataTypes) => {
         averageRating: this.averageRating,
         completedMissionsCount: this.completedMissionsCount,
         badgeCertified: this.badgeCertified,
+        profilePhotoUrl: this.profilePhotoUrl,
         ...(includePlate ? { plateNumber: this.plateNumber } : {}),
       };
     }
@@ -136,6 +151,44 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: false,
         field: 'badge_certified',
+      },
+
+      profilePhotoUrl: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+        field: 'profile_photo_url',
+      },
+      driverLicenseNumber: {
+        type: DataTypes.STRING(80),
+        allowNull: true,
+        field: 'driver_license_number',
+      },
+      driverLicenseDocumentUrl: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+        field: 'driver_license_document_url',
+      },
+      driverLicenseExpiresAt: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+        field: 'driver_license_expires_at',
+      },
+      driverLicenseVerified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        field: 'driver_license_verified',
+      },
+      identityDocumentUrl: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+        field: 'identity_document_url',
+      },
+      identityDocumentVerified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        field: 'identity_document_verified',
       },
 
       // Checklist onboarding chauffeur (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §2) — conformité

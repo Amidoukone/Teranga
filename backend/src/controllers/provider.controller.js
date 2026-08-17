@@ -1,6 +1,13 @@
 'use strict';
 
-const { Provider, ProviderContract, TradeCategory, User } = require('../../models');
+const {
+  Provider,
+  ProviderContract,
+  ProviderLiveLocation,
+  TradeCategory,
+  User,
+  Vehicle,
+} = require('../../models');
 const { getPagination } = require('../utils/pagination');
 const {
   canManageProvider,
@@ -13,6 +20,17 @@ const {
   isValidProviderStatusTransition,
 } = require('../constants/providerStatus');
 const logger = require('../utils/logger');
+const {
+  getDriverComplianceIssues,
+  getVehicleComplianceIssues,
+  toComplianceSummary,
+  findEligibleVehicleForProvider,
+} = require('../services/mobilityCompliance.service');
+const {
+  isLocationFresh,
+  serializeLiveLocation,
+  upsertProviderLiveLocation,
+} = require('../services/providerPresence.service');
 
 /**
  * Endpoints Teranga Pro (docs/DEV_SPEC_TERANGA_v3.md section 3.3).
@@ -29,6 +47,7 @@ function findProviderById(id) {
       { model: User, as: 'user', attributes: ['id', 'email', 'phone', 'role'] },
       { model: TradeCategory, as: 'tradeCategories' },
       { model: ProviderContract, as: 'contracts' },
+      { model: Vehicle, as: 'vehicles' },
     ],
   });
 }
@@ -181,8 +200,40 @@ exports.me = async (req, res) => {
 ============================================================ */
 exports.updateMyAvailability = async (req, res) => {
   try {
-    const provider = await Provider.findOne({ where: { userId: req.user.id } });
+    const provider = await Provider.findOne({
+      where: { userId: req.user.id },
+      include: [
+        { model: ProviderLiveLocation, as: 'liveLocation' },
+        { model: TradeCategory, as: 'tradeCategories', attributes: ['slug'] },
+      ],
+    });
     if (!provider) return res.status(404).json({ error: 'Profil prestataire introuvable' });
+
+    const coversMobility = (provider.tradeCategories || []).some(
+      (tradeCategory) => tradeCategory.slug === 'mobilite'
+    );
+    if (req.body.availabilityStatus === 'available' && coversMobility) {
+      if (provider.status !== 'active') {
+        return res.status(400).json({ error: "Le profil chauffeur n'est pas actif" });
+      }
+      if (!provider.liveLocation || !isLocationFresh(provider.liveLocation)) {
+        return res.status(400).json({
+          error: 'Partagez une position GPS recente avant de passer disponible',
+        });
+      }
+      const eligibility = await findEligibleVehicleForProvider({
+        provider,
+        requestedVehicleType: null,
+        vehicleId: provider.liveLocation.vehicleId,
+      });
+      if (!eligibility.vehicle) {
+        const issues = [...eligibility.driverIssues, ...eligibility.vehicleIssues];
+        return res.status(400).json({
+          error: `Chauffeur ou vehicule non conforme : ${issues.join(', ')}`,
+          complianceIssues: issues,
+        });
+      }
+    }
 
     provider.availabilityStatus = req.body.availabilityStatus;
     await provider.save();
@@ -206,6 +257,11 @@ exports.listAvailable = async (req, res) => {
     const where = { status: 'active', availabilityStatus: 'available' };
     if (filter.countryCodes) where.countryCode = filter.countryCodes;
 
+    const requestedVehicleType = String(req.query?.vehicleType || '').trim();
+    if (requestedVehicleType && !['motorcycle', 'car'].includes(requestedVehicleType)) {
+      return res.status(400).json({ error: 'Type de vehicule invalide' });
+    }
+
     const include = [
       {
         model: TradeCategory,
@@ -214,14 +270,54 @@ exports.listAvailable = async (req, res) => {
         where: { slug: 'mobilite' },
         required: true,
       },
+      {
+        model: Vehicle,
+        as: 'vehicles',
+        where: {
+          status: 'active',
+          ...(requestedVehicleType ? { vehicleType: requestedVehicleType } : {}),
+        },
+        required: true,
+      },
+      {
+        model: ProviderLiveLocation,
+        as: 'liveLocation',
+        required: true,
+      },
     ];
 
-    const providers = await Provider.findAll({
+    const candidates = await Provider.findAll({
       where,
       include,
-      attributes: ['id', 'displayFirstName', 'plateNumber', 'averageRating', 'badgeCertified', 'countryCode'],
       order: [['displayFirstName', 'ASC']],
     });
+
+    const providers = candidates
+      .filter(
+        (provider) =>
+          getDriverComplianceIssues(provider).length === 0 &&
+          isLocationFresh(provider.liveLocation)
+      )
+      .map((provider) => {
+        const eligibleVehicles = (provider.vehicles || []).filter(
+          (vehicle) =>
+            String(vehicle.id) === String(provider.liveLocation.vehicleId) &&
+            getVehicleComplianceIssues(vehicle, {
+              requestedVehicleType: requestedVehicleType || vehicle.vehicleType,
+            }).length === 0
+        );
+        if (!eligibleVehicles.length) return null;
+        return {
+          id: provider.id,
+          displayFirstName: provider.displayFirstName,
+          averageRating: provider.averageRating,
+          badgeCertified: provider.badgeCertified,
+          countryCode: provider.countryCode,
+          eligibleVehicles: eligibleVehicles.map((vehicle) => vehicle.toPublicDTO()),
+          liveLocation: serializeLiveLocation(provider.liveLocation),
+        };
+      })
+      .filter(Boolean);
 
     return res.json({ providers });
   } catch (e) {
@@ -256,6 +352,8 @@ exports.list = async (req, res) => {
     const include = [
       { model: TradeCategory, as: 'tradeCategories', through: { attributes: [] } },
       { model: User, as: 'user', attributes: ['id', 'email', 'phone', 'role'] },
+      { model: Vehicle, as: 'vehicles' },
+      { model: ProviderLiveLocation, as: 'liveLocation', required: false },
     ];
     if (filter.tradeCategoryIds) {
       include[0].where = { id: filter.tradeCategoryIds };
@@ -271,7 +369,12 @@ exports.list = async (req, res) => {
       distinct: true,
     });
 
-    return res.json({ providers: rows, pagination: { page, limit, offset, total: count } });
+    const providers = rows.map((provider) => ({
+      ...provider.toJSON(),
+      mobilityCompliance: toComplianceSummary(provider),
+      dispatchPresence: serializeLiveLocation(provider.liveLocation),
+    }));
+    return res.json({ providers, pagination: { page, limit, offset, total: count } });
   } catch (e) {
     logger.error({ err: e }, 'provider.list.failed');
     return res.status(500).json({ error: 'Erreur lors de la récupération des prestataires' });
@@ -290,10 +393,111 @@ exports.detail = async (req, res) => {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
-    return res.json({ provider });
+    return res.json({ provider, compliance: toComplianceSummary(provider) });
   } catch (e) {
     logger.error({ err: e }, 'provider.detail.failed');
     return res.status(500).json({ error: 'Erreur lors de la récupération du prestataire' });
+  }
+};
+
+exports.updateDriverCompliance = async (req, res) => {
+  try {
+    const provider = await Provider.findByPk(req.params.id);
+    if (!provider) return res.status(404).json({ error: 'Prestataire introuvable' });
+    if (!(await canManageProvider(req.user, provider))) {
+      return res.status(403).json({ error: 'Acces interdit' });
+    }
+
+    const payload = { ...req.body };
+    for (const key of [
+      'profilePhotoUrl',
+      'driverLicenseNumber',
+      'driverLicenseDocumentUrl',
+      'driverLicenseExpiresAt',
+      'identityDocumentUrl',
+    ]) {
+      if (payload[key] === '') payload[key] = null;
+    }
+    await provider.update(payload);
+    const full = await findProviderById(provider.id);
+    return res.json({ provider: full, compliance: toComplianceSummary(full) });
+  } catch (e) {
+    logger.error({ err: e }, 'provider.update_driver_compliance.failed');
+    return res.status(500).json({
+      error: 'Erreur lors de la mise a jour de la conformite chauffeur',
+    });
+  }
+};
+
+exports.getMyDispatchPresence = async (req, res) => {
+  try {
+    const provider = await Provider.findOne({
+      where: { userId: req.user.id },
+      include: [
+        { model: Vehicle, as: 'vehicles', where: { status: 'active' }, required: false },
+        { model: ProviderLiveLocation, as: 'liveLocation', required: false },
+      ],
+    });
+    if (!provider) return res.status(404).json({ error: 'Profil prestataire introuvable' });
+
+    const driverIssues = getDriverComplianceIssues(provider);
+    const eligibleVehicles = (provider.vehicles || [])
+      .filter(
+        (vehicle) =>
+          getVehicleComplianceIssues(vehicle, {
+            requestedVehicleType: vehicle.vehicleType,
+          }).length === 0
+      )
+      .map((vehicle) => vehicle.toPublicDTO());
+
+    return res.json({
+      availabilityStatus: provider.availabilityStatus,
+      driverEligible: driverIssues.length === 0,
+      driverIssues,
+      eligibleVehicles,
+      liveLocation: serializeLiveLocation(provider.liveLocation),
+    });
+  } catch (error) {
+    logger.error({ err: error }, 'provider.get_my_dispatch_presence.failed');
+    return res.status(500).json({ error: 'Erreur lors de la recuperation de la presence GPS' });
+  }
+};
+
+exports.updateMyLiveLocation = async (req, res) => {
+  try {
+    const provider = await Provider.findOne({ where: { userId: req.user.id } });
+    if (!provider) return res.status(404).json({ error: 'Profil prestataire introuvable' });
+    if (provider.status !== 'active') {
+      return res.status(400).json({ error: "Le profil chauffeur n'est pas actif" });
+    }
+
+    const vehicle = await Vehicle.findOne({
+      where: { id: req.body.vehicleId, providerId: provider.id },
+    });
+    const driverIssues = getDriverComplianceIssues(provider);
+    const vehicleIssues = getVehicleComplianceIssues(vehicle, {
+      requestedVehicleType: vehicle?.vehicleType || null,
+    });
+    const issues = [...driverIssues, ...vehicleIssues];
+    if (issues.length > 0) {
+      return res.status(400).json({
+        error: `Chauffeur ou vehicule non conforme : ${issues.join(', ')}`,
+        complianceIssues: issues,
+      });
+    }
+
+    const location = await upsertProviderLiveLocation({
+      providerId: provider.id,
+      vehicleId: vehicle.id,
+      latitude: req.body.latitude,
+      longitude: req.body.longitude,
+      accuracyMeters: req.body.accuracyMeters,
+      headingDegrees: req.body.headingDegrees,
+    });
+    return res.json({ location: serializeLiveLocation(location), vehicle: vehicle.toPublicDTO() });
+  } catch (error) {
+    logger.error({ err: error }, 'provider.update_my_live_location.failed');
+    return res.status(500).json({ error: "Erreur lors de l'enregistrement de la position GPS" });
   }
 };
 
@@ -303,7 +507,10 @@ exports.detail = async (req, res) => {
 exports.updateStatus = async (req, res) => {
   try {
     const provider = await Provider.findByPk(req.params.id, {
-      include: [{ model: TradeCategory, as: 'tradeCategories', attributes: ['slug'] }],
+      include: [
+        { model: TradeCategory, as: 'tradeCategories', attributes: ['slug'] },
+        { model: Vehicle, as: 'vehicles' },
+      ],
     });
     if (!provider) return res.status(404).json({ error: 'Prestataire introuvable' });
 
@@ -323,13 +530,13 @@ exports.updateStatus = async (req, res) => {
     // vérifiée et assurance. Ne concerne pas les autres filières.
     const coversMobilite = (provider.tradeCategories || []).some((tc) => tc.slug === 'mobilite');
     if (nextStatus === 'active' && coversMobilite) {
-      const missing = [];
-      if (!provider.plateNumber) missing.push('plaque d\'immatriculation');
-      if (!provider.circulationCardVerified) missing.push('carte de circulation vérifiée');
-      if (!provider.hasLiabilityInsurance) missing.push('assurance');
+      const compliance = toComplianceSummary(provider);
+      const missing = [...compliance.driverIssues];
+      if (!compliance.hasEligibleVehicle) missing.push('vehicule actif et conforme');
       if (missing.length > 0) {
         return res.status(400).json({
-          error: `Checklist chauffeur incomplète pour la filière Mobilité : ${missing.join(', ')}`,
+          error: `Checklist chauffeur incomplete pour la filiere Mobilite : ${missing.join(', ')}`,
+          compliance,
         });
       }
     }

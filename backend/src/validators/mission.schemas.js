@@ -69,7 +69,15 @@ const createMissionSchema = Joi.object({
 const assignMissionSchema = Joi.object({
   providerId: idSchema.allow(null),
   agentId: idSchema.allow(null),
-}).or('providerId', 'agentId');
+  vehicleId: idSchema,
+})
+  .or('providerId', 'agentId')
+  .custom((value, helpers) => {
+    if (value.vehicleId && !value.providerId) {
+      return helpers.message('vehicleId necessite un providerId');
+    }
+    return value;
+  });
 
 /**
  * Transition de statut (section 2). Les permissions fines (qui peut déclencher quelle transition)
@@ -90,6 +98,8 @@ const updateMissionStatusSchema = Joi.object({
 const missionLocationSchema = Joi.object({
   latitude: Joi.number().min(-90).max(90).required(),
   longitude: Joi.number().min(-180).max(180).required(),
+  accuracyMeters: Joi.number().min(0).max(10000).allow(null),
+  headingDegrees: Joi.number().min(0).max(360).allow(null),
 });
 
 /**

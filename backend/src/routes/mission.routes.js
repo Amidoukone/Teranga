@@ -5,6 +5,7 @@ const router = require('express').Router();
 const ctrl = require('../controllers/mission.controller');
 const disputeCtrl = require('../controllers/dispute.controller');
 const phoneOrderCtrl = require('../controllers/missionPhoneOrder.controller');
+const mobilityDispatchCtrl = require('../controllers/mobilityDispatch.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
 const { validateBody } = require('../middleware/validate.middleware');
@@ -65,6 +66,13 @@ router.post(
   requireRoles('admin'),
   validateBody(assignMissionSchema),
   ctrl.assign
+);
+
+router.get(
+  '/:id/dispatch-candidates',
+  auth,
+  requireRoles('admin'),
+  mobilityDispatchCtrl.listCandidates
 );
 
 // Fenêtre d'acceptation dispatch mobilité (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2) — prestataire

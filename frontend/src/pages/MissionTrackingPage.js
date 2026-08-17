@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car } from "lucide-react";
+import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car, Bike } from "lucide-react";
 
 import {
   getMissionTrack,
@@ -233,9 +233,17 @@ export default function MissionTrackingPage() {
 
         {track.provider ? (
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-border bg-surface-main/60 p-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-sm font-semibold text-blue-700 dark:text-blue-300">
-              {(track.provider.displayFirstName || "?").charAt(0).toUpperCase()}
-            </div>
+            {track.provider.profilePhotoUrl ? (
+              <img
+                src={track.provider.profilePhotoUrl}
+                alt={track.provider.displayFirstName || ""}
+                className="h-10 w-10 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-sm font-semibold text-blue-700 dark:text-blue-300">
+                {(track.provider.displayFirstName || "?").charAt(0).toUpperCase()}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5">
                 <p className="text-sm font-semibold text-text-primary">
@@ -266,6 +274,40 @@ export default function MissionTrackingPage() {
                       })
                   : t("missionTracking.provider.newProvider")}
               </p>
+            </div>
+          </div>
+        ) : null}
+
+        {track.vehicle ? (
+          <div className="mt-3 flex items-start gap-3 rounded-xl border border-blue-500/25 bg-blue-500/10 p-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-card text-blue-700 dark:text-blue-300">
+              {track.vehicle.vehicleType === "motorcycle" ? <Bike size={18} /> : <Car size={18} />}
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-text-primary">
+                {t(`missionTracking.provider.vehicle.${track.vehicle.vehicleType}`, {
+                  brand: track.vehicle.brand,
+                  model: track.vehicle.model,
+                })}
+              </p>
+              <p className="text-xs text-text-secondary">
+                {t("missionTracking.provider.vehicle.identity", {
+                  color: track.vehicle.color,
+                  plate: track.vehicle.plateNumber,
+                })}
+              </p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {track.vehicle.hasPassengerHelmet ? (
+                  <span className="app-badge app-badge-success text-[0.65rem]">
+                    {t("missionTracking.provider.vehicle.passengerHelmet")}
+                  </span>
+                ) : null}
+                {track.vehicle.hasAirConditioning ? (
+                  <span className="app-badge app-badge-info text-[0.65rem]">
+                    {t("missionTracking.provider.vehicle.airConditioning")}
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
         ) : null}

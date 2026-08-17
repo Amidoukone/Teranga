@@ -10,8 +10,9 @@
 
 const cron = require('node-cron');
 const { Op } = require('sequelize');
-const { Service } = require('../../models');
+const { Provider, ProviderLiveLocation, Service } = require('../../models');
 const { transitionMissionStatus } = require('../services/missionStatus.service');
+const { isLocationFresh } = require('../services/providerPresence.service');
 const { getAdminRecipientIds } = require('../services/notification.service');
 const { emitEvent } = require('../services/activity.service');
 const logger = require('../utils/logger');
@@ -30,13 +31,30 @@ async function runLogisticsAcceptanceCheck() {
 
   for (const service of overdue) {
     try {
+      const expiredProviderId = service.providerId;
       const updated = await transitionMissionStatus({
         service,
         toStatus: 'SEARCHING_EXECUTOR',
         actorType: 'system',
         actorId: null,
-        extraFields: { providerId: null, acceptanceDeadlineAt: null },
+        extraFields: { providerId: null, vehicleId: null, acceptanceDeadlineAt: null },
+        expectedFields: {
+          providerId: expiredProviderId,
+          acceptanceDeadlineAt: service.acceptanceDeadlineAt,
+        },
       });
+
+      if (expiredProviderId) {
+        const provider = await Provider.findByPk(expiredProviderId, {
+          include: [{ model: ProviderLiveLocation, as: 'liveLocation', required: false }],
+        });
+        if (provider?.liveLocation && isLocationFresh(provider.liveLocation)) {
+          await Provider.update(
+            { availabilityStatus: 'available' },
+            { where: { id: provider.id, availabilityStatus: 'busy' } }
+          );
+        }
+      }
 
       const masters = await getAdminRecipientIds({
         countryId: updated.countryId,
@@ -57,7 +75,9 @@ async function runLogisticsAcceptanceCheck() {
       }
       reassigned += 1;
     } catch (err) {
-      logger.error({ err, serviceId: service.id }, 'logisticsAcceptance.job.service_failed');
+      if (err?.code !== 'STALE_MISSION_TRANSITION') {
+        logger.error({ err, serviceId: service.id }, 'logisticsAcceptance.job.service_failed');
+      }
     }
   }
 

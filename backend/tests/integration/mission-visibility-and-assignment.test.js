@@ -119,7 +119,7 @@ async function makeProvider({ countryCode, tradeCategoryId }) {
   const { user } = await makeUser({ emailPrefix: 'provider', role: 'provider' });
   const provider = await db.Provider.create({
     userId: user.id,
-    type: 'individual',
+    type: 'independent',
     displayFirstName: 'Presta',
     phoneNumber: `+22370${Date.now().toString().slice(-7)}`,
     countryCode,

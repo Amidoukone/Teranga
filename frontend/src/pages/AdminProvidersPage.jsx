@@ -61,9 +61,6 @@ const INITIAL_FORM = {
   businessEmail: '',
   hasLiabilityInsurance: false,
   insuranceExpiresAt: '',
-  plateNumber: '',
-  circulationCardNumber: '',
-  circulationCardVerified: false,
   tradeCategoryIds: [],
 };
 
@@ -253,9 +250,6 @@ export default function AdminProvidersPage() {
         countryCode: form.country.trim().toUpperCase(),
         hasLiabilityInsurance: form.hasLiabilityInsurance,
         insuranceExpiresAt: form.insuranceExpiresAt || null,
-        plateNumber: form.plateNumber || null,
-        circulationCardNumber: form.circulationCardNumber || null,
-        circulationCardVerified: form.circulationCardVerified,
         tradeCategoryIds: form.tradeCategoryIds,
       });
 
@@ -583,37 +577,8 @@ export default function AdminProvidersPage() {
             </div>
 
             {coversMobilite ? (
-              <div className="mt-4 grid grid-cols-1 gap-4 rounded-xl border border-border bg-surface-main/60 p-4 sm:grid-cols-3">
-                <p className="sm:col-span-3 text-xs font-medium text-text-secondary">
-                  {t('adminProvidersPage.form.driverChecklistTitle')}
-                </p>
-                <AdminField label={t('adminProvidersPage.form.plateNumberLabel')}>
-                  <input
-                    type="text"
-                    className="app-input"
-                    value={form.plateNumber}
-                    onChange={(e) => handleChange('plateNumber', e.target.value)}
-                  />
-                </AdminField>
-                <AdminField label={t('adminProvidersPage.form.circulationCardNumberLabel')}>
-                  <input
-                    type="text"
-                    className="app-input"
-                    value={form.circulationCardNumber}
-                    onChange={(e) => handleChange('circulationCardNumber', e.target.value)}
-                  />
-                </AdminField>
-                <div className="flex items-end pb-1">
-                  <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
-                    <input
-                      type="checkbox"
-                      checked={form.circulationCardVerified}
-                      onChange={(e) => handleChange('circulationCardVerified', e.target.checked)}
-                      className="h-4 w-4 rounded border-border text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>{t('adminProvidersPage.form.circulationCardVerifiedLabel')}</span>
-                  </label>
-                </div>
+              <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
+                {t('adminProvidersPage.form.mobilityComplianceAfterCreation')}
               </div>
             ) : null}
           </div>
@@ -737,6 +702,14 @@ export default function AdminProvidersPage() {
                             {t(`adminProvidersPage.actions.${TRANSITION_LABEL_KEY[next]}`)}
                           </button>
                         ))}
+                        {Array.isArray(p.tradeCategories) && p.tradeCategories.some((tc) => tc.slug === 'mobilite') ? (
+                          <Link
+                            to={`/admin/providers/${p.id}/mobility`}
+                            className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-[11px] font-medium text-blue-700 hover:bg-blue-500/20 dark:text-blue-300"
+                          >
+                            {t('adminProvidersPage.actions.manageMobility')}
+                          </Link>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

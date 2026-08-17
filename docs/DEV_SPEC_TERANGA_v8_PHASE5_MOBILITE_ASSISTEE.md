@@ -104,3 +104,24 @@ Ordre : parcours client et devis, véhicule/conformité, GPS chauffeur, dispatch
 automatique, sécurité temps réel. Les taux de réponse, d'acceptation, d'annulation, le délai de
 prise en charge, les incidents, la répétition et le coût du canal téléphonique sont mesurés dès le
 pilote.
+
+## 8. État d'implémentation au 17 août 2026
+
+- **Lot 1 livré** : parcours public `/taxi`, Moto/Voiture, carte Google, position actuelle,
+  itinéraire, estimation backend et commande adaptée à la session.
+- **Lot 2 livré** : flotte multi-véhicule, conformité chauffeur et véhicule, console
+  d'administration, blocage de l'activation et de l'affectation si le dossier est invalide ou
+  expiré, véhicule attaché à la course et DTO public sans documents administratifs.
+- **Lot 3 livré (dispatch assisté)** : position GPS disponible indépendante d'une mission,
+  véhicule actif, péremption configurable, filtre de conformité, présélection par rayon et
+  classement proximité/fiabilité/réputation. La console `/admin/taxi-dispatch` affiche la course,
+  la carte et les chauffeurs sûrs classés ; Google Distance Matrix calcule le temps d'approche avec
+  un repli explicite à vol d'oiseau si l'API est indisponible.
+- L'affectation réserve atomiquement le chauffeur, ouvre une offre de 90 secondes et empêche une
+  double affectation concurrente. Une offre expirée est refusée, la mission revient en recherche,
+  le véhicule est détaché et le chauffeur est libéré si sa position est encore fraîche.
+- Le rayon reste piloté par l'opérateur (5 à 50 km), conformément au lancement assisté par appel.
+  L'enchaînement entièrement automatique des offres et l'élargissement automatique du rayon ne
+  seront activés qu'après validation des règles opérationnelles pendant le pilote.
+- **Prochain lot** : suivi de course et sécurité (ETA, code de démarrage, partage, assistance,
+  notation et signalement).

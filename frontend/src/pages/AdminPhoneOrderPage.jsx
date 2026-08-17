@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Loader2, Phone } from "lucide-react";
 
@@ -10,6 +10,7 @@ import CategoryPicker from "../features/mission-creation/CategoryPicker";
 import LocationAutocompleteInput from "../features/mission-creation/LocationAutocompleteInput";
 import MissionLocationMap from "../features/mission-creation/MissionLocationMap";
 import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
+import MobilityDispatchPanel from "../features/mobility/MobilityDispatchPanel";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500";
@@ -23,6 +24,7 @@ const labelClass = "mb-1 block text-sm font-medium text-text-primary";
  */
 export default function AdminPhoneOrderPage() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { countryId, countries, canSelect, setCountry, loading: geoLoading } = useGeo();
 
   const [tradeCategories, setTradeCategories] = useState([]);
@@ -43,6 +45,8 @@ export default function AdminPhoneOrderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [result, setResult] = useState(null);
+  const dispatchMissionId =
+    result?.mission?.id || Number(searchParams.get("missionId")) || null;
 
   useEffect(() => {
     let cancelled = false;
@@ -93,6 +97,7 @@ export default function AdminPhoneOrderPage() {
     setPickupCoordinates(null);
     setResult(null);
     setFeedback(null);
+    setSearchParams({});
   }
 
   async function handleSubmit(event) {
@@ -126,6 +131,9 @@ export default function AdminPhoneOrderPage() {
 
       const data = await createPhoneOrder(payload);
       setResult(data);
+      if (isMobilite && data?.mission?.id) {
+        setSearchParams({ missionId: String(data.mission.id) });
+      }
     } catch (error) {
       const backendMessage = error?.response?.data?.error;
       setFeedback({
@@ -138,7 +146,7 @@ export default function AdminPhoneOrderPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl px-6 py-10">
+    <div className="mx-auto max-w-5xl px-6 py-10">
       <p className="page-kicker">{t("adminPhoneOrder.kicker")}</p>
       <h1 className="app-page-headline flex items-center gap-2">
         <Phone size={22} />
@@ -146,31 +154,50 @@ export default function AdminPhoneOrderPage() {
       </h1>
       <p className="mt-1 text-sm text-text-secondary">{t("adminPhoneOrder.subtitle")}</p>
 
-      {result ? (
-        <div className="mt-6 rounded-[28px] border border-border/70 bg-surface-card p-6 shadow-sm">
-          <AuthFeedbackBanner type="success" message={t("adminPhoneOrder.success.message")} />
-          <p className="mt-3 text-sm text-text-secondary">
-            {t("adminPhoneOrder.success.reference", { id: result.mission?.id })}
-          </p>
-          {result.isNewAccount ? (
-            <p className="mt-2 text-sm text-text-secondary">
-              {t("adminPhoneOrder.success.newAccount")}
-              {result.generatedPin ? (
-                <span className="ml-1 font-mono font-semibold text-text-primary">{result.generatedPin}</span>
+      {result || dispatchMissionId ? (
+        <div className="mt-6 space-y-5">
+          {result ? (
+            <div className="rounded-[28px] border border-border/70 bg-surface-card p-6 shadow-sm">
+              <AuthFeedbackBanner type="success" message={t("adminPhoneOrder.success.message")} />
+              <p className="mt-3 text-sm text-text-secondary">
+                {t("adminPhoneOrder.success.reference", { id: result.mission?.id })}
+              </p>
+              {result.isNewAccount ? (
+                <p className="mt-2 text-sm text-text-secondary">
+                  {t("adminPhoneOrder.success.newAccount")}
+                  {result.generatedPin ? (
+                    <span className="ml-1 font-mono font-semibold text-text-primary">{result.generatedPin}</span>
+                  ) : null}
+                </p>
               ) : null}
-            </p>
-          ) : null}
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link to="/admin/services" className="btn-primary rounded-full px-6 py-2.5 text-sm">
-              {t("adminPhoneOrder.success.assignCta")}
-            </Link>
+              <div className="mt-6 flex flex-wrap gap-3">
+                {dispatchMissionId ? (
+                  <a href="#dispatch" className="btn-primary rounded-full px-6 py-2.5 text-sm">
+                    {t("adminPhoneOrder.success.assignCta")}
+                  </a>
+                ) : (
+                  <Link to="/admin/services" className="btn-primary rounded-full px-6 py-2.5 text-sm">
+                    {t("adminPhoneOrder.success.assignCta")}
+                  </Link>
+                )}
+                <button type="button" onClick={resetForm} className="btn-secondary rounded-full px-6 py-2.5 text-sm">
+                  {t("adminPhoneOrder.success.newOrderCta")}
+                </button>
+              </div>
+            </div>
+          ) : (
             <button type="button" onClick={resetForm} className="btn-secondary rounded-full px-6 py-2.5 text-sm">
               {t("adminPhoneOrder.success.newOrderCta")}
             </button>
-          </div>
+          )}
+          {dispatchMissionId ? (
+            <div id="dispatch">
+              <MobilityDispatchPanel missionId={dispatchMissionId} />
+            </div>
+          ) : null}
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="mt-6 rounded-[28px] border border-border/70 bg-surface-card p-6 shadow-sm">
+        <form onSubmit={handleSubmit} className="mt-6 max-w-xl rounded-[28px] border border-border/70 bg-surface-card p-6 shadow-sm">
           {feedback ? (
             <div className="mb-5">
               <AuthFeedbackBanner type={feedback.type} message={feedback.message} />

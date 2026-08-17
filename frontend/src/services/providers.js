@@ -16,6 +16,31 @@ export async function createProvider(payload) {
   return data?.provider;
 }
 
+export async function getProvider(id) {
+  const { data } = await api.get(`/v1/providers/${id}`);
+  return data;
+}
+
+export async function updateProviderDriverCompliance(id, payload) {
+  const { data } = await api.patch(`/v1/providers/${id}/driver-compliance`, payload);
+  return data;
+}
+
+export async function listProviderVehicles(id) {
+  const { data } = await api.get(`/v1/providers/${id}/vehicles`);
+  return data?.vehicles || [];
+}
+
+export async function createProviderVehicle(id, payload) {
+  const { data } = await api.post(`/v1/providers/${id}/vehicles`, payload);
+  return data?.vehicle;
+}
+
+export async function updateProviderVehicle(id, vehicleId, payload) {
+  const { data } = await api.patch(`/v1/providers/${id}/vehicles/${vehicleId}`, payload);
+  return data?.vehicle;
+}
+
 /**
  * PATCH /api/v1/providers/:id/status — onboarding pending→probation→active,
  * ou suspension/révocation.
@@ -47,11 +72,21 @@ export async function updateMyAvailability(availabilityStatus) {
   return data?.provider;
 }
 
+export async function getMyDispatchPresence() {
+  const { data } = await api.get('/v1/providers/me/dispatch-presence');
+  return data;
+}
+
+export async function updateMyLiveLocation(payload) {
+  const { data } = await api.post('/v1/providers/me/live-location', payload);
+  return data;
+}
+
 /**
  * GET /api/v1/providers/available — admin/master, chauffeurs disponibles dans le scope
  * géographique (filière Mobilité, statut active + available), docs/DEV_SPEC_TERANGA_v5_PHASE2.md §3.3.
  */
-export async function listAvailableProviders() {
-  const { data } = await api.get('/v1/providers/available');
+export async function listAvailableProviders(params = {}) {
+  const { data } = await api.get('/v1/providers/available', { params });
   return data?.providers || [];
 }

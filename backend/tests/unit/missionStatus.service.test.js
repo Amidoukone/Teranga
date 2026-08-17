@@ -25,6 +25,9 @@ function makeService(overrides = {}) {
       Object.assign(this, fields);
       return Promise.resolve(this);
     }),
+    reload: jest.fn(function () {
+      return Promise.resolve(this);
+    }),
     ...overrides,
   };
 }
@@ -83,6 +86,23 @@ describe('missionStatus.service', () => {
     await expect(
       transitionMissionStatus({ service, toStatus: 'COMPLETED', actorType: 'admin', actorId: 1 })
     ).rejects.toMatchObject({ status: 400 });
+  });
+
+  test('rejects a stale guarded transition after reloading the locked row', async () => {
+    const service = makeService({
+      missionStatus: 'ASSIGNED',
+      providerId: 8,
+      acceptanceDeadlineAt: new Date('2030-01-01T00:00:00.000Z'),
+    });
+    await expect(
+      transitionMissionStatus({
+        service,
+        toStatus: 'SEARCHING_EXECUTOR',
+        actorType: 'system',
+        actorId: null,
+        expectedFields: { providerId: 7 },
+      })
+    ).rejects.toMatchObject({ status: 409, code: 'STALE_MISSION_TRANSITION' });
   });
 
   test('writes the legacy-mapped status and a history row atomically for a valid transition', async () => {

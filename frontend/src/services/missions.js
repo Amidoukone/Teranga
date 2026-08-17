@@ -147,11 +147,17 @@ export async function updateMissionDispute(missionId, disputeId, payload) {
  * 4.2 + superviseur agent. `providerId`/`agentId` indépendants : omis = inchangé, `null` =
  * désassigner, nombre = assigner/réassigner. Pas de short-list/auto-matching ici (Lot 4).
  */
-export async function updateMissionAssignment(missionId, { providerId, agentId } = {}) {
+export async function updateMissionAssignment(missionId, { providerId, agentId, vehicleId } = {}) {
   const payload = {};
   if (providerId !== undefined) payload.providerId = providerId;
   if (agentId !== undefined) payload.agentId = agentId;
+  if (vehicleId !== undefined) payload.vehicleId = vehicleId;
   const { data } = await api.post(`/v1/missions/${missionId}/assign`, payload);
+  return data;
+}
+
+export async function getMobilityDispatchCandidates(missionId, params = {}) {
+  const { data } = await api.get(`/v1/missions/${missionId}/dispatch-candidates`, { params });
   return data;
 }
 

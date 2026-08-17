@@ -52,6 +52,13 @@ module.exports = (sequelize, DataTypes) => {
         });
       }
 
+      if (models.Vehicle) {
+        Service.belongsTo(models.Vehicle, {
+          foreignKey: 'vehicleId',
+          as: 'vehicle',
+        });
+      }
+
       if (models.TradeCategory) {
         Service.belongsTo(models.TradeCategory, {
           foreignKey: 'tradeCategoryId',
@@ -158,6 +165,11 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 'agent',
       },
       providerId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+      vehicleId: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: true,
+        field: 'vehicle_id',
+      },
       tradeCategoryId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
       missionStatus: {
         type: DataTypes.ENUM(...MISSION_STATUS_VALUES),

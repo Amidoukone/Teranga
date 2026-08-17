@@ -142,10 +142,27 @@ export default function AdminServicesPage() {
   function isProviderAssignableToMission(service, provider) {
     if (!service || !provider) return false;
     if (!Array.isArray(provider.tradeCategories)) return false;
-    const hasTradeCategory = provider.tradeCategories.some(
+    const matchedTradeCategory = provider.tradeCategories.find(
       (tc) => String(tc.id) === String(service.tradeCategoryId)
     );
-    if (!hasTradeCategory) return false;
+    if (!matchedTradeCategory) return false;
+
+    if (matchedTradeCategory.slug === 'mobilite') {
+      const requestedType = service.requestedVehicleType || 'motorcycle';
+      const hasEligibleVehicle = provider.mobilityCompliance?.vehicles?.some(
+        (vehicle) =>
+          vehicle.eligible &&
+          vehicle.vehicleType === requestedType &&
+          String(vehicle.id) === String(provider.dispatchPresence?.vehicleId)
+      );
+      if (
+        !provider.mobilityCompliance?.driverEligible ||
+        !provider.dispatchPresence?.isFresh ||
+        !hasEligibleVehicle
+      ) {
+        return false;
+      }
+    }
 
     // Couverture géographique : le backend refuse désormais l'assignation d'un prestataire
     // dont le pays ne couvre pas la destination réelle de la mission (mission.controller.js
@@ -624,6 +641,15 @@ export default function AdminServicesPage() {
                     <td className="px-4 sm:px-5 py-3 align-top">
                       {s.executionType === 'provider' ? (
                         <div className="space-y-2.5">
+                          {s.requestedVehicleType ? (
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/admin/taxi-dispatch?missionId=${s.id}`)}
+                              className="w-full rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-500/15 dark:text-violet-300"
+                            >
+                              {t('adminServicesPage.assign.openTaxiDispatch')}
+                            </button>
+                          ) : null}
                           <div>
                             <select
                               disabled={!canModifyProviderSlot(s) || getAssignableProviders(s).length === 0}
