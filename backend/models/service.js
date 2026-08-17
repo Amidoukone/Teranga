@@ -73,6 +73,20 @@ module.exports = (sequelize, DataTypes) => {
         });
       }
 
+      if (models.MissionShareToken) {
+        Service.hasMany(models.MissionShareToken, {
+          foreignKey: 'serviceId',
+          as: 'shareTokens',
+        });
+      }
+
+      if (models.MissionRating) {
+        Service.hasOne(models.MissionRating, {
+          foreignKey: 'serviceId',
+          as: 'rating',
+        });
+      }
+
       // Pièces jointes de la création guidée (section 4.1, étape 3 : photo + note vocale) —
       // alias distinct de Task.evidences pour rester lisible (deux chemins d'accès différents
       // vers la même table evidences).
@@ -198,6 +212,27 @@ module.exports = (sequelize, DataTypes) => {
       // Fenêtre d'acceptation du dispatch mobilité (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2) —
       // posée uniquement pour la filière Mobilité, NULL partout ailleurs.
       acceptanceDeadlineAt: { type: DataTypes.DATE, allowNull: true },
+
+      startAuthorizedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'start_authorized_at',
+      },
+      startAuthorizationMethod: {
+        type: DataTypes.ENUM('code', 'admin_override'),
+        allowNull: true,
+        field: 'start_authorization_method',
+      },
+      startAuthorizedByUserId: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: true,
+        field: 'start_authorized_by_user_id',
+      },
+      startOverrideReason: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+        field: 'start_override_reason',
+      },
 
       // Réconciliation cash à la remise, filière livraison (docs/DEV_SPEC_TERANGA_v6_PHASE3.md
       // §5) — déclaré par l'exécutant à la transition COMPLETED, NULL partout ailleurs.

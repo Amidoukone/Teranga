@@ -73,6 +73,7 @@ const AdminPropertyListingsPage = lazy(() => import('./pages/AdminPropertyListin
 const PropertyListingsPage = lazy(() => import('./pages/PropertyListingsPage'));
 const PropertyListingDetailPage = lazy(() => import('./pages/PropertyListingDetailPage'));
 const PublicTransportOrderPage = lazy(() => import('./pages/PublicTransportOrderPage'));
+const SharedRidePage = lazy(() => import('./pages/SharedRidePage'));
 const AdminServicesPage = lazy(() => import('./pages/AdminServicesPage'));
 const AdminPhoneOrderPage = lazy(() => import('./pages/AdminPhoneOrderPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
@@ -392,6 +393,7 @@ export default function App() {
               path="/livraison"
               element={<PublicTransportOrderPage serviceSlug="livraison" />}
             />
+            <Route path="/ride-share/:token" element={<SharedRidePage />} />
 
             <Route
               path="/products/:id"

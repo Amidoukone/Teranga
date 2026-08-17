@@ -6,6 +6,7 @@ const ctrl = require('../controllers/mission.controller');
 const disputeCtrl = require('../controllers/dispute.controller');
 const phoneOrderCtrl = require('../controllers/missionPhoneOrder.controller');
 const mobilityDispatchCtrl = require('../controllers/mobilityDispatch.controller');
+const safetyCtrl = require('../controllers/missionSafety.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
 const { validateBody } = require('../middleware/validate.middleware');
@@ -20,11 +21,24 @@ const {
 } = require('../validators/mission.schemas');
 const { createDisputeSchema, updateDisputeSchema } = require('../validators/dispute.schemas');
 const { phoneOrderSchema } = require('../validators/missionPhoneOrder.schemas');
+const {
+  verifyStartCodeSchema,
+  overrideStartSchema,
+  createShareSchema,
+  createRatingSchema,
+} = require('../validators/missionSafety.schemas');
+const {
+  publicQuoteLimiter,
+  startCodeLimiter,
+  writeLimiter,
+} = require('../middleware/rateLimit.middleware');
 
 /**
  * ROUTES MISSIONS — création guidée (section 4.1) + suivi en direct (section 4.2)
  * v1-only par design (section 0.5) : jamais montées sous /api legacy.
  */
+
+router.get('/shared/:token', publicQuoteLimiter, safetyCtrl.getShared);
 
 router.post(
   '/estimate',
@@ -66,6 +80,48 @@ router.post(
   requireRoles('admin'),
   validateBody(assignMissionSchema),
   ctrl.assign
+);
+
+router.post(
+  '/:id/verify-start-code',
+  auth,
+  requireRoles('provider'),
+  startCodeLimiter,
+  validateBody(verifyStartCodeSchema),
+  safetyCtrl.verifyStartCode
+);
+
+router.post(
+  '/:id/start-override',
+  auth,
+  requireRoles('admin'),
+  writeLimiter,
+  validateBody(overrideStartSchema),
+  safetyCtrl.overrideStart
+);
+
+router.post(
+  '/:id/share',
+  auth,
+  requireRoles('client'),
+  writeLimiter,
+  validateBody(createShareSchema),
+  safetyCtrl.createShare
+);
+router.delete(
+  '/:id/share',
+  auth,
+  requireRoles('client'),
+  writeLimiter,
+  safetyCtrl.revokeShare
+);
+router.post(
+  '/:id/rating',
+  auth,
+  requireRoles('client'),
+  writeLimiter,
+  validateBody(createRatingSchema),
+  safetyCtrl.createRating
 );
 
 router.get(

@@ -13,6 +13,7 @@ const {
   Evidence,
   Provider,
   ProviderLiveLocation,
+  MissionRating,
   Vehicle,
   ExecutorLocation,
 } = require('../../models');
@@ -24,6 +25,11 @@ const {
   isLocationFresh,
   upsertProviderLiveLocation,
 } = require('../services/providerPresence.service');
+const {
+  getMissionStartCode,
+  resolveAssistancePhone,
+  serializeOptionalPosition,
+} = require('../services/missionSafety.service');
 const {
   transitionMissionStatus,
   ACTIVE_STATUSES,
@@ -987,6 +993,18 @@ exports.updateStatus = async (req, res) => {
       return res.status(403).json({ error: 'Accès interdit pour cette transition' });
     }
 
+    if (toStatus === 'IN_PROGRESS') {
+      const tradeCategory = service.tradeCategoryId
+        ? await TradeCategory.findByPk(service.tradeCategoryId, { attributes: ['slug'] })
+        : null;
+      if (tradeCategory?.slug === 'mobilite' && !service.startAuthorizedAt) {
+        return res.status(400).json({
+          error:
+            "Le code client doit etre verifie, ou Teranga doit autoriser le depart par telephone",
+        });
+      }
+    }
+
     let updated = await transitionMissionStatus({
       service,
       toStatus,
@@ -1301,14 +1319,24 @@ exports.track = async (req, res) => {
       order: [['recordedAt', 'DESC']],
     });
 
+    const position = serializeOptionalPosition(location);
     let etaMinutes = null;
     const destLat = Number(service.latitude);
     const destLng = Number(service.longitude);
+    const pickupLat = Number(service.pickupLatitude);
+    const pickupLng = Number(service.pickupLongitude);
+    const headingToPickup = ['ASSIGNED', 'EN_ROUTE'].includes(service.missionStatus);
+    const etaTarget =
+      headingToPickup && Number.isFinite(pickupLat) && Number.isFinite(pickupLng)
+        ? { lat: pickupLat, lng: pickupLng }
+        : Number.isFinite(destLat) && Number.isFinite(destLng)
+        ? { lat: destLat, lng: destLng }
+        : null;
 
-    if (location && Number.isFinite(destLat) && Number.isFinite(destLng)) {
+    if (position && !position.isStale && etaTarget) {
       const result = await getDistanceMatrix(
-        [{ lat: Number(location.latitude), lng: Number(location.longitude) }],
-        [{ lat: destLat, lng: destLng }]
+        [{ lat: position.latitude, lng: position.longitude }],
+        [etaTarget]
       );
       const element = result?.rows?.[0]?.[0];
       if (element?.status === 'OK' && element.durationSeconds != null) {
@@ -1347,6 +1375,19 @@ exports.track = async (req, res) => {
       vehicle = vehicleRecord ? vehicleRecord.toPublicDTO() : null;
     }
 
+    const [assistancePhone, rating] = await Promise.all([
+      resolveAssistancePhone(service),
+      MissionRating.findOne({
+        where: { serviceId: service.id },
+        attributes: ['id', 'score', 'comment', 'createdAt'],
+      }),
+    ]);
+    const canSeeStartCode =
+      req.user.role === 'client' &&
+      tradeCategorySlug === 'mobilite' &&
+      !service.startAuthorizedAt &&
+      ['ASSIGNED', 'EN_ROUTE', 'ON_SITE'].includes(service.missionStatus);
+
     return res.status(200).json({
       tradeCategorySlug,
       missionStatus: service.missionStatus,
@@ -1359,6 +1400,12 @@ exports.track = async (req, res) => {
       isExecutor,
       parentServiceId: service.parentServiceId || null,
       acceptanceDeadlineAt: service.acceptanceDeadlineAt || null,
+      realtimeTrackingRequired: false,
+      assistancePhone,
+      startCode: canSeeStartCode ? getMissionStartCode(service) : null,
+      startAuthorizedAt: service.startAuthorizedAt || null,
+      startAuthorizationMethod: service.startAuthorizationMethod || null,
+      rating: rating || null,
       provider,
       vehicle,
       pickupAddress: service.pickupAddress || null,
@@ -1369,13 +1416,7 @@ exports.track = async (req, res) => {
         Number.isFinite(destLat) && Number.isFinite(destLng)
           ? { latitude: destLat, longitude: destLng, address: service.address }
           : null,
-      position: location
-        ? {
-            latitude: Number(location.latitude),
-            longitude: Number(location.longitude),
-            recordedAt: location.recordedAt,
-          }
-        : null,
+      position,
       etaMinutes,
     });
   } catch (e) {

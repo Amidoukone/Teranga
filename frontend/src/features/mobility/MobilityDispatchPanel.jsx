@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bike, CarFront, Loader2, MapPin, ShieldCheck } from "lucide-react";
+import { Bike, CarFront, KeyRound, Loader2, MapPin, PhoneCall, ShieldCheck } from "lucide-react";
 
 import {
   getMobilityDispatchCandidates,
+  overrideMissionStart,
   updateMissionAssignment,
 } from "../../services/missions";
 import DispatchCandidatesMap from "./DispatchCandidatesMap";
@@ -15,6 +16,8 @@ export default function MobilityDispatchPanel({ missionId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [assigningId, setAssigningId] = useState(null);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overridingStart, setOverridingStart] = useState(false);
 
   const load = useCallback(async () => {
     if (!missionId) return;
@@ -46,6 +49,21 @@ export default function MobilityDispatchPanel({ missionId }) {
       setError(requestError?.response?.data?.error || t("mobilityDispatch.errors.assign"));
     } finally {
       setAssigningId(null);
+    }
+  };
+
+  const overrideStart = async () => {
+    if (overrideReason.trim().length < 10) return;
+    setOverridingStart(true);
+    setError(null);
+    try {
+      await overrideMissionStart(missionId, overrideReason.trim());
+      setOverrideReason("");
+      await load();
+    } catch (requestError) {
+      setError(requestError?.response?.data?.error || t("mobilityDispatch.errors.override"));
+    } finally {
+      setOverridingStart(false);
     }
   };
 
@@ -97,6 +115,39 @@ export default function MobilityDispatchPanel({ missionId }) {
             {mission.providerId ? (
               <div className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-200">
                 {t("mobilityDispatch.assigned")}
+              </div>
+            ) : null}
+            {mission.startCode ? (
+              <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-center">
+                <p className="flex items-center justify-center gap-2 text-xs font-semibold text-text-secondary">
+                  <KeyRound size={14} /> {t("mobilityDispatch.startCode")}
+                </p>
+                <p className="mt-1 font-mono text-2xl font-bold tracking-[0.3em] text-text-primary">{mission.startCode}</p>
+              </div>
+            ) : null}
+            {mission.assistancePhone ? (
+              <a href={`tel:${String(mission.assistancePhone).replace(/\s+/g, "")}`} className="btn-secondary mb-3 flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-xs">
+                <PhoneCall size={14} /> {t("mobilityDispatch.callAssistance")}
+              </a>
+            ) : null}
+            {mission.missionStatus === "ON_SITE" && !mission.startAuthorizedAt ? (
+              <div className="mb-3 rounded-xl border border-border p-3">
+                <p className="text-xs font-semibold text-text-primary">{t("mobilityDispatch.overrideTitle")}</p>
+                <textarea
+                  value={overrideReason}
+                  onChange={(event) => setOverrideReason(event.target.value.slice(0, 500))}
+                  rows={2}
+                  placeholder={t("mobilityDispatch.overridePlaceholder")}
+                  className="app-input mt-2 w-full text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={overrideStart}
+                  disabled={overrideReason.trim().length < 10 || overridingStart}
+                  className="btn-secondary mt-2 w-full rounded-full px-4 py-2 text-xs disabled:opacity-50"
+                >
+                  {overridingStart ? t("mobilityDispatch.overriding") : t("mobilityDispatch.overrideCta")}
+                </button>
               </div>
             ) : null}
             {!candidates.length ? (

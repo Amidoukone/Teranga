@@ -1535,6 +1535,12 @@ const en = {
     fallback: "estimated straight-line distance",
     assign: "Assign this driver",
     assigning: "Assigning…",
+    startCode: "Start code to communicate to the client",
+    callAssistance: "Call Teranga assistance",
+    overrideTitle: "Exceptional start by phone",
+    overridePlaceholder: "Precise authorization reason (10 characters minimum)",
+    overrideCta: "Authorize start",
+    overriding: "Authorizing…",
     map: {
       pickup: "Pickup",
       destination: "Destination",
@@ -1543,6 +1549,21 @@ const en = {
     errors: {
       load: "Unable to find drivers.",
       assign: "Unable to assign this driver.",
+      override: "Unable to authorize the start.",
+    },
+  },
+  sharedRide: {
+    kicker: "Shared ride",
+    statusLabel: "Ride status",
+    verifiedDriver: "Driver verified by Teranga",
+    refresh: "Refresh",
+    positionRecent: "Last position received {{seconds}} seconds ago",
+    positionOld: "Old last position ({{seconds}} seconds)",
+    noPosition: "No position was transmitted. The ride is still tracked through its statuses.",
+    lowNetworkNote: "Location is optional and may be old when the network is weak.",
+    callTeranga: "Call Teranga",
+    errors: {
+      load: "This link is invalid, expired, or temporarily unavailable.",
     },
   },
   adminPhoneOrder: {
@@ -2773,9 +2794,13 @@ const en = {
     },
   },
   missionTracking: {
-    kicker: "Live tracking",
+    kicker: "Ride tracking",
     title: "Tracking your mission",
     mapUnavailable: "Map unavailable right now.",
+    positionOld: "Last position received {{seconds}} seconds ago. It may be outdated.",
+    lowNetworkNote: "Continuous GPS is not required: statuses and phone assistance remain the reference.",
+    refresh: "Refresh",
+    callTeranga: "Call Teranga",
     noPositionYet: "No position received yet — the executor hasn't started moving yet.",
     eta: "Estimated arrival: {{minutes}} min",
     pickupLabel: "Pickup",
@@ -2797,6 +2822,28 @@ const en = {
     errors: {
       load: "Could not load this mission's tracking.",
       action: "Something went wrong. Please try again.",
+    },
+    startCode: {
+      clientTitle: "Your start code",
+      clientHint: "Only give this code when the driver is in front of you and the vehicle matches.",
+      driverTitle: "Code given by the client",
+      driverHint: "If the network is unavailable, start after verbal verification and refresh as soon as possible.",
+      verifyCta: "Verify and start",
+      invalid: "Enter the 4 digits of the client code.",
+      error: "Unable to verify the code. Try again or call Teranga.",
+    },
+    share: {
+      cta: "Share the ride",
+      linkLabel: "Secure sharing link",
+      error: "Unable to create the sharing link.",
+    },
+    rating: {
+      title: "How was the ride?",
+      star: "{{score}} star",
+      submit: "Submit my rating",
+      commentPlaceholder: "Optional comment",
+      saved: "Thank you, your {{score}}/5 rating was saved.",
+      error: "Unable to save your rating.",
     },
     status: {
       CREATED: "Request created",

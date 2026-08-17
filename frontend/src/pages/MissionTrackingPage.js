@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car, Bike } from "lucide-react";
+import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car, Bike, KeyRound, PhoneCall, RefreshCw, Share2, Star } from "lucide-react";
 
 import {
   getMissionTrack,
@@ -10,6 +10,9 @@ import {
   requestMissionLogistics,
   acceptMission,
   declineMission,
+  verifyMissionStartCode,
+  createMissionShare,
+  createMissionRating,
 } from "../services/missions";
 import MissionTrackingMap from "../features/mission-tracking/MissionTrackingMap";
 import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
@@ -19,7 +22,7 @@ import { Modal, FormField, Button } from "../components/ui";
 // n'est pas visible — docs/DEV_SPEC_TERANGA_v3.md section 4.2 recommande 5-10s.
 const TRACK_POLL_MS = (() => {
   const raw = Number.parseInt(String(process.env.REACT_APP_MISSION_TRACK_POLL_MS || ""), 10);
-  if (!Number.isFinite(raw) || raw < 5000) return 8000;
+  if (!Number.isFinite(raw) || raw < 15000) return 30000;
   return raw;
 })();
 
@@ -28,6 +31,16 @@ const TERMINAL_STATUSES = [
   "CANCELLED_BY_CLIENT",
   "NO_EXECUTOR_FOUND",
   "VALIDATED",
+  "RESOLVED_REFUND",
+  "RESOLVED_REDO",
+  "RESOLVED_CLOSED",
+];
+
+const RATING_STATUSES = [
+  "COMPLETED",
+  "VALIDATED",
+  "CLOSED",
+  "DISPUTED",
   "RESOLVED_REFUND",
   "RESOLVED_REDO",
   "RESOLVED_CLOSED",
@@ -67,6 +80,10 @@ export default function MissionTrackingPage() {
   const [logisticsRequested, setLogisticsRequested] = useState(false);
 
   const [collectedAmountInput, setCollectedAmountInput] = useState("");
+  const [startCodeInput, setStartCodeInput] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
+  const [ratingScore, setRatingScore] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
 
   const trackRef = useRef(track);
   trackRef.current = track;
@@ -109,8 +126,74 @@ export default function MissionTrackingPage() {
       await updateMissionStatus(id, toStatus, extra);
       await load();
       setActionState(null);
-    } catch (_err) {
-      setActionState({ type: "error", message: t("missionTracking.errors.action") });
+    } catch (requestError) {
+      setActionState({
+        type: "error",
+        message: requestError?.response?.data?.error || t("missionTracking.errors.action"),
+      });
+    }
+  };
+
+  const handleVerifyStartCode = async () => {
+    if (!/^\d{4}$/.test(startCodeInput)) {
+      setActionState({ type: "error", message: t("missionTracking.startCode.invalid") });
+      return;
+    }
+    setActionState({ type: "loading" });
+    try {
+      await verifyMissionStartCode(id, startCodeInput);
+      setStartCodeInput("");
+      await load();
+      setActionState(null);
+    } catch (requestError) {
+      setActionState({
+        type: "error",
+        message:
+          requestError?.response?.data?.error || t("missionTracking.startCode.error"),
+      });
+    }
+  };
+
+  const handleShare = async () => {
+    setActionState({ type: "loading" });
+    try {
+      const share = await createMissionShare(id, 6);
+      const url = new URL(share.path, window.location.origin).toString();
+      setShareUrl(url);
+      if (navigator.share) {
+        await navigator.share({ title: track.title, url });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+      }
+      setActionState(null);
+    } catch (requestError) {
+      if (requestError?.name === "AbortError") {
+        setActionState(null);
+      } else {
+        setActionState({
+          type: "error",
+          message: requestError?.response?.data?.error || t("missionTracking.share.error"),
+        });
+      }
+    }
+  };
+
+  const handleRating = async (event) => {
+    event.preventDefault();
+    if (!ratingScore) return;
+    setActionState({ type: "loading" });
+    try {
+      await createMissionRating(id, {
+        score: ratingScore,
+        comment: ratingComment.trim() || null,
+      });
+      await load();
+      setActionState(null);
+    } catch (requestError) {
+      setActionState({
+        type: "error",
+        message: requestError?.response?.data?.error || t("missionTracking.rating.error"),
+      });
     }
   };
 
@@ -212,11 +295,25 @@ export default function MissionTrackingPage() {
   const statusLabel = t(`missionTracking.status.${track.missionStatus}`, {
     defaultValue: track.missionStatus,
   });
+  const requiresStartCode =
+    track.viewerRole !== "client" &&
+    track.isExecutor &&
+    track.tradeCategorySlug === "mobilite" &&
+    track.missionStatus === "ON_SITE";
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
       <p className="page-kicker">{t("missionTracking.kicker")}</p>
-      <h1 className="app-page-headline">{track.title || t("missionTracking.title")}</h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 className="app-page-headline">{track.title || t("missionTracking.title")}</h1>
+        <button
+          type="button"
+          onClick={load}
+          className="btn-secondary inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs"
+        >
+          <RefreshCw size={14} /> {t("missionTracking.refresh")}
+        </button>
+      </div>
 
       <div className="mt-6 rounded-2xl border border-border bg-surface-card p-5">
         <div className="flex items-center justify-between gap-3">
@@ -312,6 +409,18 @@ export default function MissionTrackingPage() {
           </div>
         ) : null}
 
+        {track.viewerRole === "client" && track.startCode ? (
+          <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-center">
+            <p className="flex items-center justify-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-100">
+              <KeyRound size={17} /> {t("missionTracking.startCode.clientTitle")}
+            </p>
+            <p className="mt-2 font-mono text-3xl font-bold tracking-[0.35em] text-text-primary">
+              {track.startCode}
+            </p>
+            <p className="mt-2 text-xs text-text-muted">{t("missionTracking.startCode.clientHint")}</p>
+          </div>
+        ) : null}
+
         <div className="mt-4">
           <MissionTrackingMap
             latitude={track.position?.latitude}
@@ -363,8 +472,46 @@ export default function MissionTrackingPage() {
           </p>
         ) : null}
 
+        {track.position?.isStale ? (
+          <p className="mt-3 text-sm text-amber-700 dark:text-amber-300">
+            {t("missionTracking.positionOld", { seconds: track.position.ageSeconds })}
+          </p>
+        ) : null}
+
         {!track.position ? (
           <p className="mt-3 text-sm text-text-muted">{t("missionTracking.noPositionYet")}</p>
+        ) : null}
+
+        <p className="mt-2 text-xs text-text-muted">{t("missionTracking.lowNetworkNote")}</p>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {track.assistancePhone ? (
+            <a
+              href={`tel:${String(track.assistancePhone).replace(/\s+/g, "")}`}
+              className="btn-secondary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm"
+            >
+              <PhoneCall size={15} /> {t("missionTracking.callTeranga")}
+            </a>
+          ) : null}
+          {track.viewerRole === "client" ? (
+            <button
+              type="button"
+              onClick={handleShare}
+              disabled={actionState?.type === "loading"}
+              className="btn-secondary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm disabled:opacity-60"
+            >
+              <Share2 size={15} /> {t("missionTracking.share.cta")}
+            </button>
+          ) : null}
+        </div>
+        {shareUrl ? (
+          <input
+            readOnly
+            value={shareUrl}
+            onFocus={(event) => event.target.select()}
+            className="mt-2 w-full rounded-lg border border-border bg-surface-main px-3 py-2 text-xs text-text-secondary"
+            aria-label={t("missionTracking.share.linkLabel")}
+          />
         ) : null}
 
         {actionState?.type === "error" ? (
@@ -433,6 +580,23 @@ export default function MissionTrackingPage() {
           !track.acceptanceDeadlineAt &&
           EXECUTOR_NEXT_STATUS[track.missionStatus] ? (
             <div className="flex flex-col gap-2">
+              {requiresStartCode ? (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+                  <label className="mb-2 block text-xs font-semibold text-text-primary" htmlFor="mission-start-code">
+                    {t("missionTracking.startCode.driverTitle")}
+                  </label>
+                  <input
+                    id="mission-start-code"
+                    value={startCodeInput}
+                    onChange={(event) => setStartCodeInput(event.target.value.replace(/\D/g, "").slice(0, 4))}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="0000"
+                    className="w-full rounded-full border border-border bg-surface-card px-4 py-2 text-center font-mono text-lg tracking-[0.3em] text-text-primary"
+                  />
+                  <p className="mt-2 text-[11px] text-text-muted">{t("missionTracking.startCode.driverHint")}</p>
+                </div>
+              ) : null}
               {EXECUTOR_NEXT_STATUS[track.missionStatus] === "COMPLETED" &&
               track.tradeCategorySlug === "livraison" ? (
                 <input
@@ -448,7 +612,9 @@ export default function MissionTrackingPage() {
               <button
                 type="button"
                 onClick={() =>
-                  handleTransition(
+                  requiresStartCode
+                    ? handleVerifyStartCode()
+                    : handleTransition(
                     EXECUTOR_NEXT_STATUS[track.missionStatus],
                     EXECUTOR_NEXT_STATUS[track.missionStatus] === "COMPLETED" &&
                     track.tradeCategorySlug === "livraison" &&
@@ -460,7 +626,9 @@ export default function MissionTrackingPage() {
                 disabled={actionState?.type === "loading"}
                 className="btn-primary rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
               >
-                {t(`missionTracking.executorCta.${EXECUTOR_NEXT_STATUS[track.missionStatus]}`)}
+                {requiresStartCode
+                  ? t("missionTracking.startCode.verifyCta")
+                  : t(`missionTracking.executorCta.${EXECUTOR_NEXT_STATUS[track.missionStatus]}`)}
               </button>
             </div>
           ) : null}
@@ -497,6 +665,51 @@ export default function MissionTrackingPage() {
               : t("missionTracking.backToMyMissions")}
           </Link>
         </div>
+
+        {track.viewerRole === "client" && track.rating ? (
+          <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+            <p className="font-semibold text-emerald-800 dark:text-emerald-200">
+              {t("missionTracking.rating.saved", { score: track.rating.score })}
+            </p>
+          </div>
+        ) : null}
+
+        {track.viewerRole === "client" &&
+        !track.rating &&
+        RATING_STATUSES.includes(track.missionStatus) ? (
+          <form onSubmit={handleRating} className="mt-5 rounded-xl border border-border bg-surface-main/60 p-4">
+            <p className="font-semibold text-text-primary">{t("missionTracking.rating.title")}</p>
+            <div className="mt-3 flex gap-1" role="radiogroup" aria-label={t("missionTracking.rating.title")}>
+              {[1, 2, 3, 4, 5].map((score) => (
+                <button
+                  key={score}
+                  type="button"
+                  role="radio"
+                  aria-checked={ratingScore === score}
+                  onClick={() => setRatingScore(score)}
+                  className={ratingScore >= score ? "text-amber-500" : "text-text-muted"}
+                  aria-label={t("missionTracking.rating.star", { score })}
+                >
+                  <Star size={27} fill={ratingScore >= score ? "currentColor" : "none"} />
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={ratingComment}
+              onChange={(event) => setRatingComment(event.target.value.slice(0, 500))}
+              rows={3}
+              placeholder={t("missionTracking.rating.commentPlaceholder")}
+              className="mt-3 w-full rounded-lg border border-border bg-surface-card px-3 py-2 text-sm text-text-primary"
+            />
+            <button
+              type="submit"
+              disabled={!ratingScore || actionState?.type === "loading"}
+              className="btn-primary mt-3 rounded-full px-5 py-2 text-sm disabled:opacity-50"
+            >
+              {t("missionTracking.rating.submit")}
+            </button>
+          </form>
+        ) : null}
       </div>
 
       <Modal

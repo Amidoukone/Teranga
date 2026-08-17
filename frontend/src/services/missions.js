@@ -161,6 +161,35 @@ export async function getMobilityDispatchCandidates(missionId, params = {}) {
   return data;
 }
 
+export async function verifyMissionStartCode(missionId, code) {
+  const { data } = await api.post(`/v1/missions/${missionId}/verify-start-code`, { code });
+  return data?.mission;
+}
+
+export async function overrideMissionStart(missionId, reason) {
+  const { data } = await api.post(`/v1/missions/${missionId}/start-override`, { reason });
+  return data?.mission;
+}
+
+export async function createMissionShare(missionId, ttlHours = 6) {
+  const { data } = await api.post(`/v1/missions/${missionId}/share`, { ttlHours });
+  return data;
+}
+
+export async function revokeMissionShare(missionId) {
+  await api.delete(`/v1/missions/${missionId}/share`);
+}
+
+export async function getSharedMission(token) {
+  const { data } = await api.get(`/v1/missions/shared/${encodeURIComponent(token)}`);
+  return data;
+}
+
+export async function createMissionRating(missionId, payload) {
+  const { data } = await api.post(`/v1/missions/${missionId}/rating`, payload);
+  return data?.rating;
+}
+
 /**
  * GET /api/v1/missions/mine — missions filière assignées au compte connecté (agent superviseur ou
  * exécutant, provider exécutant). Les missions classiques agent restent sur getAgentServices().

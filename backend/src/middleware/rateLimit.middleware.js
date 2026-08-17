@@ -80,6 +80,13 @@ const publicQuoteLimiter = buildRateLimiter({
   limiterName: 'public_mission_quote',
 });
 
+const startCodeLimiter = buildRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Trop de tentatives de code. Appelez Teranga si necessaire.',
+  limiterName: 'mission_start_code',
+});
+
 module.exports = {
   authLimiter,
   refreshLimiter,
@@ -88,4 +95,5 @@ module.exports = {
   writeLimiter,
   guestLimiter,
   publicQuoteLimiter,
+  startCodeLimiter,
 };

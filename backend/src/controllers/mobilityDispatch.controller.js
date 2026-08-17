@@ -3,6 +3,10 @@
 const { Country, Service, TradeCategory } = require('../../models');
 const { canAccessGeoResource } = require('../utils/geoScope');
 const { getMobilityDispatchCandidates } = require('../services/mobilityDispatch.service');
+const {
+  getMissionStartCode,
+  resolveAssistancePhone,
+} = require('../services/missionSafety.service');
 const logger = require('../utils/logger');
 
 exports.listCandidates = async (req, res) => {
@@ -32,6 +36,7 @@ exports.listCandidates = async (req, res) => {
       radiusKm: req.query.radiusKm,
       limit: req.query.limit,
     });
+    const assistancePhone = await resolveAssistancePhone(service);
 
     return res.json({
       mission: {
@@ -40,6 +45,10 @@ exports.listCandidates = async (req, res) => {
         missionStatus: service.missionStatus,
         providerId: service.providerId,
         vehicleId: service.vehicleId,
+        startCode: service.startAuthorizedAt ? null : getMissionStartCode(service),
+        startAuthorizedAt: service.startAuthorizedAt || null,
+        startAuthorizationMethod: service.startAuthorizationMethod || null,
+        assistancePhone,
         requestedVehicleType: service.requestedVehicleType || 'motorcycle',
         pickupAddress: service.pickupAddress,
         pickupLatitude,

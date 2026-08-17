@@ -44,6 +44,7 @@ async function makeCountry() {
         isoCode,
         currency: 'XOF',
         isActive: true,
+        contactPhone: '+22370000000',
       });
       created.countryIds.push(country.id);
       return country;
@@ -102,7 +103,7 @@ function vehiclePayload(vehicleType, plateNumber, overrides = {}) {
   };
 }
 
-describe('Phase 5 lot 2 - vehicules et conformite Mobilite', () => {
+describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () => {
   let country;
   let mobilityCategory;
   let adminToken;
@@ -360,6 +361,29 @@ describe('Phase 5 lot 2 - vehicules et conformite Mobilite', () => {
       plateNumber: 'CAR-001',
       color: 'Blanc',
     });
+    expect(tracking.body.realtimeTrackingRequired).toBe(false);
+    expect(tracking.body.assistancePhone).toBe('+22370000000');
+    expect(tracking.body.startCode).toMatch(/^\d{4}$/);
+    const startCode = tracking.body.startCode;
+
+    const share = await request(app)
+      .post(`/api/v1/missions/${mission.id}/share`)
+      .set('Authorization', `Bearer ${clientToken}`)
+      .send({ ttlHours: 6 });
+    expect(share.status).toBe(201);
+    expect(share.body.token.length).toBeGreaterThan(32);
+    const sharedRide = await request(app).get(
+      `/api/v1/missions/shared/${share.body.token}`
+    );
+    expect(sharedRide.status).toBe(200);
+    expect(sharedRide.body.mission).toMatchObject({
+      id: mission.id,
+      realtimeTrackingRequired: false,
+      assistancePhone: '+22370000000',
+      provider: { displayFirstName: 'Awa' },
+      vehicle: { plateNumber: 'CAR-001' },
+    });
+    expect(JSON.stringify(sharedRide.body)).not.toContain(startCode);
     const publicPayload = JSON.stringify(tracking.body);
     expect(publicPayload).not.toContain('insuranceDocumentUrl');
     expect(publicPayload).not.toContain('registrationDocumentUrl');
@@ -400,6 +424,104 @@ describe('Phase 5 lot 2 - vehicules et conformite Mobilite', () => {
       .set('Authorization', `Bearer ${providerToken}`);
     expect(acceptance.status).toBe(200);
     expect(acceptance.body.mission.acceptanceDeadlineAt).toBeNull();
+
+    const enRoute = await request(app)
+      .patch(`/api/v1/missions/${mission.id}/status`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ toStatus: 'EN_ROUTE' });
+    expect(enRoute.status).toBe(200);
+    const onSite = await request(app)
+      .patch(`/api/v1/missions/${mission.id}/status`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ toStatus: 'ON_SITE' });
+    expect(onSite.status).toBe(200);
+
+    const bypassStartCode = await request(app)
+      .patch(`/api/v1/missions/${mission.id}/status`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ toStatus: 'IN_PROGRESS' });
+    expect(bypassStartCode.status).toBe(400);
+    const wrongStartCode = await request(app)
+      .post(`/api/v1/missions/${mission.id}/verify-start-code`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ code: startCode === '9999' ? '0000' : '9999' });
+    expect(wrongStartCode.status).toBe(400);
+    const verifiedStart = await request(app)
+      .post(`/api/v1/missions/${mission.id}/verify-start-code`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ code: startCode });
+    expect(verifiedStart.status).toBe(200);
+    expect(verifiedStart.body.mission).toMatchObject({
+      missionStatus: 'IN_PROGRESS',
+      startAuthorizationMethod: 'code',
+    });
+
+    const completed = await request(app)
+      .patch(`/api/v1/missions/${mission.id}/status`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ toStatus: 'COMPLETED' });
+    expect(completed.status).toBe(200);
+    const rating = await request(app)
+      .post(`/api/v1/missions/${mission.id}/rating`)
+      .set('Authorization', `Bearer ${clientToken}`)
+      .send({ score: 5, comment: 'Chauffeur prudent et ponctuel' });
+    expect(rating.status).toBe(201);
+    const duplicateRating = await request(app)
+      .post(`/api/v1/missions/${mission.id}/rating`)
+      .set('Authorization', `Bearer ${clientToken}`)
+      .send({ score: 4 });
+    expect(duplicateRating.status).toBe(409);
+    await provider.reload();
+    expect(Number(provider.averageRating)).toBe(5);
+
+    const overrideMission = await db.Service.create({
+      clientId: client.id,
+      type: 'other',
+      title: 'Course demarrage assiste',
+      status: 'created',
+      currency: 'XOF',
+      countryId: country.id,
+      executionType: 'provider',
+      tradeCategoryId: mobilityCategory.id,
+      missionStatus: 'CREATED',
+      pickupAddress: 'Depart assistance',
+      pickupLatitude: 12.64,
+      pickupLongitude: -8.0,
+      address: 'Arrivee assistance',
+      latitude: 12.65,
+      longitude: -7.99,
+      requestedVehicleType: 'car',
+    });
+    created.serviceIds.push(overrideMission.id);
+    await request(app)
+      .post('/api/v1/providers/me/live-location')
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ vehicleId: carId, latitude: 12.641, longitude: -8.001 });
+    const overrideAssignment = await request(app)
+      .post(`/api/v1/missions/${overrideMission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ providerId: provider.id, vehicleId: carId });
+    expect(overrideAssignment.status).toBe(200);
+    await request(app)
+      .post(`/api/v1/missions/${overrideMission.id}/accept`)
+      .set('Authorization', `Bearer ${providerToken}`);
+    await request(app)
+      .patch(`/api/v1/missions/${overrideMission.id}/status`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ toStatus: 'EN_ROUTE' });
+    await request(app)
+      .patch(`/api/v1/missions/${overrideMission.id}/status`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ toStatus: 'ON_SITE' });
+    const overrideStart = await request(app)
+      .post(`/api/v1/missions/${overrideMission.id}/start-override`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ reason: 'Client sans connexion, confirmation recue par telephone' });
+    expect(overrideStart.status).toBe(200);
+    expect(overrideStart.body.mission).toMatchObject({
+      missionStatus: 'IN_PROGRESS',
+      startAuthorizationMethod: 'admin_override',
+    });
   });
 
   test('refuse les documents et vehicules aux clients', async () => {

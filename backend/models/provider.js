@@ -50,6 +50,13 @@ module.exports = (sequelize, DataTypes) => {
           as: 'liveLocation',
         });
       }
+
+      if (models.MissionRating) {
+        Provider.hasMany(models.MissionRating, {
+          foreignKey: 'providerId',
+          as: 'missionRatings',
+        });
+      }
     }
 
     /**

@@ -73,10 +73,21 @@ Le dispatch applique :
 7. offre avec expiration et acceptation atomique ;
 8. élargissement du rayon si aucune acceptation.
 
-### 4.4 Lot 4 — suivi et sécurité
+### 4.4 Lot 4 — suivi et sécurité adaptés au réseau faible
 
-Ajouter le suivi temps réel, l'ETA vers le départ avant prise en charge puis vers la destination,
-le code de démarrage, le partage de course, l'assistance Teranga, la notation et le signalement.
+Le GPS continu n'est pas une condition d'exécution. Le suivi repose d'abord sur les statuts manuels
+(`EN_ROUTE`, `ON_SITE`, `IN_PROGRESS`, `COMPLETED`), que le chauffeur peut actualiser dès que le
+réseau revient. La dernière position connue et l'ETA sont facultatives, clairement datées et jamais
+présentées comme actuelles lorsqu'elles sont anciennes.
+
+Le démarrage d'une course Mobilité exige un code client à quatre chiffres. Si le client ne peut pas
+utiliser l'application, l'opérateur lui communique le code par téléphone ou autorise
+exceptionnellement le départ avec un motif écrit et auditable. Le client et le chauffeur disposent
+du numéro d'assistance Teranga de leur zone.
+
+Le partage de course par lien sécurisé reste optionnel et léger : statuts, chauffeur, véhicule,
+trajet et dernière position connue, sans identité du client ni code de démarrage. Après la course,
+le client peut noter le chauffeur ou ouvrir le parcours de signalement/litige existant.
 
 ## 5. Console téléphonique
 
@@ -123,5 +134,9 @@ pilote.
 - Le rayon reste piloté par l'opérateur (5 à 50 km), conformément au lancement assisté par appel.
   L'enchaînement entièrement automatique des offres et l'élargissement automatique du rayon ne
   seront activés qu'après validation des règles opérationnelles pendant le pilote.
-- **Prochain lot** : suivi de course et sécurité (ETA, code de démarrage, partage, assistance,
-  notation et signalement).
+- **Lot 4 livré (réseau faible)** : actualisation espacée et manuelle, dernière position facultative
+  avec indicateur d'ancienneté, ETA uniquement sur une position récente, code de démarrage, recours
+  téléphonique audité, assistance locale, lien de partage temporaire, notation et signalement.
+- **Étape suivante recommandée** : pilote terrain et tableau de bord opérationnel (délais réels,
+  appels, refus, annulations, recours au démarrage téléphonique et incidents) avant d'automatiser
+  davantage le matching.
