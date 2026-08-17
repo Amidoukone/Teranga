@@ -10,6 +10,7 @@
 const { MissionPricingRule, Country } = require('../../models');
 const logger = require('../utils/logger');
 const { haversineDistanceMeters } = require('../utils/evidenceProximity');
+const { getDistanceMatrix } = require('./distanceMatrix.service');
 
 const FALLBACK_CURRENCY = 'XOF';
 const FALLBACK_DELAY_MINUTES = 120;
@@ -29,7 +30,10 @@ function buildQuoteOnlyResponse({ currency, estimatedDelayMinutes, note }) {
 
 // Surcharge distance (docs/DEV_SPEC_TERANGA_v6_PHASE3.md §2) : n'ajoute rien si retrait/dépose
 // ou pricePerKm manquent — comportement forfait fixe inchangé pour toutes les autres filières.
-function computeDistanceSurcharge(rule, { pickupLatitude, pickupLongitude, destinationLatitude, destinationLongitude }) {
+async function computeDistanceSurcharge(
+  rule,
+  { pickupLatitude, pickupLongitude, destinationLatitude, destinationLongitude }
+) {
   const pricePerKm = rule.pricePerKm != null ? Number(rule.pricePerKm) : 0;
   if (!pricePerKm) return { distanceKm: null, surcharge: 0 };
 
@@ -37,12 +41,37 @@ function computeDistanceSurcharge(rule, { pickupLatitude, pickupLongitude, desti
   const hasDestination = Number.isFinite(destinationLatitude) && Number.isFinite(destinationLongitude);
   if (!hasPickup || !hasDestination) return { distanceKm: null, surcharge: 0 };
 
-  const distanceKm = haversineDistanceMeters(pickupLatitude, pickupLongitude, destinationLatitude, destinationLongitude) / 1000;
-  return { distanceKm, surcharge: pricePerKm * distanceKm };
+  let distanceKm = null;
+  let distanceSource = 'haversine';
+
+  const matrix = await getDistanceMatrix(
+    [{ lat: pickupLatitude, lng: pickupLongitude }],
+    [{ lat: destinationLatitude, lng: destinationLongitude }],
+    { mode: 'driving' }
+  );
+  const roadDistanceMeters = matrix?.rows?.[0]?.[0]?.distanceMeters;
+
+  if (Number.isFinite(roadDistanceMeters)) {
+    distanceKm = roadDistanceMeters / 1000;
+    distanceSource = 'google_driving';
+  } else {
+    distanceKm =
+      haversineDistanceMeters(
+        pickupLatitude,
+        pickupLongitude,
+        destinationLatitude,
+        destinationLongitude
+      ) / 1000;
+  }
+
+  return { distanceKm, distanceSource, surcharge: pricePerKm * distanceKm };
 }
 
-function buildFixedEstimateResponse(rule, currency, distanceParams = {}) {
-  const { distanceKm, surcharge } = computeDistanceSurcharge(rule, distanceParams);
+async function buildFixedEstimateResponse(rule, currency, distanceParams = {}) {
+  const { distanceKm, distanceSource, surcharge } = await computeDistanceSurcharge(
+    rule,
+    distanceParams
+  );
   const basePrice = rule.basePrice != null ? Number(rule.basePrice) : null;
 
   return {
@@ -52,6 +81,7 @@ function buildFixedEstimateResponse(rule, currency, distanceParams = {}) {
     minPrice: rule.minPrice != null ? Number(rule.minPrice) : null,
     pricePerKm: rule.pricePerKm != null ? Number(rule.pricePerKm) : 0,
     distanceKm: distanceKm != null ? Number(distanceKm.toFixed(2)) : null,
+    distanceSource: distanceKm != null ? distanceSource : null,
     estimatedDelayMinutes: rule.estimatedDelayMinutes,
     note:
       rule.minPrice != null && Number(rule.minPrice) === Number(rule.basePrice)
@@ -150,7 +180,7 @@ async function estimateMission({
       return buildQuoteOnlyResponse({ currency, estimatedDelayMinutes: rule.estimatedDelayMinutes });
     }
 
-    return buildFixedEstimateResponse(rule, currency, {
+    return await buildFixedEstimateResponse(rule, currency, {
       pickupLatitude,
       pickupLongitude,
       destinationLatitude,

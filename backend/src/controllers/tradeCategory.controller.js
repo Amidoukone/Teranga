@@ -41,6 +41,25 @@ const GEO_INCLUDE = [
   { model: Region, as: 'region', attributes: ['id', 'name'] },
 ];
 
+// Colonnes présentes depuis la création historique du référentiel. Cette projection sert de
+// filet de sécurité pendant un déploiement roulant : le frontend public doit continuer à
+// afficher le formulaire si le nouveau code démarre quelques instants avant que les migrations
+// géographiques/seuils aient été appliquées sur la base de production.
+const LEGACY_PUBLIC_ATTRIBUTES = [
+  'id',
+  'name',
+  'slug',
+  'requiresCompany',
+  'defaultWarrantyDays',
+  'isActive',
+  'createdAt',
+  'updatedAt',
+];
+
+function isMissingColumnError(error) {
+  return error?.original?.code === 'ER_BAD_FIELD_ERROR' || error?.parent?.code === 'ER_BAD_FIELD_ERROR';
+}
+
 /**
  * Filière globale (countryId NULL) OU couvrant le pays/région passé — même hiérarchie à 3
  * niveaux que MissionPricingRule (région précise > pays entier > global), voir
@@ -78,6 +97,19 @@ exports.list = async (req, res) => {
 
     return res.json({ tradeCategories });
   } catch (e) {
+    if (isMissingColumnError(e)) {
+      logger.warn({ err: e }, 'tradeCategory.list.legacy_schema_fallback');
+      try {
+        const tradeCategories = await TradeCategory.findAll({
+          attributes: LEGACY_PUBLIC_ATTRIBUTES,
+          where: { isActive: true },
+          order: [['name', 'ASC']],
+        });
+        return res.json({ tradeCategories });
+      } catch (fallbackError) {
+        logger.error({ err: fallbackError }, 'tradeCategory.list.legacy_schema_fallback_failed');
+      }
+    }
     logger.error({ err: e }, 'tradeCategory.list.failed');
     return res.status(500).json({ error: 'Erreur lors de la récupération des filières' });
   }
