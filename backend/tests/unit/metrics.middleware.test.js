@@ -35,9 +35,13 @@ describe('metrics middleware profiler data', () => {
     app.use(requestContext);
     app.use(metricsMiddleware);
 
-    app.get('/api/profiled', (_req, res) => {
+    app.get('/api/profiled', async (_req, res) => {
       recordSqlQuery('SELECT * FROM services WHERE id = 1', 42);
       recordSqlQuery('SELECT * FROM tasks WHERE service_id = 1', 18);
+      // Le seuil du test est de 1 ms. Sans délai explicite, un runner CI rapide peut terminer
+      // la requête en moins de 1 ms et ne créer aucune entrée `slowRequests`, ce qui rendait
+      // l'assertion dépendante des performances de la machine plutôt que du comportement testé.
+      await new Promise((resolve) => setTimeout(resolve, 5));
       res.json({ ok: true });
     });
 
