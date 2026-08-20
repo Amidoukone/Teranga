@@ -1,22 +1,30 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Mail, MessageCircle, Phone, MapPin, Home, ArrowRight, CarFront, Truck } from "lucide-react";
 import { Trans, useTranslation } from "react-i18next";
+import {
+  ArrowRight,
+  Building2,
+  CarFront,
+  ChevronDown,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+  Truck,
+  UserRoundCheck,
+  X,
+} from "lucide-react";
 
 import MissionRequestForm from "../components/MissionRequestForm";
+import PropertyListingCard from "../components/property-listings/PropertyListingCard";
 import { listPropertyListings } from "../services/propertyListings";
-import { getFileUrl } from "../services/api";
-
-function listingPhotoUrl(listing) {
-  const first = Array.isArray(listing?.photos) ? listing.photos[0] : null;
-  const path = typeof first === "string" ? first : first?.url;
-  return path ? getFileUrl(path) : "";
-}
+import { buildTelHref, buildWhatsappHref } from "../utils/phone";
 
 export default function HomePage() {
   const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
   const [featuredListings, setFeaturedListings] = useState([]);
+  const [showRequestForm, setShowRequestForm] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -32,375 +40,229 @@ export default function HomePage() {
     };
   }, []);
 
-  const heroStats = [
-    {
-      label: t("homePage.hero.stats.realTime.label"),
-      text: t("homePage.hero.stats.realTime.text"),
-    },
-    {
-      label: t("homePage.hero.stats.agents.label"),
-      text: t("homePage.hero.stats.agents.text"),
-    },
-    {
-      label: t("homePage.hero.stats.diaspora.label"),
-      text: t("homePage.hero.stats.diaspora.text"),
-    },
-  ];
-
-  const contactInfos = [
-    { icon: Phone, text: t("homePage.contact.info.phone") },
-    { icon: Mail, text: t("homePage.contact.info.email") },
-    { icon: MapPin, text: t("homePage.contact.info.address") },
-  ];
-
-  const supportPhoneDisplay = t("homePage.contact.info.phone");
-  const supportPhoneWhatsapp = supportPhoneDisplay
-    .replace(/[^\d]/g, "")
-    .replace(/^00/, "");
+  const supportPhone = t("homePage.contact.info.phone");
   const supportEmail = t("homePage.contact.info.email");
-  const buildWhatsappHref = (message) =>
-    `https://wa.me/${supportPhoneWhatsapp}?text=${encodeURIComponent(message)}`;
-  const whatsappHref = buildWhatsappHref(t("dashboard.contactBar.whatsappPrefill"));
-  const emailHref = `mailto:${supportEmail}`;
+  const whatsappHref = buildWhatsappHref(
+    supportPhone,
+    t("dashboard.contactBar.whatsappPrefill")
+  );
+  const telHref = buildTelHref(supportPhone);
 
   return (
-    <div className="min-h-screen scroll-smooth bg-gradient-to-br from-surface-main via-surface-card to-surface-main text-text-primary">
-      <main className="flex-1">
-        <section className="px-6 pt-6 sm:pt-8">
-          <div className="relative mx-auto flex max-w-6xl flex-col gap-4 overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 px-4 py-4 shadow-sm dark:from-emerald-900/20 dark:via-teal-900/20 dark:to-cyan-900/20 sm:px-5 sm:py-5 md:flex-row md:items-center md:justify-between">
-            <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-emerald-500/20 blur-2xl" />
-            <div className="relative min-w-0">
-              <span className="inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
-                {t("dashboard.contactBar.badge")}
+    <div className="min-h-screen bg-surface-main text-text-primary">
+      <main>
+        <section id="accueil" className="relative overflow-hidden px-4 pb-12 pt-7 sm:px-6 sm:pb-16 sm:pt-12">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[34rem] overflow-hidden" aria-hidden="true">
+            <div className="absolute left-[-8rem] top-[-10rem] h-80 w-80 rounded-full bg-blue-500/10 blur-3xl" />
+            <div className="absolute right-[-8rem] top-20 h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl" />
+          </div>
+
+          <div className="relative mx-auto max-w-6xl">
+            <header className="mx-auto max-w-3xl text-center">
+              <span className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-800 dark:text-blue-200">
+                <ShieldCheck size={15} aria-hidden="true" />
+                {t("homePage.simpleHero.badge")}
               </span>
-              <h2 className="mt-2 text-lg font-bold tracking-tight text-emerald-900 dark:text-emerald-100 sm:text-xl">
-                {t("dashboard.contactBar.title")}
-              </h2>
-              <p className="mt-1 text-sm text-emerald-900/80 dark:text-emerald-100/90">
-                {t("dashboard.contactBar.subtitle")}
+              <h1 className="mt-5 text-[2.25rem] font-bold leading-[1.04] tracking-[-0.05em] sm:text-5xl lg:text-6xl">
+                {t("homePage.simpleHero.title")}
+              </h1>
+              <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-text-secondary sm:text-lg">
+                {t("homePage.simpleHero.subtitle")}
               </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                <span className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-emerald-600/20 bg-white/70 px-2.5 py-1 font-semibold text-emerald-800 dark:border-emerald-300/30 dark:bg-black/20 dark:text-emerald-100">
-                  <MessageCircle size={15} />
-                  {supportPhoneDisplay}
-                </span>
-                <span className="inline-flex max-w-full items-start gap-1.5 rounded-lg border border-emerald-600/20 bg-white/70 px-2.5 py-1 text-emerald-800 dark:border-emerald-300/30 dark:bg-black/20 dark:text-emerald-100">
-                  <Mail size={15} className="mt-0.5 shrink-0" />
-                  <span className="min-w-0 break-all leading-snug">
-                    {supportEmail}
+            </header>
+
+            <section className="mx-auto mt-8 max-w-3xl" aria-labelledby="home-services-title">
+              <h2 id="home-services-title" className="text-center text-sm font-semibold text-text-secondary">
+                {t("homePage.simpleHero.chooseAction")}
+              </h2>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4">
+                <Link
+                  to="/taxi"
+                  className="group flex min-h-36 flex-col justify-between rounded-3xl bg-blue-600 p-4 text-white shadow-lg shadow-blue-900/10 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 sm:p-5"
+                >
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15">
+                    <CarFront size={23} aria-hidden="true" />
                   </span>
-                </span>
+                  <span>
+                    <strong className="block text-lg">{t("homePage.quickServices.taxi.title")}</strong>
+                    <span className="mt-1 block text-sm text-blue-100">{t("homePage.quickServices.taxi.subtitle")}</span>
+                  </span>
+                </Link>
+
+                <Link
+                  to="/livraison"
+                  className="group flex min-h-36 flex-col justify-between rounded-3xl bg-emerald-600 p-4 text-white shadow-lg shadow-emerald-900/10 transition hover:-translate-y-0.5 hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/30 sm:p-5"
+                >
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15">
+                    <Truck size={23} aria-hidden="true" />
+                  </span>
+                  <span>
+                    <strong className="block text-lg">{t("homePage.quickServices.delivery.title")}</strong>
+                    <span className="mt-1 block text-sm text-emerald-50">{t("homePage.quickServices.delivery.subtitle")}</span>
+                  </span>
+                </Link>
+
+                <Link
+                  to="/immobilier"
+                  className="group col-span-2 flex min-h-24 items-center gap-4 rounded-3xl border border-border/80 bg-surface-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400/60 hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 sm:p-5"
+                >
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600">
+                    <Building2 size={24} aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1 text-left">
+                    <strong className="block text-lg text-text-primary">{t("homePage.quickServices.realEstate.title")}</strong>
+                    <span className="mt-0.5 block text-sm text-text-secondary">{t("homePage.quickServices.realEstate.subtitle")}</span>
+                  </span>
+                  <ArrowRight className="shrink-0 text-text-muted transition group-hover:translate-x-1" size={20} aria-hidden="true" />
+                </Link>
               </div>
-            </div>
-            <div className="relative flex flex-wrap items-center gap-2">
-              <a
-                href={whatsappHref}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-700/20 bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-700"
-              >
-                {t("dashboard.contactBar.whatsappCta")}
-                <ArrowUpRight size={15} />
-              </a>
-              <a
-                href={emailHref}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-700/30 bg-white/80 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:bg-white dark:bg-transparent dark:text-emerald-100 dark:hover:bg-emerald-900/30"
-              >
-                {t("dashboard.contactBar.emailCta")}
-              </a>
-            </div>
-          </div>
-        </section>
 
-        <section
-          id="accueil"
-          className="relative overflow-hidden px-6 pb-14 pt-8 sm:pb-20 sm:pt-12"
-        >
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-full">
-            <div className="absolute left-1/2 top-[-11rem] h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-blue-500/12 blur-[120px]" />
-            <div className="absolute right-[-10rem] top-24 h-[22rem] w-[22rem] rounded-full bg-cyan-400/10 blur-[120px]" />
-          </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {whatsappHref ? (
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/30"
+                  >
+                    <MessageCircle size={19} aria-hidden="true" />
+                    {t("homePage.simpleHero.whatsapp")}
+                  </a>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setShowRequestForm((current) => !current)}
+                  aria-expanded={showRequestForm}
+                  aria-controls="home-other-request"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-border bg-surface-card px-5 py-3 text-sm font-semibold text-text-primary shadow-sm hover:border-blue-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30"
+                >
+                  {showRequestForm ? <X size={18} aria-hidden="true" /> : <Sparkles size={18} aria-hidden="true" />}
+                  {t(showRequestForm ? "homePage.simpleHero.closeRequest" : "homePage.simpleHero.otherRequest")}
+                  {!showRequestForm ? <ChevronDown size={17} aria-hidden="true" /> : null}
+                </button>
+              </div>
 
-          <div className="relative mx-auto max-w-2xl text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface-main/85 px-4 py-1.5 text-xs font-medium text-text-secondary shadow-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-              {t("homePage.hero.badge")}
-            </span>
-
-            <h1 className="mt-5 text-[2.1rem] font-semibold leading-[1.05] tracking-[-0.045em] text-text-primary sm:text-[3rem]">
-              <span className="block text-blue-700 dark:text-blue-300">
-                {t("homePage.hero.titleLine1")}
-              </span>
-              <span className="mt-1.5 block text-text-primary dark:text-white">
-                {t("homePage.hero.titleLine2")}
-              </span>
-            </h1>
-
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-text-secondary sm:text-base">
-              <Trans
-                i18nKey="homePage.hero.description"
-                components={[<strong key="hero-strong" />]}
-              />
-            </p>
-          </div>
-
-          <div className="relative mx-auto mt-8 max-w-xl">
-            <div className="mb-4 grid grid-cols-2 gap-3">
-              <Link
-                to="/taxi"
-                className="group flex items-center gap-3 rounded-2xl border border-border/70 bg-surface-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
-                  <CarFront size={20} />
-                </span>
-                <span>
-                  <span className="block text-sm font-semibold text-text-primary">
-                    {t("homePage.quickServices.taxi.title")}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-text-secondary">
-                    {t("homePage.quickServices.taxi.subtitle")}
-                  </span>
-                </span>
-              </Link>
-              <Link
-                to="/livraison"
-                className="group flex items-center gap-3 rounded-2xl border border-border/70 bg-surface-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
-                  <Truck size={20} />
-                </span>
-                <span>
-                  <span className="block text-sm font-semibold text-text-primary">
-                    {t("homePage.quickServices.delivery.title")}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-text-secondary">
-                    {t("homePage.quickServices.delivery.subtitle")}
-                  </span>
-                </span>
-              </Link>
-            </div>
-            <MissionRequestForm />
-          </div>
-
-          <div className="relative mx-auto mt-8 flex max-w-xl flex-wrap items-center justify-center gap-3">
-            <a
-              href={whatsappHref}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-secondary inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm"
-            >
-              {t("homePage.hero.ctaWhatsapp")}
-              <ArrowUpRight size={16} />
-            </a>
-            <Link to="/register" className="btn-secondary rounded-full px-6 py-2.5 text-sm">
-              {t("homePage.hero.ctaRegister")}
-            </Link>
-            <Link
-              to="/login"
-              className="inline-flex items-center px-3 py-2.5 text-sm font-medium text-text-secondary transition hover:text-text-primary"
-            >
-              {t("homePage.hero.ctaLogin")}
-            </Link>
-          </div>
-
-          <div className="relative mx-auto mt-10 max-w-3xl overflow-hidden rounded-[26px] border border-border/70 bg-surface-main/78 shadow-[0_16px_36px_-30px_rgba(15,23,42,0.28)]">
-            <div className="grid divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-              {heroStats.map((item) => (
-                <div key={item.label} className="px-4 py-4 text-center sm:px-5">
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-text-muted">
-                    {item.label}
-                  </p>
-                  <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-                    {item.text}
-                  </p>
+              {showRequestForm ? (
+                <div id="home-other-request" className="mt-5 scroll-mt-24">
+                  <MissionRequestForm />
                 </div>
+              ) : null}
+            </section>
+
+            <ul className="mx-auto mt-8 grid max-w-3xl gap-3 sm:grid-cols-3" aria-label={t("homePage.simpleHero.trustLabel")}>
+              {[
+                { key: "withoutAccount", icon: Sparkles },
+                { key: "human", icon: UserRoundCheck },
+                { key: "verified", icon: ShieldCheck },
+              ].map(({ key, icon: Icon }) => (
+                <li key={key} className="flex items-center gap-3 rounded-2xl border border-border/70 bg-surface-card/70 px-4 py-3 text-sm text-text-secondary">
+                  <Icon size={18} className="shrink-0 text-blue-700 dark:text-blue-300" aria-hidden="true" />
+                  {t(`homePage.simpleHero.trust.${key}`)}
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         </section>
 
         {featuredListings.length > 0 ? (
-          <section
-            id="immobilier"
-            className="border-t border-border/70 bg-surface-main px-6 py-14 sm:py-16"
-          >
-            <div className="mx-auto max-w-5xl">
-              <div className="flex flex-wrap items-end justify-between gap-3">
+          <section id="immobilier" className="border-t border-border/70 bg-surface-card px-4 py-12 sm:px-6 sm:py-16">
+            <div className="mx-auto max-w-6xl">
+              <div className="flex items-end justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold tracking-tight text-text-primary sm:text-2xl">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700 dark:text-blue-300">
+                    {t("homePage.propertyListings.kicker")}
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] sm:text-3xl">
                     {t("homePage.propertyListings.title")}
                   </h2>
-                  <p className="mt-1 text-sm text-text-secondary">
+                  <p className="mt-2 max-w-xl text-sm text-text-secondary sm:text-base">
                     {t("homePage.propertyListings.subtitle")}
                   </p>
                 </div>
                 <Link
                   to="/immobilier"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:underline dark:text-blue-300"
+                  className="hidden min-h-11 shrink-0 items-center gap-2 rounded-full px-2 text-sm font-semibold text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 dark:text-blue-300 sm:inline-flex"
                 >
                   {t("homePage.propertyListings.viewAll")}
-                  <ArrowRight size={14} />
+                  <ArrowRight size={16} aria-hidden="true" />
                 </Link>
               </div>
 
-              <div className="mt-6 grid gap-5 sm:grid-cols-3">
-                {featuredListings.map((listing) => {
-                  const photo = listingPhotoUrl(listing);
-                  return (
-                    <Link
-                      key={listing.id}
-                      to={`/immobilier/${listing.id}`}
-                      className="group overflow-hidden rounded-2xl border border-border bg-surface-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                    >
-                      <div className="aspect-[4/3] w-full overflow-hidden bg-surface-main">
-                        {photo ? (
-                          <img
-                            src={photo}
-                            alt={listing.title}
-                            className="h-full w-full object-cover transition group-hover:scale-105"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-text-muted">
-                            <Home size={28} />
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="truncate text-sm font-semibold text-text-primary">
-                          {listing.title}
-                        </h3>
-                        <p className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
-                          <MapPin size={12} />
-                          {listing.neighborhood ? `${listing.neighborhood}, ` : ""}
-                          {listing.city}
-                          {listing.country ? `, ${listing.country}` : ""}
-                        </p>
-                        <p className="mt-2 text-sm font-bold text-text-primary">
-                          {listing.price} {listing.currency}
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
+              <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {featuredListings.map((listing) => (
+                  <PropertyListingCard key={listing.id} listing={listing} compact />
+                ))}
               </div>
+              <Link
+                to="/immobilier"
+                className="btn-secondary mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm sm:hidden"
+              >
+                {t("homePage.propertyListings.viewAll")}
+                <ArrowRight size={16} aria-hidden="true" />
+              </Link>
             </div>
           </section>
         ) : null}
 
-        <section
-          id="contact"
-          className="border-t border-border/70 bg-surface-card px-6 py-14 sm:py-16"
-        >
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-surface-main/70 px-3 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-              <span className="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-blue-700 dark:text-blue-300">
+        <section id="contact" className="px-4 py-12 sm:px-6 sm:py-16">
+          <div className="mx-auto grid max-w-5xl gap-6 overflow-hidden rounded-[2rem] border border-blue-500/20 bg-blue-600 p-6 text-white shadow-xl shadow-blue-900/10 sm:p-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+            <div>
+              <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-blue-100">
+                <MessageCircle size={15} aria-hidden="true" />
                 {t("homePage.contact.kicker")}
               </span>
+              <h2 className="mt-3 text-2xl font-bold tracking-[-0.03em] sm:text-3xl">
+                {t("homePage.contact.title")}
+              </h2>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-blue-100 sm:text-base">
+                {t("homePage.contact.subtitle")}
+              </p>
             </div>
-            <h2 className="mt-4 text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl">
-              {t("homePage.contact.title")}
-            </h2>
-            <p className="page-lead mx-auto mt-4 max-w-xl text-base sm:text-lg">
-              {t("homePage.contact.subtitle")}
-            </p>
-          </div>
-
-          <div className="mx-auto mt-10 max-w-xl rounded-[28px] border border-border/70 bg-surface-main/90 p-6 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.22)] sm:p-7">
-            <p className="page-kicker">{t("homePage.contact.infoTitle")}</p>
-
-            <div className="mt-5 flex flex-col space-y-4 text-text-secondary">
-              {contactInfos.map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/12 text-blue-600">
-                    <Icon size={18} />
-                  </div>
-                  <p className="text-sm sm:text-base">{text}</p>
-                </div>
-              ))}
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
+              {whatsappHref ? (
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-blue-800 shadow-sm hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/40"
+                >
+                  <MessageCircle size={18} aria-hidden="true" />
+                  {t("homePage.contact.ctaWhatsapp")}
+                </a>
+              ) : null}
+              {telHref ? (
+                <a
+                  href={telHref}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/10 px-5 py-3 text-sm font-semibold text-white hover:bg-white/15 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/40"
+                >
+                  <Phone size={18} aria-hidden="true" />
+                  {t("homePage.contact.ctaCall")}
+                </a>
+              ) : null}
             </div>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <a
-                href={whatsappHref}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-primary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm"
-              >
-                {t("homePage.contact.ctaWhatsapp")}
-                <ArrowUpRight size={16} />
-              </a>
-              <a
-                href={emailHref}
-                className="btn-secondary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm"
-              >
-                {t("homePage.contact.ctaEmail")}
-                <Mail size={16} />
-              </a>
-            </div>
-
-            <p className="mt-6 text-sm leading-relaxed text-text-muted">
-              {t("homePage.contact.note")}
-            </p>
           </div>
         </section>
       </main>
 
-      <footer className="mt-4 border-t border-border/70 bg-surface-card/95 px-6 py-8 text-xs text-text-muted sm:text-sm">
-        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-end">
-          <div className="text-center lg:text-left">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-blue-700 dark:text-blue-300">
-              Teranga
-            </p>
-            <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-secondary">
-              {t("homePage.footer.note")}
-            </p>
-            <p className="mt-4 max-w-full whitespace-nowrap leading-none">
+      <footer className="border-t border-border/70 bg-surface-card px-4 py-8 text-sm text-text-muted sm:px-6">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="font-bold tracking-wide text-text-primary">Teranga</p>
+            <p className="mt-2 max-w-lg leading-relaxed">{t("homePage.footer.note")}</p>
+            <p className="mt-3">
               <Trans
                 i18nKey="homePage.footer.copyright"
                 values={{ year: currentYear }}
-                components={[
-                  <span
-                    key="footer-brand"
-                    className="font-medium text-blue-600 dark:text-blue-300"
-                  />,
-                ]}
+                components={[<span key="footer-brand" className="font-medium text-blue-700 dark:text-blue-300" />]}
               />
             </p>
           </div>
-
-          <div className="text-center sm:text-left">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-text-muted">
-              {t("homePage.footer.resourcesTitle")}
-            </p>
-            <div className="mt-3 flex flex-wrap justify-center gap-4 sm:justify-start">
-              <Link
-                to="/help-support"
-                className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
-              >
-                {t("footer.links.helpSupport")}
-              </Link>
-              <Link
-                to="/privacy"
-                className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
-              >
-                {t("footer.links.privacy")}
-              </Link>
-              <Link
-                to="/terms"
-                className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
-              >
-                {t("footer.links.terms")}
-              </Link>
-              <Link
-                to="/legal"
-                className="transition-colors hover:text-blue-600 dark:hover:text-blue-300"
-              >
-                {t("footer.links.legal")}
-              </Link>
-            </div>
-          </div>
+          <nav className="flex flex-wrap gap-x-5 gap-y-3" aria-label={t("homePage.footer.resourcesTitle")}>
+            <Link to="/help-support" className="hover:text-blue-700 dark:hover:text-blue-300">{t("footer.links.helpSupport")}</Link>
+            <Link to="/privacy" className="hover:text-blue-700 dark:hover:text-blue-300">{t("footer.links.privacy")}</Link>
+            <Link to="/terms" className="hover:text-blue-700 dark:hover:text-blue-300">{t("footer.links.terms")}</Link>
+            <a href={`mailto:${supportEmail}`} className="hover:text-blue-700 dark:hover:text-blue-300">{supportEmail}</a>
+          </nav>
         </div>
       </footer>
     </div>

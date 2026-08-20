@@ -3,7 +3,9 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/provider.controller');
 const vehicleCtrl = require('../controllers/vehicle.controller');
+const mobilityMediaCtrl = require('../controllers/mobilityMedia.controller');
 const auth = require('../middleware/auth.middleware');
+const uploadMobilityMedia = require('../middleware/uploadMobilityMedia.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
 const { validateBody } = require('../middleware/validate.middleware');
 const {
@@ -67,6 +69,13 @@ router.patch(
 router.get('/available', auth, requireRoles('admin', 'category_manager'), ctrl.listAvailable);
 
 router.get('/', auth, requireRoles('admin', 'category_manager'), ctrl.list);
+router.post(
+  '/:id/mobility-media',
+  auth,
+  requireRoles('admin', 'category_manager'),
+  uploadMobilityMedia,
+  mobilityMediaCtrl.upload
+);
 router.get(
   '/:id/vehicles',
   auth,

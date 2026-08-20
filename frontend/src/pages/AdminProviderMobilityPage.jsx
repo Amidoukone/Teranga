@@ -1,17 +1,35 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Bike, CarFront, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  Bike,
+  CarFront,
+  CheckCircle2,
+  FileCheck2,
+  Image as ImageIcon,
+  Loader2,
+  ShieldCheck,
+  Trash2,
+  Upload,
+} from "lucide-react";
 
 import { AdminField, AdminPageHeader } from "../components/admin/AdminFormUi";
+import { getFileUrl } from "../services/api";
 import { notify } from "../utils/notify";
+import { optimizeImageForUpload } from "../utils/imageUpload";
 import {
   createProviderVehicle,
   getProvider,
   listProviderVehicles,
   updateProviderDriverCompliance,
   updateProviderVehicle,
+  uploadProviderMobilityMedia,
 } from "../services/providers";
+
+const PHOTO_ACCEPT =
+  "image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif";
+const DOCUMENT_ACCEPT = `${PHOTO_ACCEPT},application/pdf,.pdf`;
 
 const EMPTY_VEHICLE = {
   vehicleType: "motorcycle",
@@ -75,6 +93,8 @@ export default function AdminProviderMobilityPage() {
   const [loading, setLoading] = useState(true);
   const [savingDriver, setSavingDriver] = useState(false);
   const [savingVehicle, setSavingVehicle] = useState(false);
+  const [uploadingMediaCount, setUploadingMediaCount] = useState(0);
+  const [activeStep, setActiveStep] = useState("driver");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,6 +118,8 @@ export default function AdminProviderMobilityPage() {
   const changeDriver = (key, value) => setDriverForm((current) => ({ ...current, [key]: value }));
   const changeVehicle = (key, value) =>
     setVehicleForm((current) => ({ ...current, [key]: value }));
+  const changeUploadingMedia = (uploading) =>
+    setUploadingMediaCount((current) => Math.max(0, current + (uploading ? 1 : -1)));
 
   const saveDriver = async (event) => {
     event.preventDefault();
@@ -107,6 +129,7 @@ export default function AdminProviderMobilityPage() {
       setProvider(result.provider);
       setCompliance(result.compliance);
       notify.success(t("adminProviderMobility.success.driver"));
+      setActiveStep("vehicle");
     } catch (error) {
       notify(error?.response?.data?.error || t("adminProviderMobility.errors.driver"));
     } finally {
@@ -143,6 +166,7 @@ export default function AdminProviderMobilityPage() {
   };
 
   const startEdit = (vehicle) => {
+    setActiveStep("vehicle");
     setEditingVehicleId(vehicle.id);
     setVehicleForm(vehicleFormFrom(vehicle));
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
@@ -151,6 +175,15 @@ export default function AdminProviderMobilityPage() {
   if (loading) {
     return <div className="min-h-screen bg-surface-main p-10 text-center text-text-muted">{t("common.loading")}</div>;
   }
+
+  const onboardingChecks = [
+    Boolean(provider?.profilePhotoUrl),
+    Boolean(provider?.driverLicenseNumber && provider?.driverLicenseDocumentUrl),
+    Boolean(provider?.identityDocumentUrl),
+    vehicles.length > 0,
+  ];
+  const completedChecks = onboardingChecks.filter(Boolean).length;
+  const progressPercent = Math.round((completedChecks / onboardingChecks.length) * 100);
 
   return (
     <main className="min-h-screen bg-surface-main px-4 py-8 sm:px-6">
@@ -162,6 +195,54 @@ export default function AdminProviderMobilityPage() {
           title={t("adminProviderMobility.title", { name: provider?.displayFirstName || "" })}
           subtitle={t("adminProviderMobility.subtitle")}
         />
+
+        <section className="rounded-2xl border border-border bg-surface-card p-4 shadow-sm sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-text-primary">
+                {t("adminProviderMobility.guide.title")}
+              </p>
+              <p className="mt-1 text-xs text-text-muted">
+                {t("adminProviderMobility.guide.progress", {
+                  completed: completedChecks,
+                  total: onboardingChecks.length,
+                })}
+              </p>
+            </div>
+            <span className="text-sm font-bold text-blue-700 dark:text-blue-300">
+              {progressPercent}%
+            </span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-main">
+            <div
+              className="h-full rounded-full bg-emerald-600 transition-all"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {[
+              { value: "driver", complete: onboardingChecks.slice(0, 3).every(Boolean) },
+              { value: "vehicle", complete: onboardingChecks[3] },
+            ].map(({ value, complete }, index) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setActiveStep(value)}
+                aria-pressed={activeStep === value}
+                className={`min-h-14 rounded-xl border px-3 py-2 text-left text-sm font-semibold ${
+                  activeStep === value
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : "border-border bg-surface-main text-text-secondary hover:border-blue-400"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  {complete ? <CheckCircle2 size={17} /> : <span>{index + 1}.</span>}
+                  {t(`adminProviderMobility.guide.${value}`)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
 
         <section className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-border bg-surface-card p-4">
@@ -182,13 +263,14 @@ export default function AdminProviderMobilityPage() {
           </div>
         </section>
 
-        {compliance?.driverIssues?.length ? (
+        {activeStep === "driver" && compliance?.driverIssues?.length ? (
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
             <p className="font-semibold">{t("adminProviderMobility.missingDriver")}</p>
             <p className="mt-1">{compliance.driverIssues.join(", ")}</p>
           </div>
         ) : null}
 
+        {activeStep === "driver" ? (
         <form onSubmit={saveDriver} className="rounded-2xl border border-border bg-surface-card p-5 shadow-sm sm:p-6">
           <div className="flex items-center gap-2">
             <ShieldCheck size={20} className="text-blue-600" />
@@ -196,33 +278,55 @@ export default function AdminProviderMobilityPage() {
           </div>
           <p className="mt-1 text-xs text-text-muted">{t("adminProviderMobility.privateDocuments")}</p>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <AdminField label={t("adminProviderMobility.driver.profilePhotoUrl")}>
-              <input className="app-input" type="url" value={driverForm.profilePhotoUrl} onChange={(e) => changeDriver("profilePhotoUrl", e.target.value)} />
-            </AdminField>
+            <MobilityMediaPicker
+              label={t("adminProviderMobility.driver.profilePhotoUrl")}
+              value={driverForm.profilePhotoUrl}
+              providerId={id}
+              kind="profilePhoto"
+              photosOnly
+              onUploaded={(url) => changeDriver("profilePhotoUrl", url)}
+              onUploadStateChange={changeUploadingMedia}
+              t={t}
+            />
             <AdminField label={t("adminProviderMobility.driver.licenseNumber")}>
               <input className="app-input" value={driverForm.driverLicenseNumber} onChange={(e) => changeDriver("driverLicenseNumber", e.target.value)} />
             </AdminField>
-            <AdminField label={t("adminProviderMobility.driver.licenseDocumentUrl")}>
-              <input className="app-input" type="url" value={driverForm.driverLicenseDocumentUrl} onChange={(e) => changeDriver("driverLicenseDocumentUrl", e.target.value)} />
-            </AdminField>
+            <MobilityMediaPicker
+              label={t("adminProviderMobility.driver.licenseDocumentUrl")}
+              value={driverForm.driverLicenseDocumentUrl}
+              providerId={id}
+              kind="driverLicense"
+              onUploaded={(url) => changeDriver("driverLicenseDocumentUrl", url)}
+              onUploadStateChange={changeUploadingMedia}
+              t={t}
+            />
             <AdminField label={t("adminProviderMobility.driver.licenseExpiry")}>
               <input className="app-input" type="date" value={driverForm.driverLicenseExpiresAt} onChange={(e) => changeDriver("driverLicenseExpiresAt", e.target.value)} />
             </AdminField>
-            <AdminField label={t("adminProviderMobility.driver.identityDocumentUrl")}>
-              <input className="app-input" type="url" value={driverForm.identityDocumentUrl} onChange={(e) => changeDriver("identityDocumentUrl", e.target.value)} />
-            </AdminField>
+            <MobilityMediaPicker
+              label={t("adminProviderMobility.driver.identityDocumentUrl")}
+              value={driverForm.identityDocumentUrl}
+              providerId={id}
+              kind="identityDocument"
+              onUploaded={(url) => changeDriver("identityDocumentUrl", url)}
+              onUploadStateChange={changeUploadingMedia}
+              t={t}
+            />
             <div className="flex flex-wrap items-end gap-5 pb-2">
               <CheckField label={t("adminProviderMobility.driver.licenseVerified")} checked={driverForm.driverLicenseVerified} onChange={(value) => changeDriver("driverLicenseVerified", value)} />
               <CheckField label={t("adminProviderMobility.driver.identityVerified")} checked={driverForm.identityDocumentVerified} onChange={(value) => changeDriver("identityDocumentVerified", value)} />
             </div>
           </div>
           <div className="mt-5 flex justify-end">
-            <button className="app-btn-primary rounded-full px-5 py-2.5 text-sm" disabled={savingDriver}>
+            <button className="app-btn-primary rounded-full px-5 py-2.5 text-sm" disabled={savingDriver || uploadingMediaCount > 0}>
               {t(savingDriver ? "adminProviderMobility.saving" : "adminProviderMobility.driver.save")}
             </button>
           </div>
         </form>
+        ) : null}
 
+        {activeStep === "vehicle" ? (
+        <>
         <section className="rounded-2xl border border-border bg-surface-card p-5 shadow-sm sm:p-6">
           <h2 className="text-lg font-semibold text-text-primary">{t("adminProviderMobility.fleet.title")}</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -264,7 +368,12 @@ export default function AdminProviderMobilityPage() {
             setEditingVehicleId(null);
             setVehicleForm(vehicleFormFrom());
           }}
+          providerId={id}
+          onUploadStateChange={changeUploadingMedia}
+          mediaUploading={uploadingMediaCount > 0}
         />
+        </>
+        ) : null}
       </div>
     </main>
   );
@@ -279,7 +388,18 @@ function CheckField({ label, checked, onChange }) {
   );
 }
 
-function VehicleForm({ t, form, change, onSubmit, saving, editing, onCancel }) {
+function VehicleForm({
+  t,
+  form,
+  change,
+  onSubmit,
+  saving,
+  editing,
+  onCancel,
+  providerId,
+  onUploadStateChange,
+  mediaUploading,
+}) {
   return (
     <form onSubmit={onSubmit} className="rounded-2xl border border-border bg-surface-card p-5 shadow-sm sm:p-6">
       <h2 className="text-lg font-semibold text-text-primary">
@@ -292,11 +412,21 @@ function VehicleForm({ t, form, change, onSubmit, saving, editing, onCancel }) {
             <option value="car">{t("adminProviderMobility.vehicle.car")}</option>
           </select>
         </AdminField>
-        {[["brand", "brand"], ["model", "model"], ["color", "color"], ["plateNumber", "plate"], ["photoUrl", "photoUrl"]].map(([field, key]) => (
+        {[["brand", "brand"], ["model", "model"], ["color", "color"], ["plateNumber", "plate"]].map(([field, key]) => (
           <AdminField key={field} label={t(`adminProviderMobility.vehicle.${key}`)}>
-            <input className="app-input" type={field === "photoUrl" ? "url" : "text"} required={field !== "photoUrl"} value={form[field]} onChange={(e) => change(field, e.target.value)} />
+            <input className="app-input" type="text" required value={form[field]} onChange={(e) => change(field, e.target.value)} />
           </AdminField>
         ))}
+        <MobilityMediaPicker
+          label={t("adminProviderMobility.vehicle.photoUrl")}
+          value={form.photoUrl}
+          providerId={providerId}
+          kind="vehiclePhoto"
+          photosOnly
+          onUploaded={(url) => change("photoUrl", url)}
+          onUploadStateChange={onUploadStateChange}
+          t={t}
+        />
         <AdminField label={t("adminProviderMobility.vehicle.capacity")}>
           <input className="app-input" type="number" min="1" max="12" required value={form.capacity} onChange={(e) => change("capacity", e.target.value)} />
         </AdminField>
@@ -305,9 +435,9 @@ function VehicleForm({ t, form, change, onSubmit, saving, editing, onCancel }) {
         {form.vehicleType === "motorcycle" ? <CheckField label={t("adminProviderMobility.vehicle.helmet")} checked={form.hasPassengerHelmet} onChange={(value) => change("hasPassengerHelmet", value)} /> : null}
         {form.vehicleType === "car" ? <CheckField label={t("adminProviderMobility.vehicle.airConditioning")} checked={form.hasAirConditioning} onChange={(value) => change("hasAirConditioning", value)} /> : null}
       </div>
-      <DocumentFields t={t} form={form} change={change} prefix="registration" numberField="registrationNumber" urlField="registrationDocumentUrl" verifiedField="registrationVerified" />
-      <DocumentFields t={t} form={form} change={change} prefix="insurance" numberField="insurancePolicyNumber" urlField="insuranceDocumentUrl" expiryField="insuranceExpiresAt" verifiedField="insuranceVerified" />
-      <DocumentFields t={t} form={form} change={change} prefix="inspection" numberField="inspectionCertificateNumber" urlField="inspectionDocumentUrl" expiryField="inspectionExpiresAt" verifiedField="inspectionVerified" />
+      <DocumentFields t={t} form={form} change={change} prefix="registration" numberField="registrationNumber" urlField="registrationDocumentUrl" verifiedField="registrationVerified" providerId={providerId} mediaKind="vehicleRegistration" onUploadStateChange={onUploadStateChange} />
+      <DocumentFields t={t} form={form} change={change} prefix="insurance" numberField="insurancePolicyNumber" urlField="insuranceDocumentUrl" expiryField="insuranceExpiresAt" verifiedField="insuranceVerified" providerId={providerId} mediaKind="vehicleInsurance" onUploadStateChange={onUploadStateChange} />
+      <DocumentFields t={t} form={form} change={change} prefix="inspection" numberField="inspectionCertificateNumber" urlField="inspectionDocumentUrl" expiryField="inspectionExpiresAt" verifiedField="inspectionVerified" providerId={providerId} mediaKind="vehicleInspection" onUploadStateChange={onUploadStateChange} />
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <AdminField label={t("adminProviderMobility.vehicle.status")}>
           <select className="app-input" value={form.status} onChange={(e) => change("status", e.target.value)}>
@@ -317,22 +447,166 @@ function VehicleForm({ t, form, change, onSubmit, saving, editing, onCancel }) {
       </div>
       <div className="mt-5 flex justify-end gap-2">
         {editing ? <button type="button" onClick={onCancel} className="app-btn-secondary rounded-full px-5 py-2.5 text-sm">{t("common.cancel")}</button> : null}
-        <button className="app-btn-primary rounded-full px-5 py-2.5 text-sm" disabled={saving}>{t(saving ? "adminProviderMobility.saving" : "adminProviderMobility.vehicle.save")}</button>
+        <button className="app-btn-primary rounded-full px-5 py-2.5 text-sm" disabled={saving || mediaUploading}>{t(saving ? "adminProviderMobility.saving" : "adminProviderMobility.vehicle.save")}</button>
       </div>
     </form>
   );
 }
 
-function DocumentFields({ t, form, change, prefix, numberField, urlField, expiryField, verifiedField }) {
+function DocumentFields({
+  t,
+  form,
+  change,
+  prefix,
+  numberField,
+  urlField,
+  expiryField,
+  verifiedField,
+  providerId,
+  mediaKind,
+  onUploadStateChange,
+}) {
   return (
     <fieldset className="mt-5 rounded-xl border border-border p-4">
       <legend className="px-2 text-sm font-semibold text-text-primary">{t(`adminProviderMobility.documents.${prefix}.title`)}</legend>
       <div className="grid gap-4 md:grid-cols-3">
         <AdminField label={t("adminProviderMobility.documents.number")}><input className="app-input" value={form[numberField]} onChange={(e) => change(numberField, e.target.value)} /></AdminField>
-        <AdminField label={t("adminProviderMobility.documents.url")}><input className="app-input" type="url" value={form[urlField]} onChange={(e) => change(urlField, e.target.value)} /></AdminField>
+        <MobilityMediaPicker
+          label={t("adminProviderMobility.documents.url")}
+          value={form[urlField]}
+          providerId={providerId}
+          kind={mediaKind}
+          onUploaded={(url) => change(urlField, url)}
+          onUploadStateChange={onUploadStateChange}
+          t={t}
+        />
         {expiryField ? <AdminField label={t("adminProviderMobility.documents.expiry")}><input className="app-input" type="date" value={form[expiryField]} onChange={(e) => change(expiryField, e.target.value)} /></AdminField> : null}
       </div>
       <div className="mt-3"><CheckField label={t("adminProviderMobility.documents.verified")} checked={form[verifiedField]} onChange={(value) => change(verifiedField, value)} /></div>
     </fieldset>
+  );
+}
+
+function MobilityMediaPicker({
+  label,
+  value,
+  providerId,
+  kind,
+  photosOnly = false,
+  onUploaded,
+  onUploadStateChange,
+  t,
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [fileName, setFileName] = useState("");
+  const [error, setError] = useState("");
+
+  const chooseFile = async (event) => {
+    const selectedFile = event.target.files?.[0];
+    event.target.value = "";
+    if (!selectedFile) return;
+
+    setUploading(true);
+    setProgress(0);
+    setError("");
+    setFileName(selectedFile.name);
+    onUploadStateChange?.(true);
+    try {
+      const preparedFile = await optimizeImageForUpload(selectedFile);
+      const media = await uploadProviderMobilityMedia(
+        providerId,
+        kind,
+        preparedFile,
+        setProgress
+      );
+      if (!media?.url) throw new Error(t("adminProviderMobility.errors.upload"));
+      onUploaded(media.url);
+      setProgress(100);
+      notify.success(t("adminProviderMobility.success.upload"));
+    } catch (uploadError) {
+      const message =
+        uploadError?.response?.data?.error ||
+        uploadError?.message ||
+        t("adminProviderMobility.errors.upload");
+      setError(message);
+      setFileName("");
+      notify.error(message);
+    } finally {
+      setUploading(false);
+      onUploadStateChange?.(false);
+    }
+  };
+
+  return (
+    <AdminField label={label}>
+      <div className="rounded-xl border border-dashed border-border bg-surface-main/50 p-3">
+        {value ? (
+          <div className="mb-3 flex items-center gap-3">
+            {photosOnly ? (
+              <img
+                src={getFileUrl(value)}
+                alt=""
+                className="h-14 w-14 rounded-xl border border-border object-cover"
+              />
+            ) : (
+              <FileCheck2 className="text-emerald-600" size={24} />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                {fileName || t("adminProviderMobility.media.saved")}
+              </p>
+              <a
+                href={getFileUrl(value)}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-blue-700 underline dark:text-blue-300"
+              >
+                {t("adminProviderMobility.media.preview")}
+              </a>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onUploaded("");
+                setFileName("");
+              }}
+              disabled={uploading}
+              className="rounded-full p-2 text-text-muted hover:bg-surface-card hover:text-rose-600"
+              aria-label={t("adminProviderMobility.media.remove")}
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
+        ) : (
+          <div className="mb-3 flex items-center gap-2 text-xs text-text-muted">
+            {photosOnly ? <ImageIcon size={18} /> : <FileCheck2 size={18} />}
+            {t(
+              photosOnly
+                ? "adminProviderMobility.media.photoHint"
+                : "adminProviderMobility.media.documentHint"
+            )}
+          </div>
+        )}
+        <label
+          className={`inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-surface-card px-4 py-2 text-xs font-semibold text-text-secondary ${
+            uploading ? "pointer-events-none opacity-60" : "hover:border-blue-400"
+          }`}
+        >
+          {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+          {uploading
+            ? t("adminProviderMobility.media.uploading", { progress })
+            : t(value ? "adminProviderMobility.media.replace" : "adminProviderMobility.media.choose")}
+          <input
+            type="file"
+            className="sr-only"
+            accept={photosOnly ? PHOTO_ACCEPT : DOCUMENT_ACCEPT}
+            onChange={chooseFile}
+            disabled={uploading}
+          />
+        </label>
+        {error ? <p className="mt-2 text-xs text-rose-600">{error}</p> : null}
+      </div>
+    </AdminField>
   );
 }

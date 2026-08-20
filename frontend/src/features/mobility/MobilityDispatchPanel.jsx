@@ -8,6 +8,7 @@ import {
   updateMissionAssignment,
 } from "../../services/missions";
 import DispatchCandidatesMap from "./DispatchCandidatesMap";
+import { buildTelHref } from "../../utils/phone";
 
 export default function MobilityDispatchPanel({ missionId }) {
   const { t } = useTranslation();
@@ -125,8 +126,8 @@ export default function MobilityDispatchPanel({ missionId }) {
                 <p className="mt-1 font-mono text-2xl font-bold tracking-[0.3em] text-text-primary">{mission.startCode}</p>
               </div>
             ) : null}
-            {mission.assistancePhone ? (
-              <a href={`tel:${String(mission.assistancePhone).replace(/\s+/g, "")}`} className="btn-secondary mb-3 flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-xs">
+            {buildTelHref(mission.assistancePhone) ? (
+              <a href={buildTelHref(mission.assistancePhone)} className="btn-secondary mb-3 flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-xs">
                 <PhoneCall size={14} /> {t("mobilityDispatch.callAssistance")}
               </a>
             ) : null}

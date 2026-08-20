@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Bike, Car, Clock3, Loader2, MapPin, PhoneCall, RefreshCw, ShieldCheck } from "lucide-react";
 
 import { getSharedMission } from "../services/missions";
+import { buildTelHref } from "../utils/phone";
 
 const STATUS_REFRESH_MS = 60_000;
 
@@ -42,6 +43,7 @@ export default function SharedRidePage() {
   }
 
   const mission = data.mission;
+  const assistanceTelHref = buildTelHref(mission.assistancePhone);
   const VehicleIcon = mission.vehicle?.vehicleType === "motorcycle" ? Bike : Car;
   return (
     <main className="mx-auto max-w-xl px-5 py-10">
@@ -94,8 +96,8 @@ export default function SharedRidePage() {
         )}
 
         <p className="mt-4 text-xs text-text-muted">{t("sharedRide.lowNetworkNote")}</p>
-        {mission.assistancePhone ? (
-          <a href={`tel:${String(mission.assistancePhone).replace(/\s+/g, "")}`} className="btn-primary mt-5 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm">
+        {assistanceTelHref ? (
+          <a href={assistanceTelHref} className="btn-primary mt-5 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm">
             <PhoneCall size={17} /> {t("sharedRide.callTeranga")}
           </a>
         ) : null}

@@ -7,14 +7,13 @@ const vehicleTypeSchema = Joi.string().valid('motorcycle', 'car');
 
 /**
  * Candidature/demande invitée depuis la homepage (docs/DEV_SPEC_TERANGA_v3.md,
- * Lot 2). `pin` est volontairement plus court que le mot de passe exigé par
- * /auth/register (8 caractères) : c'est un point d'entrée à friction minimale
- * pour un premier contact, pas une inscription délibérée. Il reste un vrai
- * mot de passe bcrypt côté serveur, réutilisable pour se reconnecter.
+ * Lot 2). `pin` est facultatif pour un nouveau numéro : un code à six chiffres
+ * est alors généré et affiché une seule fois. Pour un numéro déjà connu, le
+ * contrôleur exige toujours le bon code avant d'ouvrir une session.
  */
 const createMissionRequestSchema = Joi.object({
   phone: Joi.string().trim().required(),
-  pin: Joi.string().trim().min(4).max(64).required(),
+  pin: Joi.string().trim().min(4).max(64).allow('', null),
   firstName: Joi.string().trim().max(80).allow('', null),
   countryId: Joi.number().integer().positive().required(),
   requestKind: Joi.string().valid('trade_category', 'classic').required(),

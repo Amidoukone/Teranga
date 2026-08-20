@@ -20,9 +20,8 @@ jest.mock(
   { virtual: true }
 );
 
-jest.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key, options) => {
+jest.mock("react-i18next", () => {
+  const t = (key, options) => {
       const labels = {
         "mobilityBooking.vehicle.title": "Quel véhicule souhaitez-vous ?",
         "mobilityBooking.vehicle.motorcycle.label": "Moto",
@@ -36,6 +35,8 @@ jest.mock("react-i18next", () => ({
         "mobilityBooking.destinationLabel": "Destination",
         "mobilityBooking.destinationPlaceholder": "Adresse d'arrivée",
         "mobilityBooking.useCurrentLocation": "Utiliser ma position actuelle",
+        "mobilityBooking.steps.next": "Continuer",
+        "mobilityBooking.steps.back": "Retour",
         "mobilityBooking.estimateCta": "Voir le trajet et le prix",
         "mobilityBooking.estimateTitle": "Estimation",
         "mobilityBooking.price": `${options?.amount || ""} ${options?.currency || ""}`,
@@ -48,6 +49,13 @@ jest.mock("react-i18next", () => ({
         "mobilityBooking.identity.firstName": "Prénom",
         "mobilityBooking.identity.firstNamePlaceholder": "Votre prénom",
         "mobilityBooking.connectedAs": `Compte ${options?.name || ""}`,
+        "mobilityBooking.callTitle": "Vous préférez téléphoner ?",
+        "mobilityBooking.callUs": `Appelez Teranga : ${options?.phone || ""}`,
+        "mobilityBooking.whatsapp.title": "Commander sur WhatsApp",
+        "mobilityBooking.whatsapp.hint": "Trajet préparé",
+        "mobilityBooking.whatsapp.toSpecify": "à préciser",
+        "mobilityBooking.whatsapp.message": `Course ${options?.vehicle || ""} ${options?.pickup || ""} ${options?.destination || ""}`,
+        "mobilityBooking.errors.pinRequired": "Code Teranga requis",
         "mobilityBooking.success.message": "Course enregistrée",
         "mobilityBooking.success.title": "Course confirmée",
         "mobilityBooking.success.reference": `Référence #${options?.id}`,
@@ -55,9 +63,9 @@ jest.mock("react-i18next", () => ({
         "mobilityBooking.success.newRide": "Nouvelle course",
       };
       return labels[key] || key;
-    },
-  }),
-}));
+  };
+  return { useTranslation: () => ({ t }) };
+});
 
 jest.mock("../mission-creation/LocationAutocompleteInput", () =>
   function MockLocationInput({ value, onChange, placeholder, onFocus }) {
@@ -95,21 +103,32 @@ const quote = {
 describe("TaxiRideRequestForm", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    window.localStorage.clear();
     getLocalUser.mockReturnValue(null);
     me.mockResolvedValue({ user: null });
     getTradeCategories.mockResolvedValue([{ id: 8, name: "Mobilité", slug: "mobilite" }]);
-    getMasterCountries.mockResolvedValue([{ id: 1, name: "Mali", contactPhone: "+22320000000" }]);
+    getMasterCountries.mockResolvedValue([{ id: 1, name: "Mali", contactPhone: "+223 20 00 00 00" }]);
     estimateMissionRequest.mockResolvedValue(quote);
     persistSession.mockResolvedValue(undefined);
   });
 
   async function enterRouteAndEstimate() {
     await screen.findByText("Quel véhicule souhaitez-vous ?");
+    await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
     await userEvent.type(screen.getByPlaceholderText("Adresse de départ"), "Sébénikoro");
     await userEvent.type(screen.getByPlaceholderText("Adresse d'arrivée"), "ACI 2000");
     await userEvent.click(screen.getByRole("button", { name: "Voir le trajet et le prix" }));
     await screen.findByText("Estimation");
   }
+
+  test("le bouton d'appel utilise un numero directement composable", async () => {
+    render(<TaxiRideRequestForm />);
+
+    const callLink = await screen.findByRole("link", {
+      name: /Appelez Teranga : \+223 20 00 00 00/,
+    });
+    expect(callLink).toHaveAttribute("href", "tel:+22320000000");
+  });
 
   test("un client connecté ne voit aucun formulaire d'inscription", async () => {
     const client = { id: 12, role: "client", firstName: "Awa", countryId: 1 };
@@ -148,13 +167,13 @@ describe("TaxiRideRequestForm", () => {
     await screen.findByText("Quel véhicule souhaitez-vous ?");
     await userEvent.click(screen.getByRole("button", { name: /Voiture/ }));
     expect(screen.queryByText("Comment vous joindre ?")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
     await userEvent.type(screen.getByPlaceholderText("Adresse de départ"), "Sébénikoro");
     await userEvent.type(screen.getByPlaceholderText("Adresse d'arrivée"), "ACI 2000");
     await userEvent.click(screen.getByRole("button", { name: "Voir le trajet et le prix" }));
 
     expect(await screen.findByText("Comment vous joindre ?")).toBeInTheDocument();
     await userEvent.type(screen.getByRole("textbox", { name: "Téléphone" }), "+22370000000");
-    await userEvent.type(screen.getByLabelText(/PIN Teranga/), "1234");
     await userEvent.click(screen.getByRole("button", { name: "Commander cette voiture" }));
 
     await waitFor(() => expect(submitMissionRequest).toHaveBeenCalledTimes(1));
@@ -162,6 +181,31 @@ describe("TaxiRideRequestForm", () => {
     expect(submitMissionRequest).toHaveBeenCalledWith(
       expect.objectContaining({ requestedVehicleType: "car", requestKind: "trade_category" })
     );
+    expect(submitMissionRequest.mock.calls[0][0]).not.toHaveProperty("pin");
     expect(persistSession).toHaveBeenCalledTimes(1);
+  });
+
+  test("demande le code seulement quand le numéro possède déjà un compte", async () => {
+    submitMissionRequest
+      .mockRejectedValueOnce({ response: { status: 401, data: { code: "PIN_REQUIRED" } } })
+      .mockResolvedValueOnce({
+        service: { id: 93, missionStatus: "CREATED" },
+        estimate: quote.estimate,
+        token: "token",
+        user: { id: 16, role: "client" },
+      });
+
+    render(<TaxiRideRequestForm />);
+    await enterRouteAndEstimate();
+    await userEvent.type(screen.getByRole("textbox", { name: "Téléphone" }), "+22371111111");
+    expect(screen.queryByLabelText(/PIN Teranga/)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Commander cette moto" }));
+    expect(await screen.findByLabelText(/PIN Teranga/)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/PIN Teranga/), "1234");
+    await userEvent.click(screen.getByRole("button", { name: "Commander cette moto" }));
+
+    await waitFor(() => expect(submitMissionRequest).toHaveBeenCalledTimes(2));
+    expect(submitMissionRequest.mock.calls[1][0]).toEqual(expect.objectContaining({ pin: "1234" }));
   });
 });

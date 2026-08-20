@@ -144,7 +144,6 @@ describe('Lot 2 — demande de mission invitée (homepage, POST /api/v1/mission-
 
     const res = await request(app).post('/api/v1/mission-requests').send({
       phone,
-      pin: '1234',
       firstName: 'Awa',
       countryId: country.id,
       requestKind: 'trade_category',
@@ -169,6 +168,28 @@ describe('Lot 2 — demande de mission invitée (homepage, POST /api/v1/mission-
       .set('Authorization', `Bearer ${res.body.token}`);
     expect(me.status).toBe(200);
     expect(me.body.user.id).toBe(res.body.user.id);
+  });
+
+  test('a first request can use the phone only and returns a generated Teranga code', async () => {
+    if (!dbReady) return;
+    const country = await makeCountry();
+    const phone = `+2237${Date.now().toString().slice(-8)}`;
+
+    const res = await request(app).post('/api/v1/mission-requests').send({
+      phone,
+      firstName: 'Awa',
+      countryId: country.id,
+      requestKind: 'classic',
+      serviceType: 'errand',
+      title: 'Première demande simplifiée',
+    });
+    trackResponse(res);
+
+    expect(res.status).toBe(201);
+    expect(res.body.isNewAccount).toBe(true);
+    expect(res.body.generatedPin).toMatch(/^\d{6}$/);
+    expect(res.body.generatedPin).toMatch(/^\d{6}$/);
+    expect(res.body.token).toBeTruthy();
   });
 
   test.each([
@@ -308,6 +329,34 @@ describe('Lot 2 — demande de mission invitée (homepage, POST /api/v1/mission-
     expect(second.body.service.executionType).toBe('agent');
     expect(second.body.service.type).toBe('payment');
     expect(second.body.service.missionStatus).toBeNull();
+  });
+
+  test('a known phone still requires its Teranga code', async () => {
+    if (!dbReady) return;
+    const country = await makeCountry();
+    const phone = `+2237${Date.now().toString().slice(-8)}`;
+
+    const first = await request(app).post('/api/v1/mission-requests').send({
+      phone,
+      pin: '2468',
+      countryId: country.id,
+      requestKind: 'classic',
+      serviceType: 'errand',
+      title: 'Première demande',
+    });
+    trackResponse(first);
+    expect(first.status).toBe(201);
+
+    const withoutPin = await request(app).post('/api/v1/mission-requests').send({
+      phone,
+      countryId: country.id,
+      requestKind: 'classic',
+      serviceType: 'errand',
+      title: 'Nouvelle demande',
+    });
+
+    expect(withoutPin.status).toBe(401);
+    expect(withoutPin.body.code).toBe('PIN_REQUIRED');
   });
 
   test('returning phone with the wrong pin is rejected, never silently authenticated', async () => {

@@ -136,7 +136,7 @@ exports.listMasterCountries = async (req, res) => {
         id: { [Op.in]: Array.from(countryIdSet) },
         isActive: true,
       },
-      attributes: ['id', 'name', 'isoCode'],
+      attributes: ['id', 'name', 'isoCode', 'contactPhone'],
       order: [['name', 'ASC']],
     });
 
@@ -148,6 +148,7 @@ exports.listMasterCountries = async (req, res) => {
         id: country.id,
         name: country.name,
         isoCode: iso,
+        contactPhone: country.contactPhone || process.env.TERANGA_ASSISTANCE_PHONE || null,
       });
     }
 

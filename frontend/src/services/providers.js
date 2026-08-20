@@ -26,6 +26,19 @@ export async function updateProviderDriverCompliance(id, payload) {
   return data;
 }
 
+export async function uploadProviderMobilityMedia(id, kind, file, onProgress) {
+  const formData = new FormData();
+  formData.append('kind', kind);
+  formData.append('file', file);
+  const { data } = await api.post(`/v1/providers/${id}/mobility-media`, formData, {
+    onUploadProgress: (event) => {
+      if (!onProgress || !event.total) return;
+      onProgress(Math.min(100, Math.round((event.loaded * 100) / event.total)));
+    },
+  });
+  return data?.media;
+}
+
 export async function listProviderVehicles(id) {
   const { data } = await api.get(`/v1/providers/${id}/vehicles`);
   return data?.vehicles || [];

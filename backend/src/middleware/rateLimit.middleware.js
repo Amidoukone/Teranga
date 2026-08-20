@@ -65,7 +65,9 @@ const writeLimiter = buildRateLimiter({
 // réussie : surface d'abus plus sensible qu'un writeLimiter classique.
 const guestLimiter = buildRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 15,
+  // Les suites d'intégration enchaînent plusieurs scénarios depuis la même IP
+  // supertest. La limite de production reste inchangée.
+  max: process.env.NODE_ENV === 'test' ? 100 : 15,
   message: 'Trop de demandes depuis cette connexion. Reessayez plus tard.',
   limiterName: 'guest_mission_request',
 });

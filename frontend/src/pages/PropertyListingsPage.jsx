@@ -1,20 +1,23 @@
-// frontend/src/pages/PropertyListingsPage.jsx
-// Vitrine publique de la marketplace immobilière (docs/BRAINSTORM_ECOSYSTEME_TERANGA.md §7) —
-// sans authentification, pensée pour être partagée/promue sur les réseaux sociaux.
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { ArrowLeft, Building2, ShieldCheck } from "lucide-react";
 
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { Home, MapPin, ArrowLeft } from 'lucide-react';
+import PropertyListingCard from "../components/property-listings/PropertyListingCard";
+import SetSeo from "../components/SetSeo";
+import { listPropertyListings } from "../services/propertyListings";
 
-import { listPropertyListings } from '../services/propertyListings';
-import { getFileUrl } from '../services/api';
-import SetSeo from '../components/SetSeo';
-
-function firstPhotoUrl(listing) {
-  const first = Array.isArray(listing?.photos) ? listing.photos[0] : null;
-  const path = typeof first === 'string' ? first : first?.url;
-  return path ? getFileUrl(path) : '';
+function ListingSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-3xl border border-border/70 bg-surface-card" aria-hidden="true">
+      <div className="aspect-[4/3] animate-pulse bg-surface-main" />
+      <div className="space-y-3 p-5">
+        <div className="h-3 w-2/5 animate-pulse rounded-full bg-surface-main" />
+        <div className="h-5 w-4/5 animate-pulse rounded-full bg-surface-main" />
+        <div className="h-4 w-3/5 animate-pulse rounded-full bg-surface-main" />
+      </div>
+    </div>
+  );
 }
 
 export default function PropertyListingsPage() {
@@ -28,7 +31,7 @@ export default function PropertyListingsPage() {
       try {
         const rows = await listPropertyListings();
         if (active) setListings(rows || []);
-      } catch (_err) {
+      } catch (_error) {
         if (active) setListings([]);
       } finally {
         if (active) setLoading(false);
@@ -40,83 +43,61 @@ export default function PropertyListingsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-6 py-10 text-text-primary">
+    <main className="min-h-screen bg-surface-main px-4 py-6 text-text-primary sm:px-6 sm:py-10">
       <SetSeo
-        title={t('propertyListingsPage.seoTitle')}
-        description={t('propertyListingsPage.seoDescription')}
+        title={t("propertyListingsPage.seoTitle")}
+        description={t("propertyListingsPage.seoDescription")}
       />
 
-      <div className="mx-auto max-w-5xl">
-        <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary">
-          <ArrowLeft size={14} />
-          {t('propertyListingsPage.backHome')}
+      <div className="mx-auto max-w-6xl">
+        <Link
+          to="/"
+          className="inline-flex min-h-11 items-center gap-2 rounded-full px-1 text-sm font-semibold text-text-secondary hover:text-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 dark:hover:text-blue-300"
+        >
+          <ArrowLeft size={17} aria-hidden="true" />
+          {t("propertyListingsPage.backHome")}
         </Link>
 
-        <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
-          {t('propertyListingsPage.title')}
-        </h1>
-        <p className="mt-2 text-sm text-text-secondary">{t('propertyListingsPage.subtitle')}</p>
+        <header className="mt-5 max-w-2xl">
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+            <ShieldCheck size={15} aria-hidden="true" />
+            {t("propertyListingsPage.verified")}
+          </span>
+          <h1 className="mt-4 text-3xl font-bold tracking-[-0.035em] sm:text-4xl">
+            {t("propertyListingsPage.title")}
+          </h1>
+          <p className="mt-3 text-base leading-relaxed text-text-secondary">
+            {t("propertyListingsPage.subtitle")}
+          </p>
+        </header>
 
-        {loading ? (
-          <p className="mt-8 text-sm text-text-secondary">{t('propertyListingsPage.loading')}</p>
-        ) : listings.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-border bg-surface-card/70 py-12 text-center text-sm text-text-secondary">
-            {t('propertyListingsPage.empty')}
-          </div>
-        ) : (
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((listing) => {
-              const photo = firstPhotoUrl(listing);
-              return (
-                <Link
-                  key={listing.id}
-                  to={`/immobilier/${listing.id}`}
-                  className="group overflow-hidden rounded-2xl border border-border bg-surface-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-main">
-                    {photo ? (
-                      <img
-                        src={photo}
-                        alt={listing.title}
-                        className="h-full w-full object-cover transition group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-text-muted">
-                        <Home size={32} />
-                      </div>
-                    )}
-                    {Array.isArray(listing.photos) && listing.photos.length > 1 ? (
-                      <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[0.65rem] font-medium text-white">
-                        +{listing.photos.length - 1}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="p-4">
-                    <div className="flex flex-wrap items-center gap-1.5 text-[0.65rem] uppercase tracking-wide text-text-muted">
-                      <span>{t(`propertyListingsPage.type.${listing.type}`)}</span>
-                      <span>·</span>
-                      <span>{t(`propertyListingsPage.transactionType.${listing.transactionType}`)}</span>
-                    </div>
-                    <h2 className="mt-1 truncate text-sm font-semibold text-text-primary">
-                      {listing.title}
-                    </h2>
-                    <p className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
-                      <MapPin size={12} />
-                      {listing.neighborhood ? `${listing.neighborhood}, ` : ''}
-                      {listing.city}
-                      {listing.country ? `, ${listing.country}` : ''}
-                    </p>
-                    <p className="mt-2 text-sm font-bold text-text-primary">
-                      {listing.price} {listing.currency}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
+        <section
+          className="mt-8"
+          aria-labelledby="property-listings-heading"
+          aria-busy={loading}
+        >
+          <h2 id="property-listings-heading" className="sr-only">
+            {t("propertyListingsPage.results")}
+          </h2>
+          {loading ? (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((item) => <ListingSkeleton key={item} />)}
+              <span className="sr-only" aria-live="polite">{t("propertyListingsPage.loading")}</span>
+            </div>
+          ) : listings.length === 0 ? (
+            <div className="rounded-3xl border border-border bg-surface-card px-6 py-14 text-center">
+              <Building2 className="mx-auto text-text-muted" size={36} aria-hidden="true" />
+              <p className="mt-4 text-sm text-text-secondary">{t("propertyListingsPage.empty")}</p>
+            </div>
+          ) : (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {listings.map((listing) => (
+                <PropertyListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          )}
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

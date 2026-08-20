@@ -17,6 +17,7 @@ import {
 import MissionTrackingMap from "../features/mission-tracking/MissionTrackingMap";
 import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
 import { Modal, FormField, Button } from "../components/ui";
+import { buildTelHref } from "../utils/phone";
 
 // Même idiome que NavBar.js (poll notifications) : intervalle configurable, pause si l'onglet
 // n'est pas visible — docs/DEV_SPEC_TERANGA_v3.md section 4.2 recommande 5-10s.
@@ -485,9 +486,9 @@ export default function MissionTrackingPage() {
         <p className="mt-2 text-xs text-text-muted">{t("missionTracking.lowNetworkNote")}</p>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {track.assistancePhone ? (
+          {buildTelHref(track.assistancePhone) ? (
             <a
-              href={`tel:${String(track.assistancePhone).replace(/\s+/g, "")}`}
+              href={buildTelHref(track.assistancePhone)}
               className="btn-secondary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm"
             >
               <PhoneCall size={15} /> {t("missionTracking.callTeranga")}

@@ -1,6 +1,7 @@
 'use strict';
 
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const { Service, User, Property, TradeCategory } = require('../../models');
 const { normalizePhone, isValidPhone } = require('../utils/contactIdentity');
 const { notifyServiceCreated } = require('../services/serviceNotification.service');
@@ -159,7 +160,7 @@ exports.reverseGeocodeLocation = async (req, res) => {
 /**
  * Demande de mission/service invitée depuis la homepage (docs/DEV_SPEC_TERANGA_v3.md,
  * Lot 2 — "la homepage comme base d'interactions"). Pas de nouveau système
- * d'auth : le téléphone+PIN passe par les mêmes primitives que
+ * d'auth : le téléphone et, pour un compte existant, le PIN passent par les mêmes primitives que
  * /auth/register + /auth/login (voir exports ajoutés dans auth.controller.js),
  * pour que le visiteur reparte avec un vrai compte/session, pas une ligne
  * orpheline non trackable.
@@ -230,12 +231,20 @@ exports.create = async (req, res) => {
     let user = await User.findOne({ where: { phone } });
     let isNewAccount = false;
     let recoveryCodes = [];
+    let generatedPin = null;
 
     if (user) {
       if (user.role !== 'client') {
         return res.status(409).json({
           error:
             'Ce numéro est associé à un compte existant non-client. Connectez-vous depuis votre espace habituel.',
+        });
+      }
+
+      if (!pin || !String(pin).trim()) {
+        return res.status(401).json({
+          code: 'PIN_REQUIRED',
+          error: 'Ce numéro possède déjà un compte. Saisissez votre code Teranga.',
         });
       }
 
@@ -258,7 +267,12 @@ exports.create = async (req, res) => {
         });
       }
 
-      const passwordHash = await bcrypt.hash(pin, 10);
+      const effectivePin =
+        pin && String(pin).trim()
+          ? String(pin).trim()
+          : String(crypto.randomInt(100000, 1000000));
+      if (!pin || !String(pin).trim()) generatedPin = effectivePin;
+      const passwordHash = await bcrypt.hash(effectivePin, 10);
       user = await User.create({
         phone,
         passwordHash,
@@ -450,6 +464,7 @@ exports.create = async (req, res) => {
       csrfToken,
       user: toAuthUser(user),
       isNewAccount,
+      generatedPin,
       recoveryCodes,
       estimate,
       service: fullService,
