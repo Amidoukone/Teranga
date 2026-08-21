@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import AdminProviderMobilityPage from "./AdminProviderMobilityPage";
@@ -165,6 +165,57 @@ test("enregistre une moto minimale sans bloquer sur les champs facultatifs", asy
       })
     )
   );
+});
+
+test("affiche un vehicule minimal comme enregistre et non comme incomplet", async () => {
+  getProvider.mockResolvedValue({
+    provider: { id: 42, displayFirstName: "Awa" },
+    compliance: {
+      driverEligible: false,
+      driverIssues: [],
+      hasEligibleVehicle: false,
+      vehicles: [
+        {
+          id: 88,
+          vehicleType: "motorcycle",
+          status: "pending",
+          eligible: false,
+          issues: ["identification du vehicule incomplete"],
+        },
+      ],
+    },
+  });
+  listProviderVehicles.mockResolvedValue([
+    {
+      id: 88,
+      vehicleType: "motorcycle",
+      status: "pending",
+      brand: null,
+      model: null,
+      color: null,
+      plateNumber: null,
+    },
+  ]);
+
+  render(<AdminProviderMobilityPage />);
+  await screen.findByText("adminProviderMobility.driver.title");
+  await userEvent.click(
+    screen.getByRole("button", { name: /adminProviderMobility.guide.vehicle/ })
+  );
+
+  const vehicleCard = screen.getByRole("article");
+  expect(
+    within(vehicleCard).getByText("adminProviderMobility.vehicle.states.registered")
+  ).toBeInTheDocument();
+  expect(
+    within(vehicleCard).getByText("adminProviderMobility.vehicle.optionalDetailsMissing")
+  ).toBeInTheDocument();
+  expect(
+    within(vehicleCard).queryByText("adminProviderMobility.summary.incomplete")
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByText("adminProviderMobility.summary.awaitingActivation")
+  ).toBeInTheDocument();
 });
 
 test("affiche des champs adaptés lorsque l admin choisit une voiture", async () => {

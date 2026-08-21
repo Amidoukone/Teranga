@@ -115,6 +115,31 @@ function vehiclePayloadFrom(form) {
   return payload;
 }
 
+function vehicleReadinessFrom(vehicle, complianceState) {
+  if (complianceState?.eligible) {
+    return {
+      badgeClass: "app-badge app-badge-success",
+      labelKey: "adminProviderMobility.vehicle.states.assignable",
+    };
+  }
+  if (vehicle.status === "pending") {
+    return {
+      badgeClass: "app-badge app-badge-info",
+      labelKey: "adminProviderMobility.vehicle.states.registered",
+    };
+  }
+  if (["suspended", "retired"].includes(vehicle.status)) {
+    return {
+      badgeClass: "app-badge app-badge-neutral",
+      labelKey: `adminProviderMobility.vehicle.statuses.${vehicle.status}`,
+    };
+  }
+  return {
+    badgeClass: "app-badge app-badge-warning",
+    labelKey: "adminProviderMobility.vehicle.states.needsReview",
+  };
+}
+
 export default function AdminProviderMobilityPage() {
   const { id } = useParams();
   const { t } = useTranslation();
@@ -214,6 +239,11 @@ export default function AdminProviderMobilityPage() {
   ];
   const completedChecks = onboardingChecks.filter(Boolean).length;
   const progressPercent = Math.round((completedChecks / onboardingChecks.length) * 100);
+  const fleetReadinessKey = compliance?.hasEligibleVehicle
+    ? "assignable"
+    : vehicles.length > 0
+    ? "awaitingActivation"
+    : "none";
 
   return (
     <main className="min-h-screen bg-surface-main px-4 py-8 sm:px-6">
@@ -288,7 +318,7 @@ export default function AdminProviderMobilityPage() {
           <div className="rounded-2xl border border-border bg-surface-card p-4">
             <p className="text-xs text-text-muted">{t("adminProviderMobility.summary.eligibleVehicle")}</p>
             <p className={`mt-1 font-semibold ${compliance?.hasEligibleVehicle ? "text-emerald-700" : "text-amber-700"}`}>
-              {t(compliance?.hasEligibleVehicle ? "adminProviderMobility.summary.yes" : "adminProviderMobility.summary.no")}
+              {t(`adminProviderMobility.summary.${fleetReadinessKey}`)}
             </p>
           </div>
         </section>
@@ -365,6 +395,7 @@ export default function AdminProviderMobilityPage() {
               const Icon = vehicle.vehicleType === "motorcycle" ? Bike : CarFront;
               const identity = [vehicle.brand, vehicle.model].filter(Boolean).join(" ");
               const details = [vehicle.color, vehicle.plateNumber].filter(Boolean).join(" · ");
+              const readiness = vehicleReadinessFrom(vehicle, state);
               return (
                 <article key={vehicle.id} className="rounded-xl border border-border bg-surface-main/60 p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -375,15 +406,23 @@ export default function AdminProviderMobilityPage() {
                           {identity || t(`adminProviderMobility.vehicle.${vehicle.vehicleType}`)}
                         </p>
                         <p className="break-words text-xs text-text-secondary">
-                          {details || t("adminProviderMobility.vehicle.incompleteIdentity")}
+                          {details || t("adminProviderMobility.vehicle.optionalDetailsMissing")}
                         </p>
                       </div>
                     </div>
-                    <span className={state?.eligible ? "app-badge app-badge-success" : "app-badge app-badge-warning"}>
-                      {t(state?.eligible ? "adminProviderMobility.summary.compliant" : "adminProviderMobility.summary.incomplete")}
+                    <span className={readiness.badgeClass}>
+                      {t(readiness.labelKey)}
                     </span>
                   </div>
-                  {state?.issues?.length ? <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">{state.issues.join(", ")}</p> : null}
+                  {vehicle.status === "pending" ? (
+                    <p className="mt-3 text-xs text-text-muted">
+                      {t("adminProviderMobility.vehicle.registeredHint")}
+                    </p>
+                  ) : state?.issues?.length ? (
+                    <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+                      {state.issues.join(", ")}
+                    </p>
+                  ) : null}
                   <button type="button" onClick={() => startEdit(vehicle)} className="mt-3 text-xs font-semibold text-blue-700 dark:text-blue-300">
                     {t("adminProviderMobility.fleet.edit")}
                   </button>
