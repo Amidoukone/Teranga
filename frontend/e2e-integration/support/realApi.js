@@ -5,6 +5,8 @@ const API_BASE_URL =
 
 const E2E_CLIENT_EMAIL =
   process.env.E2E_CLIENT_EMAIL || 'e2e.real.client@example.com';
+const E2E_ADMIN_EMAIL =
+  process.env.E2E_ADMIN_EMAIL || 'e2e.real.admin@example.com';
 const E2E_CLIENT_PASSWORD =
   process.env.E2E_CLIENT_PASSWORD || process.env.E2E_TEST_PASSWORD || 'Password123!';
 
@@ -109,6 +111,26 @@ async function loginAsSeededClient(request) {
   };
 }
 
+async function loginAsSeededAdmin(request) {
+  const response = await request.post(`${API_BASE_URL}/auth/login`, {
+    data: {
+      email: E2E_ADMIN_EMAIL,
+      password: E2E_CLIENT_PASSWORD,
+    },
+  });
+
+  const body = await response.json().catch(() => ({}));
+  expect(
+    response.ok(),
+    `API admin login failed: ${JSON.stringify(body)}`
+  ).toBeTruthy();
+
+  return {
+    token: body.token,
+    user: body.user,
+  };
+}
+
 async function seedAuthenticatedSession(page, user, token) {
   await page.addInitScript(
     ({ userPayload, tokenValue }) => {
@@ -130,11 +152,13 @@ async function seedAuthenticatedSession(page, user, token) {
 
 module.exports = {
   API_BASE_URL,
+  E2E_ADMIN_EMAIL,
   E2E_CLIENT_EMAIL,
   E2E_CLIENT_PASSWORD,
   buildRegisterPayload,
   blockExternalTracking,
   getMasterCountries,
+  loginAsSeededAdmin,
   loginAsSeededClient,
   registerDisposableClient,
   seedUiPreferences,

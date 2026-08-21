@@ -1597,6 +1597,8 @@ const fr = {
       message: "Course créée avec succès.",
       reference: "Référence mission #{{id}}",
       newAccount: "Nouveau compte client créé. PIN généré :",
+      startCodeTitle: "Code de départ à communiquer au client",
+      startCodeHint: "Le client garde ce code et le donne au chauffeur uniquement lorsque celui-ci est arrivé avec le bon véhicule.",
       assignCta: "Affecter maintenant",
       newOrderCta: "Nouvelle course",
     },
@@ -2718,6 +2720,8 @@ const fr = {
       newRide: "Nouvelle course",
       generatedPinTitle: "Votre code Teranga",
       generatedPinHint: "Notez ce code. Il vous sera demandé si vous commandez plus tard avec ce numéro.",
+      startCodeTitle: "Code de départ de votre course",
+      startCodeHint: "Gardez ce code secret. Donnez-le au chauffeur uniquement lorsqu’il est devant vous avec le véhicule annoncé.",
     },
   },
   missionCreation: {

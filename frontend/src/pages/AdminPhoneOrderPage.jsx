@@ -170,6 +170,19 @@ export default function AdminPhoneOrderPage() {
                   ) : null}
                 </p>
               ) : null}
+              {result.startCode ? (
+                <div className="mt-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-center">
+                  <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                    {t("adminPhoneOrder.success.startCodeTitle")}
+                  </p>
+                  <p className="mt-2 font-mono text-3xl font-bold tracking-[0.35em] text-text-primary">
+                    {result.startCode}
+                  </p>
+                  <p className="mt-2 text-xs text-text-secondary">
+                    {t("adminPhoneOrder.success.startCodeHint")}
+                  </p>
+                </div>
+              ) : null}
               <div className="mt-6 flex flex-wrap gap-3">
                 {dispatchMissionId ? (
                   <a href="#dispatch" className="btn-primary rounded-full px-6 py-2.5 text-sm">

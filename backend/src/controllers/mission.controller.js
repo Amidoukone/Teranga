@@ -384,6 +384,8 @@ exports.create = async (req, res) => {
       message: 'Mission créée',
       mission: fullService,
       estimate,
+      startCode:
+        tradeCategory?.slug === 'mobilite' ? getMissionStartCode(fullService) : null,
     });
   } catch (e) {
     if (e.status === 400) return res.status(400).json({ error: e.message });
@@ -1386,7 +1388,9 @@ exports.track = async (req, res) => {
       req.user.role === 'client' &&
       tradeCategorySlug === 'mobilite' &&
       !service.startAuthorizedAt &&
-      ['ASSIGNED', 'EN_ROUTE', 'ON_SITE'].includes(service.missionStatus);
+      ['CREATED', 'SEARCHING_EXECUTOR', 'ASSIGNED', 'EN_ROUTE', 'ON_SITE'].includes(
+        service.missionStatus
+      );
 
     return res.status(200).json({
       tradeCategorySlug,

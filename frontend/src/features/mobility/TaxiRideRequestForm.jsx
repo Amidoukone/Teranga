@@ -7,6 +7,7 @@ import {
   CarFront,
   CheckCircle2,
   Clock3,
+  KeyRound,
   Loader2,
   LocateFixed,
   Map,
@@ -403,6 +404,7 @@ export default function TaxiRideRequestForm() {
         estimate: data?.estimate || estimate,
         isNewAccount: Boolean(data?.isNewAccount),
         generatedPin: data?.generatedPin || null,
+        startCode: data?.startCode || null,
       });
       clearTaxiDraft();
     } catch (error) {
@@ -450,6 +452,19 @@ export default function TaxiRideRequestForm() {
             </p>
           </div>
         </div>
+        {result.startCode ? (
+          <div className="mt-5 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-center">
+            <p className="flex items-center justify-center gap-2 text-sm font-semibold text-blue-900 dark:text-blue-100">
+              <KeyRound size={18} /> {t("mobilityBooking.success.startCodeTitle")}
+            </p>
+            <p className="mt-2 font-mono text-3xl font-bold tracking-[0.35em] text-text-primary">
+              {result.startCode}
+            </p>
+            <p className="mt-2 text-xs text-text-secondary">
+              {t("mobilityBooking.success.startCodeHint")}
+            </p>
+          </div>
+        ) : null}
         {result.generatedPin ? (
           <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-100">
             <p className="text-sm font-semibold">{t("mobilityBooking.success.generatedPinTitle")}</p>

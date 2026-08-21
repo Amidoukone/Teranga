@@ -20,7 +20,19 @@ export function resolveNotificationLink(n, currentUserRole) {
     // Mission filière (executionType='provider', missionStatus renseigné) : ouvre le suivi
     // dédié. Service classique : ouvre le service lui-même — pas directement ses tâches, un
     // service n'en a pas forcément, l'utilisateur y navigue ensuite s'il le souhaite.
-    if (n?.metadata?.missionStatus) return `/missions/${serviceId}/track`;
+    if (n?.metadata?.missionStatus) {
+      // L'ecran /missions/:id/track est reserve au client et a l'executant. Un admin qui y
+      // arrivait depuis une notification recevait donc un 403. Pour une course Mobilite, le clic
+      // ouvre directement le dispatch ; pour les anciennes notifications ou les autres filieres,
+      // il revient vers la gestion admin des services.
+      if (currentUserRole === 'admin') {
+        if (n?.metadata?.requestedVehicleType) {
+          return `/admin/taxi-dispatch?missionId=${serviceId}`;
+        }
+        return '/admin/services';
+      }
+      return `/missions/${serviceId}/track`;
+    }
     return `/services/${serviceId}`;
   }
 

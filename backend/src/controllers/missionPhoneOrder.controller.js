@@ -7,6 +7,7 @@ const { normalizePhone, isValidPhone } = require('../utils/contactIdentity');
 const { notifyServiceCreated } = require('../services/serviceNotification.service');
 const { geocodeAddress } = require('../services/geocoding.service');
 const { estimateMission } = require('../services/priceEstimate.service');
+const { getMissionStartCode } = require('../services/missionSafety.service');
 const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
 const { resolveGeoScope, countryHasActiveMaster, rotateRecoveryCodes } = require('./auth.controller');
 const { PICKUP_REQUIRED_SLUGS } = require('./mission.controller');
@@ -254,6 +255,8 @@ exports.create = async (req, res) => {
       isNewAccount,
       generatedPin,
       recoveryCodes,
+      startCode:
+        tradeCategory?.slug === 'mobilite' ? getMissionStartCode(fullService) : null,
       mission: fullService,
     });
   } catch (e) {

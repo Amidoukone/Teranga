@@ -3,7 +3,12 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import AdminProviderMobilityPage from "./AdminProviderMobilityPage";
-import { getProvider, listProviderVehicles } from "../services/providers";
+import {
+  getProvider,
+  listProviderVehicles,
+  updateProviderDriverCompliance,
+  uploadProviderMobilityMedia,
+} from "../services/providers";
 
 jest.mock(
   "react-router-dom",
@@ -39,13 +44,16 @@ jest.mock("../utils/notify", () => ({
   }),
 }));
 
-test("replaces every mobility URL field with a gallery or file picker", async () => {
+beforeEach(() => {
+  jest.clearAllMocks();
   getProvider.mockResolvedValue({
     provider: { id: 42, displayFirstName: "Awa" },
     compliance: { driverEligible: false, driverIssues: [], vehicles: [] },
   });
   listProviderVehicles.mockResolvedValue([]);
+});
 
+test("replaces every mobility URL field with a gallery or file picker", async () => {
   render(<AdminProviderMobilityPage />);
   await screen.findByText("adminProviderMobility.driver.title");
   await waitFor(() => expect(getProvider).toHaveBeenCalledWith("42"));
@@ -66,4 +74,50 @@ test("replaces every mobility URL field with a gallery or file picker", async ()
     expect(input).toHaveAttribute("type", "file");
     expect(input).toHaveAttribute("accept", expect.stringContaining("image/heic"));
   });
+});
+
+test("envoie une photo choisie dans la galerie puis enregistre sa référence automatiquement", async () => {
+  uploadProviderMobilityMedia.mockResolvedValue({
+    kind: "profilePhoto",
+    url: "/uploads/mobility/chauffeur-awa.jpg",
+  });
+  updateProviderDriverCompliance.mockResolvedValue({
+    provider: {
+      id: 42,
+      displayFirstName: "Awa",
+      profilePhotoUrl: "/uploads/mobility/chauffeur-awa.jpg",
+    },
+    compliance: { driverEligible: false, driverIssues: [], vehicles: [] },
+  });
+
+  render(<AdminProviderMobilityPage />);
+  await screen.findByText("adminProviderMobility.driver.title");
+
+  const photo = new File(["photo"], "chauffeur-awa.jpg", { type: "image/jpeg" });
+  await userEvent.upload(
+    screen.getAllByLabelText("adminProviderMobility.media.choose")[0],
+    photo
+  );
+
+  await waitFor(() =>
+    expect(uploadProviderMobilityMedia).toHaveBeenCalledWith(
+      "42",
+      "profilePhoto",
+      photo,
+      expect.any(Function)
+    )
+  );
+  expect(await screen.findByText("chauffeur-awa.jpg")).toBeInTheDocument();
+
+  await userEvent.click(
+    screen.getByRole("button", { name: "adminProviderMobility.driver.save" })
+  );
+  await waitFor(() =>
+    expect(updateProviderDriverCompliance).toHaveBeenCalledWith(
+      "42",
+      expect.objectContaining({
+        profilePhotoUrl: "/uploads/mobility/chauffeur-awa.jpg",
+      })
+    )
+  );
 });

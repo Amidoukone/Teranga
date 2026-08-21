@@ -1592,6 +1592,8 @@ const en = {
       message: "Order created successfully.",
       reference: "Mission reference #{{id}}",
       newAccount: "New client account created. Generated PIN:",
+      startCodeTitle: "Ride start code to tell the client",
+      startCodeHint: "The client keeps this code and gives it to the driver only after the correct vehicle has arrived.",
       assignCta: "Assign now",
       newOrderCta: "New order",
     },
@@ -2707,6 +2709,8 @@ const en = {
       newRide: "New ride",
       generatedPinTitle: "Your Teranga code",
       generatedPinHint: "Write down this code. You will need it when booking again with this number.",
+      startCodeTitle: "Your ride start code",
+      startCodeHint: "Keep this code private. Give it to the driver only when they are in front of you with the announced vehicle.",
     },
   },
   missionCreation: {

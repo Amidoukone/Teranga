@@ -240,6 +240,17 @@ describe('Lot 2 — demande de mission invitée (homepage, POST /api/v1/mission-
       expect(Number(res.body.service.budget)).toBeGreaterThan(1000);
       expect(res.body.estimate.distanceKm).toBeGreaterThan(0);
       expect(res.body.service.requestedVehicleType).toBe(slug === 'mobilite' ? 'car' : null);
+      if (slug === 'mobilite') {
+        expect(res.body.startCode).toMatch(/^\d{4}$/);
+        const tracking = await request(app)
+          .get(`/api/v1/missions/${res.body.service.id}/track`)
+          .set('Authorization', `Bearer ${res.body.token}`);
+        expect(tracking.status).toBe(200);
+        expect(tracking.body.missionStatus).toBe('CREATED');
+        expect(tracking.body.startCode).toBe(res.body.startCode);
+      } else {
+        expect(res.body.startCode).toBeNull();
+      }
     }
   );
 

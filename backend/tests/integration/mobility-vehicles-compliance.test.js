@@ -4,12 +4,15 @@ process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'teranga_mobility_compliance_test_secret';
 
 const bcrypt = require('bcrypt');
+const fs = require('fs');
+const path = require('path');
 const request = require('supertest');
 const app = require('../../src/app');
 const db = require('../../models');
 const {
   runLogisticsAcceptanceCheck,
 } = require('../../src/jobs/logisticsAcceptance.job');
+const { resolveUploadsRoot } = require('../../src/utils/uploadsRoot');
 
 let dbReady = false;
 const created = {
@@ -19,6 +22,7 @@ const created = {
   providerIds: [],
   vehicleIds: [],
   tradeCategoryIds: [],
+  mediaUrls: [],
 };
 
 async function checkDatabase() {
@@ -157,6 +161,14 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
 
   afterAll(async () => {
     if (!dbReady) return;
+    for (const mediaUrl of created.mediaUrls) {
+      const relativePath = String(mediaUrl).replace(/^\/uploads\//, '');
+      const absolutePath = path.resolve(resolveUploadsRoot(), relativePath);
+      const uploadsRoot = path.resolve(resolveUploadsRoot());
+      if (absolutePath.startsWith(`${uploadsRoot}${path.sep}`) && fs.existsSync(absolutePath)) {
+        fs.unlinkSync(absolutePath);
+      }
+    }
     if (created.serviceIds.length) {
       await db.Notification.destroy({ where: { entityType: 'service', entityId: created.serviceIds } });
       await db.Activity.destroy({ where: { entityType: 'service', entityId: created.serviceIds } });
@@ -197,11 +209,23 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
     expect(blockedActivation.status).toBe(400);
     expect(blockedActivation.body.compliance.driverEligible).toBe(false);
 
+    const galleryUpload = await request(app)
+      .post(`/api/v1/providers/${provider.id}/mobility-media`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('kind', 'profilePhoto')
+      .attach('file', Buffer.from([0x89, 0x50, 0x4e, 0x47]), {
+        filename: 'chauffeur-awa.png',
+        contentType: 'image/png',
+      });
+    expect(galleryUpload.status).toBe(201);
+    expect(galleryUpload.body.media.url).toMatch(/^\/uploads\/mobility\//);
+    created.mediaUrls.push(galleryUpload.body.media.url);
+
     const driverUpdate = await request(app)
       .patch(`/api/v1/providers/${provider.id}/driver-compliance`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        profilePhotoUrl: 'https://private.example.test/driver/photo.jpg',
+        profilePhotoUrl: galleryUpload.body.media.url,
         driverLicenseNumber: 'PERMIS-001',
         driverLicenseDocumentUrl: 'https://private.example.test/driver/license.pdf',
         driverLicenseExpiresAt: '2030-12-31',
@@ -264,6 +288,14 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
       requestedVehicleType: 'car',
     });
     created.serviceIds.push(mission.id);
+
+    const initialTracking = await request(app)
+      .get(`/api/v1/missions/${mission.id}/track`)
+      .set('Authorization', `Bearer ${clientToken}`);
+    expect(initialTracking.status).toBe(200);
+    expect(initialTracking.body.missionStatus).toBe('CREATED');
+    expect(initialTracking.body.startCode).toMatch(/^\d{4}$/);
+    const initialStartCode = initialTracking.body.startCode;
 
     const wrongType = await request(app)
       .post(`/api/v1/missions/${mission.id}/assign`)
@@ -364,6 +396,7 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
     expect(tracking.body.realtimeTrackingRequired).toBe(false);
     expect(tracking.body.assistancePhone).toBe('+22370000000');
     expect(tracking.body.startCode).toMatch(/^\d{4}$/);
+    expect(tracking.body.startCode).toBe(initialStartCode);
     const startCode = tracking.body.startCode;
 
     const share = await request(app)

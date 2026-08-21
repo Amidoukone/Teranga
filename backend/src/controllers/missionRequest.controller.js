@@ -7,6 +7,7 @@ const { normalizePhone, isValidPhone } = require('../utils/contactIdentity');
 const { notifyServiceCreated } = require('../services/serviceNotification.service');
 const { geocodeAddress, reverseGeocode } = require('../services/geocoding.service');
 const { estimateMission } = require('../services/priceEstimate.service');
+const { getMissionStartCode } = require('../services/missionSafety.service');
 const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
 const logger = require('../utils/logger');
 const {
@@ -467,6 +468,8 @@ exports.create = async (req, res) => {
       generatedPin,
       recoveryCodes,
       estimate,
+      startCode:
+        tradeCategory?.slug === 'mobilite' ? getMissionStartCode(fullService) : null,
       service: fullService,
     });
   } catch (e) {

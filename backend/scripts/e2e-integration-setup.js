@@ -21,6 +21,8 @@ const {
   Task,
   Notification,
   Order,
+  TradeCategory,
+  MissionPricingRule,
 } = db;
 
 const E2E_PASSWORD = process.env.E2E_TEST_PASSWORD || 'Password123!';
@@ -275,6 +277,56 @@ async function ensureOrder(client, countryId, regionId) {
   return order;
 }
 
+async function ensureMobilityPricing(countryId) {
+  const [tradeCategory] = await TradeCategory.findOrCreate({
+    where: { slug: 'mobilite' },
+    defaults: {
+      name: 'Mobilite',
+      slug: 'mobilite',
+      countryId: null,
+      regionId: null,
+      isActive: true,
+    },
+  });
+
+  await tradeCategory.update({
+    name: 'Mobilite',
+    countryId: null,
+    regionId: null,
+    isActive: true,
+  });
+
+  const [pricingRule] = await MissionPricingRule.findOrCreate({
+    where: {
+      countryId,
+      tradeCategoryId: tradeCategory.id,
+      vehicleType: 'car',
+    },
+    defaults: {
+      countryId,
+      tradeCategoryId: tradeCategory.id,
+      vehicleType: 'car',
+      pricingMode: 'fixed_estimate',
+      basePrice: 2500,
+      minPrice: 2500,
+      pricePerKm: 250,
+      estimatedDelayMinutes: 20,
+      isActive: true,
+    },
+  });
+
+  await pricingRule.update({
+    pricingMode: 'fixed_estimate',
+    basePrice: 2500,
+    minPrice: 2500,
+    pricePerKm: 250,
+    estimatedDelayMinutes: 20,
+    isActive: true,
+  });
+
+  return tradeCategory;
+}
+
 async function ensureNotification(client, service, countryId, regionId) {
   const where = {
     userId: client.id,
@@ -325,6 +377,7 @@ async function main() {
   const country = await ensureCountry();
   const region = await ensureRegion(country.id);
   await ensureMasterFranchise(country.id);
+  await ensureMobilityPricing(country.id);
 
   await ensureUser({
     email: FIXTURE.adminEmail,

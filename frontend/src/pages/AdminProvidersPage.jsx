@@ -239,7 +239,7 @@ export default function AdminProvidersPage() {
     }
 
     try {
-      await createProvider({
+      const createdProvider = await createProvider({
         userId: newUser.id,
         type: form.type,
         legalName: form.type === 'company' ? form.legalName.trim() : undefined,
@@ -254,6 +254,12 @@ export default function AdminProvidersPage() {
       });
 
       notify.success(t('adminProvidersPage.alerts.createSuccess'));
+      if (coversMobilite && createdProvider?.id) {
+        navigate(`/admin/providers/${createdProvider.id}/mobility`, {
+          state: { onboarding: true },
+        });
+        return;
+      }
       setForm(INITIAL_FORM);
       setErrors({});
       await loadProviders();

@@ -61,6 +61,8 @@ jest.mock("react-i18next", () => {
         "mobilityBooking.success.reference": `Référence #${options?.id}`,
         "mobilityBooking.success.track": "Suivre ma course",
         "mobilityBooking.success.newRide": "Nouvelle course",
+        "mobilityBooking.success.startCodeTitle": "Code de départ de votre course",
+        "mobilityBooking.success.startCodeHint": "Gardez ce code secret",
       };
       return labels[key] || key;
   };
@@ -134,7 +136,11 @@ describe("TaxiRideRequestForm", () => {
     const client = { id: 12, role: "client", firstName: "Awa", countryId: 1 };
     getLocalUser.mockReturnValue(client);
     me.mockResolvedValue({ user: client });
-    createMission.mockResolvedValue({ mission: { id: 91 }, estimate: quote.estimate });
+    createMission.mockResolvedValue({
+      mission: { id: 91 },
+      estimate: quote.estimate,
+      startCode: "4821",
+    });
 
     render(<TaxiRideRequestForm />);
     await enterRouteAndEstimate();
@@ -145,6 +151,8 @@ describe("TaxiRideRequestForm", () => {
 
     await waitFor(() => expect(createMission).toHaveBeenCalledTimes(1));
     await screen.findByText(/Course confirm/);
+    expect(screen.getByText("Code de départ de votre course")).toBeInTheDocument();
+    expect(screen.getByText("4821")).toBeInTheDocument();
     expect(createMission).toHaveBeenCalledWith(
       expect.objectContaining({
         executionType: "provider",

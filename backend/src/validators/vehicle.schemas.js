@@ -2,7 +2,36 @@
 
 const Joi = require('joi');
 
-const nullableUrl = Joi.string().trim().uri().max(500).allow('', null);
+// Les medias envoyes depuis la galerie sont stockes soit sur ImageKit (URL https), soit dans le
+// stockage local/persistant expose sous /uploads en developpement. L'ancien validateur `.uri()`
+// refusait cette seconde forme : l'upload reussissait, puis l'enregistrement du chauffeur ou du
+// vehicule echouait en demandant indirectement une URL externe.
+const nullableMediaReference = Joi.string()
+  .trim()
+  .max(500)
+  .custom((value, helpers) => {
+    if (value.startsWith('/uploads/')) {
+      const segments = value.slice('/uploads/'.length).split('/');
+      const safeLocalPath =
+        segments.length > 1 &&
+        segments.every(
+          (segment) =>
+            segment &&
+            segment !== '.' &&
+            segment !== '..' &&
+            /^[A-Za-z0-9._-]+$/.test(segment)
+        );
+      if (safeLocalPath) return value;
+    }
+    try {
+      const parsed = new URL(value);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return value;
+    } catch (_error) {
+      // Le message Joi standard est volontairement conserve ci-dessous.
+    }
+    return helpers.error('string.uri');
+  }, 'media URL validation')
+  .allow('', null);
 const nullableText = (max) => Joi.string().trim().max(max).allow('', null);
 
 const vehicleFields = {
@@ -14,16 +43,16 @@ const vehicleFields = {
   capacity: Joi.number().integer().min(1).max(12),
   hasPassengerHelmet: Joi.boolean(),
   hasAirConditioning: Joi.boolean(),
-  photoUrl: nullableUrl,
+  photoUrl: nullableMediaReference,
   registrationNumber: nullableText(80),
-  registrationDocumentUrl: nullableUrl,
+  registrationDocumentUrl: nullableMediaReference,
   registrationVerified: Joi.boolean(),
   insurancePolicyNumber: nullableText(100),
-  insuranceDocumentUrl: nullableUrl,
+  insuranceDocumentUrl: nullableMediaReference,
   insuranceExpiresAt: Joi.date().iso().allow(null),
   insuranceVerified: Joi.boolean(),
   inspectionCertificateNumber: nullableText(100),
-  inspectionDocumentUrl: nullableUrl,
+  inspectionDocumentUrl: nullableMediaReference,
   inspectionExpiresAt: Joi.date().iso().allow(null),
   inspectionVerified: Joi.boolean(),
   status: Joi.string().valid('pending', 'active', 'suspended', 'retired'),
@@ -43,12 +72,12 @@ const createVehicleSchema = Joi.object({
 const updateVehicleSchema = Joi.object(vehicleFields).min(1);
 
 const updateDriverComplianceSchema = Joi.object({
-  profilePhotoUrl: nullableUrl,
+  profilePhotoUrl: nullableMediaReference,
   driverLicenseNumber: nullableText(80),
-  driverLicenseDocumentUrl: nullableUrl,
+  driverLicenseDocumentUrl: nullableMediaReference,
   driverLicenseExpiresAt: Joi.date().iso().allow(null),
   driverLicenseVerified: Joi.boolean(),
-  identityDocumentUrl: nullableUrl,
+  identityDocumentUrl: nullableMediaReference,
   identityDocumentVerified: Joi.boolean(),
 }).min(1);
 

@@ -52,6 +52,7 @@ async function notifyServiceCreated({
       metadata: {
         serviceId: service.id,
         title: service.title || null,
+        requestedVehicleType: service.requestedVehicleType || null,
         // Permet au clic frontend (NotificationsPage/ActivityCenterPage) de distinguer une
         // mission filière (ouvre /missions/:id/track) d'un service classique (ouvre
         // /services/:id), sans requête supplémentaire.
@@ -88,6 +89,7 @@ async function notifyServiceAssigned({ actorId, service }) {
       metadata: {
         serviceId: service.id,
         title: service.title || null,
+        requestedVehicleType: service.requestedVehicleType || null,
         // Permet au clic frontend (NotificationsPage/ActivityCenterPage) de distinguer une
         // mission filière (ouvre /missions/:id/track) d'un service classique (ouvre
         // /services/:id), sans requête supplémentaire.
@@ -130,6 +132,7 @@ async function notifyServiceStatusUpdate({ actorId, service, title, status }) {
       metadata: {
         serviceId: service.id,
         title: service.title || null,
+        requestedVehicleType: service.requestedVehicleType || null,
         // Permet au clic frontend (NotificationsPage/ActivityCenterPage) de distinguer une
         // mission filière (ouvre /missions/:id/track) d'un service classique (ouvre
         // /services/:id), sans requête supplémentaire.
