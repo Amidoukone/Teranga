@@ -12,6 +12,7 @@ const {
   createProviderSchema,
   updateProviderStatusSchema,
   updateMyAvailabilitySchema,
+  updateMobilityAvailabilitySchema,
   updateMyLiveLocationSchema,
 } = require('../validators/provider.schemas');
 const { createProviderContractSchema } = require('../validators/providerContract.schemas');
@@ -69,6 +70,13 @@ router.patch(
 router.get('/available', auth, requireRoles('admin', 'category_manager'), ctrl.listAvailable);
 
 router.get('/', auth, requireRoles('admin', 'category_manager'), ctrl.list);
+router.patch(
+  '/:id/mobility-availability',
+  auth,
+  requireRoles('admin', 'category_manager'),
+  validateBody(updateMobilityAvailabilitySchema),
+  ctrl.updateMobilityAvailability
+);
 router.post(
   '/:id/mobility-media',
   auth,

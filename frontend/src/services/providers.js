@@ -63,6 +63,18 @@ export async function updateProviderStatus(id, status) {
   return data;
 }
 
+export async function updateProviderMobilityAvailability(
+  id,
+  availabilityStatus,
+  vehicleId = null
+) {
+  const { data } = await api.patch(`/v1/providers/${id}/mobility-availability`, {
+    availabilityStatus,
+    ...(vehicleId ? { vehicleId: Number(vehicleId) } : {}),
+  });
+  return data;
+}
+
 /**
  * GET /api/v1/providers/me — fiche du prestataire authentifié (docs/DEV_SPEC_TERANGA_v5_PHASE2.md
  * §3). Renvoie null si aucun profil prestataire n'existe pour ce compte (jamais une erreur bloquante).

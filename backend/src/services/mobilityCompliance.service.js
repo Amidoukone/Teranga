@@ -33,24 +33,47 @@ function getVehicleComplianceIssues(
   if (requestedVehicleType && vehicle.vehicleType !== requestedVehicleType) {
     issues.push('type de vehicule incompatible');
   }
-  if (!vehicle.brand || !vehicle.model || !vehicle.color || !vehicle.plateNumber) {
-    issues.push('identification du vehicule incomplete');
+  // Les informations et justificatifs véhicule sont facultatifs dans le formulaire. Leur absence
+  // ne doit donc pas bloquer une affectation après validation explicite de l'admin. En revanche,
+  // une date renseignée mais expirée reste un vrai blocage de sécurité.
+  if (vehicle.insuranceExpiresAt && !isCurrent(vehicle.insuranceExpiresAt)) {
+    issues.push('assurance expiree');
   }
-  if (!vehicle.registrationNumber) issues.push('numero de carte grise');
-  if (!vehicle.registrationDocumentUrl) issues.push('justificatif de carte grise');
-  if (!vehicle.registrationVerified) issues.push('carte grise verifiee');
-  if (!vehicle.insurancePolicyNumber) issues.push("numero d'assurance");
-  if (!vehicle.insuranceDocumentUrl) issues.push("justificatif d'assurance");
-  if (!vehicle.insuranceVerified) issues.push('assurance verifiee');
-  if (!isCurrent(vehicle.insuranceExpiresAt)) issues.push('assurance valide');
-  if (!vehicle.inspectionCertificateNumber) issues.push('numero de controle technique');
-  if (!vehicle.inspectionDocumentUrl) issues.push('justificatif de controle technique');
-  if (!vehicle.inspectionVerified) issues.push('controle technique verifie');
-  if (!isCurrent(vehicle.inspectionExpiresAt)) issues.push('controle technique valide');
+  if (vehicle.inspectionExpiresAt && !isCurrent(vehicle.inspectionExpiresAt)) {
+    issues.push('controle technique expire');
+  }
   if (vehicle.vehicleType === 'motorcycle' && !vehicle.hasPassengerHelmet) {
     issues.push('casque passager');
   }
   return issues;
+}
+
+function getVehicleComplianceWarnings(vehicle) {
+  if (!vehicle) return [];
+  const warnings = [];
+  if (!vehicle.brand || !vehicle.model || !vehicle.color || !vehicle.plateNumber) {
+    warnings.push('identification du vehicule incomplete');
+  }
+  if (!vehicle.registrationNumber) warnings.push('numero de carte grise non renseigne');
+  if (!vehicle.registrationDocumentUrl) warnings.push('justificatif de carte grise non ajoute');
+  if (vehicle.registrationDocumentUrl && !vehicle.registrationVerified) {
+    warnings.push('carte grise non verifiee');
+  }
+  if (!vehicle.insurancePolicyNumber) warnings.push("numero d'assurance non renseigne");
+  if (!vehicle.insuranceDocumentUrl) warnings.push("justificatif d'assurance non ajoute");
+  if (vehicle.insuranceDocumentUrl && !vehicle.insuranceVerified) {
+    warnings.push('assurance non verifiee');
+  }
+  if (!vehicle.inspectionCertificateNumber) {
+    warnings.push('numero de controle technique non renseigne');
+  }
+  if (!vehicle.inspectionDocumentUrl) {
+    warnings.push('justificatif de controle technique non ajoute');
+  }
+  if (vehicle.inspectionDocumentUrl && !vehicle.inspectionVerified) {
+    warnings.push('controle technique non verifie');
+  }
+  return warnings;
 }
 
 async function findEligibleVehicleForProvider({
@@ -101,12 +124,19 @@ function toComplianceSummary(provider) {
     const issues = getVehicleComplianceIssues(vehicle, {
       requestedVehicleType: vehicle.vehicleType,
     });
+    const activationIssues = getVehicleComplianceIssues(vehicle, {
+      requestedVehicleType: vehicle.vehicleType,
+      requireActive: false,
+    });
     return {
       id: vehicle.id,
       vehicleType: vehicle.vehicleType,
       status: vehicle.status,
       eligible: issues.length === 0,
       issues,
+      canBeActivated: ['pending', 'active'].includes(vehicle.status) && activationIssues.length === 0,
+      activationIssues,
+      warnings: getVehicleComplianceWarnings(vehicle),
     };
   });
   return {
@@ -120,6 +150,7 @@ function toComplianceSummary(provider) {
 module.exports = {
   getDriverComplianceIssues,
   getVehicleComplianceIssues,
+  getVehicleComplianceWarnings,
   findEligibleVehicleForProvider,
   toComplianceSummary,
 };

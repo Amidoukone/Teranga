@@ -70,10 +70,11 @@ administrateur peut donc activer le compte même si le dossier chauffeur ou la f
 encore entièrement vérifié.
 
 Pour préserver la sécurité, chaque transition de statut remet un chauffeur Mobilité `offline`.
-La conformité du chauffeur et d'au moins un véhicule actif reste contrôlée avant le passage
-`available`, l'apparition dans le dispatch, l'affectation et l'acceptation d'une course. Ainsi,
-l'onboarding administratif n'est pas bloqué, mais aucun chauffeur incomplet ne peut recevoir une
-course.
+La conformité du chauffeur et la sécurité du véhicule choisi restent contrôlées avant le passage
+`available`, l'apparition dans le dispatch, l'affectation et l'acceptation d'une course. Les champs
+véhicule annoncés facultatifs sont des informations de suivi et produisent des avertissements, pas
+des blocages. Restent bloquants : véhicule suspendu/retiré, type incompatible, casque passager
+absent pour une moto et date explicitement renseignée mais expirée.
 
 ---
 
@@ -100,7 +101,15 @@ pas complexifier inutilement. Pour Mobilité, le compte, le chauffeur et le véh
 soumis aux contrôles de conformité. La position GPS est enregistrée en best effort : son absence ou
 son ancienneté ne bloque pas le passage `available`.
 
-### 3.3 Vue admin/master
+### 3.3 Autorisation par l'admin
+
+`PATCH /api/v1/providers/:id/mobility-availability` — body
+`{ availabilityStatus: 'available'|'offline', vehicleId? }`. L'action « Autoriser les courses »
+permet à l'admin qui réalise l'onboarding de sélectionner un véhicule, de l'activer s'il était en
+attente, puis de rendre le chauffeur disponible en une seule étape. Le compte doit être actif et
+les contrôles de sécurité doivent être satisfaits. Aucun GPS n'est requis.
+
+### 3.4 Vue admin/master
 
 `GET /api/v1/providers/available` — scope géographique (même pattern que `listForAdmin` ailleurs),
 filtré `availabilityStatus='available'`, `status='active'`, filière Mobilité. Utilisée par la vue
@@ -163,7 +172,7 @@ l'exécutant se débrouille par ses propres moyens (décision déjà actée).
 ### 5.1 Vue de dispatch (admin/master/opérateur)
 
 Écran listant les missions filière Mobilité en `SEARCHING_EXECUTOR` dans le scope de
-l'admin/master, avec en regard la liste des chauffeurs disponibles (§3.3) de la même zone —
+l'admin/master, avec en regard la liste des chauffeurs disponibles (§3.4) de la même zone —
 affectation en un clic (réutilise `POST /:id/assign` existant, pas de nouvel endpoint
 d'affectation).
 

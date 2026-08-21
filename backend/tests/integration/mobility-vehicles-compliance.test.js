@@ -330,6 +330,56 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
     }
   );
 
+  test('permet a l admin d autoriser une moto minimale sans GPS', async () => {
+    if (!dbReady) return;
+
+    const minimalMotorcycle = await request(app)
+      .post(`/api/v1/providers/${provider.id}/vehicles`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        vehicleType: 'motorcycle',
+        hasPassengerHelmet: true,
+      });
+    expect(minimalMotorcycle.status).toBe(201);
+    expect(minimalMotorcycle.body.vehicle.status).toBe('pending');
+    const vehicleId = minimalMotorcycle.body.vehicle.id;
+    created.vehicleIds.push(vehicleId);
+
+    const detail = await request(app)
+      .get(`/api/v1/providers/${provider.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(detail.status).toBe(200);
+    expect(detail.body.compliance.vehicles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: vehicleId,
+          eligible: false,
+          canBeActivated: true,
+          activationIssues: [],
+        }),
+      ])
+    );
+
+    const authorization = await request(app)
+      .patch(`/api/v1/providers/${provider.id}/mobility-availability`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ availabilityStatus: 'available', vehicleId });
+    expect(authorization.status).toBe(200);
+    expect(authorization.body.provider.availabilityStatus).toBe('available');
+    expect(authorization.body.selectedVehicle).toMatchObject({
+      id: vehicleId,
+      vehicleType: 'motorcycle',
+      status: 'active',
+    });
+
+    const offline = await request(app)
+      .patch(`/api/v1/providers/${provider.id}/mobility-availability`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ availabilityStatus: 'offline' });
+    expect(offline.status).toBe(200);
+    expect(offline.body.provider.availabilityStatus).toBe('offline');
+  });
+
   test('affecte uniquement le bon type et ne divulgue aucun document au client', async () => {
     if (!dbReady) return;
 
@@ -504,7 +554,7 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
       .post(`/api/v1/missions/${mission.id}/accept`)
       .set('Authorization', `Bearer ${providerToken}`);
     expect(unsafeAcceptance.status).toBe(400);
-    expect(unsafeAcceptance.body.complianceIssues).toContain('assurance valide');
+    expect(unsafeAcceptance.body.complianceIssues).toContain('assurance expiree');
 
     await db.Vehicle.update({ insuranceExpiresAt: '2030-12-31' }, { where: { id: carId } });
     await mission.update({ acceptanceDeadlineAt: new Date(Date.now() - 1000) });
@@ -651,5 +701,11 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
       .get(`/api/v1/providers/${provider.id}/vehicles`)
       .set('Authorization', `Bearer ${clientToken}`);
     expect(vehicles.status).toBe(403);
+
+    const availability = await request(app)
+      .patch(`/api/v1/providers/${provider.id}/mobility-availability`)
+      .set('Authorization', `Bearer ${clientToken}`)
+      .send({ availabilityStatus: 'offline' });
+    expect(availability.status).toBe(403);
   });
 });

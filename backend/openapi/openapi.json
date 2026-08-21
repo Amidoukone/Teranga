@@ -258,6 +258,63 @@
         }
       }
     },
+    "/providers/{id}/mobility-availability": {
+      "patch": {
+        "summary": "Authorize or stop Mobility ride assignments for a driver (category_manager, admin)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMobilityAvailabilityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Driver Mobility availability updated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProviderResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Account, driver or selected vehicle is not ready",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller does not manage this provider",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "409": {
+            "description": "Driver already has a ride in progress",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/providers/{id}/contracts": {
       "post": {
         "summary": "Register a signed partnership contract (category_manager, admin)",
@@ -948,6 +1005,18 @@
             "type": "string",
             "enum": ["pending", "probation", "active", "suspended", "revoked"]
           }
+        },
+        "additionalProperties": false
+      },
+      "UpdateMobilityAvailabilityRequest": {
+        "type": "object",
+        "required": ["availabilityStatus"],
+        "properties": {
+          "availabilityStatus": {
+            "type": "string",
+            "enum": ["available", "offline"]
+          },
+          "vehicleId": { "type": ["number", "null"] }
         },
         "additionalProperties": false
       },

@@ -8,6 +8,7 @@ import {
   getProvider,
   listProviderVehicles,
   updateProviderDriverCompliance,
+  updateProviderMobilityAvailability,
   uploadProviderMobilityMedia,
 } from "../services/providers";
 
@@ -37,6 +38,7 @@ jest.mock("../services/providers", () => ({
   getProvider: jest.fn(),
   listProviderVehicles: jest.fn(),
   updateProviderDriverCompliance: jest.fn(),
+  updateProviderMobilityAvailability: jest.fn(),
   updateProviderVehicle: jest.fn(),
   uploadProviderMobilityMedia: jest.fn(),
 }));
@@ -245,4 +247,57 @@ test("affiche des champs adaptés lorsque l admin choisit une voiture", async ()
   expect(
     screen.getByLabelText("adminProviderMobility.vehicle.carCapacity optional")
   ).toHaveAttribute("max", "12");
+});
+
+test("permet a l admin d autoriser un chauffeur conforme sans GPS", async () => {
+  getProvider.mockResolvedValue({
+    provider: {
+      id: 42,
+      displayFirstName: "Awa",
+      status: "active",
+      availabilityStatus: "offline",
+    },
+    compliance: {
+      driverEligible: true,
+      driverIssues: [],
+      hasEligibleVehicle: false,
+      vehicles: [
+        {
+          id: 88,
+          vehicleType: "motorcycle",
+          status: "pending",
+          eligible: false,
+          canBeActivated: true,
+          activationIssues: [],
+        },
+      ],
+    },
+  });
+  listProviderVehicles.mockResolvedValue([
+    {
+      id: 88,
+      vehicleType: "motorcycle",
+      status: "pending",
+      hasPassengerHelmet: true,
+    },
+  ]);
+  updateProviderMobilityAvailability.mockResolvedValue({
+    provider: { id: 42, availabilityStatus: "available" },
+  });
+
+  render(<AdminProviderMobilityPage />);
+
+  await userEvent.click(
+    await screen.findByRole("button", {
+      name: "adminProviderMobility.operations.enable",
+    })
+  );
+
+  await waitFor(() =>
+    expect(updateProviderMobilityAvailability).toHaveBeenCalledWith(
+      "42",
+      "available",
+      "88"
+    )
+  );
 });

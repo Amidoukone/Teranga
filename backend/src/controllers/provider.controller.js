@@ -490,6 +490,78 @@ exports.updateMyLiveLocation = async (req, res) => {
 };
 
 /* ============================================================
+   DISPONIBILITE ADMIN — validation operationnelle en une action. L'activation du compte ouvre
+   l'acces au chauffeur; cette route autorise ensuite explicitement les courses avec un vehicule
+   choisi. Elle est utile lorsque l'onboarding est entierement gere par l'administration.
+============================================================ */
+exports.updateMobilityAvailability = async (req, res) => {
+  try {
+    const provider = await Provider.findByPk(req.params.id, {
+      include: [{ model: TradeCategory, as: 'tradeCategories', attributes: ['slug'] }],
+    });
+    if (!provider) return res.status(404).json({ error: 'Prestataire introuvable' });
+    if (!(await canManageProvider(req.user, provider))) {
+      return res.status(403).json({ error: 'Acces interdit' });
+    }
+
+    const coversMobility = (provider.tradeCategories || []).some(
+      (tradeCategory) => tradeCategory.slug === 'mobilite'
+    );
+    if (!coversMobility) {
+      return res.status(400).json({ error: 'Ce prestataire ne couvre pas la filiere Mobilite' });
+    }
+    if (provider.availabilityStatus === 'busy') {
+      return res.status(409).json({ error: 'Ce chauffeur a deja une course en cours' });
+    }
+
+    if (req.body.availabilityStatus === 'offline') {
+      await provider.update({ availabilityStatus: 'offline' });
+      const full = await findProviderById(provider.id);
+      return res.json({ provider: full, compliance: toComplianceSummary(full) });
+    }
+
+    if (provider.status !== 'active') {
+      return res.status(400).json({ error: "Activez d'abord le compte du chauffeur" });
+    }
+
+    const vehicle = await Vehicle.findOne({
+      where: { id: req.body.vehicleId, providerId: provider.id },
+    });
+    if (!vehicle || !['pending', 'active'].includes(vehicle.status)) {
+      return res.status(400).json({ error: 'Choisissez une moto ou une voiture utilisable' });
+    }
+
+    const driverIssues = getDriverComplianceIssues(provider);
+    const vehicleIssues = getVehicleComplianceIssues(vehicle, {
+      requestedVehicleType: vehicle.vehicleType,
+      requireActive: false,
+    });
+    const complianceIssues = [...driverIssues, ...vehicleIssues];
+    if (complianceIssues.length > 0) {
+      return res.status(400).json({
+        error: `Dossier de securite a finaliser : ${complianceIssues.join(', ')}`,
+        complianceIssues,
+      });
+    }
+
+    if (vehicle.status !== 'active') await vehicle.update({ status: 'active' });
+    await provider.update({ availabilityStatus: 'available' });
+
+    const full = await findProviderById(provider.id);
+    return res.json({
+      provider: full,
+      selectedVehicle: { ...vehicle.toPublicDTO(), status: vehicle.status },
+      compliance: toComplianceSummary(full),
+    });
+  } catch (error) {
+    logger.error({ err: error }, 'provider.update_mobility_availability.failed');
+    return res.status(500).json({
+      error: 'Erreur lors de la mise a disposition du chauffeur',
+    });
+  }
+};
+
+/* ============================================================
    4️⃣ UPDATE STATUS — onboarding pending -> probation -> active
 ============================================================ */
 exports.updateStatus = async (req, res) => {

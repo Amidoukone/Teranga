@@ -46,6 +46,25 @@ const TRANSITION_LABEL_KEY = {
   revoked: 'toRevoked',
 };
 
+function mobilityReadiness(provider) {
+  const compliance = provider?.mobilityCompliance;
+  if (
+    provider?.status === 'active' &&
+    compliance?.driverEligible &&
+    compliance?.hasEligibleVehicle
+  ) {
+    return { key: 'ready', ready: true };
+  }
+  if (
+    provider?.status === 'active' &&
+    compliance?.driverEligible &&
+    compliance?.vehicles?.some((vehicle) => vehicle.canBeActivated)
+  ) {
+    return { key: 'authorizable', ready: false };
+  }
+  return { key: 'pending', ready: false };
+}
+
 const INITIAL_FORM = {
   firstName: '',
   lastName: '',
@@ -698,19 +717,13 @@ export default function AdminProvidersPage() {
                           </span>
                           <span
                             className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
-                              p.status === 'active' &&
-                              p.mobilityCompliance?.driverEligible &&
-                              p.mobilityCompliance?.hasEligibleVehicle
+                              mobilityReadiness(p).ready
                                 ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                                 : 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300'
                             }`}
                           >
                             {t(
-                              p.status === 'active' &&
-                                p.mobilityCompliance?.driverEligible &&
-                                p.mobilityCompliance?.hasEligibleVehicle
-                                ? 'adminProvidersPage.mobilityState.ready'
-                                : 'adminProvidersPage.mobilityState.pending'
+                              `adminProvidersPage.mobilityState.${mobilityReadiness(p).key}`
                             )}
                           </span>
                         </div>

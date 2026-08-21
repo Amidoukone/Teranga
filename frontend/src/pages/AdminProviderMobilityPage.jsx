@@ -9,6 +9,7 @@ import {
   FileCheck2,
   Image as ImageIcon,
   Loader2,
+  Power,
   ShieldCheck,
   Trash2,
   Upload,
@@ -23,6 +24,7 @@ import {
   getProvider,
   listProviderVehicles,
   updateProviderDriverCompliance,
+  updateProviderMobilityAvailability,
   updateProviderVehicle,
   uploadProviderMobilityMedia,
 } from "../services/providers";
@@ -152,8 +154,10 @@ export default function AdminProviderMobilityPage() {
   const [loading, setLoading] = useState(true);
   const [savingDriver, setSavingDriver] = useState(false);
   const [savingVehicle, setSavingVehicle] = useState(false);
+  const [savingAvailability, setSavingAvailability] = useState(false);
   const [uploadingMediaCount, setUploadingMediaCount] = useState(0);
   const [activeStep, setActiveStep] = useState("driver");
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -163,6 +167,20 @@ export default function AdminProviderMobilityPage() {
       setCompliance(detail?.compliance || null);
       setVehicles(fleet);
       setDriverForm(driverFormFrom(detail?.provider));
+      setSelectedVehicleId((current) => {
+        const selectable = fleet.filter((vehicle) =>
+          ["pending", "active"].includes(vehicle.status)
+        );
+        const currentStillExists = selectable.some(
+          (vehicle) => String(vehicle.id) === String(current)
+        );
+        if (currentStillExists) return current;
+        return String(
+          selectable.find((vehicle) => vehicle.status === "active")?.id ||
+            selectable[0]?.id ||
+            ""
+        );
+      });
     } catch (error) {
       notify(error?.response?.data?.error || t("adminProviderMobility.errors.load"));
     } finally {
@@ -227,14 +245,38 @@ export default function AdminProviderMobilityPage() {
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   };
 
+  const changeAvailability = async (availabilityStatus) => {
+    setSavingAvailability(true);
+    try {
+      await updateProviderMobilityAvailability(
+        id,
+        availabilityStatus,
+        availabilityStatus === "available" ? selectedVehicleId : null
+      );
+      notify.success(
+        t(
+          availabilityStatus === "available"
+            ? "adminProviderMobility.success.available"
+            : "adminProviderMobility.success.offline"
+        )
+      );
+      await load();
+    } catch (error) {
+      notify(
+        error?.response?.data?.error ||
+          t("adminProviderMobility.errors.availability")
+      );
+    } finally {
+      setSavingAvailability(false);
+    }
+  };
+
   if (loading) {
     return <div className="min-h-screen bg-surface-main p-10 text-center text-text-muted">{t("common.loading")}</div>;
   }
 
   const onboardingChecks = [
-    Boolean(provider?.profilePhotoUrl),
-    Boolean(provider?.driverLicenseNumber && provider?.driverLicenseDocumentUrl),
-    Boolean(provider?.identityDocumentUrl),
+    Boolean(compliance?.driverEligible),
     vehicles.length > 0,
   ];
   const completedChecks = onboardingChecks.filter(Boolean).length;
@@ -244,6 +286,17 @@ export default function AdminProviderMobilityPage() {
     : vehicles.length > 0
     ? "awaitingActivation"
     : "none";
+  const selectableVehicles = vehicles.filter((vehicle) =>
+    ["pending", "active"].includes(vehicle.status)
+  );
+  const selectedCompliance = compliance?.vehicles?.find(
+    (vehicle) => String(vehicle.id) === String(selectedVehicleId)
+  );
+  const canAuthorizeRides = Boolean(
+    provider?.status === "active" &&
+      compliance?.driverEligible &&
+      selectedCompliance?.canBeActivated
+  );
 
   return (
     <main className="min-h-screen bg-surface-main px-4 py-8 sm:px-6">
@@ -255,6 +308,82 @@ export default function AdminProviderMobilityPage() {
           title={t("adminProviderMobility.title", { name: provider?.displayFirstName || "" })}
           subtitle={t("adminProviderMobility.subtitle")}
         />
+
+        <section className="rounded-2xl border border-blue-500/25 bg-surface-card p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <Power size={19} className="text-blue-600" />
+                <h2 className="text-lg font-semibold text-text-primary">
+                  {t("adminProviderMobility.operations.title")}
+                </h2>
+              </div>
+              <p className="mt-1 text-sm text-text-secondary">
+                {t(`adminProviderMobility.operations.${provider?.availabilityStatus || "offline"}`)}
+              </p>
+            </div>
+
+            {provider?.availabilityStatus === "busy" ? null : provider?.availabilityStatus ===
+              "available" ? (
+              <button
+                type="button"
+                disabled={savingAvailability}
+                onClick={() => changeAvailability("offline")}
+                className="app-btn-secondary min-h-11 rounded-full px-5 py-2.5 text-sm disabled:opacity-50"
+              >
+                {t(
+                  savingAvailability
+                    ? "adminProviderMobility.operations.saving"
+                    : "adminProviderMobility.operations.disable"
+                )}
+              </button>
+            ) : (
+              <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+                <label className="min-w-56 text-xs font-medium text-text-secondary">
+                  {t("adminProviderMobility.operations.vehicle")}
+                  <select
+                    className="app-input mt-1"
+                    value={selectedVehicleId}
+                    onChange={(event) => setSelectedVehicleId(event.target.value)}
+                  >
+                    <option value="">{t("adminProviderMobility.operations.selectVehicle")}</option>
+                    {selectableVehicles.map((vehicle) => (
+                      <option key={vehicle.id} value={vehicle.id}>
+                        {t(`adminProviderMobility.vehicle.${vehicle.vehicleType}`)}
+                        {vehicle.plateNumber ? ` · ${vehicle.plateNumber}` : ` #${vehicle.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  disabled={!canAuthorizeRides || savingAvailability}
+                  onClick={() => changeAvailability("available")}
+                  className="app-btn-primary min-h-11 self-end rounded-full px-5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t(
+                    savingAvailability
+                      ? "adminProviderMobility.operations.saving"
+                      : "adminProviderMobility.operations.enable"
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {provider?.availabilityStatus === "offline" && !canAuthorizeRides ? (
+            <p className="mt-3 rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+              {provider?.status !== "active"
+                ? t("adminProviderMobility.operations.accountRequired")
+                : !compliance?.driverEligible
+                ? t("adminProviderMobility.operations.driverRequired")
+                : !selectableVehicles.length
+                ? t("adminProviderMobility.operations.vehicleRequired")
+                : selectedCompliance?.activationIssues?.join(", ") ||
+                  t("adminProviderMobility.operations.selectVehicle")}
+            </p>
+          ) : null}
+        </section>
 
         <section className="rounded-2xl border border-border bg-surface-card p-4 shadow-sm sm:p-5">
           <div className="flex items-center justify-between gap-3">
@@ -281,8 +410,8 @@ export default function AdminProviderMobilityPage() {
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             {[
-              { value: "driver", complete: onboardingChecks.slice(0, 3).every(Boolean) },
-              { value: "vehicle", complete: onboardingChecks[3] },
+              { value: "driver", complete: onboardingChecks[0] },
+              { value: "vehicle", complete: onboardingChecks[1] },
             ].map(({ value, complete }, index) => (
               <button
                 key={value}
@@ -414,7 +543,11 @@ export default function AdminProviderMobilityPage() {
                       {t(readiness.labelKey)}
                     </span>
                   </div>
-                  {vehicle.status === "pending" ? (
+                  {vehicle.status === "pending" && state?.activationIssues?.length ? (
+                    <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+                      {state.activationIssues.join(", ")}
+                    </p>
+                  ) : vehicle.status === "pending" ? (
                     <p className="mt-3 text-xs text-text-muted">
                       {t("adminProviderMobility.vehicle.registeredHint")}
                     </p>
