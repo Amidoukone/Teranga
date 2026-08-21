@@ -6,6 +6,30 @@ const {
 } = require('../../src/validators/vehicle.schemas');
 
 describe('vehicle media references', () => {
+  test('accepts an incomplete vehicle draft and empty optional dates', () => {
+    const vehicle = createVehicleSchema.validate({
+      vehicleType: 'motorcycle',
+      brand: '',
+      model: '',
+      color: '',
+      plateNumber: '',
+      capacity: '',
+      insuranceExpiresAt: '',
+      inspectionExpiresAt: '',
+    });
+    expect(vehicle.error).toBeUndefined();
+    expect(vehicle.value).toMatchObject({
+      vehicleType: 'motorcycle',
+      capacity: 1,
+      status: 'pending',
+    });
+
+    const driver = updateDriverComplianceSchema.validate({
+      driverLicenseExpiresAt: '',
+    });
+    expect(driver.error).toBeUndefined();
+  });
+
   test('accepts local gallery uploads returned by the media endpoint', () => {
     const driver = updateDriverComplianceSchema.validate({
       profilePhotoUrl: '/uploads/mobility/chauffeur-awa.jpg',

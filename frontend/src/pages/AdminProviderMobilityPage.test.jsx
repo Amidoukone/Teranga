@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 import AdminProviderMobilityPage from "./AdminProviderMobilityPage";
 import {
+  createProviderVehicle,
   getProvider,
   listProviderVehicles,
   updateProviderDriverCompliance,
@@ -20,7 +21,10 @@ jest.mock(
 );
 
 jest.mock("react-i18next", () => {
-  const t = (key) => key;
+  const t = (key, options = {}) =>
+    key === "adminProviderMobility.vehicle.optionalField"
+      ? `${options.label} optional`
+      : key;
   return { useTranslation: () => ({ t }) };
 });
 
@@ -93,7 +97,8 @@ test("envoie une photo choisie dans la galerie puis enregistre sa référence au
   render(<AdminProviderMobilityPage />);
   await screen.findByText("adminProviderMobility.driver.title");
 
-  const photo = new File(["photo"], "chauffeur-awa.jpg", { type: "image/jpeg" });
+  const longFileName = `${"photo-chauffeur-teranga-".repeat(8)}awa.jpg`;
+  const photo = new File(["photo"], longFileName, { type: "image/jpeg" });
   await userEvent.upload(
     screen.getAllByLabelText("adminProviderMobility.media.choose")[0],
     photo
@@ -107,7 +112,9 @@ test("envoie une photo choisie dans la galerie puis enregistre sa référence au
       expect.any(Function)
     )
   );
-  expect(await screen.findByText("chauffeur-awa.jpg")).toBeInTheDocument();
+  const displayedFileName = await screen.findByText(longFileName);
+  expect(displayedFileName).toHaveClass("truncate", "max-w-full");
+  expect(displayedFileName).toHaveAttribute("title", longFileName);
 
   await userEvent.click(
     screen.getByRole("button", { name: "adminProviderMobility.driver.save" })
@@ -120,4 +127,71 @@ test("envoie une photo choisie dans la galerie puis enregistre sa référence au
       })
     )
   );
+});
+
+test("enregistre une moto minimale sans bloquer sur les champs facultatifs", async () => {
+  createProviderVehicle.mockResolvedValue({ id: 88, vehicleType: "motorcycle" });
+
+  render(<AdminProviderMobilityPage />);
+  await screen.findByText("adminProviderMobility.driver.title");
+  await userEvent.click(
+    screen.getByRole("button", { name: /adminProviderMobility.guide.vehicle/ })
+  );
+
+  expect(
+    screen.getByRole("heading", {
+      name: "adminProviderMobility.vehicle.createMotorcycleTitle",
+    })
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText("adminProviderMobility.vehicle.airConditioning")
+  ).not.toBeInTheDocument();
+
+  await userEvent.click(
+    screen.getByRole("button", { name: "adminProviderMobility.vehicle.save" })
+  );
+
+  await waitFor(() =>
+    expect(createProviderVehicle).toHaveBeenCalledWith(
+      "42",
+      expect.objectContaining({
+        vehicleType: "motorcycle",
+        brand: null,
+        model: null,
+        color: null,
+        plateNumber: null,
+        capacity: 1,
+        status: "pending",
+      })
+    )
+  );
+});
+
+test("affiche des champs adaptés lorsque l admin choisit une voiture", async () => {
+  render(<AdminProviderMobilityPage />);
+  await screen.findByText("adminProviderMobility.driver.title");
+  await userEvent.click(
+    screen.getByRole("button", { name: /adminProviderMobility.guide.vehicle/ })
+  );
+
+  await userEvent.click(
+    screen.getByRole("button", {
+      name: /adminProviderMobility.vehicle.car adminProviderMobility.vehicle.carHint/,
+    })
+  );
+
+  expect(
+    screen.getByRole("heading", {
+      name: "adminProviderMobility.vehicle.createCarTitle",
+    })
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText("adminProviderMobility.vehicle.airConditioning")
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText("adminProviderMobility.vehicle.helmet")
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByLabelText("adminProviderMobility.vehicle.carCapacity optional")
+  ).toHaveAttribute("max", "12");
 });

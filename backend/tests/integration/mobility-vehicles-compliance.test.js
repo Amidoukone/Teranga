@@ -265,6 +265,39 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
     expect(activation.body.provider.status).toBe('active');
   });
 
+  test.each(['motorcycle', 'car'])(
+    'enregistre un brouillon %s sans imposer les informations de conformite',
+    async (vehicleType) => {
+      if (!dbReady) return;
+
+      const response = await request(app)
+        .post(`/api/v1/providers/${provider.id}/vehicles`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          vehicleType,
+          brand: '',
+          model: '',
+          color: '',
+          plateNumber: '',
+          capacity: '',
+          insuranceExpiresAt: '',
+          inspectionExpiresAt: '',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.vehicle).toMatchObject({
+        vehicleType,
+        brand: null,
+        model: null,
+        color: null,
+        plateNumber: null,
+        capacity: 1,
+        status: 'pending',
+      });
+      created.vehicleIds.push(response.body.vehicle.id);
+    }
+  );
+
   test('affecte uniquement le bon type et ne divulgue aucun document au client', async () => {
     if (!dbReady) return;
 

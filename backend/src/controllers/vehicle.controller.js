@@ -21,10 +21,11 @@ async function findManagedProvider(req, res) {
 
 function normalizePayload(payload) {
   const normalized = { ...payload };
-  if (normalized.plateNumber !== undefined) {
-    normalized.plateNumber = String(normalized.plateNumber).trim().toUpperCase();
-  }
   for (const key of [
+    'brand',
+    'model',
+    'color',
+    'plateNumber',
     'photoUrl',
     'registrationNumber',
     'registrationDocumentUrl',
@@ -35,7 +36,14 @@ function normalizePayload(payload) {
     'inspectionDocumentUrl',
     'inspectionExpiresAt',
   ]) {
-    if (normalized[key] === '') normalized[key] = null;
+    if (normalized[key] === undefined) continue;
+    if (normalized[key] === null || String(normalized[key]).trim() === '') {
+      normalized[key] = null;
+      continue;
+    }
+    if (key === 'plateNumber') {
+      normalized[key] = String(normalized[key]).trim().toUpperCase();
+    }
   }
   return normalized;
 }
