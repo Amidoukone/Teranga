@@ -74,6 +74,7 @@ export default function DispatchCandidatesMap({ mission, candidates }) {
       }
 
       candidates.forEach((candidate, index) => {
+        if (!hasPoint(candidate.location?.latitude, candidate.location?.longitude)) return;
         const position = {
           lat: Number(candidate.location.latitude),
           lng: Number(candidate.location.longitude),

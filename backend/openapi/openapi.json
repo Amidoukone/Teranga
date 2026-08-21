@@ -203,7 +203,7 @@
     },
     "/providers/{id}/status": {
       "patch": {
-        "summary": "Advance provider onboarding status (category_manager, admin)",
+        "summary": "Update provider account lifecycle status (category_manager, admin)",
         "parameters": [
           {
             "name": "id",
@@ -224,7 +224,7 @@
         },
         "responses": {
           "200": {
-            "description": "Updated provider",
+            "description": "Updated provider account; Mobility ride readiness is returned separately when applicable",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ProviderResponse" }
@@ -890,7 +890,17 @@
         "type": "object",
         "required": ["provider"],
         "properties": {
-          "provider": { "$ref": "#/components/schemas/Provider" }
+          "provider": { "$ref": "#/components/schemas/Provider" },
+          "mobilityActivation": {
+            "type": "object",
+            "required": ["accountActive", "dispatchReady", "compliance"],
+            "properties": {
+              "accountActive": { "type": "boolean" },
+              "dispatchReady": { "type": "boolean" },
+              "compliance": { "type": "object", "additionalProperties": true }
+            },
+            "additionalProperties": false
+          }
         },
         "additionalProperties": true
       },

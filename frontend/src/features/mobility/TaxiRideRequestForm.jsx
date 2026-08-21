@@ -130,15 +130,12 @@ export default function TaxiRideRequestForm() {
     let cancelled = false;
     (async () => {
       try {
-        const [categoryList, countryList, session] = await Promise.all([
-          getTradeCategories(),
+        const [countryList, session] = await Promise.all([
           getMasterCountries(),
           me().catch(() => ({ user: null })),
         ]);
         if (cancelled) return;
 
-        const mobility = categoryList.find((item) => item.slug === "mobilite") || null;
-        setTradeCategory(mobility);
         setCountries(countryList);
 
         const verifiedUser = session?.user || null;
@@ -149,8 +146,18 @@ export default function TaxiRideRequestForm() {
           (country) => String(country.id) === String(initialDraft.countryId)
         );
         const initialCountryId =
-          verifiedUser?.countryId || draftCountry?.id || mobility?.countryId || countryList[0]?.id || null;
+          verifiedUser?.countryId || draftCountry?.id || countryList[0]?.id || null;
         setCountryId(initialCountryId ? String(initialCountryId) : "");
+
+        const categoryList = initialCountryId
+          ? await getTradeCategories({
+              countryId: Number(initialCountryId),
+              ...(verifiedUser?.regionId ? { regionId: Number(verifiedUser.regionId) } : {}),
+            })
+          : [];
+        if (cancelled) return;
+        const mobility = categoryList.find((item) => item.slug === "mobilite") || null;
+        setTradeCategory(mobility);
 
         if (!mobility) {
           setFeedback({ type: "error", message: t("mobilityBooking.errors.unavailable") });
@@ -237,6 +244,28 @@ export default function TaxiRideRequestForm() {
   const handleVehicleChange = (nextVehicleType) => {
     setVehicleType(nextVehicleType);
     invalidateEstimate();
+  };
+
+  const handleCountryChange = async (nextCountryId) => {
+    setCountryId(nextCountryId);
+    setTradeCategory(null);
+    invalidateEstimate();
+    setStep(2);
+    try {
+      const categoryList = await getTradeCategories({
+        countryId: Number(nextCountryId),
+        ...(String(sessionUser?.countryId) === String(nextCountryId) && sessionUser?.regionId
+          ? { regionId: Number(sessionUser.regionId) }
+          : {}),
+      });
+      const mobility = categoryList.find((item) => item.slug === "mobilite") || null;
+      setTradeCategory(mobility);
+      if (!mobility) {
+        setFeedback({ type: "error", message: t("mobilityBooking.errors.unavailable") });
+      }
+    } catch (_error) {
+      setFeedback({ type: "error", message: t("mobilityBooking.errors.load") });
+    }
   };
 
   const resolveDroppedPin = useCallback(async (kind, coordinates) => {
@@ -809,11 +838,7 @@ export default function TaxiRideRequestForm() {
                     <select
                       className={inputClass}
                       value={countryId}
-                      onChange={(event) => {
-                        setCountryId(event.target.value);
-                        invalidateEstimate();
-                        setStep(2);
-                      }}
+                      onChange={(event) => handleCountryChange(event.target.value)}
                     >
                       {countries.map((country) => (
                         <option key={country.id} value={country.id}>{country.name}</option>

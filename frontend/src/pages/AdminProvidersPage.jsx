@@ -2,8 +2,8 @@
 // Onboarding admin des prestataires Teranga Pro (docs/DEV_SPEC_TERANGA_v3.md section 3/6) :
 // un admin/master cree en une soumission le compte (role='provider') PUIS la fiche Provider
 // (entreprise ou ouvrier independant), et fait progresser le statut pending -> probation -> active.
-// Une fois actif, le prestataire devient assignable depuis AdminServicesPage pour les missions
-// de sa filiere (executionType='provider').
+// Le statut actif ouvre le compte. Pour la Mobilite, l'aptitude a recevoir une course reste un
+// etat separe, calcule depuis la conformite du chauffeur et d'au moins un vehicule.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -279,8 +279,21 @@ export default function AdminProvidersPage() {
   async function handleStatusTransition(provider, nextStatus) {
     setTransitioningId(provider.id);
     try {
-      await updateProviderStatus(provider.id, nextStatus);
-      notify.success(t('adminProvidersPage.alerts.statusUpdateSuccess'));
+      const result = await updateProviderStatus(provider.id, nextStatus);
+      const coversMobility =
+        Array.isArray(provider.tradeCategories) &&
+        provider.tradeCategories.some((tradeCategory) => tradeCategory.slug === 'mobilite');
+      if (nextStatus === 'active' && coversMobility) {
+        notify.success(
+          t(
+            result?.mobilityActivation?.dispatchReady
+              ? 'adminProvidersPage.alerts.accountActivatedReady'
+              : 'adminProvidersPage.alerts.accountActivatedPendingCompliance'
+          )
+        );
+      } else {
+        notify.success(t('adminProvidersPage.alerts.statusUpdateSuccess'));
+      }
       await loadProviders();
     } catch (err) {
       console.error('AdminProvidersPage status update error:', err);
@@ -298,8 +311,8 @@ export default function AdminProvidersPage() {
     [t]
   );
 
-  // Checklist chauffeur (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §2) — affichée seulement si la
-  // filière Mobilité est sélectionnée, condition à passer au statut 'active' côté backend.
+  // La section Mobilite explique que la conformite conditionne les courses, mais ne bloque plus
+  // l'activation du compte.
   const coversMobilite = useMemo(
     () =>
       tradeCategories.some(
@@ -675,13 +688,30 @@ export default function AdminProvidersPage() {
                         ? p.tradeCategories.map((tc) => tc.name).join(', ')
                         : t('adminProvidersPage.table.emptyValue')}
                       {Array.isArray(p.tradeCategories) && p.tradeCategories.some((tc) => tc.slug === 'mobilite') ? (
-                        <div className="mt-1">
+                        <div className="mt-1 flex flex-wrap gap-1">
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
                               AVAILABILITY_BADGE_TONE[p.availabilityStatus] || AVAILABILITY_BADGE_TONE.offline
                             }`}
                           >
                             {t(`adminProvidersPage.availability.${p.availabilityStatus || 'offline'}`)}
+                          </span>
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                              p.status === 'active' &&
+                              p.mobilityCompliance?.driverEligible &&
+                              p.mobilityCompliance?.hasEligibleVehicle
+                                ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                : 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                            }`}
+                          >
+                            {t(
+                              p.status === 'active' &&
+                                p.mobilityCompliance?.driverEligible &&
+                                p.mobilityCompliance?.hasEligibleVehicle
+                                ? 'adminProvidersPage.mobilityState.ready'
+                                : 'adminProvidersPage.mobilityState.pending'
+                            )}
                           </span>
                         </div>
                       ) : null}

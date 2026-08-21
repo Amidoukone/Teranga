@@ -130,6 +130,7 @@ describe("TaxiRideRequestForm", () => {
       name: /Appelez Teranga : \+223 20 00 00 00/,
     });
     expect(callLink).toHaveAttribute("href", "tel:+22320000000");
+    expect(getTradeCategories).toHaveBeenCalledWith({ countryId: 1 });
   });
 
   test("un client connecté ne voit aucun formulaire d'inscription", async () => {

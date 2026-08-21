@@ -199,15 +199,33 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
     await db.sequelize.close();
   });
 
-  test('bloque l activation incomplete puis autorise un chauffeur et un vehicule conformes', async () => {
+  test('active le compte sans confondre activation et aptitude a recevoir une course', async () => {
     if (!dbReady) return;
 
-    const blockedActivation = await request(app)
+    const accountActivation = await request(app)
       .patch(`/api/v1/providers/${provider.id}/status`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ status: 'active' });
-    expect(blockedActivation.status).toBe(400);
-    expect(blockedActivation.body.compliance.driverEligible).toBe(false);
+    expect(accountActivation.status).toBe(200);
+    expect(accountActivation.body.provider).toMatchObject({
+      status: 'active',
+      availabilityStatus: 'offline',
+    });
+    expect(accountActivation.body.mobilityActivation).toMatchObject({
+      accountActive: true,
+      dispatchReady: false,
+      compliance: {
+        driverEligible: false,
+        hasEligibleVehicle: false,
+      },
+    });
+
+    const unavailableBeforeCompliance = await request(app)
+      .patch('/api/v1/providers/me/availability')
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ availabilityStatus: 'available' });
+    expect(unavailableBeforeCompliance.status).toBe(400);
+    expect(unavailableBeforeCompliance.body.error).toBeTruthy();
 
     const galleryUpload = await request(app)
       .post(`/api/v1/providers/${provider.id}/mobility-media`)
@@ -257,12 +275,26 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
     expect(motorcycleResponse.status).toBe(201);
     created.vehicleIds.push(motorcycleResponse.body.vehicle.id);
 
+    const suspension = await request(app)
+      .patch(`/api/v1/providers/${provider.id}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'suspended' });
+    expect(suspension.status).toBe(200);
+    expect(suspension.body.provider).toMatchObject({
+      status: 'suspended',
+      availabilityStatus: 'offline',
+    });
+
     const activation = await request(app)
       .patch(`/api/v1/providers/${provider.id}/status`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ status: 'active' });
     expect(activation.status).toBe(200);
     expect(activation.body.provider.status).toBe('active');
+    expect(activation.body.mobilityActivation).toMatchObject({
+      accountActive: true,
+      dispatchReady: true,
+    });
   });
 
   test.each(['motorcycle', 'car'])(
@@ -330,6 +362,12 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
     expect(initialTracking.body.startCode).toMatch(/^\d{4}$/);
     const initialStartCode = initialTracking.body.startCode;
 
+    const availableWithCompliantMotorcycle = await request(app)
+      .patch('/api/v1/providers/me/availability')
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ availabilityStatus: 'available' });
+    expect(availableWithCompliantMotorcycle.status).toBe(200);
+
     const wrongType = await request(app)
       .post(`/api/v1/missions/${mission.id}/assign`)
       .set('Authorization', `Bearer ${adminToken}`)
@@ -353,8 +391,8 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
     const availableWithoutGps = await request(app)
       .patch('/api/v1/providers/me/availability')
       .set('Authorization', `Bearer ${providerToken}`)
-      .send({ availabilityStatus: 'available' });
-    expect(availableWithoutGps.status).toBe(400);
+      .send({ availabilityStatus: 'available', vehicleId: carId });
+    expect(availableWithoutGps.status).toBe(200);
 
     const liveLocation = await request(app)
       .post('/api/v1/providers/me/live-location')
@@ -393,12 +431,15 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
       .get(`/api/v1/missions/${mission.id}/dispatch-candidates?radiusKm=8`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(staleDispatch.status).toBe(200);
-    expect(staleDispatch.body.candidates).toHaveLength(0);
-
-    await request(app)
-      .post('/api/v1/providers/me/live-location')
-      .set('Authorization', `Bearer ${providerToken}`)
-      .send({ vehicleId: carId, latitude: 12.641, longitude: -8.001 });
+    expect(staleDispatch.body.candidates).toHaveLength(1);
+    expect(staleDispatch.body.candidates[0]).toMatchObject({
+      provider: { id: provider.id },
+      vehicle: { id: carId },
+      location: null,
+      approachDistanceMeters: null,
+      approachDurationSeconds: null,
+      distanceSource: 'unavailable',
+    });
 
     const available = await request(app)
       .get('/api/v1/providers/available?vehicleType=car')
@@ -412,6 +453,9 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
       .send({ providerId: provider.id, vehicleId: carId });
     expect(assignment.status).toBe(200);
     expect(assignment.body.mission.vehicleId).toBe(carId);
+    expect(
+      new Date(assignment.body.mission.acceptanceDeadlineAt).getTime() - Date.now()
+    ).toBeGreaterThan(2 * 60 * 1000);
     await provider.reload();
     expect(provider.availabilityStatus).toBe('busy');
 
@@ -478,7 +522,13 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
       providerId: null,
       vehicleId: null,
     });
-    expect(provider.availabilityStatus).toBe('available');
+    expect(provider.availabilityStatus).toBe('offline');
+
+    const availableAgain = await request(app)
+      .patch('/api/v1/providers/me/availability')
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ availabilityStatus: 'available', vehicleId: carId });
+    expect(availableAgain.status).toBe(200);
 
     const reassignment = await request(app)
       .post(`/api/v1/missions/${mission.id}/assign`)

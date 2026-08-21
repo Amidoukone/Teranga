@@ -33,6 +33,7 @@ const updateProviderStatusSchema = Joi.object({
 
 const updateMyAvailabilitySchema = Joi.object({
   availabilityStatus: Joi.string().valid('available', 'busy', 'offline').required(),
+  vehicleId: Joi.number().integer().positive().allow(null),
 });
 
 const updateMyLiveLocationSchema = Joi.object({

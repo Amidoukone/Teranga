@@ -159,6 +159,11 @@ export default function MobilityDispatchPanel({ missionId }) {
               <ol className="max-h-[430px] space-y-3 overflow-y-auto pr-1">
                 {candidates.map((candidate, index) => {
                   const Icon = candidate.vehicle.vehicleType === "motorcycle" ? Bike : CarFront;
+                  const hasApproachEstimate =
+                    candidate.approachDurationSeconds != null &&
+                    candidate.approachDistanceMeters != null &&
+                    Number.isFinite(Number(candidate.approachDurationSeconds)) &&
+                    Number.isFinite(Number(candidate.approachDistanceMeters));
                   return (
                     <li key={`${candidate.provider.id}-${candidate.vehicle.id}`} className="rounded-xl border border-border bg-surface-main/60 p-4">
                       <div className="flex items-start justify-between gap-3">
@@ -174,13 +179,15 @@ export default function MobilityDispatchPanel({ missionId }) {
                         <span className="app-badge app-badge-success">{candidate.rankingScore}/100</span>
                       </div>
                       <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-                        <Metric icon={MapPin} value={`${Math.max(1, Math.round(candidate.approachDurationSeconds / 60))} min`} label={t("mobilityDispatch.eta")} />
-                        <Metric value={`${(candidate.approachDistanceMeters / 1000).toFixed(1)} km`} label={t("mobilityDispatch.distance")} />
+                        <Metric icon={MapPin} value={hasApproachEstimate ? `${Math.max(1, Math.round(candidate.approachDurationSeconds / 60))} min` : "—"} label={t("mobilityDispatch.eta")} />
+                        <Metric value={hasApproachEstimate ? `${(candidate.approachDistanceMeters / 1000).toFixed(1)} km` : "—"} label={t("mobilityDispatch.distance")} />
                         <Metric icon={ShieldCheck} value={`${candidate.reliabilityScore}/100`} label={t("mobilityDispatch.reliability")} />
                       </div>
                       <p className="mt-2 text-[11px] text-text-muted">
-                        {t("mobilityDispatch.gpsAge", { seconds: candidate.location.ageSeconds })}
-                        {candidate.distanceSource !== "google" ? ` · ${t("mobilityDispatch.fallback")}` : ""}
+                        {candidate.location
+                          ? t("mobilityDispatch.gpsAge", { seconds: candidate.location.ageSeconds })
+                          : t("mobilityDispatch.positionUnavailable")}
+                        {candidate.distanceSource === "straight_line_fallback" ? ` · ${t("mobilityDispatch.fallback")}` : ""}
                       </p>
                       <button
                         type="button"

@@ -30,7 +30,7 @@ const {
  *                                   au nom d'un compte déjà 'provider' (userId requis)
  * - GET    /providers            : liste scopée (admin, category_manager)
  * - GET    /providers/:id        : fiche interne (admin, category_manager)
- * - PATCH  /providers/:id/status : onboarding pending->probation->active
+ * - PATCH  /providers/:id/status : cycle de vie du compte; aptitude Mobilite retournee separement
  * - POST   /providers/:id/contracts : contrat de partenariat signé
  * ============================================================
  */

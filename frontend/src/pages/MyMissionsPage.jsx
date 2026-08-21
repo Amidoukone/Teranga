@@ -132,69 +132,47 @@ export default function MyMissionsPage() {
     try {
       if (availabilityStatus === 'available' && dispatchPresence?.eligibleVehicles?.length) {
         if (!activeVehicleId) throw new Error(t('myMissionsPage.errors.vehicleRequired'));
-        if (!navigator.geolocation) {
-          throw new Error(t('myMissionsPage.errors.geolocationUnsupported'));
+        // La position améliore le classement du chauffeur, mais une autorisation refusée ou un
+        // réseau faible ne doit jamais empêcher de recevoir une course.
+        if (navigator.geolocation) {
+          try {
+            const position = await new Promise((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: false,
+                timeout: 8000,
+                maximumAge: 5 * 60 * 1000,
+              });
+            });
+            const locationResult = await updateMyLiveLocation({
+              vehicleId: Number(activeVehicleId),
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracyMeters: position.coords.accuracy ?? null,
+              headingDegrees: position.coords.heading ?? null,
+            });
+            setDispatchPresence((current) => ({
+              ...current,
+              liveLocation: locationResult.location,
+            }));
+          } catch (_locationError) {
+            // Best effort uniquement : la disponibilité est enregistrée juste après.
+          }
         }
-        const position = await new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 12000,
-            maximumAge: 5000,
-          });
-        });
-        const locationResult = await updateMyLiveLocation({
-          vehicleId: Number(activeVehicleId),
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracyMeters: position.coords.accuracy ?? null,
-          headingDegrees: position.coords.heading ?? null,
-        });
-        setDispatchPresence((current) => ({
-          ...current,
-          liveLocation: locationResult.location,
-        }));
       }
-      const updated = await updateMyAvailability(availabilityStatus);
+      const updated = await updateMyAvailability(
+        availabilityStatus,
+        availabilityStatus === 'available' ? activeVehicleId : null
+      );
       setProvider(updated);
     } catch (e) {
       console.error('MyMissionsPage update availability error:', e);
       setAvailabilityError(
-        e?.response?.data?.error ||
-          (e?.code ? t('myMissionsPage.errors.geolocationError') : e?.message) ||
-          t('myMissionsPage.errors.availability')
+        e?.response?.data?.error || e?.message || t('myMissionsPage.errors.availability')
       );
     } finally {
       setSavingAvailability(false);
     }
   }
-
-  useEffect(() => {
-    if (
-      provider?.availabilityStatus !== 'available' ||
-      !activeVehicleId ||
-      !navigator.geolocation
-    ) {
-      return undefined;
-    }
-    let lastSentAt = 0;
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const now = Date.now();
-        if (now - lastSentAt < 15000) return;
-        lastSentAt = now;
-        updateMyLiveLocation({
-          vehicleId: Number(activeVehicleId),
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracyMeters: position.coords.accuracy ?? null,
-          headingDegrees: position.coords.heading ?? null,
-        }).catch(() => {});
-      },
-      () => {},
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-    );
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [activeVehicleId, provider?.availabilityStatus]);
 
   if (isAllowed === null) {
     return (

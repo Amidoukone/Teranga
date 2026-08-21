@@ -12,7 +12,6 @@ const {
   SavedLocation,
   Evidence,
   Provider,
-  ProviderLiveLocation,
   MissionRating,
   Vehicle,
   ExecutorLocation,
@@ -21,10 +20,7 @@ const { geocodeAddress, reverseGeocode } = require('../services/geocoding.servic
 const { getDistanceMatrix } = require('../services/distanceMatrix.service');
 const { estimateMission } = require('../services/priceEstimate.service');
 const { findEligibleVehicleForProvider } = require('../services/mobilityCompliance.service');
-const {
-  isLocationFresh,
-  upsertProviderLiveLocation,
-} = require('../services/providerPresence.service');
+const { upsertProviderLiveLocation } = require('../services/providerPresence.service');
 const {
   getMissionStartCode,
   resolveAssistancePhone,
@@ -47,6 +43,21 @@ const logger = require('../utils/logger');
 
 const MISSION_ATTACHMENT_LOCAL_FALLBACK_ENV_VAR = 'MISSION_ATTACHMENT_ALLOW_LOCAL_FALLBACK';
 const MISSION_ATTACHMENT_STORAGE_ERROR_CODE = 'MISSION_ATTACHMENT_STORAGE_UNAVAILABLE';
+const DEFAULT_ACCEPTANCE_WINDOW_SECONDS = 5 * 60;
+const MIN_ACCEPTANCE_WINDOW_SECONDS = 2 * 60;
+const MAX_ACCEPTANCE_WINDOW_SECONDS = 15 * 60;
+
+function getAcceptanceWindowSeconds() {
+  const configured = Number(process.env.MISSION_ACCEPTANCE_WINDOW_SECONDS);
+  if (
+    !Number.isFinite(configured) ||
+    configured < MIN_ACCEPTANCE_WINDOW_SECONDS ||
+    configured > MAX_ACCEPTANCE_WINDOW_SECONDS
+  ) {
+    return DEFAULT_ACCEPTANCE_WINDOW_SECONDS;
+  }
+  return Math.round(configured);
+}
 
 // Libellés courts pour les notifications de transition (section 4.2/2).
 const MISSION_STATUS_LABELS = {
@@ -525,12 +536,18 @@ async function findActiveProviderForTradeCategory(providerId, tradeCategoryId) {
 
 async function releaseMobilityProviderIfEligible(providerId) {
   if (!providerId) return false;
-  const provider = await Provider.findByPk(providerId, {
-    include: [{ model: ProviderLiveLocation, as: 'liveLocation', required: false }],
-  });
-  if (!provider?.liveLocation || !isLocationFresh(provider.liveLocation)) return false;
+  const provider = await Provider.findByPk(providerId);
+  if (!provider) return false;
+  const eligibility =
+    provider.status === 'active'
+      ? await findEligibleVehicleForProvider({
+          provider,
+          requestedVehicleType: null,
+        })
+      : { vehicle: null };
+  const availabilityStatus = eligibility.vehicle ? 'available' : 'offline';
   const [released] = await Provider.update(
-    { availabilityStatus: 'available' },
+    { availabilityStatus },
     { where: { id: provider.id, availabilityStatus: 'busy' } }
   );
   return released === 1;
@@ -674,15 +691,6 @@ exports.assign = async (req, res) => {
           }
           assignedVehicle = eligibility.vehicle;
 
-          const liveLocation = await ProviderLiveLocation.findOne({
-            where: { providerId: provider.id, vehicleId: assignedVehicle.id },
-          });
-          if (!liveLocation || !isLocationFresh(liveLocation)) {
-            return res.status(400).json({
-              error: 'La position GPS du chauffeur est absente ou perimee',
-            });
-          }
-
           const activeMissionCount = await Service.count({
             where: {
               id: { [Op.ne]: service.id },
@@ -716,7 +724,7 @@ exports.assign = async (req, res) => {
           // Dispatch partagé (docs/DEV_SPEC_TERANGA_v6_PHASE3.md §3) : la fenêtre d'acceptation
           // n'est pas spécifique à Mobilité, seule cette condition la limitait artificiellement.
           if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug)) {
-            acceptanceDeadlineAt = new Date(Date.now() + 90 * 1000);
+            acceptanceDeadlineAt = new Date(Date.now() + getAcceptanceWindowSeconds() * 1000);
           }
         }
 

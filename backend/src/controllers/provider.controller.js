@@ -27,7 +27,6 @@ const {
   findEligibleVehicleForProvider,
 } = require('../services/mobilityCompliance.service');
 const {
-  isLocationFresh,
   serializeLiveLocation,
   upsertProviderLiveLocation,
 } = require('../services/providerPresence.service');
@@ -203,7 +202,6 @@ exports.updateMyAvailability = async (req, res) => {
     const provider = await Provider.findOne({
       where: { userId: req.user.id },
       include: [
-        { model: ProviderLiveLocation, as: 'liveLocation' },
         { model: TradeCategory, as: 'tradeCategories', attributes: ['slug'] },
       ],
     });
@@ -216,15 +214,10 @@ exports.updateMyAvailability = async (req, res) => {
       if (provider.status !== 'active') {
         return res.status(400).json({ error: "Le profil chauffeur n'est pas actif" });
       }
-      if (!provider.liveLocation || !isLocationFresh(provider.liveLocation)) {
-        return res.status(400).json({
-          error: 'Partagez une position GPS recente avant de passer disponible',
-        });
-      }
       const eligibility = await findEligibleVehicleForProvider({
         provider,
         requestedVehicleType: null,
-        vehicleId: provider.liveLocation.vehicleId,
+        vehicleId: req.body.vehicleId || null,
       });
       if (!eligibility.vehicle) {
         const issues = [...eligibility.driverIssues, ...eligibility.vehicleIssues];
@@ -282,7 +275,7 @@ exports.listAvailable = async (req, res) => {
       {
         model: ProviderLiveLocation,
         as: 'liveLocation',
-        required: true,
+        required: false,
       },
     ];
 
@@ -293,15 +286,10 @@ exports.listAvailable = async (req, res) => {
     });
 
     const providers = candidates
-      .filter(
-        (provider) =>
-          getDriverComplianceIssues(provider).length === 0 &&
-          isLocationFresh(provider.liveLocation)
-      )
+      .filter((provider) => getDriverComplianceIssues(provider).length === 0)
       .map((provider) => {
         const eligibleVehicles = (provider.vehicles || []).filter(
           (vehicle) =>
-            String(vehicle.id) === String(provider.liveLocation.vehicleId) &&
             getVehicleComplianceIssues(vehicle, {
               requestedVehicleType: requestedVehicleType || vehicle.vehicleType,
             }).length === 0
@@ -525,26 +513,37 @@ exports.updateStatus = async (req, res) => {
       });
     }
 
-    // Checklist onboarding chauffeur (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §2.3) — un prestataire
-    // couvrant la filière Mobilité ne peut pas passer actif sans plaque, carte de circulation
-    // vérifiée et assurance. Ne concerne pas les autres filières.
+    // Le statut du compte et l'aptitude a recevoir une course sont deux notions distinctes.
+    // Un admin peut activer le compte pour terminer l'onboarding et permettre au chauffeur de se
+    // connecter. La disponibilite, le dispatch et l'acceptation d'une course conservent leurs
+    // propres controles stricts de conformite chauffeur + vehicule.
     const coversMobilite = (provider.tradeCategories || []).some((tc) => tc.slug === 'mobilite');
-    if (nextStatus === 'active' && coversMobilite) {
-      const compliance = toComplianceSummary(provider);
-      const missing = [...compliance.driverIssues];
-      if (!compliance.hasEligibleVehicle) missing.push('vehicule actif et conforme');
-      if (missing.length > 0) {
-        return res.status(400).json({
-          error: `Checklist chauffeur incomplete pour la filiere Mobilite : ${missing.join(', ')}`,
-          compliance,
-        });
-      }
-    }
+    const mobilityCompliance = coversMobilite ? toComplianceSummary(provider) : null;
+    const dispatchReady = Boolean(
+      nextStatus === 'active' &&
+        mobilityCompliance?.driverEligible &&
+        mobilityCompliance?.hasEligibleVehicle
+    );
 
     provider.status = nextStatus;
+    // Toute transition de cycle de vie remet un chauffeur hors service. Meme si son dossier est
+    // deja conforme, il devra declarer explicitement sa disponibilite avant d'etre propose au
+    // dispatch. updateMyAvailability reverifie la conformite avant de l'autoriser.
+    if (coversMobilite) provider.availabilityStatus = 'offline';
     await provider.save();
 
-    return res.json({ provider });
+    return res.json({
+      provider,
+      ...(coversMobilite
+        ? {
+            mobilityActivation: {
+              accountActive: nextStatus === 'active',
+              dispatchReady,
+              compliance: mobilityCompliance,
+            },
+          }
+        : {}),
+    });
   } catch (e) {
     logger.error({ err: e }, 'provider.updateStatus.failed');
     return res.status(500).json({ error: 'Erreur lors du changement de statut' });

@@ -1532,6 +1532,7 @@ const en = {
     distance: "Distance",
     reliability: "Reliability",
     gpsAge: "GPS updated {{seconds}}s ago",
+    positionUnavailable: "Position unavailable — confirm proximity with the driver.",
     fallback: "estimated straight-line distance",
     assign: "Assign this driver",
     assigning: "Assigning…",
@@ -1674,7 +1675,7 @@ const en = {
   adminProvidersPage: {
     title: "Provider management",
     subtitle:
-      "Create company or independent-worker accounts, progress their onboarding status, then assign them trade missions from the Services page.",
+      "Activate provider accounts simply. For drivers, readiness to receive a ride is checked separately.",
     loading: "Loading…",
     loadingProviders: "Loading providers…",
     badges: {
@@ -1705,9 +1706,9 @@ const en = {
       businessPhoneLabel: "Business phone *",
       businessEmailLabel: "Business email",
       hasLiabilityInsuranceLabel: "Liability insurance",
-      driverChecklistTitle: "Driver checklist (Mobility trade) — required to go active",
+      driverChecklistTitle: "Driver file (Mobility trade) — required before a ride",
       mobilityComplianceAfterCreation:
-        "After creation, open “Vehicles and compliance” in the list to verify the driver and add their motorcycles or cars. Activation remains blocked until the file is compliant.",
+        "After creation, you can activate the account immediately. Then open “Vehicles and compliance” to prepare the driver for rides. Until the file is validated, the driver stays offline and cannot receive any ride.",
       plateNumberLabel: "License plate",
       circulationCardNumberLabel: "Circulation card number",
       circulationCardVerifiedLabel: "Circulation card verified",
@@ -1740,6 +1741,8 @@ const en = {
         "Account created (id {{userId}}) but the provider profile failed: {{error}}",
       statusUpdateSuccess: "Status updated",
       statusUpdateError: "Error updating status",
+      accountActivatedReady: "Driver account activated. The file is validated and the driver can now go available.",
+      accountActivatedPendingCompliance: "Driver account activated. The driver stays offline and cannot receive rides until the Mobility file is validated.",
     },
     filters: {
       statusLabel: "Status",
@@ -1771,9 +1774,13 @@ const en = {
       busy: "Busy",
       offline: "Offline",
     },
+    mobilityState: {
+      ready: "Ready for rides",
+      pending: "Ride file to complete",
+    },
     actions: {
       toProbation: "Move to probation",
-      toActive: "Activate",
+      toActive: "Activate account",
       toSuspended: "Suspend",
       toRevoked: "Revoke",
       manageMobility: "Vehicles and compliance",
@@ -3015,8 +3022,8 @@ const en = {
       busy: "Busy",
       offline: "Offline",
       activeVehicle: "Vehicle currently in use",
-      gpsFresh: "Recent GPS position — you can receive a ride.",
-      gpsRequired: "Your position will be shared when you go available.",
+      gpsFresh: "Position recorded — useful for suggesting nearby rides.",
+      gpsRequired: "Location is optional. You can receive a ride without GPS.",
     },
     buttons: {
       refresh: "Refresh",

@@ -62,13 +62,18 @@ Formulaire `AdminProvidersPage.jsx` existant (Lot 1) — ajouter les trois champ
 lorsque la filière sélectionnée inclut "Mobilité" (cohérent avec `requires_company` déjà
 conditionnel par filière dans ce même formulaire). Pas de nouvelle page.
 
-### 2.3 Contrainte de passage à `active`
+### 2.3 Séparation entre compte actif et aptitude aux courses
 
-Un prestataire couvrant la filière Mobilité ne doit pas pouvoir passer au statut `active`
-(`providerStatus.js`, machine à états existante) sans `plate_number` ET
-`circulation_card_verified = true` ET `has_liability_insurance = true`. Vérification ajoutée dans
-`provider.controller.js` (transition de statut), pas une contrainte SQL — un prestataire couvrant
-d'autres filières uniquement n'est pas concerné.
+Le statut `active` de `providerStatus.js` indique que le compte du prestataire est ouvert par
+l'administration. Il ne constitue pas, à lui seul, une validation opérationnelle Mobilité. Un
+administrateur peut donc activer le compte même si le dossier chauffeur ou la flotte n'est pas
+encore entièrement vérifié.
+
+Pour préserver la sécurité, chaque transition de statut remet un chauffeur Mobilité `offline`.
+La conformité du chauffeur et d'au moins un véhicule actif reste contrôlée avant le passage
+`available`, l'apparition dans le dispatch, l'affectation et l'acceptation d'une course. Ainsi,
+l'onboarding administratif n'est pas bloqué, mais aucun chauffeur incomplet ne peut recevoir une
+course.
 
 ---
 
@@ -86,17 +91,21 @@ volontairement grossière.
 
 ### 3.2 Endpoint chauffeur
 
-`PATCH /api/v1/providers/me/availability` — body `{ availabilityStatus }`, réservé au prestataire
+`PATCH /api/v1/providers/me/availability` — body
+`{ availabilityStatus, vehicleId? }`, réservé au prestataire
 authentifié pour **son propre** enregistrement (`findProviderForUser`, déjà utilisé ailleurs dans
 `mission.controller.js`). Un prestataire non scopé sur la filière Mobilité peut aussi s'en servir
 sans dommage (champ inoffensif pour les autres filières) — pas de restriction filière ici, pour ne
-pas complexifier inutilement.
+pas complexifier inutilement. Pour Mobilité, le compte, le chauffeur et le véhicule choisi restent
+soumis aux contrôles de conformité. La position GPS est enregistrée en best effort : son absence ou
+son ancienneté ne bloque pas le passage `available`.
 
 ### 3.3 Vue admin/master
 
 `GET /api/v1/providers/available` — scope géographique (même pattern que `listForAdmin` ailleurs),
 filtré `availabilityStatus='available'`, `status='active'`, filière Mobilité. Utilisée par la vue
-de dispatch (§5).
+de dispatch (§5). Une position récente améliore le classement et permet l'estimation d'approche ;
+un chauffeur conforme sans position reste affectable et apparaît après les chauffeurs localisés.
 
 ---
 
@@ -161,8 +170,9 @@ d'affectation).
 ### 5.2 Fenêtre d'acceptation — extension du modèle, pas de nouveau statut
 
 Nouvelle colonne additive `services.acceptanceDeadlineAt` (DATETIME nullable). Posée par
-`exports.assign` au moment où `providerId` est renseigné **et** que la mission est de filière
-Mobilité (autres filières : comportement inchangé, colonne reste `NULL`) : `now() + 90 secondes`.
+`exports.assign` au moment où `providerId` est renseigné pour une mission avec prise en charge
+(Mobilité ou Livraison). La valeur par défaut est `now() + 5 minutes`, configurable avec
+`MISSION_ACCEPTANCE_WINDOW_SECONDS` entre 2 et 15 minutes.
 
 - `POST /api/v1/missions/:id/accept` (prestataire assigné) : `acceptanceDeadlineAt = NULL`,
   mission continue normalement (`EN_ROUTE` déclenché ensuite par l'exécutant comme aujourd'hui).
@@ -171,11 +181,10 @@ Mobilité (autres filières : comportement inchangé, colonne reste `NULL`) : `n
 
 ### 5.3 Job de timeout — même scheduler, nouveau job dédié
 
-`backend/src/jobs/logisticsAcceptance.job.js` (même cadence 15 min, ou plus courte — **à trancher
-avec toi**, une fenêtre de 90s vérifiée seulement toutes les 15 min est en pratique un timeout de
-~15 min, pas 90s ; proposer un intervalle dédié plus court, ex. 1 min, pour ce job précis) : missions
-avec `acceptanceDeadlineAt` dépassé → même traitement que `decline` ci-dessus (retour
-`SEARCHING_EXECUTOR`), notification master.
+`backend/src/jobs/logisticsAcceptance.job.js`, cadence dédiée d'une minute : missions avec
+`acceptanceDeadlineAt` dépassé → retour `SEARCHING_EXECUTOR`, notification master et chauffeur
+remis `offline`. Il repasse explicitement disponible lorsqu'il retrouve le réseau ; cela évite de
+l'affecter en boucle alors qu'il ne répond pas.
 
 ---
 
@@ -190,8 +199,8 @@ concerné (vérification `findProviderForUser` + comparaison à `service.provide
 ## 7. Plan de livraison suggéré
 
 1. **Filière Mobilité** (§1) — trivial, seeder seul.
-2. **Checklist onboarding chauffeur** (§2) — colonnes + formulaire admin + contrainte de passage
-   `active`.
+2. **Dossier chauffeur** (§2) — colonnes + formulaire admin + séparation entre activation du
+   compte et aptitude opérationnelle aux courses.
 3. **Disponibilité déclarative + vue chauffeurs disponibles** (§3) — indépendant du reste, peut
    être testé seul (toggle + liste) avant que la moindre sous-mission existe.
 4. **Sous-mission mobilité interne** (§4) — dépend de 1 et 2.
@@ -213,12 +222,8 @@ concerné (vérification `findProviderForUser` + comparaison à `service.provide
 
 ---
 
-## 9. Deux points à trancher avec toi avant/pendant l'implémentation
+## 9. Point métier restant à confirmer
 
-1. **Fréquence du job de timeout d'acceptation** (§5.3) — 90s de fenêtre mérite une vérification
-   plus fréquente que 15 min (sinon un chauffeur qui n'accepte pas bloque la mission ~15 min avant
-   réaction). Je proposerai 1 minute pour ce job spécifique, distinct des jobs Phase 0 — confirme
-   si ça te va.
-2. **Un prestataire "Mobilité" doit-il être exclusivement dédié à cette filière**, ou peut-il aussi
+1. **Un prestataire "Mobilité" doit-il être exclusivement dédié à cette filière**, ou peut-il aussi
    couvrir plomberie/électricité en parallèle ? Le schéma `provider_trade_categories` le permet
    déjà techniquement (many-to-many) — je pars du principe que oui, sauf avis contraire.

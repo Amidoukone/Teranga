@@ -55,12 +55,12 @@ export async function updateProviderVehicle(id, vehicleId, payload) {
 }
 
 /**
- * PATCH /api/v1/providers/:id/status — onboarding pending→probation→active,
- * ou suspension/révocation.
+ * PATCH /api/v1/providers/:id/status — cycle de vie du compte. Pour la Mobilité, la réponse
+ * expose séparément l'aptitude au dispatch afin que l'activation du compte reste non bloquante.
  */
 export async function updateProviderStatus(id, status) {
   const { data } = await api.patch(`/v1/providers/${id}/status`, { status });
-  return data?.provider;
+  return data;
 }
 
 /**
@@ -80,8 +80,11 @@ export async function getMyProvider() {
  * PATCH /api/v1/providers/me/availability — le prestataire déclare son propre statut
  * ('available'|'busy'|'offline'), docs/DEV_SPEC_TERANGA_v5_PHASE2.md §3.2.
  */
-export async function updateMyAvailability(availabilityStatus) {
-  const { data } = await api.patch('/v1/providers/me/availability', { availabilityStatus });
+export async function updateMyAvailability(availabilityStatus, vehicleId = null) {
+  const { data } = await api.patch('/v1/providers/me/availability', {
+    availabilityStatus,
+    ...(vehicleId ? { vehicleId: Number(vehicleId) } : {}),
+  });
   return data?.provider;
 }
 

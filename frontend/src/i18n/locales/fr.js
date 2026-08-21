@@ -1537,6 +1537,7 @@ const fr = {
     distance: "Distance",
     reliability: "Fiabilité",
     gpsAge: "GPS actualisé il y a {{seconds}} s",
+    positionUnavailable: "Position non disponible — confirmez la proximité avec le chauffeur.",
     fallback: "distance directe estimée",
     assign: "Affecter ce chauffeur",
     assigning: "Affectation…",
@@ -1679,7 +1680,7 @@ const fr = {
   adminProvidersPage: {
     title: "Gestion des prestataires",
     subtitle:
-      "Créez des comptes entreprise ou ouvrier indépendant, faites progresser leur statut d'onboarding, puis assignez-leur des missions filière depuis la page Services.",
+      "Activez simplement les comptes prestataires. Pour les chauffeurs, l’aptitude à recevoir une course est vérifiée séparément.",
     loading: "Chargement…",
     loadingProviders: "Chargement des prestataires…",
     badges: {
@@ -1710,9 +1711,9 @@ const fr = {
       businessPhoneLabel: "Téléphone professionnel *",
       businessEmailLabel: "Email professionnel",
       hasLiabilityInsuranceLabel: "Assurance responsabilité civile",
-      driverChecklistTitle: "Checklist chauffeur (filière Mobilité) — requise pour passer actif",
+      driverChecklistTitle: "Dossier chauffeur (filière Mobilité) — requis avant une course",
       mobilityComplianceAfterCreation:
-        "Après la création, ouvrez « Véhicules et conformité » dans la liste pour vérifier le chauffeur et ajouter ses motos ou voitures. L'activation restera bloquée tant que le dossier n'est pas conforme.",
+        "Après la création, vous pourrez activer le compte immédiatement. Ouvrez ensuite « Véhicules et conformité » pour préparer le chauffeur aux courses. Tant que le dossier n’est pas validé, il restera hors service et ne pourra recevoir aucune course.",
       plateNumberLabel: "Plaque d'immatriculation",
       circulationCardNumberLabel: "Numéro de carte de circulation",
       circulationCardVerifiedLabel: "Carte de circulation vérifiée",
@@ -1745,6 +1746,8 @@ const fr = {
         "Compte créé (id {{userId}}) mais la fiche prestataire a échoué : {{error}}",
       statusUpdateSuccess: "Statut mis à jour",
       statusUpdateError: "Erreur lors du changement de statut",
+      accountActivatedReady: "Compte chauffeur activé. Le dossier est validé et le chauffeur peut maintenant se déclarer disponible.",
+      accountActivatedPendingCompliance: "Compte chauffeur activé. Il reste hors service et ne recevra aucune course avant la validation de son dossier Mobilité.",
     },
     filters: {
       statusLabel: "Statut",
@@ -1776,9 +1779,13 @@ const fr = {
       busy: "En course",
       offline: "Hors service",
     },
+    mobilityState: {
+      ready: "Prêt pour les courses",
+      pending: "Dossier course à finaliser",
+    },
     actions: {
       toProbation: "Passer en probation",
-      toActive: "Activer",
+      toActive: "Activer le compte",
       toSuspended: "Suspendre",
       toRevoked: "Révoquer",
       manageMobility: "Véhicules et conformité",
@@ -3026,8 +3033,8 @@ const fr = {
       busy: "En course",
       offline: "Hors service",
       activeVehicle: "Véhicule utilisé maintenant",
-      gpsFresh: "Position GPS récente — vous pouvez recevoir une course.",
-      gpsRequired: "Votre position sera partagée lorsque vous passerez disponible.",
+      gpsFresh: "Position enregistrée — utile pour proposer les courses proches.",
+      gpsRequired: "La position est facultative. Vous pouvez recevoir une course même sans GPS.",
     },
     buttons: {
       refresh: "Rafraîchir",

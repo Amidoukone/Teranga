@@ -1,8 +1,8 @@
 'use strict';
 
 // docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.3 — timeout de la fenêtre d'acceptation dispatch
-// mobilité. Cadence dédiée plus courte (1 min) que les jobs Phase 0 (15 min) : une fenêtre de
-// 90s vérifiée seulement toutes les 15 min reviendrait en pratique à un timeout de ~15 min.
+// mobilité. Cadence dédiée d'une minute pour traiter rapidement les fenêtres configurables
+// arrivées à expiration, sans dépendre de la cadence des autres jobs.
 // `missionStatus: 'ASSIGNED'` dans la requête est une défense en profondeur — updateStatus
 // bloque déjà toute progression tant que acceptanceDeadlineAt n'est pas levé (§5.2), donc une
 // mission qui a avancé ne devrait jamais avoir de deadline résiduelle, mais on ne veut jamais
@@ -10,9 +10,8 @@
 
 const cron = require('node-cron');
 const { Op } = require('sequelize');
-const { Provider, ProviderLiveLocation, Service } = require('../../models');
+const { Provider, Service } = require('../../models');
 const { transitionMissionStatus } = require('../services/missionStatus.service');
-const { isLocationFresh } = require('../services/providerPresence.service');
 const { getAdminRecipientIds } = require('../services/notification.service');
 const { emitEvent } = require('../services/activity.service');
 const logger = require('../utils/logger');
@@ -45,15 +44,12 @@ async function runLogisticsAcceptanceCheck() {
       });
 
       if (expiredProviderId) {
-        const provider = await Provider.findByPk(expiredProviderId, {
-          include: [{ model: ProviderLiveLocation, as: 'liveLocation', required: false }],
-        });
-        if (provider?.liveLocation && isLocationFresh(provider.liveLocation)) {
-          await Provider.update(
-            { availabilityStatus: 'available' },
-            { where: { id: provider.id, availabilityStatus: 'busy' } }
-          );
-        }
+        // A driver who did not answer should not be offered another ride automatically. They can
+        // explicitly go available again after recovering connectivity or access to their phone.
+        await Provider.update(
+          { availabilityStatus: 'offline' },
+          { where: { id: expiredProviderId, availabilityStatus: 'busy' } }
+        );
       }
 
       const masters = await getAdminRecipientIds({
