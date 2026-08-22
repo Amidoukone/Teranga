@@ -20,6 +20,8 @@ jest.mock("react-i18next", () => {
     "homePage.quickServices.taxi.title": "Teranga Taxi",
     "homePage.quickServices.delivery.title": "Livraison",
     "homePage.quickServices.realEstate.title": "Annonces immobilières",
+    "homePage.propertyListings.title": "Annonces immobilières",
+    "homePage.propertyListings.viewAll": "Voir toutes les annonces",
     "homePage.contact.info.phone": "00223 70453345",
     "homePage.contact.info.email": "contact@teranga.test",
   };
@@ -46,7 +48,8 @@ test("shows the three main public actions and keeps the long form collapsed", as
   expect(screen.getByRole("heading", { name: "De quoi avez-vous besoin aujourd’hui ?" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Teranga Taxi/ })).toHaveAttribute("href", "/taxi");
   expect(screen.getByRole("link", { name: /Livraison/ })).toHaveAttribute("href", "/livraison");
-  expect(screen.getByRole("link", { name: /Annonces immobilières/ })).toHaveAttribute("href", "/immobilier");
+  expect(screen.getByRole("heading", { name: "Annonces immobilières" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Voir toutes les annonces/ })).toHaveAttribute("href", "/immobilier");
   expect(screen.queryByText("Formulaire autre demande")).not.toBeInTheDocument();
 
   await userEvent.click(screen.getByRole("button", { name: /Faire une autre demande/ }));

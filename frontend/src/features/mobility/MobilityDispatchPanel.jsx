@@ -10,12 +10,13 @@ import {
 import DispatchCandidatesMap from "./DispatchCandidatesMap";
 import { buildTelHref } from "../../utils/phone";
 
-export default function MobilityDispatchPanel({ missionId }) {
+export default function MobilityDispatchPanel({ missionId, onAssignmentChange }) {
   const { t } = useTranslation();
   const [radiusKm, setRadiusKm] = useState(8);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [assignmentSuccess, setAssignmentSuccess] = useState(null);
   const [assigningId, setAssigningId] = useState(null);
   const [overrideReason, setOverrideReason] = useState("");
   const [overridingStart, setOverridingStart] = useState(false);
@@ -34,18 +35,24 @@ export default function MobilityDispatchPanel({ missionId }) {
   }, [missionId, radiusKm, t]);
 
   useEffect(() => {
+    setAssignmentSuccess(null);
     load();
   }, [load]);
 
   const assign = async (candidate) => {
     setAssigningId(candidate.provider.id);
     setError(null);
+    setAssignmentSuccess(null);
     try {
       await updateMissionAssignment(missionId, {
         providerId: candidate.provider.id,
         vehicleId: candidate.vehicle.id,
       });
       await load();
+      setAssignmentSuccess(
+        t("mobilityDispatch.assignedTo", { name: candidate.provider.displayFirstName })
+      );
+      await onAssignmentChange?.();
     } catch (requestError) {
       setError(requestError?.response?.data?.error || t("mobilityDispatch.errors.assign"));
     } finally {
@@ -111,11 +118,13 @@ export default function MobilityDispatchPanel({ missionId }) {
         </div>
       ) : mission ? (
         <div className="mt-5 grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-          <DispatchCandidatesMap mission={mission} candidates={candidates} />
-          <div>
+          <div className="order-2 lg:order-1">
+            <DispatchCandidatesMap mission={mission} candidates={candidates} />
+          </div>
+          <div className="order-1 lg:order-2">
             {mission.providerId ? (
               <div className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-200">
-                {t("mobilityDispatch.assigned")}
+                {assignmentSuccess || t("mobilityDispatch.assigned")}
               </div>
             ) : null}
             {mission.startCode ? (

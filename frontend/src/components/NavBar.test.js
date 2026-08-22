@@ -119,4 +119,24 @@ describe("NavBar logout flow", () => {
       })
     );
   });
+
+  test("keeps Taxi rides directly visible for admins on desktop and mobile", async () => {
+    const adminUser = {
+      ...mockUser,
+      role: "admin",
+      countryId: 1,
+    };
+    getLocalUser.mockReturnValue(adminUser);
+    me.mockResolvedValue({ user: adminUser });
+
+    render(<NavBar />);
+
+    const taxiLinks = await screen.findAllByRole("link", {
+      name: "nav.taxiOperations",
+    });
+    expect(taxiLinks.length).toBeGreaterThanOrEqual(2);
+    taxiLinks.forEach((link) => {
+      expect(link).toHaveAttribute("href", "/admin/taxi-dispatch");
+    });
+  });
 });

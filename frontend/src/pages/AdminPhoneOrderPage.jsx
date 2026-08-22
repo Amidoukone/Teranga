@@ -50,8 +50,11 @@ export default function AdminPhoneOrderPage() {
   const [result, setResult] = useState(null);
   const [rideQueue, setRideQueue] = useState([]);
   const [queueLoading, setQueueLoading] = useState(false);
-  const dispatchMissionId =
-    result?.mission?.id || Number(searchParams.get("missionId")) || null;
+  const [queueError, setQueueError] = useState(false);
+  const [showPhoneOrder, setShowPhoneOrder] = useState(false);
+  const dispatchMissionId = taxiMode
+    ? result?.mission?.id || Number(searchParams.get("missionId")) || null
+    : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -89,14 +92,18 @@ export default function AdminPhoneOrderPage() {
   const loadRideQueue = useCallback(async () => {
     if (!taxiMode) return;
     setQueueLoading(true);
+    setQueueError(false);
     try {
       const data = await getTaxiDispatchQueue({
         limit: 100,
         countryId: countryId || undefined,
       });
-      setRideQueue(data?.rides || []);
+      const rides = Array.isArray(data?.rides) ? [...data.rides] : [];
+      rides.sort((left, right) => Number(Boolean(left.providerId)) - Number(Boolean(right.providerId)));
+      setRideQueue(rides);
     } catch (_error) {
       setRideQueue([]);
+      setQueueError(true);
     } finally {
       setQueueLoading(false);
     }
@@ -112,6 +119,8 @@ export default function AdminPhoneOrderPage() {
   const requiresPickup = selectedTradeCategorySlug === "livraison" || selectedTradeCategorySlug === "mobilite";
   const isMobilite = selectedTradeCategorySlug === "mobilite";
   const effectiveTitle = taxiMode ? t("adminPhoneOrder.taxiTitle") : title;
+  const unassignedRideCount = rideQueue.filter((ride) => !ride.providerId).length;
+  const assignedRideCount = rideQueue.length - unassignedRideCount;
 
   const canSubmit =
     Boolean(countryId) &&
@@ -121,7 +130,7 @@ export default function AdminPhoneOrderPage() {
     (!requiresPickup || (pickupAddress.trim() || pickupCoordinates)) &&
     (!isMobilite || address.trim() || coordinates);
 
-  function resetForm() {
+  function resetForm({ keepPhoneOrderOpen = true } = {}) {
     setPhone("");
     setFirstName("");
     const mobility = tradeCategories.find((item) => item.slug === "mobilite");
@@ -140,6 +149,15 @@ export default function AdminPhoneOrderPage() {
     setResult(null);
     setFeedback(null);
     setSearchParams({});
+    setShowPhoneOrder(taxiMode && keepPhoneOrderOpen);
+  }
+
+  function backToQueue() {
+    setResult(null);
+    setFeedback(null);
+    setSearchParams({});
+    setShowPhoneOrder(false);
+    loadRideQueue();
   }
 
   async function handleSubmit(event) {
@@ -175,6 +193,7 @@ export default function AdminPhoneOrderPage() {
       setResult(data);
       await loadRideQueue();
       if (isMobilite && data?.mission?.id) {
+        setShowPhoneOrder(false);
         setSearchParams({ missionId: String(data.mission.id) });
       }
     } catch (error) {
@@ -199,12 +218,19 @@ export default function AdminPhoneOrderPage() {
         {taxiMode ? t("adminPhoneOrder.taxiPageSubtitle") : t("adminPhoneOrder.subtitle")}
       </p>
       {taxiMode && !dispatchMissionId ? (
-        <a href="#phone-order" className="btn-primary mt-4 inline-flex min-h-12 items-center rounded-2xl px-5 text-sm font-semibold">
-          {t("adminPhoneOrder.phoneOrderCta")}
-        </a>
+        <button
+          type="button"
+          onClick={() => {
+            if (showPhoneOrder) backToQueue();
+            else setShowPhoneOrder(true);
+          }}
+          className={`${showPhoneOrder ? "btn-secondary" : "btn-primary"} mt-4 inline-flex min-h-12 items-center rounded-2xl px-5 text-sm font-semibold`}
+        >
+          {showPhoneOrder ? t("adminPhoneOrder.backToQueue") : t("adminPhoneOrder.phoneOrderCta")}
+        </button>
       ) : null}
 
-      {taxiMode && !dispatchMissionId ? (
+      {taxiMode && !dispatchMissionId && !showPhoneOrder ? (
         <section className="mt-6 rounded-[28px] border border-border/70 bg-surface-card p-5 shadow-sm sm:p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -216,6 +242,25 @@ export default function AdminPhoneOrderPage() {
               {t("adminPhoneOrder.queueRefresh")}
             </button>
           </div>
+
+          {!queueLoading && rideQueue.length ? (
+            <div className="mt-4 grid grid-cols-2 gap-3" aria-label={t("adminPhoneOrder.queueSummary")}>
+              <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3">
+                <p className="text-2xl font-bold text-text-primary">{unassignedRideCount}</p>
+                <p className="text-xs font-medium text-text-secondary">{t("adminPhoneOrder.queueUnassigned")}</p>
+              </div>
+              <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
+                <p className="text-2xl font-bold text-text-primary">{assignedRideCount}</p>
+                <p className="text-xs font-medium text-text-secondary">{t("adminPhoneOrder.queueAssigned")}</p>
+              </div>
+            </div>
+          ) : null}
+
+          {queueError ? (
+            <div className="mt-4">
+              <AuthFeedbackBanner type="error" message={t("adminPhoneOrder.queueError")} />
+            </div>
+          ) : null}
 
           {queueLoading && !rideQueue.length ? (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-text-muted">
@@ -237,6 +282,9 @@ export default function AdminPhoneOrderPage() {
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-text-secondary">{[ride.client?.firstName, ride.client?.phone].filter(Boolean).join(" · ")}</p>
+                        <p className={`mt-2 text-xs font-semibold ${ride.providerId ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
+                          {t(ride.providerId ? "adminPhoneOrder.driverAssigned" : "adminPhoneOrder.driverNeeded")}
+                        </p>
                       </div>
                     </div>
                     <p className="mt-3 text-xs text-text-secondary">{ride.pickupAddress || t("adminPhoneOrder.locationUnknown")}</p>
@@ -245,7 +293,14 @@ export default function AdminPhoneOrderPage() {
                       {ride.address || t("adminPhoneOrder.locationUnknown")}
                     </p>
                     <div className="mt-4 grid grid-cols-2 gap-2">
-                      <button type="button" onClick={() => setSearchParams({ missionId: String(ride.id) })} className="btn-primary min-h-11 rounded-xl px-3 text-sm font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPhoneOrder(false);
+                          setSearchParams({ missionId: String(ride.id) });
+                        }}
+                        className={`${ride.providerId ? "btn-secondary" : "btn-primary"} min-h-11 rounded-xl px-3 text-sm font-semibold`}
+                      >
                         {ride.providerId ? t("adminPhoneOrder.openRide") : t("adminPhoneOrder.assignRide")}
                       </button>
                       {buildTelHref(ride.client?.phone) ? (
@@ -258,9 +313,9 @@ export default function AdminPhoneOrderPage() {
                 );
               })}
             </ol>
-          ) : (
+          ) : !queueError ? (
             <p className="py-7 text-center text-sm text-text-muted">{t("adminPhoneOrder.queueEmpty")}</p>
-          )}
+          ) : null}
         </section>
       ) : null}
 
@@ -303,23 +358,23 @@ export default function AdminPhoneOrderPage() {
                     {t("adminPhoneOrder.success.assignCta")}
                   </Link>
                 )}
-                <button type="button" onClick={resetForm} className="btn-secondary rounded-full px-6 py-2.5 text-sm">
+                <button type="button" onClick={() => resetForm({ keepPhoneOrderOpen: true })} className="btn-secondary rounded-full px-6 py-2.5 text-sm">
                   {t("adminPhoneOrder.success.newOrderCta")}
                 </button>
               </div>
             </div>
           ) : (
-            <button type="button" onClick={resetForm} className="btn-secondary rounded-full px-6 py-2.5 text-sm">
+            <button type="button" onClick={backToQueue} className="btn-secondary rounded-full px-6 py-2.5 text-sm">
               {taxiMode ? t("adminPhoneOrder.backToQueue") : t("adminPhoneOrder.success.newOrderCta")}
             </button>
           )}
           {dispatchMissionId ? (
             <div id="dispatch">
-              <MobilityDispatchPanel missionId={dispatchMissionId} />
+              <MobilityDispatchPanel missionId={dispatchMissionId} onAssignmentChange={loadRideQueue} />
             </div>
           ) : null}
         </div>
-      ) : (
+      ) : !taxiMode || showPhoneOrder ? (
         <form id="phone-order" onSubmit={handleSubmit} className="mt-6 max-w-xl scroll-mt-24 rounded-[28px] border border-border/70 bg-surface-card p-6 shadow-sm">
           {taxiMode ? (
             <div className="mb-5">
@@ -508,7 +563,7 @@ export default function AdminPhoneOrderPage() {
             {submitting ? t("adminPhoneOrder.submitting") : t("adminPhoneOrder.submitCta")}
           </button>
         </form>
-      )}
+      ) : null}
     </div>
   );
 }

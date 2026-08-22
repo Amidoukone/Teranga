@@ -1023,7 +1023,7 @@ export default function App() {
                 <RequireAuth>
                   <RequireRole allow={['admin']}>
                     <>
-                      <SetSeo title={t('seo.pages.adminPhoneOrders.title')} />
+                      <SetSeo title={t('seo.pages.adminTaxiRides.title')} />
                       <AdminPhoneOrderPage />
                     </>
                   </RequireRole>

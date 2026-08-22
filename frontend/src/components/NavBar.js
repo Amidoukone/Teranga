@@ -53,7 +53,6 @@ import {
   Banknote,
   Briefcase,
   AlertTriangle,
-  Phone,
   CarFront,
 } from "lucide-react";
 
@@ -238,6 +237,7 @@ const BOTTOM_LINKS = {
   ],
   admin: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
+    { key: "taxiRides", path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations", icon: CarFront },
     { key: "adminServices", path: "/admin/services", labelKey: "nav.services", icon: BarChart3 },
     { key: "finance", path: "/finance", labelKey: "nav.finance", icon: CreditCard },
   ],
@@ -271,7 +271,7 @@ const ICON_BY_PATH_PREFIX = [
   // Admin
   { prefix: "/admin/projects", icon: FolderKanban },
   { prefix: "/admin/services", icon: BarChart3 },
-  { prefix: "/admin/taxi-dispatch", icon: Phone },
+  { prefix: "/admin/taxi-dispatch", icon: CarFront },
   { prefix: "/admin/metrics", icon: BarChart3 },
   { prefix: "/admin/agents", icon: Users },
   { prefix: "/admin/providers", icon: Briefcase },
@@ -341,6 +341,7 @@ function buildSections(role, links, t) {
       byPath("/admin/projects"),
       byPath("/admin/onboarding"),
       byPath("/admin/services"),
+      byPath("/admin/taxi-dispatch"),
       byPath("/admin/metrics"),
       byPath("/admin/agents"),
       byPath("/admin/providers"),
@@ -807,8 +808,8 @@ function NavBar() {
   // Desktop: tabs primaires (calme). Le reste -> Plus.
   const desktopPrimaryTabs = useMemo(() => {
     const candidates =
-      role === "admin" && isGlobalAdmin
-        ? ["/dashboard", "/services"]
+      role === "admin"
+        ? ["/dashboard", "/admin/taxi-dispatch", "/services"]
         : ["/dashboard", servicePrimaryPath, "/tasks"];
 
     const tabs = [];
@@ -822,7 +823,7 @@ function NavBar() {
 
     if (!tabs.length) return links.slice(0, 4);
     return tabs.slice(0, 4);
-  }, [links, role, isGlobalAdmin, servicePrimaryPath]);
+  }, [links, role, servicePrimaryPath]);
 
   const desktopMoreItems = useMemo(() => {
     const primaryPaths = new Set(desktopPrimaryTabs.map((x) => x.path));
