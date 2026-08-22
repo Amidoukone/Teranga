@@ -160,7 +160,7 @@ export default function DashboardPage() {
       // donc pas la peine d'appeler getDashboardSummary()/les modules legacy pour ce cas.
       if (role === 'provider') {
         try {
-          const data = await getMyMissions();
+          const data = await getMyMissions({ tradeCategorySlug: 'mobilite', limit: 100 });
           const missions = data?.missions || [];
           const active = missions.filter((m) =>
             ['ASSIGNED', 'EN_ROUTE', 'ON_SITE', 'IN_PROGRESS'].includes(m.missionStatus)
@@ -210,10 +210,10 @@ export default function DashboardPage() {
 
       const servicesPromise =
         role === 'admin'
-          ? getAllServicesAdmin()
+          ? getAllServicesAdmin({ excludeTradeCategorySlug: 'mobilite' })
           : role === 'agent'
           ? getAgentServices()
-          : getMyServices();
+          : getMyServices({ excludeTradeCategorySlug: 'mobilite' });
 
       const transactionsPromise = getTransactions();
       const financialSummaryPromise =
@@ -451,7 +451,7 @@ export default function DashboardPage() {
           </div>
 
           <Link
-            to="/missions/mine"
+            to="/chauffeur/courses"
             className="app-btn-primary inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium shadow-sm"
           >
             <Briefcase size={16} />

@@ -124,6 +124,7 @@ const roleVariant = useMemo(() => {
       const params = {
         page,
         limit: pageSize,
+        excludeTradeCategorySlug: 'mobilite',
         q: filters.q?.trim() || undefined,
         type: filters.type || undefined,
         status: filters.status || undefined,

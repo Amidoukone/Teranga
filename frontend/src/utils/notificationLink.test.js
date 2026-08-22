@@ -19,10 +19,10 @@ describe("resolveNotificationLink", () => {
 
   test("conserve le suivi pour le client et le chauffeur", () => {
     expect(resolveNotificationLink(mobilityNotification, "client")).toBe(
-      "/missions/81/track"
+      "/courses/81"
     );
     expect(resolveNotificationLink(mobilityNotification, "provider")).toBe(
-      "/missions/81/track"
+      "/courses/81"
     );
   });
 

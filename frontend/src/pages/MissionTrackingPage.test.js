@@ -8,6 +8,7 @@ jest.mock(
   "react-router-dom",
   () => ({
     Link: ({ children, to, ...props }) => <a href={to} {...props}>{children}</a>,
+    useLocation: () => ({ pathname: "/courses/81" }),
     useParams: () => ({ id: "81" }),
   }),
   { virtual: true }
@@ -22,6 +23,7 @@ jest.mock("react-i18next", () => ({
         "missionTracking.startCode.clientTitle": "Votre code de départ",
         "missionTracking.startCode.clientHint": "Donnez-le au chauffeur à son arrivée",
         "missionTracking.cancelCta": "Annuler la mission",
+        "taxiRides.rideReference": "Course #81",
       };
       return labels[key] || options.defaultValue || key;
     },
@@ -57,7 +59,7 @@ test("affiche le code de départ au client dès la création de la course", asyn
 
   render(<MissionTrackingPage />);
 
-  expect(await screen.findByRole("heading", { name: "Course Teranga en moto" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Course #81" })).toBeInTheDocument();
   expect(screen.getByText("Votre code de départ")).toBeInTheDocument();
   expect(screen.getByText("4821")).toBeInTheDocument();
   expect(screen.getByText("Donnez-le au chauffeur à son arrivée")).toBeInTheDocument();

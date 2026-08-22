@@ -505,7 +505,7 @@ export default function TaxiRideRequestForm() {
         ) : null}
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
-            to={`/missions/${result.mission?.id}/track`}
+            to={`/courses/${result.mission?.id}`}
             className="btn-primary rounded-full px-6 py-2.5 text-sm"
           >
             {t("mobilityBooking.success.track")}

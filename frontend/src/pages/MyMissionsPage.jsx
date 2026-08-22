@@ -7,9 +7,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Bike, CarFront, Check, Loader2, MapPin, Power, X } from 'lucide-react';
 import { me } from '../services/auth';
 import { normalizeRole } from '../utils/role';
-import { getMyMissions } from '../services/missions';
+import { acceptMission, declineMission, getMyMissions } from '../services/missions';
 import {
   getMyDispatchPresence,
   getMyProvider,
@@ -48,7 +49,7 @@ function statusBadgeClass(missionStatus) {
   }
 }
 
-export default function MyMissionsPage() {
+export default function MyMissionsPage({ mobilityOnly = false }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -61,6 +62,7 @@ export default function MyMissionsPage() {
   const [activeVehicleId, setActiveVehicleId] = useState('');
   const [savingAvailability, setSavingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState(null);
+  const [rideAction, setRideAction] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -111,7 +113,9 @@ export default function MyMissionsPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getMyMissions();
+      const data = await getMyMissions(
+        mobilityOnly ? { tradeCategorySlug: 'mobilite', limit: 100 } : {}
+      );
       setMissions(data?.missions || []);
     } catch (e) {
       console.error('MyMissionsPage load missions error:', e);
@@ -120,7 +124,27 @@ export default function MyMissionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [mobilityOnly, t]);
+
+  async function handleRideOffer(event, missionId, action) {
+    event.preventDefault();
+    event.stopPropagation();
+    setRideAction({ missionId, action });
+    setError(null);
+    try {
+      if (action === 'accept') {
+        await acceptMission(missionId);
+        navigate(`/courses/${missionId}`);
+        return;
+      }
+      await declineMission(missionId);
+      await loadMissions();
+    } catch (requestError) {
+      setError(requestError?.response?.data?.error || t('myMissionsPage.errors.load'));
+    } finally {
+      setRideAction(null);
+    }
+  }
 
   useEffect(() => {
     if (isAllowed) loadMissions();
@@ -188,9 +212,11 @@ export default function MyMissionsPage() {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-text-primary">
-              {t('myMissionsPage.title')}
+              {mobilityOnly ? t('taxiRides.driverTitle') : t('myMissionsPage.title')}
             </h1>
-            <p className="mt-1 text-sm text-text-secondary">{t('myMissionsPage.subtitle')}</p>
+            <p className="mt-1 text-sm text-text-secondary">
+              {mobilityOnly ? t('taxiRides.driverSubtitle') : t('myMissionsPage.subtitle')}
+            </p>
           </div>
           <button
             onClick={loadMissions}
@@ -207,7 +233,65 @@ export default function MyMissionsPage() {
           </div>
         )}
 
-        {provider ? (
+        {provider && mobilityOnly ? (
+          <section className="mb-6 rounded-3xl border border-border bg-surface-main/60 p-4 sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-text-primary">
+                  {provider.availabilityStatus === 'available'
+                    ? t('taxiRides.driverAvailable')
+                    : provider.availabilityStatus === 'busy'
+                    ? t('taxiRides.driverBusy')
+                    : t('taxiRides.driverOffline')}
+                </p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  {provider.availabilityStatus === 'available'
+                    ? t('taxiRides.driverAvailableHint')
+                    : provider.availabilityStatus === 'busy'
+                    ? t('taxiRides.driverBusyHint')
+                    : t('taxiRides.driverOfflineHint')}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={savingAvailability || provider.availabilityStatus === 'busy'}
+                onClick={() =>
+                  handleAvailabilityChange(
+                    provider.availabilityStatus === 'available' ? 'offline' : 'available'
+                  )
+                }
+                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold disabled:opacity-60 ${
+                  provider.availabilityStatus === 'available' ? 'btn-secondary' : 'btn-primary'
+                }`}
+              >
+                {savingAvailability ? <Loader2 className="animate-spin" size={18} /> : <Power size={18} />}
+                {provider.availabilityStatus === 'available'
+                  ? t('taxiRides.goOffline')
+                  : provider.availabilityStatus === 'busy'
+                  ? t('taxiRides.rideInProgress')
+                  : t('taxiRides.goAvailable')}
+              </button>
+            </div>
+            {dispatchPresence?.eligibleVehicles?.length > 1 ? (
+              <select
+                className="app-input mt-4 max-w-sm"
+                value={activeVehicleId}
+                disabled={provider.availabilityStatus === 'busy'}
+                onChange={(event) => setActiveVehicleId(event.target.value)}
+                aria-label={t('myMissionsPage.availability.activeVehicle')}
+              >
+                {dispatchPresence.eligibleVehicles.map((vehicle) => (
+                  <option key={vehicle.id} value={vehicle.id}>
+                    {vehicle.brand} {vehicle.model} · {vehicle.plateNumber}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            {availabilityError ? (
+              <p className="mt-3 text-sm text-rose-600 dark:text-rose-300">{availabilityError}</p>
+            ) : null}
+          </section>
+        ) : provider ? (
           <div className="mb-6 rounded-2xl border border-border bg-surface-main/60 px-4 py-3">
             <p className="mb-2 text-xs font-medium text-text-secondary">
               {t('myMissionsPage.availability.label')}
@@ -260,47 +344,106 @@ export default function MyMissionsPage() {
         ) : null}
 
         {!loading && missions.length === 0 && !error ? (
-          <p className="text-center text-text-muted italic py-10">{t('myMissionsPage.empty')}</p>
+          <p className="text-center text-text-muted italic py-10">
+            {mobilityOnly ? t('taxiRides.driverEmpty') : t('myMissionsPage.empty')}
+          </p>
         ) : (
           <ul className="space-y-3">
-            {missions.map((m) => (
-              <li key={m.id}>
-                <Link
-                  to={`/missions/${m.id}/track`}
-                  className="block rounded-2xl border border-border bg-surface-main/60 hover:bg-surface-main px-4 py-4 transition-colors"
+            {missions.map((m) => {
+              const isOffer = Boolean(m.acceptanceDeadlineAt);
+              const VehicleIcon = m.requestedVehicleType === 'car' ? CarFront : Bike;
+              return (
+                <li
+                  key={m.id}
+                  className={`rounded-3xl border p-4 transition-colors ${
+                    isOffer
+                      ? 'border-blue-500/40 bg-blue-500/10 shadow-sm'
+                      : 'border-border bg-surface-main/60'
+                  }`}
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-medium text-text-primary break-words">
-                        {m.title || t('myMissionsPage.missionFallback', { id: m.id })}
-                      </div>
-                      <div className="mt-0.5 text-xs text-text-muted">
-                        {m.tradeCategory?.name || t('myMissionsPage.tradeCategoryUnknown')}
-                      </div>
-                      {m.address && (
-                        <div className="mt-1 text-xs text-text-secondary break-words">
-                          {m.address}
+                  <Link
+                    to={mobilityOnly ? `/courses/${m.id}` : `/missions/${m.id}/track`}
+                    className="block"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex min-w-0 gap-3">
+                        {mobilityOnly ? (
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white">
+                            <VehicleIcon size={19} />
+                          </span>
+                        ) : null}
+                        <div className="min-w-0">
+                          {isOffer ? (
+                            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+                              {t('taxiRides.newOffer')}
+                            </p>
+                          ) : null}
+                          <div className="font-medium text-text-primary break-words">
+                            {m.title || t('myMissionsPage.missionFallback', { id: m.id })}
+                          </div>
+                          <div className="mt-0.5 text-xs text-text-muted">
+                            {m.tradeCategory?.name || t('myMissionsPage.tradeCategoryUnknown')}
+                          </div>
+                          {m.pickupAddress ? (
+                            <div className="mt-2 flex items-start gap-1.5 text-sm text-text-secondary">
+                              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full border-2 border-blue-600" />
+                              {m.pickupAddress}
+                            </div>
+                          ) : null}
+                          {m.address ? (
+                            <div className="mt-1 flex items-start gap-1.5 text-sm text-text-secondary break-words">
+                              <MapPin className="mt-0.5 shrink-0 text-emerald-600" size={14} />
+                              {m.address}
+                            </div>
+                          ) : null}
+                          {displayClient(m.client) && (
+                            <div className="mt-2 text-xs text-text-muted">
+                              {t('myMissionsPage.clientLabel')} {displayClient(m.client)}
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {displayClient(m.client) && (
-                        <div className="mt-1 text-xs text-text-muted">
-                          {t('myMissionsPage.clientLabel')} {displayClient(m.client)}
-                        </div>
-                      )}
+                      </div>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap ${statusBadgeClass(
+                          m.missionStatus
+                        )}`}
+                      >
+                        {t(`missionTracking.status.${m.missionStatus}`, {
+                          defaultValue: m.missionStatus,
+                        })}
+                      </span>
                     </div>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap ${statusBadgeClass(
-                        m.missionStatus
-                      )}`}
-                    >
-                      {t(`missionTracking.status.${m.missionStatus}`, {
-                        defaultValue: m.missionStatus,
-                      })}
-                    </span>
-                  </div>
-                </Link>
-              </li>
-            ))}
+                  </Link>
+                  {isOffer ? (
+                    <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+                      <button
+                        type="button"
+                        onClick={(event) => handleRideOffer(event, m.id, 'accept')}
+                        disabled={Boolean(rideAction)}
+                        className="btn-primary flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 text-base font-bold disabled:opacity-60"
+                      >
+                        {rideAction?.missionId === m.id && rideAction.action === 'accept' ? (
+                          <Loader2 className="animate-spin" size={20} />
+                        ) : (
+                          <Check size={21} />
+                        )}
+                        {t('taxiRides.accept')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => handleRideOffer(event, m.id, 'decline')}
+                        disabled={Boolean(rideAction)}
+                        className="btn-secondary flex min-h-14 items-center justify-center rounded-2xl px-4 disabled:opacity-60"
+                        aria-label={t('taxiRides.decline')}
+                        title={t('taxiRides.decline')}
+                      >
+                        <X size={21} />
+                      </button>
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

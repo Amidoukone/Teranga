@@ -54,6 +54,7 @@ import {
   Briefcase,
   AlertTriangle,
   Phone,
+  CarFront,
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -136,6 +137,7 @@ const ROLE_LINKS = {
     { path: "/activities", labelKey: "nav.activities" },
     { path: "/projects", labelKey: "nav.projects" },
     { path: "/properties", labelKey: "nav.properties" },
+    { path: "/courses", labelKey: "nav.myRides" },
     { path: "/services", labelKey: "nav.services" },
     { path: "/tasks", labelKey: "nav.tasks" },
     { path: "/transactions", labelKey: "nav.transactions" },
@@ -170,7 +172,7 @@ const ROLE_LINKS = {
     { path: "/dashboard", labelKey: "nav.dashboard" },
     { path: "/notifications", labelKey: "nav.notifications" },
     { path: "/activities", labelKey: "nav.activities" },
-    { path: "/missions/mine", labelKey: "nav.myMissions" },
+    { path: "/chauffeur/courses", labelKey: "nav.myRides" },
     SETTINGS_LINK,
     ACCOUNT_SECURITY_LINK,
     HELP_SUPPORT_LINK,
@@ -190,7 +192,7 @@ const ROLE_LINKS = {
     { path: "/services", labelKey: "nav.services" },
     { path: "/tasks", labelKey: "nav.tasks" },
     { path: "/admin/services", labelKey: "nav.adminServices" },
-    { path: "/admin/taxi-dispatch", labelKey: "nav.phoneOrders" },
+    { path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations" },
     { path: "/admin/metrics", labelKey: "nav.metrics" },
     { path: "/admin/agents", labelKey: "nav.agents" },
     { path: "/admin/providers", labelKey: "nav.providers" },
@@ -221,6 +223,7 @@ const ROLE_LINKS = {
 const BOTTOM_LINKS = {
   client: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
+    { key: "rides", path: "/courses", labelKey: "nav.myRides", icon: CarFront },
     { key: "services", path: "/services", labelKey: "nav.services", icon: Wrench },
     { key: "transactions", path: "/transactions", labelKey: "nav.flow", icon: ReceiptEuro },
   ],
@@ -231,7 +234,7 @@ const BOTTOM_LINKS = {
   ],
   provider: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
-    { key: "myMissions", path: "/missions/mine", labelKey: "nav.myMissions", icon: Briefcase },
+    { key: "myRides", path: "/chauffeur/courses", labelKey: "nav.myRides", icon: CarFront },
   ],
   admin: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
@@ -250,6 +253,8 @@ const ICON_BY_PATH_PREFIX = [
   { prefix: "/activities", icon: BarChart3 },
   { prefix: "/projects", icon: FolderKanban },
   { prefix: "/properties", icon: Building2 },
+  { prefix: "/courses", icon: CarFront },
+  { prefix: "/chauffeur/courses", icon: CarFront },
   { prefix: "/services", icon: Wrench },
   { prefix: "/agent/services", icon: Wrench },
   { prefix: "/missions/mine", icon: Briefcase },
@@ -317,9 +322,11 @@ function buildSections(role, links, t) {
     byPath("/activities"),
     ...byPrefix("/projects"),
     ...byPrefix("/properties"),
+    ...byPrefix("/courses"),
+    ...byPrefix("/chauffeur/courses"),
     ...byPrefix("/services"),
     ...byPrefix("/tasks"),
-    ...(role === "provider" || role === "agent" ? byPrefix("/missions/mine") : []),
+    ...(role === "agent" ? byPrefix("/missions/mine") : []),
   ]);
 
   pushSection(t("nav.sections.finance"), [
@@ -791,6 +798,8 @@ function NavBar() {
 
   const servicePrimaryPath = useMemo(() => {
     if (role === "agent") return "/agent/services";
+    if (role === "provider") return "/chauffeur/courses";
+    if (role === "client") return "/courses";
     if (role === "admin") return "/services";
     return "/services";
   }, [role]);

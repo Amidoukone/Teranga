@@ -46,6 +46,7 @@ const MissionCreatePage = lazy(() => import('./pages/MissionCreatePage'));
 const MissionPricingAdminPage = lazy(() => import('./pages/MissionPricingAdminPage'));
 const MissionTrackingPage = lazy(() => import('./pages/MissionTrackingPage'));
 const MyMissionsPage = lazy(() => import('./pages/MyMissionsPage'));
+const TaxiRidesPage = lazy(() => import('./pages/TaxiRidesPage'));
 const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'));
 const ServiceTasksPage = lazy(() => import('./pages/ServiceTasksPage'));
 const ServiceTransactionsPage = lazy(() => import('./pages/ServiceTransactionsPage'));
@@ -169,8 +170,18 @@ function getLikelyNextPaths(pathname, hasSession, role) {
     ];
   }
 
+  if (role === 'provider') {
+    return [
+      '/chauffeur/courses',
+      '/dashboard',
+      '/notifications',
+      '/settings',
+    ];
+  }
+
   return [
     '/dashboard',
+    '/courses',
     '/services',
     '/tasks',
     '/projects',
@@ -595,6 +606,34 @@ export default function App() {
             />
 
             <Route
+              path="/courses"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['client']}>
+                    <>
+                      <SetSeo title={t('taxiRides.title')} />
+                      <TaxiRidesPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/courses/:id"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['client', 'provider']}>
+                    <>
+                      <SetSeo title={t('taxiRides.detailTitle')} />
+                      <MissionTrackingPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
               path="/admin/mission-pricing"
               element={
                 <RequireAuth>
@@ -626,6 +665,20 @@ export default function App() {
                     <>
                       <SetSeo title={t('seo.pages.myMissions.title')} />
                       <MyMissionsPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/chauffeur/courses"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['provider']}>
+                    <>
+                      <SetSeo title={t('taxiRides.driverTitle')} />
+                      <MyMissionsPage mobilityOnly />
                     </>
                   </RequireRole>
                 </RequireAuth>

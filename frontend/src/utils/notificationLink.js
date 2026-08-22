@@ -31,6 +31,9 @@ export function resolveNotificationLink(n, currentUserRole) {
         }
         return '/admin/services';
       }
+      if (n?.metadata?.requestedVehicleType) {
+        return `/courses/${serviceId}`;
+      }
       return `/missions/${serviceId}/track`;
     }
     return `/services/${serviceId}`;

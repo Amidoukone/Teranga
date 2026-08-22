@@ -196,6 +196,7 @@ export default function AdminServicesPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.set('excludeTradeCategorySlug', 'mobilite');
 
       if (status !== 'all') params.set('status', status);
       if (onlyUnassigned) params.set('unassigned', '1');

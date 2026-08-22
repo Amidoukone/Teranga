@@ -1,16 +1,17 @@
-import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Loader2, Phone } from "lucide-react";
+import { Bike, CarFront, Loader2, MapPin, Phone, RefreshCw } from "lucide-react";
 
 import { useGeo } from "../contexts/GeoContext";
 import { getTradeCategories } from "../services/missionRequests";
-import { createPhoneOrder } from "../services/missions";
+import { createPhoneOrder, getTaxiDispatchQueue } from "../services/missions";
 import CategoryPicker from "../features/mission-creation/CategoryPicker";
 import LocationAutocompleteInput from "../features/mission-creation/LocationAutocompleteInput";
 import MissionLocationMap from "../features/mission-creation/MissionLocationMap";
 import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
 import MobilityDispatchPanel from "../features/mobility/MobilityDispatchPanel";
+import { buildTelHref } from "../utils/phone";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500";
@@ -24,6 +25,8 @@ const labelClass = "mb-1 block text-sm font-medium text-text-primary";
  */
 export default function AdminPhoneOrderPage() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const taxiMode = location.pathname === "/admin/taxi-dispatch";
   const [searchParams, setSearchParams] = useSearchParams();
   const { countryId, countries, canSelect, setCountry, loading: geoLoading } = useGeo();
 
@@ -45,6 +48,8 @@ export default function AdminPhoneOrderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [result, setResult] = useState(null);
+  const [rideQueue, setRideQueue] = useState([]);
+  const [queueLoading, setQueueLoading] = useState(false);
   const dispatchMissionId =
     result?.mission?.id || Number(searchParams.get("missionId")) || null;
 
@@ -59,7 +64,17 @@ export default function AdminPhoneOrderPage() {
       setLoadingOptions(true);
       try {
         const categories = await getTradeCategories({ countryId });
-        if (!cancelled) setTradeCategories(categories);
+        if (!cancelled) {
+          setTradeCategories(categories);
+          if (taxiMode) {
+            const mobility = categories.find((item) => item.slug === "mobilite");
+            setCategory(
+              mobility
+                ? { requestKind: "trade_category", tradeCategoryId: String(mobility.id), serviceType: "" }
+                : { requestKind: null, tradeCategoryId: "", serviceType: "" }
+            );
+          }
+        }
       } catch (_err) {
         if (!cancelled) setTradeCategories([]);
       } finally {
@@ -69,25 +84,52 @@ export default function AdminPhoneOrderPage() {
     return () => {
       cancelled = true;
     };
-  }, [countryId]);
+  }, [countryId, taxiMode]);
+
+  const loadRideQueue = useCallback(async () => {
+    if (!taxiMode) return;
+    setQueueLoading(true);
+    try {
+      const data = await getTaxiDispatchQueue({
+        limit: 100,
+        countryId: countryId || undefined,
+      });
+      setRideQueue(data?.rides || []);
+    } catch (_error) {
+      setRideQueue([]);
+    } finally {
+      setQueueLoading(false);
+    }
+  }, [countryId, taxiMode]);
+
+  useEffect(() => {
+    loadRideQueue();
+  }, [loadRideQueue]);
 
   const selectedTradeCategorySlug = category.tradeCategoryId
     ? tradeCategories.find((tc) => String(tc.id) === String(category.tradeCategoryId))?.slug || null
     : null;
   const requiresPickup = selectedTradeCategorySlug === "livraison" || selectedTradeCategorySlug === "mobilite";
   const isMobilite = selectedTradeCategorySlug === "mobilite";
+  const effectiveTitle = taxiMode ? t("adminPhoneOrder.taxiTitle") : title;
 
   const canSubmit =
     Boolean(countryId) &&
     phone.trim().length > 0 &&
     Boolean(category.requestKind) &&
-    title.trim().length >= 3 &&
-    (!requiresPickup || (pickupAddress.trim() || pickupCoordinates));
+    effectiveTitle.trim().length >= 3 &&
+    (!requiresPickup || (pickupAddress.trim() || pickupCoordinates)) &&
+    (!isMobilite || address.trim() || coordinates);
 
   function resetForm() {
     setPhone("");
     setFirstName("");
-    setCategory({ requestKind: null, tradeCategoryId: "", serviceType: "" });
+    const mobility = tradeCategories.find((item) => item.slug === "mobilite");
+    setCategory(
+      taxiMode && mobility
+        ? { requestKind: "trade_category", tradeCategoryId: String(mobility.id), serviceType: "" }
+        : { requestKind: null, tradeCategoryId: "", serviceType: "" }
+    );
     setTitle("");
     setDescription("");
     setRequestedVehicleType("motorcycle");
@@ -112,7 +154,7 @@ export default function AdminPhoneOrderPage() {
         firstName: firstName.trim() || undefined,
         countryId,
         requestKind: category.requestKind,
-        title: title.trim(),
+        title: effectiveTitle.trim(),
         description: description.trim() || undefined,
       };
       if (category.tradeCategoryId) payload.tradeCategoryId = Number(category.tradeCategoryId);
@@ -131,6 +173,7 @@ export default function AdminPhoneOrderPage() {
 
       const data = await createPhoneOrder(payload);
       setResult(data);
+      await loadRideQueue();
       if (isMobilite && data?.mission?.id) {
         setSearchParams({ missionId: String(data.mission.id) });
       }
@@ -147,12 +190,79 @@ export default function AdminPhoneOrderPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
-      <p className="page-kicker">{t("adminPhoneOrder.kicker")}</p>
+      <p className="page-kicker">{taxiMode ? "Teranga Taxi" : t("adminPhoneOrder.kicker")}</p>
       <h1 className="app-page-headline flex items-center gap-2">
         <Phone size={22} />
-        {t("adminPhoneOrder.title")}
+        {taxiMode ? t("adminPhoneOrder.taxiPageTitle") : t("adminPhoneOrder.title")}
       </h1>
-      <p className="mt-1 text-sm text-text-secondary">{t("adminPhoneOrder.subtitle")}</p>
+      <p className="mt-1 text-sm text-text-secondary">
+        {taxiMode ? t("adminPhoneOrder.taxiPageSubtitle") : t("adminPhoneOrder.subtitle")}
+      </p>
+      {taxiMode && !dispatchMissionId ? (
+        <a href="#phone-order" className="btn-primary mt-4 inline-flex min-h-12 items-center rounded-2xl px-5 text-sm font-semibold">
+          {t("adminPhoneOrder.phoneOrderCta")}
+        </a>
+      ) : null}
+
+      {taxiMode && !dispatchMissionId ? (
+        <section className="mt-6 rounded-[28px] border border-border/70 bg-surface-card p-5 shadow-sm sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-text-primary">{t("adminPhoneOrder.queueTitle")}</h2>
+              <p className="text-sm text-text-secondary">{t("adminPhoneOrder.queueCount", { count: rideQueue.length })}</p>
+            </div>
+            <button type="button" onClick={loadRideQueue} disabled={queueLoading} className="btn-secondary inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs">
+              {queueLoading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+              {t("adminPhoneOrder.queueRefresh")}
+            </button>
+          </div>
+
+          {queueLoading && !rideQueue.length ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-text-muted">
+              <Loader2 size={17} className="animate-spin" /> {t("adminPhoneOrder.queueLoading")}
+            </div>
+          ) : rideQueue.length ? (
+            <ol className="mt-4 grid max-h-[500px] gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
+              {rideQueue.map((ride) => {
+                const VehicleIcon = ride.requestedVehicleType === "car" ? CarFront : Bike;
+                return (
+                  <li key={ride.id} className="rounded-2xl border border-border bg-surface-main/60 p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white"><VehicleIcon size={19} /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="font-semibold text-text-primary">{t("adminPhoneOrder.rideReference", { id: ride.id })}</p>
+                          <span className="app-badge app-badge-info text-[10px]">
+                            {t(`missionTracking.status.${ride.missionStatus}`, { defaultValue: ride.missionStatus })}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-text-secondary">{[ride.client?.firstName, ride.client?.phone].filter(Boolean).join(" · ")}</p>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs text-text-secondary">{ride.pickupAddress || t("adminPhoneOrder.locationUnknown")}</p>
+                    <p className="mt-1 flex items-start gap-1.5 text-xs text-text-primary">
+                      <MapPin size={13} className="mt-0.5 shrink-0 text-emerald-600" />
+                      {ride.address || t("adminPhoneOrder.locationUnknown")}
+                    </p>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => setSearchParams({ missionId: String(ride.id) })} className="btn-primary min-h-11 rounded-xl px-3 text-sm font-semibold">
+                        {ride.providerId ? t("adminPhoneOrder.openRide") : t("adminPhoneOrder.assignRide")}
+                      </button>
+                      {buildTelHref(ride.client?.phone) ? (
+                        <a href={buildTelHref(ride.client.phone)} className="btn-secondary flex min-h-11 items-center justify-center rounded-xl px-3 text-sm">
+                          <Phone size={15} /> {t("adminPhoneOrder.callClient")}
+                        </a>
+                      ) : <span />}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <p className="py-7 text-center text-sm text-text-muted">{t("adminPhoneOrder.queueEmpty")}</p>
+          )}
+        </section>
+      ) : null}
 
       {result || dispatchMissionId ? (
         <div className="mt-6 space-y-5">
@@ -200,7 +310,7 @@ export default function AdminPhoneOrderPage() {
             </div>
           ) : (
             <button type="button" onClick={resetForm} className="btn-secondary rounded-full px-6 py-2.5 text-sm">
-              {t("adminPhoneOrder.success.newOrderCta")}
+              {taxiMode ? t("adminPhoneOrder.backToQueue") : t("adminPhoneOrder.success.newOrderCta")}
             </button>
           )}
           {dispatchMissionId ? (
@@ -210,7 +320,13 @@ export default function AdminPhoneOrderPage() {
           ) : null}
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="mt-6 max-w-xl rounded-[28px] border border-border/70 bg-surface-card p-6 shadow-sm">
+        <form id="phone-order" onSubmit={handleSubmit} className="mt-6 max-w-xl scroll-mt-24 rounded-[28px] border border-border/70 bg-surface-card p-6 shadow-sm">
+          {taxiMode ? (
+            <div className="mb-5">
+              <h2 className="text-lg font-semibold text-text-primary">{t("adminPhoneOrder.newTaxiOrder")}</h2>
+              <p className="mt-1 text-sm text-text-secondary">{t("adminPhoneOrder.newTaxiOrderHint")}</p>
+            </div>
+          ) : null}
           {feedback ? (
             <div className="mb-5">
               <AuthFeedbackBanner type={feedback.type} message={feedback.message} />
@@ -264,18 +380,20 @@ export default function AdminPhoneOrderPage() {
             </div>
           </div>
 
-          <div className="mt-5">
-            <label className={labelClass}>{t("missionCreation.category.title")}</label>
-            <CategoryPicker
-              tradeCategories={tradeCategories}
-              loading={loadingOptions}
-              value={category}
-              onChange={(value) => {
-                setCategory(value);
-                setRequestedVehicleType("motorcycle");
-              }}
-            />
-          </div>
+          {!taxiMode ? (
+            <div className="mt-5">
+              <label className={labelClass}>{t("missionCreation.category.title")}</label>
+              <CategoryPicker
+                tradeCategories={tradeCategories}
+                loading={loadingOptions}
+                value={category}
+                onChange={(value) => {
+                  setCategory(value);
+                  setRequestedVehicleType("motorcycle");
+                }}
+              />
+            </div>
+          ) : null}
 
           {isMobilite ? (
             <div className="mt-5">
@@ -291,27 +409,31 @@ export default function AdminPhoneOrderPage() {
             </div>
           ) : null}
 
-          <div className="mt-5">
-            <label className={labelClass}>{t("adminPhoneOrder.titleLabel")}</label>
-            <input
-              type="text"
-              className={inputClass}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t("missionCreation.description.titlePlaceholder")}
-            />
-          </div>
+          {!taxiMode ? (
+            <div className="mt-5">
+              <label className={labelClass}>{t("adminPhoneOrder.titleLabel")}</label>
+              <input
+                type="text"
+                className={inputClass}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t("missionCreation.description.titlePlaceholder")}
+              />
+            </div>
+          ) : null}
 
-          <div className="mt-5">
-            <label className={labelClass}>{t("missionCreation.description.descriptionLabel")}</label>
-            <textarea
-              className={inputClass}
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={t("missionCreation.description.descriptionPlaceholder")}
-            />
-          </div>
+          {!taxiMode ? (
+            <div className="mt-5">
+              <label className={labelClass}>{t("missionCreation.description.descriptionLabel")}</label>
+              <textarea
+                className={inputClass}
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t("missionCreation.description.descriptionPlaceholder")}
+              />
+            </div>
+          ) : null}
 
           {requiresPickup ? (
             <div className="mt-5 rounded-xl border border-border bg-surface-main/60 p-4">
@@ -333,13 +455,15 @@ export default function AdminPhoneOrderPage() {
                   }}
                 />
               </div>
-              <div className="mt-3">
-                <MissionLocationMap
-                  latitude={pickupCoordinates?.latitude}
-                  longitude={pickupCoordinates?.longitude}
-                  onPositionChange={(pos) => setPickupCoordinates(pos)}
-                />
-              </div>
+              {!taxiMode ? (
+                <div className="mt-3">
+                  <MissionLocationMap
+                    latitude={pickupCoordinates?.latitude}
+                    longitude={pickupCoordinates?.longitude}
+                    onPositionChange={(pos) => setPickupCoordinates(pos)}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -364,19 +488,21 @@ export default function AdminPhoneOrderPage() {
                 setCoordinates({ latitude, longitude });
               }}
             />
-            <div className="mt-3">
-              <MissionLocationMap
-                latitude={coordinates?.latitude}
-                longitude={coordinates?.longitude}
-                onPositionChange={(pos) => setCoordinates(pos)}
-              />
-            </div>
+            {!taxiMode ? (
+              <div className="mt-3">
+                <MissionLocationMap
+                  latitude={coordinates?.latitude}
+                  longitude={coordinates?.longitude}
+                  onPositionChange={(pos) => setCoordinates(pos)}
+                />
+              </div>
+            ) : null}
           </div>
 
           <button
             type="submit"
             disabled={!canSubmit || submitting}
-            className="btn-primary mt-6 inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
+            className={`btn-primary mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-6 py-2.5 text-sm font-semibold disabled:opacity-60 ${taxiMode ? "w-full" : ""}`}
           >
             {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
             {submitting ? t("adminPhoneOrder.submitting") : t("adminPhoneOrder.submitCta")}

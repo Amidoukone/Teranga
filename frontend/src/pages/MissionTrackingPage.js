@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car, Bike, KeyRound, PhoneCall, RefreshCw, Share2, Star } from "lucide-react";
 
@@ -64,6 +64,8 @@ function isDocumentVisible() {
 export default function MissionTrackingPage() {
   const { t } = useTranslation();
   const { id } = useParams();
+  const location = useLocation();
+  const isRideRoute = location.pathname.startsWith("/courses/");
 
   const [track, setTrack] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -286,8 +288,8 @@ export default function MissionTrackingPage() {
     return (
       <div className="mx-auto max-w-xl px-6 py-10">
         <AuthFeedbackBanner type="error" message={error || t("missionTracking.errors.load")} />
-        <Link to="/services" className="btn-secondary mt-4 inline-block rounded-full px-6 py-2.5 text-sm">
-          {t("missionTracking.backToServices")}
+        <Link to={isRideRoute ? "/courses" : "/services"} className="btn-secondary mt-4 inline-block rounded-full px-6 py-2.5 text-sm">
+          {isRideRoute ? t("taxiRides.backToRides") : t("missionTracking.backToServices")}
         </Link>
       </div>
     );
@@ -304,9 +306,15 @@ export default function MissionTrackingPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
-      <p className="page-kicker">{t("missionTracking.kicker")}</p>
+      <p className="page-kicker">
+        {track.tradeCategorySlug === "mobilite" ? "Teranga Taxi" : t("missionTracking.kicker")}
+      </p>
       <div className="flex items-start justify-between gap-3">
-        <h1 className="app-page-headline">{track.title || t("missionTracking.title")}</h1>
+        <h1 className="app-page-headline">
+          {track.tradeCategorySlug === "mobilite"
+            ? t("taxiRides.rideReference", { id })
+            : track.title || t("missionTracking.title")}
+        </h1>
         <button
           type="button"
           onClick={load}
@@ -658,10 +666,20 @@ export default function MissionTrackingPage() {
           ) : null}
 
           <Link
-            to={track.viewerRole === "client" ? "/services" : "/missions/mine"}
+            to={
+              track.tradeCategorySlug === "mobilite"
+                ? track.viewerRole === "client"
+                  ? "/courses"
+                  : "/chauffeur/courses"
+                : track.viewerRole === "client"
+                ? "/services"
+                : "/missions/mine"
+            }
             className="btn-secondary rounded-full px-6 py-2.5 text-sm"
           >
-            {track.viewerRole === "client"
+            {track.tradeCategorySlug === "mobilite"
+              ? t("taxiRides.backToRides")
+              : track.viewerRole === "client"
               ? t("missionTracking.backToServices")
               : t("missionTracking.backToMyMissions")}
           </Link>

@@ -198,3 +198,15 @@ export async function getMyMissions(params = {}) {
   const { data } = await api.get('/v1/missions/mine', { params });
   return data;
 }
+
+/** Courses Taxi du client, séparées de la liste historique des services. */
+export async function getMyTaxiRides(params = {}) {
+  const { data } = await api.get('/v1/missions/rides/mine', { params });
+  return data;
+}
+
+/** File de courses Taxi visible par l'opérateur/admin de ce périmètre. */
+export async function getTaxiDispatchQueue(params = {}) {
+  const { data } = await api.get('/v1/missions/rides/dispatch', { params });
+  return data;
+}

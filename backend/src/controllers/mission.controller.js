@@ -1445,6 +1445,7 @@ exports.track = async (req, res) => {
 exports.mine = async (req, res) => {
   try {
     const { limit, offset, page } = getPagination(req);
+    const tradeCategorySlug = String(req.query.tradeCategorySlug || '').trim();
 
     let where;
     if (req.user.role === 'agent') {
@@ -1459,11 +1460,21 @@ exports.mine = async (req, res) => {
       return res.status(403).json({ error: 'Accès interdit' });
     }
 
+    if (tradeCategorySlug) {
+      const categoryIds = (
+        await TradeCategory.findAll({
+          where: { slug: tradeCategorySlug },
+          attributes: ['id'],
+        })
+      ).map((category) => category.id);
+      where.tradeCategoryId = categoryIds.length ? { [Op.in]: categoryIds } : -1;
+    }
+
     const { rows, count } = await Service.findAndCountAll({
       where,
       include: [
         { model: User, as: 'client', attributes: ['id', 'firstName', 'lastName', 'phone'] },
-        { model: TradeCategory, as: 'tradeCategory', attributes: ['id', 'name'] },
+        { model: TradeCategory, as: 'tradeCategory', attributes: ['id', 'name', 'slug'] },
       ],
       order: [['createdAt', 'DESC']],
       limit,
@@ -1475,5 +1486,105 @@ exports.mine = async (req, res) => {
   } catch (e) {
     logger.error({ err: e }, 'mission.mine.failed');
     return res.status(500).json({ error: 'Erreur lors de la récupération de vos missions' });
+  }
+};
+
+const RIDE_TERMINAL_STATUSES = [
+  'COMPLETED',
+  'CLOSED',
+  'CANCELLED_BY_CLIENT',
+  'NO_EXECUTOR_FOUND',
+  'VALIDATED',
+  'RESOLVED_REFUND',
+  'RESOLVED_REDO',
+  'RESOLVED_CLOSED',
+];
+
+async function getMobilityCategoryIds() {
+  return (
+    await TradeCategory.findAll({
+      where: { slug: 'mobilite' },
+      attributes: ['id'],
+    })
+  ).map((category) => category.id);
+}
+
+function rideListIncludes({ includeClient = false } = {}) {
+  return [
+    includeClient
+      ? {
+          model: User,
+          as: 'client',
+          attributes: ['id', 'firstName', 'lastName', 'phone'],
+        }
+      : null,
+    { model: TradeCategory, as: 'tradeCategory', attributes: ['id', 'name', 'slug'] },
+  ].filter(Boolean);
+}
+
+/* Listes Taxi dédiées. Le stockage reste partagé avec Service pour compatibilité,
+   mais ces endpoints n'exposent plus ce détail historique dans l'expérience. */
+exports.myRides = async (req, res) => {
+  try {
+    const { limit, offset, page } = getPagination(req, 25, 100);
+    const categoryIds = await getMobilityCategoryIds();
+    if (!categoryIds.length) {
+      return res.json({ rides: [], pagination: { page, limit, offset, total: 0 } });
+    }
+
+    const { rows, count } = await Service.findAndCountAll({
+      where: {
+        clientId: req.user.id,
+        parentServiceId: null,
+        tradeCategoryId: { [Op.in]: categoryIds },
+      },
+      include: rideListIncludes(),
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset,
+      distinct: true,
+    });
+
+    return res.json({ rides: rows, pagination: { page, limit, offset, total: count } });
+  } catch (e) {
+    logger.error({ err: e }, 'mission.my_rides.failed');
+    return res.status(500).json({ error: 'Erreur lors de la récupération de vos courses' });
+  }
+};
+
+exports.dispatchRides = async (req, res) => {
+  try {
+    const { limit, offset, page } = getPagination(req, 40, 100);
+    const categoryIds = await getMobilityCategoryIds();
+    if (!categoryIds.length) {
+      return res.json({ rides: [], pagination: { page, limit, offset, total: 0 } });
+    }
+
+    const where = {
+      parentServiceId: null,
+      tradeCategoryId: { [Op.in]: categoryIds },
+    };
+    if (String(req.query.history || '') !== '1') {
+      where.missionStatus = { [Op.notIn]: RIDE_TERMINAL_STATUSES };
+    }
+    if (req.user.regionId) where.regionId = req.user.regionId;
+    else if (req.user.countryId) where.countryId = req.user.countryId;
+    else if (Number.isFinite(Number(req.query.countryId))) {
+      where.countryId = Number(req.query.countryId);
+    }
+
+    const { rows, count } = await Service.findAndCountAll({
+      where,
+      include: rideListIncludes({ includeClient: true }),
+      order: [['createdAt', 'ASC']],
+      limit,
+      offset,
+      distinct: true,
+    });
+
+    return res.json({ rides: rows, pagination: { page, limit, offset, total: count } });
+  } catch (e) {
+    logger.error({ err: e }, 'mission.dispatch_rides.failed');
+    return res.status(500).json({ error: 'Erreur lors du chargement des courses Taxi' });
   }
 };

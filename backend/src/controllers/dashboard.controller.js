@@ -8,6 +8,7 @@ const {
   Order,
   Property,
   Transaction,
+  TradeCategory,
   User,
 } = require('../../models');
 const { applyGeoScopeForModel, getUserGeoScope, isGlobalAdmin, toSafeInt } = require('../utils/geoScope');
@@ -298,8 +299,30 @@ function orderBaseQueryForDashboard(req) {
 
 async function countServices(req) {
   const baseWhere = serviceWhereForDashboard(req);
+  const mobilityCategoryIds = TradeCategory?.findAll
+    ? (
+        await TradeCategory.findAll({
+          where: { slug: 'mobilite' },
+          attributes: ['id'],
+        })
+      ).map((category) => category.id)
+    : [];
+  const where = mobilityCategoryIds.length
+    ? {
+        ...baseWhere,
+        [Op.and]: [
+          ...(Array.isArray(baseWhere[Op.and]) ? baseWhere[Op.and] : []),
+          {
+            [Op.or]: [
+              { tradeCategoryId: null },
+              { tradeCategoryId: { [Op.notIn]: mobilityCategoryIds } },
+            ],
+          },
+        ],
+      }
+    : baseWhere;
   const row = await fetchAggregateRow(Service, {
-    where: baseWhere,
+    where,
     attributes: [
       [literal(countDistinctSql('Service')), 'total'],
       [

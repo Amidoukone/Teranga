@@ -342,6 +342,7 @@ exports.listClient = async (req, res) => {
     const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
     const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
     const sort = toTrimOrNull(req.query?.sort);
+    const excludeTradeCategorySlug = toTrimOrNull(req.query?.excludeTradeCategorySlug);
 
     let where = {};
     const andWhere = [];
@@ -357,6 +358,24 @@ exports.listClient = async (req, res) => {
     if (propertyId) where.propertyId = propertyId;
     if (countryId) where.countryId = countryId;
     if (regionId) where.regionId = regionId;
+
+
+    if (excludeTradeCategorySlug) {
+      const excludedCategoryIds = (
+        await TradeCategory.findAll({
+          where: { slug: excludeTradeCategorySlug },
+          attributes: ['id'],
+        })
+      ).map((category) => category.id);
+      if (excludedCategoryIds.length) {
+        andWhere.push({
+          [Op.or]: [
+            { tradeCategoryId: null },
+            { tradeCategoryId: { [Op.notIn]: excludedCategoryIds } },
+          ],
+        });
+      }
+    }
 
     if (q) {
       const like = { [Op.like]: `%${q}%` };
@@ -440,6 +459,7 @@ exports.listAll = async (req, res) => {
     const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
     const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
     const sort = toTrimOrNull(req.query?.sort);
+    const excludeTradeCategorySlug = toTrimOrNull(req.query?.excludeTradeCategorySlug);
 
     let where = {};
     const andWhere = [];
@@ -450,6 +470,23 @@ exports.listAll = async (req, res) => {
     if (propertyId) where.propertyId = propertyId;
     if (countryId) where.countryId = countryId;
     if (regionId) where.regionId = regionId;
+
+    if (excludeTradeCategorySlug) {
+      const excludedCategoryIds = (
+        await TradeCategory.findAll({
+          where: { slug: excludeTradeCategorySlug },
+          attributes: ['id'],
+        })
+      ).map((category) => category.id);
+      if (excludedCategoryIds.length) {
+        andWhere.push({
+          [Op.or]: [
+            { tradeCategoryId: null },
+            { tradeCategoryId: { [Op.notIn]: excludedCategoryIds } },
+          ],
+        });
+      }
+    }
 
     if (q) {
       const like = { [Op.like]: `%${q}%` };
@@ -1012,7 +1049,6 @@ exports.getById = async (req, res) => {
     return res.status(500).json({ error: "Erreur lors de la récupération du service" });
   }
 };
-
 
 
 
