@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car, Bike, KeyRound, PhoneCall, RefreshCw, Share2, Star, PackageCheck, Truck } from "lucide-react";
+import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car, Bike, KeyRound, PhoneCall, RefreshCw, Share2, Star, PackageCheck, Truck, Wrench } from "lucide-react";
 
 import {
   getMissionTrack,
@@ -88,6 +88,13 @@ const CLIENT_DELIVERY_PROGRESS_STEPS = [
   { key: "delivery", status: "IN_PROGRESS" },
 ];
 
+const CLIENT_SERVICE_PROGRESS_STEPS = [
+  { key: "provider", status: "ASSIGNED" },
+  { key: "enRoute", status: "EN_ROUTE" },
+  { key: "onSite", status: "ON_SITE" },
+  { key: "work", status: "IN_PROGRESS" },
+];
+
 const CLIENT_DELIVERY_STATUS_ICONS = {
   CREATED: Clock,
   SEARCHING_EXECUTOR: Clock,
@@ -116,6 +123,10 @@ function ClientRideStatus({ status, t, translationRoot = "taxiRides" }) {
   const Icon =
     translationRoot === "deliveryOrders"
       ? CLIENT_DELIVERY_STATUS_ICONS[status] || PackageCheck
+      : translationRoot === "serviceMission"
+      ? status === "COMPLETED"
+        ? BadgeCheck
+        : Wrench
       : config.icon;
 
   return (
@@ -144,6 +155,8 @@ function ClientRideProgress({ status, t, translationRoot = "taxiRides" }) {
   const steps =
     translationRoot === "deliveryOrders"
       ? CLIENT_DELIVERY_PROGRESS_STEPS
+      : translationRoot === "serviceMission"
+      ? CLIENT_SERVICE_PROGRESS_STEPS
       : CLIENT_RIDE_PROGRESS_STEPS;
 
   return (
@@ -523,7 +536,13 @@ export default function MissionTrackingPage() {
     ? "deliveryOrders"
     : null;
   const clientTransportView = track.viewerRole === "client" && transportTranslationRoot;
-  const statusLabel = t(`${clientTransportView ? `${transportTranslationRoot}.status` : "missionTracking.status"}.${track.missionStatus}`, {
+  const clientServiceView = track.viewerRole === "client" && !transportTranslationRoot;
+  const clientSimpleTranslationRoot = clientTransportView
+    ? transportTranslationRoot
+    : clientServiceView
+    ? "serviceMission"
+    : null;
+  const statusLabel = t(`${clientSimpleTranslationRoot ? `${clientSimpleTranslationRoot}.status` : "missionTracking.status"}.${track.missionStatus}`, {
     defaultValue: track.missionStatus,
   });
   const requiresStartCode =
@@ -535,12 +554,13 @@ export default function MissionTrackingPage() {
     track.viewerRole !== "client" &&
     track.isExecutor &&
     !track.acceptanceDeadlineAt &&
-    (isTaxiMission || isDeliveryMission) &&
     ["ASSIGNED", "EN_ROUTE", "ON_SITE", "IN_PROGRESS"].includes(track.missionStatus)
       ? EXECUTOR_NEXT_STATUS[track.missionStatus]
       : null;
   const executorCtaRoot = isDeliveryMission
     ? "deliveryOrders.executorCta"
+    : !isTaxiMission
+    ? "serviceMission.executorCta"
     : "missionTracking.executorCta";
   const transitionExtra =
     stickyExecutorNextStatus === "COMPLETED" &&
@@ -575,17 +595,17 @@ export default function MissionTrackingPage() {
         </button>
       </div>
 
-      {clientTransportView ? (
+      {clientSimpleTranslationRoot ? (
         <>
           <ClientRideStatus
             status={track.missionStatus}
             t={t}
-            translationRoot={transportTranslationRoot}
+            translationRoot={clientSimpleTranslationRoot}
           />
           <ClientRideProgress
             status={track.missionStatus}
             t={t}
-            translationRoot={transportTranslationRoot}
+            translationRoot={clientSimpleTranslationRoot}
           />
         </>
       ) : null}
@@ -956,6 +976,8 @@ export default function MissionTrackingPage() {
                   : "/livreur/livraisons"
                 : track.viewerRole === "client"
                 ? "/services"
+                : track.viewerRole === "provider"
+                ? "/prestataire/services"
                 : "/missions/mine"
             }
             className="btn-secondary rounded-full px-6 py-2.5 text-sm"

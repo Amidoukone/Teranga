@@ -70,13 +70,14 @@ async function loginAndGetToken(email, password) {
   return res.body?.token;
 }
 
-async function makeService({ clientId, agentId = null, countryId = null }) {
+async function makeService({ clientId, agentId = null, countryId = null, status = 'created' }) {
   const service = await db.Service.create({
     clientId,
     agentId,
     type: 'errand',
     title: 'Course simple pour test detail',
     countryId,
+    status,
   });
   created.serviceIds.push(service.id);
   return service;
@@ -205,5 +206,43 @@ describe('GET /api/services/:id — détail (client propriétaire, agent assign�
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(404);
+  });
+
+  test('the owning client confirms a completed classic service', async () => {
+    if (!dbReady) return;
+    const { user: client, password } = await makeUser({ role: 'client', countryId: country.id });
+    const token = await loginAndGetToken(client.email, password);
+    const service = await makeService({
+      clientId: client.id,
+      countryId: country.id,
+      status: 'completed',
+    });
+
+    const res = await request(app)
+      .post(`/api/services/${service.id}/validate`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.service.status).toBe('validated');
+    await service.reload();
+    expect(service.status).toBe('validated');
+  });
+
+  test('a client cannot confirm another client service', async () => {
+    if (!dbReady) return;
+    const { user: owner } = await makeUser({ role: 'client', countryId: country.id });
+    const { user: intruder, password } = await makeUser({ role: 'client', countryId: country.id });
+    const token = await loginAndGetToken(intruder.email, password);
+    const service = await makeService({
+      clientId: owner.id,
+      countryId: country.id,
+      status: 'completed',
+    });
+
+    const res = await request(app)
+      .post(`/api/services/${service.id}/validate`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
   });
 });

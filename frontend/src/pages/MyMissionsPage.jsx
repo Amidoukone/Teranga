@@ -64,7 +64,7 @@ function missionDetailPath(mission) {
   return `/missions/${mission.id}/track`;
 }
 
-export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = false }) {
+export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = false, serviceOnly = false }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const transportOnly = mobilityOnly || deliveryOnly;
@@ -142,7 +142,12 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
           ? { tradeCategorySlug: selectedTradeCategorySlug, limit: 100 }
           : {}
       );
-      setMissions(data?.missions || []);
+      const items = Array.isArray(data?.missions) ? data.missions : [];
+      setMissions(
+        serviceOnly
+          ? items.filter((mission) => !['mobilite', 'livraison'].includes(mission.tradeCategory?.slug))
+          : items
+      );
     } catch (e) {
       console.error('MyMissionsPage load missions error:', e);
       if (!silent) {
@@ -152,7 +157,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [selectedTradeCategorySlug]);
+  }, [selectedTradeCategorySlug, serviceOnly]);
 
   async function handleRideOffer(event, mission, action) {
     event.preventDefault();
@@ -178,7 +183,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
   useEffect(() => {
     if (!isAllowed) return undefined;
     loadMissions();
-    if (!transportOnly) return undefined;
+    if (!transportOnly && !serviceOnly) return undefined;
 
     const refreshIfVisible = () => {
       if (isDocumentVisible()) loadMissions({ silent: true });
@@ -192,7 +197,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
       window.removeEventListener('focus', refreshIfVisible);
       document.removeEventListener('visibilitychange', refreshIfVisible);
     };
-  }, [isAllowed, loadMissions, transportOnly]);
+  }, [isAllowed, loadMissions, serviceOnly, transportOnly]);
 
   async function handleAvailabilityChange(availabilityStatus) {
     setSavingAvailability(true);
@@ -256,12 +261,16 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-text-primary">
-              {transportOnly
+              {serviceOnly
+                ? t('serviceProvider.title')
+                : transportOnly
                 ? t(`${transportTranslationRoot}.driverTitle`)
                 : t('myMissionsPage.title')}
             </h1>
             <p className="mt-1 text-sm text-text-secondary">
-              {transportOnly
+              {serviceOnly
+                ? t('serviceProvider.subtitle')
+                : transportOnly
                 ? t(`${transportTranslationRoot}.driverSubtitle`)
                 : t('myMissionsPage.subtitle')}
             </p>
@@ -393,7 +402,9 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
 
         {!loading && missions.length === 0 && !error ? (
           <p className="text-center text-text-muted italic py-10">
-            {transportOnly
+            {serviceOnly
+              ? t('serviceProvider.empty')
+              : transportOnly
               ? t(`${transportTranslationRoot}.driverEmpty`)
               : t('myMissionsPage.empty')}
           </p>
@@ -408,6 +419,8 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
                   : m.tradeCategory?.slug === 'livraison'
                   ? 'deliveryOrders'
                   : null;
+              const actionTranslationRoot =
+                missionTranslationRoot || (serviceOnly ? 'serviceProvider' : 'myMissionsPage');
               return (
                 <li
                   key={m.id}
@@ -431,7 +444,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
                         <div className="min-w-0">
                           {isOffer ? (
                             <p className="mb-1 text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">
-                              {t(`${transportTranslationRoot}.newOffer`)}
+                              {t(`${actionTranslationRoot}.newOffer`)}
                             </p>
                           ) : null}
                           <div className="font-medium text-text-primary break-words">
@@ -483,15 +496,15 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
                         ) : (
                           <Check size={21} />
                         )}
-                        {t(`${missionTranslationRoot || transportTranslationRoot}.accept`)}
+                        {t(`${actionTranslationRoot}.accept`)}
                       </button>
                       <button
                         type="button"
                         onClick={(event) => handleRideOffer(event, m, 'decline')}
                         disabled={Boolean(rideAction)}
                         className="btn-secondary flex min-h-14 items-center justify-center rounded-2xl px-4 disabled:opacity-60"
-                        aria-label={t(`${missionTranslationRoot || transportTranslationRoot}.decline`)}
-                        title={t(`${missionTranslationRoot || transportTranslationRoot}.decline`)}
+                        aria-label={t(`${actionTranslationRoot}.decline`)}
+                        title={t(`${actionTranslationRoot}.decline`)}
                       >
                         <X size={21} />
                       </button>

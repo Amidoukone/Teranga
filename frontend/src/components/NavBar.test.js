@@ -151,4 +151,27 @@ describe("NavBar logout flow", () => {
       expect(link).toHaveAttribute("href", "/livraisons");
     });
   });
+
+  test("keeps the dedicated Services page visible for admins", async () => {
+    const adminUser = { ...mockUser, role: "admin", countryId: 1 };
+    getLocalUser.mockReturnValue(adminUser);
+    me.mockResolvedValue({ user: adminUser });
+
+    render(<NavBar />);
+
+    const serviceLinks = await screen.findAllByRole("link", { name: "nav.services" });
+    expect(serviceLinks.some((link) => link.getAttribute("href") === "/admin/services")).toBe(true);
+  });
+
+  test("keeps generic service jobs directly visible for providers", async () => {
+    const providerUser = { ...mockUser, role: "provider" };
+    getLocalUser.mockReturnValue(providerUser);
+    me.mockResolvedValue({ user: providerUser });
+
+    render(<NavBar />);
+
+    const serviceLinks = await screen.findAllByRole("link", { name: "nav.services" });
+    expect(serviceLinks.length).toBeGreaterThanOrEqual(2);
+    serviceLinks.forEach((link) => expect(link).toHaveAttribute("href", "/prestataire/services"));
+  });
 });

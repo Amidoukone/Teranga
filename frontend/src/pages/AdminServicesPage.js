@@ -14,6 +14,12 @@ import {
   AdminPageHeader,
 } from '../components/admin/AdminFormUi';
 
+const ADMIN_SERVICES_POLL_MS = 15000;
+
+function isDocumentVisible() {
+  return typeof document === 'undefined' || document.visibilityState === 'visible';
+}
+
 export default function AdminServicesPage({ tradeCategorySlug = null }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -197,7 +203,7 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
     try {
       const params = new URLSearchParams();
       if (tradeCategorySlug) params.set('tradeCategorySlug', tradeCategorySlug);
-      else params.set('excludeTradeCategorySlug', 'mobilite');
+      else params.set('excludeTradeCategorySlug', 'mobilite,livraison');
 
       if (status !== 'all') params.set('status', status);
       if (onlyUnassigned) params.set('unassigned', '1');
@@ -208,7 +214,13 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
 
       const { data } = await api.get(`/services?${params.toString()}`);
 
-      setServices(data?.services || []);
+      const items = Array.isArray(data?.services) ? [...data.services] : [];
+      items.sort((left, right) => {
+        const leftAssigned = left.executionType === 'provider' ? Boolean(left.providerId) : Boolean(left.agentId || left.agent);
+        const rightAssigned = right.executionType === 'provider' ? Boolean(right.providerId) : Boolean(right.agentId || right.agent);
+        return Number(leftAssigned) - Number(rightAssigned);
+      });
+      setServices(items);
     } catch (e) {
       console.error('AdminServicesPage load services error:', e);
       setServices([]);
@@ -231,6 +243,23 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
     if (isAdmin) {
       loadServices();
     }
+  }, [isAdmin, loadServices]);
+
+  useEffect(() => {
+    if (!isAdmin) return undefined;
+
+    function refreshIfVisible() {
+      if (isDocumentVisible()) loadServices();
+    }
+
+    const interval = setInterval(refreshIfVisible, ADMIN_SERVICES_POLL_MS);
+    window.addEventListener('focus', refreshIfVisible);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', refreshIfVisible);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+    };
   }, [isAdmin, loadServices]);
 
   /* ============================================================
@@ -317,6 +346,34 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
   function getAssignableAgents(service) {
     return agents.filter((a) => isAgentAssignableToService(service, a));
   }
+
+  const serviceStats = useMemo(() => {
+    const unassigned = services.filter((service) =>
+      service.executionType === 'provider'
+        ? !service.providerId && ['CREATED', 'SEARCHING_EXECUTOR', 'ASSIGNED'].includes(service.missionStatus)
+        : !(service.agentId || service.agent) && !['completed', 'validated'].includes(service.status)
+    ).length;
+    const active = services.filter((service) =>
+      service.executionType === 'provider'
+        ? ['ASSIGNED', 'EN_ROUTE', 'ON_SITE', 'IN_PROGRESS'].includes(service.missionStatus)
+        : service.status === 'in_progress'
+    ).length;
+    const completed = services.filter((service) =>
+      service.executionType === 'provider'
+        ? ['COMPLETED', 'VALIDATED', 'CLOSED'].includes(service.missionStatus)
+        : ['completed', 'validated'].includes(service.status)
+    ).length;
+    return { unassigned, active, completed };
+  }, [services]);
+
+  const priorityServices = useMemo(
+    () => services.filter((service) =>
+      service.executionType === 'provider'
+        ? !service.providerId && ['CREATED', 'SEARCHING_EXECUTOR', 'ASSIGNED'].includes(service.missionStatus)
+        : !(service.agentId || service.agent) && !['completed', 'validated'].includes(service.status)
+    ),
+    [services]
+  );
 
   function statusBadgeClass(st) {
     switch (st) {
@@ -412,7 +469,15 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
                 >
                   {t('deliveryOrders.phoneOrderCta')}
                 </button>
-              ) : null}
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin/phone-orders')}
+                  className="btn-primary inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-full"
+                >
+                  {t('serviceAdmin.phoneOrder')}
+                </button>
+              )}
               <button
                 onClick={loadServices}
                 disabled={loading}
@@ -425,6 +490,21 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
             </div>
           }
         />
+
+        <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-3 py-3 sm:px-4">
+            <p className="text-xl font-bold text-text-primary sm:text-2xl">{serviceStats.unassigned}</p>
+            <p className="text-[11px] font-medium text-text-secondary sm:text-xs">{t('serviceAdmin.toAssign')}</p>
+          </div>
+          <div className="rounded-2xl border border-blue-500/25 bg-blue-500/10 px-3 py-3 sm:px-4">
+            <p className="text-xl font-bold text-text-primary sm:text-2xl">{serviceStats.active}</p>
+            <p className="text-[11px] font-medium text-text-secondary sm:text-xs">{t('serviceAdmin.inProgress')}</p>
+          </div>
+          <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-3 sm:px-4">
+            <p className="text-xl font-bold text-text-primary sm:text-2xl">{serviceStats.completed}</p>
+            <p className="text-[11px] font-medium text-text-secondary sm:text-xs">{t('serviceAdmin.completed')}</p>
+          </div>
+        </div>
 
  {/* Contexte: administration des services. */}
         <AdminFilterBar className="mb-8 rounded-2xl px-4 sm:px-5 py-4 sm:py-5">
@@ -525,6 +605,74 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
             </button>
           </div>
         </AdminFilterBar>
+
+        {!tradeCategorySlug && priorityServices.length ? (
+          <section className="mb-7 rounded-[24px] border border-amber-500/25 bg-amber-500/5 p-4 sm:p-5">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-text-primary">{t('serviceAdmin.priorityTitle')}</h2>
+              <p className="mt-1 text-sm text-text-secondary">{t('serviceAdmin.priorityHint')}</p>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              {priorityServices.map((service) => (
+                <article key={service.id} className="rounded-2xl border border-border bg-surface-card p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                        {service.tradeCategory?.name || service.typeLabel || service.type}
+                      </p>
+                      <h3 className="mt-1 font-bold text-text-primary break-words">
+                        {service.title || t('adminServicesPage.table.serviceFallback', { id: service.id })}
+                      </h3>
+                      <p className="mt-1 text-xs text-text-secondary">{displayUser(service.client)}</p>
+                    </div>
+                    <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-800 dark:text-amber-200">
+                      {t('serviceAdmin.unassigned')}
+                    </span>
+                  </div>
+                  {service.address ? <p className="mt-3 line-clamp-2 text-sm text-text-secondary">{service.address}</p> : null}
+                  <div className="mt-4">
+                    {service.executionType === 'provider' ? (
+                      <select
+                        value=""
+                        onChange={(event) => handleAssignProvider(service.id, event.target.value)}
+                        disabled={getAssignableProviders(service).length === 0}
+                        className="app-input min-h-12 w-full font-medium"
+                        aria-label={t('serviceAdmin.assignWorker')}
+                      >
+                        <option value="">{t('serviceAdmin.chooseProvider')}</option>
+                        {getAssignableProviders(service).map((provider) => (
+                          <option key={provider.id} value={provider.id}>{provider.displayFirstName}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <select
+                        value=""
+                        onChange={(event) => handleAssign(service.id, event.target.value)}
+                        disabled={getAssignableAgents(service).length === 0}
+                        className="app-input min-h-12 w-full font-medium"
+                        aria-label={t('serviceAdmin.assignWorker')}
+                      >
+                        <option value="">{t('serviceAdmin.chooseAgent')}</option>
+                        {getAssignableAgents(service).map((agent) => (
+                          <option key={agent.id} value={agent.id}>
+                            {[agent.firstName, agent.lastName].filter(Boolean).join(' ') || agent.email}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {(
+                      service.executionType === 'provider'
+                        ? getAssignableProviders(service).length === 0
+                        : getAssignableAgents(service).length === 0
+                    ) ? (
+                      <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">{t('serviceAdmin.noWorker')}</p>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
  {/* Contexte: administration des services. */}
         <div className="overflow-x-auto rounded-2xl border border-border bg-surface-card shadow-sm">

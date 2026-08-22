@@ -150,3 +150,12 @@ export async function completeService(id) {
   const { data } = await api.post(`/services/agent/services/${id}/complete`);
   return data.service;
 }
+
+/**
+ * Le client confirme qu'un service classique termine est conforme.
+ * POST /api/services/:id/validate
+ */
+export async function validateService(id) {
+  const { data } = await api.post(`/services/${id}/validate`);
+  return data.service;
+}

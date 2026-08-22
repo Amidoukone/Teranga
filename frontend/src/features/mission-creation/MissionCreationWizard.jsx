@@ -16,7 +16,7 @@ import ConfirmStep from "./steps/ConfirmStep";
 
 const TOTAL_STEPS = 4;
 
-export default function MissionCreationWizard() {
+export default function MissionCreationWizard({ serviceOnly = false }) {
   const { t } = useTranslation();
 
   const [step, setStep] = useState(1);
@@ -73,7 +73,11 @@ export default function MissionCreationWizard() {
           listSavedLocations(),
         ]);
         if (cancelled) return;
-        setTradeCategories(categories);
+        setTradeCategories(
+          serviceOnly
+            ? categories.filter((item) => !["mobilite", "livraison"].includes(item.slug))
+            : categories
+        );
         setSavedLocations(locations);
       } catch (_err) {
         if (!cancelled) {
@@ -89,7 +93,7 @@ export default function MissionCreationWizard() {
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [serviceOnly, t]);
 
   const executionType = category.requestKind === "trade_category" ? "provider" : "agent";
 
@@ -302,7 +306,7 @@ export default function MissionCreationWizard() {
                   : selectedTradeCategorySlug === "mobilite"
                   ? `/courses/${result.mission.id}`
                   : `/missions/${result.mission.id}/track`
-                : "/services"
+                : `/services/${result.mission.id}`
             }
             className="btn-primary rounded-full px-6 py-2.5 text-sm"
           >

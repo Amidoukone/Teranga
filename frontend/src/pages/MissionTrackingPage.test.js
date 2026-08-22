@@ -209,3 +209,45 @@ test("partage la position du livreur pendant l'acheminement du colis", async () 
       .length
   ).toBeGreaterThanOrEqual(1);
 });
+
+test("montre clairement au client qu'un service est en cours", async () => {
+  getMissionTrack.mockResolvedValue({
+    title: "Reparation plomberie",
+    missionStatus: "IN_PROGRESS",
+    viewerRole: "client",
+    isExecutor: false,
+    tradeCategorySlug: "plomberie",
+    realtimeTrackingRequired: false,
+  });
+
+  render(<MissionTrackingPage />);
+
+  expect(await screen.findByRole("status")).toHaveTextContent(
+    "serviceMission.liveStatus.IN_PROGRESS.title"
+  );
+  expect(
+    screen.getByRole("listitem", { name: "serviceMission.progress.work" })
+  ).toHaveAttribute("aria-current", "step");
+});
+
+test("donne au prestataire une action principale pour un service", async () => {
+  getMissionTrack.mockResolvedValue({
+    title: "Reparation plomberie",
+    missionStatus: "ASSIGNED",
+    viewerRole: "provider",
+    isExecutor: true,
+    tradeCategorySlug: "plomberie",
+    acceptanceDeadlineAt: null,
+    realtimeTrackingRequired: false,
+  });
+
+  render(<MissionTrackingPage />);
+
+  expect(
+    (await screen.findAllByRole("button", { name: "serviceMission.executorCta.EN_ROUTE" })).length
+  ).toBeGreaterThanOrEqual(1);
+  expect(screen.getByRole("link", { name: "missionTracking.backToMyMissions" })).toHaveAttribute(
+    "href",
+    "/prestataire/services"
+  );
+});

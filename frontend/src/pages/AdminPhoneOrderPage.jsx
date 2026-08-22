@@ -125,6 +125,9 @@ export default function AdminPhoneOrderPage() {
   const selectedTradeCategorySlug = category.tradeCategoryId
     ? tradeCategories.find((tc) => String(tc.id) === String(category.tradeCategoryId))?.slug || null
     : null;
+  const serviceTradeCategories = tradeCategories.filter(
+    (item) => !["mobilite", "livraison"].includes(item.slug)
+  );
   const requiresPickup = selectedTradeCategorySlug === "livraison" || selectedTradeCategorySlug === "mobilite";
   const isMobilite = selectedTradeCategorySlug === "mobilite";
   const effectiveTitle = taxiMode
@@ -217,7 +220,13 @@ export default function AdminPhoneOrderPage() {
       const backendMessage = error?.response?.data?.error;
       setFeedback({
         type: "error",
-        message: backendMessage || t("adminPhoneOrder.errors.submitFailed"),
+        message:
+          backendMessage ||
+          t(
+            taxiMode || deliveryMode
+              ? "adminPhoneOrder.errors.submitFailed"
+              : "servicePhoneOrder.submitFailed"
+          ),
       });
     } finally {
       setSubmitting(false);
@@ -231,7 +240,7 @@ export default function AdminPhoneOrderPage() {
           ? "Teranga Taxi"
           : deliveryMode
           ? t("deliveryOrders.kicker")
-          : t("adminPhoneOrder.kicker")}
+          : t("servicePhoneOrder.kicker")}
       </p>
       <h1 className="app-page-headline flex items-center gap-2">
         <Phone size={22} />
@@ -239,14 +248,14 @@ export default function AdminPhoneOrderPage() {
           ? t("adminPhoneOrder.taxiPageTitle")
           : deliveryMode
           ? t("deliveryOrders.phoneOrderTitle")
-          : t("adminPhoneOrder.title")}
+          : t("servicePhoneOrder.title")}
       </h1>
       <p className="mt-1 text-sm text-text-secondary">
         {taxiMode
           ? t("adminPhoneOrder.taxiPageSubtitle")
           : deliveryMode
           ? t("deliveryOrders.phoneOrderSubtitle")
-          : t("adminPhoneOrder.subtitle")}
+          : t("servicePhoneOrder.subtitle")}
       </p>
       {taxiMode && !dispatchMissionId ? (
         <button
@@ -354,7 +363,14 @@ export default function AdminPhoneOrderPage() {
         <div className="mt-6 space-y-5">
           {result ? (
             <div className="rounded-[28px] border border-border/70 bg-surface-card p-6 shadow-sm">
-              <AuthFeedbackBanner type="success" message={t("adminPhoneOrder.success.message")} />
+              <AuthFeedbackBanner
+                type="success"
+                message={t(
+                  taxiMode || deliveryMode
+                    ? "adminPhoneOrder.success.message"
+                    : "servicePhoneOrder.success"
+                )}
+              />
               <p className="mt-3 text-sm text-text-secondary">
                 {t("adminPhoneOrder.success.reference", { id: result.mission?.id })}
               </p>
@@ -393,13 +409,19 @@ export default function AdminPhoneOrderPage() {
                   </Link>
                 )}
                 <button type="button" onClick={() => resetForm({ keepPhoneOrderOpen: true })} className="btn-secondary rounded-full px-6 py-2.5 text-sm">
-                  {t("adminPhoneOrder.success.newOrderCta")}
+                  {t(
+                    taxiMode || deliveryMode
+                      ? "adminPhoneOrder.success.newOrderCta"
+                      : "servicePhoneOrder.newOrder"
+                  )}
                 </button>
               </div>
             </div>
           ) : (
             <button type="button" onClick={backToQueue} className="btn-secondary rounded-full px-6 py-2.5 text-sm">
-              {taxiMode ? t("adminPhoneOrder.backToQueue") : t("adminPhoneOrder.success.newOrderCta")}
+              {taxiMode
+                ? t("adminPhoneOrder.backToQueue")
+                : t(deliveryMode ? "adminPhoneOrder.success.newOrderCta" : "servicePhoneOrder.newOrder")}
             </button>
           )}
           {dispatchMissionId ? (
@@ -473,7 +495,7 @@ export default function AdminPhoneOrderPage() {
             <div className="mt-5">
               <label className={labelClass}>{t("missionCreation.category.title")}</label>
               <CategoryPicker
-                tradeCategories={tradeCategories}
+                tradeCategories={serviceTradeCategories}
                 loading={loadingOptions}
                 value={category}
                 onChange={(value) => {
@@ -594,7 +616,9 @@ export default function AdminPhoneOrderPage() {
             className={`btn-primary mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-6 py-2.5 text-sm font-semibold disabled:opacity-60 ${taxiMode ? "w-full" : ""}`}
           >
             {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
-            {submitting ? t("adminPhoneOrder.submitting") : t("adminPhoneOrder.submitCta")}
+            {submitting
+              ? t("adminPhoneOrder.submitting")
+              : t(taxiMode || deliveryMode ? "adminPhoneOrder.submitCta" : "servicePhoneOrder.submit")}
           </button>
         </form>
       ) : null}

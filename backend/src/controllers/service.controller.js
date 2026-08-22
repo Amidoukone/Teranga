@@ -1,6 +1,15 @@
 "use strict";
 
-const { Service, User, Property, Country, TradeCategory, Sequelize, sequelize } = require("../../models");
+const {
+  Service,
+  User,
+  Property,
+  Country,
+  TradeCategory,
+  Provider,
+  Sequelize,
+  sequelize,
+} = require("../../models");
 const { Op } = require("sequelize");
 const {
   SERVICE_STATUSES,
@@ -421,10 +430,23 @@ exports.listClient = async (req, res) => {
         {
           model: User,
           as: "client",
-          attributes: ["id", "firstName", "lastName", "email", "country"],
+          attributes: ["id", "firstName", "lastName", "email", "phone", "country"],
         },
         { model: User, as: "creator", attributes: ["id", "firstName", "lastName", "email"] },
         { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email"] },
+        {
+          model: Provider,
+          as: "provider",
+          attributes: [
+            "id",
+            "displayFirstName",
+            "averageRating",
+            "completedMissionsCount",
+            "badgeCertified",
+            "profilePhotoUrl",
+          ],
+        },
+        { model: TradeCategory, as: "tradeCategory", attributes: ["id", "name", "slug"] },
         { model: Property, as: "property", attributes: ["id", "title", "city", "address", "photos"] },
       ],
       order: buildServiceOrder(sort),
@@ -472,7 +494,14 @@ exports.listAll = async (req, res) => {
     const andWhere = [];
 
     if (status && ALLOWED_STATUSES.has(status)) where.status = status;
-    if (unassigned) where.agentId = null;
+    if (unassigned) {
+      andWhere.push({
+        [Op.or]: [
+          { executionType: "agent", agentId: null },
+          { executionType: "provider", providerId: null },
+        ],
+      });
+    }
     if (type && ALLOWED_TYPES.has(type)) where.type = type;
     if (propertyId) where.propertyId = propertyId;
     if (countryId) where.countryId = countryId;
@@ -547,6 +576,7 @@ exports.listAll = async (req, res) => {
         // effectivement ce pays (voir AdminServicesPage.js / mission.controller.js assign()
         // qui applique la même règle côté backend).
         { model: Country, as: "country", attributes: ["id", "isoCode", "name"] },
+        { model: TradeCategory, as: "tradeCategory", attributes: ["id", "name", "slug"] },
       ],
       order: buildServiceOrder(sort),
       limit,
@@ -691,6 +721,12 @@ exports.updateService = async (req, res) => {
       return res
         .status(403)
         .json({ error: "Service hors scope géographique" });
+    }
+
+    if (req.user.role !== "admin" && Object.prototype.hasOwnProperty.call(req.body || {}, "status")) {
+      return res.status(403).json({
+        error: "Utilisez l'action de confirmation prevue pour changer le statut",
+      });
     }
 
     const updatable = [
@@ -863,7 +899,13 @@ exports.listAgent = async (req, res) => {
     const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
     const sort = toTrimOrNull(req.query?.sort);
 
-    let where = { agentId: req.user.id };
+    // Cette page est reservee aux services classiques executes par un agent.
+    // Les missions par filiere supervisees utilisent le suivi /missions/mine.
+    let where = {
+      agentId: req.user.id,
+      executionType: "agent",
+      tradeCategoryId: null,
+    };
     const andWhere = [];
 
     if (status && ALLOWED_STATUSES.has(status)) where.status = status;
@@ -903,7 +945,7 @@ exports.listAgent = async (req, res) => {
         {
           model: User,
           as: "client",
-          attributes: ["id", "firstName", "lastName", "email", "country"],
+          attributes: ["id", "firstName", "lastName", "email", "phone", "country"],
         },
         {
           model: User,
@@ -997,6 +1039,12 @@ exports.completeService = async (req, res) => {
     if (!service)
       return res.status(404).json({ error: "Service introuvable" });
 
+    if (!canAccessByGeoScope(req.user, service)) {
+      return res
+        .status(403)
+        .json({ error: "Service hors scope geographique" });
+    }
+
     if (service.agentId !== req.user.id)
       return res.status(403).json({ error: "Non autorisé" });
 
@@ -1027,6 +1075,49 @@ exports.completeService = async (req, res) => {
 };
 
 /* ============================================================
+   CLIENT CONFIRME LA FIN DU SERVICE
+   Le bouton dedie evite de laisser le frontend modifier librement
+   le statut et garantit la transition completed -> validated.
+============================================================ */
+exports.validateService = async (req, res) => {
+  try {
+    const id = toSafeInt(req.params.id);
+    const service = await Service.findByPk(id);
+
+    if (!service) return res.status(404).json({ error: "Service introuvable" });
+    if (String(service.clientId) !== String(req.user.id)) {
+      return res.status(403).json({ error: "Non autorise" });
+    }
+    if (service.executionType !== "agent" || service.tradeCategoryId) {
+      return res.status(400).json({
+        error: "Utilisez le suivi de mission pour confirmer ce service",
+      });
+    }
+    if (service.status !== "completed") {
+      return res.status(400).json({
+        error: "Le service doit etre termine avant confirmation",
+      });
+    }
+
+    await service.update({ status: "validated" });
+    await notifyServiceStatusUpdate({
+      actorId: req.user.id,
+      service,
+      title: "Service valide par le client",
+      status: "validated",
+    });
+
+    return res.json({
+      message: "Service valide",
+      service: addLabels(service),
+    });
+  } catch (e) {
+    logger.error({ err: e }, "service.validate.failed");
+    return res.status(500).json({ error: "Erreur lors de la validation du service" });
+  }
+};
+
+/* ============================================================
    🔎 DÉTAIL D'UN SERVICE — client propriétaire, agent assigné, ou admin (scope géo).
    Utilisé par le clic sur une notification/activité de type "service" (voir
    serviceNotification.service.js) pour ouvrir le service lui-même plutôt que ses tâches,
@@ -1039,6 +1130,7 @@ exports.getById = async (req, res) => {
       include: [
         { model: User, as: "client", attributes: ["id", "firstName", "lastName", "email", "phone"] },
         { model: User, as: "agent", attributes: ["id", "firstName", "lastName", "email", "phone"] },
+        { model: Property, as: "property", attributes: ["id", "title", "city", "address"] },
       ],
     });
 
@@ -1066,4 +1158,3 @@ exports.getById = async (req, res) => {
     return res.status(500).json({ error: "Erreur lors de la récupération du service" });
   }
 };
-

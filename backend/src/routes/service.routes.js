@@ -91,6 +91,9 @@ router.post('/agent/services/:id/start', auth, requireRoles('agent'), useHandler
 // 🔹 Agent termine un service
 router.post('/agent/services/:id/complete', auth, requireRoles('agent'), useHandler('completeService'));
 
+// Le client confirme en une action que le service classique est termine.
+router.post('/:id/validate', auth, requireRoles('client'), useHandler('validateService'));
+
 /* ======================================================
    🔎 DÉTAIL (client propriétaire, agent assigné, admin)
    Placé en dernier : "/:id" est un segment générique qui capturerait "/me" s'il était

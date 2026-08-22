@@ -174,6 +174,7 @@ const ROLE_LINKS = {
     { path: "/activities", labelKey: "nav.activities" },
     { path: "/chauffeur/courses", labelKey: "nav.myRides" },
     { path: "/livreur/livraisons", labelKey: "nav.myDeliveries" },
+    { path: "/prestataire/services", labelKey: "nav.services" },
     SETTINGS_LINK,
     ACCOUNT_SECURITY_LINK,
     HELP_SUPPORT_LINK,
@@ -190,7 +191,6 @@ const ROLE_LINKS = {
 
  // Onboarding injecte dynamiquement uniquement admin global
 
-    { path: "/services", labelKey: "nav.services" },
     { path: "/tasks", labelKey: "nav.tasks" },
     { path: "/admin/services", labelKey: "nav.adminServices" },
     { path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations" },
@@ -238,6 +238,7 @@ const BOTTOM_LINKS = {
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
     { key: "myRides", path: "/chauffeur/courses", labelKey: "nav.myRides", icon: CarFront },
     { key: "myDeliveries", path: "/livreur/livraisons", labelKey: "nav.myDeliveries", icon: Package },
+    { key: "providerServices", path: "/prestataire/services", labelKey: "nav.services", icon: Wrench },
   ],
   admin: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
@@ -333,6 +334,7 @@ function buildSections(role, links, t) {
     ...byPrefix("/chauffeur/courses"),
     ...byPrefix("/livraisons"),
     ...byPrefix("/livreur/livraisons"),
+    ...byPrefix("/prestataire/services"),
     ...byPrefix("/services"),
     ...byPrefix("/tasks"),
     ...(role === "agent" ? byPrefix("/missions/mine") : []),
@@ -735,22 +737,7 @@ function NavBar() {
   }, [isGlobalAdmin, role, t]);
 
   const bottomLinks = useMemo(() => {
-    let base = BOTTOM_LINKS[role] || [];
-
-    if (role === "admin") {
-      base = base.map((item) =>
-        item.path === "/admin/services"
-          ? {
-              ...item,
-              key: "services",
-              path: "/services",
-              labelKey: "nav.services",
-              icon: Wrench,
-            }
-          : item
-      );
-    }
-
+    const base = BOTTOM_LINKS[role] || [];
     return base.map((item) => ({
       ...item,
       label: t(item.labelKey),
@@ -809,9 +796,9 @@ function NavBar() {
 
   const servicePrimaryPath = useMemo(() => {
     if (role === "agent") return "/agent/services";
-    if (role === "provider") return "/chauffeur/courses";
+    if (role === "provider") return "/prestataire/services";
     if (role === "client") return "/courses";
-    if (role === "admin") return "/services";
+    if (role === "admin") return "/admin/services";
     return "/services";
   }, [role]);
 
@@ -819,11 +806,11 @@ function NavBar() {
   const desktopPrimaryTabs = useMemo(() => {
     const candidates =
       role === "admin"
-        ? ["/dashboard", "/admin/taxi-dispatch", "/admin/livraisons", "/services"]
+        ? ["/dashboard", "/admin/taxi-dispatch", "/admin/livraisons", "/admin/services"]
         : role === "client"
         ? ["/dashboard", "/courses", "/livraisons", "/services"]
         : role === "provider"
-        ? ["/dashboard", "/chauffeur/courses", "/livreur/livraisons"]
+        ? ["/dashboard", "/chauffeur/courses", "/livreur/livraisons", "/prestataire/services"]
         : ["/dashboard", servicePrimaryPath, "/tasks"];
 
     const tabs = [];

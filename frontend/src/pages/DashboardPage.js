@@ -465,6 +465,13 @@ export default function DashboardPage() {
               <Briefcase size={16} />
               {t('nav.myDeliveries')}
             </Link>
+            <Link
+              to="/prestataire/services"
+              className="btn-secondary inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium"
+            >
+              <Briefcase size={16} />
+              {t('nav.services')}
+            </Link>
           </div>
         </div>
       </div>

@@ -159,4 +159,29 @@ describe("MyMissionsPage - disponibilité réseau faible", () => {
       limit: 100,
     });
   });
+
+  test("le prestataire voit ses autres services sans Taxi ni Livraison", async () => {
+    getMyMissions.mockResolvedValue({
+      missions: [
+        {
+          id: 61,
+          title: "Reparer une fuite",
+          missionStatus: "ASSIGNED",
+          tradeCategory: { name: "Plomberie", slug: "plomberie" },
+        },
+        {
+          id: 62,
+          title: "Livrer un colis",
+          missionStatus: "ASSIGNED",
+          tradeCategory: { name: "Livraison", slug: "livraison" },
+        },
+      ],
+    });
+
+    render(<MyMissionsPage serviceOnly />);
+
+    expect(await screen.findByText("Reparer une fuite")).toBeInTheDocument();
+    expect(screen.queryByText("Livrer un colis")).not.toBeInTheDocument();
+    expect(getMyMissions).toHaveBeenCalledWith({});
+  });
 });

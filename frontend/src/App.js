@@ -586,10 +586,12 @@ export default function App() {
               path="/services"
               element={
                 <RequireAuth>
-                  <>
-                    <SetSeo title={t('seo.pages.services.title')} />
-                    <ServicesPage />
-                  </>
+                  <RequireRole allow={['client']}>
+                    <>
+                      <SetSeo title={t('seo.pages.services.title')} />
+                      <ServicesPage />
+                    </>
+                  </RequireRole>
                 </RequireAuth>
               }
             />
@@ -602,6 +604,20 @@ export default function App() {
                     <SetSeo title={t('seo.pages.missionCreate.title')} />
                     <MissionCreatePage />
                   </>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/services/new"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['client']}>
+                    <>
+                      <SetSeo title={t('serviceOrders.newPageTitle')} />
+                      <MissionCreatePage serviceOnly />
+                    </>
+                  </RequireRole>
                 </RequireAuth>
               }
             />
@@ -722,6 +738,20 @@ export default function App() {
                     <>
                       <SetSeo title={t('deliveryOrders.driverTitle')} />
                       <MyMissionsPage deliveryOnly />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/prestataire/services"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['provider']}>
+                    <>
+                      <SetSeo title={t('serviceProvider.title')} />
+                      <MyMissionsPage serviceOnly />
                     </>
                   </RequireRole>
                 </RequireAuth>
