@@ -47,6 +47,7 @@ const MissionPricingAdminPage = lazy(() => import('./pages/MissionPricingAdminPa
 const MissionTrackingPage = lazy(() => import('./pages/MissionTrackingPage'));
 const MyMissionsPage = lazy(() => import('./pages/MyMissionsPage'));
 const TaxiRidesPage = lazy(() => import('./pages/TaxiRidesPage'));
+const DeliveryOrdersPage = lazy(() => import('./pages/DeliveryOrdersPage'));
 const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'));
 const ServiceTasksPage = lazy(() => import('./pages/ServiceTasksPage'));
 const ServiceTransactionsPage = lazy(() => import('./pages/ServiceTransactionsPage'));
@@ -634,6 +635,34 @@ export default function App() {
             />
 
             <Route
+              path="/livraisons"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['client']}>
+                    <>
+                      <SetSeo title={t('deliveryOrders.title')} />
+                      <DeliveryOrdersPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/livraisons/:id"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['client', 'provider']}>
+                    <>
+                      <SetSeo title={t('deliveryOrders.detailTitle')} />
+                      <MissionTrackingPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
               path="/admin/mission-pricing"
               element={
                 <RequireAuth>
@@ -679,6 +708,20 @@ export default function App() {
                     <>
                       <SetSeo title={t('taxiRides.driverTitle')} />
                       <MyMissionsPage mobilityOnly />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/livreur/livraisons"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['provider']}>
+                    <>
+                      <SetSeo title={t('deliveryOrders.driverTitle')} />
+                      <MyMissionsPage deliveryOnly />
                     </>
                   </RequireRole>
                 </RequireAuth>
@@ -998,6 +1041,20 @@ export default function App() {
                     <>
                       <SetSeo title={t('seo.pages.adminServices.title')} />
                       <AdminServicesPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/admin/livraisons"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['admin']}>
+                    <>
+                      <SetSeo title={t('deliveryOrders.adminTitle')} />
+                      <AdminServicesPage tradeCategorySlug="livraison" />
                     </>
                   </RequireRole>
                 </RequireAuth>

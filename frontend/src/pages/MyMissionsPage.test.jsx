@@ -128,4 +128,35 @@ describe("MyMissionsPage - disponibilité réseau faible", () => {
     });
     await waitFor(() => expect(getMyMissions).toHaveBeenCalledTimes(2));
   });
+
+  test("le livreur accepte une livraison en une action depuis sa liste", async () => {
+    acceptMission.mockResolvedValue({ id: 48 });
+    getMyMissions.mockResolvedValue({
+      missions: [
+        {
+          id: 48,
+          title: "Livraison de colis",
+          missionStatus: "ASSIGNED",
+          acceptanceDeadlineAt: "2030-01-01T12:00:00.000Z",
+          pickupAddress: "Sogoniko",
+          address: "Hamdallaye",
+          tradeCategory: { name: "Livraison", slug: "livraison" },
+          client: { firstName: "Awa", phone: "+22370000000" },
+        },
+      ],
+    });
+
+    render(<MyMissionsPage deliveryOnly />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "deliveryOrders.accept" })
+    );
+
+    await waitFor(() => expect(acceptMission).toHaveBeenCalledWith(48));
+    expect(mockNavigate).toHaveBeenCalledWith("/livraisons/48");
+    expect(getMyMissions).toHaveBeenCalledWith({
+      tradeCategorySlug: "livraison",
+      limit: 100,
+    });
+  });
 });

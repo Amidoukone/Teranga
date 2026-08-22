@@ -137,6 +137,7 @@ const ROLE_LINKS = {
     { path: "/projects", labelKey: "nav.projects" },
     { path: "/properties", labelKey: "nav.properties" },
     { path: "/courses", labelKey: "nav.myRides" },
+    { path: "/livraisons", labelKey: "nav.myDeliveries" },
     { path: "/services", labelKey: "nav.services" },
     { path: "/tasks", labelKey: "nav.tasks" },
     { path: "/transactions", labelKey: "nav.transactions" },
@@ -172,6 +173,7 @@ const ROLE_LINKS = {
     { path: "/notifications", labelKey: "nav.notifications" },
     { path: "/activities", labelKey: "nav.activities" },
     { path: "/chauffeur/courses", labelKey: "nav.myRides" },
+    { path: "/livreur/livraisons", labelKey: "nav.myDeliveries" },
     SETTINGS_LINK,
     ACCOUNT_SECURITY_LINK,
     HELP_SUPPORT_LINK,
@@ -192,6 +194,7 @@ const ROLE_LINKS = {
     { path: "/tasks", labelKey: "nav.tasks" },
     { path: "/admin/services", labelKey: "nav.adminServices" },
     { path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations" },
+    { path: "/admin/livraisons", labelKey: "nav.deliveryOperations" },
     { path: "/admin/metrics", labelKey: "nav.metrics" },
     { path: "/admin/agents", labelKey: "nav.agents" },
     { path: "/admin/providers", labelKey: "nav.providers" },
@@ -223,8 +226,8 @@ const BOTTOM_LINKS = {
   client: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
     { key: "rides", path: "/courses", labelKey: "nav.myRides", icon: CarFront },
+    { key: "deliveries", path: "/livraisons", labelKey: "nav.myDeliveries", icon: Package },
     { key: "services", path: "/services", labelKey: "nav.services", icon: Wrench },
-    { key: "transactions", path: "/transactions", labelKey: "nav.flow", icon: ReceiptEuro },
   ],
   agent: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
@@ -234,12 +237,13 @@ const BOTTOM_LINKS = {
   provider: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
     { key: "myRides", path: "/chauffeur/courses", labelKey: "nav.myRides", icon: CarFront },
+    { key: "myDeliveries", path: "/livreur/livraisons", labelKey: "nav.myDeliveries", icon: Package },
   ],
   admin: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
     { key: "taxiRides", path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations", icon: CarFront },
+    { key: "deliveries", path: "/admin/livraisons", labelKey: "nav.deliveryOperations", icon: Package },
     { key: "adminServices", path: "/admin/services", labelKey: "nav.services", icon: BarChart3 },
-    { key: "finance", path: "/finance", labelKey: "nav.finance", icon: CreditCard },
   ],
 };
 
@@ -255,6 +259,8 @@ const ICON_BY_PATH_PREFIX = [
   { prefix: "/properties", icon: Building2 },
   { prefix: "/courses", icon: CarFront },
   { prefix: "/chauffeur/courses", icon: CarFront },
+  { prefix: "/livraisons", icon: Package },
+  { prefix: "/livreur/livraisons", icon: Package },
   { prefix: "/services", icon: Wrench },
   { prefix: "/agent/services", icon: Wrench },
   { prefix: "/missions/mine", icon: Briefcase },
@@ -272,6 +278,7 @@ const ICON_BY_PATH_PREFIX = [
   { prefix: "/admin/projects", icon: FolderKanban },
   { prefix: "/admin/services", icon: BarChart3 },
   { prefix: "/admin/taxi-dispatch", icon: CarFront },
+  { prefix: "/admin/livraisons", icon: Package },
   { prefix: "/admin/metrics", icon: BarChart3 },
   { prefix: "/admin/agents", icon: Users },
   { prefix: "/admin/providers", icon: Briefcase },
@@ -324,6 +331,8 @@ function buildSections(role, links, t) {
     ...byPrefix("/properties"),
     ...byPrefix("/courses"),
     ...byPrefix("/chauffeur/courses"),
+    ...byPrefix("/livraisons"),
+    ...byPrefix("/livreur/livraisons"),
     ...byPrefix("/services"),
     ...byPrefix("/tasks"),
     ...(role === "agent" ? byPrefix("/missions/mine") : []),
@@ -342,6 +351,7 @@ function buildSections(role, links, t) {
       byPath("/admin/onboarding"),
       byPath("/admin/services"),
       byPath("/admin/taxi-dispatch"),
+      byPath("/admin/livraisons"),
       byPath("/admin/metrics"),
       byPath("/admin/agents"),
       byPath("/admin/providers"),
@@ -809,7 +819,11 @@ function NavBar() {
   const desktopPrimaryTabs = useMemo(() => {
     const candidates =
       role === "admin"
-        ? ["/dashboard", "/admin/taxi-dispatch", "/services"]
+        ? ["/dashboard", "/admin/taxi-dispatch", "/admin/livraisons", "/services"]
+        : role === "client"
+        ? ["/dashboard", "/courses", "/livraisons", "/services"]
+        : role === "provider"
+        ? ["/dashboard", "/chauffeur/courses", "/livreur/livraisons"]
         : ["/dashboard", servicePrimaryPath, "/tasks"];
 
     const tabs = [];
@@ -1287,7 +1301,7 @@ function NavBar() {
         aria-hidden={mobileSelectActive}
       >
         <div className="mx-auto w-full flex justify-center">
-          <div className="w-full max-w-xs px-2 pb-2">
+          <div className="w-full max-w-sm px-2 pb-2">
             <div className="bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl border border-border/70 rounded-2xl shadow-[0_12px_35px_-25px_rgba(15,23,42,0.6)] flex px-1 py-1 gap-1">
               {bottomLinks.map((item) => {
                 const Icon = item.icon;

@@ -342,7 +342,10 @@ exports.listClient = async (req, res) => {
     const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
     const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
     const sort = toTrimOrNull(req.query?.sort);
-    const excludeTradeCategorySlug = toTrimOrNull(req.query?.excludeTradeCategorySlug);
+    const excludedTradeCategorySlugs = String(req.query?.excludeTradeCategorySlug || '')
+      .split(',')
+      .map((slug) => slug.trim())
+      .filter(Boolean);
 
     let where = {};
     const andWhere = [];
@@ -360,10 +363,10 @@ exports.listClient = async (req, res) => {
     if (regionId) where.regionId = regionId;
 
 
-    if (excludeTradeCategorySlug) {
+    if (excludedTradeCategorySlugs.length) {
       const excludedCategoryIds = (
         await TradeCategory.findAll({
-          where: { slug: excludeTradeCategorySlug },
+          where: { slug: { [Op.in]: excludedTradeCategorySlugs } },
           attributes: ['id'],
         })
       ).map((category) => category.id);
@@ -459,7 +462,11 @@ exports.listAll = async (req, res) => {
     const countryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
     const regionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
     const sort = toTrimOrNull(req.query?.sort);
-    const excludeTradeCategorySlug = toTrimOrNull(req.query?.excludeTradeCategorySlug);
+    const excludedTradeCategorySlugs = String(req.query?.excludeTradeCategorySlug || '')
+      .split(',')
+      .map((slug) => slug.trim())
+      .filter(Boolean);
+    const tradeCategorySlug = toTrimOrNull(req.query?.tradeCategorySlug);
 
     let where = {};
     const andWhere = [];
@@ -471,10 +478,20 @@ exports.listAll = async (req, res) => {
     if (countryId) where.countryId = countryId;
     if (regionId) where.regionId = regionId;
 
-    if (excludeTradeCategorySlug) {
+    if (tradeCategorySlug) {
+      const categoryIds = (
+        await TradeCategory.findAll({
+          where: { slug: tradeCategorySlug },
+          attributes: ['id'],
+        })
+      ).map((category) => category.id);
+      where.tradeCategoryId = categoryIds.length ? { [Op.in]: categoryIds } : -1;
+    }
+
+    if (excludedTradeCategorySlugs.length) {
       const excludedCategoryIds = (
         await TradeCategory.findAll({
-          where: { slug: excludeTradeCategorySlug },
+          where: { slug: { [Op.in]: excludedTradeCategorySlugs } },
           attributes: ['id'],
         })
       ).map((category) => category.id);
@@ -1049,7 +1066,4 @@ exports.getById = async (req, res) => {
     return res.status(500).json({ error: "Erreur lors de la récupération du service" });
   }
 };
-
-
-
 

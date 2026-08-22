@@ -22,7 +22,10 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
-jest.mock("../services/missions", () => ({ getMyTaxiRides: jest.fn() }));
+jest.mock("../services/missions", () => ({
+  getMyDeliveries: jest.fn(),
+  getMyTaxiRides: jest.fn(),
+}));
 
 describe("TaxiRidesPage", () => {
   beforeEach(() => {

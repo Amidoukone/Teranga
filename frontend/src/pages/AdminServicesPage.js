@@ -14,7 +14,7 @@ import {
   AdminPageHeader,
 } from '../components/admin/AdminFormUi';
 
-export default function AdminServicesPage() {
+export default function AdminServicesPage({ tradeCategorySlug = null }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -196,7 +196,8 @@ export default function AdminServicesPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.set('excludeTradeCategorySlug', 'mobilite');
+      if (tradeCategorySlug) params.set('tradeCategorySlug', tradeCategorySlug);
+      else params.set('excludeTradeCategorySlug', 'mobilite');
 
       if (status !== 'all') params.set('status', status);
       if (onlyUnassigned) params.set('unassigned', '1');
@@ -214,7 +215,7 @@ export default function AdminServicesPage() {
     } finally {
       setLoading(false);
     }
-  }, [status, onlyUnassigned, q, limit, offset]);
+  }, [status, onlyUnassigned, q, limit, offset, tradeCategorySlug]);
 
   /* ============================================================
      Initialisation au montage.
@@ -357,8 +358,16 @@ export default function AdminServicesPage() {
       <div className="max-w-6xl mx-auto bg-surface-card/90 backdrop-blur-sm shadow-xl rounded-2xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
  {/* Contexte: administration des services. */}
         <AdminPageHeader
-          title={t('adminServicesPage.title')}
-          subtitle={t('adminServicesPage.subtitle')}
+          title={
+            tradeCategorySlug === 'livraison'
+              ? t('deliveryOrders.adminTitle')
+              : t('adminServicesPage.title')
+          }
+          subtitle={
+            tradeCategorySlug === 'livraison'
+              ? t('deliveryOrders.adminSubtitle')
+              : t('adminServicesPage.subtitle')
+          }
           subtitleClassName="max-w-xl text-text-muted"
           meta={
             currentUser && (
@@ -394,15 +403,26 @@ export default function AdminServicesPage() {
           }
           actionsClassName="justify-start sm:justify-end"
           actions={
-            <button
-              onClick={loadServices}
-              disabled={loading}
-              className="app-btn-primary inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-full shadow-sm"
-            >
-              {loading
-                ? t('adminServicesPage.loading')
-                : t('adminServicesPage.buttons.refresh')}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              {tradeCategorySlug === 'livraison' ? (
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin/phone-orders?category=livraison')}
+                  className="btn-primary inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-full"
+                >
+                  {t('deliveryOrders.phoneOrderCta')}
+                </button>
+              ) : null}
+              <button
+                onClick={loadServices}
+                disabled={loading}
+                className="app-btn-primary inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-full shadow-sm"
+              >
+                {loading
+                  ? t('adminServicesPage.loading')
+                  : t('adminServicesPage.buttons.refresh')}
+              </button>
+            </div>
           }
         />
 

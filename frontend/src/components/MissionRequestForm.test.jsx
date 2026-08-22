@@ -172,5 +172,40 @@ describe("MissionRequestForm (révélation progressive)", () => {
       })
     );
     expect(await screen.findByText("Demande reçue")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Suivre" })).toHaveAttribute(
+      "href",
+      "/courses/84"
+    );
+  });
+
+  test("ouvre une livraison créée dans l'espace Livraisons", async () => {
+    getTradeCategories.mockResolvedValue([
+      { id: 9, name: "Livraison", slug: "livraison" },
+    ]);
+    submitMissionRequest.mockResolvedValue({
+      isNewAccount: true,
+      service: { id: 85, missionStatus: "CREATED" },
+      user: { id: 3 },
+    });
+    persistSession.mockResolvedValue(undefined);
+
+    render(
+      <MissionRequestForm
+        initialTradeCategorySlug="livraison"
+        initialTitle="Livraison de colis"
+      />
+    );
+
+    expect(await screen.findByText("Point de retrait")).toBeInTheDocument();
+    await userEvent.type(screen.getByPlaceholderText("Adresse de départ"), "Sogoniko");
+    await userEvent.type(screen.getByPlaceholderText("Quartier, ville"), "Hamdallaye");
+    await userEvent.type(screen.getByPlaceholderText("+223..."), "+22370000085");
+    await userEvent.type(screen.getAllByPlaceholderText("Code")[0], "1234");
+    await userEvent.click(screen.getByRole("button", { name: "Envoyer ma demande" }));
+
+    expect(await screen.findByRole("link", { name: "Suivre" })).toHaveAttribute(
+      "href",
+      "/livraisons/85"
+    );
   });
 });

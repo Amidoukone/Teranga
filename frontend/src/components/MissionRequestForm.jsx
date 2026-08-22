@@ -214,7 +214,15 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
         ) : null}
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
-            to={result.service?.missionStatus ? `/missions/${result.service.id}/track` : "/services"}
+            to={
+              result.service?.missionStatus
+                ? selectedTradeCategorySlug === "livraison"
+                  ? `/livraisons/${result.service.id}`
+                  : selectedTradeCategorySlug === "mobilite"
+                  ? `/courses/${result.service.id}`
+                  : `/missions/${result.service.id}/track`
+                : "/services"
+            }
             className="btn-primary rounded-full px-6 py-2.5 text-sm"
           >
             {t("homePage.missionRequest.trackCta")}

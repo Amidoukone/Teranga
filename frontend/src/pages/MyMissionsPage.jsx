@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Bike, CarFront, Check, Loader2, MapPin, Power, X } from 'lucide-react';
+import { Bike, CarFront, Check, Loader2, MapPin, PackageCheck, Power, X } from 'lucide-react';
 import { me } from '../services/auth';
 import { normalizeRole } from '../utils/role';
 import { acceptMission, declineMission, getMyMissions } from '../services/missions';
@@ -58,9 +58,22 @@ function statusBadgeClass(missionStatus) {
   }
 }
 
-export default function MyMissionsPage({ mobilityOnly = false }) {
+function missionDetailPath(mission) {
+  if (mission?.tradeCategory?.slug === 'mobilite') return `/courses/${mission.id}`;
+  if (mission?.tradeCategory?.slug === 'livraison') return `/livraisons/${mission.id}`;
+  return `/missions/${mission.id}/track`;
+}
+
+export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = false }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const transportOnly = mobilityOnly || deliveryOnly;
+  const transportTranslationRoot = mobilityOnly ? 'taxiRides' : 'deliveryOrders';
+  const selectedTradeCategorySlug = mobilityOnly
+    ? 'mobilite'
+    : deliveryOnly
+    ? 'livraison'
+    : null;
 
   const [isAllowed, setIsAllowed] = useState(null);
   const [missions, setMissions] = useState([]);
@@ -125,7 +138,9 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
     }
     try {
       const data = await getMyMissions(
-        mobilityOnly ? { tradeCategorySlug: 'mobilite', limit: 100 } : {}
+        selectedTradeCategorySlug
+          ? { tradeCategorySlug: selectedTradeCategorySlug, limit: 100 }
+          : {}
       );
       setMissions(data?.missions || []);
     } catch (e) {
@@ -137,17 +152,18 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [mobilityOnly]);
+  }, [selectedTradeCategorySlug]);
 
-  async function handleRideOffer(event, missionId, action) {
+  async function handleRideOffer(event, mission, action) {
     event.preventDefault();
     event.stopPropagation();
+    const missionId = mission.id;
     setRideAction({ missionId, action });
     setError(null);
     try {
       if (action === 'accept') {
         await acceptMission(missionId);
-        navigate(`/courses/${missionId}`);
+        navigate(missionDetailPath(mission));
         return;
       }
       await declineMission(missionId);
@@ -162,7 +178,7 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
   useEffect(() => {
     if (!isAllowed) return undefined;
     loadMissions();
-    if (!mobilityOnly) return undefined;
+    if (!transportOnly) return undefined;
 
     const refreshIfVisible = () => {
       if (isDocumentVisible()) loadMissions({ silent: true });
@@ -176,7 +192,7 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
       window.removeEventListener('focus', refreshIfVisible);
       document.removeEventListener('visibilitychange', refreshIfVisible);
     };
-  }, [isAllowed, loadMissions, mobilityOnly]);
+  }, [isAllowed, loadMissions, transportOnly]);
 
   async function handleAvailabilityChange(availabilityStatus) {
     setSavingAvailability(true);
@@ -240,10 +256,14 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-text-primary">
-              {mobilityOnly ? t('taxiRides.driverTitle') : t('myMissionsPage.title')}
+              {transportOnly
+                ? t(`${transportTranslationRoot}.driverTitle`)
+                : t('myMissionsPage.title')}
             </h1>
             <p className="mt-1 text-sm text-text-secondary">
-              {mobilityOnly ? t('taxiRides.driverSubtitle') : t('myMissionsPage.subtitle')}
+              {transportOnly
+                ? t(`${transportTranslationRoot}.driverSubtitle`)
+                : t('myMissionsPage.subtitle')}
             </p>
           </div>
           <button
@@ -261,23 +281,23 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
           </div>
         )}
 
-        {provider && mobilityOnly ? (
+        {provider && transportOnly ? (
           <section className="mb-6 rounded-3xl border border-border bg-surface-main/60 p-4 sm:p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-text-primary">
                   {provider.availabilityStatus === 'available'
-                    ? t('taxiRides.driverAvailable')
+                    ? t(`${transportTranslationRoot}.driverAvailable`)
                     : provider.availabilityStatus === 'busy'
-                    ? t('taxiRides.driverBusy')
-                    : t('taxiRides.driverOffline')}
+                    ? t(`${transportTranslationRoot}.driverBusy`)
+                    : t(`${transportTranslationRoot}.driverOffline`)}
                 </p>
                 <p className="mt-1 text-xs text-text-secondary">
                   {provider.availabilityStatus === 'available'
-                    ? t('taxiRides.driverAvailableHint')
+                    ? t(`${transportTranslationRoot}.driverAvailableHint`)
                     : provider.availabilityStatus === 'busy'
-                    ? t('taxiRides.driverBusyHint')
-                    : t('taxiRides.driverOfflineHint')}
+                    ? t(`${transportTranslationRoot}.driverBusyHint`)
+                    : t(`${transportTranslationRoot}.driverOfflineHint`)}
                 </p>
               </div>
               <button
@@ -294,10 +314,10 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
               >
                 {savingAvailability ? <Loader2 className="animate-spin" size={18} /> : <Power size={18} />}
                 {provider.availabilityStatus === 'available'
-                  ? t('taxiRides.goOffline')
+                  ? t(`${transportTranslationRoot}.goOffline`)
                   : provider.availabilityStatus === 'busy'
-                  ? t('taxiRides.rideInProgress')
-                  : t('taxiRides.goAvailable')}
+                  ? t(`${transportTranslationRoot}.rideInProgress`)
+                  : t(`${transportTranslationRoot}.goAvailable`)}
               </button>
             </div>
             {dispatchPresence?.eligibleVehicles?.length > 1 ? (
@@ -373,13 +393,21 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
 
         {!loading && missions.length === 0 && !error ? (
           <p className="text-center text-text-muted italic py-10">
-            {mobilityOnly ? t('taxiRides.driverEmpty') : t('myMissionsPage.empty')}
+            {transportOnly
+              ? t(`${transportTranslationRoot}.driverEmpty`)
+              : t('myMissionsPage.empty')}
           </p>
         ) : (
           <ul className="space-y-3">
             {missions.map((m) => {
               const isOffer = Boolean(m.acceptanceDeadlineAt);
               const VehicleIcon = m.requestedVehicleType === 'car' ? CarFront : Bike;
+              const missionTranslationRoot =
+                m.tradeCategory?.slug === 'mobilite'
+                  ? 'taxiRides'
+                  : m.tradeCategory?.slug === 'livraison'
+                  ? 'deliveryOrders'
+                  : null;
               return (
                 <li
                   key={m.id}
@@ -390,20 +418,20 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
                   }`}
                 >
                   <Link
-                    to={mobilityOnly ? `/courses/${m.id}` : `/missions/${m.id}/track`}
+                    to={missionDetailPath(m)}
                     className="block"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="flex min-w-0 gap-3">
-                        {mobilityOnly ? (
+                        {transportOnly ? (
                           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white">
-                            <VehicleIcon size={19} />
+                            {deliveryOnly ? <PackageCheck size={19} /> : <VehicleIcon size={19} />}
                           </span>
                         ) : null}
                         <div className="min-w-0">
                           {isOffer ? (
                             <p className="mb-1 text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">
-                              {t('taxiRides.newOffer')}
+                              {t(`${transportTranslationRoot}.newOffer`)}
                             </p>
                           ) : null}
                           <div className="font-medium text-text-primary break-words">
@@ -436,7 +464,7 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
                           m.missionStatus
                         )}`}
                       >
-                        {t(`missionTracking.status.${m.missionStatus}`, {
+                        {t(`${missionTranslationRoot || 'missionTracking'}.status.${m.missionStatus}`, {
                           defaultValue: m.missionStatus,
                         })}
                       </span>
@@ -446,7 +474,7 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
                     <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
                       <button
                         type="button"
-                        onClick={(event) => handleRideOffer(event, m.id, 'accept')}
+                        onClick={(event) => handleRideOffer(event, m, 'accept')}
                         disabled={Boolean(rideAction)}
                         className="btn-primary flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 text-base font-bold disabled:opacity-60"
                       >
@@ -455,15 +483,15 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
                         ) : (
                           <Check size={21} />
                         )}
-                        {t('taxiRides.accept')}
+                        {t(`${missionTranslationRoot || transportTranslationRoot}.accept`)}
                       </button>
                       <button
                         type="button"
-                        onClick={(event) => handleRideOffer(event, m.id, 'decline')}
+                        onClick={(event) => handleRideOffer(event, m, 'decline')}
                         disabled={Boolean(rideAction)}
                         className="btn-secondary flex min-h-14 items-center justify-center rounded-2xl px-4 disabled:opacity-60"
-                        aria-label={t('taxiRides.decline')}
-                        title={t('taxiRides.decline')}
+                        aria-label={t(`${missionTranslationRoot || transportTranslationRoot}.decline`)}
+                        title={t(`${missionTranslationRoot || transportTranslationRoot}.decline`)}
                       >
                         <X size={21} />
                       </button>

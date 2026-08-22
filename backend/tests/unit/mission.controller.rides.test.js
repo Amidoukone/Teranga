@@ -30,7 +30,7 @@ function makeRes() {
   return { json: jest.fn(), status: jest.fn().mockReturnThis() };
 }
 
-describe("mission.controller dedicated Taxi lists", () => {
+describe("mission.controller dedicated transport lists", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     TradeCategory.findAll.mockResolvedValue([{ id: 9 }]);
@@ -78,6 +78,29 @@ describe("mission.controller dedicated Taxi lists", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         rides: [{ id: 31 }],
+        pagination: expect.objectContaining({ total: 1 }),
+      }),
+    );
+  });
+
+  test("myDeliveries is strictly scoped to the connected client and Delivery", async () => {
+    const req = { user: { id: 8, role: "client" }, query: {} };
+    const res = makeRes();
+
+    await ctrl.myDeliveries(req, res);
+
+    expect(TradeCategory.findAll).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { slug: "livraison" } }),
+    );
+    expect(Service.findAndCountAll).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ clientId: 8, parentServiceId: null }),
+        order: [["createdAt", "DESC"]],
+      }),
+    );
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deliveries: [{ id: 31 }],
         pagination: expect.objectContaining({ total: 1 }),
       }),
     );

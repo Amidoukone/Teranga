@@ -28,6 +28,8 @@ export default function AdminPhoneOrderPage() {
   const location = useLocation();
   const taxiMode = location.pathname === "/admin/taxi-dispatch";
   const [searchParams, setSearchParams] = useSearchParams();
+  const requestedCategorySlug = searchParams.get("category");
+  const deliveryMode = !taxiMode && requestedCategorySlug === "livraison";
   const { countryId, countries, canSelect, setCountry, loading: geoLoading } = useGeo();
 
   const [tradeCategories, setTradeCategories] = useState([]);
@@ -76,6 +78,13 @@ export default function AdminPhoneOrderPage() {
                 ? { requestKind: "trade_category", tradeCategoryId: String(mobility.id), serviceType: "" }
                 : { requestKind: null, tradeCategoryId: "", serviceType: "" }
             );
+          } else if (deliveryMode) {
+            const delivery = categories.find((item) => item.slug === "livraison");
+            setCategory(
+              delivery
+                ? { requestKind: "trade_category", tradeCategoryId: String(delivery.id), serviceType: "" }
+                : { requestKind: null, tradeCategoryId: "", serviceType: "" }
+            );
           }
         }
       } catch (_err) {
@@ -87,7 +96,7 @@ export default function AdminPhoneOrderPage() {
     return () => {
       cancelled = true;
     };
-  }, [countryId, taxiMode]);
+  }, [countryId, deliveryMode, taxiMode]);
 
   const loadRideQueue = useCallback(async () => {
     if (!taxiMode) return;
@@ -118,7 +127,11 @@ export default function AdminPhoneOrderPage() {
     : null;
   const requiresPickup = selectedTradeCategorySlug === "livraison" || selectedTradeCategorySlug === "mobilite";
   const isMobilite = selectedTradeCategorySlug === "mobilite";
-  const effectiveTitle = taxiMode ? t("adminPhoneOrder.taxiTitle") : title;
+  const effectiveTitle = taxiMode
+    ? t("adminPhoneOrder.taxiTitle")
+    : deliveryMode
+    ? t("deliveryOrders.phoneOrderDefaultTitle")
+    : title;
   const unassignedRideCount = rideQueue.filter((ride) => !ride.providerId).length;
   const assignedRideCount = rideQueue.length - unassignedRideCount;
 
@@ -127,16 +140,20 @@ export default function AdminPhoneOrderPage() {
     phone.trim().length > 0 &&
     Boolean(category.requestKind) &&
     effectiveTitle.trim().length >= 3 &&
-    (!requiresPickup || (pickupAddress.trim() || pickupCoordinates)) &&
-    (!isMobilite || address.trim() || coordinates);
+    (!requiresPickup ||
+      ((pickupAddress.trim() || pickupCoordinates) &&
+        (address.trim() || coordinates)));
 
   function resetForm({ keepPhoneOrderOpen = true } = {}) {
     setPhone("");
     setFirstName("");
     const mobility = tradeCategories.find((item) => item.slug === "mobilite");
+    const delivery = tradeCategories.find((item) => item.slug === "livraison");
     setCategory(
       taxiMode && mobility
         ? { requestKind: "trade_category", tradeCategoryId: String(mobility.id), serviceType: "" }
+        : deliveryMode && delivery
+        ? { requestKind: "trade_category", tradeCategoryId: String(delivery.id), serviceType: "" }
         : { requestKind: null, tradeCategoryId: "", serviceType: "" }
     );
     setTitle("");
@@ -209,13 +226,27 @@ export default function AdminPhoneOrderPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
-      <p className="page-kicker">{taxiMode ? "Teranga Taxi" : t("adminPhoneOrder.kicker")}</p>
+      <p className="page-kicker">
+        {taxiMode
+          ? "Teranga Taxi"
+          : deliveryMode
+          ? t("deliveryOrders.kicker")
+          : t("adminPhoneOrder.kicker")}
+      </p>
       <h1 className="app-page-headline flex items-center gap-2">
         <Phone size={22} />
-        {taxiMode ? t("adminPhoneOrder.taxiPageTitle") : t("adminPhoneOrder.title")}
+        {taxiMode
+          ? t("adminPhoneOrder.taxiPageTitle")
+          : deliveryMode
+          ? t("deliveryOrders.phoneOrderTitle")
+          : t("adminPhoneOrder.title")}
       </h1>
       <p className="mt-1 text-sm text-text-secondary">
-        {taxiMode ? t("adminPhoneOrder.taxiPageSubtitle") : t("adminPhoneOrder.subtitle")}
+        {taxiMode
+          ? t("adminPhoneOrder.taxiPageSubtitle")
+          : deliveryMode
+          ? t("deliveryOrders.phoneOrderSubtitle")
+          : t("adminPhoneOrder.subtitle")}
       </p>
       {taxiMode && !dispatchMissionId ? (
         <button
@@ -354,7 +385,10 @@ export default function AdminPhoneOrderPage() {
                     {t("adminPhoneOrder.success.assignCta")}
                   </a>
                 ) : (
-                  <Link to="/admin/services" className="btn-primary rounded-full px-6 py-2.5 text-sm">
+                  <Link
+                    to={deliveryMode ? "/admin/livraisons" : "/admin/services"}
+                    className="btn-primary rounded-full px-6 py-2.5 text-sm"
+                  >
                     {t("adminPhoneOrder.success.assignCta")}
                   </Link>
                 )}
@@ -435,7 +469,7 @@ export default function AdminPhoneOrderPage() {
             </div>
           </div>
 
-          {!taxiMode ? (
+          {!taxiMode && !deliveryMode ? (
             <div className="mt-5">
               <label className={labelClass}>{t("missionCreation.category.title")}</label>
               <CategoryPicker
@@ -464,7 +498,7 @@ export default function AdminPhoneOrderPage() {
             </div>
           ) : null}
 
-          {!taxiMode ? (
+          {!taxiMode && !deliveryMode ? (
             <div className="mt-5">
               <label className={labelClass}>{t("adminPhoneOrder.titleLabel")}</label>
               <input
@@ -510,7 +544,7 @@ export default function AdminPhoneOrderPage() {
                   }}
                 />
               </div>
-              {!taxiMode ? (
+              {!taxiMode && !deliveryMode ? (
                 <div className="mt-3">
                   <MissionLocationMap
                     latitude={pickupCoordinates?.latitude}
@@ -543,7 +577,7 @@ export default function AdminPhoneOrderPage() {
                 setCoordinates({ latitude, longitude });
               }}
             />
-            {!taxiMode ? (
+            {!taxiMode && !deliveryMode ? (
               <div className="mt-3">
                 <MissionLocationMap
                   latitude={coordinates?.latitude}

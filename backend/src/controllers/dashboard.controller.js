@@ -299,15 +299,15 @@ function orderBaseQueryForDashboard(req) {
 
 async function countServices(req) {
   const baseWhere = serviceWhereForDashboard(req);
-  const mobilityCategoryIds = TradeCategory?.findAll
+  const transportCategoryIds = TradeCategory?.findAll
     ? (
         await TradeCategory.findAll({
-          where: { slug: 'mobilite' },
+          where: { slug: { [Op.in]: ['mobilite', 'livraison'] } },
           attributes: ['id'],
         })
       ).map((category) => category.id)
     : [];
-  const where = mobilityCategoryIds.length
+  const where = transportCategoryIds.length
     ? {
         ...baseWhere,
         [Op.and]: [
@@ -315,7 +315,7 @@ async function countServices(req) {
           {
             [Op.or]: [
               { tradeCategoryId: null },
-              { tradeCategoryId: { [Op.notIn]: mobilityCategoryIds } },
+              { tradeCategoryId: { [Op.notIn]: transportCategoryIds } },
             ],
           },
         ],

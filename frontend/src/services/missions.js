@@ -214,6 +214,12 @@ export async function getMyTaxiRides(params = {}) {
   return data;
 }
 
+/** Livraisons du client, séparées des services génériques. */
+export async function getMyDeliveries(params = {}) {
+  const { data } = await api.get('/v1/missions/deliveries/mine', { params });
+  return data;
+}
+
 /** File de courses Taxi visible par l'opérateur/admin de ce périmètre. */
 export async function getTaxiDispatchQueue(params = {}) {
   const { data } = await api.get('/v1/missions/rides/dispatch', { params });

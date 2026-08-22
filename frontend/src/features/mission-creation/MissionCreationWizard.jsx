@@ -297,7 +297,11 @@ export default function MissionCreationWizard() {
           <Link
             to={
               result.mission?.missionStatus
-                ? `/missions/${result.mission.id}/track`
+                ? selectedTradeCategorySlug === "livraison"
+                  ? `/livraisons/${result.mission.id}`
+                  : selectedTradeCategorySlug === "mobilite"
+                  ? `/courses/${result.mission.id}`
+                  : `/missions/${result.mission.id}/track`
                 : "/services"
             }
             className="btn-primary rounded-full px-6 py-2.5 text-sm"

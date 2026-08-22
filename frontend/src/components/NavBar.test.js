@@ -139,4 +139,16 @@ describe("NavBar logout flow", () => {
       expect(link).toHaveAttribute("href", "/admin/taxi-dispatch");
     });
   });
+
+  test("keeps deliveries directly visible for clients", async () => {
+    render(<NavBar />);
+
+    const deliveryLinks = await screen.findAllByRole("link", {
+      name: "nav.myDeliveries",
+    });
+    expect(deliveryLinks.length).toBeGreaterThanOrEqual(2);
+    deliveryLinks.forEach((link) => {
+      expect(link).toHaveAttribute("href", "/livraisons");
+    });
+  });
 });

@@ -42,6 +42,7 @@ router.get('/shared/:token', publicQuoteLimiter, safetyCtrl.getShared);
 
 // Espaces Taxi dédiés : côté client et côté opérateur.
 router.get('/rides/mine', auth, requireRoles('client'), ctrl.myRides);
+router.get('/deliveries/mine', auth, requireRoles('client'), ctrl.myDeliveries);
 router.get('/rides/dispatch', auth, requireRoles('admin'), ctrl.dispatchRides);
 
 router.post(

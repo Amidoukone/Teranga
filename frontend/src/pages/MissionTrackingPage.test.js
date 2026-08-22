@@ -26,6 +26,9 @@ jest.mock("react-i18next", () => ({
         "taxiRides.rideReference": "Course #81",
         "taxiRides.liveStatus.ON_SITE.title": "Votre chauffeur est arrivé",
         "taxiRides.liveStatus.ON_SITE.hint": "Rejoignez le point de départ",
+        "deliveryOrders.deliveryReference": "Livraison #81",
+        "deliveryOrders.liveStatus.IN_PROGRESS.title": "Votre colis est en chemin",
+        "deliveryOrders.liveStatus.IN_PROGRESS.hint": "Le livreur se dirige vers la destination",
       };
       return labels[key] || options.defaultValue || key;
     },
@@ -139,6 +142,70 @@ test("partage une position économique quand le chauffeur est en route", async (
   );
   expect(
     screen.getAllByRole("button", { name: "missionTracking.executorCta.ON_SITE" })
+      .length
+  ).toBeGreaterThanOrEqual(1);
+});
+
+test("annonce clairement au client que son colis est en chemin", async () => {
+  getMissionTrack.mockResolvedValue({
+    title: "Livraison de colis",
+    missionStatus: "IN_PROGRESS",
+    viewerRole: "client",
+    isExecutor: false,
+    tradeCategorySlug: "livraison",
+    realtimeTrackingRequired: false,
+  });
+
+  render(<MissionTrackingPage />);
+
+  expect(await screen.findByRole("heading", { name: "Livraison #81" })).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Votre colis est en chemin");
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Le livreur se dirige vers la destination"
+  );
+  expect(
+    screen.getByRole("listitem", { name: "deliveryOrders.progress.delivery" })
+  ).toHaveAttribute("aria-current", "step");
+});
+
+test("partage la position du livreur pendant l'acheminement du colis", async () => {
+  Object.defineProperty(navigator, "geolocation", {
+    configurable: true,
+    value: {
+      getCurrentPosition: (success) =>
+        success({
+          coords: {
+            latitude: 12.61,
+            longitude: -7.99,
+            accuracy: 30,
+            heading: 90,
+          },
+        }),
+    },
+  });
+  pingMissionLocation.mockResolvedValue({ id: 10 });
+  getMissionTrack.mockResolvedValue({
+    title: "Livraison de colis",
+    missionStatus: "IN_PROGRESS",
+    viewerRole: "provider",
+    isExecutor: true,
+    tradeCategorySlug: "livraison",
+    acceptanceDeadlineAt: null,
+    realtimeTrackingRequired: false,
+  });
+
+  render(<MissionTrackingPage />);
+
+  await waitFor(() =>
+    expect(pingMissionLocation).toHaveBeenCalledWith("81", {
+      latitude: 12.61,
+      longitude: -7.99,
+      accuracyMeters: 30,
+      headingDegrees: 90,
+    })
+  );
+  expect(
+    screen.getAllByRole("button", { name: "deliveryOrders.executorCta.COMPLETED" })
       .length
   ).toBeGreaterThanOrEqual(1);
 });

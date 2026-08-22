@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car, Bike, KeyRound, PhoneCall, RefreshCw, Share2, Star } from "lucide-react";
+import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car, Bike, KeyRound, PhoneCall, RefreshCw, Share2, Star, PackageCheck, Truck } from "lucide-react";
 
 import {
   getMissionTrack,
@@ -81,6 +81,23 @@ const CLIENT_RIDE_PROGRESS_STEPS = [
   { key: "trip", status: "IN_PROGRESS" },
 ];
 
+const CLIENT_DELIVERY_PROGRESS_STEPS = [
+  { key: "courier", status: "ASSIGNED" },
+  { key: "enRoute", status: "EN_ROUTE" },
+  { key: "pickup", status: "ON_SITE" },
+  { key: "delivery", status: "IN_PROGRESS" },
+];
+
+const CLIENT_DELIVERY_STATUS_ICONS = {
+  CREATED: Clock,
+  SEARCHING_EXECUTOR: Clock,
+  ASSIGNED: Truck,
+  EN_ROUTE: Truck,
+  ON_SITE: MapPin,
+  IN_PROGRESS: Truck,
+  COMPLETED: PackageCheck,
+};
+
 const CLIENT_RIDE_PROGRESS_INDEX = {
   CREATED: -1,
   SEARCHING_EXECUTOR: -1,
@@ -93,10 +110,13 @@ const CLIENT_RIDE_PROGRESS_INDEX = {
   CLOSED: 3,
 };
 
-function ClientRideStatus({ status, t }) {
+function ClientRideStatus({ status, t, translationRoot = "taxiRides" }) {
   const config = CLIENT_RIDE_STATUS[status];
   if (!config) return null;
-  const Icon = config.icon;
+  const Icon =
+    translationRoot === "deliveryOrders"
+      ? CLIENT_DELIVERY_STATUS_ICONS[status] || PackageCheck
+      : config.icon;
 
   return (
     <div
@@ -109,31 +129,35 @@ function ClientRideStatus({ status, t }) {
       </span>
       <div>
         <p className="text-base font-bold">
-          {t(`taxiRides.liveStatus.${status}.title`)}
+          {t(`${translationRoot}.liveStatus.${status}.title`)}
         </p>
         <p className="mt-1 text-sm opacity-80">
-          {t(`taxiRides.liveStatus.${status}.hint`)}
+          {t(`${translationRoot}.liveStatus.${status}.hint`)}
         </p>
       </div>
     </div>
   );
 }
 
-function ClientRideProgress({ status, t }) {
+function ClientRideProgress({ status, t, translationRoot = "taxiRides" }) {
   const currentIndex = CLIENT_RIDE_PROGRESS_INDEX[status] ?? -1;
+  const steps =
+    translationRoot === "deliveryOrders"
+      ? CLIENT_DELIVERY_PROGRESS_STEPS
+      : CLIENT_RIDE_PROGRESS_STEPS;
 
   return (
     <ol
       className="mt-3 grid grid-cols-4 gap-1 rounded-2xl border border-border/70 bg-surface-card p-3"
-      aria-label={t("taxiRides.progress.label")}
+      aria-label={t(`${translationRoot}.progress.label`)}
     >
-      {CLIENT_RIDE_PROGRESS_STEPS.map((step, index) => {
+      {steps.map((step, index) => {
         const complete = index < currentIndex || (currentIndex === 3 && index === 3 && ["COMPLETED", "VALIDATED", "CLOSED"].includes(status));
         const current = index === currentIndex && !complete;
         return (
           <li
             key={step.status}
-            aria-label={t(`taxiRides.progress.${step.key}`)}
+            aria-label={t(`${translationRoot}.progress.${step.key}`)}
             aria-current={current ? "step" : undefined}
             className="flex min-w-0 flex-col items-center text-center"
           >
@@ -149,7 +173,7 @@ function ClientRideProgress({ status, t }) {
               {complete ? "✓" : index + 1}
             </span>
             <span className={`mt-1.5 text-[10px] leading-tight sm:text-xs ${current || complete ? "font-semibold text-text-primary" : "text-text-muted"}`}>
-              {t(`taxiRides.progress.${step.key}`)}
+              {t(`${translationRoot}.progress.${step.key}`)}
             </span>
           </li>
         );
@@ -167,6 +191,7 @@ export default function MissionTrackingPage() {
   const { id } = useParams();
   const location = useLocation();
   const isRideRoute = location.pathname.startsWith("/courses/");
+  const isDeliveryRoute = location.pathname.startsWith("/livraisons/");
 
   const [track, setTrack] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -236,11 +261,16 @@ export default function MissionTrackingPage() {
   }, [load]);
 
   useEffect(() => {
+    const isTaxiMission = track?.tradeCategorySlug === "mobilite";
+    const isDeliveryMission = track?.tradeCategorySlug === "livraison";
+    const locationStatuses = isDeliveryMission
+      ? ["EN_ROUTE", "ON_SITE", "IN_PROGRESS"]
+      : ["EN_ROUTE", "ON_SITE"];
     const shouldReportLocation =
       track?.viewerRole !== "client" &&
       track?.isExecutor &&
-      track?.tradeCategorySlug === "mobilite" &&
-      ["EN_ROUTE", "ON_SITE"].includes(track?.missionStatus);
+      (isTaxiMission || isDeliveryMission) &&
+      locationStatuses.includes(track?.missionStatus);
     if (
       !shouldReportLocation ||
       typeof navigator === "undefined" ||
@@ -289,7 +319,8 @@ export default function MissionTrackingPage() {
 
     reportLocation();
     const interval =
-      track.missionStatus === "EN_ROUTE"
+      track.missionStatus === "EN_ROUTE" ||
+      (isDeliveryMission && track.missionStatus === "IN_PROGRESS")
         ? window.setInterval(reportLocation, DRIVER_LOCATION_POLL_MS)
         : null;
 
@@ -470,41 +501,69 @@ export default function MissionTrackingPage() {
     return (
       <div className="mx-auto max-w-xl px-6 py-10">
         <AuthFeedbackBanner type="error" message={error || t("missionTracking.errors.load")} />
-        <Link to={isRideRoute ? "/courses" : "/services"} className="btn-secondary mt-4 inline-block rounded-full px-6 py-2.5 text-sm">
-          {isRideRoute ? t("taxiRides.backToRides") : t("missionTracking.backToServices")}
+        <Link
+          to={isRideRoute ? "/courses" : isDeliveryRoute ? "/livraisons" : "/services"}
+          className="btn-secondary mt-4 inline-block rounded-full px-6 py-2.5 text-sm"
+        >
+          {isRideRoute
+            ? t("taxiRides.backToRides")
+            : isDeliveryRoute
+            ? t("deliveryOrders.backToDeliveries")
+            : t("missionTracking.backToServices")}
         </Link>
       </div>
     );
   }
 
-  const clientTaxiView =
-    track.viewerRole === "client" && track.tradeCategorySlug === "mobilite";
-  const statusLabel = t(`${clientTaxiView ? "taxiRides.status" : "missionTracking.status"}.${track.missionStatus}`, {
+  const isTaxiMission = track.tradeCategorySlug === "mobilite";
+  const isDeliveryMission = track.tradeCategorySlug === "livraison";
+  const transportTranslationRoot = isTaxiMission
+    ? "taxiRides"
+    : isDeliveryMission
+    ? "deliveryOrders"
+    : null;
+  const clientTransportView = track.viewerRole === "client" && transportTranslationRoot;
+  const statusLabel = t(`${clientTransportView ? `${transportTranslationRoot}.status` : "missionTracking.status"}.${track.missionStatus}`, {
     defaultValue: track.missionStatus,
   });
   const requiresStartCode =
     track.viewerRole !== "client" &&
     track.isExecutor &&
-    track.tradeCategorySlug === "mobilite" &&
+    isTaxiMission &&
     track.missionStatus === "ON_SITE";
   const stickyExecutorNextStatus =
     track.viewerRole !== "client" &&
     track.isExecutor &&
     !track.acceptanceDeadlineAt &&
-    track.tradeCategorySlug === "mobilite" &&
+    (isTaxiMission || isDeliveryMission) &&
     ["ASSIGNED", "EN_ROUTE", "ON_SITE", "IN_PROGRESS"].includes(track.missionStatus)
       ? EXECUTOR_NEXT_STATUS[track.missionStatus]
       : null;
+  const executorCtaRoot = isDeliveryMission
+    ? "deliveryOrders.executorCta"
+    : "missionTracking.executorCta";
+  const transitionExtra =
+    stickyExecutorNextStatus === "COMPLETED" &&
+    isDeliveryMission &&
+    collectedAmountInput.trim() !== ""
+      ? { collectedAmount: Number(collectedAmountInput) }
+      : undefined;
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
       <p className="page-kicker">
-        {track.tradeCategorySlug === "mobilite" ? "Teranga Taxi" : t("missionTracking.kicker")}
+        {isTaxiMission
+          ? "Teranga Taxi"
+          : isDeliveryMission
+          ? t("deliveryOrders.kicker")
+          : t("missionTracking.kicker")}
       </p>
       <div className="flex items-start justify-between gap-3">
         <h1 className="app-page-headline">
-          {track.tradeCategorySlug === "mobilite"
+          {isTaxiMission
             ? t("taxiRides.rideReference", { id })
+            : isDeliveryMission
+            ? t("deliveryOrders.deliveryReference", { id })
             : track.title || t("missionTracking.title")}
         </h1>
         <button
@@ -516,10 +575,18 @@ export default function MissionTrackingPage() {
         </button>
       </div>
 
-      {clientTaxiView ? (
+      {clientTransportView ? (
         <>
-          <ClientRideStatus status={track.missionStatus} t={t} />
-          <ClientRideProgress status={track.missionStatus} t={t} />
+          <ClientRideStatus
+            status={track.missionStatus}
+            t={t}
+            translationRoot={transportTranslationRoot}
+          />
+          <ClientRideProgress
+            status={track.missionStatus}
+            t={t}
+            translationRoot={transportTranslationRoot}
+          />
         </>
       ) : null}
 
@@ -708,7 +775,11 @@ export default function MissionTrackingPage() {
               disabled={actionState?.type === "loading"}
               className="btn-secondary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm disabled:opacity-60"
             >
-              <Share2 size={15} /> {t("missionTracking.share.cta")}
+              <Share2 size={15} />{
+                isDeliveryMission
+                  ? t("deliveryOrders.share.cta")
+                  : t("missionTracking.share.cta")
+              }
             </button>
           ) : null}
         </div>
@@ -718,7 +789,11 @@ export default function MissionTrackingPage() {
             value={shareUrl}
             onFocus={(event) => event.target.select()}
             className="mt-2 w-full rounded-lg border border-border bg-surface-main px-3 py-2 text-xs text-text-secondary"
-            aria-label={t("missionTracking.share.linkLabel")}
+            aria-label={
+              isDeliveryMission
+                ? t("deliveryOrders.share.linkLabel")
+                : t("missionTracking.share.linkLabel")
+            }
           />
         ) : null}
 
@@ -736,7 +811,9 @@ export default function MissionTrackingPage() {
               disabled={actionState?.type === "loading"}
               className="btn-primary rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
             >
-              {t("missionTracking.validateCta")}
+              {isDeliveryMission
+                ? t("deliveryOrders.validateCta")
+                : t("missionTracking.validateCta")}
             </button>
           ) : null}
 
@@ -758,7 +835,9 @@ export default function MissionTrackingPage() {
               disabled={actionState?.type === "loading"}
               className="btn-secondary rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
             >
-              {t("missionTracking.cancelCta")}
+              {isDeliveryMission
+                ? t("deliveryOrders.cancelCta")
+                : t("missionTracking.cancelCta")}
             </button>
           ) : null}
 
@@ -770,7 +849,9 @@ export default function MissionTrackingPage() {
                 disabled={actionState?.type === "loading"}
                 className="btn-primary rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
               >
-                {t("missionTracking.acceptCourseCta")}
+                {transportTranslationRoot
+                  ? t(`${transportTranslationRoot}.accept`)
+                  : t("missionTracking.acceptCourseCta")}
               </button>
               <button
                 type="button"
@@ -778,7 +859,9 @@ export default function MissionTrackingPage() {
                 disabled={actionState?.type === "loading"}
                 className="btn-secondary rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
               >
-                {t("missionTracking.declineCourseCta")}
+                {transportTranslationRoot
+                  ? t(`${transportTranslationRoot}.decline`)
+                  : t("missionTracking.declineCourseCta")}
               </button>
             </>
           ) : null}
@@ -813,7 +896,7 @@ export default function MissionTrackingPage() {
                   inputMode="decimal"
                   value={collectedAmountInput}
                   onChange={(event) => setCollectedAmountInput(event.target.value)}
-                  placeholder={t("missionTracking.collectedAmountPlaceholder")}
+                  placeholder={t("deliveryOrders.collectedAmountPlaceholder")}
                   className="w-full rounded-full border border-border bg-surface-card px-4 py-2 text-sm text-text-primary"
                 />
               ) : null}
@@ -823,20 +906,16 @@ export default function MissionTrackingPage() {
                   requiresStartCode
                     ? handleVerifyStartCode()
                     : handleTransition(
-                    EXECUTOR_NEXT_STATUS[track.missionStatus],
-                    EXECUTOR_NEXT_STATUS[track.missionStatus] === "COMPLETED" &&
-                    track.tradeCategorySlug === "livraison" &&
-                    collectedAmountInput.trim() !== ""
-                      ? { collectedAmount: Number(collectedAmountInput) }
-                      : undefined
-                  )
+                        EXECUTOR_NEXT_STATUS[track.missionStatus],
+                        transitionExtra
+                      )
                 }
                 disabled={actionState?.type === "loading"}
                 className="btn-primary rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
               >
                 {requiresStartCode
                   ? t("missionTracking.startCode.verifyCta")
-                  : t(`missionTracking.executorCta.${EXECUTOR_NEXT_STATUS[track.missionStatus]}`)}
+                  : t(`${executorCtaRoot}.${EXECUTOR_NEXT_STATUS[track.missionStatus]}`)}
               </button>
             </div>
           ) : null}
@@ -844,6 +923,7 @@ export default function MissionTrackingPage() {
           {track.viewerRole !== "client" &&
           track.isExecutor &&
           !track.parentServiceId &&
+          !transportTranslationRoot &&
           ["ASSIGNED", "EN_ROUTE"].includes(track.missionStatus) ? (
             <button
               type="button"
@@ -866,18 +946,24 @@ export default function MissionTrackingPage() {
 
           <Link
             to={
-              track.tradeCategorySlug === "mobilite"
+              isTaxiMission
                 ? track.viewerRole === "client"
                   ? "/courses"
                   : "/chauffeur/courses"
+                : isDeliveryMission
+                ? track.viewerRole === "client"
+                  ? "/livraisons"
+                  : "/livreur/livraisons"
                 : track.viewerRole === "client"
                 ? "/services"
                 : "/missions/mine"
             }
             className="btn-secondary rounded-full px-6 py-2.5 text-sm"
           >
-            {track.tradeCategorySlug === "mobilite"
+            {isTaxiMission
               ? t("taxiRides.backToRides")
+              : isDeliveryMission
+              ? t("deliveryOrders.backToDeliveries")
               : track.viewerRole === "client"
               ? t("missionTracking.backToServices")
               : t("missionTracking.backToMyMissions")}
@@ -887,7 +973,12 @@ export default function MissionTrackingPage() {
         {track.viewerRole === "client" && track.rating ? (
           <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
             <p className="font-semibold text-emerald-800 dark:text-emerald-200">
-              {t("missionTracking.rating.saved", { score: track.rating.score })}
+              {t(
+                isDeliveryMission
+                  ? "deliveryOrders.rating.saved"
+                  : "missionTracking.rating.saved",
+                { score: track.rating.score }
+              )}
             </p>
           </div>
         ) : null}
@@ -896,8 +987,22 @@ export default function MissionTrackingPage() {
         !track.rating &&
         RATING_STATUSES.includes(track.missionStatus) ? (
           <form onSubmit={handleRating} className="mt-5 rounded-xl border border-border bg-surface-main/60 p-4">
-            <p className="font-semibold text-text-primary">{t("missionTracking.rating.title")}</p>
-            <div className="mt-3 flex gap-1" role="radiogroup" aria-label={t("missionTracking.rating.title")}>
+            <p className="font-semibold text-text-primary">
+              {t(
+                isDeliveryMission
+                  ? "deliveryOrders.rating.title"
+                  : "missionTracking.rating.title"
+              )}
+            </p>
+            <div
+              className="mt-3 flex gap-1"
+              role="radiogroup"
+              aria-label={t(
+                isDeliveryMission
+                  ? "deliveryOrders.rating.title"
+                  : "missionTracking.rating.title"
+              )}
+            >
               {[1, 2, 3, 4, 5].map((score) => (
                 <button
                   key={score}
@@ -949,12 +1054,23 @@ export default function MissionTrackingPage() {
                 />
               </div>
             ) : null}
+            {stickyExecutorNextStatus === "COMPLETED" && isDeliveryMission ? (
+              <input
+                type="number"
+                min="0"
+                inputMode="decimal"
+                value={collectedAmountInput}
+                onChange={(event) => setCollectedAmountInput(event.target.value)}
+                placeholder={t("deliveryOrders.collectedAmountPlaceholder")}
+                className="mb-2 w-full rounded-2xl border border-border bg-surface-card px-4 py-2.5 text-sm text-text-primary"
+              />
+            ) : null}
             <button
               type="button"
               onClick={() =>
                 requiresStartCode
                   ? handleVerifyStartCode()
-                  : handleTransition(stickyExecutorNextStatus)
+                  : handleTransition(stickyExecutorNextStatus, transitionExtra)
               }
               disabled={actionState?.type === "loading"}
               className="btn-primary flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-6 text-base font-bold disabled:opacity-60"
@@ -962,7 +1078,7 @@ export default function MissionTrackingPage() {
               {actionState?.type === "loading" ? <Loader2 className="animate-spin" size={20} /> : null}
               {requiresStartCode
                 ? t("missionTracking.startCode.verifyCta")
-                : t(`missionTracking.executorCta.${stickyExecutorNextStatus}`)}
+                : t(`${executorCtaRoot}.${stickyExecutorNextStatus}`)}
             </button>
           </div>
         </div>

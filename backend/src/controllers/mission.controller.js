@@ -1501,10 +1501,10 @@ const RIDE_TERMINAL_STATUSES = [
   'RESOLVED_CLOSED',
 ];
 
-async function getMobilityCategoryIds() {
+async function getTradeCategoryIdsBySlug(slug) {
   return (
     await TradeCategory.findAll({
-      where: { slug: 'mobilite' },
+      where: { slug },
       attributes: ['id'],
     })
   ).map((category) => category.id);
@@ -1528,7 +1528,7 @@ function rideListIncludes({ includeClient = false } = {}) {
 exports.myRides = async (req, res) => {
   try {
     const { limit, offset, page } = getPagination(req, 25, 100);
-    const categoryIds = await getMobilityCategoryIds();
+    const categoryIds = await getTradeCategoryIdsBySlug('mobilite');
     if (!categoryIds.length) {
       return res.json({ rides: [], pagination: { page, limit, offset, total: 0 } });
     }
@@ -1553,10 +1553,38 @@ exports.myRides = async (req, res) => {
   }
 };
 
+exports.myDeliveries = async (req, res) => {
+  try {
+    const { limit, offset, page } = getPagination(req, 25, 100);
+    const categoryIds = await getTradeCategoryIdsBySlug('livraison');
+    if (!categoryIds.length) {
+      return res.json({ deliveries: [], pagination: { page, limit, offset, total: 0 } });
+    }
+
+    const { rows, count } = await Service.findAndCountAll({
+      where: {
+        clientId: req.user.id,
+        parentServiceId: null,
+        tradeCategoryId: { [Op.in]: categoryIds },
+      },
+      include: rideListIncludes(),
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset,
+      distinct: true,
+    });
+
+    return res.json({ deliveries: rows, pagination: { page, limit, offset, total: count } });
+  } catch (e) {
+    logger.error({ err: e }, 'mission.my_deliveries.failed');
+    return res.status(500).json({ error: 'Erreur lors de la récupération de vos livraisons' });
+  }
+};
+
 exports.dispatchRides = async (req, res) => {
   try {
     const { limit, offset, page } = getPagination(req, 40, 100);
-    const categoryIds = await getMobilityCategoryIds();
+    const categoryIds = await getTradeCategoryIdsBySlug('mobilite');
     if (!categoryIds.length) {
       return res.json({ rides: [], pagination: { page, limit, offset, total: 0 } });
     }
