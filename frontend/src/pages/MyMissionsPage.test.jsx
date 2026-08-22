@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import MyMissionsPage from "./MyMissionsPage";
@@ -117,5 +117,15 @@ describe("MyMissionsPage - disponibilité réseau faible", () => {
       tradeCategorySlug: "mobilite",
       limit: 100,
     });
+  });
+
+  test("actualise automatiquement les offres quand le chauffeur revient sur l'écran", async () => {
+    render(<MyMissionsPage mobilityOnly />);
+
+    await waitFor(() => expect(getMyMissions).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(getMyMissions).toHaveBeenCalledTimes(2));
   });
 });

@@ -5,6 +5,7 @@ import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car, Bike, K
 
 import {
   getMissionTrack,
+  pingMissionLocation,
   updateMissionStatus,
   createMissionDispute,
   requestMissionLogistics,
@@ -23,7 +24,7 @@ import { buildTelHref } from "../utils/phone";
 // n'est pas visible — docs/DEV_SPEC_TERANGA_v3.md section 4.2 recommande 5-10s.
 const TRACK_POLL_MS = (() => {
   const raw = Number.parseInt(String(process.env.REACT_APP_MISSION_TRACK_POLL_MS || ""), 10);
-  if (!Number.isFinite(raw) || raw < 15000) return 30000;
+  if (!Number.isFinite(raw) || raw < 5000) return 15000;
   return raw;
 })();
 
@@ -57,6 +58,106 @@ const EXECUTOR_NEXT_STATUS = {
   IN_PROGRESS: "COMPLETED",
 };
 
+const CLIENT_RIDE_STATUS = {
+  CREATED: { icon: Clock, tone: "border-slate-500/25 bg-slate-500/10 text-text-primary" },
+  SEARCHING_EXECUTOR: { icon: Clock, tone: "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100" },
+  ASSIGNED: { icon: Car, tone: "border-blue-500/30 bg-blue-500/10 text-blue-900 dark:text-blue-100" },
+  EN_ROUTE: { icon: Car, tone: "border-blue-500/40 bg-blue-500/15 text-blue-900 dark:text-blue-100" },
+  ON_SITE: { icon: MapPin, tone: "border-emerald-500/40 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100" },
+  IN_PROGRESS: { icon: Car, tone: "border-violet-500/30 bg-violet-500/10 text-violet-900 dark:text-violet-100" },
+  COMPLETED: { icon: BadgeCheck, tone: "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100" },
+};
+
+const DRIVER_LOCATION_POLL_MS = (() => {
+  const raw = Number.parseInt(String(process.env.REACT_APP_DRIVER_LOCATION_POLL_MS || ""), 10);
+  if (!Number.isFinite(raw) || raw < 30000) return 60000;
+  return raw;
+})();
+
+const CLIENT_RIDE_PROGRESS_STEPS = [
+  { key: "driver", status: "ASSIGNED" },
+  { key: "enRoute", status: "EN_ROUTE" },
+  { key: "arrived", status: "ON_SITE" },
+  { key: "trip", status: "IN_PROGRESS" },
+];
+
+const CLIENT_RIDE_PROGRESS_INDEX = {
+  CREATED: -1,
+  SEARCHING_EXECUTOR: -1,
+  ASSIGNED: 0,
+  EN_ROUTE: 1,
+  ON_SITE: 2,
+  IN_PROGRESS: 3,
+  COMPLETED: 3,
+  VALIDATED: 3,
+  CLOSED: 3,
+};
+
+function ClientRideStatus({ status, t }) {
+  const config = CLIENT_RIDE_STATUS[status];
+  if (!config) return null;
+  const Icon = config.icon;
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={`mt-6 flex items-start gap-3 rounded-2xl border p-4 ${config.tone}`}
+    >
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-surface-card/80 shadow-sm">
+        <Icon size={22} aria-hidden="true" />
+      </span>
+      <div>
+        <p className="text-base font-bold">
+          {t(`taxiRides.liveStatus.${status}.title`)}
+        </p>
+        <p className="mt-1 text-sm opacity-80">
+          {t(`taxiRides.liveStatus.${status}.hint`)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ClientRideProgress({ status, t }) {
+  const currentIndex = CLIENT_RIDE_PROGRESS_INDEX[status] ?? -1;
+
+  return (
+    <ol
+      className="mt-3 grid grid-cols-4 gap-1 rounded-2xl border border-border/70 bg-surface-card p-3"
+      aria-label={t("taxiRides.progress.label")}
+    >
+      {CLIENT_RIDE_PROGRESS_STEPS.map((step, index) => {
+        const complete = index < currentIndex || (currentIndex === 3 && index === 3 && ["COMPLETED", "VALIDATED", "CLOSED"].includes(status));
+        const current = index === currentIndex && !complete;
+        return (
+          <li
+            key={step.status}
+            aria-label={t(`taxiRides.progress.${step.key}`)}
+            aria-current={current ? "step" : undefined}
+            className="flex min-w-0 flex-col items-center text-center"
+          >
+            <span
+              className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold ${
+                complete
+                  ? "border-emerald-600 bg-emerald-600 text-white"
+                  : current
+                  ? "border-blue-600 bg-blue-600 text-white ring-4 ring-blue-500/15"
+                  : "border-border bg-surface-main text-text-muted"
+              }`}
+            >
+              {complete ? "✓" : index + 1}
+            </span>
+            <span className={`mt-1.5 text-[10px] leading-tight sm:text-xs ${current || complete ? "font-semibold text-text-primary" : "text-text-muted"}`}>
+              {t(`taxiRides.progress.${step.key}`)}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 function isDocumentVisible() {
   return typeof document === "undefined" || document.visibilityState === "visible";
 }
@@ -89,12 +190,17 @@ export default function MissionTrackingPage() {
   const [ratingComment, setRatingComment] = useState("");
 
   const trackRef = useRef(track);
+  const locationPermissionDeniedRef = useRef(false);
   trackRef.current = track;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ skipEta = false } = {}) => {
     try {
-      const data = await getMissionTrack(id);
-      setTrack(data);
+      const data = await getMissionTrack(id, skipEta ? { skipEta: 1 } : {});
+      setTrack((current) =>
+        skipEta && data?.etaMinutes == null && current?.etaMinutes != null
+          ? { ...data, etaMinutes: current.etaMinutes }
+          : data
+      );
       setError(null);
     } catch (_err) {
       setError(t("missionTracking.errors.load"));
@@ -106,22 +212,98 @@ export default function MissionTrackingPage() {
   useEffect(() => {
     load();
 
-    function refreshIfVisible() {
+    function refreshSilentlyIfVisible() {
+      if (!isDocumentVisible()) return;
+      if (trackRef.current && TERMINAL_STATUSES.includes(trackRef.current.missionStatus)) return;
+      load({ skipEta: true });
+    }
+
+    function refreshFullyIfVisible() {
       if (!isDocumentVisible()) return;
       if (trackRef.current && TERMINAL_STATUSES.includes(trackRef.current.missionStatus)) return;
       load();
     }
 
-    const interval = setInterval(refreshIfVisible, TRACK_POLL_MS);
-    window.addEventListener("focus", refreshIfVisible);
-    document.addEventListener("visibilitychange", refreshIfVisible);
+    const interval = setInterval(refreshSilentlyIfVisible, TRACK_POLL_MS);
+    window.addEventListener("focus", refreshFullyIfVisible);
+    document.addEventListener("visibilitychange", refreshFullyIfVisible);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener("focus", refreshIfVisible);
-      document.removeEventListener("visibilitychange", refreshIfVisible);
+      window.removeEventListener("focus", refreshFullyIfVisible);
+      document.removeEventListener("visibilitychange", refreshFullyIfVisible);
     };
   }, [load]);
+
+  useEffect(() => {
+    const shouldReportLocation =
+      track?.viewerRole !== "client" &&
+      track?.isExecutor &&
+      track?.tradeCategorySlug === "mobilite" &&
+      ["EN_ROUTE", "ON_SITE"].includes(track?.missionStatus);
+    if (
+      !shouldReportLocation ||
+      typeof navigator === "undefined" ||
+      !navigator.geolocation ||
+      locationPermissionDeniedRef.current
+    ) {
+      return undefined;
+    }
+
+    let active = true;
+    let inFlight = false;
+    const reportLocation = () => {
+      if (!active || inFlight || locationPermissionDeniedRef.current) return;
+      inFlight = true;
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          if (!active) return;
+          const accuracy =
+            position.coords.accuracy == null ? null : Number(position.coords.accuracy);
+          const heading =
+            position.coords.heading == null ? null : Number(position.coords.heading);
+          try {
+            await pingMissionLocation(id, {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracyMeters: accuracy != null && Number.isFinite(accuracy) ? accuracy : null,
+              headingDegrees: heading != null && Number.isFinite(heading) ? heading : null,
+            });
+          } catch (_error) {
+            // Best effort : le statut et la course restent utilisables avec un réseau faible.
+          } finally {
+            inFlight = false;
+          }
+        },
+        (positionError) => {
+          if (positionError?.code === 1) locationPermissionDeniedRef.current = true;
+          inFlight = false;
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 60000,
+        }
+      );
+    };
+
+    reportLocation();
+    const interval =
+      track.missionStatus === "EN_ROUTE"
+        ? window.setInterval(reportLocation, DRIVER_LOCATION_POLL_MS)
+        : null;
+
+    return () => {
+      active = false;
+      if (interval) window.clearInterval(interval);
+    };
+  }, [
+    id,
+    track?.isExecutor,
+    track?.missionStatus,
+    track?.tradeCategorySlug,
+    track?.viewerRole,
+  ]);
 
   const handleTransition = async (toStatus, extra) => {
     setActionState({ type: "loading" });
@@ -295,7 +477,9 @@ export default function MissionTrackingPage() {
     );
   }
 
-  const statusLabel = t(`missionTracking.status.${track.missionStatus}`, {
+  const clientTaxiView =
+    track.viewerRole === "client" && track.tradeCategorySlug === "mobilite";
+  const statusLabel = t(`${clientTaxiView ? "taxiRides.status" : "missionTracking.status"}.${track.missionStatus}`, {
     defaultValue: track.missionStatus,
   });
   const requiresStartCode =
@@ -303,6 +487,14 @@ export default function MissionTrackingPage() {
     track.isExecutor &&
     track.tradeCategorySlug === "mobilite" &&
     track.missionStatus === "ON_SITE";
+  const stickyExecutorNextStatus =
+    track.viewerRole !== "client" &&
+    track.isExecutor &&
+    !track.acceptanceDeadlineAt &&
+    track.tradeCategorySlug === "mobilite" &&
+    ["ASSIGNED", "EN_ROUTE", "ON_SITE", "IN_PROGRESS"].includes(track.missionStatus)
+      ? EXECUTOR_NEXT_STATUS[track.missionStatus]
+      : null;
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
@@ -317,12 +509,19 @@ export default function MissionTrackingPage() {
         </h1>
         <button
           type="button"
-          onClick={load}
+          onClick={() => load()}
           className="btn-secondary inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs"
         >
           <RefreshCw size={14} /> {t("missionTracking.refresh")}
         </button>
       </div>
+
+      {clientTaxiView ? (
+        <>
+          <ClientRideStatus status={track.missionStatus} t={t} />
+          <ClientRideProgress status={track.missionStatus} t={t} />
+        </>
+      ) : null}
 
       <div className="mt-6 rounded-2xl border border-border bg-surface-card p-5">
         <div className="flex items-center justify-between gap-3">
@@ -588,7 +787,7 @@ export default function MissionTrackingPage() {
           track.isExecutor &&
           !track.acceptanceDeadlineAt &&
           EXECUTOR_NEXT_STATUS[track.missionStatus] ? (
-            <div className="flex flex-col gap-2">
+            <div className={stickyExecutorNextStatus ? "hidden md:flex md:flex-col md:gap-2" : "flex flex-col gap-2"}>
               {requiresStartCode ? (
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
                   <label className="mb-2 block text-xs font-semibold text-text-primary" htmlFor="mission-start-code">
@@ -730,6 +929,44 @@ export default function MissionTrackingPage() {
           </form>
         ) : null}
       </div>
+
+      {stickyExecutorNextStatus ? (
+        <div className="fixed inset-x-0 bottom-24 z-40 px-3 md:hidden">
+          <div className="mx-auto max-w-md rounded-3xl border border-border/70 bg-surface-card/95 p-3 shadow-2xl backdrop-blur-xl">
+            {requiresStartCode ? (
+              <div className="mb-2">
+                <label className="mb-1.5 block text-center text-xs font-semibold text-text-primary" htmlFor="mission-start-code-mobile">
+                  {t("missionTracking.startCode.driverTitle")}
+                </label>
+                <input
+                  id="mission-start-code-mobile"
+                  value={startCodeInput}
+                  onChange={(event) => setStartCodeInput(event.target.value.replace(/\D/g, "").slice(0, 4))}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="0000"
+                  className="w-full rounded-2xl border border-border bg-surface-card px-4 py-2 text-center font-mono text-lg tracking-[0.3em] text-text-primary"
+                />
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={() =>
+                requiresStartCode
+                  ? handleVerifyStartCode()
+                  : handleTransition(stickyExecutorNextStatus)
+              }
+              disabled={actionState?.type === "loading"}
+              className="btn-primary flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-6 text-base font-bold disabled:opacity-60"
+            >
+              {actionState?.type === "loading" ? <Loader2 className="animate-spin" size={20} /> : null}
+              {requiresStartCode
+                ? t("missionTracking.startCode.verifyCta")
+                : t(`missionTracking.executorCta.${stickyExecutorNextStatus}`)}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <Modal
         open={disputeModalOpen}

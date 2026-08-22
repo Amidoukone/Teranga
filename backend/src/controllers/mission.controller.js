@@ -1343,7 +1343,8 @@ exports.track = async (req, res) => {
         ? { lat: destLat, lng: destLng }
         : null;
 
-    if (position && !position.isStale && etaTarget) {
+    const shouldCalculateEta = String(req.query.skipEta || '') !== '1';
+    if (shouldCalculateEta && position && !position.isStale && etaTarget) {
       const result = await getDistanceMatrix(
         [{ lat: position.latitude, lng: position.longitude }],
         [etaTarget]

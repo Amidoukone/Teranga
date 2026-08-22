@@ -19,11 +19,20 @@ import {
 } from '../services/providers';
 
 const AVAILABILITY_VALUES = ['available', 'busy', 'offline'];
+const DRIVER_RIDES_POLL_MS = (() => {
+  const raw = Number.parseInt(String(process.env.REACT_APP_DRIVER_RIDES_POLL_MS || ''), 10);
+  if (!Number.isFinite(raw) || raw < 5000) return 15000;
+  return raw;
+})();
 const AVAILABILITY_TONE = {
   available: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30',
   busy: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
   offline: 'bg-surface-main text-text-secondary border border-border',
 };
+
+function isDocumentVisible() {
+  return typeof document === 'undefined' || document.visibilityState === 'visible';
+}
 
 function displayClient(client) {
   if (!client) return null;
@@ -109,9 +118,11 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
     };
   }, [navigate]);
 
-  const loadMissions = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const loadMissions = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const data = await getMyMissions(
         mobilityOnly ? { tradeCategorySlug: 'mobilite', limit: 100 } : {}
@@ -119,12 +130,14 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
       setMissions(data?.missions || []);
     } catch (e) {
       console.error('MyMissionsPage load missions error:', e);
-      setError(t('myMissionsPage.errors.load'));
-      setMissions([]);
+      if (!silent) {
+        setError(true);
+        setMissions([]);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [mobilityOnly, t]);
+  }, [mobilityOnly]);
 
   async function handleRideOffer(event, missionId, action) {
     event.preventDefault();
@@ -147,8 +160,23 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
   }
 
   useEffect(() => {
-    if (isAllowed) loadMissions();
-  }, [isAllowed, loadMissions]);
+    if (!isAllowed) return undefined;
+    loadMissions();
+    if (!mobilityOnly) return undefined;
+
+    const refreshIfVisible = () => {
+      if (isDocumentVisible()) loadMissions({ silent: true });
+    };
+    const interval = window.setInterval(refreshIfVisible, DRIVER_RIDES_POLL_MS);
+    window.addEventListener('focus', refreshIfVisible);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshIfVisible);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+    };
+  }, [isAllowed, loadMissions, mobilityOnly]);
 
   async function handleAvailabilityChange(availabilityStatus) {
     setSavingAvailability(true);
@@ -219,7 +247,7 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
             </p>
           </div>
           <button
-            onClick={loadMissions}
+            onClick={() => loadMissions()}
             disabled={loading}
             className="app-btn-primary inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-full shadow-sm self-start sm:self-auto"
           >
@@ -229,7 +257,7 @@ export default function MyMissionsPage({ mobilityOnly = false }) {
 
         {error && (
           <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
-            {error}
+            {error === true ? t('myMissionsPage.errors.load') : error}
           </div>
         )}
 

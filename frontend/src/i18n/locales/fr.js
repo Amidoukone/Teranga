@@ -3067,8 +3067,62 @@ const fr = {
   taxiRides: {
     title: "Mes courses",
     detailTitle: "Suivi de ma course",
+    status: {
+      CREATED: "Course demandée",
+      SEARCHING_EXECUTOR: "Recherche d’un chauffeur",
+      ASSIGNED: "Chauffeur affecté",
+      EN_ROUTE: "Chauffeur en route",
+      ON_SITE: "Chauffeur arrivé",
+      IN_PROGRESS: "Course en cours",
+      COMPLETED: "Course terminée",
+      VALIDATED: "Course validée",
+      CLOSED: "Course clôturée",
+      CANCELLED_BY_CLIENT: "Course annulée",
+      NO_EXECUTOR_FOUND: "Aucun chauffeur disponible",
+      DISPUTED: "Réclamation en cours",
+      RESOLVED_REFUND: "Remboursement effectué",
+      RESOLVED_REDO: "Nouvelle course prévue",
+      RESOLVED_CLOSED: "Réclamation clôturée",
+    },
+    liveStatus: {
+      CREATED: {
+        title: "Votre course est demandée",
+        hint: "Teranga prépare la recherche d’un chauffeur.",
+      },
+      SEARCHING_EXECUTOR: {
+        title: "Nous cherchons un chauffeur",
+        hint: "Vous pouvez garder cette page ouverte, elle s’actualise automatiquement.",
+      },
+      ASSIGNED: {
+        title: "Un chauffeur vous a été affecté",
+        hint: "Il doit confirmer la course avant de prendre la route.",
+      },
+      EN_ROUTE: {
+        title: "Votre chauffeur est en route",
+        hint: "Préparez-vous pendant qu’il rejoint le point de départ.",
+      },
+      ON_SITE: {
+        title: "Votre chauffeur est arrivé",
+        hint: "Rejoignez le point de départ et vérifiez le véhicule avant de donner le code.",
+      },
+      IN_PROGRESS: {
+        title: "Votre course a commencé",
+        hint: "Bon trajet. Teranga reste disponible en cas de besoin.",
+      },
+      COMPLETED: {
+        title: "Vous êtes arrivé",
+        hint: "Vérifiez que tout va bien, puis validez la course.",
+      },
+    },
+    progress: {
+      label: "Progression de la course",
+      driver: "Chauffeur",
+      enRoute: "En route",
+      arrived: "Arrivé",
+      trip: "Trajet",
+    },
     driverTitle: "Mes courses chauffeur",
-    driverSubtitle: "Une seule chose à faire : restez disponible, puis acceptez la course quand elle arrive.",
+    driverSubtitle: "Restez disponible : les nouvelles courses apparaissent automatiquement et s’acceptent en un geste.",
     driverAvailable: "Vous êtes disponible",
     driverAvailableHint: "Vous pouvez recevoir une nouvelle course.",
     driverBusy: "Course en cours",

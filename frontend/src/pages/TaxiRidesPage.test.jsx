@@ -48,7 +48,7 @@ describe("TaxiRidesPage", () => {
     expect(await screen.findByText("ACI 2000")).toBeInTheDocument();
     expect(screen.getByText("Aéroport de Bamako")).toBeInTheDocument();
     expect(
-      screen.getByText("missionTracking.status.EN_ROUTE"),
+      screen.getByText("taxiRides.status.EN_ROUTE"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /taxiRides.follow/ }),

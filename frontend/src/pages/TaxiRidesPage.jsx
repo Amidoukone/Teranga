@@ -25,10 +25,20 @@ const ACTIVE_STATUSES = new Set([
   "COMPLETED",
 ]);
 
+const RIDES_POLL_MS = (() => {
+  const raw = Number.parseInt(String(process.env.REACT_APP_TAXI_RIDES_POLL_MS || ""), 10);
+  if (!Number.isFinite(raw) || raw < 5000) return 15000;
+  return raw;
+})();
+
+function isDocumentVisible() {
+  return typeof document === "undefined" || document.visibilityState === "visible";
+}
+
 function RideCard({ ride, featured = false }) {
   const { t, i18n } = useTranslation();
   const VehicleIcon = ride.requestedVehicleType === "car" ? CarFront : Bike;
-  const status = t(`missionTracking.status.${ride.missionStatus}`, {
+  const status = t(`taxiRides.status.${ride.missionStatus}`, {
     defaultValue: ride.missionStatus,
   });
   const date = ride.createdAt
@@ -97,21 +107,34 @@ export default function TaxiRidesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const data = await getMyTaxiRides({ limit: 100 });
       setRides(data?.rides || []);
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || t("taxiRides.loadError"));
+      setError(requestError?.response?.data?.error || true);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     load();
+
+    const refreshIfVisible = () => {
+      if (isDocumentVisible()) load({ silent: true });
+    };
+    const interval = window.setInterval(refreshIfVisible, RIDES_POLL_MS);
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
   }, [load]);
 
   const activeRides = useMemo(
@@ -143,7 +166,10 @@ export default function TaxiRidesPage() {
 
       {error ? (
         <div className="mt-6">
-          <AuthFeedbackBanner type="error" message={error} />
+          <AuthFeedbackBanner
+            type="error"
+            message={error === true ? t("taxiRides.loadError") : error}
+          />
         </div>
       ) : null}
 
@@ -180,7 +206,7 @@ export default function TaxiRidesPage() {
                 </h2>
                 <button
                   type="button"
-                  onClick={load}
+                  onClick={() => load()}
                   className="btn-secondary inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs"
                 >
                   <RefreshCw size={14} /> {t("taxiRides.refresh")}

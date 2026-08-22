@@ -70,8 +70,8 @@ export async function uploadMissionAttachments(missionId, { photo, voiceNote } =
  * GET /api/v1/missions/:id/track — suivi en direct (docs/DEV_SPEC_TERANGA_v3.md section 4.2),
  * consommé par polling depuis MissionTrackingPage.
  */
-export async function getMissionTrack(missionId) {
-  const { data } = await api.get(`/v1/missions/${missionId}/track`);
+export async function getMissionTrack(missionId, params = {}) {
+  const { data } = await api.get(`/v1/missions/${missionId}/track`, { params });
   return data;
 }
 
@@ -82,6 +82,15 @@ export async function getMissionTrack(missionId) {
 export async function updateMissionStatus(missionId, toStatus, extra = {}) {
   const { data } = await api.patch(`/v1/missions/${missionId}/status`, { toStatus, ...extra });
   return data;
+}
+
+/**
+ * Position best-effort de l'exécutant pendant une mission active. Le backend stocke le point
+ * sans déclencher de calcul cartographique payant ; le suivi client le consomme ensuite.
+ */
+export async function pingMissionLocation(missionId, payload) {
+  const { data } = await api.post(`/v1/missions/${missionId}/location`, payload);
+  return data?.location;
 }
 
 /**

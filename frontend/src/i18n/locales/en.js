@@ -3056,8 +3056,62 @@ const en = {
   taxiRides: {
     title: "My rides",
     detailTitle: "Ride tracking",
+    status: {
+      CREATED: "Ride requested",
+      SEARCHING_EXECUTOR: "Finding a driver",
+      ASSIGNED: "Driver assigned",
+      EN_ROUTE: "Driver on the way",
+      ON_SITE: "Driver has arrived",
+      IN_PROGRESS: "Ride in progress",
+      COMPLETED: "Ride completed",
+      VALIDATED: "Ride confirmed",
+      CLOSED: "Ride closed",
+      CANCELLED_BY_CLIENT: "Ride cancelled",
+      NO_EXECUTOR_FOUND: "No driver available",
+      DISPUTED: "Claim in progress",
+      RESOLVED_REFUND: "Refund completed",
+      RESOLVED_REDO: "New ride scheduled",
+      RESOLVED_CLOSED: "Claim closed",
+    },
+    liveStatus: {
+      CREATED: {
+        title: "Your ride has been requested",
+        hint: "Teranga is preparing the driver search.",
+      },
+      SEARCHING_EXECUTOR: {
+        title: "We are finding a driver",
+        hint: "You can keep this page open; it updates automatically.",
+      },
+      ASSIGNED: {
+        title: "A driver has been assigned",
+        hint: "The driver must confirm the ride before leaving.",
+      },
+      EN_ROUTE: {
+        title: "Your driver is on the way",
+        hint: "Get ready while the driver heads to the pickup point.",
+      },
+      ON_SITE: {
+        title: "Your driver has arrived",
+        hint: "Go to the pickup point and check the vehicle before sharing the code.",
+      },
+      IN_PROGRESS: {
+        title: "Your ride has started",
+        hint: "Have a good trip. Teranga is available if you need help.",
+      },
+      COMPLETED: {
+        title: "You have arrived",
+        hint: "Check that everything is fine, then confirm the ride.",
+      },
+    },
+    progress: {
+      label: "Ride progress",
+      driver: "Driver",
+      enRoute: "On the way",
+      arrived: "Arrived",
+      trip: "Ride",
+    },
     driverTitle: "My driver rides",
-    driverSubtitle: "Just stay available, then accept a ride when it arrives.",
+    driverSubtitle: "Stay available: new rides appear automatically and can be accepted in one tap.",
     driverAvailable: "You are available",
     driverAvailableHint: "You can receive a new ride.",
     driverBusy: "Ride in progress",
