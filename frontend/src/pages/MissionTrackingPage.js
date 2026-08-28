@@ -767,17 +767,23 @@ export default function MissionTrackingPage() {
           </p>
         ) : null}
 
-        {track.position?.isStale ? (
+        {track.position?.isStale && !clientTransportView ? (
           <p className="mt-3 text-sm text-amber-700 dark:text-amber-300">
             {t("missionTracking.positionOld", { seconds: track.position.ageSeconds })}
           </p>
         ) : null}
 
-        {!track.position ? (
+        {!track.position && !clientTransportView ? (
           <p className="mt-3 text-sm text-text-muted">{t("missionTracking.noPositionYet")}</p>
         ) : null}
 
-        <p className="mt-2 text-xs text-text-muted">{t("missionTracking.lowNetworkNote")}</p>
+        <p className="mt-2 text-xs text-text-muted">
+          {t(
+            clientTransportView
+              ? "missionTracking.transportNetworkNote"
+              : "missionTracking.lowNetworkNote"
+          )}
+        </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
           {buildTelHref(track.assistancePhone) ? (

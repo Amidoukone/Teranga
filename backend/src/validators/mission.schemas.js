@@ -3,6 +3,7 @@
 const Joi = require('joi');
 const { SERVICE_TYPES } = require('../utils/labels');
 const { MISSION_STATUS_VALUES } = require('../constants/missionStatus');
+const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../constants/deliveryPackage');
 
 const idSchema = Joi.number().integer().positive();
 const requestedVehicleTypeSchema = Joi.string().valid('motorcycle', 'car');
@@ -34,6 +35,7 @@ const estimateMissionSchema = Joi.object({
   pickupLatitude: Joi.number().min(-90).max(90),
   pickupLongitude: Joi.number().min(-180).max(180),
   requestedVehicleType: requestedVehicleTypeSchema,
+  packageType: Joi.string().valid(...DELIVERY_PACKAGE_TYPE_VALUES),
 });
 
 /**
@@ -57,6 +59,7 @@ const createMissionSchema = Joi.object({
   pickupLatitude: Joi.number().min(-90).max(90),
   pickupLongitude: Joi.number().min(-180).max(180),
   requestedVehicleType: requestedVehicleTypeSchema,
+  packageType: Joi.string().valid(...DELIVERY_PACKAGE_TYPE_VALUES),
 });
 
 /**

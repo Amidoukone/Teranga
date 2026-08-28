@@ -228,6 +228,7 @@ describe('Lot 2 — demande de mission invitée (homepage, POST /api/v1/mission-
         latitude: 12.6205,
         longitude: -7.9895,
         ...(slug === 'mobilite' ? { requestedVehicleType: 'car' } : {}),
+        ...(slug === 'livraison' ? { packageType: 'standard' } : {}),
       });
       trackResponse(res);
 
@@ -240,6 +241,7 @@ describe('Lot 2 — demande de mission invitée (homepage, POST /api/v1/mission-
       expect(Number(res.body.service.budget)).toBeGreaterThan(1000);
       expect(res.body.estimate.distanceKm).toBeGreaterThan(0);
       expect(res.body.service.requestedVehicleType).toBe(slug === 'mobilite' ? 'car' : null);
+      expect(res.body.service.packageType).toBe(slug === 'livraison' ? 'standard' : null);
       if (slug === 'mobilite') {
         expect(res.body.startCode).toMatch(/^\d{4}$/);
         const tracking = await request(app)

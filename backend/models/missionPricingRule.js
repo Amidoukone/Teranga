@@ -1,5 +1,6 @@
 'use strict';
 const { Model } = require('sequelize');
+const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../src/constants/deliveryPackage');
 
 module.exports = (sequelize, DataTypes) => {
   class MissionPricingRule extends Model {
@@ -52,6 +53,12 @@ module.exports = (sequelize, DataTypes) => {
         field: 'vehicle_type',
         validate: { isIn: [['motorcycle', 'car']] },
       },
+      packageType: {
+        type: DataTypes.STRING(30),
+        allowNull: true,
+        field: 'package_type',
+        validate: { isIn: [DELIVERY_PACKAGE_TYPE_VALUES] },
+      },
       pricingMode: {
         type: DataTypes.ENUM('fixed_estimate', 'quote_only'),
         allowNull: false,
@@ -73,6 +80,12 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 0,
         field: 'price_per_km',
+      },
+      priceIncrement: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0,
+        field: 'price_increment',
       },
       estimatedDelayMinutes: {
         type: DataTypes.INTEGER.UNSIGNED,

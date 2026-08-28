@@ -77,6 +77,8 @@ test("affiche le code de départ au client dès la création de la course", asyn
   expect(screen.getByText("Votre code de départ")).toBeInTheDocument();
   expect(screen.getByText("4821")).toBeInTheDocument();
   expect(screen.getByText("Donnez-le au chauffeur à son arrivée")).toBeInTheDocument();
+  expect(screen.queryByText("missionTracking.noPositionYet")).not.toBeInTheDocument();
+  expect(screen.getByText("missionTracking.transportNetworkNote")).toBeInTheDocument();
 });
 
 test("annonce clairement au client que son chauffeur est arrivé", async () => {

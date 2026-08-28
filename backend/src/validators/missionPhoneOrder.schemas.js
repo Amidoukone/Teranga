@@ -2,6 +2,7 @@
 
 const Joi = require('joi');
 const { SERVICE_TYPES } = require('../utils/labels');
+const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../constants/deliveryPackage');
 
 /**
  * Canal opérateur téléphone (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §3) — un admin/master saisit
@@ -34,6 +35,7 @@ const phoneOrderSchema = Joi.object({
   pickupLatitude: Joi.number().min(-90).max(90),
   pickupLongitude: Joi.number().min(-180).max(180),
   requestedVehicleType: Joi.string().valid('motorcycle', 'car'),
+  packageType: Joi.string().valid(...DELIVERY_PACKAGE_TYPE_VALUES),
 });
 
 module.exports = {

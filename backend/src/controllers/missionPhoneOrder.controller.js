@@ -46,6 +46,7 @@ exports.create = async (req, res) => {
       pickupLatitude: rawPickupLatitude,
       pickupLongitude: rawPickupLongitude,
       requestedVehicleType: rawRequestedVehicleType,
+      packageType: rawPackageType,
     } = req.body;
 
     const phone = normalizePhone(rawPhone);
@@ -190,6 +191,7 @@ exports.create = async (req, res) => {
     const executionType = tradeCategory ? 'provider' : 'agent';
     const requestedVehicleType =
       tradeCategory?.slug === 'mobilite' ? rawRequestedVehicleType || 'motorcycle' : null;
+    const packageType = tradeCategory?.slug === 'livraison' ? rawPackageType || 'small' : null;
 
     // Estimation pour renseigner le budget (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §3.1) — même
     // appel que mission.controller.js exports.create, jamais bloquant si elle échoue.
@@ -205,6 +207,7 @@ exports.create = async (req, res) => {
       pickupLatitude,
       pickupLongitude,
       requestedVehicleType,
+      packageType,
     });
 
     const service = await Service.create({
@@ -224,6 +227,7 @@ exports.create = async (req, res) => {
       pickupLatitude,
       pickupLongitude,
       requestedVehicleType,
+      packageType,
       budget: estimate.basePrice ?? estimate.minPrice ?? null,
       currency: estimate.currency,
       status: 'created',
