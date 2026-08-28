@@ -2,6 +2,7 @@
 
 const Joi = require('joi');
 const { SERVICE_TYPES } = require('../utils/labels');
+const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../constants/deliveryPackage');
 
 const idSchema = Joi.number().integer().positive();
 
@@ -16,10 +17,12 @@ const createMissionPricingRuleSchema = Joi.object({
     .valid(...Object.keys(SERVICE_TYPES))
     .allow(null),
   vehicleType: Joi.string().valid('motorcycle', 'car').allow(null),
+  packageType: Joi.string().valid(...DELIVERY_PACKAGE_TYPE_VALUES).allow(null),
   pricingMode: Joi.string().valid('fixed_estimate', 'quote_only').required(),
   basePrice: Joi.number().min(0).allow(null),
   minPrice: Joi.number().min(0).allow(null),
   pricePerKm: Joi.number().min(0).default(0),
+  priceIncrement: Joi.number().min(0).default(0),
   estimatedDelayMinutes: Joi.number().integer().min(0).required(),
 }).custom((value, helpers) => {
   if (value.tradeCategoryId && value.serviceType) {
@@ -30,6 +33,12 @@ const createMissionPricingRuleSchema = Joi.object({
   if (value.vehicleType && !value.tradeCategoryId) {
     return helpers.message('vehicleType nécessite une filière tradeCategoryId.');
   }
+  if (value.packageType && !value.tradeCategoryId) {
+    return helpers.message('packageType nécessite une filière tradeCategoryId.');
+  }
+  if (value.vehicleType && value.packageType) {
+    return helpers.message('Une règle ne peut pas cibler à la fois un véhicule et un type de colis.');
+  }
   return value;
 });
 
@@ -38,6 +47,7 @@ const updateMissionPricingRuleSchema = Joi.object({
   basePrice: Joi.number().min(0).allow(null),
   minPrice: Joi.number().min(0).allow(null),
   pricePerKm: Joi.number().min(0),
+  priceIncrement: Joi.number().min(0),
   estimatedDelayMinutes: Joi.number().integer().min(0),
   isActive: Joi.boolean(),
 }).min(1);

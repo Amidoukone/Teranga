@@ -149,11 +149,13 @@ exports.estimate = async (req, res) => {
       pickupLatitude: rawPickupLatitude,
       pickupLongitude: rawPickupLongitude,
       requestedVehicleType: rawRequestedVehicleType,
+      packageType: rawPackageType,
     } = req.body;
 
     const tradeCategory = await resolveTradeCategory(executionType, tradeCategoryId);
     const requestedVehicleType =
       tradeCategory?.slug === 'mobilite' ? rawRequestedVehicleType || 'motorcycle' : null;
+    const packageType = tradeCategory?.slug === 'livraison' ? rawPackageType || 'small' : null;
 
     // Estimation basée sur la destination réelle (adresse déjà saisie à l'étape Location du
     // wizard) quand elle est disponible — jamais bloquant : un aperçu de prix qui échoue à se
@@ -201,6 +203,7 @@ exports.estimate = async (req, res) => {
       pickupLatitude,
       pickupLongitude,
       requestedVehicleType,
+      packageType,
     });
 
     return res.status(200).json({ estimate });
@@ -230,11 +233,13 @@ exports.create = async (req, res) => {
       pickupLatitude: rawPickupLatitude,
       pickupLongitude: rawPickupLongitude,
       requestedVehicleType: rawRequestedVehicleType,
+      packageType: rawPackageType,
     } = req.body;
 
     const tradeCategory = await resolveTradeCategory(executionType, tradeCategoryId);
     const requestedVehicleType =
       tradeCategory?.slug === 'mobilite' ? rawRequestedVehicleType || 'motorcycle' : null;
+    const packageType = tradeCategory?.slug === 'livraison' ? rawPackageType || 'small' : null;
 
     let trimmedAddress = rawAddress ? String(rawAddress).trim() : null;
     let latitude = rawLatitude != null ? Number(rawLatitude) : null;
@@ -347,6 +352,7 @@ exports.create = async (req, res) => {
       pickupLatitude,
       pickupLongitude,
       requestedVehicleType,
+      packageType,
     });
 
     const service = await Service.create({
@@ -358,6 +364,7 @@ exports.create = async (req, res) => {
       pickupLatitude,
       pickupLongitude,
       requestedVehicleType,
+      packageType,
       type: tradeCategory ? 'other' : serviceType,
       title: String(title).trim(),
       description: description ? String(description).trim() : null,
@@ -1423,6 +1430,7 @@ exports.track = async (req, res) => {
       vehicle,
       pickupAddress: service.pickupAddress || null,
       requestedVehicleType: service.requestedVehicleType || null,
+      packageType: service.packageType || null,
       pickupLatitude: service.pickupLatitude != null ? Number(service.pickupLatitude) : null,
       pickupLongitude: service.pickupLongitude != null ? Number(service.pickupLongitude) : null,
       destination:

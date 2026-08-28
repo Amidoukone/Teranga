@@ -1,6 +1,7 @@
 'use strict';
 const { Model } = require('sequelize');
 const { MISSION_STATUS_VALUES } = require('../src/constants/missionStatus');
+const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../src/constants/deliveryPackage');
 
 module.exports = (sequelize, DataTypes) => {
   class Service extends Model {
@@ -207,6 +208,12 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         field: 'requested_vehicle_type',
         validate: { isIn: [['motorcycle', 'car']] },
+      },
+      packageType: {
+        type: DataTypes.STRING(30),
+        allowNull: true,
+        field: 'package_type',
+        validate: { isIn: [DELIVERY_PACKAGE_TYPE_VALUES] },
       },
 
       // Fenêtre d'acceptation du dispatch mobilité (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2) —

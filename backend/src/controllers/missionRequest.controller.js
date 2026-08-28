@@ -30,6 +30,11 @@ function resolveRequestedVehicleType(tradeCategory, requestedVehicleType) {
   return requestedVehicleType || 'motorcycle';
 }
 
+function resolvePackageType(tradeCategory, packageType) {
+  if (tradeCategory?.slug !== 'livraison') return null;
+  return packageType || 'small';
+}
+
 /**
  * Aperçu public du trajet — aucune identité et aucune écriture. Le pays est fourni par le
  * catalogue public (champ masqué quand un seul pays est disponible), puis la destination réelle
@@ -41,6 +46,7 @@ exports.estimate = async (req, res) => {
       countryId,
       tradeCategoryId,
       requestedVehicleType: rawRequestedVehicleType,
+      packageType: rawPackageType,
       address: rawAddress,
       latitude: rawLatitude,
       longitude: rawLongitude,
@@ -112,6 +118,7 @@ exports.estimate = async (req, res) => {
       tradeCategory,
       rawRequestedVehicleType
     );
+    const packageType = resolvePackageType(tradeCategory, rawPackageType);
     const estimate = await estimateMission({
       user: null,
       executionType: 'provider',
@@ -124,10 +131,11 @@ exports.estimate = async (req, res) => {
       pickupLatitude,
       pickupLongitude,
       requestedVehicleType,
+      packageType,
     });
 
     return res.status(200).json({
-      estimate: { ...estimate, requestedVehicleType },
+      estimate: { ...estimate, requestedVehicleType, packageType },
       pickup: { address: pickupAddress, latitude: pickupLatitude, longitude: pickupLongitude },
       destination: { address, latitude, longitude },
     });
@@ -189,6 +197,7 @@ exports.create = async (req, res) => {
       pickupLatitude: rawPickupLatitude,
       pickupLongitude: rawPickupLongitude,
       requestedVehicleType: rawRequestedVehicleType,
+      packageType: rawPackageType,
     } = req.body;
 
     const phone = normalizePhone(rawPhone);
@@ -383,6 +392,7 @@ exports.create = async (req, res) => {
       tradeCategory,
       rawRequestedVehicleType
     );
+    const packageType = resolvePackageType(tradeCategory, rawPackageType);
     const estimate = await estimateMission({
       user,
       executionType,
@@ -395,6 +405,7 @@ exports.create = async (req, res) => {
       pickupLatitude,
       pickupLongitude,
       requestedVehicleType,
+      packageType,
     });
 
     const service = await Service.create({
@@ -411,6 +422,7 @@ exports.create = async (req, res) => {
       pickupLatitude,
       pickupLongitude,
       requestedVehicleType,
+      packageType,
       address: trimmedAddress,
       latitude,
       longitude,

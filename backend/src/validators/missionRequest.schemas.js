@@ -2,6 +2,7 @@
 
 const Joi = require('joi');
 const { SERVICE_TYPES } = require('../utils/labels');
+const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../constants/deliveryPackage');
 
 const vehicleTypeSchema = Joi.string().valid('motorcycle', 'car');
 
@@ -40,6 +41,7 @@ const createMissionRequestSchema = Joi.object({
   pickupLatitude: Joi.number().min(-90).max(90),
   pickupLongitude: Joi.number().min(-180).max(180),
   requestedVehicleType: vehicleTypeSchema,
+  packageType: Joi.string().valid(...DELIVERY_PACKAGE_TYPE_VALUES),
 });
 
 // Aperçu public sans écriture : aucune identité n'est nécessaire pour voir le prix d'un trajet.
@@ -47,6 +49,7 @@ const estimateMissionRequestSchema = Joi.object({
   countryId: Joi.number().integer().positive().required(),
   tradeCategoryId: Joi.number().integer().positive().required(),
   requestedVehicleType: vehicleTypeSchema.default('motorcycle'),
+  packageType: Joi.string().valid(...DELIVERY_PACKAGE_TYPE_VALUES),
   address: Joi.string().trim().max(255).allow('', null),
   latitude: Joi.number().min(-90).max(90),
   longitude: Joi.number().min(-180).max(180),

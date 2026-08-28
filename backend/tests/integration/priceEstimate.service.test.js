@@ -59,6 +59,7 @@ async function makeRule(overrides) {
     serviceType: null,
     pricingMode: 'fixed_estimate',
     pricePerKm: 0,
+    priceIncrement: 0,
     estimatedDelayMinutes: 60,
     isActive: true,
     ...overrides,
@@ -165,6 +166,41 @@ describe('priceEstimate.service.estimateMission', () => {
 
     expect(car.basePrice).toBe(3000);
     expect(motorcycle.basePrice).toBe(1500);
+  });
+
+  test('prefers a delivery package rule and rounds the distance price to a simple step', async () => {
+    if (!dbReady) return;
+    const country = await makeCountry('XOF');
+    const tradeCategory = await makeTradeCategory();
+    await makeRule({
+      countryId: country.id,
+      tradeCategoryId: tradeCategory.id,
+      basePrice: 1500,
+      pricePerKm: 0,
+    });
+    await makeRule({
+      countryId: country.id,
+      tradeCategoryId: tradeCategory.id,
+      packageType: 'standard',
+      basePrice: 2000,
+      pricePerKm: 300,
+      priceIncrement: 500,
+    });
+
+    const result = await estimateMission({
+      user: { countryId: country.id, regionId: null },
+      executionType: 'provider',
+      tradeCategoryId: tradeCategory.id,
+      packageType: 'standard',
+      pickupLatitude: 12.6392,
+      pickupLongitude: -8.0029,
+      destinationLatitude: 12.6205,
+      destinationLongitude: -7.9895,
+    });
+
+    expect(result.basePrice).toBeGreaterThan(2000);
+    expect(result.basePrice % 500).toBe(0);
+    expect(result.priceIncrement).toBe(500);
   });
 
   test('prefers a region-specific override over the country-wide rule for the same category', async () => {

@@ -30,10 +30,12 @@ const EMPTY_FORM = {
   tradeCategoryId: "",
   serviceType: "",
   vehicleType: "",
+  packageType: "",
   pricingMode: "fixed_estimate",
   basePrice: "",
   minPrice: "",
   pricePerKm: "0",
+  priceIncrement: "0",
   estimatedDelayMinutes: "",
 };
 
@@ -146,9 +148,13 @@ export default function MissionPricingAdminPage() {
   const categoryLabel = (rule) => {
     if (rule.tradeCategoryId) {
       const tradeLabel = tradeCategoryNameById.get(String(rule.tradeCategoryId)) || "—";
-      return rule.vehicleType
-        ? `${tradeLabel} — ${t(`missionPricingAdmin.form.vehicleType.${rule.vehicleType}`)}`
-        : tradeLabel;
+      if (rule.vehicleType) {
+        return `${tradeLabel} — ${t(`missionPricingAdmin.form.vehicleType.${rule.vehicleType}`)}`;
+      }
+      if (rule.packageType) {
+        return `${tradeLabel} — ${t(`missionPricingAdmin.form.packageType.${rule.packageType}`)}`;
+      }
+      return tradeLabel;
     }
     if (rule.serviceType) return t(`services.type.${rule.serviceType}`);
     return t("missionPricingAdmin.table.genericCategory");
@@ -166,12 +172,16 @@ export default function MissionPricingAdminPage() {
         basePrice: form.basePrice !== "" ? Number(form.basePrice) : null,
         minPrice: form.minPrice !== "" ? Number(form.minPrice) : null,
         pricePerKm: form.pricePerKm !== "" ? Number(form.pricePerKm) : 0,
+        priceIncrement: form.priceIncrement !== "" ? Number(form.priceIncrement) : 0,
         estimatedDelayMinutes: Number(form.estimatedDelayMinutes),
       };
       if (form.categoryMode === "trade") payload.tradeCategoryId = Number(form.tradeCategoryId);
       if (form.categoryMode === "classic") payload.serviceType = form.serviceType;
       if (form.categoryMode === "trade" && form.vehicleType) {
         payload.vehicleType = form.vehicleType;
+      }
+      if (form.categoryMode === "trade" && form.packageType) {
+        payload.packageType = form.packageType;
       }
 
       const created = await createMissionPricingRule(payload);
@@ -193,6 +203,7 @@ export default function MissionPricingAdminPage() {
       basePrice: rule.basePrice ?? "",
       minPrice: rule.minPrice ?? "",
       pricePerKm: rule.pricePerKm ?? 0,
+      priceIncrement: rule.priceIncrement ?? 0,
       estimatedDelayMinutes: rule.estimatedDelayMinutes,
       isActive: rule.isActive,
     });
@@ -210,6 +221,7 @@ export default function MissionPricingAdminPage() {
         basePrice: editForm.basePrice !== "" ? Number(editForm.basePrice) : null,
         minPrice: editForm.minPrice !== "" ? Number(editForm.minPrice) : null,
         pricePerKm: Number(editForm.pricePerKm) || 0,
+        priceIncrement: Number(editForm.priceIncrement) || 0,
         estimatedDelayMinutes: Number(editForm.estimatedDelayMinutes),
         isActive: Boolean(editForm.isActive),
       };
@@ -238,6 +250,7 @@ export default function MissionPricingAdminPage() {
     (tc) => String(tc.id) === String(form.tradeCategoryId)
   );
   const isMobilityPricing = selectedTradeCategory?.slug === "mobilite";
+  const isDeliveryPricing = selectedTradeCategory?.slug === "livraison";
 
   if (loading) {
     return (
@@ -318,6 +331,7 @@ export default function MissionPricingAdminPage() {
                     tradeCategoryId: "",
                     serviceType: "",
                     vehicleType: "",
+                    packageType: "",
                   }))
                 }
                 className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
@@ -339,7 +353,12 @@ export default function MissionPricingAdminPage() {
               className={inputClass}
               value={form.tradeCategoryId}
               onChange={(e) =>
-                setForm((f) => ({ ...f, tradeCategoryId: e.target.value, vehicleType: "" }))
+                setForm((f) => ({
+                  ...f,
+                  tradeCategoryId: e.target.value,
+                  vehicleType: "",
+                  packageType: "",
+                }))
               }
               required
             >
@@ -366,6 +385,24 @@ export default function MissionPricingAdminPage() {
                 {t("missionPricingAdmin.form.vehicleType.motorcycle")}
               </option>
               <option value="car">{t("missionPricingAdmin.form.vehicleType.car")}</option>
+            </select>
+          </div>
+        ) : null}
+
+        {form.categoryMode === "trade" && isDeliveryPricing ? (
+          <div className="sm:col-span-2">
+            <label className={labelClass}>{t("missionPricingAdmin.form.package")}</label>
+            <select
+              className={inputClass}
+              value={form.packageType}
+              onChange={(e) => setForm((f) => ({ ...f, packageType: e.target.value }))}
+            >
+              <option value="">{t("missionPricingAdmin.form.packageType.all")}</option>
+              {['document', 'small', 'standard', 'bulky'].map((type) => (
+                <option key={type} value={type}>
+                  {t(`missionPricingAdmin.form.packageType.${type}`)}
+                </option>
+              ))}
             </select>
           </div>
         ) : null}
@@ -449,6 +486,17 @@ export default function MissionPricingAdminPage() {
                 onChange={(e) => setForm((f) => ({ ...f, pricePerKm: e.target.value }))}
               />
             </div>
+            <div>
+              <label className={labelClass}>{t("missionPricingAdmin.form.priceIncrement")}</label>
+              <input
+                type="number"
+                min="0"
+                step="100"
+                className={inputClass}
+                value={form.priceIncrement}
+                onChange={(e) => setForm((f) => ({ ...f, priceIncrement: e.target.value }))}
+              />
+            </div>
           </>
         ) : null}
 
@@ -501,13 +549,35 @@ export default function MissionPricingAdminPage() {
                         <option value="quote_only">{t("missionPricingAdmin.form.pricingModeQuote")}</option>
                       </select>
                       {editForm.pricingMode === "fixed_estimate" ? (
-                        <input
-                          type="number"
-                          className={`${inputClass} mt-1`}
-                          placeholder={t("missionPricingAdmin.form.basePrice")}
-                          value={editForm.basePrice}
-                          onChange={(e) => setEditForm((f) => ({ ...f, basePrice: e.target.value }))}
-                        />
+                        <div className="mt-1 space-y-1">
+                          <input
+                            type="number"
+                            className={inputClass}
+                            placeholder={t("missionPricingAdmin.form.basePrice")}
+                            value={editForm.basePrice}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, basePrice: e.target.value }))
+                            }
+                          />
+                          <input
+                            type="number"
+                            className={inputClass}
+                            placeholder={t("missionPricingAdmin.form.pricePerKm")}
+                            value={editForm.pricePerKm}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, pricePerKm: e.target.value }))
+                            }
+                          />
+                          <input
+                            type="number"
+                            className={inputClass}
+                            placeholder={t("missionPricingAdmin.form.priceIncrement")}
+                            value={editForm.priceIncrement}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, priceIncrement: e.target.value }))
+                            }
+                          />
+                        </div>
                       ) : null}
                     </td>
                     <td className="px-4 py-3">
@@ -555,7 +625,9 @@ export default function MissionPricingAdminPage() {
                   <>
                     <td className="px-4 py-3">
                       {rule.pricingMode === "fixed_estimate"
-                        ? `${rule.basePrice} ${rule.country?.currency || ""}`
+                        ? `${rule.basePrice} ${rule.country?.currency || ""} + ${rule.pricePerKm || 0}/km${
+                            Number(rule.priceIncrement) > 0 ? ` · ↗ ${rule.priceIncrement}` : ""
+                          }`
                         : t("missionPricingAdmin.form.pricingModeQuote")}
                     </td>
                     <td className="px-4 py-3">{rule.estimatedDelayMinutes} min</td>
