@@ -19,31 +19,31 @@ jest.mock('../i18n/useLocale', () => ({
   }),
 }));
 
-describe('ServicesPage simplifiÃ©e', () => {
+describe('ServicesPage simplifiée', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     getMyServices.mockResolvedValue({
       items: [
-        { id: 1, title: 'DÃ©marche mairie', type: 'administrative', status: 'created' },
+        { id: 1, title: 'Démarche mairie', type: 'administrative', status: 'created' },
         {
           id: 2,
-          title: 'RÃ©parer la plomberie',
+          title: 'Réparer la plomberie',
           type: 'other',
           status: 'in_progress',
           missionStatus: 'IN_PROGRESS',
           tradeCategory: { name: 'Plomberie', slug: 'plomberie' },
         },
-        { id: 3, title: 'Paiement confirmÃ©', type: 'payment', status: 'validated' },
+        { id: 3, title: 'Paiement confirmé', type: 'payment', status: 'validated' },
       ],
     });
   });
 
-  test('sÃ©pare les demandes actives de l historique et ouvre le bon suivi', async () => {
+  test('sépare les demandes actives de l historique et ouvre le bon suivi', async () => {
     render(<ServicesPage />);
 
-    expect(await screen.findByText('DÃ©marche mairie')).toBeInTheDocument();
-    expect(screen.getByText('RÃ©parer la plomberie')).toBeInTheDocument();
-    expect(screen.getByText('Paiement confirmÃ©')).toBeInTheDocument();
+    expect(await screen.findByText('Démarche mairie')).toBeInTheDocument();
+    expect(screen.getByText('Réparer la plomberie')).toBeInTheDocument();
+    expect(screen.getByText('Paiement confirmé')).toBeInTheDocument();
 
     expect(screen.getByRole('link', { name: 'serviceOrders.newRequest' })).toHaveAttribute('href', '/services/new');
     const followLinks = screen.getAllByRole('link', { name: 'serviceOrders.follow' });
@@ -61,9 +61,9 @@ describe('ServicesPage simplifiÃ©e', () => {
     ));
   });
 
-  test('actualise la liste au retour sur l Ã©cran', async () => {
+  test('actualise la liste au retour sur l écran', async () => {
     render(<ServicesPage />);
-    await screen.findByText('DÃ©marche mairie');
+    await screen.findByText('Démarche mairie');
     const callsBeforeFocus = getMyServices.mock.calls.length;
     await act(async () => window.dispatchEvent(new Event('focus')));
     await waitFor(() => expect(getMyServices.mock.calls.length).toBeGreaterThan(callsBeforeFocus));

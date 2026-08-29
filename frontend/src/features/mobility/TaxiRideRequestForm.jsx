@@ -71,7 +71,7 @@ function clearTaxiDraft() {
   try {
     window.localStorage.removeItem(TAXI_DRAFT_KEY);
   } catch (_error) {
-    // Le stockage local peut Ãªtre dÃ©sactivÃ© : la commande reste utilisable sans lui.
+    // Le stockage local peut être désactivé : la commande reste utilisable sans lui.
   }
 }
 
@@ -287,7 +287,7 @@ export default function TaxiRideRequestForm() {
       if (kind === "pickup") setPickupAddress(address);
       else setDestinationAddress(address);
     } catch (_error) {
-      // Les coordonnÃ©es restent valides mÃªme si le libellÃ© Google est momentanÃ©ment indisponible.
+      // Les coordonnées restent valides même si le libellé Google est momentanément indisponible.
     }
   }, []);
 
@@ -807,7 +807,7 @@ export default function TaxiRideRequestForm() {
                 </p>
               )}
               <p className="mt-2 text-sm text-text-secondary">
-                {pickupAddress} <span aria-hidden="true">â†’</span> {destinationAddress}
+                {pickupAddress} <span aria-hidden="true">→</span> {destinationAddress}
               </p>
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-text-secondary">
                 {estimate.distanceKm != null ? (
@@ -867,7 +867,7 @@ export default function TaxiRideRequestForm() {
                       className={inputClass}
                       value={pin}
                       onChange={(event) => setPin(event.target.value)}
-                      placeholder="â€¢â€¢â€¢â€¢"
+                      placeholder="••••"
                       autoFocus
                       required
                     />
@@ -918,4 +918,3 @@ export default function TaxiRideRequestForm() {
     </form>
   );
 }
-

@@ -19,10 +19,10 @@ const labelClass = "mb-1 block text-sm font-medium text-text-primary";
 const DELIVERY_HANDLING_VALUES = ["fragile", "food", "liquid", "medicine", "keep_upright"];
 
 /**
- * Canal opÃ©rateur tÃ©lÃ©phone (docs/DEV_SPEC_TERANGA_v7_PHASE4.md Â§3.2) â€” un admin/master saisit
- * une course/mission au nom d'un appelant sans app. Formulaire volontairement plus lÃ©ger que
- * MissionCreationWizard.jsx (pas d'Ã©tapes, pas de lieux enregistrÃ©s/piÃ¨ces jointes) : c'est un
- * outil opÃ©rateur, pas le parcours client.
+ * Canal opérateur téléphone (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §3.2) — un admin/master saisit
+ * une course/mission au nom d'un appelant sans app. Formulaire volontairement plus léger que
+ * MissionCreationWizard.jsx (pas d'étapes, pas de lieux enregistrés/pièces jointes) : c'est un
+ * outil opérateur, pas le parcours client.
  */
 export default function AdminPhoneOrderPage() {
   const { t } = useTranslation();
@@ -336,7 +336,7 @@ export default function AdminPhoneOrderPage() {
                             {t(`missionTracking.status.${ride.missionStatus}`, { defaultValue: ride.missionStatus })}
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-text-secondary">{[ride.client?.firstName, ride.client?.phone].filter(Boolean).join(" Â· ")}</p>
+                        <p className="mt-1 text-xs text-text-secondary">{[ride.client?.firstName, ride.client?.phone].filter(Boolean).join(" · ")}</p>
                         <p className={`mt-2 text-xs font-semibold ${ride.providerId ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
                           {t(ride.providerId ? "adminPhoneOrder.driverAssigned" : "adminPhoneOrder.driverNeeded")}
                         </p>
@@ -673,4 +673,3 @@ export default function AdminPhoneOrderPage() {
     </div>
   );
 }
-

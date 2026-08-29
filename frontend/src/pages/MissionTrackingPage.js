@@ -20,8 +20,8 @@ import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
 import { Modal, FormField, Button } from "../components/ui";
 import { buildTelHref } from "../utils/phone";
 
-// MÃªme idiome que NavBar.js (poll notifications) : intervalle configurable, pause si l'onglet
-// n'est pas visible â€” docs/DEV_SPEC_TERANGA_v3.md section 4.2 recommande 5-10s.
+// Même idiome que NavBar.js (poll notifications) : intervalle configurable, pause si l'onglet
+// n'est pas visible — docs/DEV_SPEC_TERANGA_v3.md section 4.2 recommande 5-10s.
 const TRACK_POLL_MS = (() => {
   const raw = Number.parseInt(String(process.env.REACT_APP_MISSION_TRACK_POLL_MS || ""), 10);
   if (!Number.isFinite(raw) || raw < 30000) return 60000;
@@ -48,7 +48,7 @@ const RATING_STATUSES = [
   "RESOLVED_CLOSED",
 ];
 
-// Action suivante pour un exÃ©cutant (agent ou prestataire) â€” supervision passive : un agent
+// Action suivante pour un exécutant (agent ou prestataire) — supervision passive : un agent
 // superviseur (isExecutor=false) ne voit jamais ces boutons, voir mission.controller.js
 // updateStatus.
 const EXECUTOR_NEXT_STATUS = {
@@ -195,7 +195,7 @@ function ClientRideProgress({ status, t, translationRoot = "taxiRides" }) {
                   : "border-border bg-surface-main text-text-muted"
               }`}
             >
-              {complete ? "âœ“" : index + 1}
+              {complete ? "✓" : index + 1}
             </span>
             <span className={`mt-1.5 text-[10px] leading-tight sm:text-xs ${current || complete ? "font-semibold text-text-primary" : "text-text-muted"}`}>
               {t(`${translationRoot}.progress.${step.key}`)}
@@ -332,7 +332,7 @@ export default function MissionTrackingPage() {
               headingDegrees: heading != null && Number.isFinite(heading) ? heading : null,
             });
           } catch (_error) {
-            // Best effort : le statut et la course restent utilisables avec un rÃ©seau faible.
+            // Best effort : le statut et la course restent utilisables avec un réseau faible.
           } finally {
             inFlight = false;
           }
@@ -787,7 +787,7 @@ export default function MissionTrackingPage() {
             {track.recipientName ? <p className="mt-1 text-text-secondary">{track.recipientName}</p> : null}
             {track.recipientPhone ? (
               <a className="mt-1 inline-flex min-h-11 items-center text-primary underline" href={buildTelHref(track.recipientPhone)}>
-                {t("deliveryOrders.callRecipient")} Â· {track.recipientPhone}
+                {t("deliveryOrders.callRecipient")} · {track.recipientPhone}
               </a>
             ) : null}
           </div>
@@ -1239,4 +1239,3 @@ export default function MissionTrackingPage() {
     </div>
   );
 }
-

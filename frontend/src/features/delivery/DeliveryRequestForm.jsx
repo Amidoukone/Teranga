@@ -72,7 +72,7 @@ function clearDeliveryDraft() {
   try {
     window.localStorage.removeItem(DELIVERY_DRAFT_KEY);
   } catch (_error) {
-    // La livraison reste utilisable quand le stockage local est dÃ©sactivÃ©.
+    // La livraison reste utilisable quand le stockage local est désactivé.
   }
 }
 
@@ -221,7 +221,7 @@ export default function DeliveryRequestForm() {
           })
         );
       } catch (_error) {
-        // La saisie reste disponible si localStorage est bloquÃ©.
+        // La saisie reste disponible si localStorage est bloqué.
       }
     }, 250);
     return () => window.clearTimeout(timeout);
@@ -836,7 +836,7 @@ export default function DeliveryRequestForm() {
                 {t(`deliveryBooking.package.${packageType}.label`)}
               </p>
               <p className="mt-1 text-sm text-text-secondary">
-                {pickupAddress} <span aria-hidden="true">â†’</span> {destinationAddress}
+                {pickupAddress} <span aria-hidden="true">→</span> {destinationAddress}
               </p>
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-text-secondary">
                 {estimate.distanceKm != null ? (
@@ -902,7 +902,7 @@ export default function DeliveryRequestForm() {
                       className={inputClass}
                       value={pin}
                       onChange={(event) => setPin(event.target.value)}
-                      placeholder="â€¢â€¢â€¢â€¢"
+                      placeholder="••••"
                       autoFocus
                       required
                     />
@@ -942,4 +942,3 @@ export default function DeliveryRequestForm() {
     </form>
   );
 }
-

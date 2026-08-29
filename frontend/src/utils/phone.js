@@ -28,6 +28,5 @@ const COUNTRY_CALLING_CODES = {
 export function getPhonePlaceholder(country) {
   const iso = String(country?.isoCode || '').toUpperCase();
   const code = COUNTRY_CALLING_CODES[iso] || String(country?.contactPhone || '').match(/^\+(\d{1,4})/)?.[1];
-  return code ? `+${code} â€¦` : '+â€¦';
+  return code ? `+${code} …` : '+…';
 }
-

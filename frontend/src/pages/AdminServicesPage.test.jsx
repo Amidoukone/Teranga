@@ -18,7 +18,7 @@ jest.mock('../services/services', () => ({ updateService: jest.fn() }));
 jest.mock('../utils/notify', () => ({ notify: Object.assign(jest.fn(), { success: jest.fn() }) }));
 jest.mock('../utils/role', () => ({ normalizeRole: (role) => role, isMasterUser: () => false }));
 
-describe('AdminServicesPage simplifiÃ©e', () => {
+describe('AdminServicesPage simplifiée', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     me.mockResolvedValue({ user: { id: 1, role: 'admin' } });
@@ -34,7 +34,7 @@ describe('AdminServicesPage simplifiÃ©e', () => {
               id: 21,
               title: 'Retirer un document',
               type: 'administrative',
-              typeLabel: 'DÃ©marche administrative',
+              typeLabel: 'Démarche administrative',
               status: 'created',
               executionType: 'agent',
               agentId: null,
@@ -50,7 +50,7 @@ describe('AdminServicesPage simplifiÃ©e', () => {
     api.post.mockResolvedValue({ data: {} });
   });
 
-  test('place les demandes sans intervenant en prioritÃ© et les affecte directement', async () => {
+  test('place les demandes sans intervenant en priorité et les affecte directement', async () => {
     render(<AdminServicesPage />);
 
     expect(await screen.findByText('serviceAdmin.priorityTitle')).toBeInTheDocument();

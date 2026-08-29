@@ -17,13 +17,13 @@ jest.mock('../i18n/useLocale', () => ({
   useLocale: () => ({ formatDate: (value) => value, formatNumber: (value) => String(value) }),
 }));
 
-describe('AgentServicesPage simplifiÃ©e', () => {
+describe('AgentServicesPage simplifiée', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     getAgentServices.mockResolvedValue([
       {
         id: 9,
-        title: 'RÃ©cupÃ©rer un document',
+        title: 'Récupérer un document',
         type: 'administrative',
         status: 'created',
         client: { firstName: 'Awa', phone: '+22370000000' },
@@ -32,7 +32,7 @@ describe('AgentServicesPage simplifiÃ©e', () => {
     startService.mockResolvedValue({ id: 9, status: 'in_progress' });
   });
 
-  test('dÃ©marre le service avec le bouton principal', async () => {
+  test('démarre le service avec le bouton principal', async () => {
     render(<AgentServicesPage />);
     await userEvent.click(await screen.findByRole('button', { name: 'serviceTracking.actions.start' }));
     await waitFor(() => expect(startService).toHaveBeenCalledWith(9));
