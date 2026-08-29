@@ -1,8 +1,8 @@
 // frontend/src/pages/MyMissionsPage.jsx
-// "Mes missions" — portail agent (superviseur ou exécutant) / prestataire exécutant sur les
-// missions filière (executionType='provider', voir docs/DEV_SPEC_TERANGA_v3.md section 2/3).
+// "Mes missions" â€” portail agent (superviseur ou exÃ©cutant) / prestataire exÃ©cutant sur les
+// missions filiÃ¨re (executionType='provider', voir docs/DEV_SPEC_TERANGA_v3.md section 2/3).
 // Les missions classiques agent (executionType='agent') restent sur AgentServicesPage.js /
-// GET /services/agent/services — non dupliquées ici (GET /v1/missions/mine les exclut déjà).
+// GET /services/agent/services â€” non dupliquÃ©es ici (GET /v1/missions/mine les exclut dÃ©jÃ ).
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -21,7 +21,7 @@ import {
 const AVAILABILITY_VALUES = ['available', 'busy', 'offline'];
 const DRIVER_RIDES_POLL_MS = (() => {
   const raw = Number.parseInt(String(process.env.REACT_APP_DRIVER_RIDES_POLL_MS || ''), 10);
-  if (!Number.isFinite(raw) || raw < 5000) return 15000;
+  if (!Number.isFinite(raw) || raw < 30000) return 60000;
   return raw;
 })();
 const AVAILABILITY_TONE = {
@@ -37,7 +37,7 @@ function isDocumentVisible() {
 function displayClient(client) {
   if (!client) return null;
   const name = [client.firstName, client.lastName].filter(Boolean).join(' ');
-  return [name || null, client.phone || null].filter(Boolean).join(' · ') || null;
+  return [name || null, client.phone || null].filter(Boolean).join(' Â· ') || null;
 }
 
 function statusBadgeClass(missionStatus) {
@@ -205,8 +205,8 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     try {
       if (availabilityStatus === 'available' && dispatchPresence?.eligibleVehicles?.length) {
         if (!activeVehicleId) throw new Error(t('myMissionsPage.errors.vehicleRequired'));
-        // La position améliore le classement du chauffeur, mais une autorisation refusée ou un
-        // réseau faible ne doit jamais empêcher de recevoir une course.
+        // La position amÃ©liore le classement du chauffeur, mais une autorisation refusÃ©e ou un
+        // rÃ©seau faible ne doit jamais empÃªcher de recevoir une course.
         if (navigator.geolocation) {
           try {
             const position = await new Promise((resolve, reject) => {
@@ -228,7 +228,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
               liveLocation: locationResult.location,
             }));
           } catch (_locationError) {
-            // Best effort uniquement : la disponibilité est enregistrée juste après.
+            // Best effort uniquement : la disponibilitÃ© est enregistrÃ©e juste aprÃ¨s.
           }
         }
       }
@@ -339,7 +339,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
               >
                 {dispatchPresence.eligibleVehicles.map((vehicle) => (
                   <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.brand} {vehicle.model} · {vehicle.plateNumber}
+                    {vehicle.brand} {vehicle.model} Â· {vehicle.plateNumber}
                   </option>
                 ))}
               </select>
@@ -383,7 +383,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
                 >
                   {dispatchPresence.eligibleVehicles.map((vehicle) => (
                     <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.brand} {vehicle.model} · {vehicle.plateNumber}
+                      {vehicle.brand} {vehicle.model} Â· {vehicle.plateNumber}
                     </option>
                   ))}
                 </select>
@@ -519,3 +519,4 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     </div>
   );
 }
+

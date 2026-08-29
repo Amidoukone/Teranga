@@ -16,12 +16,13 @@ import { buildTelHref } from "../utils/phone";
 const inputClass =
   "w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500";
 const labelClass = "mb-1 block text-sm font-medium text-text-primary";
+const DELIVERY_HANDLING_VALUES = ["fragile", "food", "liquid", "medicine", "keep_upright"];
 
 /**
- * Canal opérateur téléphone (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §3.2) — un admin/master saisit
- * une course/mission au nom d'un appelant sans app. Formulaire volontairement plus léger que
- * MissionCreationWizard.jsx (pas d'étapes, pas de lieux enregistrés/pièces jointes) : c'est un
- * outil opérateur, pas le parcours client.
+ * Canal opÃ©rateur tÃ©lÃ©phone (docs/DEV_SPEC_TERANGA_v7_PHASE4.md Â§3.2) â€” un admin/master saisit
+ * une course/mission au nom d'un appelant sans app. Formulaire volontairement plus lÃ©ger que
+ * MissionCreationWizard.jsx (pas d'Ã©tapes, pas de lieux enregistrÃ©s/piÃ¨ces jointes) : c'est un
+ * outil opÃ©rateur, pas le parcours client.
  */
 export default function AdminPhoneOrderPage() {
   const { t } = useTranslation();
@@ -41,6 +42,10 @@ export default function AdminPhoneOrderPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [requestedVehicleType, setRequestedVehicleType] = useState("motorcycle");
+  const [packageType, setPackageType] = useState("small");
+  const [packageHandling, setPackageHandling] = useState([]);
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
 
   const [address, setAddress] = useState("");
   const [coordinates, setCoordinates] = useState(null);
@@ -162,6 +167,10 @@ export default function AdminPhoneOrderPage() {
     setTitle("");
     setDescription("");
     setRequestedVehicleType("motorcycle");
+    setPackageType("small");
+    setPackageHandling([]);
+    setRecipientName("");
+    setRecipientPhone("");
     setAddress("");
     setCoordinates(null);
     setPickupAddress("");
@@ -198,6 +207,12 @@ export default function AdminPhoneOrderPage() {
       if (category.tradeCategoryId) payload.tradeCategoryId = Number(category.tradeCategoryId);
       else payload.serviceType = category.serviceType;
       if (isMobilite) payload.requestedVehicleType = requestedVehicleType;
+      if (deliveryMode) {
+        payload.packageType = packageType;
+        payload.packageHandling = packageHandling;
+        if (recipientName.trim()) payload.recipientName = recipientName.trim();
+        if (recipientPhone.trim()) payload.recipientPhone = recipientPhone.trim();
+      }
 
       if (address.trim()) payload.address = address.trim();
       if (coordinates?.latitude != null) payload.latitude = coordinates.latitude;
@@ -321,7 +336,7 @@ export default function AdminPhoneOrderPage() {
                             {t(`missionTracking.status.${ride.missionStatus}`, { defaultValue: ride.missionStatus })}
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-text-secondary">{[ride.client?.firstName, ride.client?.phone].filter(Boolean).join(" · ")}</p>
+                        <p className="mt-1 text-xs text-text-secondary">{[ride.client?.firstName, ride.client?.phone].filter(Boolean).join(" Â· ")}</p>
                         <p className={`mt-2 text-xs font-semibold ${ride.providerId ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
                           {t(ride.providerId ? "adminPhoneOrder.driverAssigned" : "adminPhoneOrder.driverNeeded")}
                         </p>
@@ -520,6 +535,39 @@ export default function AdminPhoneOrderPage() {
             </div>
           ) : null}
 
+          {deliveryMode ? (
+            <div className="mt-5 rounded-xl border border-border bg-surface-main/60 p-4">
+              <label className={labelClass}>{t("deliveryOrders.packageTypeLabel")}</label>
+              <select className={inputClass} value={packageType} onChange={(e) => setPackageType(e.target.value)}>
+                {['document', 'small', 'standard', 'bulky'].map((value) => (
+                  <option key={value} value={value}>{t(`deliveryOrders.package.${value}.label`)}</option>
+                ))}
+              </select>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {DELIVERY_HANDLING_VALUES.map((value) => (
+                  <label key={value} className="flex min-h-11 items-center gap-2 text-sm text-text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={packageHandling.includes(value)}
+                      onChange={() => setPackageHandling((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value])}
+                    />
+                    {t(`deliveryOrders.handling.${value}`)}
+                  </label>
+                ))}
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>{t("deliveryOrders.recipientNameLabel")}</label>
+                  <input className={inputClass} value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder={t("deliveryOrders.recipientNamePlaceholder")} />
+                </div>
+                <div>
+                  <label className={labelClass}>{t("deliveryOrders.recipientPhoneLabel")}</label>
+                  <input type="tel" inputMode="tel" className={inputClass} value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)} placeholder={t("deliveryOrders.recipientPhonePlaceholder")} />
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {!taxiMode && !deliveryMode ? (
             <div className="mt-5">
               <label className={labelClass}>{t("adminPhoneOrder.titleLabel")}</label>
@@ -625,3 +673,4 @@ export default function AdminPhoneOrderPage() {
     </div>
   );
 }
+

@@ -1062,7 +1062,16 @@
           "serviceType": {
             "type": "string",
             "enum": ["errand", "administrative", "payment", "money_transfer", "other"]
-          }
+          },
+          "requestedVehicleType": { "type": "string", "enum": ["motorcycle", "car"] },
+          "packageType": {
+            "type": "string",
+            "enum": ["document", "small", "standard", "bulky"]
+          },
+          "pickupLatitude": { "type": "number" },
+          "pickupLongitude": { "type": "number" },
+          "latitude": { "type": "number" },
+          "longitude": { "type": "number" }
         },
         "additionalProperties": false
       },
@@ -1075,6 +1084,7 @@
           "basePrice": { "type": ["number", "null"] },
           "minPrice": { "type": ["number", "null"] },
           "pricePerKm": { "type": "number" },
+          "priceIncrement": { "type": "number" },
           "estimatedDelayMinutes": { "type": "number" },
           "note": { "type": "string" }
         },
@@ -1100,7 +1110,15 @@
           },
           "title": { "type": "string", "minLength": 3, "maxLength": 150 },
           "description": { "type": "string", "maxLength": 2000 },
+          "packageType": {
+            "type": "string",
+            "enum": ["document", "small", "standard", "bulky"]
+          },
+          "requestedVehicleType": { "type": "string", "enum": ["motorcycle", "car"] },
           "savedLocationId": { "type": "number" },
+          "pickupAddress": { "type": "string", "maxLength": 255 },
+          "pickupLatitude": { "type": "number" },
+          "pickupLongitude": { "type": "number" },
           "address": { "type": "string", "maxLength": 255 },
           "latitude": { "type": "number" },
           "longitude": { "type": "number" }
@@ -1178,10 +1196,16 @@
           "regionId": { "type": ["number", "null"] },
           "tradeCategoryId": { "type": ["number", "null"] },
           "serviceType": { "type": ["string", "null"] },
+          "vehicleType": { "type": ["string", "null"], "enum": ["motorcycle", "car", null] },
+          "packageType": {
+            "type": ["string", "null"],
+            "enum": ["document", "small", "standard", "bulky", null]
+          },
           "pricingMode": { "type": "string", "enum": ["fixed_estimate", "quote_only"] },
           "basePrice": { "type": ["number", "null"] },
           "minPrice": { "type": ["number", "null"] },
           "pricePerKm": { "type": "number" },
+          "priceIncrement": { "type": "number" },
           "estimatedDelayMinutes": { "type": "number" },
           "isActive": { "type": "boolean" }
         },
@@ -1217,10 +1241,16 @@
             "type": "string",
             "enum": ["errand", "administrative", "payment", "money_transfer", "other"]
           },
+          "vehicleType": { "type": "string", "enum": ["motorcycle", "car"] },
+          "packageType": {
+            "type": "string",
+            "enum": ["document", "small", "standard", "bulky"]
+          },
           "pricingMode": { "type": "string", "enum": ["fixed_estimate", "quote_only"] },
           "basePrice": { "type": "number", "minimum": 0 },
           "minPrice": { "type": "number", "minimum": 0 },
           "pricePerKm": { "type": "number", "minimum": 0 },
+          "priceIncrement": { "type": "number", "minimum": 0 },
           "estimatedDelayMinutes": { "type": "number", "minimum": 0 }
         },
         "additionalProperties": false
