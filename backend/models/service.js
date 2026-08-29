@@ -2,6 +2,7 @@
 const { Model } = require('sequelize');
 const { MISSION_STATUS_VALUES } = require('../src/constants/missionStatus');
 const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../src/constants/deliveryPackage');
+const { DELIVERY_HANDLING_VALUES } = require('../src/constants/deliveryHandling');
 
 module.exports = (sequelize, DataTypes) => {
   class Service extends Model {
@@ -11,10 +12,10 @@ module.exports = (sequelize, DataTypes) => {
       Service.belongsTo(models.User, { foreignKey: 'agentId', as: 'agent' });
       Service.belongsTo(models.User, { foreignKey: 'createdById', as: 'creator' });
 
-      // Lien vers une propriété (optionnel)
+      // Lien vers une propriÃ©tÃ© (optionnel)
       Service.belongsTo(models.Property, { foreignKey: 'propertyId', as: 'property' });
 
-      // Tâches liées au service
+      // TÃ¢ches liÃ©es au service
       Service.hasMany(models.Task, {
         foreignKey: 'serviceId',
         as: 'tasks',
@@ -23,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
       });
 
       /**
-       * 🌍 Multi-pays (associations logiques uniquement)
+       * ðŸŒ Multi-pays (associations logiques uniquement)
        * - Pas de FK DB pour garder les imports MySQL portables
        * - Permet include: [{ model: Country, as: 'country' }]
        */
@@ -42,7 +43,7 @@ module.exports = (sequelize, DataTypes) => {
       }
 
       /**
-       * 🛠️ Teranga Pro (Dev spec v3, associations logiques uniquement —
+       * ðŸ› ï¸ Teranga Pro (Dev spec v3, associations logiques uniquement â€”
        * providerId/tradeCategoryId ne portent pas de FK physique sur cette
        * table historique, voir docs/DEV_SPEC_TERANGA_v3.md section 0.6.a)
        */
@@ -88,9 +89,9 @@ module.exports = (sequelize, DataTypes) => {
         });
       }
 
-      // Pièces jointes de la création guidée (section 4.1, étape 3 : photo + note vocale) —
-      // alias distinct de Task.evidences pour rester lisible (deux chemins d'accès différents
-      // vers la même table evidences).
+      // PiÃ¨ces jointes de la crÃ©ation guidÃ©e (section 4.1, Ã©tape 3 : photo + note vocale) â€”
+      // alias distinct de Task.evidences pour rester lisible (deux chemins d'accÃ¨s diffÃ©rents
+      // vers la mÃªme table evidences).
       if (models.Evidence) {
         Service.hasMany(models.Evidence, {
           foreignKey: 'serviceId',
@@ -106,7 +107,7 @@ module.exports = (sequelize, DataTypes) => {
       agentId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
       createdById: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
 
-      // 🔥 Correction : devient facultatif
+      // ðŸ”¥ Correction : devient facultatif
       propertyId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
 
       type: {
@@ -128,12 +129,12 @@ module.exports = (sequelize, DataTypes) => {
 
       /**
        * ============================================================
-       * 🌍 Géolocalisation mission (Dev spec v3, section 0.5 / 4.3)
+       * ðŸŒ GÃ©olocalisation mission (Dev spec v3, section 0.5 / 4.3)
        * ============================================================
-       * - Nullable en DB (historique sans coordonnées), mais requis par
-       *   Joi sur toute NOUVELLE création de mission à partir de ce lot.
-       * - Alimenté soit par Places Autocomplete (frontend), soit par un
-       *   géocodage serveur de `address` (voir geocoding.service.js).
+       * - Nullable en DB (historique sans coordonnÃ©es), mais requis par
+       *   Joi sur toute NOUVELLE crÃ©ation de mission Ã  partir de ce lot.
+       * - AlimentÃ© soit par Places Autocomplete (frontend), soit par un
+       *   gÃ©ocodage serveur de `address` (voir geocoding.service.js).
        */
       latitude: { type: DataTypes.DECIMAL(10, 7), allowNull: true },
       longitude: { type: DataTypes.DECIMAL(10, 7), allowNull: true },
@@ -153,26 +154,26 @@ module.exports = (sequelize, DataTypes) => {
 
       /**
        * ============================================================
-       * 🌍 Multi-pays / franchise (NOUVEAU – non bloquant)
+       * ðŸŒ Multi-pays / franchise (NOUVEAU â€“ non bloquant)
        * ============================================================
-       * - Ajouté par migration : services.countryId / services.regionId
+       * - AjoutÃ© par migration : services.countryId / services.regionId
        * - Nullable pour ne rien casser en prod
        * - Rempli par :
-       *    • backfill (Mali/Bamako) migration
-       *    • resolveGeoScope / héritage user/franchise côté backend
+       *    â€¢ backfill (Mali/Bamako) migration
+       *    â€¢ resolveGeoScope / hÃ©ritage user/franchise cÃ´tÃ© backend
        */
       countryId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
       regionId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
 
       /**
        * ============================================================
-       * 🛠️ Teranga Pro / App (Dev spec v3 — Lot 1, non bloquant)
+       * ðŸ› ï¸ Teranga Pro / App (Dev spec v3 â€” Lot 1, non bloquant)
        * ============================================================
-       * - executionType/providerId/tradeCategoryId/warrantyExpiresAt ajoutés
+       * - executionType/providerId/tradeCategoryId/warrantyExpiresAt ajoutÃ©s
        *   par migration 20260724103400-add-mission-fields-to-services.js
        * - missionStatus est ADDITIF : ne remplace pas `status` legacy
-       *   ci-dessus. Synchronisation applicative prévue en Lot 2/3
-       *   (docs/DEV_SPEC_TERANGA_v3.md section 0.6.b) — non implémentée ici.
+       *   ci-dessus. Synchronisation applicative prÃ©vue en Lot 2/3
+       *   (docs/DEV_SPEC_TERANGA_v3.md section 0.6.b) â€” non implÃ©mentÃ©e ici.
        */
       executionType: {
         type: DataTypes.ENUM('agent', 'provider'),
@@ -191,13 +192,13 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       warrantyExpiresAt: { type: DataTypes.DATE, allowNull: true },
-      // Idempotence du job d'alerte de seuil (docs/DEV_SPEC_TERANGA_v4_PHASE0.md §1.2) —
-      // réinitialisée à chaque transition de statut par missionStatus.service.js.
+      // Idempotence du job d'alerte de seuil (docs/DEV_SPEC_TERANGA_v4_PHASE0.md Â§1.2) â€”
+      // rÃ©initialisÃ©e Ã  chaque transition de statut par missionStatus.service.js.
       thresholdAlertSentAt: { type: DataTypes.DATE, allowNull: true },
 
-      // Sous-mission mobilité interne, Cas 1 (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §4) —
-      // `address`/`latitude`/`longitude` ci-dessus restent la DÉPOSE, ces colonnes portent le
-      // RETRAIT. `parentServiceId` rattache la sous-mission à la mission mère (association
+      // Sous-mission mobilitÃ© interne, Cas 1 (docs/DEV_SPEC_TERANGA_v5_PHASE2.md Â§4) â€”
+      // `address`/`latitude`/`longitude` ci-dessus restent la DÃ‰POSE, ces colonnes portent le
+      // RETRAIT. `parentServiceId` rattache la sous-mission Ã  la mission mÃ¨re (association
       // logique, invisible du client).
       parentServiceId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
       pickupAddress: { type: DataTypes.STRING(255), allowNull: true },
@@ -215,9 +216,35 @@ module.exports = (sequelize, DataTypes) => {
         field: 'package_type',
         validate: { isIn: [DELIVERY_PACKAGE_TYPE_VALUES] },
       },
+      recipientName: {
+        type: DataTypes.STRING(120),
+        allowNull: true,
+        field: 'recipient_name',
+      },
+      recipientPhone: {
+        type: DataTypes.STRING(40),
+        allowNull: true,
+        field: 'recipient_phone',
+      },
+      packageHandling: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        field: 'package_handling',
+        validate: {
+          isValidHandling(value) {
+            if (value == null) return;
+            if (
+              !Array.isArray(value) ||
+              value.some((item) => !DELIVERY_HANDLING_VALUES.includes(item))
+            ) {
+              throw new Error('PrÃ©cautions de colis invalides');
+            }
+          },
+        },
+      },
 
-      // Fenêtre d'acceptation du dispatch mobilité (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2) —
-      // posée uniquement pour la filière Mobilité, NULL partout ailleurs.
+      // FenÃªtre d'acceptation du dispatch mobilitÃ© (docs/DEV_SPEC_TERANGA_v5_PHASE2.md Â§5.2) â€”
+      // posÃ©e uniquement pour la filiÃ¨re MobilitÃ©, NULL partout ailleurs.
       acceptanceDeadlineAt: { type: DataTypes.DATE, allowNull: true },
 
       startAuthorizedAt: {
@@ -241,8 +268,8 @@ module.exports = (sequelize, DataTypes) => {
         field: 'start_override_reason',
       },
 
-      // Réconciliation cash à la remise, filière livraison (docs/DEV_SPEC_TERANGA_v6_PHASE3.md
-      // §5) — déclaré par l'exécutant à la transition COMPLETED, NULL partout ailleurs.
+      // RÃ©conciliation cash Ã  la remise, filiÃ¨re livraison (docs/DEV_SPEC_TERANGA_v6_PHASE3.md
+      // Â§5) â€” dÃ©clarÃ© par l'exÃ©cutant Ã  la transition COMPLETED, NULL partout ailleurs.
       collectedAmount: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
     },
     {
@@ -251,9 +278,9 @@ module.exports = (sequelize, DataTypes) => {
       tableName: 'services',
 
       /**
-       * ✅ Timestamps
-       * Aligné avec ta prod : createdAt/updatedAt camelCase
-       * (ta config globale timestamps:true est déjà en place)
+       * âœ… Timestamps
+       * AlignÃ© avec ta prod : createdAt/updatedAt camelCase
+       * (ta config globale timestamps:true est dÃ©jÃ  en place)
        */
       timestamps: true,
     }
@@ -261,3 +288,4 @@ module.exports = (sequelize, DataTypes) => {
 
   return Service;
 };
+

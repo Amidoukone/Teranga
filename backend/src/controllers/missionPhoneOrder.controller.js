@@ -12,20 +12,21 @@ const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
 const { resolveGeoScope, countryHasActiveMaster, rotateRecoveryCodes } = require('./auth.controller');
 const { PICKUP_REQUIRED_SLUGS } = require('./mission.controller');
 const { isGlobalAdmin } = require('../utils/geoScope');
+const { resolveDeliveryDetails } = require('../utils/deliveryDetails');
 const logger = require('../utils/logger');
 
 /**
- * Canal opérateur téléphone (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §3) — un admin/master saisit
+ * Canal opÃ©rateur tÃ©lÃ©phone (docs/DEV_SPEC_TERANGA_v7_PHASE4.md Â§3) â€” un admin/master saisit
  * une mission au nom d'un appelant qui n'a pas l'app. Distinct de missionRequest.controller.js
- * (point d'entrée invité homepage) : celui-ci pose les cookies d'auth du compte trouvé/créé
- * dans la réponse, ce qui écraserait la session de l'opérateur si réutilisé tel quel depuis
- * son navigateur. Ici, aucune session n'est ouverte pour le client — l'opérateur reste
- * connecté avec son propre compte admin, et la mission créée est immédiatement exploitable
- * pour affectation (POST .../assign) depuis la même vue.
+ * (point d'entrÃ©e invitÃ© homepage) : celui-ci pose les cookies d'auth du compte trouvÃ©/crÃ©Ã©
+ * dans la rÃ©ponse, ce qui Ã©craserait la session de l'opÃ©rateur si rÃ©utilisÃ© tel quel depuis
+ * son navigateur. Ici, aucune session n'est ouverte pour le client â€” l'opÃ©rateur reste
+ * connectÃ© avec son propre compte admin, et la mission crÃ©Ã©e est immÃ©diatement exploitable
+ * pour affectation (POST .../assign) depuis la mÃªme vue.
  *
- * Pas de vérification de PIN pour un compte existant : l'opérateur n'a pas le PIN de
- * l'appelant, et l'autorisation vient de son propre rôle admin, pas d'un secret client (une
- * différence assumée avec le flux invité homepage, où n'importe qui peut appeler l'endpoint).
+ * Pas de vÃ©rification de PIN pour un compte existant : l'opÃ©rateur n'a pas le PIN de
+ * l'appelant, et l'autorisation vient de son propre rÃ´le admin, pas d'un secret client (une
+ * diffÃ©rence assumÃ©e avec le flux invitÃ© homepage, oÃ¹ n'importe qui peut appeler l'endpoint).
  */
 exports.create = async (req, res) => {
   try {
@@ -47,18 +48,21 @@ exports.create = async (req, res) => {
       pickupLongitude: rawPickupLongitude,
       requestedVehicleType: rawRequestedVehicleType,
       packageType: rawPackageType,
+      recipientName: rawRecipientName,
+      recipientPhone: rawRecipientPhone,
+      packageHandling: rawPackageHandling,
     } = req.body;
 
     const phone = normalizePhone(rawPhone);
     if (!isValidPhone(phone)) {
-      return res.status(400).json({ error: 'Téléphone invalide' });
+      return res.status(400).json({ error: 'TÃ©lÃ©phone invalide' });
     }
 
-    // Un master (admin scopé pays) ne peut saisir une course que pour son propre pays — même
-    // règle d'écriture que le reste de l'app (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §4). Sans ce
+    // Un master (admin scopÃ© pays) ne peut saisir une course que pour son propre pays â€” mÃªme
+    // rÃ¨gle d'Ã©criture que le reste de l'app (docs/DEV_SPEC_TERANGA_v7_PHASE4.md Â§4). Sans ce
     // garde, `requireRoles('admin')` seul laisserait un master agir hors de son scope.
     if (!isGlobalAdmin(req.user) && Number(req.user.countryId) !== Number(countryId)) {
-      return res.status(403).json({ error: 'Accès interdit hors de votre pays' });
+      return res.status(403).json({ error: 'AccÃ¨s interdit hors de votre pays' });
     }
 
     let tradeCategory = null;
@@ -67,7 +71,19 @@ exports.create = async (req, res) => {
         where: { id: tradeCategoryId, isActive: true },
       });
       if (!tradeCategory) {
-        return res.status(400).json({ error: 'Filière invalide ou inactive' });
+        return res.status(400).json({ error: 'FiliÃ¨re invalide ou inactive' });
+      }
+    }
+
+    if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug)) {
+      const hasDestination = Boolean(String(address || '').trim()) ||
+        (rawLatitude != null && rawLongitude != null);
+      const hasPickup = Boolean(String(rawPickupAddress || '').trim()) ||
+        (rawPickupLatitude != null && rawPickupLongitude != null);
+      if (!hasDestination || !hasPickup) {
+        return res.status(400).json({
+          error: 'Le point de dÃ©part et la destination sont obligatoires pour cette filiÃ¨re',
+        });
       }
     }
 
@@ -80,7 +96,7 @@ exports.create = async (req, res) => {
       if (user.role !== 'client') {
         return res.status(409).json({
           error:
-            'Ce numéro est associé à un compte existant non-client. Utilisez son espace habituel pour cette demande.',
+            'Ce numÃ©ro est associÃ© Ã  un compte existant non-client. Utilisez son espace habituel pour cette demande.',
         });
       }
     } else {
@@ -96,8 +112,8 @@ exports.create = async (req, res) => {
         });
       }
 
-      // Pin fourni par l'opérateur (l'appelant l'a choisi au téléphone) ou généré
-      // aléatoirement — dans les deux cas transmis à l'appelant via recoveryCodes/réponse,
+      // Pin fourni par l'opÃ©rateur (l'appelant l'a choisi au tÃ©lÃ©phone) ou gÃ©nÃ©rÃ©
+      // alÃ©atoirement â€” dans les deux cas transmis Ã  l'appelant via recoveryCodes/rÃ©ponse,
       // jamais silencieusement perdu (le compte doit rester accessible ensuite).
       const effectivePin = pin && String(pin).trim() ? String(pin).trim() : crypto.randomBytes(6).toString('hex');
       if (!pin) generatedPin = effectivePin;
@@ -130,10 +146,15 @@ exports.create = async (req, res) => {
     let geocodedAdminAreaName = null;
 
     if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && trimmedAddress) {
-      const geocoded = await geocodeAddress(trimmedAddress);
+      const geocoded = (await geocodeAddress(trimmedAddress)) || {
+        latitude: null,
+        longitude: null,
+        countryIso: null,
+        adminAreaName: null,
+      };
       if (!geocoded) {
         return res.status(400).json({
-          error: 'Adresse introuvable. Veuillez préciser un lieu plus précis.',
+          error: 'Adresse introuvable. Veuillez prÃ©ciser un lieu plus prÃ©cis.',
         });
       }
       latitude = geocoded.latitude;
@@ -147,16 +168,19 @@ exports.create = async (req, res) => {
       longitude = null;
     }
 
-    // Retrait/départ — même règle que mission.controller.js exports.create (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §1.1/§3.1).
+    // Retrait/dÃ©part â€” mÃªme rÃ¨gle que mission.controller.js exports.create (docs/DEV_SPEC_TERANGA_v7_PHASE4.md Â§1.1/Â§3.1).
     let pickupAddress = rawPickupAddress ? String(rawPickupAddress).trim() : null;
     let pickupLatitude = rawPickupLatitude != null ? Number(rawPickupLatitude) : null;
     let pickupLongitude = rawPickupLongitude != null ? Number(rawPickupLongitude) : null;
 
     if (pickupAddress && (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude))) {
-      const geocodedPickup = await geocodeAddress(pickupAddress);
+      const geocodedPickup = (await geocodeAddress(pickupAddress)) || {
+        latitude: null,
+        longitude: null,
+      };
       if (!geocodedPickup) {
         return res.status(400).json({
-          error: 'Adresse de départ introuvable. Veuillez préciser un lieu plus précis.',
+          error: 'Adresse de dÃ©part introuvable. Veuillez prÃ©ciser un lieu plus prÃ©cis.',
         });
       }
       pickupLatitude = geocodedPickup.latitude;
@@ -166,12 +190,13 @@ exports.create = async (req, res) => {
     if (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude)) {
       pickupLatitude = null;
       pickupLongitude = null;
-      pickupAddress = null;
+      pickupAddress = pickupAddress || null;
     }
 
-    if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug) && (pickupLatitude === null || pickupLongitude === null)) {
+    if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug) &&
+      !pickupAddress && (pickupLatitude === null || pickupLongitude === null)) {
       return res.status(400).json({
-        error: 'Le point de départ est obligatoire pour cette filière',
+        error: 'Le point de dÃ©part est obligatoire pour cette filiÃ¨re',
       });
     }
 
@@ -192,9 +217,14 @@ exports.create = async (req, res) => {
     const requestedVehicleType =
       tradeCategory?.slug === 'mobilite' ? rawRequestedVehicleType || 'motorcycle' : null;
     const packageType = tradeCategory?.slug === 'livraison' ? rawPackageType || 'small' : null;
+    const deliveryDetails = resolveDeliveryDetails(tradeCategory, {
+      recipientName: rawRecipientName,
+      recipientPhone: rawRecipientPhone,
+      packageHandling: rawPackageHandling,
+    });
 
-    // Estimation pour renseigner le budget (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §3.1) — même
-    // appel que mission.controller.js exports.create, jamais bloquant si elle échoue.
+    // Estimation pour renseigner le budget (docs/DEV_SPEC_TERANGA_v7_PHASE4.md Â§3.1) â€” mÃªme
+    // appel que mission.controller.js exports.create, jamais bloquant si elle Ã©choue.
     const estimate = await estimateMission({
       user,
       executionType,
@@ -228,6 +258,7 @@ exports.create = async (req, res) => {
       pickupLongitude,
       requestedVehicleType,
       packageType,
+      ...deliveryDetails,
       budget: estimate.basePrice ?? estimate.minPrice ?? null,
       currency: estimate.currency,
       status: 'created',
@@ -255,7 +286,7 @@ exports.create = async (req, res) => {
     });
 
     return res.status(201).json({
-      message: isNewAccount ? 'Compte créé et course enregistrée' : 'Course enregistrée',
+      message: isNewAccount ? 'Compte crÃ©Ã© et course enregistrÃ©e' : 'Course enregistrÃ©e',
       isNewAccount,
       generatedPin,
       recoveryCodes,
@@ -264,7 +295,9 @@ exports.create = async (req, res) => {
       mission: fullService,
     });
   } catch (e) {
+    if (e.status === 400) return res.status(400).json({ error: e.message });
     logger.error({ err: e }, 'missionPhoneOrder.create.failed');
-    return res.status(500).json({ error: 'Erreur lors de la création de la course' });
+    return res.status(500).json({ error: 'Erreur lors de la crÃ©ation de la course' });
   }
 };
+

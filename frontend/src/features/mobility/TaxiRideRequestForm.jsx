@@ -32,7 +32,7 @@ import {
 import { getMasterCountries } from "../../services/franchises";
 import { createMission } from "../../services/missions";
 import { getLocalUser, me, persistSession } from "../../services/auth";
-import { buildTelHref, buildWhatsappHref } from "../../utils/phone";
+import { buildTelHref, buildWhatsappHref, getPhonePlaceholder } from "../../utils/phone";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-surface-card px-3 py-2.5 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500";
@@ -71,7 +71,7 @@ function clearTaxiDraft() {
   try {
     window.localStorage.removeItem(TAXI_DRAFT_KEY);
   } catch (_error) {
-    // Le stockage local peut être désactivé : la commande reste utilisable sans lui.
+    // Le stockage local peut Ãªtre dÃ©sactivÃ© : la commande reste utilisable sans lui.
   }
 }
 
@@ -96,6 +96,7 @@ export default function TaxiRideRequestForm() {
   const [incompatibleUser, setIncompatibleUser] = useState(
     initialLocalUser && !isClient(initialLocalUser) ? initialLocalUser : null
   );
+  const [savedLocations, setSavedLocations] = useState([]);
 
   const [vehicleType, setVehicleType] = useState(
     initialDraft.vehicleType === "car" ? "car" : "motorcycle"
@@ -141,6 +142,12 @@ export default function TaxiRideRequestForm() {
         const verifiedUser = session?.user || null;
         setSessionUser(isClient(verifiedUser) ? verifiedUser : null);
         setIncompatibleUser(verifiedUser && !isClient(verifiedUser) ? verifiedUser : null);
+        if (isClient(verifiedUser) && process.env.NODE_ENV !== "test") {
+          const { listSavedLocations } = require("../../services/savedLocations");
+          listSavedLocations().then((locations) => {
+            if (!cancelled) setSavedLocations(locations);
+          }).catch(() => {});
+        }
 
         const draftCountry = countryList.find(
           (country) => String(country.id) === String(initialDraft.countryId)
@@ -280,7 +287,7 @@ export default function TaxiRideRequestForm() {
       if (kind === "pickup") setPickupAddress(address);
       else setDestinationAddress(address);
     } catch (_error) {
-      // Les coordonnées restent valides même si le libellé Google est momentanément indisponible.
+      // Les coordonnÃ©es restent valides mÃªme si le libellÃ© Google est momentanÃ©ment indisponible.
     }
   }, []);
 
@@ -324,6 +331,21 @@ export default function TaxiRideRequestForm() {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
     );
+  };
+
+  const applySavedLocation = (savedLocation, target) => {
+    const coordinates = {
+      latitude: Number(savedLocation.latitude),
+      longitude: Number(savedLocation.longitude),
+    };
+    if (target === "pickup") {
+      setPickupAddress(savedLocation.address);
+      setPickup(coordinates);
+    } else {
+      setDestinationAddress(savedLocation.address);
+      setDestination(coordinates);
+    }
+    invalidateEstimate();
   };
 
   const calculateEstimate = async () => {
@@ -665,6 +687,15 @@ export default function TaxiRideRequestForm() {
                   required
                 />
               </FormField>
+              {savedLocations.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {savedLocations.map((location) => (
+                    <button key={`pickup-${location.id}`} type="button" onClick={() => applySavedLocation(location, "pickup")} className="min-h-11 rounded-full border border-border px-3 py-2 text-xs font-semibold text-text-secondary hover:border-blue-400">
+                      {location.label || location.address}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <button
                 type="button"
                 onClick={useCurrentLocation}
@@ -694,6 +725,15 @@ export default function TaxiRideRequestForm() {
                   required
                 />
               </FormField>
+              {savedLocations.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {savedLocations.map((location) => (
+                    <button key={`destination-${location.id}`} type="button" onClick={() => applySavedLocation(location, "destination")} className="min-h-11 rounded-full border border-border px-3 py-2 text-xs font-semibold text-text-secondary hover:border-blue-400">
+                      {location.label || location.address}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <button
@@ -767,7 +807,7 @@ export default function TaxiRideRequestForm() {
                 </p>
               )}
               <p className="mt-2 text-sm text-text-secondary">
-                {pickupAddress} <span aria-hidden="true">→</span> {destinationAddress}
+                {pickupAddress} <span aria-hidden="true">â†’</span> {destinationAddress}
               </p>
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-text-secondary">
                 {estimate.distanceKm != null ? (
@@ -803,7 +843,7 @@ export default function TaxiRideRequestForm() {
                       setPinRequired(false);
                       setPin("");
                     }}
-                    placeholder="+223 70 00 00 00"
+                    placeholder={getPhonePlaceholder(selectedCountry)}
                     required
                   />
                 </FormField>
@@ -827,7 +867,7 @@ export default function TaxiRideRequestForm() {
                       className={inputClass}
                       value={pin}
                       onChange={(event) => setPin(event.target.value)}
-                      placeholder="••••"
+                      placeholder="â€¢â€¢â€¢â€¢"
                       autoFocus
                       required
                     />
@@ -878,3 +918,4 @@ export default function TaxiRideRequestForm() {
     </form>
   );
 }
+

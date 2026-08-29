@@ -31,7 +31,7 @@ import {
 import { getMasterCountries } from "../../services/franchises";
 import { createMission } from "../../services/missions";
 import { getLocalUser, me, persistSession } from "../../services/auth";
-import { buildTelHref, buildWhatsappHref } from "../../utils/phone";
+import { buildTelHref, buildWhatsappHref, getPhonePlaceholder } from "../../utils/phone";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-surface-card px-3 py-2.5 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500";
@@ -72,7 +72,7 @@ function clearDeliveryDraft() {
   try {
     window.localStorage.removeItem(DELIVERY_DRAFT_KEY);
   } catch (_error) {
-    // La livraison reste utilisable quand le stockage local est désactivé.
+    // La livraison reste utilisable quand le stockage local est dÃ©sactivÃ©.
   }
 }
 
@@ -97,6 +97,7 @@ export default function DeliveryRequestForm() {
   const [incompatibleUser, setIncompatibleUser] = useState(
     initialLocalUser && !isClient(initialLocalUser) ? initialLocalUser : null
   );
+  const [savedLocations, setSavedLocations] = useState([]);
 
   const initialPackageType = PACKAGE_TYPES.some(
     (item) => item.value === initialDraft.packageType
@@ -113,6 +114,11 @@ export default function DeliveryRequestForm() {
     draftCoordinates(initialDraft.destination)
   );
   const [description, setDescription] = useState(initialDraft.description || "");
+  const [recipientName, setRecipientName] = useState(initialDraft.recipientName || "");
+  const [recipientPhone, setRecipientPhone] = useState(initialDraft.recipientPhone || "");
+  const [packageHandling, setPackageHandling] = useState(
+    Array.isArray(initialDraft.packageHandling) ? initialDraft.packageHandling : []
+  );
   const [locating, setLocating] = useState(false);
   const [step, setStep] = useState(1);
 
@@ -143,6 +149,12 @@ export default function DeliveryRequestForm() {
         const verifiedUser = session?.user || null;
         setSessionUser(isClient(verifiedUser) ? verifiedUser : null);
         setIncompatibleUser(verifiedUser && !isClient(verifiedUser) ? verifiedUser : null);
+        if (isClient(verifiedUser) && process.env.NODE_ENV !== "test") {
+          const { listSavedLocations } = require("../../services/savedLocations");
+          listSavedLocations().then((locations) => {
+            if (!cancelled) setSavedLocations(locations);
+          }).catch(() => {});
+        }
 
         const draftCountry = countryList.find(
           (country) => String(country.id) === String(initialDraft.countryId)
@@ -199,6 +211,9 @@ export default function DeliveryRequestForm() {
             destinationAddress,
             destination,
             description,
+            recipientName,
+            recipientPhone,
+            packageHandling,
             phone,
             firstName,
             countryId,
@@ -206,19 +221,22 @@ export default function DeliveryRequestForm() {
           })
         );
       } catch (_error) {
-        // La saisie reste disponible si localStorage est bloqué.
+        // La saisie reste disponible si localStorage est bloquÃ©.
       }
     }, 250);
     return () => window.clearTimeout(timeout);
   }, [
     countryId,
     description,
+    packageHandling,
     destination,
     destinationAddress,
     firstName,
     loading,
     packageType,
     phone,
+    recipientName,
+    recipientPhone,
     pickup,
     pickupAddress,
     result,
@@ -293,6 +311,21 @@ export default function DeliveryRequestForm() {
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
     );
+  };
+
+  const applySavedLocation = (savedLocation, target) => {
+    const coordinates = {
+      latitude: Number(savedLocation.latitude),
+      longitude: Number(savedLocation.longitude),
+    };
+    if (target === "pickup") {
+      setPickupAddress(savedLocation.address);
+      setPickup(coordinates);
+    } else {
+      setDestinationAddress(savedLocation.address);
+      setDestination(coordinates);
+    }
+    invalidateEstimate();
   };
 
   const calculateEstimate = async () => {
@@ -382,6 +415,9 @@ export default function DeliveryRequestForm() {
       }),
       description: description.trim() || undefined,
       packageType,
+      recipientName: recipientName.trim() || undefined,
+      recipientPhone: recipientPhone.trim() || undefined,
+      packageHandling,
       pickupAddress: pickupAddress.trim() || undefined,
       pickupLatitude: pickup?.latitude,
       pickupLongitude: pickup?.longitude,
@@ -665,6 +701,15 @@ export default function DeliveryRequestForm() {
                   required
                 />
               </FormField>
+              {savedLocations.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {savedLocations.map((location) => (
+                    <button key={`pickup-${location.id}`} type="button" onClick={() => applySavedLocation(location, "pickup")} className="min-h-11 rounded-full border border-border px-3 py-2 text-xs font-semibold text-text-secondary hover:border-blue-400">
+                      {location.label || location.address}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <button
                 type="button"
                 onClick={useCurrentLocation}
@@ -699,6 +744,15 @@ export default function DeliveryRequestForm() {
                   required
                 />
               </FormField>
+              {savedLocations.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {savedLocations.map((location) => (
+                    <button key={`destination-${location.id}`} type="button" onClick={() => applySavedLocation(location, "destination")} className="min-h-11 rounded-full border border-border px-3 py-2 text-xs font-semibold text-text-secondary hover:border-blue-400">
+                      {location.label || location.address}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
 
               <FormField label={t("deliveryBooking.descriptionLabel")}>
                 <textarea
@@ -709,6 +763,31 @@ export default function DeliveryRequestForm() {
                   maxLength={2000}
                 />
               </FormField>
+
+              <div className="rounded-2xl border border-border bg-surface-main/50 p-4">
+                <p className="text-sm font-semibold text-text-primary">{t("deliveryBooking.recipientTitle")}</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <FormField label={t("deliveryBooking.recipientNameLabel")}>
+                    <input className={inputClass} value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder={t("deliveryBooking.recipientNamePlaceholder")} autoComplete="name" />
+                  </FormField>
+                  <FormField label={t("deliveryBooking.recipientPhoneLabel")}>
+                    <input type="tel" inputMode="tel" className={inputClass} value={recipientPhone} onChange={(event) => setRecipientPhone(event.target.value)} placeholder={t("deliveryBooking.recipientPhonePlaceholder")} autoComplete="tel" />
+                  </FormField>
+                </div>
+                <p className="mt-2 text-xs text-text-muted">{t("deliveryBooking.recipientHint")}</p>
+              </div>
+
+              <fieldset className="rounded-2xl border border-border bg-surface-main/50 p-4">
+                <legend className="px-1 text-sm font-semibold text-text-primary">{t("deliveryBooking.handlingTitle")}</legend>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {["fragile", "food", "liquid", "medicine", "keep_upright"].map((value) => (
+                    <label key={value} className="flex min-h-11 items-center gap-2 text-sm text-text-secondary">
+                      <input type="checkbox" checked={packageHandling.includes(value)} onChange={() => setPackageHandling((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value])} />
+                      {t(`deliveryBooking.handling.${value}`)}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
             </div>
 
             <div className="mt-6 flex gap-3">
@@ -757,7 +836,7 @@ export default function DeliveryRequestForm() {
                 {t(`deliveryBooking.package.${packageType}.label`)}
               </p>
               <p className="mt-1 text-sm text-text-secondary">
-                {pickupAddress} <span aria-hidden="true">→</span> {destinationAddress}
+                {pickupAddress} <span aria-hidden="true">â†’</span> {destinationAddress}
               </p>
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-text-secondary">
                 {estimate.distanceKm != null ? (
@@ -799,7 +878,7 @@ export default function DeliveryRequestForm() {
                       setPinRequired(false);
                       setPin("");
                     }}
-                    placeholder="+223 70 00 00 00"
+                    placeholder={getPhonePlaceholder(selectedCountry)}
                     required
                   />
                 </FormField>
@@ -823,7 +902,7 @@ export default function DeliveryRequestForm() {
                       className={inputClass}
                       value={pin}
                       onChange={(event) => setPin(event.target.value)}
-                      placeholder="••••"
+                      placeholder="â€¢â€¢â€¢â€¢"
                       autoFocus
                       required
                     />
@@ -863,3 +942,4 @@ export default function DeliveryRequestForm() {
     </form>
   );
 }
+

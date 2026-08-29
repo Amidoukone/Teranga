@@ -3,13 +3,14 @@
 const Joi = require('joi');
 const { SERVICE_TYPES } = require('../utils/labels');
 const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../constants/deliveryPackage');
+const { DELIVERY_HANDLING_VALUES } = require('../constants/deliveryHandling');
 
 /**
- * Canal opérateur téléphone (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §3) — un admin/master saisit
- * une course/mission au nom d'un appelant. `pin` optionnel : contrairement à
- * missionRequest.schemas.js (homepage invitée), l'opérateur n'a pas forcément de PIN à faire
- * choisir à l'appelant ; un compte existant n'a de toute façon pas besoin d'être re-vérifié ici
- * (l'autorisation vient du rôle admin de l'appelant de l'API, pas d'un secret client).
+ * Canal opÃ©rateur tÃ©lÃ©phone (docs/DEV_SPEC_TERANGA_v7_PHASE4.md Â§3) â€” un admin/master saisit
+ * une course/mission au nom d'un appelant. `pin` optionnel : contrairement Ã 
+ * missionRequest.schemas.js (homepage invitÃ©e), l'opÃ©rateur n'a pas forcÃ©ment de PIN Ã  faire
+ * choisir Ã  l'appelant ; un compte existant n'a de toute faÃ§on pas besoin d'Ãªtre re-vÃ©rifiÃ© ici
+ * (l'autorisation vient du rÃ´le admin de l'appelant de l'API, pas d'un secret client).
  */
 const phoneOrderSchema = Joi.object({
   phone: Joi.string().trim().required(),
@@ -29,15 +30,22 @@ const phoneOrderSchema = Joi.object({
   address: Joi.string().trim().max(255).allow('', null),
   latitude: Joi.number().min(-90).max(90),
   longitude: Joi.number().min(-180).max(180),
-  // Retrait/départ — structure seulement ici, l'obligation pour livraison/mobilité est une
-  // règle métier vérifiée dans le contrôleur (même principe que mission.schemas.js).
+  // Retrait/dÃ©part â€” structure seulement ici, l'obligation pour livraison/mobilitÃ© est une
+  // rÃ¨gle mÃ©tier vÃ©rifiÃ©e dans le contrÃ´leur (mÃªme principe que mission.schemas.js).
   pickupAddress: Joi.string().trim().max(255).allow('', null),
   pickupLatitude: Joi.number().min(-90).max(90),
   pickupLongitude: Joi.number().min(-180).max(180),
   requestedVehicleType: Joi.string().valid('motorcycle', 'car'),
   packageType: Joi.string().valid(...DELIVERY_PACKAGE_TYPE_VALUES),
+  recipientName: Joi.string().trim().max(120).allow('', null),
+  recipientPhone: Joi.string().trim().max(40).allow('', null),
+  packageHandling: Joi.array()
+    .items(Joi.string().valid(...DELIVERY_HANDLING_VALUES))
+    .unique()
+    .max(DELIVERY_HANDLING_VALUES.length),
 });
 
 module.exports = {
   phoneOrderSchema,
 };
+
