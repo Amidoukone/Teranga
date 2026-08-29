@@ -227,7 +227,6 @@ const BOTTOM_LINKS = {
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
     { key: "rides", path: "/courses", labelKey: "nav.myRides", icon: CarFront },
     { key: "deliveries", path: "/livraisons", labelKey: "nav.myDeliveries", icon: Package },
-    { key: "services", path: "/services", labelKey: "nav.services", icon: Wrench },
   ],
   agent: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
@@ -238,13 +237,11 @@ const BOTTOM_LINKS = {
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
     { key: "myRides", path: "/chauffeur/courses", labelKey: "nav.myRides", icon: CarFront },
     { key: "myDeliveries", path: "/livreur/livraisons", labelKey: "nav.myDeliveries", icon: Package },
-    { key: "providerServices", path: "/prestataire/services", labelKey: "nav.services", icon: Wrench },
   ],
   admin: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
     { key: "taxiRides", path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations", icon: CarFront },
     { key: "deliveries", path: "/admin/livraisons", labelKey: "nav.deliveryOperations", icon: Package },
-    { key: "adminServices", path: "/admin/services", labelKey: "nav.services", icon: BarChart3 },
   ],
 };
 
@@ -324,18 +321,28 @@ function buildSections(role, links, t) {
   const byPrefix = (prefix) =>
     links.filter((x) => x.path === prefix || x.path.startsWith(prefix + "/"));
 
-  pushSection(t("nav.sections.essential"), [
+  pushSection(t("nav.sections.activity"), [
     byPath("/dashboard"),
     byPath("/notifications"),
     byPath("/activities"),
-    ...byPrefix("/projects"),
-    ...byPrefix("/properties"),
+  ]);
+
+  pushSection(t("nav.sections.mobility"), [
     ...byPrefix("/courses"),
     ...byPrefix("/chauffeur/courses"),
     ...byPrefix("/livraisons"),
     ...byPrefix("/livreur/livraisons"),
     ...byPrefix("/prestataire/services"),
+    ...byPrefix("/agent/services"),
     ...byPrefix("/services"),
+    byPath("/admin/services"),
+    byPath("/admin/taxi-dispatch"),
+    byPath("/admin/livraisons"),
+  ]);
+
+  pushSection(t("nav.sections.work"), [
+    ...byPrefix("/projects"),
+    ...byPrefix("/properties"),
     ...byPrefix("/tasks"),
     ...(role === "agent" ? byPrefix("/missions/mine") : []),
   ]);
@@ -351,9 +358,6 @@ function buildSections(role, links, t) {
     pushSection(t("nav.sections.admin"), [
       byPath("/admin/projects"),
       byPath("/admin/onboarding"),
-      byPath("/admin/services"),
-      byPath("/admin/taxi-dispatch"),
-      byPath("/admin/livraisons"),
       byPath("/admin/metrics"),
       byPath("/admin/agents"),
       byPath("/admin/providers"),
@@ -784,14 +788,20 @@ function NavBar() {
 
   const sections = useMemo(() => buildSections(role, links, t), [role, links, t]);
   const mobileSections = useMemo(
-    () =>
+    () => {
+      const primaryPaths = new Set(bottomLinks.map((item) => item.path));
+      return (
       sections
         .map((sec) => ({
           ...sec,
-          items: sec.items.filter((it) => !ACCOUNT_LINK_PATHS.has(it.path)),
+          items: sec.items.filter(
+            (it) => !ACCOUNT_LINK_PATHS.has(it.path) && !primaryPaths.has(it.path)
+          ),
         }))
-        .filter((sec) => sec.items.length > 0),
-    [sections]
+        .filter((sec) => sec.items.length > 0)
+      );
+    },
+    [bottomLinks, sections]
   );
 
   const servicePrimaryPath = useMemo(() => {
@@ -806,11 +816,11 @@ function NavBar() {
   const desktopPrimaryTabs = useMemo(() => {
     const candidates =
       role === "admin"
-        ? ["/dashboard", "/admin/taxi-dispatch", "/admin/livraisons", "/admin/services"]
+        ? ["/dashboard", "/admin/taxi-dispatch", "/admin/livraisons"]
         : role === "client"
-        ? ["/dashboard", "/courses", "/livraisons", "/services"]
+        ? ["/dashboard", "/courses", "/livraisons"]
         : role === "provider"
-        ? ["/dashboard", "/chauffeur/courses", "/livreur/livraisons", "/prestataire/services"]
+        ? ["/dashboard", "/chauffeur/courses", "/livreur/livraisons"]
         : ["/dashboard", servicePrimaryPath, "/tasks"];
 
     const tabs = [];
@@ -842,6 +852,15 @@ function NavBar() {
       }))
       .filter((sec) => sec.items.length > 0);
   }, [sections, desktopMoreItems]);
+
+  const mobileMoreIsActive = useMemo(
+    () => mobileSections.some((section) => section.items.some((item) => isActive(item.path))),
+    [isActive, mobileSections]
+  );
+  const desktopMoreIsActive = useMemo(
+    () => desktopMoreItems.some((item) => isActive(item.path)),
+    [desktopMoreItems, isActive]
+  );
 
   const Logo = (
     <img
@@ -1000,11 +1019,12 @@ function NavBar() {
                 onClick={() => setOpenDesktopMore((v) => !v)}
                 className={[
                   clsTabBase,
-                  openDesktopMore ? clsTabActive : clsTabInactive,
+                  openDesktopMore || desktopMoreIsActive ? clsTabActive : clsTabInactive,
                   "inline-flex items-center gap-1.5",
                 ].join(" ")}
                 aria-expanded={openDesktopMore}
                 aria-controls="desktop-more-menu"
+                aria-current={desktopMoreIsActive ? "page" : undefined}
               >
                 {t("nav.more")} <ChevronDown size={16} className="opacity-90" />
               </button>
@@ -1284,7 +1304,7 @@ function NavBar() {
           mobileSelectActive ? "pointer-events-none translate-y-3 opacity-0" : "pointer-events-auto opacity-100",
         ].join(" ")}
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.5rem)" }}
-        aria-label="Navigation basse"
+        aria-label={t("nav.bottomNavigation")}
         aria-hidden={mobileSelectActive}
       >
         <div className="mx-auto w-full flex justify-center">
@@ -1300,7 +1320,7 @@ function NavBar() {
                     to={item.path}
                     {...withRouteWarmup(item.path)}
                     className={[
-                      "flex-1 flex min-h-[52px] flex-col items-center justify-center py-1.5 rounded-xl text-[0.75rem] transition touch-manipulation",
+                      "flex-1 flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-[0.7rem] font-medium leading-tight transition touch-manipulation",
                       "focus:outline-none focus:ring-4 focus:ring-primary/10",
                       active
                         ? "bg-primary/10 text-primary border border-border shadow-sm"
@@ -1308,8 +1328,8 @@ function NavBar() {
                     ].join(" ")}
                     aria-current={active ? "page" : undefined}
                   >
-                    <Icon size={17} className={active ? "text-primary" : "text-text-secondary"} />
-                    {item.label}
+                    <Icon size={19} className={active ? "text-primary" : "text-text-secondary"} aria-hidden="true" />
+                    <span>{item.label}</span>
                   </Link>
                 );
               })}
@@ -1318,18 +1338,19 @@ function NavBar() {
               <button
                 onClick={() => setOpenMore((v) => !v)}
                 className={[
-                  "flex-1 flex min-h-[52px] flex-col items-center justify-center py-1.5 rounded-xl text-[0.75rem] transition touch-manipulation",
+                  "flex-1 flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-[0.7rem] font-medium leading-tight transition touch-manipulation",
                   "focus:outline-none focus:ring-4 focus:ring-primary/10",
-                  openMore
+                  openMore || mobileMoreIsActive
                     ? "bg-primary/10 text-primary border border-border shadow-sm"
                     : "text-text-secondary hover:bg-surface-main/70 hover:text-text-primary",
                 ].join(" ")}
                 aria-expanded={openMore}
                 aria-controls="navbar-more-panel"
                 aria-label={t("nav.openMoreMenu")}
+                aria-current={mobileMoreIsActive ? "page" : undefined}
               >
-                <MoreHorizontal size={17} />
-                {t("nav.more")}
+                <MoreHorizontal size={19} aria-hidden="true" />
+                <span>{t("nav.more")}</span>
               </button>
             </div>
           </div>
@@ -1364,7 +1385,7 @@ function NavBar() {
               aria-modal="true"
               aria-label={t("nav.menu")}
             >
-              <div className="w-full max-w-sm bg-surface-card/95 backdrop-blur-2xl border border-border/70 rounded-2xl shadow-2xl overflow-hidden">
+              <div className="flex max-h-[calc(100dvh-7rem-env(safe-area-inset-bottom,0px))] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-border/70 bg-surface-card/95 shadow-2xl backdrop-blur-2xl">
                 {/* HEADER */}
                 <div className="px-4 py-3 border-b border-border flex justify-between items-center bg-gradient-to-r from-surface-main/60 to-surface-card/30">
                   <div className="flex items-center gap-2 min-w-0">
@@ -1406,7 +1427,7 @@ function NavBar() {
                 </div>
 
                 {/* LINKS (grouped) */}
-                <div className="max-h-72 overflow-y-auto py-2">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2">
                   {mobileSections.map((sec) => (
                     <div key={sec.title} className={clsPanelSectionCard}>
                       <div className={clsPanelSectionTitle}>

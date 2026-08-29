@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import NavBar from "./NavBar";
 import {
   logout,
@@ -152,26 +152,43 @@ describe("NavBar logout flow", () => {
     });
   });
 
-  test("keeps the dedicated Services page visible for admins", async () => {
+  test("moves the dedicated Services page into More for admins", async () => {
     const adminUser = { ...mockUser, role: "admin", countryId: 1 };
     getLocalUser.mockReturnValue(adminUser);
     me.mockResolvedValue({ user: adminUser });
 
     render(<NavBar />);
 
-    const serviceLinks = await screen.findAllByRole("link", { name: "nav.services" });
-    expect(serviceLinks.some((link) => link.getAttribute("href") === "/admin/services")).toBe(true);
+    expect(screen.queryByRole("link", { name: "nav.adminServices" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "nav.openMoreMenu" }));
+    const serviceLink = await screen.findByRole("link", { name: "nav.adminServices" });
+    expect(serviceLink).toHaveAttribute("href", "/admin/services");
   });
 
-  test("keeps generic service jobs directly visible for providers", async () => {
+  test("moves generic service jobs into More for providers", async () => {
     const providerUser = { ...mockUser, role: "provider" };
     getLocalUser.mockReturnValue(providerUser);
     me.mockResolvedValue({ user: providerUser });
 
     render(<NavBar />);
 
-    const serviceLinks = await screen.findAllByRole("link", { name: "nav.services" });
-    expect(serviceLinks.length).toBeGreaterThanOrEqual(2);
-    serviceLinks.forEach((link) => expect(link).toHaveAttribute("href", "/prestataire/services"));
+    expect(screen.queryByRole("link", { name: "nav.services" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "nav.openMoreMenu" }));
+    const serviceLink = await screen.findByRole("link", { name: "nav.services" });
+    expect(serviceLink).toHaveAttribute("href", "/prestataire/services");
+  });
+
+  test("does not duplicate primary Taxi and Delivery links inside More", async () => {
+    render(<NavBar />);
+
+    fireEvent.click(screen.getByRole("button", { name: "nav.openMoreMenu" }));
+    const panel = await screen.findByRole("dialog", { name: "nav.menu" });
+
+    expect(within(panel).queryByRole("link", { name: "nav.myRides" })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole("link", { name: "nav.myDeliveries" })).not.toBeInTheDocument();
+    expect(within(panel).getByRole("link", { name: "nav.services" })).toHaveAttribute(
+      "href",
+      "/services"
+    );
   });
 });
