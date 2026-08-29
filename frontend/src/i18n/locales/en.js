@@ -1829,6 +1829,8 @@ const en = {
     loadedCount_other: "{{count}} services loaded for this page",
     alerts: {
       assignError: "Error during assignment",
+      driverOnlyAssignment:
+        "Taxi rides and deliveries can only be assigned to a driver or courier.",
       budgetUpdateError: "Error while updating the price",
       budgetUpdateSuccess: "Price updated",
     },
@@ -1837,6 +1839,7 @@ const en = {
         titleType: "Title / Type",
         client: "Client",
         agent: "Agent",
+        driver: "Driver / courier",
         status: "Status",
         assign: "Assign / reassign",
       },
@@ -1856,6 +1859,8 @@ const en = {
       locked: "Reassignment disabled (service closed).",
       providerPlaceholder: "— Choose a provider —",
       providerUnassign: "— Unassign the provider —",
+      driverPlaceholder: "— Assign a driver / courier —",
+      driverUnassign: "— Remove the driver / courier —",
       providerLocked: "Assignment unavailable for this status ({{status}}).",
       openTaxiDispatch: "Open Taxi dispatch",
       supervisorPlaceholder: "— Assign a supervising agent —",

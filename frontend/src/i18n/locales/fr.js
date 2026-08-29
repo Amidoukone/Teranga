@@ -1834,6 +1834,8 @@ const fr = {
     loadedCount_other: "{{count}} services charg\u00E9s pour cette page",
     alerts: {
       assignError: "Erreur lors de l\u2019assignation",
+      driverOnlyAssignment:
+        "Les courses taxi et les livraisons doivent \u00eatre affect\u00e9es uniquement \u00e0 un chauffeur ou livreur.",
       budgetUpdateError: "Erreur lors de la mise \u00e0 jour du prix",
       budgetUpdateSuccess: "Prix mis \u00e0 jour",
     },
@@ -1842,6 +1844,7 @@ const fr = {
         titleType: "Titre / Type",
         client: "Client",
         agent: "Agent",
+        driver: "Chauffeur / livreur",
         status: "Statut",
         assign: "Assigner / r\u00E9assigner",
       },
@@ -1861,6 +1864,8 @@ const fr = {
       locked: "R\u00E9assignation d\u00E9sactiv\u00E9e (service cl\u00F4tur\u00E9).",
       providerPlaceholder: "\u2014 Choisir un prestataire \u2014",
       providerUnassign: "\u2014 D\u00e9sassigner le prestataire \u2014",
+      driverPlaceholder: "\u2014 Affecter un chauffeur / livreur \u2014",
+      driverUnassign: "\u2014 Retirer le chauffeur / livreur \u2014",
       providerLocked: "Assignation indisponible pour ce statut ({{status}}).",
       supervisorPlaceholder: "\u2014 Assigner un agent superviseur \u2014",
       supervisorUnassign: "\u2014 Retirer le superviseur \u2014",
