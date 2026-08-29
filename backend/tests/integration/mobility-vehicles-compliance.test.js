@@ -199,6 +199,49 @@ describe('Phase 5 Mobilite - vehicules, dispatch et securite reseau faible', () 
     await db.sequelize.close();
   });
 
+  test('refuse toute affectation d agent a une course taxi', async () => {
+    if (!dbReady) return;
+
+    const client = await db.User.findOne({ where: { role: 'client', id: created.userIds } });
+    const { user: agent } = await makeUser({ role: 'agent', countryId: country.id });
+    const mission = await db.Service.create({
+      clientId: client.id,
+      type: 'other',
+      title: 'Course reservee aux chauffeurs',
+      status: 'created',
+      currency: 'XOF',
+      countryId: country.id,
+      executionType: 'provider',
+      tradeCategoryId: mobilityCategory.id,
+      missionStatus: 'CREATED',
+      pickupAddress: 'Point de depart',
+      pickupLatitude: 12.64,
+      pickupLongitude: -8.0,
+      address: 'Point arrivee',
+      latitude: 12.66,
+      longitude: -7.98,
+      requestedVehicleType: 'motorcycle',
+    });
+    created.serviceIds.push(mission.id);
+
+    const missionAssignment = await request(app)
+      .post(`/api/v1/missions/${mission.id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ agentId: agent.id });
+    expect(missionAssignment.status).toBe(400);
+    expect(missionAssignment.body.error).toMatch(/chauffeur|livreur/i);
+
+    const legacyAssignment = await request(app)
+      .post('/api/v1/services/assign')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ serviceId: mission.id, agentId: agent.id });
+    expect(legacyAssignment.status).toBe(400);
+    expect(legacyAssignment.body.error).toMatch(/chauffeur|livreur/i);
+
+    await mission.reload();
+    expect(mission.agentId).toBeNull();
+  });
+
   test('active le compte sans confondre activation et aptitude a recevoir une course', async () => {
     if (!dbReady) return;
 

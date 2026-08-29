@@ -23,6 +23,7 @@ function isDocumentVisible() {
 export default function AdminServicesPage({ tradeCategorySlug = null }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const isDriverOnlyView = ['mobilite', 'livraison'].includes(tradeCategorySlug);
 
   const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(null);
@@ -132,9 +133,18 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
     }
   }
 
-  async function handleAssignSupervisor(serviceId, agentId) {
+  function isDriverOnlyMission(service) {
+    const slug = service?.tradeCategory?.slug || tradeCategorySlug;
+    return ['mobilite', 'livraison'].includes(slug);
+  }
+
+  async function handleAssignSupervisor(service, agentId) {
+    if (isDriverOnlyMission(service)) {
+      notify(t('adminServicesPage.alerts.driverOnlyAssignment'));
+      return;
+    }
     try {
-      await updateMissionAssignment(serviceId, { agentId: agentId || null });
+      await updateMissionAssignment(service.id, { agentId: agentId || null });
       await loadServices();
     } catch (e) {
       console.error('AdminServicesPage supervisor assignment error:', e);
@@ -241,10 +251,10 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
   ============================================================ */
   useEffect(() => {
     if (isAdmin) {
-      loadAgents();
+      if (!isDriverOnlyView) loadAgents();
       loadProviders();
     }
-  }, [isAdmin, loadAgents, loadProviders]);
+  }, [isAdmin, isDriverOnlyView, loadAgents, loadProviders]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -692,14 +702,20 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
                 <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                   {t('adminServicesPage.table.headers.client')}
                 </th>
-                <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                  {t('adminServicesPage.table.headers.agent')}
-                </th>
+                {!isDriverOnlyView ? (
+                  <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                    {t('adminServicesPage.table.headers.agent')}
+                  </th>
+                ) : null}
                 <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                   {t('adminServicesPage.table.headers.status')}
                 </th>
                 <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                  {t('adminServicesPage.table.headers.assign')}
+                  {t(
+                    isDriverOnlyView
+                      ? 'adminServicesPage.table.headers.driver'
+                      : 'adminServicesPage.table.headers.assign'
+                  )}
                 </th>
               </tr>
             </thead>
@@ -709,7 +725,7 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
               {services.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={isDriverOnlyView ? 4 : 5}
                     className="text-center py-8 text-text-muted text-sm italic"
                   >
                     {t('adminServicesPage.empty')}
@@ -789,14 +805,16 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
                       </div>
                     </td>
 
-                    {/* Agent */}
-                    <td className="px-4 sm:px-5 py-3 align-top">
-                      <div className="text-sm text-text-primary break-words">
-                        {s.agent
-                          ? displayUser(s.agent)
-                          : t('adminServicesPage.table.unassigned')}
-                      </div>
-                    </td>
+                    {/* Agent : uniquement pour les services hors Taxi/Livraison. */}
+                    {!isDriverOnlyView ? (
+                      <td className="px-4 sm:px-5 py-3 align-top">
+                        <div className="text-sm text-text-primary break-words">
+                          {s.agent
+                            ? displayUser(s.agent)
+                            : t('adminServicesPage.table.unassigned')}
+                        </div>
+                      </td>
+                    ) : null}
 
                     {/* Statut badge */}
                     <td className="px-4 sm:px-5 py-3 align-top">
@@ -839,8 +857,16 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
                             >
                               <option value="">
                                 {s.providerId
-                                  ? t('adminServicesPage.assign.providerUnassign')
-                                  : t('adminServicesPage.assign.providerPlaceholder')}
+                                  ? t(
+                                      isDriverOnlyMission(s)
+                                        ? 'adminServicesPage.assign.driverUnassign'
+                                        : 'adminServicesPage.assign.providerUnassign'
+                                    )
+                                  : t(
+                                      isDriverOnlyMission(s)
+                                        ? 'adminServicesPage.assign.driverPlaceholder'
+                                        : 'adminServicesPage.assign.providerPlaceholder'
+                                    )}
                               </option>
                               {getAssignableProviders(s).map((p) => (
                                 <option key={p.id} value={p.id}>
@@ -857,24 +883,26 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
                             )}
                           </div>
 
-                          <div>
-                            <select
-                              value={s.agentId || ''}
-                              onChange={(e) => handleAssignSupervisor(s.id, e.target.value)}
-                              className="w-full rounded-xl border px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-surface-card text-text-primary border-border"
-                            >
-                              <option value="">
-                                {s.agentId
-                                  ? t('adminServicesPage.assign.supervisorUnassign')
-                                  : t('adminServicesPage.assign.supervisorPlaceholder')}
-                              </option>
-                              {getAssignableAgents(s).map((a) => (
-                                <option key={a.id} value={a.id}>
-                                  {a.firstName} {a.lastName} ({a.email})
+                          {!isDriverOnlyMission(s) ? (
+                            <div>
+                              <select
+                                value={s.agentId || ''}
+                                onChange={(e) => handleAssignSupervisor(s, e.target.value)}
+                                className="w-full rounded-xl border px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-surface-card text-text-primary border-border"
+                              >
+                                <option value="">
+                                  {s.agentId
+                                    ? t('adminServicesPage.assign.supervisorUnassign')
+                                    : t('adminServicesPage.assign.supervisorPlaceholder')}
                                 </option>
-                              ))}
-                            </select>
-                          </div>
+                                {getAssignableAgents(s).map((a) => (
+                                  <option key={a.id} value={a.id}>
+                                    {a.firstName} {a.lastName} ({a.email})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          ) : null}
                         </div>
                       ) : (
                         <>

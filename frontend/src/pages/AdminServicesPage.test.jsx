@@ -63,4 +63,59 @@ describe('AdminServicesPage simplifiée', () => {
     }));
     expect(api.get.mock.calls.some(([url]) => url.includes('excludeTradeCategorySlug=mobilite%2Clivraison'))).toBe(true);
   });
+
+  test('ne propose que les chauffeurs pour une course taxi', async () => {
+    listProviders.mockResolvedValue([
+      {
+        id: 12,
+        displayFirstName: 'Awa',
+        countryCode: 'ML',
+        tradeCategories: [{ id: 4, slug: 'mobilite' }],
+        mobilityCompliance: {
+          driverEligible: true,
+          vehicles: [{ id: 31, vehicleType: 'motorcycle', eligible: true }],
+        },
+        dispatchPresence: { isFresh: true, vehicleId: 31 },
+      },
+    ]);
+    api.get.mockImplementation((url) => {
+      if (url.startsWith('/services?')) {
+        return Promise.resolve({
+          data: {
+            services: [
+              {
+                id: 44,
+                title: 'Course moto',
+                type: 'other',
+                status: 'created',
+                executionType: 'provider',
+                providerId: null,
+                agentId: null,
+                countryId: null,
+                regionId: null,
+                tradeCategoryId: 4,
+                tradeCategory: { id: 4, slug: 'mobilite', name: 'Mobilite' },
+                missionStatus: 'CREATED',
+                requestedVehicleType: 'motorcycle',
+                client: { firstName: 'Awa', email: 'awa@example.com' },
+              },
+            ],
+          },
+        });
+      }
+      return Promise.resolve({ data: {} });
+    });
+
+    render(<AdminServicesPage tradeCategorySlug="mobilite" />);
+
+    expect(
+      await screen.findByRole('option', {
+        name: 'adminServicesPage.assign.driverPlaceholder',
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByText('adminServicesPage.table.headers.driver')).toBeInTheDocument();
+    expect(screen.queryByText('adminServicesPage.table.headers.agent')).not.toBeInTheDocument();
+    expect(screen.queryByText('adminServicesPage.assign.supervisorPlaceholder')).not.toBeInTheDocument();
+    expect(api.get.mock.calls.some(([url]) => url === '/users?role=agent')).toBe(false);
+  });
 });
