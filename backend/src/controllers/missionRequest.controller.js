@@ -37,9 +37,9 @@ function resolvePackageType(tradeCategory, packageType) {
 }
 
 /**
- * AperÃ§u public du trajet â€” aucune identitÃ© et aucune Ã©criture. Le pays est fourni par le
- * catalogue public (champ masquÃ© quand un seul pays est disponible), puis la destination rÃ©elle
- * peut affiner le scope si Google renvoie son pays/rÃ©gion.
+ * Aperçu public du trajet — aucune identité et aucune écriture. Le pays est fourni par le
+ * catalogue public (champ masqué quand un seul pays est disponible), puis la destination réelle
+ * peut affiner le scope si Google renvoie son pays/région.
  */
 exports.estimate = async (req, res) => {
   try {
@@ -59,7 +59,7 @@ exports.estimate = async (req, res) => {
     const tradeCategory = await TradeCategory.findOne({
       where: { id: tradeCategoryId, isActive: true },
     });
-    if (!tradeCategory) return res.status(400).json({ error: 'FiliÃ¨re invalide ou inactive' });
+    if (!tradeCategory) return res.status(400).json({ error: 'Filière invalide ou inactive' });
 
     let address = rawAddress ? String(rawAddress).trim() : null;
     let latitude = rawLatitude != null ? Number(rawLatitude) : null;
@@ -99,7 +99,7 @@ exports.estimate = async (req, res) => {
         !(pickupAddress || (Number.isFinite(pickupLatitude) && Number.isFinite(pickupLongitude))))
     ) {
       return res.status(400).json({
-        error: 'Le point de dÃ©part et la destination doivent Ãªtre placÃ©s sur la carte',
+        error: 'Le point de départ et la destination doivent être placés sur la carte',
       });
     }
 
@@ -163,21 +163,21 @@ exports.reverseGeocodeLocation = async (req, res) => {
     return res.json({ address: await reverseGeocode(latitude, longitude) });
   } catch (e) {
     logger.error({ err: e }, 'missionRequest.reverse_geocode.failed');
-    return res.status(500).json({ error: 'Erreur lors du gÃ©ocodage inverse' });
+    return res.status(500).json({ error: 'Erreur lors du géocodage inverse' });
   }
 };
 
 /**
- * Demande de mission/service invitÃ©e depuis la homepage (docs/DEV_SPEC_TERANGA_v3.md,
- * Lot 2 â€” "la homepage comme base d'interactions"). Pas de nouveau systÃ¨me
- * d'auth : le tÃ©lÃ©phone et, pour un compte existant, le PIN passent par les mÃªmes primitives que
- * /auth/register + /auth/login (voir exports ajoutÃ©s dans auth.controller.js),
+ * Demande de mission/service invitée depuis la homepage (docs/DEV_SPEC_TERANGA_v3.md,
+ * Lot 2 — "la homepage comme base d'interactions"). Pas de nouveau système
+ * d'auth : le téléphone et, pour un compte existant, le PIN passent par les mêmes primitives que
+ * /auth/register + /auth/login (voir exports ajoutés dans auth.controller.js),
  * pour que le visiteur reparte avec un vrai compte/session, pas une ligne
  * orpheline non trackable.
  *
- * SÃ©curitÃ© : un numÃ©ro dÃ©jÃ  associÃ© Ã  un compte NE loggue JAMAIS
- * silencieusement â€” il faut le bon PIN, sinon 401. Sans Ã§a, n'importe qui
- * pourrait usurper une session en soumettant le numÃ©ro de quelqu'un d'autre.
+ * Sécurité : un numéro déjà associé à un compte NE loggue JAMAIS
+ * silencieusement — il faut le bon PIN, sinon 401. Sans ça, n'importe qui
+ * pourrait usurper une session en soumettant le numéro de quelqu'un d'autre.
  */
 exports.create = async (req, res) => {
   try {
@@ -206,7 +206,7 @@ exports.create = async (req, res) => {
 
     const phone = normalizePhone(rawPhone);
     if (!isValidPhone(phone)) {
-      return res.status(400).json({ error: 'TÃ©lÃ©phone invalide' });
+      return res.status(400).json({ error: 'Téléphone invalide' });
     }
 
     let tradeCategory = null;
@@ -215,12 +215,12 @@ exports.create = async (req, res) => {
         where: { id: tradeCategoryId, isActive: true },
       });
       if (!tradeCategory) {
-        return res.status(400).json({ error: 'FiliÃ¨re invalide ou inactive' });
+        return res.status(400).json({ error: 'Filière invalide ou inactive' });
       }
     }
 
-    // Rejeter les commandes Taxi/Livraison incomplÃ¨tes avant toute crÃ©ation automatique de
-    // compte. Cela Ã©vite de laisser un compte orphelin lorsqu'un visiteur oublie un des lieux.
+    // Rejeter les commandes Taxi/Livraison incomplètes avant toute création automatique de
+    // compte. Cela évite de laisser un compte orphelin lorsqu'un visiteur oublie un des lieux.
     if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug)) {
       const hasDestination =
         Boolean(String(address || '').trim()) ||
@@ -237,7 +237,7 @@ exports.create = async (req, res) => {
 
       if (!hasPickup || !hasDestination) {
         return res.status(400).json({
-          error: 'Le point de dÃ©part et la destination sont obligatoires pour cette filiÃ¨re',
+          error: 'Le point de départ et la destination sont obligatoires pour cette filière',
         });
       }
     }
@@ -251,21 +251,21 @@ exports.create = async (req, res) => {
       if (user.role !== 'client') {
         return res.status(409).json({
           error:
-            'Ce numÃ©ro est associÃ© Ã  un compte existant non-client. Connectez-vous depuis votre espace habituel.',
+            'Ce numéro est associé à un compte existant non-client. Connectez-vous depuis votre espace habituel.',
         });
       }
 
       if (!pin || !String(pin).trim()) {
         return res.status(401).json({
           code: 'PIN_REQUIRED',
-          error: 'Ce numÃ©ro possÃ¨de dÃ©jÃ  un compte. Saisissez votre code Teranga.',
+          error: 'Ce numéro possède déjà un compte. Saisissez votre code Teranga.',
         });
       }
 
       const pinOk = await bcrypt.compare(pin, user.passwordHash);
       if (!pinOk) {
         return res.status(401).json({
-          error: 'Ce numÃ©ro est dÃ©jÃ  associÃ© Ã  un compte. Code incorrect.',
+          error: 'Ce numéro est déjà associé à un compte. Code incorrect.',
         });
       }
     } else {
@@ -311,13 +311,13 @@ exports.create = async (req, res) => {
 
     const trimmedAddress = address ? String(address).trim() : null;
 
-    // CoordonnÃ©es dÃ©rivÃ©es quand un lieu est fourni (dette 0.5) : le frontend
-    // peut dÃ©jÃ  les fournir (Places Autocomplete, dÃ©pose d'Ã©pingle), sinon on
-    // gÃ©ocode l'adresse cÃ´tÃ© serveur â€” sans biais vers le pays du compte, une
-    // mission peut volontairement se situer dans un autre pays (client Ã 
-    // Bamako demandant une mission Ã  Abidjan). Rejet 400 si l'adresse fournie
-    // ne rÃ©sout Ã  aucune coordonnÃ©e valide â€” jamais de mission avec une
-    // adresse saisie mais des coordonnÃ©es nulles. Les types de demande sans
+    // Coordonnées dérivées quand un lieu est fourni (dette 0.5) : le frontend
+    // peut déjà les fournir (Places Autocomplete, dépose d'épingle), sinon on
+    // géocode l'adresse côté serveur — sans biais vers le pays du compte, une
+    // mission peut volontairement se situer dans un autre pays (client à
+    // Bamako demandant une mission à Abidjan). Rejet 400 si l'adresse fournie
+    // ne résout à aucune coordonnée valide — jamais de mission avec une
+    // adresse saisie mais des coordonnées nulles. Les types de demande sans
     // lieu (paiement, transfert d'argent...) restent possibles sans adresse.
     let latitude = rawLatitude != null ? Number(rawLatitude) : null;
     let longitude = rawLongitude != null ? Number(rawLongitude) : null;
@@ -333,7 +333,7 @@ exports.create = async (req, res) => {
       };
       if (!geocoded) {
         return res.status(400).json({
-          error: 'Adresse introuvable. Veuillez prÃ©ciser un lieu plus prÃ©cis.',
+          error: 'Adresse introuvable. Veuillez préciser un lieu plus précis.',
         });
       }
       latitude = geocoded.latitude;
@@ -362,7 +362,7 @@ exports.create = async (req, res) => {
       };
       if (!geocodedPickup) {
         return res.status(400).json({
-          error: 'Adresse de dÃ©part introuvable. Veuillez prÃ©ciser un lieu plus prÃ©cis.',
+          error: 'Adresse de départ introuvable. Veuillez préciser un lieu plus précis.',
         });
       }
       pickupLatitude = geocodedPickup.latitude;
@@ -380,12 +380,12 @@ exports.create = async (req, res) => {
       (!pickupAddress && (pickupLatitude === null || pickupLongitude === null))
     ) {
       return res.status(400).json({
-        error: 'Le point de dÃ©part est obligatoire pour cette filiÃ¨re',
+        error: 'Le point de départ est obligatoire pour cette filière',
       });
     }
 
-    // La mission est routÃ©e/tarifÃ©e selon le pays/rÃ©gion oÃ¹ elle a rÃ©ellement
-    // lieu (adresse gÃ©ocodÃ©e), pas selon le pays du compte du demandeur â€” sauf
+    // La mission est routée/tarifée selon le pays/région où elle a réellement
+    // lieu (adresse géocodée), pas selon le pays du compte du demandeur — sauf
     // absence de lieu (fallback sur le compte, cf. commentaire ci-dessus).
     const missionGeoScope = await resolveMissionGeoScope({
       countryIso: geocodedCountryIso,
@@ -491,7 +491,7 @@ exports.create = async (req, res) => {
     });
 
     return res.status(201).json({
-      message: isNewAccount ? 'Compte crÃ©Ã© et demande envoyÃ©e' : 'Demande envoyÃ©e',
+      message: isNewAccount ? 'Compte créé et demande envoyée' : 'Demande envoyée',
       token,
       csrfToken,
       user: toAuthUser(user),
@@ -506,7 +506,6 @@ exports.create = async (req, res) => {
   } catch (e) {
     if (e.status === 400) return res.status(400).json({ error: e.message });
     logger.error({ err: e }, 'missionRequest.create.failed');
-    return res.status(500).json({ error: 'Erreur lors de la crÃ©ation de la demande' });
+    return res.status(500).json({ error: 'Erreur lors de la création de la demande' });
   }
 };
-

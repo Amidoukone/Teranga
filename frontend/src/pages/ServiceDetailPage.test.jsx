@@ -29,13 +29,13 @@ jest.mock('../i18n/useLocale', () => ({
   useLocale: () => ({ formatDate: (value) => value, formatNumber: (value) => String(value) }),
 }));
 
-describe('ServiceDetailPage simplifiÃ©e', () => {
+describe('ServiceDetailPage simplifiée', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     me.mockResolvedValue({ user: { id: 4, role: 'client' } });
     getServiceById.mockResolvedValue({
       id: 14,
-      title: 'DÃ©marche administrative',
+      title: 'Démarche administrative',
       type: 'administrative',
       status: 'completed',
       agent: { firstName: 'Moussa', phone: '+22370000000' },
@@ -43,7 +43,7 @@ describe('ServiceDetailPage simplifiÃ©e', () => {
     validateService.mockResolvedValue({ id: 14, status: 'validated' });
   });
 
-  test('permet au client de confirmer un service terminÃ© en une action', async () => {
+  test('permet au client de confirmer un service terminé en une action', async () => {
     render(<ServiceDetailPage />);
 
     const buttons = await screen.findAllByRole('button', { name: /serviceTracking.actions.validate/ });
