@@ -29,9 +29,9 @@ const categorySelectionFields = {
     }),
 };
 
-// Adresse/coordonnÃ©es optionnelles : permet Ã  l'estimation de reflÃ©ter la destination rÃ©elle
-// de la mission (dÃ©jÃ  saisie Ã  l'Ã©tape Location du wizard) plutÃ´t que le seul pays du compte â€”
-// correction transfrontaliÃ¨re, jamais bloquant (aperÃ§u de prix uniquement).
+// Adresse/coordonnées optionnelles : permet à l'estimation de refléter la destination réelle
+// de la mission (déjà saisie à l'étape Location du wizard) plutôt que le seul pays du compte —
+// correction transfrontalière, jamais bloquant (aperçu de prix uniquement).
 const estimateMissionSchema = Joi.object({
   ...categorySelectionFields,
   address: Joi.string().trim().max(255).allow('', null),
@@ -45,10 +45,10 @@ const estimateMissionSchema = Joi.object({
 });
 
 /**
- * CrÃ©ation de mission guidÃ©e, utilisateur dÃ©jÃ  authentifiÃ© (docs/DEV_SPEC_TERANGA_v3.md
- * section 4.1). MÃªme rÃ¨gle qu'Ã  la homepage (missionRequest.schemas.js) : l'adresse reste
+ * Création de mission guidée, utilisateur déjà authentifié (docs/DEV_SPEC_TERANGA_v3.md
+ * section 4.1). Même règle qu'à la homepage (missionRequest.schemas.js) : l'adresse reste
  * optionnelle (types sans lieu, ex. paiement/transfert d'argent), mais si fournie doit aboutir
- * Ã  des coordonnÃ©es valides cÃ´tÃ© contrÃ´leur (gÃ©ocodage ou coordonnÃ©es client dÃ©jÃ  rÃ©solues).
+ * à des coordonnées valides côté contrôleur (géocodage ou coordonnées client déjà résolues).
  */
 const createMissionSchema = Joi.object({
   ...categorySelectionFields,
@@ -58,9 +58,9 @@ const createMissionSchema = Joi.object({
   address: Joi.string().trim().max(255).allow('', null),
   latitude: Joi.number().min(-90).max(90),
   longitude: Joi.number().min(-180).max(180),
-  // Retrait â€” structure seulement ici (optionnel pour Joi) ; l'obligation "requis pour la
-  // filiÃ¨re livraison" est une rÃ¨gle mÃ©tier vÃ©rifiÃ©e dans le contrÃ´leur, pas dans le schÃ©ma
-  // (docs/DEV_SPEC_TERANGA_v6_PHASE3.md Â§1.1).
+  // Retrait — structure seulement ici (optionnel pour Joi) ; l'obligation "requis pour la
+  // filière livraison" est une règle métier vérifiée dans le contrôleur, pas dans le schéma
+  // (docs/DEV_SPEC_TERANGA_v6_PHASE3.md §1.1).
   pickupAddress: Joi.string().trim().max(255).allow('', null),
 =======
 });
@@ -97,11 +97,11 @@ const createMissionSchema = Joi.object({
 });
 
 /**
- * Assignation manuelle (docs/DEV_SPEC_TERANGA_v3.md section 4.2/3.3) â€” pas de short-list/Distance
- * Matrix ici, Ã§a reste le moteur de matching automatique du Lot 4. `providerId` (exÃ©cutant filiÃ¨re)
- * et `agentId` (superviseur, voir section 8 de ce chantier) sont indÃ©pendants : absent = ne pas
- * toucher ce champ, `null` = dÃ©sassigner, nombre = assigner/rÃ©assigner. Au moins l'un des deux doit
- * Ãªtre fourni.
+ * Assignation manuelle (docs/DEV_SPEC_TERANGA_v3.md section 4.2/3.3) — pas de short-list/Distance
+ * Matrix ici, ça reste le moteur de matching automatique du Lot 4. `providerId` (exécutant filière)
+ * et `agentId` (superviseur, voir section 8 de ce chantier) sont indépendants : absent = ne pas
+ * toucher ce champ, `null` = désassigner, nombre = assigner/réassigner. Au moins l'un des deux doit
+ * être fourni.
  */
 const assignMissionSchema = Joi.object({
   providerId: idSchema.allow(null),
@@ -117,20 +117,20 @@ const assignMissionSchema = Joi.object({
   });
 
 /**
- * Transition de statut (section 2). Les permissions fines (qui peut dÃ©clencher quelle transition)
- * sont vÃ©rifiÃ©es dans le contrÃ´leur, pas ici â€” Joi ne valide que la forme.
+ * Transition de statut (section 2). Les permissions fines (qui peut déclencher quelle transition)
+ * sont vérifiées dans le contrôleur, pas ici — Joi ne valide que la forme.
  */
 const updateMissionStatusSchema = Joi.object({
   toStatus: Joi.string()
     .valid(...MISSION_STATUS_VALUES)
     .required(),
-  // RÃ©conciliation cash Ã  la remise (docs/DEV_SPEC_TERANGA_v6_PHASE3.md Â§5) â€” optionnel, ignorÃ©
-  // hors transition COMPLETED filiÃ¨re livraison (rÃ¨gle mÃ©tier vÃ©rifiÃ©e dans le contrÃ´leur).
+  // Réconciliation cash à la remise (docs/DEV_SPEC_TERANGA_v6_PHASE3.md §5) — optionnel, ignoré
+  // hors transition COMPLETED filière livraison (règle métier vérifiée dans le contrôleur).
   collectedAmount: Joi.number().min(0).allow(null),
 });
 
 /**
- * Ping de position d'un exÃ©cutant en mission active (section 3.3/4.2).
+ * Ping de position d'un exécutant en mission active (section 3.3/4.2).
  */
 const missionLocationSchema = Joi.object({
   latitude: Joi.number().min(-90).max(90).required(),
@@ -140,8 +140,8 @@ const missionLocationSchema = Joi.object({
 });
 
 /**
- * Demande de dÃ©placement interne, Cas 1 (docs/DEV_SPEC_TERANGA_v5_PHASE2.md Â§4.2) â€” position
- * actuelle de l'exÃ©cutant (retrait), adresse optionnelle (affichage seulement).
+ * Demande de déplacement interne, Cas 1 (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §4.2) — position
+ * actuelle de l'exécutant (retrait), adresse optionnelle (affichage seulement).
  */
 const logisticsRequestSchema = Joi.object({
   latitude: Joi.number().min(-90).max(90).required(),
@@ -157,4 +157,3 @@ module.exports = {
   missionLocationSchema,
   logisticsRequestSchema,
 };
-
