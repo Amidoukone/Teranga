@@ -72,11 +72,7 @@ function clearDeliveryDraft() {
   try {
     window.localStorage.removeItem(DELIVERY_DRAFT_KEY);
   } catch (_error) {
-<<<<<<< HEAD
-    // La livraison reste utilisable quand le stockage local est dÃ©sactivÃ©.
-=======
     // La livraison reste utilisable quand le stockage local est désactivé.
->>>>>>> feat/mobility-delivery-pricing
   }
 }
 
@@ -225,11 +221,7 @@ export default function DeliveryRequestForm() {
           })
         );
       } catch (_error) {
-<<<<<<< HEAD
-        // La saisie reste disponible si localStorage est bloquÃ©.
-=======
         // La saisie reste disponible si localStorage est bloqué.
->>>>>>> feat/mobility-delivery-pricing
       }
     }, 250);
     return () => window.clearTimeout(timeout);
@@ -844,11 +836,7 @@ export default function DeliveryRequestForm() {
                 {t(`deliveryBooking.package.${packageType}.label`)}
               </p>
               <p className="mt-1 text-sm text-text-secondary">
-<<<<<<< HEAD
-                {pickupAddress} <span aria-hidden="true">â†’</span> {destinationAddress}
-=======
                 {pickupAddress} <span aria-hidden="true">→</span> {destinationAddress}
->>>>>>> feat/mobility-delivery-pricing
               </p>
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-text-secondary">
                 {estimate.distanceKm != null ? (
@@ -914,11 +902,7 @@ export default function DeliveryRequestForm() {
                       className={inputClass}
                       value={pin}
                       onChange={(event) => setPin(event.target.value)}
-<<<<<<< HEAD
-                      placeholder="â€¢â€¢â€¢â€¢"
-=======
                       placeholder="••••"
->>>>>>> feat/mobility-delivery-pricing
                       autoFocus
                       required
                     />
@@ -958,7 +942,3 @@ export default function DeliveryRequestForm() {
     </form>
   );
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> feat/mobility-delivery-pricing

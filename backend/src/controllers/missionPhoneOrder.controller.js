@@ -13,7 +13,6 @@ const { resolveGeoScope, countryHasActiveMaster, rotateRecoveryCodes } = require
 const { PICKUP_REQUIRED_SLUGS } = require('./mission.controller');
 const { isGlobalAdmin } = require('../utils/geoScope');
 const { resolveDeliveryDetails } = require('../utils/deliveryDetails');
-<<<<<<< HEAD
 const logger = require('../utils/logger');
 
 /**
@@ -47,47 +46,11 @@ exports.create = async (req, res) => {
       pickupAddress: rawPickupAddress,
       pickupLatitude: rawPickupLatitude,
       pickupLongitude: rawPickupLongitude,
-=======
-const logger = require('../utils/logger');
-
-/**
- * Canal opérateur téléphone (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §3) — un admin/master saisit
- * une mission au nom d'un appelant qui n'a pas l'app. Distinct de missionRequest.controller.js
- * (point d'entrée invité homepage) : celui-ci pose les cookies d'auth du compte trouvé/créé
- * dans la réponse, ce qui écraserait la session de l'opérateur si réutilisé tel quel depuis
- * son navigateur. Ici, aucune session n'est ouverte pour le client — l'opérateur reste
- * connecté avec son propre compte admin, et la mission créée est immédiatement exploitable
- * pour affectation (POST .../assign) depuis la même vue.
- *
- * Pas de vérification de PIN pour un compte existant : l'opérateur n'a pas le PIN de
- * l'appelant, et l'autorisation vient de son propre rôle admin, pas d'un secret client (une
- * différence assumée avec le flux invité homepage, où n'importe qui peut appeler l'endpoint).
- */
-exports.create = async (req, res) => {
-  try {
-    const {
-      phone: rawPhone,
-      pin,
-      firstName,
-      countryId,
-      requestKind,
-      tradeCategoryId,
-      serviceType,
-      title,
-      description,
-      address,
-      latitude: rawLatitude,
-      longitude: rawLongitude,
-      pickupAddress: rawPickupAddress,
-      pickupLatitude: rawPickupLatitude,
-      pickupLongitude: rawPickupLongitude,
->>>>>>> feat/mobility-delivery-pricing
       requestedVehicleType: rawRequestedVehicleType,
       packageType: rawPackageType,
       recipientName: rawRecipientName,
       recipientPhone: rawRecipientPhone,
       packageHandling: rawPackageHandling,
-<<<<<<< HEAD
     } = req.body;
 
     const phone = normalizePhone(rawPhone);
@@ -103,23 +66,6 @@ exports.create = async (req, res) => {
     }
 
     let tradeCategory = null;
-=======
-    } = req.body;
-
-    const phone = normalizePhone(rawPhone);
-    if (!isValidPhone(phone)) {
-      return res.status(400).json({ error: 'Téléphone invalide' });
-    }
-
-    // Un master (admin scopé pays) ne peut saisir une course que pour son propre pays — même
-    // règle d'écriture que le reste de l'app (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §4). Sans ce
-    // garde, `requireRoles('admin')` seul laisserait un master agir hors de son scope.
-    if (!isGlobalAdmin(req.user) && Number(req.user.countryId) !== Number(countryId)) {
-      return res.status(403).json({ error: 'Accès interdit hors de votre pays' });
-    }
-
-    let tradeCategory = null;
->>>>>>> feat/mobility-delivery-pricing
     if (requestKind === 'trade_category') {
       tradeCategory = await TradeCategory.findOne({
         where: { id: tradeCategoryId, isActive: true },
@@ -135,41 +81,11 @@ exports.create = async (req, res) => {
       const hasPickup = Boolean(String(rawPickupAddress || '').trim()) ||
         (rawPickupLatitude != null && rawPickupLongitude != null);
       if (!hasDestination || !hasPickup) {
-<<<<<<< HEAD
-=======
         return res.status(400).json({
           error: 'Le point de départ et la destination sont obligatoires pour cette filière',
         });
       }
     }
-
-    let user = await User.findOne({ where: { phone } });
-    let isNewAccount = false;
-    let recoveryCodes = [];
-    let generatedPin = null;
-
-    if (user) {
-      if (user.role !== 'client') {
-        return res.status(409).json({
-          error:
-            'Ce numéro est associé à un compte existant non-client. Utilisez son espace habituel pour cette demande.',
-        });
-      }
-    } else {
-      const geoScope = await resolveGeoScope({ countryId });
-      if (geoScope?.error) {
-        return res.status(400).json({ error: geoScope.error });
-      }
-
-      const hasMaster = await countryHasActiveMaster(geoScope.countryId);
-      if (!hasMaster) {
->>>>>>> feat/mobility-delivery-pricing
-        return res.status(400).json({
-          error: 'Le point de départ et la destination sont obligatoires pour cette filière',
-        });
-      }
-    }
-<<<<<<< HEAD
 
     let user = await User.findOne({ where: { phone } });
     let isNewAccount = false;
@@ -230,24 +146,12 @@ exports.create = async (req, res) => {
     let geocodedAdminAreaName = null;
 
     if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && trimmedAddress) {
-=======
-
-    const trimmedAddress = address ? String(address).trim() : null;
-
-    let latitude = rawLatitude != null ? Number(rawLatitude) : null;
-    let longitude = rawLongitude != null ? Number(rawLongitude) : null;
-    let geocodedCountryIso = null;
-    let geocodedAdminAreaName = null;
-
-    if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && trimmedAddress) {
->>>>>>> feat/mobility-delivery-pricing
       const geocoded = (await geocodeAddress(trimmedAddress)) || {
         latitude: null,
         longitude: null,
         countryIso: null,
         adminAreaName: null,
       };
-<<<<<<< HEAD
       if (!geocoded) {
         return res.status(400).json({
           error: 'Adresse introuvable. Veuillez préciser un lieu plus précis.',
@@ -270,35 +174,10 @@ exports.create = async (req, res) => {
     let pickupLongitude = rawPickupLongitude != null ? Number(rawPickupLongitude) : null;
 
     if (pickupAddress && (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude))) {
-=======
-      if (!geocoded) {
-        return res.status(400).json({
-          error: 'Adresse introuvable. Veuillez préciser un lieu plus précis.',
-        });
-      }
-      latitude = geocoded.latitude;
-      longitude = geocoded.longitude;
-      geocodedCountryIso = geocoded.countryIso;
-      geocodedAdminAreaName = geocoded.adminAreaName;
-    }
-
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      latitude = null;
-      longitude = null;
-    }
-
-    // Retrait/départ — même règle que mission.controller.js exports.create (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §1.1/§3.1).
-    let pickupAddress = rawPickupAddress ? String(rawPickupAddress).trim() : null;
-    let pickupLatitude = rawPickupLatitude != null ? Number(rawPickupLatitude) : null;
-    let pickupLongitude = rawPickupLongitude != null ? Number(rawPickupLongitude) : null;
-
-    if (pickupAddress && (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude))) {
->>>>>>> feat/mobility-delivery-pricing
       const geocodedPickup = (await geocodeAddress(pickupAddress)) || {
         latitude: null,
         longitude: null,
       };
-<<<<<<< HEAD
       if (!geocodedPickup) {
         return res.status(400).json({
           error: 'Adresse de départ introuvable. Veuillez préciser un lieu plus précis.',
@@ -335,44 +214,6 @@ exports.create = async (req, res) => {
     }
 
     const executionType = tradeCategory ? 'provider' : 'agent';
-=======
-      if (!geocodedPickup) {
-        return res.status(400).json({
-          error: 'Adresse de départ introuvable. Veuillez préciser un lieu plus précis.',
-        });
-      }
-      pickupLatitude = geocodedPickup.latitude;
-      pickupLongitude = geocodedPickup.longitude;
-    }
-
-    if (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude)) {
-      pickupLatitude = null;
-      pickupLongitude = null;
-      pickupAddress = pickupAddress || null;
-    }
-
-    if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug) &&
-      !pickupAddress && (pickupLatitude === null || pickupLongitude === null)) {
-      return res.status(400).json({
-        error: 'Le point de départ est obligatoire pour cette filière',
-      });
-    }
-
-    const missionGeoScope = await resolveMissionGeoScope({
-      countryIso: geocodedCountryIso,
-      adminAreaName: geocodedAdminAreaName,
-      fallbackCountryId: user.countryId,
-      fallbackRegionId: user.regionId,
-      tradeCategoryScope: tradeCategory
-        ? { countryId: tradeCategory.countryId, regionId: tradeCategory.regionId }
-        : null,
-    });
-    if (missionGeoScope.error) {
-      return res.status(400).json({ error: missionGeoScope.error });
-    }
-
-    const executionType = tradeCategory ? 'provider' : 'agent';
->>>>>>> feat/mobility-delivery-pricing
     const requestedVehicleType =
       tradeCategory?.slug === 'mobilite' ? rawRequestedVehicleType || 'motorcycle' : null;
     const packageType = tradeCategory?.slug === 'livraison' ? rawPackageType || 'small' : null;
@@ -380,8 +221,6 @@ exports.create = async (req, res) => {
       recipientName: rawRecipientName,
       recipientPhone: rawRecipientPhone,
       packageHandling: rawPackageHandling,
-<<<<<<< HEAD
-=======
     });
 
     // Estimation pour renseigner le budget (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §3.1) — même
@@ -399,25 +238,6 @@ exports.create = async (req, res) => {
       pickupLongitude,
       requestedVehicleType,
       packageType,
->>>>>>> feat/mobility-delivery-pricing
-    });
-
-    // Estimation pour renseigner le budget (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §3.1) — même
-    // appel que mission.controller.js exports.create, jamais bloquant si elle échoue.
-    const estimate = await estimateMission({
-      user,
-      executionType,
-      tradeCategoryId: tradeCategory ? tradeCategory.id : null,
-      serviceType: tradeCategory ? null : serviceType,
-      countryId: missionGeoScope.countryId,
-      regionId: missionGeoScope.regionId,
-      destinationLatitude: latitude,
-      destinationLongitude: longitude,
-      pickupLatitude,
-      pickupLongitude,
-      requestedVehicleType,
-      packageType,
-<<<<<<< HEAD
     });
 
     const service = await Service.create({
@@ -438,8 +258,6 @@ exports.create = async (req, res) => {
       pickupLongitude,
       requestedVehicleType,
       packageType,
-=======
->>>>>>> feat/mobility-delivery-pricing
       ...deliveryDetails,
       budget: estimate.basePrice ?? estimate.minPrice ?? null,
       currency: estimate.currency,

@@ -8,8 +8,8 @@ import reportWebVitals from './reportWebVitals';
 import { initTheme } from './utils/theme';
 
 /* ============================================================
-   ðŸš« Patch PRO : Ignore ResizeObserver loop limit errors
-   (uniquement ces erreurs â†’ laisse passer les autres)
+   🚫 Patch PRO : Ignore ResizeObserver loop limit errors
+   (uniquement ces erreurs → laisse passer les autres)
 ============================================================ */
 const ignoreResizeObserverError = (event) => {
   if (
@@ -43,7 +43,3 @@ if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
     });
   });
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> feat/mobility-delivery-pricing

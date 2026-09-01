@@ -9,7 +9,3 @@ const DELIVERY_HANDLING_VALUES = [
 ];
 
 module.exports = { DELIVERY_HANDLING_VALUES };
-<<<<<<< HEAD
-
-=======
->>>>>>> feat/mobility-delivery-pricing
