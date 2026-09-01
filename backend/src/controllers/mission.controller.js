@@ -38,6 +38,7 @@ const mediaUpload = require('../services/mediaUpload.service');
 const { canAccessGeoResource } = require('../utils/geoScope');
 const { isProviderCountryMatchesMission } = require('../utils/providerScope');
 const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
+const { resolveDeliveryDetails } = require('../utils/deliveryDetails');
 const { getPagination } = require('../utils/pagination');
 const logger = require('../utils/logger');
 
@@ -234,12 +235,20 @@ exports.create = async (req, res) => {
       pickupLongitude: rawPickupLongitude,
       requestedVehicleType: rawRequestedVehicleType,
       packageType: rawPackageType,
+      recipientName: rawRecipientName,
+      recipientPhone: rawRecipientPhone,
+      packageHandling: rawPackageHandling,
     } = req.body;
 
     const tradeCategory = await resolveTradeCategory(executionType, tradeCategoryId);
     const requestedVehicleType =
       tradeCategory?.slug === 'mobilite' ? rawRequestedVehicleType || 'motorcycle' : null;
     const packageType = tradeCategory?.slug === 'livraison' ? rawPackageType || 'small' : null;
+    const deliveryDetails = resolveDeliveryDetails(tradeCategory, {
+      recipientName: rawRecipientName,
+      recipientPhone: rawRecipientPhone,
+      packageHandling: rawPackageHandling,
+    });
 
     let trimmedAddress = rawAddress ? String(rawAddress).trim() : null;
     let latitude = rawLatitude != null ? Number(rawLatitude) : null;
@@ -318,10 +327,11 @@ exports.create = async (req, res) => {
     if (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude)) {
       pickupLatitude = null;
       pickupLongitude = null;
-      pickupAddress = null;
+      pickupAddress = pickupAddress || null;
     }
 
-    if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug) && (pickupLatitude === null || pickupLongitude === null)) {
+    if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug) &&
+      !pickupAddress && (pickupLatitude === null || pickupLongitude === null)) {
       return res.status(400).json({
         error: 'Le point de départ est obligatoire pour cette filière',
       });
@@ -365,6 +375,7 @@ exports.create = async (req, res) => {
       pickupLongitude,
       requestedVehicleType,
       packageType,
+      ...deliveryDetails,
       type: tradeCategory ? 'other' : serviceType,
       title: String(title).trim(),
       description: description ? String(description).trim() : null,
@@ -562,8 +573,9 @@ async function releaseMobilityProviderIfEligible(providerId) {
 
 /* ============================================================
    POST /api/v1/missions/:id/assign — assignation/réassignation/désassignation (admin), section
-   4.2/3.3 + extension "superviseur agent" (voir docs internes de ce chantier — un agent peut être
-   posé en plus d'un prestataire sur une mission filière, sans jamais piloter la machine à états :
+   4.2/3.3 + extension "superviseur agent" pour les filières hors transport. Taxi et Livraison
+   sont exécutés exclusivement par un prestataire chauffeur/livreur : aucun agent superviseur.
+   Pour les autres filières, un agent peut être posé en plus d'un prestataire sans piloter la machine à états :
    voir exports.updateStatus). Body : { providerId?, agentId? }, chaque clé indépendante — absente
    = inchangé, null = désassigner, nombre = assigner/réassigner. Pas de short-list ni de calcul
    Distance Matrix ici : le moteur de matching automatique reste le Lot 4 (section 3.4/section 6).
@@ -590,16 +602,23 @@ exports.assign = async (req, res) => {
       ? await TradeCategory.findByPk(service.tradeCategoryId, { attributes: ['slug'] })
       : null;
     const isMobility = tradeCategory?.slug === 'mobilite';
+    const isDriverOnlyMission = ['mobilite', 'livraison'].includes(tradeCategory?.slug);
     if (vehicleId !== undefined && !isMobility) {
       return res.status(400).json({ error: 'vehicleId est reserve aux courses Mobilite' });
     }
 
-    let directUpdates = {};
+    if (isDriverOnlyMission && agentId !== undefined && agentId !== null) {
+      return res.status(400).json({
+        error: 'Les courses taxi et les livraisons doivent être affectées uniquement à un chauffeur ou livreur',
+      });
+    }
+
+    let directUpdates = isDriverOnlyMission && service.agentId ? { agentId: null } : {};
     let shouldNotify = false;
     let mobilityProviderToRelease = null;
     let mobilityAssignmentGuard = null;
 
-    // --- Agent superviseur : jamais un moteur de statut, modifiable à tout stade. ---
+    // --- Agent superviseur : réservé aux filières hors Taxi/Livraison. ---
     if (agentId !== undefined) {
       if (agentId === null) {
         directUpdates.agentId = null;
@@ -657,6 +676,16 @@ exports.assign = async (req, res) => {
           return res.status(400).json({
             error: 'Ce prestataire ne couvre pas le pays de destination de cette mission',
           });
+        }
+        if (tradeCategory?.slug === 'livraison' && service.packageType === 'bulky') {
+          const hasCar = await Vehicle.count({
+            where: { providerId: provider.id, status: 'active', vehicleType: 'car' },
+          });
+          if (!hasCar) {
+            return res.status(400).json({
+              error: 'Un véhicule adapté est requis pour un colis volumineux',
+            });
+          }
         }
         if (
           isMobility &&
@@ -1431,6 +1460,9 @@ exports.track = async (req, res) => {
       pickupAddress: service.pickupAddress || null,
       requestedVehicleType: service.requestedVehicleType || null,
       packageType: service.packageType || null,
+      recipientName: service.recipientName || null,
+      recipientPhone: service.recipientPhone || null,
+      packageHandling: Array.isArray(service.packageHandling) ? service.packageHandling : [],
       pickupLatitude: service.pickupLatitude != null ? Number(service.pickupLatitude) : null,
       pickupLongitude: service.pickupLongitude != null ? Number(service.pickupLongitude) : null,
       destination:

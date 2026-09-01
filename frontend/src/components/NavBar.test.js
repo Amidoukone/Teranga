@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import NavBar from "./NavBar";
 import {
   logout,
@@ -140,38 +140,80 @@ describe("NavBar logout flow", () => {
     });
   });
 
-  test("keeps deliveries directly visible for clients", async () => {
+  test("shows the unified request entry points directly for clients", async () => {
     render(<NavBar />);
 
-    const deliveryLinks = await screen.findAllByRole("link", {
-      name: "nav.myDeliveries",
+    const newRequestLinks = await screen.findAllByRole("link", {
+      name: "nav.newRequest",
     });
-    expect(deliveryLinks.length).toBeGreaterThanOrEqual(2);
-    deliveryLinks.forEach((link) => {
-      expect(link).toHaveAttribute("href", "/livraisons");
+    const requestLinks = await screen.findAllByRole("link", {
+      name: "nav.myRequests",
+    });
+    expect(newRequestLinks.length).toBeGreaterThanOrEqual(2);
+    expect(requestLinks.length).toBeGreaterThanOrEqual(2);
+    newRequestLinks.forEach((link) => {
+      expect(link).toHaveAttribute("href", "/demandes/nouvelle");
+    });
+    requestLinks.forEach((link) => {
+      expect(link).toHaveAttribute("href", "/demandes");
     });
   });
 
-  test("keeps the dedicated Services page visible for admins", async () => {
+  test("moves the dedicated Services page into More for admins", async () => {
     const adminUser = { ...mockUser, role: "admin", countryId: 1 };
     getLocalUser.mockReturnValue(adminUser);
     me.mockResolvedValue({ user: adminUser });
 
     render(<NavBar />);
 
-    const serviceLinks = await screen.findAllByRole("link", { name: "nav.services" });
-    expect(serviceLinks.some((link) => link.getAttribute("href") === "/admin/services")).toBe(true);
+    expect(screen.queryByRole("link", { name: "nav.adminServices" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "nav.openMoreMenu" }));
+    const serviceLink = await screen.findByRole("link", { name: "nav.adminServices" });
+    expect(serviceLink).toHaveAttribute("href", "/admin/services");
   });
 
-  test("keeps generic service jobs directly visible for providers", async () => {
+  test("groups the admin menu into six business spaces", async () => {
+    const adminUser = { ...mockUser, role: "admin", countryId: 1 };
+    getLocalUser.mockReturnValue(adminUser);
+    me.mockResolvedValue({ user: adminUser });
+
+    render(<NavBar />);
+    fireEvent.click(screen.getByRole("button", { name: "nav.openMoreMenu" }));
+    const panel = await screen.findByRole("dialog", { name: "nav.menu" });
+
+    [
+      "nav.sections.operations",
+      "nav.sections.network",
+      "nav.sections.catalog",
+      "nav.sections.quality",
+      "nav.sections.finance",
+      "nav.sections.configuration",
+    ].forEach((section) => expect(within(panel).getByText(section)).toBeInTheDocument());
+  });
+
+  test("moves generic service jobs into More for providers", async () => {
     const providerUser = { ...mockUser, role: "provider" };
     getLocalUser.mockReturnValue(providerUser);
     me.mockResolvedValue({ user: providerUser });
 
     render(<NavBar />);
 
-    const serviceLinks = await screen.findAllByRole("link", { name: "nav.services" });
-    expect(serviceLinks.length).toBeGreaterThanOrEqual(2);
-    serviceLinks.forEach((link) => expect(link).toHaveAttribute("href", "/prestataire/services"));
+    expect(screen.queryByRole("link", { name: "nav.services" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "nav.openMoreMenu" }));
+    const serviceLink = await screen.findByRole("link", { name: "nav.services" });
+    expect(serviceLink).toHaveAttribute("href", "/prestataire/services");
+  });
+
+  test("keeps client technical objects out of the navigation", async () => {
+    render(<NavBar />);
+
+    fireEvent.click(screen.getByRole("button", { name: "nav.openMoreMenu" }));
+    const panel = await screen.findByRole("dialog", { name: "nav.menu" });
+
+    expect(within(panel).queryByRole("link", { name: "nav.myRides" })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole("link", { name: "nav.myDeliveries" })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole("link", { name: "nav.services" })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole("link", { name: "nav.tasks" })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole("link", { name: "nav.transactions" })).not.toBeInTheDocument();
   });
 });

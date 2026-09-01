@@ -35,6 +35,8 @@ const createTransactionSchema = Joi.object({
     .allow('', null),
   paymentMethod: Joi.string().trim().max(255).allow('', null),
   description: Joi.string().trim().max(5000).allow('', null),
+  // Le fichier reçu est transmis en multipart et contrôlé par le contrôleur.
+  proofFile: Joi.alternatives().try(Joi.string().max(2000), Joi.object()).allow(null),
   status: Joi.string()
     .trim()
     .valid(...ALLOWED_TRANSACTION_STATUSES),
@@ -60,6 +62,7 @@ const updateTransactionSchema = Joi.object({
     .allow('', null),
   paymentMethod: Joi.string().trim().max(255).allow('', null),
   description: Joi.string().trim().max(5000).allow('', null),
+  proofFile: Joi.alternatives().try(Joi.string().max(2000), Joi.object()).allow(null),
   status: Joi.string()
     .trim()
     .valid(...ALLOWED_TRANSACTION_STATUSES),

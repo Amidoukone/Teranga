@@ -2,6 +2,7 @@
 
 const { Op } = require("sequelize");
 const { Country, Region } = require("../../models");
+const { resolveStrictRegionScope } = require("./geoScopePolicy");
 
 function toSafeInt(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -136,6 +137,10 @@ function applyGeoScope(where = {}, user, options = {}) {
   const { countryId, regionId } = getUserGeoScope(user);
 
   if (regionId) {
+    if (resolveStrictRegionScope(options)) {
+      return { ...where, regionId };
+    }
+
     // Même filet de sécurité que canAccessGeoResource() : une ressource dont la région
     // n'a pas pu être résolue (regionId NULL) mais dont le pays correspond reste incluse,
     // au lieu de disparaître silencieusement de la liste du master régional.
@@ -208,7 +213,7 @@ function filterGeoAssignmentsForModel(model, assignments = {}) {
   return out;
 }
 
-function canAccessGeoResource(resource, user) {
+function canAccessGeoResource(resource, user, options = {}) {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
 
@@ -219,6 +224,7 @@ function canAccessGeoResource(resource, user) {
 
   if (regionId) {
     if (String(resRegion) === String(regionId)) return true;
+    if (resolveStrictRegionScope(options)) return false;
     // Filet de sécurité : une ressource dont la région n'a pas pu être résolue
     // (ex. missions guidées géocodées, cf. resolveMissionGeoScope.js — correspondance
     // de nom de région best-effort) reste visible pour un master régional tant que le

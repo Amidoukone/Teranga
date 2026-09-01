@@ -2,6 +2,7 @@
 const { Model } = require('sequelize');
 const { MISSION_STATUS_VALUES } = require('../src/constants/missionStatus');
 const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../src/constants/deliveryPackage');
+const { DELIVERY_HANDLING_VALUES } = require('../src/constants/deliveryHandling');
 
 module.exports = (sequelize, DataTypes) => {
   class Service extends Model {
@@ -214,6 +215,32 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         field: 'package_type',
         validate: { isIn: [DELIVERY_PACKAGE_TYPE_VALUES] },
+      },
+      recipientName: {
+        type: DataTypes.STRING(120),
+        allowNull: true,
+        field: 'recipient_name',
+      },
+      recipientPhone: {
+        type: DataTypes.STRING(40),
+        allowNull: true,
+        field: 'recipient_phone',
+      },
+      packageHandling: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        field: 'package_handling',
+        validate: {
+          isValidHandling(value) {
+            if (value == null) return;
+            if (
+              !Array.isArray(value) ||
+              value.some((item) => !DELIVERY_HANDLING_VALUES.includes(item))
+            ) {
+              throw new Error('Précautions de colis invalides');
+            }
+          },
+        },
       },
 
       // Fenêtre d'acceptation du dispatch mobilité (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2) —

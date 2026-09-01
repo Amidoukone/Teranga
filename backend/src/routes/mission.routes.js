@@ -8,7 +8,8 @@ const phoneOrderCtrl = require('../controllers/missionPhoneOrder.controller');
 const mobilityDispatchCtrl = require('../controllers/mobilityDispatch.controller');
 const safetyCtrl = require('../controllers/missionSafety.controller');
 const auth = require('../middleware/auth.middleware');
-const { requireRoles } = require('../middleware/roles.middleware');
+const { requirePermission } = require('../middleware/authorization.middleware');
+const { PERMISSIONS } = require('../constants/permissions');
 const { validateBody } = require('../middleware/validate.middleware');
 const uploadMissionAttachment = require('../middleware/uploadMissionAttachment.middleware');
 const {
@@ -41,23 +42,49 @@ const {
 router.get('/shared/:token', publicQuoteLimiter, safetyCtrl.getShared);
 
 // Espaces Taxi dédiés : côté client et côté opérateur.
-router.get('/rides/mine', auth, requireRoles('client'), ctrl.myRides);
-router.get('/deliveries/mine', auth, requireRoles('client'), ctrl.myDeliveries);
-router.get('/rides/dispatch', auth, requireRoles('admin'), ctrl.dispatchRides);
+router.get(
+  '/rides/mine',
+  auth,
+  requirePermission(PERMISSIONS.MISSION_CLIENT_SELF),
+  ctrl.myRides
+);
+router.get(
+  '/deliveries/mine',
+  auth,
+  requirePermission(PERMISSIONS.MISSION_CLIENT_SELF),
+  ctrl.myDeliveries
+);
+router.get(
+  '/rides/dispatch',
+  auth,
+  requirePermission(PERMISSIONS.MISSION_OPERATE),
+  ctrl.dispatchRides
+);
 
 router.post(
   '/estimate',
   auth,
-  requireRoles('client'),
+  requirePermission(PERMISSIONS.MISSION_CLIENT_SELF),
   validateBody(estimateMissionSchema),
   ctrl.estimate
 );
 
 // Géocodage inverse (bouton "Utiliser ma position actuelle", étape Lieu du wizard) — clé
 // serveur uniquement, jamais la clé navigateur (restreinte à Maps JavaScript/Places).
-router.get('/reverse-geocode', auth, requireRoles('client'), ctrl.reverseGeocodeLocation);
+router.get(
+  '/reverse-geocode',
+  auth,
+  requirePermission(PERMISSIONS.MISSION_CLIENT_SELF),
+  ctrl.reverseGeocodeLocation
+);
 
-router.post('/', auth, requireRoles('client'), validateBody(createMissionSchema), ctrl.create);
+router.post(
+  '/',
+  auth,
+  requirePermission(PERMISSIONS.MISSION_CLIENT_SELF),
+  validateBody(createMissionSchema),
+  ctrl.create
+);
 
 // Canal opérateur téléphone (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §3) — admin/master saisit une
 // course au nom d'un appelant. Chemin littéral, doit rester déclaré avant toute route `/:id/...`
@@ -65,7 +92,7 @@ router.post('/', auth, requireRoles('client'), validateBody(createMissionSchema)
 router.post(
   '/phone-order',
   auth,
-  requireRoles('admin'),
+  requirePermission(PERMISSIONS.MISSION_OPERATE),
   validateBody(phoneOrderSchema),
   phoneOrderCtrl.create
 );
@@ -73,7 +100,7 @@ router.post(
 router.post(
   '/:id/attachments',
   auth,
-  requireRoles('client'),
+  requirePermission(PERMISSIONS.MISSION_CLIENT_SELF),
   uploadMissionAttachment,
   ctrl.addAttachments
 );
@@ -82,7 +109,7 @@ router.post(
 router.post(
   '/:id/assign',
   auth,
-  requireRoles('admin'),
+  requirePermission(PERMISSIONS.MISSION_OPERATE),
   validateBody(assignMissionSchema),
   ctrl.assign
 );
@@ -90,7 +117,7 @@ router.post(
 router.post(
   '/:id/verify-start-code',
   auth,
-  requireRoles('provider'),
+  requirePermission(PERMISSIONS.MISSION_PROVIDER_EXECUTE),
   startCodeLimiter,
   validateBody(verifyStartCodeSchema),
   safetyCtrl.verifyStartCode
@@ -99,7 +126,7 @@ router.post(
 router.post(
   '/:id/start-override',
   auth,
-  requireRoles('admin'),
+  requirePermission(PERMISSIONS.MISSION_OPERATE),
   writeLimiter,
   validateBody(overrideStartSchema),
   safetyCtrl.overrideStart
@@ -108,7 +135,7 @@ router.post(
 router.post(
   '/:id/share',
   auth,
-  requireRoles('client'),
+  requirePermission(PERMISSIONS.MISSION_CLIENT_SELF),
   writeLimiter,
   validateBody(createShareSchema),
   safetyCtrl.createShare
@@ -116,14 +143,14 @@ router.post(
 router.delete(
   '/:id/share',
   auth,
-  requireRoles('client'),
+  requirePermission(PERMISSIONS.MISSION_CLIENT_SELF),
   writeLimiter,
   safetyCtrl.revokeShare
 );
 router.post(
   '/:id/rating',
   auth,
-  requireRoles('client'),
+  requirePermission(PERMISSIONS.MISSION_CLIENT_SELF),
   writeLimiter,
   validateBody(createRatingSchema),
   safetyCtrl.createRating
@@ -132,20 +159,30 @@ router.post(
 router.get(
   '/:id/dispatch-candidates',
   auth,
-  requireRoles('admin'),
+  requirePermission(PERMISSIONS.MISSION_OPERATE),
   mobilityDispatchCtrl.listCandidates
 );
 
 // Fenêtre d'acceptation dispatch mobilité (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2) — prestataire
 // assigné uniquement.
-router.post('/:id/accept', auth, requireRoles('provider'), ctrl.accept);
-router.post('/:id/decline', auth, requireRoles('provider'), ctrl.decline);
+router.post(
+  '/:id/accept',
+  auth,
+  requirePermission(PERMISSIONS.MISSION_PROVIDER_EXECUTE),
+  ctrl.accept
+);
+router.post(
+  '/:id/decline',
+  auth,
+  requirePermission(PERMISSIONS.MISSION_PROVIDER_EXECUTE),
+  ctrl.decline
+);
 
 // Transition de statut (section 2) — permissions fines vérifiées dans le contrôleur.
 router.patch(
   '/:id/status',
   auth,
-  requireRoles('client', 'agent', 'provider', 'admin'),
+  requirePermission(PERMISSIONS.MISSION_STATUS_UPDATE),
   validateBody(updateMissionStatusSchema),
   ctrl.updateStatus
 );
@@ -154,7 +191,7 @@ router.patch(
 router.post(
   '/:id/location',
   auth,
-  requireRoles('agent', 'provider'),
+  requirePermission(PERMISSIONS.MISSION_FIELD_EXECUTE),
   validateBody(missionLocationSchema),
   ctrl.pingLocation
 );
@@ -164,30 +201,45 @@ router.post(
 router.post(
   '/:id/logistics-request',
   auth,
-  requireRoles('agent', 'provider'),
+  requirePermission(PERMISSIONS.MISSION_FIELD_EXECUTE),
   validateBody(logisticsRequestSchema),
   ctrl.requestLogistics
 );
 
 // Flux de suivi (carte + statut + ETA) — client propriétaire, agent (exécutant ou superviseur
 // passif), prestataire exécutant. Permissions fines + scope vérifiés dans le contrôleur.
-router.get('/:id/track', auth, requireRoles('client', 'agent', 'provider'), ctrl.track);
+router.get(
+  '/:id/track',
+  auth,
+  requirePermission(PERMISSIONS.MISSION_TRACK),
+  ctrl.track
+);
 
 // "Mes missions" — agent (missions filière où il est superviseur/exécutant) ou prestataire
 // (ses missions assignées). Les missions classiques agent restent sur /services/agent/services.
-router.get('/mine', auth, requireRoles('agent', 'provider'), ctrl.mine);
+router.get(
+  '/mine',
+  auth,
+  requirePermission(PERMISSIONS.MISSION_FIELD_EXECUTE),
+  ctrl.mine
+);
 
 // Parcours de litige enrichi (docs/DEV_SPEC_TERANGA_v4_PHASE0.md §2). Ouverture réservée au
 // client propriétaire ; mise à jour (premier contact / résolution) réservée à l'admin/master du
 // scope de la mission — vérifié dans le contrôleur.
 // File de traitement (admin/master) — chemin littéral, doit rester déclaré avant toute route
 // `/:id/...` pour ne jamais être capturé par un paramètre.
-router.get('/disputes', auth, requireRoles('admin'), disputeCtrl.list);
+router.get(
+  '/disputes',
+  auth,
+  requirePermission(PERMISSIONS.MISSION_DISPUTE_MANAGE),
+  disputeCtrl.list
+);
 
 router.post(
   '/:id/disputes',
   auth,
-  requireRoles('client'),
+  requirePermission(PERMISSIONS.MISSION_CLIENT_SELF),
   validateBody(createDisputeSchema),
   disputeCtrl.create
 );
@@ -195,7 +247,7 @@ router.post(
 router.patch(
   '/:id/disputes/:disputeId',
   auth,
-  requireRoles('admin'),
+  requirePermission(PERMISSIONS.MISSION_DISPUTE_MANAGE),
   validateBody(updateDisputeSchema),
   disputeCtrl.update
 );

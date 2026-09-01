@@ -9,6 +9,7 @@ const { geocodeAddress, reverseGeocode } = require('../services/geocoding.servic
 const { estimateMission } = require('../services/priceEstimate.service');
 const { getMissionStartCode } = require('../services/missionSafety.service');
 const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
+const { resolveDeliveryDetails } = require('../utils/deliveryDetails');
 const logger = require('../utils/logger');
 const {
   signAccess,
@@ -71,12 +72,13 @@ exports.estimate = async (req, res) => {
 
     if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && address) {
       const geocoded = await geocodeAddress(address);
-      if (!geocoded) return res.status(400).json({ error: 'Destination introuvable' });
-      latitude = geocoded.latitude;
-      longitude = geocoded.longitude;
-      address = geocoded.formattedAddress || address;
-      geocodedCountryIso = geocoded.countryIso;
-      geocodedAdminAreaName = geocoded.adminAreaName;
+      if (geocoded) {
+        latitude = geocoded.latitude;
+        longitude = geocoded.longitude;
+        address = geocoded.formattedAddress || address;
+        geocodedCountryIso = geocoded.countryIso;
+        geocodedAdminAreaName = geocoded.adminAreaName;
+      }
     }
 
     if (
@@ -84,18 +86,17 @@ exports.estimate = async (req, res) => {
       pickupAddress
     ) {
       const geocodedPickup = await geocodeAddress(pickupAddress);
-      if (!geocodedPickup) return res.status(400).json({ error: 'Point de départ introuvable' });
-      pickupLatitude = geocodedPickup.latitude;
-      pickupLongitude = geocodedPickup.longitude;
-      pickupAddress = geocodedPickup.formattedAddress || pickupAddress;
+      if (geocodedPickup) {
+        pickupLatitude = geocodedPickup.latitude;
+        pickupLongitude = geocodedPickup.longitude;
+        pickupAddress = geocodedPickup.formattedAddress || pickupAddress;
+      }
     }
 
     if (
       PICKUP_REQUIRED_SLUGS.includes(tradeCategory.slug) &&
-      (!Number.isFinite(latitude) ||
-        !Number.isFinite(longitude) ||
-        !Number.isFinite(pickupLatitude) ||
-        !Number.isFinite(pickupLongitude))
+      (!(address || (Number.isFinite(latitude) && Number.isFinite(longitude))) ||
+        !(pickupAddress || (Number.isFinite(pickupLatitude) && Number.isFinite(pickupLongitude))))
     ) {
       return res.status(400).json({
         error: 'Le point de départ et la destination doivent être placés sur la carte',
@@ -198,6 +199,9 @@ exports.create = async (req, res) => {
       pickupLongitude: rawPickupLongitude,
       requestedVehicleType: rawRequestedVehicleType,
       packageType: rawPackageType,
+      recipientName: rawRecipientName,
+      recipientPhone: rawRecipientPhone,
+      packageHandling: rawPackageHandling,
     } = req.body;
 
     const phone = normalizePhone(rawPhone);
@@ -357,14 +361,14 @@ exports.create = async (req, res) => {
     }
 
     if (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude)) {
-      pickupAddress = null;
+      pickupAddress = pickupAddress || null;
       pickupLatitude = null;
       pickupLongitude = null;
     }
 
     if (
       PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug) &&
-      (pickupLatitude === null || pickupLongitude === null)
+      (!pickupAddress && (pickupLatitude === null || pickupLongitude === null))
     ) {
       return res.status(400).json({
         error: 'Le point de départ est obligatoire pour cette filière',
@@ -393,6 +397,11 @@ exports.create = async (req, res) => {
       rawRequestedVehicleType
     );
     const packageType = resolvePackageType(tradeCategory, rawPackageType);
+    const deliveryDetails = resolveDeliveryDetails(tradeCategory, {
+      recipientName: rawRecipientName,
+      recipientPhone: rawRecipientPhone,
+      packageHandling: rawPackageHandling,
+    });
     const estimate = await estimateMission({
       user,
       executionType,
@@ -423,6 +432,7 @@ exports.create = async (req, res) => {
       pickupLongitude,
       requestedVehicleType,
       packageType,
+      ...deliveryDetails,
       address: trimmedAddress,
       latitude,
       longitude,
@@ -485,6 +495,7 @@ exports.create = async (req, res) => {
       service: fullService,
     });
   } catch (e) {
+    if (e.status === 400) return res.status(400).json({ error: e.message });
     logger.error({ err: e }, 'missionRequest.create.failed');
     return res.status(500).json({ error: 'Erreur lors de la création de la demande' });
   }

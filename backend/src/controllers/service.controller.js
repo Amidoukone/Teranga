@@ -620,6 +620,21 @@ exports.assignAgent = async (req, res) => {
       if (!service)
         throw Object.assign(new Error("Service introuvable"), { status: 404 });
 
+      const tradeCategory = service.tradeCategoryId
+        ? await TradeCategory.findByPk(service.tradeCategoryId, {
+            attributes: ["slug"],
+            transaction: t,
+          })
+        : null;
+      if (["mobilite", "livraison"].includes(tradeCategory?.slug)) {
+        throw Object.assign(
+          new Error(
+            "Les courses taxi et les livraisons doivent etre affectees uniquement a un chauffeur ou livreur"
+          ),
+          { status: 400 }
+        );
+      }
+
       // 🔐 Scope géographique (strict)
       if (!canAccessByGeoScope(req.user, service)) {
         throw Object.assign(

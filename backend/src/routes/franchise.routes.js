@@ -3,7 +3,8 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/franchise.controller');
 const auth = require('../middleware/auth.middleware');
-const { requireRoles } = require('../middleware/roles.middleware');
+const { requirePermission } = require('../middleware/authorization.middleware');
+const { PERMISSIONS } = require('../constants/permissions');
 const { requireScopeMatch } = require('../middleware/scope.middleware');
 const { validateBody } = require('../middleware/validate.middleware');
 const {
@@ -28,11 +29,11 @@ const NON_REGRESSIVE_VALIDATION_OPTIONS = {
 
 router.get('/masters', ctrl.listMasterCountries);
 
-router.get('/', auth, requireRoles('admin'), ctrl.list);
+router.get('/', auth, requirePermission(PERMISSIONS.FRANCHISE_READ), ctrl.list);
 router.post(
   '/',
   auth,
-  requireRoles('admin'),
+  requirePermission(PERMISSIONS.FRANCHISE_WRITE),
   validateBody(createFranchiseSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
   requireScopeMatch(),
   ctrl.create
@@ -40,7 +41,7 @@ router.post(
 router.put(
   '/:id',
   auth,
-  requireRoles('admin'),
+  requirePermission(PERMISSIONS.FRANCHISE_WRITE),
   validateBody(updateFranchiseSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
   requireScopeMatch(),
   ctrl.update

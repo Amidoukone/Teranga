@@ -21,7 +21,7 @@ import {
 const AVAILABILITY_VALUES = ['available', 'busy', 'offline'];
 const DRIVER_RIDES_POLL_MS = (() => {
   const raw = Number.parseInt(String(process.env.REACT_APP_DRIVER_RIDES_POLL_MS || ''), 10);
-  if (!Number.isFinite(raw) || raw < 5000) return 15000;
+  if (!Number.isFinite(raw) || raw < 30000) return 60000;
   return raw;
 })();
 const AVAILABILITY_TONE = {

@@ -4,7 +4,8 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/project.controller');
 const auth = require('../middleware/auth.middleware');
-const { requireRoles } = require('../middleware/roles.middleware');
+const { requirePermission } = require('../middleware/authorization.middleware');
+const { PERMISSIONS } = require('../constants/permissions');
 const { canAccessGeoResource, isGlobalAdmin } = require('../utils/geoScope');
 const { validateBody } = require('../middleware/validate.middleware');
 const {
@@ -27,20 +28,20 @@ const {
 router.post(
   '/',
   auth,
-  requireRoles('client', 'admin'),
+  requirePermission(PERMISSIONS.PROJECT_WRITE),
   validateBody(createProjectSchema),
   ctrl.create
 );
-router.get('/', auth, requireRoles('client', 'agent', 'admin'), ctrl.list);
-router.get('/:id', auth, requireRoles('client', 'agent', 'admin'), ctrl.detail);
+router.get('/', auth, requirePermission(PERMISSIONS.PROJECT_READ), ctrl.list);
+router.get('/:id', auth, requirePermission(PERMISSIONS.PROJECT_READ), ctrl.detail);
 router.put(
   '/:id',
   auth,
-  requireRoles('client', 'admin'),
+  requirePermission(PERMISSIONS.PROJECT_WRITE),
   validateBody(updateProjectSchema),
   ctrl.update
 );
-router.delete('/:id', auth, requireRoles('client', 'admin'), ctrl.remove);
+router.delete('/:id', auth, requirePermission(PERMISSIONS.PROJECT_WRITE), ctrl.remove);
 
 /* =========================================================
    🧩 Assignation d’un agent à un projet (ADMIN uniquement)
@@ -52,7 +53,7 @@ router.delete('/:id', auth, requireRoles('client', 'admin'), ctrl.remove);
 router.post(
   '/assign',
   auth,
-  requireRoles('admin'),
+  requirePermission(PERMISSIONS.PROJECT_ASSIGN),
   validateBody(assignProjectSchema),
   async (req, res) => {
     try {

@@ -21,6 +21,8 @@ import { normalizeRole } from '../utils/role';
 import { notify } from '../utils/notify';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 import useFocusTrap from '../hooks/useFocusTrap';
+import LocationAutocompleteInput from '../features/mission-creation/LocationAutocompleteInput';
+import MissionLocationMap from '../features/mission-creation/MissionLocationMap';
 
 function normalizePath(path = '') {
   if (!path) return '';
@@ -211,6 +213,7 @@ export default function AdminPropertiesPage() {
   const [editExistingMedia, setEditExistingMedia] = useState([]);
   const [removedMedia, setRemovedMedia] = useState([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [coordinates, setCoordinates] = useState(null);
 
   const [form, setForm] = useState({
     title: '',
@@ -429,7 +432,7 @@ export default function AdminPropertiesPage() {
 
     try {
       setIsSubmitting(true);
-      await createPropertyForClient(selectedClient, form, files);
+      await createPropertyForClient(selectedClient, { ...form, latitude: coordinates?.latitude, longitude: coordinates?.longitude }, files);
       notify(t('adminPropertiesPage.alerts.createSuccess'));
       resetForm();
       setIsCreating(false);
@@ -466,6 +469,11 @@ export default function AdminPropertiesPage() {
       // countryId: p.countryId || '',
       // regionId: p.regionId || '',
     });
+    setCoordinates(
+      p.latitude != null && p.longitude != null
+        ? { latitude: Number(p.latitude), longitude: Number(p.longitude) }
+        : null
+    );
 
     setFiles([]);
     setRemovedMedia([]);
@@ -497,8 +505,8 @@ export default function AdminPropertiesPage() {
     try {
       setIsSubmitting(true);
       const payload = removedMedia.length
-        ? { ...form, removePhotos: JSON.stringify(removedMedia) }
-        : form;
+        ? { ...form, latitude: coordinates?.latitude, longitude: coordinates?.longitude, removePhotos: JSON.stringify(removedMedia) }
+        : { ...form, latitude: coordinates?.latitude, longitude: coordinates?.longitude };
       await updateProperty(editId, payload, files);
       notify(t('adminPropertiesPage.alerts.updateSuccess'));
       resetForm();
@@ -538,6 +546,7 @@ export default function AdminPropertiesPage() {
     setEditExistingMedia([]);
     setRemovedMedia([]);
     setFiles([]);
+    setCoordinates(null);
 
     previewUrls.forEach(safeRevoke);
     setPreviewUrls([]);
@@ -771,10 +780,14 @@ export default function AdminPropertiesPage() {
                 <label className="text-[11px] font-medium text-text-secondary">
                   {t('adminPropertiesPage.form.labels.address')}
                 </label>
-                <input
+                <LocationAutocompleteInput
                   placeholder={t('adminPropertiesPage.form.placeholders.address')}
                   value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  onChange={(address) => setForm((prev) => ({ ...prev, address }))}
+                  onPlaceSelected={({ address, latitude, longitude }) => {
+                    setForm((prev) => ({ ...prev, address }));
+                    setCoordinates({ latitude, longitude });
+                  }}
                   required
                   className="app-input-subtle"
                 />
@@ -792,6 +805,27 @@ export default function AdminPropertiesPage() {
                   required
                   className="app-input-subtle"
                 />
+              </div>
+
+              <div className="sm:col-span-2">
+                <p className="mb-2 text-[11px] font-medium text-text-secondary">
+                  {t('adminPropertiesPage.form.labels.locationMap', { defaultValue: 'Localisation précise' })}
+                </p>
+                <MissionLocationMap
+                  latitude={coordinates?.latitude}
+                  longitude={coordinates?.longitude}
+                  onPositionChange={setCoordinates}
+                />
+                <p className="mt-2 text-xs text-text-muted">
+                  {coordinates
+                    ? `${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}`
+                    : t('adminPropertiesPage.form.hints.locationMap', { defaultValue: 'Sélectionnez une adresse ou déplacez le marqueur sur la carte.' })}
+                </p>
+                {coordinates ? (
+                  <a className="mt-1 inline-flex text-xs font-semibold text-blue-700 hover:underline dark:text-blue-300" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${coordinates.latitude},${coordinates.longitude}`}>
+                    {t('adminPropertiesPage.form.actions.openMap', { defaultValue: 'Ouvrir dans Google Maps' })}
+                  </a>
+                ) : null}
               </div>
 
               {/* Code postal */}

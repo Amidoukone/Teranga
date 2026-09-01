@@ -26,10 +26,6 @@ exports.listCandidates = async (req, res) => {
     }
     const pickupLatitude = Number(service.pickupLatitude);
     const pickupLongitude = Number(service.pickupLongitude);
-    if (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude)) {
-      return res.status(400).json({ error: 'Point de depart GPS manquant' });
-    }
-
     const result = await getMobilityDispatchCandidates({
       service,
       countryCode: service.country?.isoCode || null,

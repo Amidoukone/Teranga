@@ -16,7 +16,7 @@ import ConfirmStep from "./steps/ConfirmStep";
 
 const TOTAL_STEPS = 4;
 
-export default function MissionCreationWizard({ serviceOnly = false }) {
+export default function MissionCreationWizard({ serviceOnly = false, preferredCategorySlug = null }) {
   const { t } = useTranslation();
 
   const [step, setStep] = useState(1);
@@ -73,11 +73,22 @@ export default function MissionCreationWizard({ serviceOnly = false }) {
           listSavedLocations(),
         ]);
         if (cancelled) return;
-        setTradeCategories(
-          serviceOnly
-            ? categories.filter((item) => !["mobilite", "livraison"].includes(item.slug))
-            : categories
-        );
+        const visibleCategories = serviceOnly
+          ? categories.filter((item) => !["mobilite", "livraison"].includes(item.slug))
+          : categories;
+        setTradeCategories(visibleCategories);
+        const preferredCategory = preferredCategorySlug
+          ? visibleCategories.find((item) => item.slug === preferredCategorySlug)
+          : null;
+        if (preferredCategory) {
+          setCategory((current) => current.requestKind
+            ? current
+            : {
+                requestKind: "trade_category",
+                tradeCategoryId: String(preferredCategory.id),
+                serviceType: "",
+              });
+        }
         setSavedLocations(locations);
       } catch (_err) {
         if (!cancelled) {
@@ -93,7 +104,7 @@ export default function MissionCreationWizard({ serviceOnly = false }) {
     return () => {
       cancelled = true;
     };
-  }, [serviceOnly, t]);
+  }, [preferredCategorySlug, serviceOnly, t]);
 
   const executionType = category.requestKind === "trade_category" ? "provider" : "agent";
 

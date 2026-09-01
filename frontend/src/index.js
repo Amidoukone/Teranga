@@ -34,3 +34,12 @@ root.render(
 );
 
 reportWebVitals();
+
+if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((error) => {
+      // Le mode en ligne reste pleinement fonctionnel si le navigateur refuse le cache offline.
+      console.warn('Teranga offline shell unavailable:', error);
+    });
+  });
+}

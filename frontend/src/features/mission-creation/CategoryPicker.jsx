@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Loader2,
@@ -42,6 +43,14 @@ const CLASSIC_TYPE_ICONS = {
   other: HelpCircle,
 };
 
+function normalizeSearch(input) {
+  return String(input || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 function CategoryChip({ label, Icon, selected, onClick }) {
   return (
     <button
@@ -54,7 +63,7 @@ function CategoryChip({ label, Icon, selected, onClick }) {
           : "border-border bg-surface-main text-text-secondary hover:border-blue-400 hover:text-text-primary"
       }`}
     >
-      <Icon size={20} />
+      <Icon size={20} aria-hidden="true" />
       <span>{label}</span>
     </button>
   );
@@ -69,6 +78,21 @@ function CategoryChip({ label, Icon, selected, onClick }) {
  */
 export default function CategoryPicker({ tradeCategories = [], loading = false, value, onChange }) {
   const { t } = useTranslation();
+  const [search, setSearch] = useState("");
+
+  const normalizedSearch = normalizeSearch(search);
+  const visibleTradeCategories = useMemo(
+    () => tradeCategories.filter((item) =>
+      !normalizedSearch || normalizeSearch(`${item.name} ${item.slug}`).includes(normalizedSearch)
+    ),
+    [normalizedSearch, tradeCategories]
+  );
+  const visibleClassicTypes = useMemo(
+    () => CLASSIC_SERVICE_TYPES.filter((key) =>
+      !normalizedSearch || normalizeSearch(`${t(`services.type.${key}`)} ${key}`).includes(normalizedSearch)
+    ),
+    [normalizedSearch, t]
+  );
 
   const selectTradeCategory = (id) =>
     onChange({ requestKind: "trade_category", tradeCategoryId: String(id), serviceType: "" });
@@ -86,8 +110,29 @@ export default function CategoryPicker({ tradeCategories = [], loading = false, 
   }
 
   return (
-    <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6">
-      {tradeCategories.map((tc) => (
+    <div>
+      <label htmlFor="service-category-search" className="text-sm font-semibold text-text-primary">
+        {t("missionCreation.categorySearch.label")}
+      </label>
+      <p id="service-category-search-hint" className="mt-1 text-xs text-text-muted">
+        {t("missionCreation.categorySearch.hint")}
+      </p>
+      <input
+        id="service-category-search"
+        type="search"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder={t("missionCreation.categorySearch.placeholder")}
+        aria-describedby="service-category-search-hint"
+        className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface-main px-4 text-base text-text-primary outline-none transition placeholder:text-text-muted focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+      />
+      {search && (visibleTradeCategories.length || visibleClassicTypes.length) ? (
+        <p className="sr-only" role="status" aria-live="polite">
+          {t("missionCreation.categorySearch.results", { count: visibleTradeCategories.length + visibleClassicTypes.length })}
+        </p>
+      ) : null}
+      <div className="mt-4 grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6">
+      {visibleTradeCategories.map((tc) => (
         <CategoryChip
           key={`trade-${tc.id}`}
           label={tc.name}
@@ -96,7 +141,7 @@ export default function CategoryPicker({ tradeCategories = [], loading = false, 
           onClick={() => selectTradeCategory(tc.id)}
         />
       ))}
-      {CLASSIC_SERVICE_TYPES.map((key) => (
+      {visibleClassicTypes.map((key) => (
         <CategoryChip
           key={`classic-${key}`}
           label={t(`services.type.${key}`)}
@@ -105,6 +150,12 @@ export default function CategoryPicker({ tradeCategories = [], loading = false, 
           onClick={() => selectClassicType(key)}
         />
       ))}
+      </div>
+      {!visibleTradeCategories.length && !visibleClassicTypes.length ? (
+        <p className="mt-4 rounded-xl border border-dashed border-border px-4 py-5 text-center text-sm text-text-secondary" role="status">
+          {t("missionCreation.categorySearch.empty")}
+        </p>
+      ) : null}
     </div>
   );
 }

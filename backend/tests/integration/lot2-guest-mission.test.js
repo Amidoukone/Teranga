@@ -489,15 +489,24 @@ describe('Lot 2 — demande de mission invitée (homepage, POST /api/v1/mission-
     // GOOGLE_MAPS_SERVER_KEY absent en environnement de test : le géocodage
     // échoue systématiquement, ce qui exerce le chemin de rejet 400 (jamais
     // de mission avec une adresse saisie mais des coordonnées nulles).
-    const res = await request(app).post('/api/v1/mission-requests').send({
-      phone,
-      pin: '1234',
-      countryId: country.id,
-      requestKind: 'classic',
-      serviceType: 'errand',
-      title: 'Course avec adresse texte libre',
-      address: 'Quelque part a Bamako',
-    });
+    const previousServerKey = process.env.GOOGLE_MAPS_SERVER_KEY;
+    delete process.env.GOOGLE_MAPS_SERVER_KEY;
+
+    let res;
+    try {
+      res = await request(app).post('/api/v1/mission-requests').send({
+        phone,
+        pin: '1234',
+        countryId: country.id,
+        requestKind: 'classic',
+        serviceType: 'errand',
+        title: 'Course avec adresse texte libre',
+        address: 'Quelque part a Bamako',
+      });
+    } finally {
+      if (previousServerKey === undefined) delete process.env.GOOGLE_MAPS_SERVER_KEY;
+      else process.env.GOOGLE_MAPS_SERVER_KEY = previousServerKey;
+    }
 
     expect(res.status).toBe(400);
   });

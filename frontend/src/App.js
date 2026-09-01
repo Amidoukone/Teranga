@@ -8,6 +8,7 @@ import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import NavBar from './components/NavBar';
+import SkipLink from './components/SkipLink';
 import Analytics from './components/Analytics';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -40,6 +41,7 @@ const HelpSupportPage = lazy(() => import('./pages/HelpSupportPage'));
 
 // Contexte: routage et guardes d'acces.
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const DossiersPage = lazy(() => import('./pages/DossiersPage'));
 const PropertiesPage = lazy(() => import('./pages/PropertiesPage'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
 const MissionCreatePage = lazy(() => import('./pages/MissionCreatePage'));
@@ -118,9 +120,24 @@ function ScrollToTop() {
   return null;
 }
 
+function FocusMainOnRouteChange() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    // Laisser React monter le nouvel écran avant de déplacer le focus.
+    const frame = window.requestAnimationFrame(() => {
+      const main = document.getElementById('main-content');
+      if (main) main.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
+
+  return null;
+}
+
 function RouteLoadingFallback() {
   return (
-    <div className="flex min-h-[40vh] items-center justify-center text-sm text-text-secondary">
+    <div role="status" aria-live="polite" aria-busy="true" className="flex min-h-[40vh] items-center justify-center text-sm text-text-secondary">
       Chargement...
     </div>
   );
@@ -182,11 +199,9 @@ function getLikelyNextPaths(pathname, hasSession, role) {
 
   return [
     '/dashboard',
-    '/courses',
-    '/services',
-    '/tasks',
-    '/projects',
-    '/orders',
+    '/demandes/nouvelle',
+    '/demandes',
+    '/dossiers',
     '/notifications',
     '/settings',
   ];
@@ -351,6 +366,8 @@ export default function App() {
           <GeoProvider>
             <div className="min-h-screen flex flex-col bg-surface-main text-text-primary">
               <ScrollToTop />
+              <FocusMainOnRouteChange />
+              <SkipLink />
               <NavBar />
 
  {/* Contexte: routage et guardes d'acces. */}
@@ -361,7 +378,7 @@ export default function App() {
             onConsentChange={setAnalyticsConsent}
           />
 
-          <main className="flex-1 w-full">
+          <main id="main-content" tabIndex="-1" className="flex-1 w-full">
             <div className="mobile-bottom-safe-space mx-auto w-full max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
               <Suspense fallback={<RouteLoadingFallback />}>
                 <Routes key={`geo-${geoRefreshKey}`}>
@@ -547,6 +564,20 @@ export default function App() {
             />
 
             <Route
+              path="/dossiers"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['client']}>
+                    <>
+                      <SetSeo title={t('dossierHub.title')} />
+                      <DossiersPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
               path="/properties"
               element={
                 <RequireAuth>
@@ -582,6 +613,35 @@ export default function App() {
               }
             />
 
+            <Route
+              path="/demandes"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['client']}>
+                    <>
+                      <SetSeo title={t('serviceOrders.title')} />
+                      <ServicesPage />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/demandes/nouvelle"
+              element={
+                <RequireAuth>
+                  <RequireRole allow={['client']}>
+                    <>
+                      <SetSeo title={t('serviceOrders.newPageTitle')} />
+                      <MissionCreatePage unified />
+                    </>
+                  </RequireRole>
+                </RequireAuth>
+              }
+            />
+
+            {/* URL historique conservée pendant la migration vers /demandes. */}
             <Route
               path="/services"
               element={

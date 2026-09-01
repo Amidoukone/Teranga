@@ -12,6 +12,7 @@ const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
 const { resolveGeoScope, countryHasActiveMaster, rotateRecoveryCodes } = require('./auth.controller');
 const { PICKUP_REQUIRED_SLUGS } = require('./mission.controller');
 const { isGlobalAdmin } = require('../utils/geoScope');
+const { resolveDeliveryDetails } = require('../utils/deliveryDetails');
 const logger = require('../utils/logger');
 
 /**
@@ -47,6 +48,9 @@ exports.create = async (req, res) => {
       pickupLongitude: rawPickupLongitude,
       requestedVehicleType: rawRequestedVehicleType,
       packageType: rawPackageType,
+      recipientName: rawRecipientName,
+      recipientPhone: rawRecipientPhone,
+      packageHandling: rawPackageHandling,
     } = req.body;
 
     const phone = normalizePhone(rawPhone);
@@ -68,6 +72,18 @@ exports.create = async (req, res) => {
       });
       if (!tradeCategory) {
         return res.status(400).json({ error: 'Filière invalide ou inactive' });
+      }
+    }
+
+    if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug)) {
+      const hasDestination = Boolean(String(address || '').trim()) ||
+        (rawLatitude != null && rawLongitude != null);
+      const hasPickup = Boolean(String(rawPickupAddress || '').trim()) ||
+        (rawPickupLatitude != null && rawPickupLongitude != null);
+      if (!hasDestination || !hasPickup) {
+        return res.status(400).json({
+          error: 'Le point de départ et la destination sont obligatoires pour cette filière',
+        });
       }
     }
 
@@ -130,7 +146,12 @@ exports.create = async (req, res) => {
     let geocodedAdminAreaName = null;
 
     if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && trimmedAddress) {
-      const geocoded = await geocodeAddress(trimmedAddress);
+      const geocoded = (await geocodeAddress(trimmedAddress)) || {
+        latitude: null,
+        longitude: null,
+        countryIso: null,
+        adminAreaName: null,
+      };
       if (!geocoded) {
         return res.status(400).json({
           error: 'Adresse introuvable. Veuillez préciser un lieu plus précis.',
@@ -153,7 +174,10 @@ exports.create = async (req, res) => {
     let pickupLongitude = rawPickupLongitude != null ? Number(rawPickupLongitude) : null;
 
     if (pickupAddress && (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude))) {
-      const geocodedPickup = await geocodeAddress(pickupAddress);
+      const geocodedPickup = (await geocodeAddress(pickupAddress)) || {
+        latitude: null,
+        longitude: null,
+      };
       if (!geocodedPickup) {
         return res.status(400).json({
           error: 'Adresse de départ introuvable. Veuillez préciser un lieu plus précis.',
@@ -166,10 +190,11 @@ exports.create = async (req, res) => {
     if (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude)) {
       pickupLatitude = null;
       pickupLongitude = null;
-      pickupAddress = null;
+      pickupAddress = pickupAddress || null;
     }
 
-    if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug) && (pickupLatitude === null || pickupLongitude === null)) {
+    if (PICKUP_REQUIRED_SLUGS.includes(tradeCategory?.slug) &&
+      !pickupAddress && (pickupLatitude === null || pickupLongitude === null)) {
       return res.status(400).json({
         error: 'Le point de départ est obligatoire pour cette filière',
       });
@@ -192,6 +217,11 @@ exports.create = async (req, res) => {
     const requestedVehicleType =
       tradeCategory?.slug === 'mobilite' ? rawRequestedVehicleType || 'motorcycle' : null;
     const packageType = tradeCategory?.slug === 'livraison' ? rawPackageType || 'small' : null;
+    const deliveryDetails = resolveDeliveryDetails(tradeCategory, {
+      recipientName: rawRecipientName,
+      recipientPhone: rawRecipientPhone,
+      packageHandling: rawPackageHandling,
+    });
 
     // Estimation pour renseigner le budget (docs/DEV_SPEC_TERANGA_v7_PHASE4.md §3.1) — même
     // appel que mission.controller.js exports.create, jamais bloquant si elle échoue.
@@ -228,6 +258,7 @@ exports.create = async (req, res) => {
       pickupLongitude,
       requestedVehicleType,
       packageType,
+      ...deliveryDetails,
       budget: estimate.basePrice ?? estimate.minPrice ?? null,
       currency: estimate.currency,
       status: 'created',
@@ -264,6 +295,7 @@ exports.create = async (req, res) => {
       mission: fullService,
     });
   } catch (e) {
+    if (e.status === 400) return res.status(400).json({ error: e.message });
     logger.error({ err: e }, 'missionPhoneOrder.create.failed');
     return res.status(500).json({ error: 'Erreur lors de la création de la course' });
   }

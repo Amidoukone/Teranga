@@ -13,6 +13,11 @@ module.exports = (sequelize, DataTypes) => {
         as: 'recoveryCodes',
       });
 
+      User.hasMany(models.Membership, {
+        foreignKey: 'userId',
+        as: 'memberships',
+      });
+
       if (models.Provider) {
         User.hasOne(models.Provider, {
           foreignKey: 'userId',

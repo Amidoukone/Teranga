@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import ServicesPage from './ServicesPage';
 import { getMyServices } from '../services/services';
@@ -7,9 +7,10 @@ jest.mock('react-router-dom', () => ({
   Link: ({ children, to, ...props }) => <a href={to} {...props}>{children}</a>,
 }), { virtual: true });
 
-jest.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key }),
-}));
+jest.mock('react-i18next', () => {
+  const t = (key) => key;
+  return { useTranslation: () => ({ t }) };
+});
 
 jest.mock('../services/services', () => ({ getMyServices: jest.fn() }));
 jest.mock('../i18n/useLocale', () => ({
@@ -19,51 +20,94 @@ jest.mock('../i18n/useLocale', () => ({
   }),
 }));
 
-describe('ServicesPage simplifiÃ©e', () => {
+describe('ServicesPage unified requests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     getMyServices.mockResolvedValue({
       items: [
-        { id: 1, title: 'DÃ©marche mairie', type: 'administrative', status: 'created' },
+        { id: 1, title: 'City hall errand', type: 'administrative', status: 'created' },
         {
           id: 2,
-          title: 'RÃ©parer la plomberie',
+          title: 'Repair plumbing',
           type: 'other',
           status: 'in_progress',
           missionStatus: 'IN_PROGRESS',
-          tradeCategory: { name: 'Plomberie', slug: 'plomberie' },
+          tradeCategory: { name: 'Plumbing', slug: 'plomberie' },
         },
-        { id: 3, title: 'Paiement confirmÃ©', type: 'payment', status: 'validated' },
+        { id: 3, title: 'Confirmed payment', type: 'payment', status: 'validated' },
+        {
+          id: 4,
+          title: 'Airport ride',
+          status: 'created',
+          missionStatus: 'CREATED',
+          tradeCategory: { name: 'Mobility', slug: 'mobilite' },
+        },
+        {
+          id: 5,
+          title: 'Family parcel',
+          status: 'created',
+          missionStatus: 'SEARCHING_EXECUTOR',
+          tradeCategory: { name: 'Delivery', slug: 'livraison' },
+        },
       ],
     });
   });
 
-  test('sÃ©pare les demandes actives de l historique et ouvre le bon suivi', async () => {
+  test('shows every request family and opens the correct tracking route', async () => {
     render(<ServicesPage />);
 
-    expect(await screen.findByText('DÃ©marche mairie')).toBeInTheDocument();
-    expect(screen.getByText('RÃ©parer la plomberie')).toBeInTheDocument();
-    expect(screen.getByText('Paiement confirmÃ©')).toBeInTheDocument();
+    expect(await screen.findByText('City hall errand')).toBeInTheDocument();
+    expect(screen.getByText('Airport ride')).toBeInTheDocument();
+    expect(screen.getByText('Family parcel')).toBeInTheDocument();
 
-    expect(screen.getByRole('link', { name: 'serviceOrders.newRequest' })).toHaveAttribute('href', '/services/new');
-    const followLinks = screen.getAllByRole('link', { name: 'serviceOrders.follow' });
-    expect(followLinks[0]).toHaveAttribute('href', '/services/1');
-    expect(followLinks[1]).toHaveAttribute('href', '/missions/2/track');
+    expect(screen.getAllByRole('link', { name: 'serviceOrders.newRequest' })[0]).toHaveAttribute(
+      'href',
+      '/demandes/nouvelle'
+    );
+    expect(screen.getByRole('link', { name: 'serviceOrders.newTaxi' })).toHaveAttribute(
+      'href',
+      '/demandes/nouvelle?categorie=mobilite'
+    );
+    expect(screen.getByRole('link', { name: 'serviceOrders.newDelivery' })).toHaveAttribute(
+      'href',
+      '/demandes/nouvelle?categorie=livraison'
+    );
+    const followHrefs = screen
+      .getAllByRole('link', { name: 'serviceOrders.follow' })
+      .map((link) => link.getAttribute('href'));
+    expect(followHrefs).toEqual(expect.arrayContaining([
+      '/services/1',
+      '/missions/2/track',
+      '/courses/4',
+      '/livraisons/5',
+    ]));
     expect(screen.getByRole('link', { name: 'serviceOrders.view' })).toHaveAttribute('href', '/services/3');
 
     await waitFor(() => expect(getMyServices).toHaveBeenCalledWith(
       {
         limit: 100,
         sort: '-createdAt',
-        excludeTradeCategorySlug: 'mobilite,livraison',
       },
       { withPagination: true }
     ));
   });
 
-  test('actualise la liste au retour sur l Ã©cran', async () => {
+  test('filters request families without another API call', async () => {
     render(<ServicesPage />);
-    await screen.findByText('DÃ©marche mairie');
+    await screen.findByText('Airport ride');
+
+    const callsBeforeFilter = getMyServices.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'serviceOrders.filters.taxi (1)' }));
+
+    expect(screen.getByText('Airport ride')).toBeInTheDocument();
+    expect(screen.queryByText('City hall errand')).not.toBeInTheDocument();
+    expect(screen.queryByText('Family parcel')).not.toBeInTheDocument();
+    expect(getMyServices).toHaveBeenCalledTimes(callsBeforeFilter);
+  });
+
+  test('refreshes the list when the screen regains focus', async () => {
+    render(<ServicesPage />);
+    await screen.findByText('City hall errand');
     const callsBeforeFocus = getMyServices.mock.calls.length;
     await act(async () => window.dispatchEvent(new Event('focus')));
     await waitFor(() => expect(getMyServices.mock.calls.length).toBeGreaterThan(callsBeforeFocus));

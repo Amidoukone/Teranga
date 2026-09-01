@@ -568,7 +568,7 @@ export default function TransactionsPage() {
   if (booting) {
     return (
       <div className="app-page-wrap flex min-h-screen items-center justify-center">
-        <div className="text-center">
+        <div className="text-center" role="status" aria-live="polite" aria-busy="true">
           <p className="text-lg animate-pulse text-text-secondary">
             {t('transactionsPage.loading')}
           </p>
@@ -591,7 +591,7 @@ export default function TransactionsPage() {
   if (!user) {
     return (
       <div className="app-page-wrap flex min-h-screen items-center justify-center px-4">
-        <div className="max-w-md rounded-2xl border border-border/70 bg-surface-card p-5 text-center">
+        <div className="max-w-md rounded-2xl border border-border/70 bg-surface-card p-5 text-center" role="alert" aria-live="assertive">
           <p className="text-sm text-text-secondary">
             {bootError ||
               t('transactionsPage.alerts.authRequired', {

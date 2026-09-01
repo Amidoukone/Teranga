@@ -931,6 +931,16 @@ export default function ProjectsPage() {
               <p className="mt-1.5 text-xs text-text-muted">
                 {t('projects.form.mapHint')}
               </p>
+              {form.latitude != null && form.longitude != null ? (
+                <a
+                  className="mt-1 inline-flex text-xs font-semibold text-blue-700 hover:underline dark:text-blue-300"
+                  target="_blank"
+                  rel="noreferrer"
+                  href={`https://www.google.com/maps/search/?api=1&query=${form.latitude},${form.longitude}`}
+                >
+                  {t('projects.form.openMap', { defaultValue: 'Ouvrir dans Google Maps' })}
+                </a>
+              ) : null}
             </div>
 
             <div>

@@ -124,6 +124,7 @@ async function getMobilityDispatchCandidates({
     latitude: Number(service.pickupLatitude),
     longitude: Number(service.pickupLongitude),
   };
+  const hasPickup = Number.isFinite(pickup.latitude) && Number.isFinite(pickup.longitude);
   const radiusMeters = radiusKm * 1000;
   const preselected = providers
     .filter((provider) => getDriverComplianceIssues(provider).length === 0)
@@ -155,11 +156,19 @@ async function getMobilityDispatchCandidates({
           straightLineDistanceMeters: null,
         };
       }
+      if (!hasPickup) {
+        return {
+          provider,
+          location,
+          vehicle,
+          straightLineDistanceMeters: null,
+        };
+      }
       const straightLineDistanceMeters = haversineMeters(
         { latitude: Number(location.latitude), longitude: Number(location.longitude) },
         pickup
       );
-      if (straightLineDistanceMeters > radiusMeters) return null;
+      if (hasPickup && straightLineDistanceMeters > radiusMeters) return null;
       return { provider, location, vehicle, straightLineDistanceMeters };
     })
     .filter(Boolean)
@@ -174,7 +183,7 @@ async function getMobilityDispatchCandidates({
     .slice(0, limit);
 
   const locatedCandidates = preselected.filter((entry) => entry.location);
-  const matrix = locatedCandidates.length
+  const matrix = hasPickup && locatedCandidates.length
     ? await getDistanceMatrix(
         locatedCandidates.map(({ location }) => ({
           lat: Number(location.latitude),
@@ -192,12 +201,12 @@ async function getMobilityDispatchCandidates({
     const hasRoadEstimate =
       matrixElement?.status === 'OK' &&
       Number.isFinite(Number(matrixElement.durationSeconds));
-    const approachDistanceMeters = entry.location
+    const approachDistanceMeters = entry.location && hasPickup
       ? hasRoadEstimate
         ? Number(matrixElement.distanceMeters)
         : entry.straightLineDistanceMeters
       : null;
-    const approachDurationSeconds = entry.location
+    const approachDurationSeconds = entry.location && hasPickup
       ? hasRoadEstimate
         ? Number(matrixElement.durationSeconds)
         : Math.round((entry.straightLineDistanceMeters / 1000 / FALLBACK_SPEED_KPH) * 3600)
@@ -245,6 +254,7 @@ async function getMobilityDispatchCandidates({
       radiusKm,
       candidateLimit: limit,
       locationMaxAgeSeconds,
+      pickupPositionAvailable: hasPickup,
       candidatesWithoutPosition: candidates.filter((candidate) => !candidate.location).length,
       requestedVehicleType,
     },

@@ -1,0 +1,37 @@
+'use strict';
+
+const PERMISSIONS = Object.freeze({
+  GEO_REFERENCE_READ: 'geo.reference.read',
+  GEO_REFERENCE_MANAGE: 'geo.reference.manage',
+  FRANCHISE_READ: 'franchise.read',
+  FRANCHISE_WRITE: 'franchise.write',
+  SERVICE_ADMIN_LIST: 'service.admin.list',
+  SERVICE_ASSIGN: 'service.assign',
+  SERVICE_CREATE: 'service.create',
+  SERVICE_UPDATE: 'service.update',
+  SERVICE_DELETE: 'service.delete',
+  SERVICE_CLIENT_LIST: 'service.client.list',
+  SERVICE_AGENT_LIST: 'service.agent.list',
+  SERVICE_AGENT_EXECUTE: 'service.agent.execute',
+  SERVICE_VALIDATE: 'service.validate',
+  SERVICE_DETAIL: 'service.detail',
+  MISSION_CLIENT_SELF: 'mission.client.self',
+  MISSION_OPERATE: 'mission.operate',
+  MISSION_PROVIDER_EXECUTE: 'mission.provider.execute',
+  MISSION_STATUS_UPDATE: 'mission.status.update',
+  MISSION_FIELD_EXECUTE: 'mission.field.execute',
+  MISSION_TRACK: 'mission.track',
+  MISSION_DISPUTE_MANAGE: 'mission.dispute.manage',
+  PROVIDER_ONBOARD: 'provider.onboard',
+  PROVIDER_SELF: 'provider.self',
+  PROVIDER_MANAGE: 'provider.manage',
+  FINANCE_REPORT: 'finance.report',
+  FINANCE_TRANSACTION_ACCESS: 'finance.transaction.access',
+  FINANCE_TRANSACTION_DELETE: 'finance.transaction.delete',
+  PROJECT_WRITE: 'project.write',
+  PROJECT_READ: 'project.read',
+  PROJECT_ASSIGN: 'project.assign',
+  CATALOG_MANAGE: 'catalog.manage',
+});
+
+module.exports = { PERMISSIONS };

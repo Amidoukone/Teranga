@@ -3,6 +3,7 @@
 const Joi = require('joi');
 const { SERVICE_TYPES } = require('../utils/labels');
 const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../constants/deliveryPackage');
+const { DELIVERY_HANDLING_VALUES } = require('../constants/deliveryHandling');
 
 const vehicleTypeSchema = Joi.string().valid('motorcycle', 'car');
 
@@ -42,6 +43,12 @@ const createMissionRequestSchema = Joi.object({
   pickupLongitude: Joi.number().min(-180).max(180),
   requestedVehicleType: vehicleTypeSchema,
   packageType: Joi.string().valid(...DELIVERY_PACKAGE_TYPE_VALUES),
+  recipientName: Joi.string().trim().max(120).allow('', null),
+  recipientPhone: Joi.string().trim().max(40).allow('', null),
+  packageHandling: Joi.array()
+    .items(Joi.string().valid(...DELIVERY_HANDLING_VALUES))
+    .unique()
+    .max(DELIVERY_HANDLING_VALUES.length),
 });
 
 // Aperçu public sans écriture : aucune identité n'est nécessaire pour voir le prix d'un trajet.

@@ -20,6 +20,13 @@ module.exports = (sequelize, DataTypes) => {
         });
       }
 
+      if (models.ServiceDefinition) {
+        TradeCategory.hasOne(models.ServiceDefinition, {
+          foreignKey: 'legacyTradeCategoryId',
+          as: 'serviceDefinition',
+        });
+      }
+
       if (models.User && models.CategoryManagerTradeCategory) {
         TradeCategory.belongsToMany(models.User, {
           through: models.CategoryManagerTradeCategory,

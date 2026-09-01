@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car, Bike, KeyRound, PhoneCall, RefreshCw, Share2, Star, PackageCheck, Truck, Wrench } from "lucide-react";
+import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car, Bike, KeyRound, PhoneCall, RefreshCw, Share2, Star, PackageCheck, Truck, Wrench, Map } from "lucide-react";
 
 import {
   getMissionTrack,
@@ -24,7 +24,7 @@ import { buildTelHref } from "../utils/phone";
 // n'est pas visible — docs/DEV_SPEC_TERANGA_v3.md section 4.2 recommande 5-10s.
 const TRACK_POLL_MS = (() => {
   const raw = Number.parseInt(String(process.env.REACT_APP_MISSION_TRACK_POLL_MS || ""), 10);
-  if (!Number.isFinite(raw) || raw < 5000) return 15000;
+  if (!Number.isFinite(raw) || raw < 30000) return 60000;
   return raw;
 })();
 
@@ -66,6 +66,13 @@ const CLIENT_RIDE_STATUS = {
   ON_SITE: { icon: MapPin, tone: "border-emerald-500/40 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100" },
   IN_PROGRESS: { icon: Car, tone: "border-violet-500/30 bg-violet-500/10 text-violet-900 dark:text-violet-100" },
   COMPLETED: { icon: BadgeCheck, tone: "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100" },
+  VALIDATED: { icon: BadgeCheck, tone: "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100" },
+  CLOSED: { icon: BadgeCheck, tone: "border-slate-500/30 bg-slate-500/10 text-text-primary" },
+  CANCELLED_BY_CLIENT: { icon: AlertTriangle, tone: "border-slate-500/30 bg-slate-500/10 text-text-primary" },
+  NO_EXECUTOR_FOUND: { icon: AlertTriangle, tone: "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100" },
+  RESOLVED_REFUND: { icon: BadgeCheck, tone: "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100" },
+  RESOLVED_REDO: { icon: RefreshCw, tone: "border-blue-500/30 bg-blue-500/10 text-blue-900 dark:text-blue-100" },
+  RESOLVED_CLOSED: { icon: BadgeCheck, tone: "border-slate-500/30 bg-slate-500/10 text-text-primary" },
 };
 
 const DRIVER_LOCATION_POLL_MS = (() => {
@@ -115,6 +122,11 @@ const CLIENT_RIDE_PROGRESS_INDEX = {
   COMPLETED: 3,
   VALIDATED: 3,
   CLOSED: 3,
+  CANCELLED_BY_CLIENT: 3,
+  NO_EXECUTOR_FOUND: 3,
+  RESOLVED_REFUND: 3,
+  RESOLVED_REDO: 3,
+  RESOLVED_CLOSED: 3,
 };
 
 function ClientRideStatus({ status, t, translationRoot = "taxiRides" }) {
@@ -226,10 +238,16 @@ export default function MissionTrackingPage() {
   const [shareUrl, setShareUrl] = useState("");
   const [ratingScore, setRatingScore] = useState(0);
   const [ratingComment, setRatingComment] = useState("");
+  const [showMap, setShowMap] = useState(false);
+  const headingRef = useRef(null);
 
   const trackRef = useRef(track);
   const locationPermissionDeniedRef = useRef(false);
   trackRef.current = track;
+
+  useEffect(() => {
+    if (track?.missionStatus) headingRef.current?.focus();
+  }, [track?.missionStatus]);
 
   const load = useCallback(async ({ skipEta = false } = {}) => {
     try {
@@ -252,6 +270,7 @@ export default function MissionTrackingPage() {
 
     function refreshSilentlyIfVisible() {
       if (!isDocumentVisible()) return;
+      if (typeof navigator !== "undefined" && navigator.onLine === false) return;
       if (trackRef.current && TERMINAL_STATUSES.includes(trackRef.current.missionStatus)) return;
       load({ skipEta: true });
     }
@@ -579,7 +598,7 @@ export default function MissionTrackingPage() {
           : t("missionTracking.kicker")}
       </p>
       <div className="flex items-start justify-between gap-3">
-        <h1 className="app-page-headline">
+        <h1 ref={headingRef} tabIndex={-1} className="app-page-headline focus:outline-none">
           {isTaxiMission
             ? t("taxiRides.rideReference", { id })
             : isDeliveryMission
@@ -716,14 +735,19 @@ export default function MissionTrackingPage() {
           </div>
         ) : null}
 
-        <div className="mt-4">
-          <MissionTrackingMap
-            latitude={track.position?.latitude}
-            longitude={track.position?.longitude}
-            destinationLatitude={track.destination?.latitude}
-            destinationLongitude={track.destination?.longitude}
-          />
-        </div>
+        <button type="button" onClick={() => setShowMap((current) => !current)} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-text-secondary hover:border-blue-400">
+          <Map size={17} /> {t(showMap ? "missionTracking.hideMap" : "missionTracking.showMap")}
+        </button>
+        {showMap ? (
+          <div className="mt-3">
+            <MissionTrackingMap
+              latitude={track.position?.latitude}
+              longitude={track.position?.longitude}
+              destinationLatitude={track.destination?.latitude}
+              destinationLongitude={track.destination?.longitude}
+            />
+          </div>
+        ) : null}
 
         {track.pickupAddress ? (
           <p className="mt-3 flex items-center gap-1.5 text-sm text-text-secondary">
@@ -757,6 +781,18 @@ export default function MissionTrackingPage() {
           </p>
         ) : null}
 
+        {isDeliveryMission && (track.recipientName || track.recipientPhone) ? (
+          <div className="mt-3 rounded-xl border border-border bg-surface-main/60 p-3 text-sm">
+            <p className="font-medium text-text-primary">{t("deliveryOrders.recipientLabel")}</p>
+            {track.recipientName ? <p className="mt-1 text-text-secondary">{track.recipientName}</p> : null}
+            {track.recipientPhone ? (
+              <a className="mt-1 inline-flex min-h-11 items-center text-primary underline" href={buildTelHref(track.recipientPhone)}>
+                {t("deliveryOrders.callRecipient")} · {track.recipientPhone}
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+
         {track.budget != null ? (
           <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-text-primary">
             <Wallet size={14} />
@@ -775,6 +811,20 @@ export default function MissionTrackingPage() {
 
         {!track.position && !clientTransportView ? (
           <p className="mt-3 text-sm text-text-muted">{t("missionTracking.noPositionYet")}</p>
+        ) : null}
+
+        {TERMINAL_STATUSES.includes(track.missionStatus) && track.viewerRole === "client" ? (
+          <div className="mt-4 rounded-2xl border border-border bg-surface-main/60 p-4">
+            <p className="text-sm font-semibold text-text-primary">
+              {t(`${clientSimpleTranslationRoot}.terminal.${track.missionStatus}.title`)}
+            </p>
+            <p className="mt-1 text-sm text-text-secondary">
+              {t(`${clientSimpleTranslationRoot}.terminal.${track.missionStatus}.hint`)}
+            </p>
+            <Link to={isDeliveryMission ? "/livraison" : "/taxi"} className="btn-primary mt-3 inline-flex min-h-11 items-center rounded-full px-5 py-2.5 text-sm">
+              {t(`${clientSimpleTranslationRoot}.terminal.newRequest`)}
+            </Link>
+          </div>
         ) : null}
 
         <p className="mt-2 text-xs text-text-muted">

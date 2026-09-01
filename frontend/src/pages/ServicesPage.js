@@ -4,8 +4,10 @@ import { useTranslation } from 'react-i18next';
 import {
   BadgeCheck,
   BriefcaseBusiness,
+  CarFront,
   Clock3,
   MapPin,
+  PackageCheck,
   RefreshCw,
   UserRound,
 } from 'lucide-react';
@@ -24,6 +26,8 @@ const MISSION_TERMINAL_STATUSES = new Set([
   'RESOLVED_CLOSED',
 ]);
 
+const REQUEST_FILTERS = ['all', 'service', 'taxi', 'delivery'];
+
 function isDocumentVisible() {
   return typeof document === 'undefined' || document.visibilityState === 'visible';
 }
@@ -33,7 +37,17 @@ function isHistoryItem(service) {
   return service?.status === 'validated';
 }
 
+function requestKind(service) {
+  const slug = service?.tradeCategory?.slug;
+  if (slug === 'mobilite') return 'taxi';
+  if (slug === 'livraison') return 'delivery';
+  return 'service';
+}
+
 function detailPath(service) {
+  const kind = requestKind(service);
+  if (kind === 'taxi') return `/courses/${service.id}`;
+  if (kind === 'delivery') return `/livraisons/${service.id}`;
   return service?.missionStatus
     ? `/missions/${service.id}/track`
     : `/services/${service.id}`;
@@ -62,6 +76,8 @@ function executorName(service, t) {
 function ServiceCard({ service }) {
   const { t } = useTranslation();
   const { formatDate, formatNumber } = useLocale();
+  const kind = requestKind(service);
+  const RequestIcon = kind === 'taxi' ? CarFront : kind === 'delivery' ? PackageCheck : BriefcaseBusiness;
   const missionStatus = service.missionStatus || null;
   const statusLabel = missionStatus
     ? t(`missionTracking.status.${missionStatus}`, { defaultValue: missionStatus })
@@ -80,7 +96,7 @@ function ServiceCard({ service }) {
     <article className="rounded-[24px] border border-border/70 bg-surface-card p-5 shadow-sm transition hover:border-blue-500/30 hover:shadow-md">
       <div className="flex items-start gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
-          <BriefcaseBusiness size={20} aria-hidden="true" />
+          <RequestIcon size={20} aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-2">
@@ -92,7 +108,7 @@ function ServiceCard({ service }) {
                 {service.title || t('serviceOrders.reference', { id: service.id })}
               </h3>
             </div>
-            <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusTone(service)}`}>
+            <span role="status" aria-label={t('serviceOrders.statusLabel', { status: statusLabel })} className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusTone(service)}`}>
               {statusLabel}
             </span>
           </div>
@@ -166,6 +182,7 @@ export default function ServicesPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [filter, setFilter] = useState('all');
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setRefreshing(true);
@@ -174,7 +191,6 @@ export default function ServicesPage() {
         {
           limit: 100,
           sort: '-createdAt',
-          excludeTradeCategorySlug: 'mobilite,livraison',
         },
         { withPagination: true }
       );
@@ -205,8 +221,23 @@ export default function ServicesPage() {
     };
   }, [load]);
 
-  const active = useMemo(() => services.filter((service) => !isHistoryItem(service)), [services]);
-  const history = useMemo(() => services.filter(isHistoryItem), [services]);
+  const counts = useMemo(() => {
+    const next = { all: services.length, service: 0, taxi: 0, delivery: 0 };
+    services.forEach((service) => {
+      next[requestKind(service)] += 1;
+    });
+    return next;
+  }, [services]);
+
+  const visibleServices = useMemo(
+    () => filter === 'all' ? services : services.filter((service) => requestKind(service) === filter),
+    [filter, services]
+  );
+  const active = useMemo(
+    () => visibleServices.filter((service) => !isHistoryItem(service)),
+    [visibleServices]
+  );
+  const history = useMemo(() => visibleServices.filter(isHistoryItem), [visibleServices]);
 
   if (loading) {
     return (
@@ -226,12 +257,26 @@ export default function ServicesPage() {
               <h1 className="app-page-headline">{t('serviceOrders.title')}</h1>
               <p className="mt-2 max-w-2xl text-sm text-text-secondary">{t('serviceOrders.subtitle')}</p>
             </div>
-            <Link
-              to="/services/new"
-              className="btn-primary flex min-h-12 shrink-0 items-center justify-center rounded-2xl px-5 text-sm font-bold"
-            >
-              {t('serviceOrders.newRequest')}
-            </Link>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Link
+                to="/demandes/nouvelle?categorie=mobilite"
+                className="btn-secondary flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold"
+              >
+                {t('serviceOrders.newTaxi')}
+              </Link>
+              <Link
+                to="/demandes/nouvelle?categorie=livraison"
+                className="btn-secondary flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold"
+              >
+                {t('serviceOrders.newDelivery')}
+              </Link>
+              <Link
+                to="/demandes/nouvelle"
+                className="btn-primary flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-bold"
+              >
+                {t('serviceOrders.newRequest')}
+              </Link>
+            </div>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
@@ -245,6 +290,32 @@ export default function ServicesPage() {
             </div>
           </div>
         </header>
+
+        <div
+          className="flex gap-2 overflow-x-auto pb-1"
+          role="group"
+          aria-label={t('serviceOrders.filters.label')}
+        >
+          {REQUEST_FILTERS.map((value) => {
+            const selected = filter === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFilter(value)}
+                aria-pressed={selected}
+                className={[
+                  'min-h-11 shrink-0 rounded-full border px-4 text-sm font-semibold transition',
+                  selected
+                    ? 'border-blue-600 bg-blue-600 text-white'
+                    : 'border-border bg-surface-card text-text-secondary hover:border-blue-400 hover:text-text-primary',
+                ].join(' ')}
+              >
+                {t(`serviceOrders.filters.${value}`)} ({counts[value]})
+              </button>
+            );
+          })}
+        </div>
 
         {error ? (
           <div className="app-alert app-alert-error flex flex-wrap items-center justify-between gap-3">
@@ -260,9 +331,20 @@ export default function ServicesPage() {
             <BadgeCheck size={34} className="mx-auto text-blue-600" aria-hidden="true" />
             <h2 className="mt-4 text-lg font-bold text-text-primary">{t('serviceOrders.emptyTitle')}</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">{t('serviceOrders.emptyHint')}</p>
-            <Link to="/services/new" className="btn-primary mt-5 inline-flex min-h-11 items-center rounded-xl px-5 text-sm font-bold">
+            <Link to="/demandes/nouvelle" className="btn-primary mt-5 inline-flex min-h-11 items-center rounded-xl px-5 text-sm font-bold">
               {t('serviceOrders.newRequest')}
             </Link>
+          </div>
+        ) : !visibleServices.length && !error ? (
+          <div className="rounded-[28px] border border-dashed border-border bg-surface-card px-6 py-10 text-center">
+            <p className="text-sm font-medium text-text-secondary">{t('serviceOrders.filters.empty')}</p>
+            <button
+              type="button"
+              onClick={() => setFilter('all')}
+              className="btn-secondary mt-4 min-h-11 rounded-xl px-4 text-sm font-semibold"
+            >
+              {t('serviceOrders.filters.showAll')}
+            </button>
           </div>
         ) : (
           <>

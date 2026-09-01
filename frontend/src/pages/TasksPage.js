@@ -350,6 +350,8 @@ export default function TasksPage() {
 
         {notice && (
           <div
+            role={notice.type === 'error' ? 'alert' : 'status'}
+            aria-live={notice.type === 'error' ? 'assertive' : 'polite'}
             className={`mb-6 rounded-2xl border px-4 py-3 text-xs sm:text-sm flex gap-2 items-start ${
               notice.type === 'error'
                 ? 'app-alert app-alert-error'

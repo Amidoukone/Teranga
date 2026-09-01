@@ -397,7 +397,7 @@ export default function ServiceTasksPage() {
 
         {/* Message d'erreur */}
         {errorMsg && (
-          <div className="mb-6 rounded-2xl bg-rose-500/15 border border-rose-500/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 flex gap-2 items-start">
+          <div role="alert" aria-live="assertive" className="mb-6 rounded-2xl bg-rose-500/15 border border-rose-500/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 flex gap-2 items-start">
             <span className="mt-[2px]">{getFeedbackIcon("error")}</span>
             <p className="break-words">{errorMsg}</p>
           </div>
@@ -415,6 +415,8 @@ export default function ServiceTasksPage() {
 
             {formNotice && (
               <div
+                role={formNotice.type === "error" ? "alert" : "status"}
+                aria-live={formNotice.type === "error" ? "assertive" : "polite"}
                 className={`mb-4 rounded-xl border px-4 py-3 text-xs sm:text-sm flex gap-2 items-start ${
                   formNotice.type === "error"
                     ? "bg-rose-500/15 border-rose-500/30 text-rose-700 dark:text-rose-300"

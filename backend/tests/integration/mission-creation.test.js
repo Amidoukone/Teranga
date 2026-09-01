@@ -183,15 +183,24 @@ describe('Mission creation guidée (POST /api/v1/missions*, docs section 4.1)', 
 
   test('POST /missions rejects an address that cannot be geocoded (no coordinates provided, no API key configured)', async () => {
     if (!dbReady) return;
-    const res = await request(app)
-      .post('/api/v1/missions')
-      .set('Authorization', `Bearer ${token}`)
-      .send({
-        executionType: 'agent',
-        serviceType: 'errand',
-        title: 'Course de test',
-        address: 'Un lieu quelconque sans coordonnees',
-      });
+    const previousServerKey = process.env.GOOGLE_MAPS_SERVER_KEY;
+    delete process.env.GOOGLE_MAPS_SERVER_KEY;
+
+    let res;
+    try {
+      res = await request(app)
+        .post('/api/v1/missions')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          executionType: 'agent',
+          serviceType: 'errand',
+          title: 'Course de test',
+          address: 'Un lieu quelconque sans coordonnees',
+        });
+    } finally {
+      if (previousServerKey === undefined) delete process.env.GOOGLE_MAPS_SERVER_KEY;
+      else process.env.GOOGLE_MAPS_SERVER_KEY = previousServerKey;
+    }
 
     expect(res.status).toBe(400);
   });

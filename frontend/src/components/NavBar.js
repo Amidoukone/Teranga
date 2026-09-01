@@ -54,6 +54,8 @@ import {
   Briefcase,
   AlertTriangle,
   CarFront,
+  CirclePlus,
+  ListChecks,
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -134,14 +136,9 @@ const ROLE_LINKS = {
     { path: "/dashboard", labelKey: "nav.dashboard" },
     { path: "/notifications", labelKey: "nav.notifications" },
     { path: "/activities", labelKey: "nav.activities" },
-    { path: "/projects", labelKey: "nav.projects" },
-    { path: "/properties", labelKey: "nav.properties" },
-    { path: "/courses", labelKey: "nav.myRides" },
-    { path: "/livraisons", labelKey: "nav.myDeliveries" },
-    { path: "/services", labelKey: "nav.services" },
-    { path: "/tasks", labelKey: "nav.tasks" },
-    { path: "/transactions", labelKey: "nav.transactions" },
-    { path: "/finance", labelKey: "nav.finance" },
+    { path: "/demandes/nouvelle", labelKey: "nav.newRequest" },
+    { path: "/demandes", labelKey: "nav.myRequests", exact: true },
+    { path: "/dossiers", labelKey: "nav.myCases" },
     ...COMMON_COMMERCE,
     SETTINGS_LINK,
     ACCOUNT_SECURITY_LINK,
@@ -225,9 +222,9 @@ const ROLE_LINKS = {
 const BOTTOM_LINKS = {
   client: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
-    { key: "rides", path: "/courses", labelKey: "nav.myRides", icon: CarFront },
-    { key: "deliveries", path: "/livraisons", labelKey: "nav.myDeliveries", icon: Package },
-    { key: "services", path: "/services", labelKey: "nav.services", icon: Wrench },
+    { key: "newRequest", path: "/demandes/nouvelle", labelKey: "nav.newRequest", icon: CirclePlus },
+    { key: "requests", path: "/demandes", labelKey: "nav.myRequests", icon: ListChecks, exact: true },
+    { key: "cases", path: "/dossiers", labelKey: "nav.myCases", icon: FolderKanban },
   ],
   agent: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
@@ -238,13 +235,11 @@ const BOTTOM_LINKS = {
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
     { key: "myRides", path: "/chauffeur/courses", labelKey: "nav.myRides", icon: CarFront },
     { key: "myDeliveries", path: "/livreur/livraisons", labelKey: "nav.myDeliveries", icon: Package },
-    { key: "providerServices", path: "/prestataire/services", labelKey: "nav.services", icon: Wrench },
   ],
   admin: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
     { key: "taxiRides", path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations", icon: CarFront },
     { key: "deliveries", path: "/admin/livraisons", labelKey: "nav.deliveryOperations", icon: Package },
-    { key: "adminServices", path: "/admin/services", labelKey: "nav.services", icon: BarChart3 },
   ],
 };
 
@@ -258,6 +253,9 @@ const ICON_BY_PATH_PREFIX = [
   { prefix: "/activities", icon: BarChart3 },
   { prefix: "/projects", icon: FolderKanban },
   { prefix: "/properties", icon: Building2 },
+  { prefix: "/dossiers", icon: FolderKanban },
+  { prefix: "/demandes/nouvelle", icon: CirclePlus },
+  { prefix: "/demandes", icon: ListChecks },
   { prefix: "/courses", icon: CarFront },
   { prefix: "/chauffeur/courses", icon: CarFront },
   { prefix: "/livraisons", icon: Package },
@@ -324,47 +322,76 @@ function buildSections(role, links, t) {
   const byPrefix = (prefix) =>
     links.filter((x) => x.path === prefix || x.path.startsWith(prefix + "/"));
 
-  pushSection(t("nav.sections.essential"), [
-    byPath("/dashboard"),
-    byPath("/notifications"),
-    byPath("/activities"),
-    ...byPrefix("/projects"),
-    ...byPrefix("/properties"),
-    ...byPrefix("/courses"),
-    ...byPrefix("/chauffeur/courses"),
-    ...byPrefix("/livraisons"),
-    ...byPrefix("/livreur/livraisons"),
-    ...byPrefix("/prestataire/services"),
-    ...byPrefix("/services"),
-    ...byPrefix("/tasks"),
-    ...(role === "agent" ? byPrefix("/missions/mine") : []),
-  ]);
-
-  pushSection(t("nav.sections.finance"), [
-    ...byPrefix("/transactions"),
-    ...byPrefix("/finance"),
-  ]);
-
-  pushSection(t("nav.sections.shop"), [...byPrefix("/shop"), ...byPrefix("/orders")]);
-
   if (role === "admin") {
-    pushSection(t("nav.sections.admin"), [
-      byPath("/admin/projects"),
-      byPath("/admin/onboarding"),
+    pushSection(t("nav.sections.operations"), [
+      byPath("/dashboard"),
+      byPath("/notifications"),
+      byPath("/activities"),
       byPath("/admin/services"),
       byPath("/admin/taxi-dispatch"),
       byPath("/admin/livraisons"),
-      byPath("/admin/metrics"),
+      byPath("/projects"),
+      byPath("/admin/projects"),
+      byPath("/tasks"),
+    ]);
+    pushSection(t("nav.sections.network"), [
       byPath("/admin/agents"),
       byPath("/admin/providers"),
-      byPath("/admin/disputes"),
-      byPath("/admin/property-listings"),
-      byPath("/admin/trade-categories"),
       byPath("/admin/users"),
       byPath("/admin/properties"),
+    ]);
+    pushSection(t("nav.sections.catalog"), [
+      byPath("/admin/trade-categories"),
+      byPath("/admin/property-listings"),
       byPath("/admin/catalog/categories"),
       byPath("/admin/catalog/products"),
+      byPath("/shop"),
+      byPath("/orders"),
     ]);
+    pushSection(t("nav.sections.quality"), [
+      byPath("/admin/metrics"),
+      byPath("/admin/disputes"),
+    ]);
+    pushSection(t("nav.sections.finance"), [
+      byPath("/transactions"),
+      byPath("/finance"),
+    ]);
+    pushSection(t("nav.sections.configuration"), [
+      byPath("/admin/mission-pricing"),
+      byPath("/admin/onboarding"),
+    ]);
+  } else {
+    pushSection(t("nav.sections.activity"), [
+      byPath("/dashboard"),
+      byPath("/notifications"),
+      byPath("/activities"),
+    ]);
+
+    pushSection(t("nav.sections.mobility"), [
+      ...byPrefix("/demandes"),
+      ...byPrefix("/courses"),
+      ...byPrefix("/chauffeur/courses"),
+      ...byPrefix("/livraisons"),
+      ...byPrefix("/livreur/livraisons"),
+      ...byPrefix("/prestataire/services"),
+      ...byPrefix("/agent/services"),
+      ...byPrefix("/services"),
+    ]);
+
+    pushSection(t("nav.sections.work"), [
+      ...byPrefix("/dossiers"),
+      ...byPrefix("/projects"),
+      ...byPrefix("/properties"),
+      ...byPrefix("/tasks"),
+      ...(role === "agent" ? byPrefix("/missions/mine") : []),
+    ]);
+
+    pushSection(t("nav.sections.finance"), [
+      ...byPrefix("/transactions"),
+      ...byPrefix("/finance"),
+    ]);
+
+    pushSection(t("nav.sections.shop"), [...byPrefix("/shop"), ...byPrefix("/orders")]);
   }
 
   const seen = new Set();
@@ -745,16 +772,16 @@ function NavBar() {
   }, [role, t]);
 
   const isActive = useCallback(
-    (path) => {
+    (path, exact = false) => {
       if (!path) return false;
-      if (path === "/") return location.pathname === "/";
+      if (path === "/" || exact) return location.pathname === path;
       return location.pathname === path || location.pathname.startsWith(path + "/");
     },
     [location.pathname]
   );
 
   const activeLabel = useMemo(() => {
-    const current = links.find((l) => isActive(l.path));
+    const current = links.find((l) => isActive(l.path, l.exact));
     return current?.label || "";
   }, [links, isActive]);
   const isLoginRoute = isActive("/login");
@@ -784,20 +811,26 @@ function NavBar() {
 
   const sections = useMemo(() => buildSections(role, links, t), [role, links, t]);
   const mobileSections = useMemo(
-    () =>
+    () => {
+      const primaryPaths = new Set(bottomLinks.map((item) => item.path));
+      return (
       sections
         .map((sec) => ({
           ...sec,
-          items: sec.items.filter((it) => !ACCOUNT_LINK_PATHS.has(it.path)),
+          items: sec.items.filter(
+            (it) => !ACCOUNT_LINK_PATHS.has(it.path) && !primaryPaths.has(it.path)
+          ),
         }))
-        .filter((sec) => sec.items.length > 0),
-    [sections]
+        .filter((sec) => sec.items.length > 0)
+      );
+    },
+    [bottomLinks, sections]
   );
 
   const servicePrimaryPath = useMemo(() => {
     if (role === "agent") return "/agent/services";
     if (role === "provider") return "/prestataire/services";
-    if (role === "client") return "/courses";
+    if (role === "client") return "/demandes";
     if (role === "admin") return "/admin/services";
     return "/services";
   }, [role]);
@@ -806,11 +839,11 @@ function NavBar() {
   const desktopPrimaryTabs = useMemo(() => {
     const candidates =
       role === "admin"
-        ? ["/dashboard", "/admin/taxi-dispatch", "/admin/livraisons", "/admin/services"]
+        ? ["/dashboard", "/admin/taxi-dispatch", "/admin/livraisons"]
         : role === "client"
-        ? ["/dashboard", "/courses", "/livraisons", "/services"]
+        ? ["/dashboard", "/demandes/nouvelle", "/demandes", "/dossiers"]
         : role === "provider"
-        ? ["/dashboard", "/chauffeur/courses", "/livreur/livraisons", "/prestataire/services"]
+        ? ["/dashboard", "/chauffeur/courses", "/livreur/livraisons"]
         : ["/dashboard", servicePrimaryPath, "/tasks"];
 
     const tabs = [];
@@ -842,6 +875,15 @@ function NavBar() {
       }))
       .filter((sec) => sec.items.length > 0);
   }, [sections, desktopMoreItems]);
+
+  const mobileMoreIsActive = useMemo(
+    () => mobileSections.some((section) => section.items.some((item) => isActive(item.path, item.exact))),
+    [isActive, mobileSections]
+  );
+  const desktopMoreIsActive = useMemo(
+    () => desktopMoreItems.some((item) => isActive(item.path, item.exact)),
+    [desktopMoreItems, isActive]
+  );
 
   const Logo = (
     <img
@@ -890,7 +932,7 @@ function NavBar() {
   /* ============================================================================ */
   if (!user && isPublic) {
     return (
-      <nav className="sticky top-0 z-50 border-b border-border/70 bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl shadow-[0_10px_30px_-20px_rgba(15,23,42,0.45)]">
+      <nav aria-label={t("nav.mainNavigation")} className="sticky top-0 z-50 border-b border-border/70 bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl shadow-[0_10px_30px_-20px_rgba(15,23,42,0.45)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-3">
           <Link
             to="/"
@@ -945,7 +987,7 @@ function NavBar() {
   return (
     <>
       {/* TOP BAR */}
-      <nav className="sticky top-0 z-50 border-b border-border/70 bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl shadow-[0_10px_30px_-20px_rgba(15,23,42,0.45)]">
+      <nav aria-label={t("nav.mainNavigation")} className="sticky top-0 z-50 border-b border-border/70 bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl shadow-[0_10px_30px_-20px_rgba(15,23,42,0.45)]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           {/* LEFT: Logo + Context */}
           <div className="flex items-center gap-3 min-w-0">
@@ -980,7 +1022,7 @@ function NavBar() {
           {/* CENTER: Desktop nav tabs */}
           <div className="hidden md:flex flex-1 items-center justify-center gap-1">
             {desktopPrimaryTabs.map((l) => {
-              const active = isActive(l.path);
+              const active = isActive(l.path, l.exact);
               return (
                 <Link
                   key={l.path}
@@ -1000,11 +1042,12 @@ function NavBar() {
                 onClick={() => setOpenDesktopMore((v) => !v)}
                 className={[
                   clsTabBase,
-                  openDesktopMore ? clsTabActive : clsTabInactive,
+                  openDesktopMore || desktopMoreIsActive ? clsTabActive : clsTabInactive,
                   "inline-flex items-center gap-1.5",
                 ].join(" ")}
                 aria-expanded={openDesktopMore}
                 aria-controls="desktop-more-menu"
+                aria-current={desktopMoreIsActive ? "page" : undefined}
               >
                 {t("nav.more")} <ChevronDown size={16} className="opacity-90" />
               </button>
@@ -1059,7 +1102,7 @@ function NavBar() {
                             </div>
 
                             {sec.items.map((l) => {
-                              const active = isActive(l.path);
+                              const active = isActive(l.path, l.exact);
                               const Icon = iconForPath(l.path);
 
                               return (
@@ -1284,7 +1327,7 @@ function NavBar() {
           mobileSelectActive ? "pointer-events-none translate-y-3 opacity-0" : "pointer-events-auto opacity-100",
         ].join(" ")}
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.5rem)" }}
-        aria-label="Navigation basse"
+        aria-label={t("nav.bottomNavigation")}
         aria-hidden={mobileSelectActive}
       >
         <div className="mx-auto w-full flex justify-center">
@@ -1292,7 +1335,7 @@ function NavBar() {
             <div className="bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl border border-border/70 rounded-2xl shadow-[0_12px_35px_-25px_rgba(15,23,42,0.6)] flex px-1 py-1 gap-1">
               {bottomLinks.map((item) => {
                 const Icon = item.icon;
-                const active = isActive(item.path);
+                const active = isActive(item.path, item.exact);
 
                 return (
                   <Link
@@ -1300,7 +1343,7 @@ function NavBar() {
                     to={item.path}
                     {...withRouteWarmup(item.path)}
                     className={[
-                      "flex-1 flex min-h-[52px] flex-col items-center justify-center py-1.5 rounded-xl text-[0.75rem] transition touch-manipulation",
+                      "flex-1 flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-[0.7rem] font-medium leading-tight transition touch-manipulation",
                       "focus:outline-none focus:ring-4 focus:ring-primary/10",
                       active
                         ? "bg-primary/10 text-primary border border-border shadow-sm"
@@ -1308,8 +1351,8 @@ function NavBar() {
                     ].join(" ")}
                     aria-current={active ? "page" : undefined}
                   >
-                    <Icon size={17} className={active ? "text-primary" : "text-text-secondary"} />
-                    {item.label}
+                    <Icon size={19} className={active ? "text-primary" : "text-text-secondary"} aria-hidden="true" />
+                    <span>{item.label}</span>
                   </Link>
                 );
               })}
@@ -1318,18 +1361,19 @@ function NavBar() {
               <button
                 onClick={() => setOpenMore((v) => !v)}
                 className={[
-                  "flex-1 flex min-h-[52px] flex-col items-center justify-center py-1.5 rounded-xl text-[0.75rem] transition touch-manipulation",
+                  "flex-1 flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-[0.7rem] font-medium leading-tight transition touch-manipulation",
                   "focus:outline-none focus:ring-4 focus:ring-primary/10",
-                  openMore
+                  openMore || mobileMoreIsActive
                     ? "bg-primary/10 text-primary border border-border shadow-sm"
                     : "text-text-secondary hover:bg-surface-main/70 hover:text-text-primary",
                 ].join(" ")}
                 aria-expanded={openMore}
                 aria-controls="navbar-more-panel"
                 aria-label={t("nav.openMoreMenu")}
+                aria-current={mobileMoreIsActive ? "page" : undefined}
               >
-                <MoreHorizontal size={17} />
-                {t("nav.more")}
+                <MoreHorizontal size={19} aria-hidden="true" />
+                <span>{t("nav.more")}</span>
               </button>
             </div>
           </div>
@@ -1364,7 +1408,7 @@ function NavBar() {
               aria-modal="true"
               aria-label={t("nav.menu")}
             >
-              <div className="w-full max-w-sm bg-surface-card/95 backdrop-blur-2xl border border-border/70 rounded-2xl shadow-2xl overflow-hidden">
+              <div className="flex max-h-[calc(100dvh-7rem-env(safe-area-inset-bottom,0px))] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-border/70 bg-surface-card/95 shadow-2xl backdrop-blur-2xl">
                 {/* HEADER */}
                 <div className="px-4 py-3 border-b border-border flex justify-between items-center bg-gradient-to-r from-surface-main/60 to-surface-card/30">
                   <div className="flex items-center gap-2 min-w-0">
@@ -1406,7 +1450,7 @@ function NavBar() {
                 </div>
 
                 {/* LINKS (grouped) */}
-                <div className="max-h-72 overflow-y-auto py-2">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2">
                   {mobileSections.map((sec) => (
                     <div key={sec.title} className={clsPanelSectionCard}>
                       <div className={clsPanelSectionTitle}>
@@ -1414,7 +1458,7 @@ function NavBar() {
                       </div>
 
                       {sec.items.map((l) => {
-                        const active = isActive(l.path);
+                        const active = isActive(l.path, l.exact);
                         const Icon = iconForPath(l.path);
 
                         return (

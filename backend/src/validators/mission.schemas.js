@@ -4,6 +4,7 @@ const Joi = require('joi');
 const { SERVICE_TYPES } = require('../utils/labels');
 const { MISSION_STATUS_VALUES } = require('../constants/missionStatus');
 const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../constants/deliveryPackage');
+const { DELIVERY_HANDLING_VALUES } = require('../constants/deliveryHandling');
 
 const idSchema = Joi.number().integer().positive();
 const requestedVehicleTypeSchema = Joi.string().valid('motorcycle', 'car');
@@ -60,6 +61,12 @@ const createMissionSchema = Joi.object({
   pickupLongitude: Joi.number().min(-180).max(180),
   requestedVehicleType: requestedVehicleTypeSchema,
   packageType: Joi.string().valid(...DELIVERY_PACKAGE_TYPE_VALUES),
+  recipientName: Joi.string().trim().max(120).allow('', null),
+  recipientPhone: Joi.string().trim().max(40).allow('', null),
+  packageHandling: Joi.array()
+    .items(Joi.string().valid(...DELIVERY_HANDLING_VALUES))
+    .unique()
+    .max(DELIVERY_HANDLING_VALUES.length),
 });
 
 /**
