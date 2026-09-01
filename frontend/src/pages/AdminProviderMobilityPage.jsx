@@ -404,6 +404,11 @@ export default function AdminProviderMobilityPage() {
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-main">
             <div
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progressPercent}
+              aria-label={t("adminProviderMobility.guide.progress", { completed: completedChecks, total: onboardingChecks.length })}
               className="h-full rounded-full bg-emerald-600 transition-all"
               style={{ width: `${progressPercent}%` }}
             />
@@ -453,7 +458,7 @@ export default function AdminProviderMobilityPage() {
         </section>
 
         {activeStep === "driver" && compliance?.driverIssues?.length ? (
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
+          <div role="status" aria-live="polite" className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
             <p className="font-semibold">{t("adminProviderMobility.missingDriver")}</p>
             <p className="mt-1">{compliance.driverIssues.join(", ")}</p>
           </div>

@@ -1,4 +1,7 @@
 const en = {
+  accessibility: {
+    skipToContent: "Skip to main content",
+  },
   language: {
     label: "Language",
     fr: "French",
@@ -47,6 +50,10 @@ const en = {
     myMissions: "My missions",
     myRides: "My rides",
     myDeliveries: "My deliveries",
+    newRequest: "New request",
+    myRequests: "My requests",
+      myCases: "My cases",
+      statusLabel: "Status: {{status}}",
     taxiOperations: "Taxi rides",
     deliveryOperations: "Deliveries",
     users: "Users",
@@ -69,15 +76,25 @@ const en = {
     logout: "Sign out",
     userFallback: "User",
     openMoreMenu: "Open more menu",
+    bottomNavigation: "Main navigation",
+    mainNavigation: "Main navigation",
     closeMenu: "Close menu",
     menu: "Menu",
     sections: {
       essential: "Essential",
+      activity: "My activity",
+      mobility: "Services",
+      work: "Work and projects",
       finance: "Finance",
       shop: "Shop",
       account: "Account",
       session: "Session",
       admin: "Administration",
+      operations: "Operations",
+      network: "Network",
+      catalog: "Catalog",
+      quality: "Quality",
+      configuration: "Configuration",
     },
   },
   footer: {
@@ -505,14 +522,35 @@ const en = {
       other: "Other service",
     },
   },
+  dossierHub: {
+    kicker: "My cases",
+    title: "My cases",
+    subtitle: "Find your properties and long-running projects in one place.",
+    loading: "Loading your cases...",
+    loadError: "Unable to load your case summary.",
+    properties: {
+      title: "My properties",
+      description: "Homes, land, businesses, vehicles, and other assets managed with Teranga.",
+      action: "Open my properties",
+    },
+    projects: {
+      title: "My projects",
+      description: "Construction and complex projects with phases, documents, and financial tracking.",
+      action: "Open my projects",
+    },
+  },
   serviceOrders: {
-    kicker: "Teranga Services",
-    title: "My service requests",
-    subtitle: "Request a service, then easily follow its assignment and progress.",
-    newRequest: "Request a service",
+    statusLabel: "Status: {{status}}",
+    kicker: "My requests",
+    title: "My requests",
+    subtitle: "Find your services, taxi rides, and deliveries in one place.",
+    newRequest: "New request",
+    newTaxi: "Taxi",
+    newDelivery: "Delivery",
     newPageTitle: "What do you need?",
     newPageHint: "Choose the service, provide the location and briefly explain your need.",
     back: "Back to my services",
+    backToRequests: "Back to my requests",
     activeCount: "Active requests",
     completedCount: "Closed services",
     activeTitle: "In progress",
@@ -533,6 +571,15 @@ const en = {
     reference: "Service #{{id}}",
     executorPending: "Finding a worker",
     confirmationNeeded: "The worker has finished. Open the service to confirm.",
+    filters: {
+      label: "Filter requests by type",
+      all: "All",
+      service: "Services",
+      taxi: "Taxi",
+      delivery: "Deliveries",
+      empty: "No request matches this filter.",
+      showAll: "Show all requests",
+    },
   },
   serviceTracking: {
     kicker: "Service tracking",
@@ -706,6 +753,7 @@ const en = {
       addressLabel: "Location (optional)",
       addressPlaceholder: "Project address or cityâ€¦",
       mapHint: "Fine-tune the project's exact position on the map if needed (click or drag the pin).",
+      openMap: "Open in Google Maps",
       descriptionLabel: "Description",
       descriptionPlaceholder: "Describe the projectâ€¦",
       cancel: "Cancel",
@@ -1825,6 +1873,8 @@ const en = {
     loadedCount_other: "{{count}} services loaded for this page",
     alerts: {
       assignError: "Error during assignment",
+      driverOnlyAssignment:
+        "Taxi rides and deliveries can only be assigned to a driver or courier.",
       budgetUpdateError: "Error while updating the price",
       budgetUpdateSuccess: "Price updated",
     },
@@ -1833,6 +1883,7 @@ const en = {
         titleType: "Title / Type",
         client: "Client",
         agent: "Agent",
+        driver: "Driver / courier",
         status: "Status",
         assign: "Assign / reassign",
       },
@@ -1850,8 +1901,15 @@ const en = {
     assign: {
       placeholder: "â€” Choose an agent â€”",
       locked: "Reassignment disabled (service closed).",
+<<<<<<< HEAD
       providerPlaceholder: "â€” Choose a provider â€”",
       providerUnassign: "â€” Unassign the provider â€”",
+=======
+      providerPlaceholder: "— Choose a provider —",
+      providerUnassign: "— Unassign the provider —",
+      driverPlaceholder: "— Assign a driver / courier —",
+      driverUnassign: "— Remove the driver / courier —",
+>>>>>>> feat/mobility-delivery-pricing
       providerLocked: "Assignment unavailable for this status ({{status}}).",
       openTaxiDispatch: "Open Taxi dispatch",
       supervisorPlaceholder: "â€” Assign a supervising agent â€”",
@@ -2960,9 +3018,15 @@ const en = {
     destinationLabel: "Where should we deliver it?",
     destinationPlaceholder: "Neighborhood, street or landmark",
     useCurrentLocation: "Use my current position",
+<<<<<<< HEAD
     locating: "Locatingâ€¦",
     descriptionLabel: "Useful detail (optional)",
     descriptionPlaceholder: "E.g. call on arrival, fragile contents, recipient nameâ€¦",
+=======
+    locating: "Locating…",
+    descriptionLabel: "Useful detail (optional)",
+    descriptionPlaceholder: "E.g. call on arrival, fragile contents, recipient name…",
+>>>>>>> feat/mobility-delivery-pricing
     offline: "No connection. Your entry remains saved on this phone.",
     draftRestored: "Your last entry was restored automatically.",
     steps: {
@@ -2980,7 +3044,11 @@ const en = {
     package: {
       title: "What would you like to deliver?",
       hint: "Choose the closest category. It is used to calculate a clear price.",
+<<<<<<< HEAD
       missionTitle: "Teranga delivery â€” {{package}}",
+=======
+      missionTitle: "Teranga delivery — {{package}}",
+>>>>>>> feat/mobility-delivery-pricing
       document: {
         label: "Document",
         hint: "Envelope, file or small flat item",
@@ -3004,7 +3072,11 @@ const en = {
     recipientNameLabel: "Recipient name (optional)",
     recipientNamePlaceholder: "First and last name",
     recipientPhoneLabel: "Recipient phone (optional)",
+<<<<<<< HEAD
     recipientPhonePlaceholder: "+223 â€¦",
+=======
+    recipientPhonePlaceholder: "+223 …",
+>>>>>>> feat/mobility-delivery-pricing
     handlingTitle: "Special handling (optional)",
     handling: { fragile: "Fragile", food: "Food", liquid: "Liquid", medicine: "Medicine", keep_upright: "Keep upright" },
     estimateTitle: "Estimated price",
@@ -3056,6 +3128,13 @@ const en = {
     },
   },
   missionCreation: {
+      categorySearch: {
+        label: "Search for a service",
+        hint: "Type a keyword or choose a category.",
+        results: "{{count}} result(s) available.",
+      placeholder: "E.g. taxi, delivery, plumbing, paperwork...",
+      empty: "No service matches. Try a simpler need.",
+    },
     wizard: {
       steps: {
         category: "Category",
@@ -3447,7 +3526,11 @@ const en = {
     recipientNameLabel: "Recipient name",
     recipientNamePlaceholder: "First and last name",
     recipientPhoneLabel: "Recipient phone",
+<<<<<<< HEAD
     recipientPhonePlaceholder: "+223 â€¦",
+=======
+    recipientPhonePlaceholder: "+223 …",
+>>>>>>> feat/mobility-delivery-pricing
     handling: { fragile: "Fragile", food: "Food", liquid: "Liquid", medicine: "Medicine", keep_upright: "Keep upright" },
     status: {
       CREATED: "Delivery requested",

@@ -585,11 +585,20 @@ async function releaseMobilityProviderIfEligible(providerId) {
 }
 
 /* ============================================================
+<<<<<<< HEAD
    POST /api/v1/missions/:id/assign â€” assignation/rÃ©assignation/dÃ©sassignation (admin), section
    4.2/3.3 + extension "superviseur agent" (voir docs internes de ce chantier â€” un agent peut Ãªtre
    posÃ© en plus d'un prestataire sur une mission filiÃ¨re, sans jamais piloter la machine Ã  Ã©tats :
    voir exports.updateStatus). Body : { providerId?, agentId? }, chaque clÃ© indÃ©pendante â€” absente
    = inchangÃ©, null = dÃ©sassigner, nombre = assigner/rÃ©assigner. Pas de short-list ni de calcul
+=======
+   POST /api/v1/missions/:id/assign — assignation/réassignation/désassignation (admin), section
+   4.2/3.3 + extension "superviseur agent" pour les filières hors transport. Taxi et Livraison
+   sont exécutés exclusivement par un prestataire chauffeur/livreur : aucun agent superviseur.
+   Pour les autres filières, un agent peut être posé en plus d'un prestataire sans piloter la machine à états :
+   voir exports.updateStatus). Body : { providerId?, agentId? }, chaque clé indépendante — absente
+   = inchangé, null = désassigner, nombre = assigner/réassigner. Pas de short-list ni de calcul
+>>>>>>> feat/mobility-delivery-pricing
    Distance Matrix ici : le moteur de matching automatique reste le Lot 4 (section 3.4/section 6).
 ============================================================ */
 exports.assign = async (req, res) => {
@@ -614,16 +623,27 @@ exports.assign = async (req, res) => {
       ? await TradeCategory.findByPk(service.tradeCategoryId, { attributes: ['slug'] })
       : null;
     const isMobility = tradeCategory?.slug === 'mobilite';
+    const isDriverOnlyMission = ['mobilite', 'livraison'].includes(tradeCategory?.slug);
     if (vehicleId !== undefined && !isMobility) {
       return res.status(400).json({ error: 'vehicleId est reserve aux courses Mobilite' });
     }
 
-    let directUpdates = {};
+    if (isDriverOnlyMission && agentId !== undefined && agentId !== null) {
+      return res.status(400).json({
+        error: 'Les courses taxi et les livraisons doivent être affectées uniquement à un chauffeur ou livreur',
+      });
+    }
+
+    let directUpdates = isDriverOnlyMission && service.agentId ? { agentId: null } : {};
     let shouldNotify = false;
     let mobilityProviderToRelease = null;
     let mobilityAssignmentGuard = null;
 
+<<<<<<< HEAD
     // --- Agent superviseur : jamais un moteur de statut, modifiable Ã  tout stade. ---
+=======
+    // --- Agent superviseur : réservé aux filières hors Taxi/Livraison. ---
+>>>>>>> feat/mobility-delivery-pricing
     if (agentId !== undefined) {
       if (agentId === null) {
         directUpdates.agentId = null;
@@ -688,7 +708,11 @@ exports.assign = async (req, res) => {
           });
           if (!hasCar) {
             return res.status(400).json({
+<<<<<<< HEAD
               error: 'Un vÃ©hicule adaptÃ© est requis pour un colis volumineux',
+=======
+              error: 'Un véhicule adapté est requis pour un colis volumineux',
+>>>>>>> feat/mobility-delivery-pricing
             });
           }
         }

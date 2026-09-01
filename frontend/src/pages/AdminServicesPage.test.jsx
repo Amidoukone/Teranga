@@ -18,7 +18,7 @@ jest.mock('../services/services', () => ({ updateService: jest.fn() }));
 jest.mock('../utils/notify', () => ({ notify: Object.assign(jest.fn(), { success: jest.fn() }) }));
 jest.mock('../utils/role', () => ({ normalizeRole: (role) => role, isMasterUser: () => false }));
 
-describe('AdminServicesPage simplifiÃ©e', () => {
+describe('AdminServicesPage simplifiée', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     me.mockResolvedValue({ user: { id: 1, role: 'admin' } });
@@ -34,7 +34,7 @@ describe('AdminServicesPage simplifiÃ©e', () => {
               id: 21,
               title: 'Retirer un document',
               type: 'administrative',
-              typeLabel: 'DÃ©marche administrative',
+              typeLabel: 'Démarche administrative',
               status: 'created',
               executionType: 'agent',
               agentId: null,
@@ -50,7 +50,7 @@ describe('AdminServicesPage simplifiÃ©e', () => {
     api.post.mockResolvedValue({ data: {} });
   });
 
-  test('place les demandes sans intervenant en prioritÃ© et les affecte directement', async () => {
+  test('place les demandes sans intervenant en priorité et les affecte directement', async () => {
     render(<AdminServicesPage />);
 
     expect(await screen.findByText('serviceAdmin.priorityTitle')).toBeInTheDocument();
@@ -62,5 +62,60 @@ describe('AdminServicesPage simplifiÃ©e', () => {
       agentId: '7',
     }));
     expect(api.get.mock.calls.some(([url]) => url.includes('excludeTradeCategorySlug=mobilite%2Clivraison'))).toBe(true);
+  });
+
+  test('ne propose que les chauffeurs pour une course taxi', async () => {
+    listProviders.mockResolvedValue([
+      {
+        id: 12,
+        displayFirstName: 'Awa',
+        countryCode: 'ML',
+        tradeCategories: [{ id: 4, slug: 'mobilite' }],
+        mobilityCompliance: {
+          driverEligible: true,
+          vehicles: [{ id: 31, vehicleType: 'motorcycle', eligible: true }],
+        },
+        dispatchPresence: { isFresh: true, vehicleId: 31 },
+      },
+    ]);
+    api.get.mockImplementation((url) => {
+      if (url.startsWith('/services?')) {
+        return Promise.resolve({
+          data: {
+            services: [
+              {
+                id: 44,
+                title: 'Course moto',
+                type: 'other',
+                status: 'created',
+                executionType: 'provider',
+                providerId: null,
+                agentId: null,
+                countryId: null,
+                regionId: null,
+                tradeCategoryId: 4,
+                tradeCategory: { id: 4, slug: 'mobilite', name: 'Mobilite' },
+                missionStatus: 'CREATED',
+                requestedVehicleType: 'motorcycle',
+                client: { firstName: 'Awa', email: 'awa@example.com' },
+              },
+            ],
+          },
+        });
+      }
+      return Promise.resolve({ data: {} });
+    });
+
+    render(<AdminServicesPage tradeCategorySlug="mobilite" />);
+
+    expect(
+      await screen.findByRole('option', {
+        name: 'adminServicesPage.assign.driverPlaceholder',
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByText('adminServicesPage.table.headers.driver')).toBeInTheDocument();
+    expect(screen.queryByText('adminServicesPage.table.headers.agent')).not.toBeInTheDocument();
+    expect(screen.queryByText('adminServicesPage.assign.supervisorPlaceholder')).not.toBeInTheDocument();
+    expect(api.get.mock.calls.some(([url]) => url === '/users?role=agent')).toBe(false);
   });
 });

@@ -43,4 +43,7 @@ if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
     });
   });
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> feat/mobility-delivery-pricing

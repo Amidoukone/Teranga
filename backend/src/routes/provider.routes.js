@@ -6,7 +6,8 @@ const vehicleCtrl = require('../controllers/vehicle.controller');
 const mobilityMediaCtrl = require('../controllers/mobilityMedia.controller');
 const auth = require('../middleware/auth.middleware');
 const uploadMobilityMedia = require('../middleware/uploadMobilityMedia.middleware');
-const { requireRoles } = require('../middleware/roles.middleware');
+const { requirePermission } = require('../middleware/authorization.middleware');
+const { PERMISSIONS } = require('../constants/permissions');
 const { validateBody } = require('../middleware/validate.middleware');
 const {
   createProviderSchema,
@@ -39,84 +40,94 @@ const {
 router.post(
   '/',
   auth,
-  requireRoles('provider', 'admin'),
+  requirePermission(PERMISSIONS.PROVIDER_ONBOARD),
   validateBody(createProviderSchema),
   ctrl.create
 );
 
 // Chemins littéraux — déclarés avant '/:id' pour ne jamais être capturés par le paramètre
 // (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §3).
-router.get('/me', auth, requireRoles('provider'), ctrl.me);
+router.get('/me', auth, requirePermission(PERMISSIONS.PROVIDER_SELF), ctrl.me);
 router.get(
   '/me/dispatch-presence',
   auth,
-  requireRoles('provider'),
+  requirePermission(PERMISSIONS.PROVIDER_SELF),
   ctrl.getMyDispatchPresence
 );
 router.post(
   '/me/live-location',
   auth,
-  requireRoles('provider'),
+  requirePermission(PERMISSIONS.PROVIDER_SELF),
   validateBody(updateMyLiveLocationSchema),
   ctrl.updateMyLiveLocation
 );
 router.patch(
   '/me/availability',
   auth,
-  requireRoles('provider'),
+  requirePermission(PERMISSIONS.PROVIDER_SELF),
   validateBody(updateMyAvailabilitySchema),
   ctrl.updateMyAvailability
 );
-router.get('/available', auth, requireRoles('admin', 'category_manager'), ctrl.listAvailable);
+router.get(
+  '/available',
+  auth,
+  requirePermission(PERMISSIONS.PROVIDER_MANAGE),
+  ctrl.listAvailable
+);
 
-router.get('/', auth, requireRoles('admin', 'category_manager'), ctrl.list);
+router.get('/', auth, requirePermission(PERMISSIONS.PROVIDER_MANAGE), ctrl.list);
 router.patch(
   '/:id/mobility-availability',
   auth,
-  requireRoles('admin', 'category_manager'),
+  requirePermission(PERMISSIONS.PROVIDER_MANAGE),
   validateBody(updateMobilityAvailabilitySchema),
   ctrl.updateMobilityAvailability
 );
 router.post(
   '/:id/mobility-media',
   auth,
-  requireRoles('admin', 'category_manager'),
+  requirePermission(PERMISSIONS.PROVIDER_MANAGE),
   uploadMobilityMedia,
   mobilityMediaCtrl.upload
 );
 router.get(
   '/:id/vehicles',
   auth,
-  requireRoles('admin', 'category_manager'),
+  requirePermission(PERMISSIONS.PROVIDER_MANAGE),
   vehicleCtrl.list
 );
 router.post(
   '/:id/vehicles',
   auth,
-  requireRoles('admin', 'category_manager'),
+  requirePermission(PERMISSIONS.PROVIDER_MANAGE),
   validateBody(createVehicleSchema),
   vehicleCtrl.create
 );
 router.patch(
   '/:id/vehicles/:vehicleId',
   auth,
-  requireRoles('admin', 'category_manager'),
+  requirePermission(PERMISSIONS.PROVIDER_MANAGE),
   validateBody(updateVehicleSchema),
   vehicleCtrl.update
 );
 router.patch(
   '/:id/driver-compliance',
   auth,
-  requireRoles('admin', 'category_manager'),
+  requirePermission(PERMISSIONS.PROVIDER_MANAGE),
   validateBody(updateDriverComplianceSchema),
   ctrl.updateDriverCompliance
 );
-router.get('/:id', auth, requireRoles('admin', 'category_manager'), ctrl.detail);
+router.get(
+  '/:id',
+  auth,
+  requirePermission(PERMISSIONS.PROVIDER_MANAGE),
+  ctrl.detail
+);
 
 router.patch(
   '/:id/status',
   auth,
-  requireRoles('admin', 'category_manager'),
+  requirePermission(PERMISSIONS.PROVIDER_MANAGE),
   validateBody(updateProviderStatusSchema),
   ctrl.updateStatus
 );
@@ -124,7 +135,7 @@ router.patch(
 router.post(
   '/:id/contracts',
   auth,
-  requireRoles('category_manager', 'admin'),
+  requirePermission(PERMISSIONS.PROVIDER_MANAGE),
   validateBody(createProviderContractSchema),
   ctrl.addContract
 );

@@ -4,7 +4,8 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/service.controller');
 const auth = require('../middleware/auth.middleware');
-const { requireRoles } = require('../middleware/roles.middleware');
+const { requirePermission } = require('../middleware/authorization.middleware');
+const { PERMISSIONS } = require('../constants/permissions');
 const { validateBody } = require('../middleware/validate.middleware');
 const {
   createServiceSchema,
@@ -39,13 +40,18 @@ function useHandler(name) {
 ====================================================== */
 
 // 🔹 Liste tous les services (admin global + admin scoped)
-router.get('/', auth, requireRoles('admin'), useHandler('listAll'));
+router.get(
+  '/',
+  auth,
+  requirePermission(PERMISSIONS.SERVICE_ADMIN_LIST),
+  useHandler('listAll')
+);
 
 // 🔹 Assigner un agent à un service
 router.post(
   '/assign',
   auth,
-  requireRoles('admin'),
+  requirePermission(PERMISSIONS.SERVICE_ASSIGN),
   validateBody(assignServiceSchema),
   useHandler('assignAgent')
 );
@@ -54,13 +60,18 @@ router.post(
 router.put(
   '/:id',
   auth,
-  requireRoles('admin', 'client'),
+  requirePermission(PERMISSIONS.SERVICE_UPDATE),
   validateBody(updateServiceSchema),
   useHandler('updateService')
 );
 
 // 🔹 Supprimer un service (admin + client propriétaire)
-router.delete('/:id', auth, requireRoles('admin', 'client'), useHandler('deleteService'));
+router.delete(
+  '/:id',
+  auth,
+  requirePermission(PERMISSIONS.SERVICE_DELETE),
+  useHandler('deleteService')
+);
 
 /* ======================================================
    👤 CLIENT & ADMIN
@@ -70,35 +81,65 @@ router.delete('/:id', auth, requireRoles('admin', 'client'), useHandler('deleteS
 router.post(
   '/',
   auth,
-  requireRoles('client', 'admin'),
+  requirePermission(PERMISSIONS.SERVICE_CREATE),
   validateBody(createServiceSchema),
   useHandler('create')
 );
 
 // 🔹 Liste des services du client connecté
-router.get('/me', auth, requireRoles('client', 'admin'), useHandler('listClient'));
+router.get(
+  '/me',
+  auth,
+  requirePermission(PERMISSIONS.SERVICE_CLIENT_LIST),
+  useHandler('listClient')
+);
 
 /* ======================================================
    ⚙️ AGENT
 ====================================================== */
 
 // 🔹 Liste des services assignés à un agent
-router.get('/agent/services', auth, requireRoles('agent'), useHandler('listAgent'));
+router.get(
+  '/agent/services',
+  auth,
+  requirePermission(PERMISSIONS.SERVICE_AGENT_LIST),
+  useHandler('listAgent')
+);
 
 // 🔹 Agent démarre un service
-router.post('/agent/services/:id/start', auth, requireRoles('agent'), useHandler('startService'));
+router.post(
+  '/agent/services/:id/start',
+  auth,
+  requirePermission(PERMISSIONS.SERVICE_AGENT_EXECUTE),
+  useHandler('startService')
+);
 
 // 🔹 Agent termine un service
-router.post('/agent/services/:id/complete', auth, requireRoles('agent'), useHandler('completeService'));
+router.post(
+  '/agent/services/:id/complete',
+  auth,
+  requirePermission(PERMISSIONS.SERVICE_AGENT_EXECUTE),
+  useHandler('completeService')
+);
 
 // Le client confirme en une action que le service classique est termine.
-router.post('/:id/validate', auth, requireRoles('client'), useHandler('validateService'));
+router.post(
+  '/:id/validate',
+  auth,
+  requirePermission(PERMISSIONS.SERVICE_VALIDATE),
+  useHandler('validateService')
+);
 
 /* ======================================================
    🔎 DÉTAIL (client propriétaire, agent assigné, admin)
    Placé en dernier : "/:id" est un segment générique qui capturerait "/me" s'il était
    enregistré avant lui.
 ====================================================== */
-router.get('/:id', auth, requireRoles('client', 'agent', 'admin'), useHandler('getById'));
+router.get(
+  '/:id',
+  auth,
+  requirePermission(PERMISSIONS.SERVICE_DETAIL),
+  useHandler('getById')
+);
 
 module.exports = router;

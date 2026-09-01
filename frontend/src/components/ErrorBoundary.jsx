@@ -47,6 +47,7 @@ class ErrorBoundary extends React.Component {
     return (
       <div className="min-h-screen bg-surface-main flex items-center justify-center px-4">
         <div className="max-w-xl w-full bg-surface-card shadow-lg rounded-2xl border border-border p-6 sm:p-10 text-center">
+          <div role="alert" aria-live="assertive">
           <p className="text-sm font-semibold uppercase tracking-wide text-red-500">
             {t('errorBoundary.kicker')}
           </p>
@@ -56,6 +57,7 @@ class ErrorBoundary extends React.Component {
           <p className="mt-4 text-text-secondary">
             {t('errorBoundary.description')}
           </p>
+          </div>
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               type="button"

@@ -13,6 +13,16 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'countryId',
         as: 'franchises',
       });
+
+      Country.hasMany(models.Organization, {
+        foreignKey: 'countryId',
+        as: 'organizations',
+      });
+
+      Country.hasMany(models.Territory, {
+        foreignKey: 'countryId',
+        as: 'territories',
+      });
     }
   }
 

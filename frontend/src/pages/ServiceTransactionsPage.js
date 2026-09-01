@@ -309,7 +309,7 @@ export default function ServiceTransactionsPage() {
   ============================================================================ */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-main via-surface-card to-surface-main" role="status" aria-live="polite" aria-busy="true">
         <p className="text-text-secondary text-lg animate-pulse text-center">
           {t("serviceTransactions.loading")}
         </p>
@@ -319,7 +319,7 @@ export default function ServiceTransactionsPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-main">
+      <div className="min-h-screen flex items-center justify-center bg-surface-main" role="alert" aria-live="assertive">
         <p className="text-red-600 text-lg font-semibold">
           {t("serviceTransactions.unauthenticated")}
         </p>

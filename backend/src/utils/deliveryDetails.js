@@ -12,7 +12,11 @@ function resolveDeliveryDetails(
 
   const normalizedRecipientPhone = normalizeOptionalPhone(recipientPhone);
   if (recipientPhone && !isValidPhone(normalizedRecipientPhone)) {
+<<<<<<< HEAD
     const error = new Error('TÃ©lÃ©phone du destinataire invalide');
+=======
+    const error = new Error('Téléphone du destinataire invalide');
+>>>>>>> feat/mobility-delivery-pricing
     error.status = 400;
     throw error;
   }
@@ -29,4 +33,7 @@ function resolveDeliveryDetails(
 }
 
 module.exports = { resolveDeliveryDetails };
+<<<<<<< HEAD
 
+=======
+>>>>>>> feat/mobility-delivery-pricing

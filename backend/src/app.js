@@ -268,6 +268,7 @@ app.use('/api/v1', apiRouter);
 const v1OnlyRouter = express.Router();
 loadRouter('./routes/provider.routes', '/providers', v1OnlyRouter);
 loadRouter('./routes/tradeCategory.routes', '/trade-categories', v1OnlyRouter);
+loadRouter('./routes/serviceCatalog.routes', '/service-catalog', v1OnlyRouter);
 loadRouter('./routes/missionRequest.routes', '/mission-requests', v1OnlyRouter);
 // Lot 2, section 4.1 — création de mission guidée (app authentifiée).
 loadRouter('./routes/mission.routes', '/missions', v1OnlyRouter);

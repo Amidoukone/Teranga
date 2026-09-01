@@ -37,4 +37,7 @@ module.exports = {
     }
   },
 };
+<<<<<<< HEAD
 
+=======
+>>>>>>> feat/mobility-delivery-pricing

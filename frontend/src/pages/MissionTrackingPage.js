@@ -787,7 +787,11 @@ export default function MissionTrackingPage() {
             {track.recipientName ? <p className="mt-1 text-text-secondary">{track.recipientName}</p> : null}
             {track.recipientPhone ? (
               <a className="mt-1 inline-flex min-h-11 items-center text-primary underline" href={buildTelHref(track.recipientPhone)}>
+<<<<<<< HEAD
                 {t("deliveryOrders.callRecipient")} Â· {track.recipientPhone}
+=======
+                {t("deliveryOrders.callRecipient")} · {track.recipientPhone}
+>>>>>>> feat/mobility-delivery-pricing
               </a>
             ) : null}
           </div>

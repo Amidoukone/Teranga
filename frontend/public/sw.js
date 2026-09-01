@@ -42,4 +42,7 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+<<<<<<< HEAD
 
+=======
+>>>>>>> feat/mobility-delivery-pricing

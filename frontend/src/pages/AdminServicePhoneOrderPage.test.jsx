@@ -23,7 +23,7 @@ jest.mock('../features/mobility/MobilityDispatchPanel', () => () => null);
 
 test('la commande Services par appel masque Taxi et Livraison', async () => {
   getTradeCategories.mockResolvedValue([
-    { id: 1, slug: 'mobilite', name: 'MobilitÃ©' },
+    { id: 1, slug: 'mobilite', name: 'Mobilité' },
     { id: 2, slug: 'livraison', name: 'Livraison' },
     { id: 3, slug: 'plomberie', name: 'Plomberie' },
   ]);

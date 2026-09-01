@@ -3,6 +3,7 @@ const { Model } = require('sequelize');
 const { MISSION_STATUS_VALUES } = require('../src/constants/missionStatus');
 const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../src/constants/deliveryPackage');
 const { DELIVERY_HANDLING_VALUES } = require('../src/constants/deliveryHandling');
+<<<<<<< HEAD
 
 module.exports = (sequelize, DataTypes) => {
   class Service extends Model {
@@ -47,6 +48,52 @@ module.exports = (sequelize, DataTypes) => {
        * providerId/tradeCategoryId ne portent pas de FK physique sur cette
        * table historique, voir docs/DEV_SPEC_TERANGA_v3.md section 0.6.a)
        */
+=======
+
+module.exports = (sequelize, DataTypes) => {
+  class Service extends Model {
+    static associate(models) {
+      // Relations utilisateurs
+      Service.belongsTo(models.User, { foreignKey: 'clientId', as: 'client' });
+      Service.belongsTo(models.User, { foreignKey: 'agentId', as: 'agent' });
+      Service.belongsTo(models.User, { foreignKey: 'createdById', as: 'creator' });
+
+      // Lien vers une propriété (optionnel)
+      Service.belongsTo(models.Property, { foreignKey: 'propertyId', as: 'property' });
+
+      // Tâches liées au service
+      Service.hasMany(models.Task, {
+        foreignKey: 'serviceId',
+        as: 'tasks',
+        onDelete: 'CASCADE',
+        hooks: true,
+      });
+
+      /**
+       * 🌍 Multi-pays (associations logiques uniquement)
+       * - Pas de FK DB pour garder les imports MySQL portables
+       * - Permet include: [{ model: Country, as: 'country' }]
+       */
+      if (models.Country) {
+        Service.belongsTo(models.Country, {
+          foreignKey: 'countryId',
+          as: 'country',
+        });
+      }
+
+      if (models.Region) {
+        Service.belongsTo(models.Region, {
+          foreignKey: 'regionId',
+          as: 'region',
+        });
+      }
+
+      /**
+       * 🛠️ Teranga Pro (Dev spec v3, associations logiques uniquement —
+       * providerId/tradeCategoryId ne portent pas de FK physique sur cette
+       * table historique, voir docs/DEV_SPEC_TERANGA_v3.md section 0.6.a)
+       */
+>>>>>>> feat/mobility-delivery-pricing
       if (models.Provider) {
         Service.belongsTo(models.Provider, {
           foreignKey: 'providerId',
@@ -237,14 +284,24 @@ module.exports = (sequelize, DataTypes) => {
               !Array.isArray(value) ||
               value.some((item) => !DELIVERY_HANDLING_VALUES.includes(item))
             ) {
+<<<<<<< HEAD
               throw new Error('PrÃ©cautions de colis invalides');
+=======
+              throw new Error('Précautions de colis invalides');
+>>>>>>> feat/mobility-delivery-pricing
             }
           },
         },
       },
+<<<<<<< HEAD
 
       // FenÃªtre d'acceptation du dispatch mobilitÃ© (docs/DEV_SPEC_TERANGA_v5_PHASE2.md Â§5.2) â€”
       // posÃ©e uniquement pour la filiÃ¨re MobilitÃ©, NULL partout ailleurs.
+=======
+
+      // Fenêtre d'acceptation du dispatch mobilité (docs/DEV_SPEC_TERANGA_v5_PHASE2.md §5.2) —
+      // posée uniquement pour la filière Mobilité, NULL partout ailleurs.
+>>>>>>> feat/mobility-delivery-pricing
       acceptanceDeadlineAt: { type: DataTypes.DATE, allowNull: true },
 
       startAuthorizedAt: {

@@ -3,7 +3,8 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/region.controller');
 const auth = require('../middleware/auth.middleware');
-const { requireGlobalAdmin } = require('../middleware/roles.middleware');
+const { requirePermission } = require('../middleware/authorization.middleware');
+const { PERMISSIONS } = require('../constants/permissions');
 const { validateBody } = require('../middleware/validate.middleware');
 const {
   createRegionSchema,
@@ -27,23 +28,28 @@ const NON_REGRESSIVE_VALIDATION_OPTIONS = {
  */
 
 // Liste (tous rôles authentifiés)
-router.get('/', auth, ctrl.list);
+router.get('/', auth, requirePermission(PERMISSIONS.GEO_REFERENCE_READ), ctrl.list);
 
 // Admin uniquement
 router.post(
   '/',
   auth,
-  requireGlobalAdmin,
+  requirePermission(PERMISSIONS.GEO_REFERENCE_MANAGE),
   validateBody(createRegionSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
   ctrl.create
 );
 router.put(
   '/:id',
   auth,
-  requireGlobalAdmin,
+  requirePermission(PERMISSIONS.GEO_REFERENCE_MANAGE),
   validateBody(updateRegionSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
   ctrl.update
 );
-router.delete('/:id', auth, requireGlobalAdmin, ctrl.remove);
+router.delete(
+  '/:id',
+  auth,
+  requirePermission(PERMISSIONS.GEO_REFERENCE_MANAGE),
+  ctrl.remove
+);
 
 module.exports = router;

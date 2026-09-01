@@ -6,7 +6,8 @@ const router = express.Router();
 
 const ctrl = require('../controllers/transaction.controller');
 const auth = require('../middleware/auth.middleware');
-const { requireRoles } = require('../middleware/roles.middleware');
+const { requirePermission } = require('../middleware/authorization.middleware');
+const { PERMISSIONS } = require('../constants/permissions');
 const upload = require('../middleware/uploadEvidence.middleware');
 const { validateBody } = require('../middleware/validate.middleware');
 const {
@@ -68,8 +69,8 @@ function injectOrderIdQuery(req, _res, next) {
 /* ===================================================================
    🧮 ADMIN : agrégats
 =================================================================== */
-router.get('/summary', auth, requireRoles('admin'), ctrl.summary);
-router.get('/report', auth, requireRoles('admin'), ctrl.report);
+router.get('/summary', auth, requirePermission(PERMISSIONS.FINANCE_REPORT), ctrl.summary);
+router.get('/report', auth, requirePermission(PERMISSIONS.FINANCE_REPORT), ctrl.report);
 
 /* ===================================================================
    📖 LECTURE
@@ -77,7 +78,7 @@ router.get('/report', auth, requireRoles('admin'), ctrl.report);
 router.get(
   '/',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requirePermission(PERMISSIONS.FINANCE_TRANSACTION_ACCESS),
   ctrl.list
 );
 
@@ -85,7 +86,7 @@ router.get(
 router.get(
   '/:id',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requirePermission(PERMISSIONS.FINANCE_TRANSACTION_ACCESS),
   ctrl.detail
 );
 
@@ -95,7 +96,7 @@ router.get(
 router.post(
   '/',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requirePermission(PERMISSIONS.FINANCE_TRANSACTION_ACCESS),
   upload.any(), // ✅ tolérant aux différents noms de champ fichier
   validateBody(createTransactionSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
   ctrl.create
@@ -104,7 +105,7 @@ router.post(
 router.put(
   '/:id',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requirePermission(PERMISSIONS.FINANCE_TRANSACTION_ACCESS),
   upload.any(), // ✅ idem pour la mise à jour
   validateBody(updateTransactionSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
   ctrl.update
@@ -113,7 +114,7 @@ router.put(
 router.delete(
   '/:id',
   auth,
-  requireRoles('admin'),
+  requirePermission(PERMISSIONS.FINANCE_TRANSACTION_DELETE),
   ctrl.remove
 );
 
@@ -125,7 +126,7 @@ router.delete(
 router.get(
   '/order/:id',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requirePermission(PERMISSIONS.FINANCE_TRANSACTION_ACCESS),
   injectOrderIdQuery,
   ctrl.list
 );
@@ -134,7 +135,7 @@ router.get(
 router.post(
   '/order/:id',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requirePermission(PERMISSIONS.FINANCE_TRANSACTION_ACCESS),
   upload.any(),
   validateBody(createTransactionSchema, NON_REGRESSIVE_VALIDATION_OPTIONS),
   injectOrderIdFromParam, // ⚠️ après multer si besoin (ici ok, multer remplit req.body mais on force orderId)

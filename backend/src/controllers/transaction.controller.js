@@ -216,6 +216,10 @@ function extractProofUrl(rawProof) {
   return String(nested.url || nested.path || nested.filePath || "");
 }
 
+function hasPaymentProof(proofFile) {
+  return Boolean(extractProofUrl(proofFile));
+}
+
 function isLocalUploadPath(filePath) {
   return typeof filePath === "string" && /^\/?uploads\//.test(filePath);
 }
@@ -534,6 +538,16 @@ exports.create = async (req, res) => {
     if (status && req.user?.role === "admin") {
       const s = String(status).trim();
       if (ALLOWED_STATUSES.has(s)) payload.status = s;
+    }
+
+    // Le paiement reste externe : une clôture manuelle doit être accompagnée
+    // d'un reçu ou d'une preuve uploadée. Les clôtures héritées d'une commande
+    // conservent leur comportement historique pour éviter toute régression.
+    if (status === "completed" && !hasPaymentProof(payload.proofFile)) {
+      return res.status(400).json({
+        error: "Une preuve de paiement (reçu) est obligatoire pour clôturer la transaction.",
+        code: "PAYMENT_PROOF_REQUIRED",
+      });
     }
 
     // 🔄 Prévention doublon (transaction unique par order + type)
@@ -883,6 +897,13 @@ exports.update = async (req, res) => {
       }
 
       trx.status = s;
+
+      if (s === "completed" && !hasPaymentProof(trx.proofFile)) {
+        return res.status(400).json({
+          error: "Une preuve de paiement (reçu) est obligatoire pour clôturer la transaction.",
+          code: "PAYMENT_PROOF_REQUIRED",
+        });
+      }
     }
 
     if (currency !== undefined) {

@@ -5,7 +5,11 @@ const { SERVICE_TYPES } = require('../utils/labels');
 const { MISSION_STATUS_VALUES } = require('../constants/missionStatus');
 const { DELIVERY_PACKAGE_TYPE_VALUES } = require('../constants/deliveryPackage');
 const { DELIVERY_HANDLING_VALUES } = require('../constants/deliveryHandling');
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> feat/mobility-delivery-pricing
 const idSchema = Joi.number().integer().positive();
 const requestedVehicleTypeSchema = Joi.string().valid('motorcycle', 'car');
 
@@ -37,6 +41,7 @@ const estimateMissionSchema = Joi.object({
   pickupLongitude: Joi.number().min(-180).max(180),
   requestedVehicleType: requestedVehicleTypeSchema,
   packageType: Joi.string().valid(...DELIVERY_PACKAGE_TYPE_VALUES),
+<<<<<<< HEAD
 });
 
 /**
@@ -57,6 +62,28 @@ const createMissionSchema = Joi.object({
   // filiÃ¨re livraison" est une rÃ¨gle mÃ©tier vÃ©rifiÃ©e dans le contrÃ´leur, pas dans le schÃ©ma
   // (docs/DEV_SPEC_TERANGA_v6_PHASE3.md Â§1.1).
   pickupAddress: Joi.string().trim().max(255).allow('', null),
+=======
+});
+
+/**
+ * Création de mission guidée, utilisateur déjà authentifié (docs/DEV_SPEC_TERANGA_v3.md
+ * section 4.1). Même règle qu'à la homepage (missionRequest.schemas.js) : l'adresse reste
+ * optionnelle (types sans lieu, ex. paiement/transfert d'argent), mais si fournie doit aboutir
+ * à des coordonnées valides côté contrôleur (géocodage ou coordonnées client déjà résolues).
+ */
+const createMissionSchema = Joi.object({
+  ...categorySelectionFields,
+  title: Joi.string().trim().min(3).max(150).required(),
+  description: Joi.string().trim().max(2000).allow('', null),
+  savedLocationId: idSchema.allow(null),
+  address: Joi.string().trim().max(255).allow('', null),
+  latitude: Joi.number().min(-90).max(90),
+  longitude: Joi.number().min(-180).max(180),
+  // Retrait — structure seulement ici (optionnel pour Joi) ; l'obligation "requis pour la
+  // filière livraison" est une règle métier vérifiée dans le contrôleur, pas dans le schéma
+  // (docs/DEV_SPEC_TERANGA_v6_PHASE3.md §1.1).
+  pickupAddress: Joi.string().trim().max(255).allow('', null),
+>>>>>>> feat/mobility-delivery-pricing
   pickupLatitude: Joi.number().min(-90).max(90),
   pickupLongitude: Joi.number().min(-180).max(180),
   requestedVehicleType: requestedVehicleTypeSchema,
