@@ -80,13 +80,24 @@ async function buildFixedEstimateResponse(rule, currency, distanceParams = {}) {
     distanceParams
   );
   const basePrice = rule.basePrice != null ? Number(rule.basePrice) : null;
+  const minPrice = rule.minPrice != null ? Number(rule.minPrice) : null;
+  const priceIncrement = rule.priceIncrement != null ? Number(rule.priceIncrement) : 0;
+  const rawPrice = basePrice != null ? Math.max(basePrice + surcharge, minPrice || 0) : null;
+  const roundedPrice =
+    rawPrice != null && priceIncrement > 0
+      ? Math.ceil(rawPrice / priceIncrement) * priceIncrement
+      : rawPrice;
 
   return {
     pricingMode: 'fixed_estimate',
     currency,
-    basePrice: basePrice != null ? basePrice + surcharge : null,
-    minPrice: rule.minPrice != null ? Number(rule.minPrice) : null,
+    basePrice: roundedPrice,
+    minPrice:
+      minPrice != null && priceIncrement > 0
+        ? Math.ceil(minPrice / priceIncrement) * priceIncrement
+        : minPrice,
     pricePerKm: rule.pricePerKm != null ? Number(rule.pricePerKm) : 0,
+    priceIncrement,
     distanceKm: distanceKm != null ? Number(distanceKm.toFixed(2)) : null,
     distanceSource: distanceKm != null ? distanceSource : null,
     durationMinutes,
@@ -98,24 +109,35 @@ async function buildFixedEstimateResponse(rule, currency, distanceParams = {}) {
   };
 }
 
-async function findRuleAtScope({ countryId, regionId, categoryWhere, vehicleType }) {
+async function findRuleAtScope({ countryId, regionId, categoryWhere, vehicleType, packageType }) {
   const sharedWhere = { countryId, regionId, isActive: true, ...categoryWhere };
 
   // Une grille Moto/Voiture explicite prime. Les anciennes règles sans type restent un repli
   // compatible et permettent une activation progressive sans casser les tarifs Phase 4.
-  if (vehicleType) {
+  if (vehicleType || packageType) {
     const exact = await MissionPricingRule.findOne({
-      where: { ...sharedWhere, vehicleType },
+      where: {
+        ...sharedWhere,
+        vehicleType: vehicleType || null,
+        packageType: packageType || null,
+      },
     });
     if (exact) return exact;
   }
 
   return MissionPricingRule.findOne({
-    where: { ...sharedWhere, vehicleType: null },
+    where: { ...sharedWhere, vehicleType: null, packageType: null },
   });
 }
 
-async function findBestRule({ countryId, regionId, tradeCategoryId, serviceType, vehicleType }) {
+async function findBestRule({
+  countryId,
+  regionId,
+  tradeCategoryId,
+  serviceType,
+  vehicleType,
+  packageType,
+}) {
   const categoryWhere = tradeCategoryId
     ? { tradeCategoryId, serviceType: null }
     : { serviceType, tradeCategoryId: null };
@@ -126,6 +148,7 @@ async function findBestRule({ countryId, regionId, tradeCategoryId, serviceType,
       regionId,
       categoryWhere,
       vehicleType,
+      packageType,
     });
     if (regional) return regional;
   }
@@ -135,6 +158,7 @@ async function findBestRule({ countryId, regionId, tradeCategoryId, serviceType,
     regionId: null,
     categoryWhere,
     vehicleType,
+    packageType,
   });
   if (countryWide) return countryWide;
 
@@ -145,6 +169,7 @@ async function findBestRule({ countryId, regionId, tradeCategoryId, serviceType,
       tradeCategoryId: null,
       serviceType: null,
       vehicleType: null,
+      packageType: null,
       isActive: true,
     },
   });
@@ -166,6 +191,7 @@ async function findBestRule({ countryId, regionId, tradeCategoryId, serviceType,
  * @param {number|null} [params.pickupLatitude] - retrait, pour la surcharge distance (§2)
  * @param {number|null} [params.pickupLongitude]
  * @param {'motorcycle'|'car'|null} [params.requestedVehicleType]
+ * @param {'document'|'small'|'standard'|'bulky'|null} [params.packageType]
  */
 async function estimateMission({
   user,
@@ -179,6 +205,7 @@ async function estimateMission({
   pickupLatitude,
   pickupLongitude,
   requestedVehicleType = null,
+  packageType = null,
 }) {
   const countryId = explicitCountryId ?? user?.countryId ?? null;
   const regionId = explicitRegionId ?? user?.regionId ?? null;
@@ -201,6 +228,7 @@ async function estimateMission({
       tradeCategoryId: executionType === 'provider' ? tradeCategoryId : null,
       serviceType: executionType === 'agent' ? serviceType : null,
       vehicleType: executionType === 'provider' ? requestedVehicleType : null,
+      packageType: executionType === 'provider' ? packageType : null,
     });
 
     if (!rule) {

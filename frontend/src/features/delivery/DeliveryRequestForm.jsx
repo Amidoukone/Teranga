@@ -3,26 +3,25 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
-  Bike,
-  CarFront,
+  Boxes,
   CheckCircle2,
   Clock3,
+  FileText,
   KeyRound,
   Loader2,
   LocateFixed,
-  Map,
-  MapPinned,
   MessageCircle,
+  Package,
   Phone,
   Route,
   ShieldCheck,
+  ShoppingBag,
   WifiOff,
 } from "lucide-react";
 
 import { Button, FormField } from "../../components/ui";
 import AuthFeedbackBanner from "../../components/AuthFeedbackBanner";
 import LocationAutocompleteInput from "../mission-creation/LocationAutocompleteInput";
-import TaxiRouteMap from "./TaxiRouteMap";
 import {
   estimateMissionRequest,
   getTradeCategories,
@@ -37,20 +36,22 @@ import { buildTelHref, buildWhatsappHref, getPhonePlaceholder } from "../../util
 const inputClass =
   "w-full rounded-xl border border-border bg-surface-card px-3 py-2.5 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500";
 
-const VEHICLES = [
-  { value: "motorcycle", icon: Bike },
-  { value: "car", icon: CarFront },
+const PACKAGE_TYPES = [
+  { value: "document", icon: FileText },
+  { value: "small", icon: ShoppingBag },
+  { value: "standard", icon: Package },
+  { value: "bulky", icon: Boxes },
 ];
 
-const TAXI_DRAFT_KEY = "teranga_taxi_booking_draft_v1";
+const DELIVERY_DRAFT_KEY = "teranga_delivery_booking_draft_v1";
 
-function readTaxiDraft() {
+function readDeliveryDraft() {
   if (typeof window === "undefined") return {};
   try {
-    const value = JSON.parse(window.localStorage.getItem(TAXI_DRAFT_KEY) || "{}");
+    const value = JSON.parse(window.localStorage.getItem(DELIVERY_DRAFT_KEY) || "{}");
     const updatedAt = Date.parse(value?.updatedAt || "");
     if (Number.isFinite(updatedAt) && Date.now() - updatedAt > 24 * 60 * 60 * 1000) {
-      window.localStorage.removeItem(TAXI_DRAFT_KEY);
+      window.localStorage.removeItem(DELIVERY_DRAFT_KEY);
       return {};
     }
     return value && typeof value === "object" ? value : {};
@@ -66,12 +67,12 @@ function draftCoordinates(value) {
   return { latitude: value.latitude, longitude: value.longitude };
 }
 
-function clearTaxiDraft() {
+function clearDeliveryDraft() {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem(TAXI_DRAFT_KEY);
+    window.localStorage.removeItem(DELIVERY_DRAFT_KEY);
   } catch (_error) {
-    // Le stockage local peut Ãªtre dÃ©sactivÃ© : la commande reste utilisable sans lui.
+    // La livraison reste utilisable quand le stockage local est dÃ©sactivÃ©.
   }
 }
 
@@ -83,9 +84,9 @@ function hasCoordinates(value) {
   return Number.isFinite(value?.latitude) && Number.isFinite(value?.longitude);
 }
 
-export default function TaxiRideRequestForm() {
+export default function DeliveryRequestForm() {
   const { t } = useTranslation();
-  const [initialDraft] = useState(readTaxiDraft);
+  const [initialDraft] = useState(readDeliveryDraft);
   const [tradeCategory, setTradeCategory] = useState(null);
   const [countries, setCountries] = useState([]);
   const [countryId, setCountryId] = useState(() => String(initialDraft.countryId || ""));
@@ -98,9 +99,12 @@ export default function TaxiRideRequestForm() {
   );
   const [savedLocations, setSavedLocations] = useState([]);
 
-  const [vehicleType, setVehicleType] = useState(
-    initialDraft.vehicleType === "car" ? "car" : "motorcycle"
-  );
+  const initialPackageType = PACKAGE_TYPES.some(
+    (item) => item.value === initialDraft.packageType
+  )
+    ? initialDraft.packageType
+    : "small";
+  const [packageType, setPackageType] = useState(initialPackageType);
   const [pickupAddress, setPickupAddress] = useState(initialDraft.pickupAddress || "");
   const [pickup, setPickup] = useState(() => draftCoordinates(initialDraft.pickup));
   const [destinationAddress, setDestinationAddress] = useState(
@@ -109,9 +113,13 @@ export default function TaxiRideRequestForm() {
   const [destination, setDestination] = useState(() =>
     draftCoordinates(initialDraft.destination)
   );
-  const [activePoint, setActivePoint] = useState("pickup");
+  const [description, setDescription] = useState(initialDraft.description || "");
+  const [recipientName, setRecipientName] = useState(initialDraft.recipientName || "");
+  const [recipientPhone, setRecipientPhone] = useState(initialDraft.recipientPhone || "");
+  const [packageHandling, setPackageHandling] = useState(
+    Array.isArray(initialDraft.packageHandling) ? initialDraft.packageHandling : []
+  );
   const [locating, setLocating] = useState(false);
-  const [showMap, setShowMap] = useState(false);
   const [step, setStep] = useState(1);
 
   const [estimate, setEstimate] = useState(null);
@@ -138,7 +146,6 @@ export default function TaxiRideRequestForm() {
         if (cancelled) return;
 
         setCountries(countryList);
-
         const verifiedUser = session?.user || null;
         setSessionUser(isClient(verifiedUser) ? verifiedUser : null);
         setIncompatibleUser(verifiedUser && !isClient(verifiedUser) ? verifiedUser : null);
@@ -163,15 +170,14 @@ export default function TaxiRideRequestForm() {
             })
           : [];
         if (cancelled) return;
-        const mobility = categoryList.find((item) => item.slug === "mobilite") || null;
-        setTradeCategory(mobility);
-
-        if (!mobility) {
-          setFeedback({ type: "error", message: t("mobilityBooking.errors.unavailable") });
+        const delivery = categoryList.find((item) => item.slug === "livraison") || null;
+        setTradeCategory(delivery);
+        if (!delivery) {
+          setFeedback({ type: "error", message: t("deliveryBooking.errors.unavailable") });
         }
       } catch (_error) {
         if (!cancelled) {
-          setFeedback({ type: "error", message: t("mobilityBooking.errors.load") });
+          setFeedback({ type: "error", message: t("deliveryBooking.errors.load") });
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -197,13 +203,17 @@ export default function TaxiRideRequestForm() {
     const timeout = window.setTimeout(() => {
       try {
         window.localStorage.setItem(
-          TAXI_DRAFT_KEY,
+          DELIVERY_DRAFT_KEY,
           JSON.stringify({
-            vehicleType,
+            packageType,
             pickupAddress,
             pickup,
             destinationAddress,
             destination,
+            description,
+            recipientName,
+            recipientPhone,
+            packageHandling,
             phone,
             firstName,
             countryId,
@@ -211,21 +221,25 @@ export default function TaxiRideRequestForm() {
           })
         );
       } catch (_error) {
-        // Le formulaire continue normalement si le navigateur bloque localStorage.
+        // La saisie reste disponible si localStorage est bloquÃ©.
       }
     }, 250);
     return () => window.clearTimeout(timeout);
   }, [
     countryId,
+    description,
+    packageHandling,
     destination,
     destinationAddress,
     firstName,
     loading,
+    packageType,
     phone,
+    recipientName,
+    recipientPhone,
     pickup,
     pickupAddress,
     result,
-    vehicleType,
   ]);
 
   const selectedCountry = useMemo(
@@ -235,11 +249,11 @@ export default function TaxiRideRequestForm() {
   const assistanceTelHref = buildTelHref(selectedCountry?.contactPhone);
   const assistanceWhatsappHref = buildWhatsappHref(
     selectedCountry?.contactPhone,
-    t("mobilityBooking.whatsapp.message", {
-      vehicle: t(`mobilityBooking.vehicle.${vehicleType}.label`),
-      pickup: pickupAddress.trim() || t("mobilityBooking.whatsapp.toSpecify"),
-      destination: destinationAddress.trim() || t("mobilityBooking.whatsapp.toSpecify"),
-      phone: phone.trim() || t("mobilityBooking.whatsapp.toSpecify"),
+    t("deliveryBooking.whatsapp.message", {
+      package: t(`deliveryBooking.package.${packageType}.label`),
+      pickup: pickupAddress.trim() || t("deliveryBooking.whatsapp.toSpecify"),
+      destination: destinationAddress.trim() || t("deliveryBooking.whatsapp.toSpecify"),
+      phone: phone.trim() || t("deliveryBooking.whatsapp.toSpecify"),
     })
   );
 
@@ -248,64 +262,30 @@ export default function TaxiRideRequestForm() {
     setFeedback(null);
   }, []);
 
-  const handleVehicleChange = (nextVehicleType) => {
-    setVehicleType(nextVehicleType);
-    invalidateEstimate();
-  };
-
   const handleCountryChange = async (nextCountryId) => {
     setCountryId(nextCountryId);
     setTradeCategory(null);
     invalidateEstimate();
-    setStep(2);
     try {
-      const categoryList = await getTradeCategories({
-        countryId: Number(nextCountryId),
-        ...(String(sessionUser?.countryId) === String(nextCountryId) && sessionUser?.regionId
-          ? { regionId: Number(sessionUser.regionId) }
-          : {}),
-      });
-      const mobility = categoryList.find((item) => item.slug === "mobilite") || null;
-      setTradeCategory(mobility);
-      if (!mobility) {
-        setFeedback({ type: "error", message: t("mobilityBooking.errors.unavailable") });
+      const categoryList = await getTradeCategories({ countryId: Number(nextCountryId) });
+      const delivery = categoryList.find((item) => item.slug === "livraison") || null;
+      setTradeCategory(delivery);
+      if (!delivery) {
+        setFeedback({ type: "error", message: t("deliveryBooking.errors.unavailable") });
       }
     } catch (_error) {
-      setFeedback({ type: "error", message: t("mobilityBooking.errors.load") });
+      setFeedback({ type: "error", message: t("deliveryBooking.errors.load") });
     }
   };
 
-  const resolveDroppedPin = useCallback(async (kind, coordinates) => {
-    if (kind === "pickup") setPickup(coordinates);
-    else setDestination(coordinates);
-    setEstimate(null);
-    setFeedback(null);
-
-    try {
-      const address = await reverseGeocodeMissionRequestLocation(coordinates);
-      if (!address) return;
-      if (kind === "pickup") setPickupAddress(address);
-      else setDestinationAddress(address);
-    } catch (_error) {
-      // Les coordonnÃ©es restent valides mÃªme si le libellÃ© Google est momentanÃ©ment indisponible.
-    }
-  }, []);
-
-  const handlePickupMapChange = useCallback(
-    (coordinates) => resolveDroppedPin("pickup", coordinates),
-    [resolveDroppedPin]
-  );
-  const handleDestinationMapChange = useCallback(
-    (coordinates) => resolveDroppedPin("destination", coordinates),
-    [resolveDroppedPin]
-  );
-
   const useCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setFeedback({ type: "error", message: t("mobilityBooking.errors.geolocationUnsupported") });
+      setFeedback({
+        type: "error",
+        message: t("deliveryBooking.errors.geolocationUnsupported"),
+      });
       return;
     }
-    setActivePoint("pickup");
     setLocating(true);
     setFeedback(null);
     navigator.geolocation.getCurrentPosition(
@@ -318,18 +298,18 @@ export default function TaxiRideRequestForm() {
         setEstimate(null);
         try {
           const address = await reverseGeocodeMissionRequestLocation(coordinates);
-          setPickupAddress(address || t("mobilityBooking.currentPosition"));
+          setPickupAddress(address || t("deliveryBooking.currentPosition"));
         } catch (_error) {
-          setPickupAddress(t("mobilityBooking.currentPosition"));
+          setPickupAddress(t("deliveryBooking.currentPosition"));
         } finally {
           setLocating(false);
         }
       },
       () => {
         setLocating(false);
-        setFeedback({ type: "error", message: t("mobilityBooking.errors.geolocation") });
+        setFeedback({ type: "error", message: t("deliveryBooking.errors.geolocation") });
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
     );
   };
 
@@ -350,11 +330,14 @@ export default function TaxiRideRequestForm() {
 
   const calculateEstimate = async () => {
     if (!tradeCategory || !countryId) {
-      setFeedback({ type: "error", message: t("mobilityBooking.errors.unavailable") });
+      setFeedback({ type: "error", message: t("deliveryBooking.errors.unavailable") });
       return false;
     }
-    if (!(pickupAddress.trim() || hasCoordinates(pickup)) || !(destinationAddress.trim() || hasCoordinates(destination))) {
-      setFeedback({ type: "error", message: t("mobilityBooking.errors.locations") });
+    if (
+      !(pickupAddress.trim() || hasCoordinates(pickup)) ||
+      !(destinationAddress.trim() || hasCoordinates(destination))
+    ) {
+      setFeedback({ type: "error", message: t("deliveryBooking.errors.locations") });
       return false;
     }
 
@@ -364,7 +347,7 @@ export default function TaxiRideRequestForm() {
       const data = await estimateMissionRequest({
         countryId: Number(countryId),
         tradeCategoryId: Number(tradeCategory.id),
-        requestedVehicleType: vehicleType,
+        packageType,
         pickupAddress: pickupAddress.trim() || undefined,
         pickupLatitude: pickup?.latitude,
         pickupLongitude: pickup?.longitude,
@@ -392,8 +375,8 @@ export default function TaxiRideRequestForm() {
         type: "error",
         message:
           !error?.response || !isOnline
-            ? t("mobilityBooking.errors.draftSaved")
-            : error?.response?.data?.error || t("mobilityBooking.errors.estimate"),
+            ? t("deliveryBooking.errors.draftSaved")
+            : error?.response?.data?.error || t("deliveryBooking.errors.estimate"),
       });
       return false;
     } finally {
@@ -408,15 +391,18 @@ export default function TaxiRideRequestForm() {
       return;
     }
     if (incompatibleUser) {
-      setFeedback({ type: "error", message: t("mobilityBooking.errors.clientAccountRequired") });
+      setFeedback({
+        type: "error",
+        message: t("deliveryBooking.errors.clientAccountRequired"),
+      });
       return;
     }
     if (!sessionUser && !phone.trim()) {
-      setFeedback({ type: "error", message: t("mobilityBooking.errors.identity") });
+      setFeedback({ type: "error", message: t("deliveryBooking.errors.identity") });
       return;
     }
     if (!sessionUser && pinRequired && !pin.trim()) {
-      setFeedback({ type: "error", message: t("mobilityBooking.errors.pinRequired") });
+      setFeedback({ type: "error", message: t("deliveryBooking.errors.pinRequired") });
       return;
     }
 
@@ -424,8 +410,14 @@ export default function TaxiRideRequestForm() {
     setFeedback(null);
     const commonPayload = {
       tradeCategoryId: Number(tradeCategory.id),
-      title: t(`mobilityBooking.vehicle.${vehicleType}.missionTitle`),
-      requestedVehicleType: vehicleType,
+      title: t("deliveryBooking.package.missionTitle", {
+        package: t(`deliveryBooking.package.${packageType}.label`),
+      }),
+      description: description.trim() || undefined,
+      packageType,
+      recipientName: recipientName.trim() || undefined,
+      recipientPhone: recipientPhone.trim() || undefined,
+      packageHandling,
       pickupAddress: pickupAddress.trim() || undefined,
       pickupLatitude: pickup?.latitude,
       pickupLongitude: pickup?.longitude,
@@ -453,11 +445,9 @@ export default function TaxiRideRequestForm() {
       setResult({
         mission: data?.mission || data?.service,
         estimate: data?.estimate || estimate,
-        isNewAccount: Boolean(data?.isNewAccount),
         generatedPin: data?.generatedPin || null,
-        startCode: data?.startCode || null,
       });
-      clearTaxiDraft();
+      clearDeliveryDraft();
     } catch (error) {
       const status = error?.response?.status;
       const requiresPin = status === 401 && error?.response?.data?.code === "PIN_REQUIRED";
@@ -466,12 +456,12 @@ export default function TaxiRideRequestForm() {
         type: "error",
         message:
           requiresPin
-            ? t("mobilityBooking.errors.pinRequired")
+            ? t("deliveryBooking.errors.pinRequired")
             : status === 401
-            ? t("mobilityBooking.errors.wrongPin")
+            ? t("deliveryBooking.errors.wrongPin")
             : !error?.response || !isOnline
-            ? t("mobilityBooking.errors.draftSaved")
-            : error?.response?.data?.error || t("mobilityBooking.errors.submit"),
+            ? t("deliveryBooking.errors.draftSaved")
+            : error?.response?.data?.error || t("deliveryBooking.errors.submit"),
       });
     } finally {
       setSubmitting(false);
@@ -489,56 +479,52 @@ export default function TaxiRideRequestForm() {
   if (result) {
     return (
       <div className="rounded-3xl border border-emerald-500/30 bg-surface-card p-6 shadow-sm sm:p-8">
-        <AuthFeedbackBanner type="success" message={t("mobilityBooking.success.message")} />
+        <AuthFeedbackBanner type="success" message={t("deliveryBooking.success.message")} />
         <div className="mt-5 flex items-center gap-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-700">
             <ShieldCheck size={24} />
           </span>
           <div>
             <h2 className="text-xl font-semibold text-text-primary">
-              {t("mobilityBooking.success.title")}
+              {t("deliveryBooking.success.title")}
             </h2>
             <p className="text-sm text-text-secondary">
-              {t("mobilityBooking.success.reference", { id: result.mission?.id })}
+              {t("deliveryBooking.success.reference", { id: result.mission?.id })}
             </p>
           </div>
         </div>
-        {result.startCode ? (
-          <div className="mt-5 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-center">
-            <p className="flex items-center justify-center gap-2 text-sm font-semibold text-blue-900 dark:text-blue-100">
-              <KeyRound size={18} /> {t("mobilityBooking.success.startCodeTitle")}
-            </p>
-            <p className="mt-2 font-mono text-3xl font-bold tracking-[0.35em] text-text-primary">
-              {result.startCode}
-            </p>
-            <p className="mt-2 text-xs text-text-secondary">
-              {t("mobilityBooking.success.startCodeHint")}
-            </p>
-          </div>
-        ) : null}
         {result.generatedPin ? (
           <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-100">
-            <p className="text-sm font-semibold">{t("mobilityBooking.success.generatedPinTitle")}</p>
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <KeyRound size={17} /> {t("deliveryBooking.success.generatedPinTitle")}
+            </p>
             <p className="mt-2 font-mono text-2xl font-bold tracking-[0.3em]">
               {result.generatedPin}
             </p>
-            <p className="mt-2 text-xs">{t("mobilityBooking.success.generatedPinHint")}</p>
+            <p className="mt-2 text-xs">{t("deliveryBooking.success.generatedPinHint")}</p>
           </div>
         ) : null}
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
-            to={`/courses/${result.mission?.id}`}
+            to={`/livraisons/${result.mission?.id}`}
             className="btn-primary rounded-full px-6 py-2.5 text-sm"
           >
-            {t("mobilityBooking.success.track")}
+            {t("deliveryBooking.success.track")}
           </Link>
-          <button type="button" onClick={() => window.location.reload()} className="btn-secondary rounded-full px-6 py-2.5 text-sm">
-            {t("mobilityBooking.success.newRide")}
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="btn-secondary rounded-full px-6 py-2.5 text-sm"
+          >
+            {t("deliveryBooking.success.newDelivery")}
           </button>
         </div>
       </div>
     );
   }
+
+  const restoredDraft =
+    initialDraft.pickupAddress || initialDraft.destinationAddress || initialDraft.phone;
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-2xl">
@@ -552,72 +538,71 @@ export default function TaxiRideRequestForm() {
         {!isOnline ? (
           <div className="mb-5 flex items-start gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100">
             <WifiOff className="mt-0.5 shrink-0" size={18} />
-            <span>{t("mobilityBooking.offline")}</span>
+            <span>{t("deliveryBooking.offline")}</span>
           </div>
         ) : null}
 
-        {initialDraft.pickupAddress || initialDraft.destinationAddress || initialDraft.phone ? (
+        {restoredDraft ? (
           <p className="mb-5 flex items-center gap-2 rounded-2xl bg-blue-500/10 px-3 py-2 text-xs text-blue-800 dark:text-blue-200">
-            <CheckCircle2 size={16} /> {t("mobilityBooking.draftRestored")}
+            <CheckCircle2 size={16} /> {t("deliveryBooking.draftRestored")}
           </p>
         ) : null}
 
         {assistanceTelHref || assistanceWhatsappHref ? (
-          <div className="mb-6 grid gap-3 sm:grid-cols-2">
+          <div className="mb-6 grid gap-2 sm:grid-cols-2">
+            {assistanceTelHref ? (
+              <a
+                href={assistanceTelHref}
+                className="flex items-center gap-3 rounded-2xl border border-border bg-surface-main/60 p-3 text-text-secondary"
+              >
+                <Phone size={18} />
+                <span>
+                  <strong className="block text-sm">{t("deliveryBooking.callTitle")}</strong>
+                  <span className="text-xs">
+                    {t("deliveryBooking.callUs", { phone: selectedCountry.contactPhone })}
+                  </span>
+                </span>
+              </a>
+            ) : null}
             {assistanceWhatsappHref ? (
               <a
                 href={assistanceWhatsappHref}
                 target="_blank"
                 rel="noreferrer"
-                className="flex min-h-14 items-center gap-3 rounded-2xl border border-emerald-700 bg-emerald-600 px-4 py-3 text-white shadow-sm hover:bg-emerald-700"
+                className="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-emerald-800 dark:text-emerald-200"
               >
-                <MessageCircle size={21} />
+                <MessageCircle size={18} />
                 <span>
-                  <strong className="block text-sm">{t("mobilityBooking.whatsapp.title")}</strong>
-                  <span className="block text-xs text-emerald-50">
-                    {t("mobilityBooking.whatsapp.hint")}
-                  </span>
-                </span>
-              </a>
-            ) : null}
-            {assistanceTelHref ? (
-              <a
-                href={assistanceTelHref}
-                className="flex min-h-14 items-center gap-3 rounded-2xl border border-border bg-surface-main px-4 py-3 text-text-primary hover:border-blue-400"
-              >
-                <Phone size={20} className="text-blue-700 dark:text-blue-300" />
-                <span>
-                  <strong className="block text-sm">{t("mobilityBooking.callTitle")}</strong>
-                  <span className="block text-xs text-text-muted">
-                    {t("mobilityBooking.callUs", { phone: selectedCountry.contactPhone })}
-                  </span>
+                  <strong className="block text-sm">
+                    {t("deliveryBooking.whatsapp.title")}
+                  </strong>
+                  <span className="text-xs">{t("deliveryBooking.whatsapp.hint")}</span>
                 </span>
               </a>
             ) : null}
           </div>
         ) : null}
 
-        <ol className="mb-7 grid grid-cols-3 gap-2" aria-label={t("mobilityBooking.steps.label")}>
-          {["vehicle", "route", "confirm"].map((key, index) => {
+        <ol className="mb-7 grid grid-cols-3 gap-2" aria-label={t("deliveryBooking.steps.label")}>
+          {["package", "route", "confirm"].map((key, index) => {
             const number = index + 1;
             const active = step === number;
             const complete = step > number;
             return (
               <li
                 key={key}
-                aria-current={active ? "step" : undefined}
                 className={`rounded-xl border px-2 py-2 text-center text-xs font-semibold ${
                   active
                     ? "border-blue-600 bg-blue-600 text-white"
                     : complete
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200"
-                    : "border-border bg-surface-main text-text-muted"
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                    : "border-border text-text-muted"
                 }`}
               >
-                <span className="block text-[0.65rem] uppercase tracking-wide">
-                  {t("mobilityBooking.steps.number", { number })}
+                <span className="block text-[10px]">
+                  {t("deliveryBooking.steps.number", { number })}
                 </span>
-                {t(`mobilityBooking.steps.${key}`)}
+                {t(`deliveryBooking.steps.${key}`)}
               </li>
             );
           })}
@@ -626,36 +611,48 @@ export default function TaxiRideRequestForm() {
         {step === 1 ? (
           <section>
             <h2 className="text-lg font-semibold text-text-primary">
-              {t("mobilityBooking.vehicle.title")}
+              {t("deliveryBooking.package.title")}
             </h2>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {VEHICLES.map(({ value, icon: Icon }) => {
-                const selected = vehicleType === value;
+            <p className="mt-1 text-sm text-text-muted">
+              {t("deliveryBooking.package.hint")}
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {PACKAGE_TYPES.map(({ value, icon: Icon }) => {
+                const selected = value === packageType;
                 return (
                   <button
                     key={value}
                     type="button"
-                    onClick={() => handleVehicleChange(value)}
-                    aria-pressed={selected}
-                    className={`min-h-28 rounded-2xl border p-4 text-left transition ${
+                    onClick={() => {
+                      setPackageType(value);
+                      invalidateEstimate();
+                    }}
+                    className={`flex min-h-20 items-center gap-3 rounded-2xl border p-4 text-left transition ${
                       selected
-                        ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-                        : "border-border bg-surface-main text-text-primary hover:border-blue-400"
+                        ? "border-blue-600 bg-blue-500/10 text-blue-800 dark:text-blue-200"
+                        : "border-border bg-surface-main/50 text-text-secondary hover:border-blue-400"
                     }`}
+                    aria-pressed={selected}
                   >
-                    <Icon size={26} />
-                    <span className="mt-3 block text-base font-semibold">
-                      {t(`mobilityBooking.vehicle.${value}.label`)}
-                    </span>
-                    <span className={`mt-1 block text-xs ${selected ? "text-blue-100" : "text-text-muted"}`}>
-                      {t(`mobilityBooking.vehicle.${value}.hint`)}
+                    <Icon size={24} />
+                    <span>
+                      <strong className="block text-sm">
+                        {t(`deliveryBooking.package.${value}.label`)}
+                      </strong>
+                      <span className="text-xs">
+                        {t(`deliveryBooking.package.${value}.hint`)}
+                      </span>
                     </span>
                   </button>
                 );
               })}
             </div>
-            <Button type="button" onClick={() => setStep(2)} className="mt-6 w-full rounded-full">
-              {t("mobilityBooking.steps.next")}
+            <Button
+              type="button"
+              onClick={() => setStep(2)}
+              className="mt-6 min-h-11 w-full rounded-full"
+            >
+              {t("deliveryBooking.steps.next")}
             </Button>
           </section>
         ) : null}
@@ -663,16 +660,34 @@ export default function TaxiRideRequestForm() {
         {step === 2 ? (
           <section>
             <h2 className="text-lg font-semibold text-text-primary">
-              {t("mobilityBooking.steps.routeTitle")}
+              {t("deliveryBooking.steps.routeTitle")}
             </h2>
-            <p className="mt-1 text-sm text-text-muted">{t("mobilityBooking.steps.routeHint")}</p>
+            <p className="mt-1 text-sm text-text-muted">
+              {t("deliveryBooking.steps.routeHint")}
+            </p>
+
             <div className="mt-5 space-y-4">
-              <FormField label={t("mobilityBooking.pickupLabel")} required>
+              {countries.length > 1 ? (
+                <FormField label={t("deliveryBooking.identity.country")} required>
+                  <select
+                    className={inputClass}
+                    value={countryId}
+                    onChange={(event) => handleCountryChange(event.target.value)}
+                  >
+                    {countries.map((country) => (
+                      <option key={country.id} value={country.id}>
+                        {country.name}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+              ) : null}
+
+              <FormField label={t("deliveryBooking.pickupLabel")} required>
                 <LocationAutocompleteInput
                   className={inputClass}
                   value={pickupAddress}
-                  placeholder={t("mobilityBooking.pickupPlaceholder")}
-                  onFocus={() => setActivePoint("pickup")}
+                  placeholder={t("deliveryBooking.pickupPlaceholder")}
                   onChange={(value) => {
                     setPickupAddress(value);
                     setPickup(null);
@@ -681,7 +696,6 @@ export default function TaxiRideRequestForm() {
                   onPlaceSelected={({ address, latitude, longitude }) => {
                     setPickupAddress(address);
                     setPickup({ latitude, longitude });
-                    setActivePoint("destination");
                     invalidateEstimate();
                   }}
                   required
@@ -702,16 +716,21 @@ export default function TaxiRideRequestForm() {
                 disabled={locating}
                 className="inline-flex min-h-11 items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-700 disabled:opacity-60 dark:text-blue-300"
               >
-                {locating ? <Loader2 size={16} className="animate-spin" /> : <LocateFixed size={16} />}
-                {locating ? t("mobilityBooking.locating") : t("mobilityBooking.useCurrentLocation")}
+                {locating ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <LocateFixed size={16} />
+                )}
+                {locating
+                  ? t("deliveryBooking.locating")
+                  : t("deliveryBooking.useCurrentLocation")}
               </button>
 
-              <FormField label={t("mobilityBooking.destinationLabel")} required>
+              <FormField label={t("deliveryBooking.destinationLabel")} required>
                 <LocationAutocompleteInput
                   className={inputClass}
                   value={destinationAddress}
-                  placeholder={t("mobilityBooking.destinationPlaceholder")}
-                  onFocus={() => setActivePoint("destination")}
+                  placeholder={t("deliveryBooking.destinationPlaceholder")}
                   onChange={(value) => {
                     setDestinationAddress(value);
                     setDestination(null);
@@ -734,34 +753,42 @@ export default function TaxiRideRequestForm() {
                   ))}
                 </div>
               ) : null}
-            </div>
 
-            <button
-              type="button"
-              onClick={() => setShowMap((current) => !current)}
-              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-text-secondary hover:border-blue-400"
-            >
-              <Map size={17} />
-              {t(showMap ? "mobilityBooking.hideMap" : "mobilityBooking.showMap")}
-            </button>
-
-            {showMap ? (
-              <div className="mt-4">
-                <TaxiRouteMap
-                  pickup={pickup}
-                  destination={destination}
-                  activePoint={activePoint}
-                  onPickupChange={handlePickupMapChange}
-                  onDestinationChange={handleDestinationMapChange}
+              <FormField label={t("deliveryBooking.descriptionLabel")}>
+                <textarea
+                  className={`${inputClass} min-h-20`}
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder={t("deliveryBooking.descriptionPlaceholder")}
+                  maxLength={2000}
                 />
-                <p className="mt-2 flex items-center gap-1.5 text-xs text-text-muted">
-                  <MapPinned size={13} />
-                  {t("mobilityBooking.mapHint", {
-                    point: t(`mobilityBooking.point.${activePoint}`),
-                  })}
-                </p>
+              </FormField>
+
+              <div className="rounded-2xl border border-border bg-surface-main/50 p-4">
+                <p className="text-sm font-semibold text-text-primary">{t("deliveryBooking.recipientTitle")}</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <FormField label={t("deliveryBooking.recipientNameLabel")}>
+                    <input className={inputClass} value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder={t("deliveryBooking.recipientNamePlaceholder")} autoComplete="name" />
+                  </FormField>
+                  <FormField label={t("deliveryBooking.recipientPhoneLabel")}>
+                    <input type="tel" inputMode="tel" className={inputClass} value={recipientPhone} onChange={(event) => setRecipientPhone(event.target.value)} placeholder={t("deliveryBooking.recipientPhonePlaceholder")} autoComplete="tel" />
+                  </FormField>
+                </div>
+                <p className="mt-2 text-xs text-text-muted">{t("deliveryBooking.recipientHint")}</p>
               </div>
-            ) : null}
+
+              <fieldset className="rounded-2xl border border-border bg-surface-main/50 p-4">
+                <legend className="px-1 text-sm font-semibold text-text-primary">{t("deliveryBooking.handlingTitle")}</legend>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {["fragile", "food", "liquid", "medicine", "keep_upright"].map((value) => (
+                    <label key={value} className="flex min-h-11 items-center gap-2 text-sm text-text-secondary">
+                      <input type="checkbox" checked={packageHandling.includes(value)} onChange={() => setPackageHandling((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value])} />
+                      {t(`deliveryBooking.handling.${value}`)}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </div>
 
             <div className="mt-6 flex gap-3">
               <button
@@ -769,7 +796,7 @@ export default function TaxiRideRequestForm() {
                 onClick={() => setStep(1)}
                 className="btn-secondary inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-2.5 text-sm"
               >
-                <ArrowLeft size={16} /> {t("mobilityBooking.steps.back")}
+                <ArrowLeft size={16} /> {t("deliveryBooking.steps.back")}
               </button>
               <Button
                 type="button"
@@ -778,8 +805,7 @@ export default function TaxiRideRequestForm() {
                 disabled={!tradeCategory || !countryId}
                 className="min-h-11 flex-1 rounded-full"
               >
-                <Route size={16} />
-                {t("mobilityBooking.estimateCta")}
+                <Route size={16} /> {t("deliveryBooking.estimateCta")}
               </Button>
             </div>
           </section>
@@ -788,25 +814,28 @@ export default function TaxiRideRequestForm() {
         {step === 3 && estimate ? (
           <section>
             <h2 className="text-lg font-semibold text-text-primary">
-              {t("mobilityBooking.steps.confirmTitle")}
+              {t("deliveryBooking.steps.confirmTitle")}
             </h2>
             <div className="mt-4 rounded-2xl border border-blue-500/25 bg-blue-500/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
-                {t("mobilityBooking.estimateTitle")}
+                {t("deliveryBooking.estimateTitle")}
               </p>
               {estimate.basePrice != null ? (
                 <p className="mt-1 text-2xl font-semibold text-text-primary">
-                  {t("mobilityBooking.price", {
+                  {t("deliveryBooking.price", {
                     amount: Math.round(Number(estimate.basePrice)),
                     currency: estimate.currency,
                   })}
                 </p>
               ) : (
                 <p className="mt-1 text-base font-semibold text-text-primary">
-                  {t("mobilityBooking.quoteOnly")}
+                  {t("deliveryBooking.quoteOnly")}
                 </p>
               )}
-              <p className="mt-2 text-sm text-text-secondary">
+              <p className="mt-2 text-sm font-medium text-text-primary">
+                {t(`deliveryBooking.package.${packageType}.label`)}
+              </p>
+              <p className="mt-1 text-sm text-text-secondary">
                 {pickupAddress} <span aria-hidden="true">â†’</span> {destinationAddress}
               </p>
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-text-secondary">
@@ -817,21 +846,27 @@ export default function TaxiRideRequestForm() {
                 ) : null}
                 {estimate.durationMinutes != null ? (
                   <span className="inline-flex items-center gap-1">
-                    <Clock3 size={13} /> {t("mobilityBooking.duration", { minutes: estimate.durationMinutes })}
+                    <Clock3 size={13} />
+                    {t("deliveryBooking.duration", { minutes: estimate.durationMinutes })}
                   </span>
                 ) : null}
               </div>
+              <p className="mt-3 text-xs text-text-muted">
+                {t("deliveryBooking.priceHint")}
+              </p>
             </div>
 
             {!sessionUser && !incompatibleUser ? (
               <div className="mt-5 space-y-4">
                 <div>
                   <h3 className="text-sm font-semibold text-text-primary">
-                    {t("mobilityBooking.identity.title")}
+                    {t("deliveryBooking.identity.title")}
                   </h3>
-                  <p className="mt-1 text-xs text-text-muted">{t("mobilityBooking.identity.hint")}</p>
+                  <p className="mt-1 text-xs text-text-muted">
+                    {t("deliveryBooking.identity.hint")}
+                  </p>
                 </div>
-                <FormField label={t("mobilityBooking.identity.phone")} required>
+                <FormField label={t("deliveryBooking.identity.phone")} required>
                   <input
                     type="tel"
                     inputMode="tel"
@@ -847,18 +882,18 @@ export default function TaxiRideRequestForm() {
                     required
                   />
                 </FormField>
-                <FormField label={t("mobilityBooking.identity.firstName")}>
+                <FormField label={t("deliveryBooking.identity.firstName")}>
                   <input
                     type="text"
                     autoComplete="given-name"
                     className={inputClass}
                     value={firstName}
                     onChange={(event) => setFirstName(event.target.value)}
-                    placeholder={t("mobilityBooking.identity.firstNamePlaceholder")}
+                    placeholder={t("deliveryBooking.identity.firstNamePlaceholder")}
                   />
                 </FormField>
                 {pinRequired ? (
-                  <FormField label={t("mobilityBooking.identity.pin")} required>
+                  <FormField label={t("deliveryBooking.identity.pin")} required>
                     <input
                       type="password"
                       inputMode="numeric"
@@ -873,25 +908,14 @@ export default function TaxiRideRequestForm() {
                     />
                   </FormField>
                 ) : null}
-                {countries.length > 1 ? (
-                  <FormField label={t("mobilityBooking.identity.country")} required>
-                    <select
-                      className={inputClass}
-                      value={countryId}
-                      onChange={(event) => handleCountryChange(event.target.value)}
-                    >
-                      {countries.map((country) => (
-                        <option key={country.id} value={country.id}>{country.name}</option>
-                      ))}
-                    </select>
-                  </FormField>
-                ) : null}
               </div>
             ) : null}
 
             {sessionUser ? (
               <p className="mt-5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">
-                {t("mobilityBooking.connectedAs", { name: sessionUser.firstName || sessionUser.phone || "" })}
+                {t("deliveryBooking.connectedAs", {
+                  name: sessionUser.firstName || sessionUser.phone || "",
+                })}
               </p>
             ) : null}
 
@@ -901,7 +925,7 @@ export default function TaxiRideRequestForm() {
                 onClick={() => setStep(2)}
                 className="btn-secondary inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-2.5 text-sm"
               >
-                <ArrowLeft size={16} /> {t("mobilityBooking.steps.back")}
+                <ArrowLeft size={16} /> {t("deliveryBooking.steps.back")}
               </button>
               <Button
                 type="submit"
@@ -909,7 +933,7 @@ export default function TaxiRideRequestForm() {
                 disabled={Boolean(incompatibleUser) || !isOnline}
                 className="min-h-11 flex-1 rounded-full"
               >
-                {t(`mobilityBooking.book.${vehicleType}`)}
+                {t("deliveryBooking.book")}
               </Button>
             </div>
           </section>

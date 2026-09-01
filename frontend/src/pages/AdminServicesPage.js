@@ -33,7 +33,7 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Édition inline du prix (budget) d'une mission par l'admin.
+  // Ã‰dition inline du prix (budget) d'une mission par l'admin.
   const [editingBudgetId, setEditingBudgetId] = useState(null);
   const [budgetDraft, setBudgetDraft] = useState('');
   const [savingBudget, setSavingBudget] = useState(false);
@@ -107,7 +107,7 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
 
   /* ============================================================
      Charge les prestataires actifs assignables (missions Teranga Pro,
-     docs/DEV_SPEC_TERANGA_v3.md section 4.2 — assignation manuelle).
+     docs/DEV_SPEC_TERANGA_v3.md section 4.2 â€” assignation manuelle).
   ============================================================ */
   const loadProviders = useCallback(async () => {
     try {
@@ -170,9 +170,16 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
       }
     }
 
-    // Couverture géographique : le backend refuse désormais l'assignation d'un prestataire
-    // dont le pays ne couvre pas la destination réelle de la mission (mission.controller.js
-    // assign()) — filtré ici aussi pour ne pas proposer un choix qui échouera à l'envoi.
+    if (matchedTradeCategory.slug === 'livraison' && service.packageType === 'bulky') {
+      const hasCar = Array.isArray(provider.vehicles) && provider.vehicles.some(
+        (vehicle) => vehicle.status === 'active' && vehicle.vehicleType === 'car'
+      );
+      if (!hasCar) return false;
+    }
+
+    // Couverture gÃ©ographique : le backend refuse dÃ©sormais l'assignation d'un prestataire
+    // dont le pays ne couvre pas la destination rÃ©elle de la mission (mission.controller.js
+    // assign()) â€” filtrÃ© ici aussi pour ne pas proposer un choix qui Ã©chouera Ã  l'envoi.
     const missionCountryIso = service.country?.isoCode;
     if (missionCountryIso && provider.countryCode) {
       return String(provider.countryCode).toUpperCase() === String(missionCountryIso).toUpperCase();
@@ -184,8 +191,8 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
     return providers.filter((p) => isProviderAssignableToMission(service, p));
   }
 
-  // Statuts non terminaux : le backend reste l'arbitre final des règles fines (ex. désassignation
-  // refusée après ON_SITE) — ce gate ne fait qu'éviter d'afficher les contrôles sur une mission
+  // Statuts non terminaux : le backend reste l'arbitre final des rÃ¨gles fines (ex. dÃ©sassignation
+  // refusÃ©e aprÃ¨s ON_SITE) â€” ce gate ne fait qu'Ã©viter d'afficher les contrÃ´les sur une mission
   // manifestement close.
   function canModifyProviderSlot(service) {
     return ['CREATED', 'SEARCHING_EXECUTOR', 'ASSIGNED', 'EN_ROUTE', 'ON_SITE', 'IN_PROGRESS'].includes(
@@ -942,6 +949,7 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
     </div>
   );
 }
+
 
 
 

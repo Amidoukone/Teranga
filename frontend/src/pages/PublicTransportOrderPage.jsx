@@ -2,8 +2,8 @@ import { ArrowLeft, CarFront, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-import MissionRequestForm from "../components/MissionRequestForm";
 import TaxiRideRequestForm from "../features/mobility/TaxiRideRequestForm";
+import DeliveryRequestForm from "../features/delivery/DeliveryRequestForm";
 import SetSeo from "../components/SetSeo";
 
 export default function PublicTransportOrderPage({ serviceSlug }) {
@@ -42,14 +42,7 @@ export default function PublicTransportOrderPage({ serviceSlug }) {
           </p>
         </div>
 
-        {isTaxi ? (
-          <TaxiRideRequestForm />
-        ) : (
-          <MissionRequestForm
-            initialTradeCategorySlug={serviceSlug}
-            initialTitle={t(`${translationRoot}.defaultTitle`)}
-          />
-        )}
+        {isTaxi ? <TaxiRideRequestForm /> : <DeliveryRequestForm />}
       </div>
     </main>
   );
