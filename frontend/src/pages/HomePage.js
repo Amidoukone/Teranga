@@ -71,6 +71,15 @@ export default function HomePage() {
               </p>
             </header>
 
+            <ol aria-label={t("homePage.simpleHero.flowLabel")} className="mx-auto mt-7 grid max-w-4xl grid-cols-2 gap-2 sm:grid-cols-4">
+              {["request", "execution", "tracking", "validation"].map((step, index) => (
+                <li key={step} className="rounded-2xl border border-border/70 bg-surface-card/80 px-3 py-3 text-center shadow-sm">
+                  <span className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">{index + 1}</span>
+                  <span className="mt-2 block text-xs font-semibold text-text-primary">{t(`homePage.simpleHero.flow.${step}`)}</span>
+                </li>
+              ))}
+            </ol>
+
             <section className="mx-auto mt-8 max-w-5xl" aria-labelledby="home-services-title">
               <h2 id="home-services-title" className="text-center text-sm font-semibold text-text-secondary">
                 {t("homePage.simpleHero.chooseAction")}

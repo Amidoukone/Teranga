@@ -391,7 +391,9 @@ export default function NotificationsPage() {
           return (
             <button
               key={tab.key}
+              type="button"
               onClick={() => setProgress(tab.key)}
+              aria-pressed={active}
               className={[
                 "app-tab",
                 active ? "app-tab-active" : "app-tab-idle",
@@ -425,7 +427,7 @@ export default function NotificationsPage() {
 
       {/* List */}
       {loading ? (
-        <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
+        <div role="status" aria-live="polite" aria-busy="true" className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
           {t("notifications.loading")}
         </div>
       ) : displayItems.length === 0 ? (

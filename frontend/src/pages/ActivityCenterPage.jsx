@@ -366,7 +366,7 @@ export default function ActivityCenterPage() {
             </div>
           ) : null}
           {dateError ? (
-            <p className="text-xs text-rose-600 font-semibold">
+            <p role="alert" aria-live="assertive" className="text-xs text-rose-600 font-semibold">
               {dateError}
             </p>
           ) : null}
@@ -388,7 +388,7 @@ export default function ActivityCenterPage() {
     >
 
       {dateError ? (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 font-semibold">
+        <div role="alert" aria-live="assertive" className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 font-semibold">
           {dateError}
         </div>
       ) : null}
@@ -400,7 +400,9 @@ export default function ActivityCenterPage() {
           return (
             <button
               key={tab.key}
+              type="button"
               onClick={() => setProgress(tab.key)}
+              aria-pressed={active}
               className={[
                 "app-tab",
                 active ? "app-tab-active" : "app-tab-idle",
@@ -430,7 +432,7 @@ export default function ActivityCenterPage() {
         ].join(" ")}
       >
         {loading ? (
-          <div className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
+          <div role="status" aria-live="polite" aria-busy="true" className="rounded-2xl border border-border/70 bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
             {t("activities.loading")}
           </div>
         ) : items.length === 0 ? (

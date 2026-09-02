@@ -14,6 +14,7 @@ import {
 
 import { getMyServices } from '../services/services';
 import { useLocale } from '../i18n/useLocale';
+import { getRequestNextAction, getRequestProofState } from '../utils/requestLifecycle';
 
 const SERVICE_POLL_MS = 15000;
 const MISSION_TERMINAL_STATUSES = new Set([
@@ -82,6 +83,8 @@ function ServiceCard({ service }) {
   const statusLabel = missionStatus
     ? t(`missionTracking.status.${missionStatus}`, { defaultValue: missionStatus })
     : t(`services.status.${service.status}`, { defaultValue: service.status });
+  const nextAction = getRequestNextAction(service);
+  const proofState = getRequestProofState(service);
   const typeLabel =
     service.tradeCategory?.name ||
     service.typeLabel ||
@@ -140,6 +143,11 @@ function ServiceCard({ service }) {
               {t('serviceOrders.confirmationNeeded')}
             </p>
           ) : null}
+
+          <p className="mt-3 text-xs text-text-secondary" aria-live="polite">
+            {t(`serviceOrders.nextAction.${nextAction}`, { defaultValue: t('serviceOrders.nextAction.follow') })}
+            {nextAction === 'proof' && proofState === 'missing' ? ` · ${t('serviceOrders.proofRequired', { defaultValue: 'Preuve à fournir' })}` : ''}
+          </p>
 
           <Link
             to={detailPath(service)}
