@@ -18,6 +18,7 @@ export default function MobilityDispatchPanel({ missionId, onAssignmentChange })
   const [error, setError] = useState(null);
   const [assignmentSuccess, setAssignmentSuccess] = useState(null);
   const [assigningId, setAssigningId] = useState(null);
+  const [pendingAssignment, setPendingAssignment] = useState(null);
   const [overrideReason, setOverrideReason] = useState("");
   const [overridingStart, setOverridingStart] = useState(false);
   const previousCandidateIds = useRef(null);
@@ -80,13 +81,7 @@ export default function MobilityDispatchPanel({ missionId, onAssignmentChange })
     previousCandidateIds.current = currentIds;
   }, [data?.candidates]);
 
-  const assign = async (candidate) => {
-    const isReassignment = mission?.providerId && String(mission.providerId) !== String(candidate.provider.id);
-    if (isReassignment && typeof window !== "undefined" && !window.confirm(
-      t("mobilityDispatch.confirmReassign", { name: candidate.provider.displayFirstName })
-    )) {
-      return;
-    }
+  const executeAssignment = async (candidate) => {
     setAssigningId(candidate.provider.id);
     setError(null);
     setAssignmentSuccess(null);
@@ -112,7 +107,17 @@ export default function MobilityDispatchPanel({ missionId, onAssignmentChange })
       }
     } finally {
       setAssigningId(null);
+      setPendingAssignment(null);
     }
+  };
+
+  const assign = (candidate) => {
+    const isReassignment = mission?.providerId && String(mission.providerId) !== String(candidate.provider.id);
+    if (isReassignment) {
+      setPendingAssignment(candidate);
+      return;
+    }
+    executeAssignment(candidate);
   };
 
   const overrideStart = async () => {
@@ -164,6 +169,22 @@ export default function MobilityDispatchPanel({ missionId, onAssignmentChange })
       {error ? (
         <div role="alert" aria-live="assertive" className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
           {error}
+        </div>
+      ) : null}
+
+      {pendingAssignment ? (
+        <div role="dialog" aria-live="assertive" className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
+          <p className="text-sm font-semibold text-text-primary">
+            {t("mobilityDispatch.confirmReassign", { name: pendingAssignment.provider.displayFirstName })}
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button type="button" onClick={() => setPendingAssignment(null)} className="btn-secondary flex-1 rounded-full px-4 py-2 text-xs">
+              {t("mobilityDispatch.cancel")}
+            </button>
+            <button type="button" onClick={() => executeAssignment(pendingAssignment)} disabled={Boolean(assigningId)} className="btn-primary flex-1 rounded-full px-4 py-2 text-xs disabled:opacity-50">
+              {t("mobilityDispatch.confirm")}
+            </button>
+          </div>
         </div>
       ) : null}
 

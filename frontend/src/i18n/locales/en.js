@@ -1773,6 +1773,8 @@ const en = {
     reassign: "Reassign to this driver",
     assignBest: "Assign the best driver",
     confirmReassign: "Reassign the ride to {{name}}? The current driver will be replaced.",
+    cancel: "Cancel",
+    confirm: "Confirm",
     assigning: "Assigning…",
     startCode: "Start code to communicate to the client",
     callAssistance: "Call Teranga assistance",

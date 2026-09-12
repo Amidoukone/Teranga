@@ -1778,6 +1778,8 @@ const fr = {
     reassign: "Réaffecter à ce chauffeur",
     assignBest: "Affecter le meilleur chauffeur",
     confirmReassign: "Réaffecter la course à {{name}} ? Le chauffeur actuel sera remplacé.",
+    cancel: "Annuler",
+    confirm: "Confirmer",
     assigning: "Affectation…",
     startCode: "Code de démarrage à communiquer au client",
     callAssistance: "Appeler l'assistance Teranga",
