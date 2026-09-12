@@ -778,7 +778,7 @@ export default function DeliveryRequestForm() {
               ) : null}
 
               {!sessionUser && !incompatibleUser ? (
-                {!phone.trim() ? <FormField label={t("deliveryBooking.identity.phone")} required>
+                !phone.trim() ? <FormField label={t("deliveryBooking.identity.phone")} required>
                   <input
                     type="tel"
                     inputMode="tel"
@@ -793,7 +793,7 @@ export default function DeliveryRequestForm() {
                     placeholder={getPhonePlaceholder(selectedCountry)}
                     required
                   />
-                </FormField> : null}
+                </FormField> : null
               ) : null}
 
               <FormField label={t("deliveryBooking.descriptionLabel")}>
