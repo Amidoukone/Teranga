@@ -120,7 +120,8 @@ export default function DeliveryRequestForm() {
     Array.isArray(initialDraft.packageHandling) ? initialDraft.packageHandling : []
   );
   const [locating, setLocating] = useState(false);
-  const [step, setStep] = useState(1);
+  // Le parcours rapide commence directement par le trajet.
+  const [step, setStep] = useState(2);
 
   const [estimate, setEstimate] = useState(null);
   const [estimating, setEstimating] = useState(false);
@@ -262,6 +263,24 @@ export default function DeliveryRequestForm() {
     setFeedback(null);
   }, []);
 
+  const clearRestoredDraft = () => {
+    clearDeliveryDraft();
+    setPackageType("small");
+    setPickupAddress("");
+    setPickup(null);
+    setDestinationAddress("");
+    setDestination(null);
+    setDescription("");
+    setRecipientName("");
+    setRecipientPhone("");
+    setPackageHandling([]);
+    setPhone("");
+    setFirstName("");
+    setEstimate(null);
+    setFeedback(null);
+    setStep(2);
+  };
+
   const handleCountryChange = async (nextCountryId) => {
     setCountryId(nextCountryId);
     setTradeCategory(null);
@@ -368,7 +387,7 @@ export default function DeliveryRequestForm() {
         if (data.destination.address) setDestinationAddress(data.destination.address);
       }
       setStep(3);
-      return true;
+      return data?.estimate || null;
     } catch (error) {
       setEstimate(null);
       setFeedback({
@@ -390,6 +409,7 @@ export default function DeliveryRequestForm() {
       await calculateEstimate();
       return;
     }
+    const estimateForSubmit = estimate;
     if (incompatibleUser) {
       setFeedback({
         type: "error",
@@ -444,7 +464,7 @@ export default function DeliveryRequestForm() {
 
       setResult({
         mission: data?.mission || data?.service,
-        estimate: data?.estimate || estimate,
+        estimate: data?.estimate || estimateForSubmit,
         generatedPin: data?.generatedPin || null,
       });
       clearDeliveryDraft();
@@ -543,9 +563,12 @@ export default function DeliveryRequestForm() {
         ) : null}
 
         {restoredDraft ? (
-          <p className="mb-5 flex items-center gap-2 rounded-2xl bg-blue-500/10 px-3 py-2 text-xs text-blue-800 dark:text-blue-200">
-            <CheckCircle2 size={16} /> {t("deliveryBooking.draftRestored")}
-          </p>
+          <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl bg-blue-500/10 px-3 py-2 text-xs text-blue-800 dark:text-blue-200">
+            <p className="flex items-center gap-2"><CheckCircle2 size={16} /> {t("deliveryBooking.draftRestored")}</p>
+            <button type="button" onClick={clearRestoredDraft} className="shrink-0 font-semibold underline underline-offset-2">
+              {t("deliveryBooking.clearDraft")}
+            </button>
+          </div>
         ) : null}
 
         {assistanceTelHref || assistanceWhatsappHref ? (
@@ -583,9 +606,9 @@ export default function DeliveryRequestForm() {
           </div>
         ) : null}
 
-        <ol className="mb-7 grid grid-cols-3 gap-2" aria-label={t("deliveryBooking.steps.label")}>
-          {["package", "route", "confirm"].map((key, index) => {
-            const number = index + 1;
+        <ol className="mb-7 grid grid-cols-2 gap-2" aria-label={t("deliveryBooking.steps.label")}>
+          {["route", "confirm"].map((key, index) => {
+            const number = index + 2;
             const active = step === number;
             const complete = step > number;
             return (
@@ -665,8 +688,24 @@ export default function DeliveryRequestForm() {
             <p className="mt-1 text-sm text-text-muted">
               {t("deliveryBooking.steps.routeHint")}
             </p>
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="mt-3 text-xs font-semibold text-blue-700 underline-offset-2 hover:underline dark:text-blue-300"
+            >
+              {t("deliveryBooking.steps.package")} : {t(`deliveryBooking.package.${packageType}.label`)}
+            </button>
 
             <div className="mt-5 space-y-4">
+              <button
+                type="button"
+                onClick={useCurrentLocation}
+                disabled={locating}
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-500/15 disabled:opacity-60 dark:text-blue-300"
+              >
+                {locating ? <Loader2 size={17} className="animate-spin" /> : <LocateFixed size={17} />}
+                {locating ? t("deliveryBooking.locating") : t("deliveryBooking.useCurrentLocation")}
+              </button>
               {countries.length > 1 ? (
                 <FormField label={t("deliveryBooking.identity.country")} required>
                   <select
@@ -710,22 +749,6 @@ export default function DeliveryRequestForm() {
                   ))}
                 </div>
               ) : null}
-              <button
-                type="button"
-                onClick={useCurrentLocation}
-                disabled={locating}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-700 disabled:opacity-60 dark:text-blue-300"
-              >
-                {locating ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <LocateFixed size={16} />
-                )}
-                {locating
-                  ? t("deliveryBooking.locating")
-                  : t("deliveryBooking.useCurrentLocation")}
-              </button>
-
               <FormField label={t("deliveryBooking.destinationLabel")} required>
                 <LocationAutocompleteInput
                   className={inputClass}
@@ -752,6 +775,25 @@ export default function DeliveryRequestForm() {
                     </button>
                   ))}
                 </div>
+              ) : null}
+
+              {!sessionUser && !incompatibleUser ? (
+                {!phone.trim() ? <FormField label={t("deliveryBooking.identity.phone")} required>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    className={inputClass}
+                    value={phone}
+                    onChange={(event) => {
+                      setPhone(event.target.value);
+                      setPinRequired(false);
+                      setPin("");
+                    }}
+                    placeholder={getPhonePlaceholder(selectedCountry)}
+                    required
+                  />
+                </FormField> : null}
               ) : null}
 
               <FormField label={t("deliveryBooking.descriptionLabel")}>
@@ -791,17 +833,9 @@ export default function DeliveryRequestForm() {
             </div>
 
             <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="btn-secondary inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-2.5 text-sm"
-              >
-                <ArrowLeft size={16} /> {t("deliveryBooking.steps.back")}
-              </button>
               <Button
-                type="button"
-                onClick={calculateEstimate}
-                loading={estimating}
+                type="submit"
+                loading={estimating || submitting}
                 disabled={!tradeCategory || !countryId}
                 className="min-h-11 flex-1 rounded-full"
               >
@@ -866,7 +900,7 @@ export default function DeliveryRequestForm() {
                     {t("deliveryBooking.identity.hint")}
                   </p>
                 </div>
-                <FormField label={t("deliveryBooking.identity.phone")} required>
+                {!phone.trim() ? <FormField label={t("deliveryBooking.identity.phone")} required>
                   <input
                     type="tel"
                     inputMode="tel"
@@ -881,7 +915,7 @@ export default function DeliveryRequestForm() {
                     placeholder={getPhonePlaceholder(selectedCountry)}
                     required
                   />
-                </FormField>
+                </FormField> : null}
                 <FormField label={t("deliveryBooking.identity.firstName")}>
                   <input
                     type="text"

@@ -175,6 +175,16 @@ export default function HomePage() {
                 </button>
               </div>
 
+              {telHref ? (
+                <a href={telHref} className="mt-4 flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-blue-950 px-5 py-3 text-center text-sm font-bold text-white shadow-lg shadow-blue-900/15 hover:bg-blue-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30">
+                  <Phone size={20} aria-hidden="true" />
+                  <span>
+                    <span className="block">{t("homePage.simpleHero.callCta")}</span>
+                    <span className="mt-0.5 block text-xs font-normal text-blue-200">{supportPhone}</span>
+                  </span>
+                </a>
+              ) : null}
+
               {showRequestForm ? (
                 <div id="home-other-request" className="mt-5 scroll-mt-24">
                   <MissionRequestForm />

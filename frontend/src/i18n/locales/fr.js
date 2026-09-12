@@ -675,6 +675,7 @@ const fr = {
     unassigned: "Sans intervenant",
     assignWorker: "Affecter un intervenant",
     chooseProvider: "Choisir un prestataire",
+    manualAssignment: "Choisir manuellement",
     chooseAgent: "Choisir un agent",
     noWorker: "Aucun intervenant compatible n'est disponible dans ce secteur.",
   },
@@ -1757,6 +1758,12 @@ const fr = {
     kicker: "Dispatch assisté",
     title: "Chauffeurs proches — course #{{id}}",
     radius: "Rayon de recherche",
+    refresh: "Actualiser la recherche",
+    callDriver: "Appeler ce chauffeur",
+    autoRefresh: "La recherche se relance automatiquement tant qu'aucun chauffeur n'est affecté.",
+    newCandidates: "{{count}} nouveau chauffeur disponible.",
+    newCandidates_other: "{{count}} nouveaux chauffeurs disponibles.",
+    dismiss: "Vu",
     loading: "Recherche des chauffeurs disponibles…",
     empty: "Aucun chauffeur sûr et disponible dans un rayon de {{radius}} km. Élargissez le rayon ou appelez un chauffeur vérifié.",
     assigned: "Un chauffeur est affecté. Il doit maintenant accepter la course.",
@@ -1768,6 +1775,9 @@ const fr = {
     positionUnavailable: "Position non disponible — confirmez la proximité avec le chauffeur.",
     fallback: "distance directe estimée",
     assign: "Affecter ce chauffeur",
+    reassign: "Réaffecter à ce chauffeur",
+    assignBest: "Affecter le meilleur chauffeur",
+    confirmReassign: "Réaffecter la course à {{name}} ? Le chauffeur actuel sera remplacé.",
     assigning: "Affectation…",
     startCode: "Code de démarrage à communiquer au client",
     callAssistance: "Appeler l'assistance Teranga",
@@ -1783,6 +1793,7 @@ const fr = {
     errors: {
       load: "Impossible de rechercher les chauffeurs.",
       assign: "Impossible d'affecter ce chauffeur.",
+      conflict: "Ce chauffeur vient probablement d'être affecté. La liste a été actualisée.",
       override: "Impossible d'autoriser le démarrage.",
     },
   },
@@ -1967,6 +1978,7 @@ const fr = {
       displayFirstNameLabel: "Nom affiché au client *",
       businessPhoneLabel: "Téléphone professionnel *",
       businessEmailLabel: "Email professionnel",
+      advancedTitle: "Informations administratives (facultatif)",
       hasLiabilityInsuranceLabel: "Assurance responsabilité civile",
       driverChecklistTitle: "Dossier chauffeur (filière Mobilité) — requis avant une course",
       mobilityComplianceAfterCreation:
@@ -1976,6 +1988,7 @@ const fr = {
       circulationCardVerifiedLabel: "Carte de circulation vérifiée",
       insuranceExpiresAtLabel: "Expiration de l'assurance",
       tradeCategoriesLabel: "Filières couvertes *",
+      mobilityQuickCta: "Ajouter Taxi",
       tradeCategoriesEmpty: "Aucune filière active pour le moment.",
       tradeCategoriesEmptyLink: "Créer une filière",
     },
@@ -2009,10 +2022,18 @@ const fr = {
     filters: {
       statusLabel: "Statut",
       statusAll: "Tous les statuts",
+      searchLabel: "Rechercher un chauffeur",
+      searchPlaceholder: "Nom, téléphone, email ou plaque",
+      readinessLabel: "Affectation",
+      readinessAll: "Tous les niveaux",
+      availabilityLabel: "Disponibilité",
+      availabilityAll: "Toutes les disponibilités",
     },
     table: {
       title: "Liste des prestataires",
       empty: "Aucun prestataire pour ce filtre.",
+      emptyReady: "Aucun chauffeur prêt à être affecté.",
+      emptyAvailability: "Aucun chauffeur dans cette disponibilité.",
       headers: {
         name: "Nom",
         account: "Compte",
@@ -2032,9 +2053,14 @@ const fr = {
       revoked: "Révoqué",
     },
     availability: {
+      title: "Disponibilité des chauffeurs",
       available: "Disponible",
       busy: "En course",
       offline: "Hors service",
+      ready: "Prêt à affecter",
+      gpsAge: "GPS il y a {{seconds}} s",
+      mapTitle: "Voir les chauffeurs sur la carte",
+      mapEmpty: "Aucun chauffeur avec une position GPS récente.",
     },
     mobilityState: {
       ready: "Véhicule autorisé",
@@ -2047,6 +2073,7 @@ const fr = {
       toSuspended: "Suspendre",
       toRevoked: "Révoquer",
       manageMobility: "Véhicules et conformité",
+      callDriver: "Appeler",
     },
   },
   adminProviderMobility: {
@@ -2071,6 +2098,7 @@ const fr = {
       vehicleRequired: "Ajoutez d’abord une moto ou une voiture.",
     },
     guide: {
+      operations: "3. Autoriser les courses",
       title: "Inscription guidée",
       progress: "{{completed}} élément(s) essentiel(s) sur {{total}} complété(s)",
       driver: "Chauffeur et identité",
@@ -2111,6 +2139,7 @@ const fr = {
       editMotorcycleTitle: "Modifier la moto",
       editCarTitle: "Modifier la voiture",
       draftHint: "Seul le type est nécessaire pour enregistrer. Les informations marquées facultatives ne bloquent pas les courses et pourront être complétées plus tard.",
+      documentsAdvanced: "Ajouter les documents et contrôles plus tard (facultatif)",
       type: "Type",
       motorcycle: "Moto",
       car: "Voiture",
@@ -2800,6 +2829,7 @@ const fr = {
       viewAll: "Voir toutes les annonces",
     },
     simpleHero: {
+      callCta: "Appeler Teranga pour commander",
       badge: "Services de confiance, accessibles à tous",
       title: "De quoi avez-vous besoin aujourd’hui ?",
       subtitle: "Commandez un taxi, envoyez un colis ou découvrez un bien immobilier. Vous pouvez commencer sans créer de compte.",
@@ -2915,6 +2945,17 @@ const fr = {
     },
   },
   publicTransportOrder: {
+    callFirst: {
+      kicker: "Commande assistée",
+      title: "Vous préférez parler à quelqu'un ?",
+      subtitle: "Appelez-nous : un membre de l'équipe prend votre commande et vous accompagne.",
+      call: "Appeler Teranga",
+      whatsapp: "Écrire sur WhatsApp",
+    },
+    online: {
+      title: "Commander directement en ligne",
+      subtitle: "Deux adresses et un numéro de téléphone suffisent.",
+    },
     backHome: "Retour à l'accueil",
     noAccountHint: "Aucun compte préalable nécessaire : votre espace est créé automatiquement.",
     taxi: {
@@ -2966,6 +3007,7 @@ const fr = {
     hideMap: "Masquer la carte",
     offline: "Connexion indisponible. Vos informations restent enregistrées sur ce téléphone.",
     draftRestored: "Votre dernière saisie a été restaurée automatiquement.",
+    clearDraft: "Effacer et recommencer",
     steps: {
       label: "Étapes de la commande",
       number: "Étape {{number}}",
@@ -3043,6 +3085,7 @@ const fr = {
     descriptionPlaceholder: "Ex. appeler à l’arrivée, contenu fragile, nom du destinataire…",
     offline: "Connexion indisponible. Votre saisie reste enregistrée sur ce téléphone.",
     draftRestored: "Votre dernière saisie a été restaurée automatiquement.",
+    clearDraft: "Effacer et recommencer",
     steps: {
       label: "Étapes de la livraison",
       number: "Étape {{number}}",

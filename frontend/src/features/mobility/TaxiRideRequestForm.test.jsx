@@ -114,11 +114,13 @@ describe("TaxiRideRequestForm", () => {
     persistSession.mockResolvedValue(undefined);
   });
 
-  async function enterRouteAndEstimate() {
-    await screen.findByText("Quel véhicule souhaitez-vous ?");
-    await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
+  async function enterRouteAndEstimate(phone) {
+    await screen.findByPlaceholderText("Adresse de départ");
     await userEvent.type(screen.getByPlaceholderText("Adresse de départ"), "Sébénikoro");
     await userEvent.type(screen.getByPlaceholderText("Adresse d'arrivée"), "ACI 2000");
+    if (phone) {
+      await userEvent.type(screen.getByRole("textbox", { name: "Téléphone" }), phone);
+    }
     await userEvent.click(screen.getByRole("button", { name: "Voir le trajet et le prix" }));
     await screen.findByText("Estimation");
   }
@@ -173,16 +175,17 @@ describe("TaxiRideRequestForm", () => {
     });
 
     render(<TaxiRideRequestForm />);
-    await screen.findByText("Quel véhicule souhaitez-vous ?");
+    await screen.findByRole("button", { name: /Véhicule : Moto/ });
+    await userEvent.click(screen.getByRole("button", { name: /Véhicule : Moto/ }));
     await userEvent.click(screen.getByRole("button", { name: /Voiture/ }));
     expect(screen.queryByText("Comment vous joindre ?")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
     await userEvent.type(screen.getByPlaceholderText("Adresse de départ"), "Sébénikoro");
     await userEvent.type(screen.getByPlaceholderText("Adresse d'arrivée"), "ACI 2000");
+    await userEvent.type(screen.getByRole("textbox", { name: "Téléphone" }), "+22370000000");
     await userEvent.click(screen.getByRole("button", { name: "Voir le trajet et le prix" }));
 
     expect(await screen.findByText("Comment vous joindre ?")).toBeInTheDocument();
-    await userEvent.type(screen.getByRole("textbox", { name: "Téléphone" }), "+22370000000");
     await userEvent.click(screen.getByRole("button", { name: "Commander cette voiture" }));
 
     await waitFor(() => expect(submitMissionRequest).toHaveBeenCalledTimes(1));
@@ -205,8 +208,7 @@ describe("TaxiRideRequestForm", () => {
       });
 
     render(<TaxiRideRequestForm />);
-    await enterRouteAndEstimate();
-    await userEvent.type(screen.getByRole("textbox", { name: "Téléphone" }), "+22371111111");
+    await enterRouteAndEstimate("+22371111111");
     expect(screen.queryByLabelText(/PIN Teranga/)).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Commander cette moto" }));

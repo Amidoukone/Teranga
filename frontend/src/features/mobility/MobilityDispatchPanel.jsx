@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bike, CarFront, KeyRound, Loader2, MapPin, PhoneCall, ShieldCheck } from "lucide-react";
 
@@ -20,6 +20,8 @@ export default function MobilityDispatchPanel({ missionId, onAssignmentChange })
   const [assigningId, setAssigningId] = useState(null);
   const [overrideReason, setOverrideReason] = useState("");
   const [overridingStart, setOverridingStart] = useState(false);
+  const previousCandidateIds = useRef(null);
+  const [newCandidateCount, setNewCandidateCount] = useState(0);
 
   const load = useCallback(async () => {
     if (!missionId) return;
@@ -39,7 +41,52 @@ export default function MobilityDispatchPanel({ missionId, onAssignmentChange })
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (!data?.mission || data.mission.providerId) return undefined;
+    const refreshTimer = window.setInterval(() => {
+      load();
+    }, 30000);
+    return () => window.clearInterval(refreshTimer);
+  }, [data?.mission, load]);
+
+  useEffect(() => {
+    if (!data?.candidates) return;
+    const currentIds = data.candidates.map((candidate) => `${candidate.provider.id}-${candidate.vehicle.id}`);
+    const previousIds = previousCandidateIds.current;
+    if (previousIds) {
+      const addedCount = currentIds.filter((id) => !previousIds.includes(id)).length;
+      if (addedCount > 0) {
+        setNewCandidateCount(addedCount);
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            const context = new AudioContext();
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            oscillator.frequency.value = 880;
+            gain.gain.setValueAtTime(0.035, context.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.16);
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            oscillator.start();
+            oscillator.stop(context.currentTime + 0.16);
+            oscillator.addEventListener("ended", () => context.close());
+          }
+        } catch (_error) {
+          // Le signal sonore reste facultatif si le navigateur le bloque.
+        }
+      }
+    }
+    previousCandidateIds.current = currentIds;
+  }, [data?.candidates]);
+
   const assign = async (candidate) => {
+    const isReassignment = mission?.providerId && String(mission.providerId) !== String(candidate.provider.id);
+    if (isReassignment && typeof window !== "undefined" && !window.confirm(
+      t("mobilityDispatch.confirmReassign", { name: candidate.provider.displayFirstName })
+    )) {
+      return;
+    }
     setAssigningId(candidate.provider.id);
     setError(null);
     setAssignmentSuccess(null);
@@ -54,7 +101,15 @@ export default function MobilityDispatchPanel({ missionId, onAssignmentChange })
       );
       await onAssignmentChange?.();
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || t("mobilityDispatch.errors.assign"));
+      const status = requestError?.response?.status;
+      const code = requestError?.response?.data?.code;
+      const isConflict = status === 409 || status === 423 || ["PROVIDER_BUSY", "MISSION_ALREADY_ASSIGNED"].includes(code);
+      if (isConflict) {
+        await load();
+        setError(t("mobilityDispatch.errors.conflict"));
+      } else {
+        setError(requestError?.response?.data?.error || t("mobilityDispatch.errors.assign"));
+      }
     } finally {
       setAssigningId(null);
     }
@@ -107,7 +162,7 @@ export default function MobilityDispatchPanel({ missionId, onAssignmentChange })
       </div>
 
       {error ? (
-        <div className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
+        <div role="alert" aria-live="assertive" className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
           {error}
         </div>
       ) : null}
@@ -126,6 +181,19 @@ export default function MobilityDispatchPanel({ missionId, onAssignmentChange })
               <div className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-200">
                 {assignmentSuccess || t("mobilityDispatch.assigned")}
               </div>
+            ) : null}
+            {!mission.providerId && newCandidateCount > 0 ? (
+              <div role="status" aria-live="polite" className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-200">
+                <span>{t("mobilityDispatch.newCandidates", { count: newCandidateCount })}</span>
+                <button type="button" onClick={() => setNewCandidateCount(0)} className="shrink-0 font-semibold underline underline-offset-2">
+                  {t("mobilityDispatch.dismiss")}
+                </button>
+              </div>
+            ) : null}
+            {!mission.providerId ? (
+              <p className="mb-3 rounded-xl border border-blue-500/20 bg-blue-500/5 px-3 py-2 text-xs text-blue-800 dark:text-blue-200">
+                {t("mobilityDispatch.autoRefresh")}
+              </p>
             ) : null}
             {mission.startCode ? (
               <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-center">
@@ -162,9 +230,25 @@ export default function MobilityDispatchPanel({ missionId, onAssignmentChange })
             ) : null}
             {!candidates.length ? (
               <div className="rounded-xl border border-border bg-surface-main/60 p-5 text-sm text-text-muted">
-                {t("mobilityDispatch.empty", { radius: radiusKm })}
+                <p>{t("mobilityDispatch.empty", { radius: radiusKm })}</p>
+                <button type="button" onClick={load} disabled={loading} className="btn-secondary mt-3 rounded-full px-4 py-2 text-xs disabled:opacity-50">
+                  {loading ? t("mobilityDispatch.loading") : t("mobilityDispatch.refresh")}
+                </button>
               </div>
             ) : (
+              <>
+                {!mission.providerId && candidates[0] ? (
+                  <button
+                    type="button"
+                    disabled={Boolean(assigningId)}
+                    onClick={() => assign(candidates[0])}
+                    className="btn-primary mb-3 flex min-h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-bold disabled:opacity-50"
+                  >
+                    {assigningId === candidates[0].provider.id
+                      ? t("mobilityDispatch.assigning")
+                      : t("mobilityDispatch.assignBest")}
+                  </button>
+                ) : null}
               <ol className="max-h-[430px] space-y-3 overflow-y-auto pr-1">
                 {candidates.map((candidate, index) => {
                   const Icon = candidate.vehicle.vehicleType === "motorcycle" ? Bike : CarFront;
@@ -198,18 +282,28 @@ export default function MobilityDispatchPanel({ missionId, onAssignmentChange })
                           : t("mobilityDispatch.positionUnavailable")}
                         {candidate.distanceSource === "straight_line_fallback" ? ` · ${t("mobilityDispatch.fallback")}` : ""}
                       </p>
+                      {buildTelHref(candidate.provider.phone || candidate.provider.user?.phone) ? (
+                        <a href={buildTelHref(candidate.provider.phone || candidate.provider.user?.phone)} className="btn-secondary mt-3 flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-xs">
+                          <PhoneCall size={14} /> {t("mobilityDispatch.callDriver")}
+                        </a>
+                      ) : null}
                       <button
                         type="button"
-                        disabled={Boolean(assigningId) || Boolean(mission.providerId)}
+                        disabled={Boolean(assigningId) || String(mission.providerId || "") === String(candidate.provider.id)}
                         onClick={() => assign(candidate)}
                         className="btn-primary mt-3 w-full rounded-full px-4 py-2 text-xs disabled:opacity-50"
                       >
-                        {assigningId === candidate.provider.id ? t("mobilityDispatch.assigning") : t("mobilityDispatch.assign")}
+                        {assigningId === candidate.provider.id
+                          ? t("mobilityDispatch.assigning")
+                          : mission.providerId
+                          ? t("mobilityDispatch.reassign")
+                          : t("mobilityDispatch.assign")}
                       </button>
                     </li>
                   );
                 })}
               </ol>
+              </>
             )}
           </div>
         </div>

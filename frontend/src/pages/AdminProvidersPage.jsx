@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { PhoneCall } from 'lucide-react';
 import { me } from '../services/auth';
 import { normalizeRole, isMasterUser } from '../utils/role';
 import { notify } from '../utils/notify';
@@ -15,6 +16,8 @@ import { createUser } from '../services/users';
 import { listProviders, createProvider, updateProviderStatus } from '../services/providers';
 import { listTradeCategoriesAdmin } from '../services/tradeCategories';
 import { AdminField, AdminPageHeader } from '../components/admin/AdminFormUi';
+import { buildTelHref } from '../utils/phone';
+import ProviderAvailabilityMap from '../features/mobility/ProviderAvailabilityMap';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -65,6 +68,13 @@ function mobilityReadiness(provider) {
   return { key: 'pending', ready: false };
 }
 
+function isMobilityProvider(provider) {
+  return (
+    Array.isArray(provider?.tradeCategories) &&
+    provider.tradeCategories.some((category) => category.slug === 'mobilite')
+  );
+}
+
 const INITIAL_FORM = {
   firstName: '',
   lastName: '',
@@ -99,6 +109,9 @@ export default function AdminProvidersPage() {
   const [providers, setProviders] = useState([]);
   const [loadingProviders, setLoadingProviders] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [availabilityFilter, setAvailabilityFilter] = useState('all');
+  const [readinessFilter, setReadinessFilter] = useState('all');
+  const [providerSearch, setProviderSearch] = useState('');
   const [transitioningId, setTransitioningId] = useState(null);
 
   /* ============================================================
@@ -126,6 +139,10 @@ export default function AdminProvidersPage() {
         setCurrentUser(user);
         setIsAdmin(true);
         setIsMaster(isMasterUser(user));
+        setForm((current) => ({
+          ...current,
+          country: current.country || user.country || user.countryCode || '',
+        }));
       } catch (e) {
         navigate('/login');
       }
@@ -151,8 +168,8 @@ export default function AdminProvidersPage() {
     }
   }, []);
 
-  const loadProviders = useCallback(async () => {
-    setLoadingProviders(true);
+  const loadProviders = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoadingProviders(true);
     try {
       const params = statusFilter === 'all' ? {} : { status: statusFilter };
       const list = await listProviders(params);
@@ -161,7 +178,7 @@ export default function AdminProvidersPage() {
       console.error('AdminProvidersPage load providers error:', err);
       setProviders([]);
     } finally {
-      setLoadingProviders(false);
+      if (!silent) setLoadingProviders(false);
     }
   }, [statusFilter]);
 
@@ -173,9 +190,41 @@ export default function AdminProvidersPage() {
     if (isAdmin) loadProviders();
   }, [isAdmin, loadProviders]);
 
+  useEffect(() => {
+    if (!isAdmin) return undefined;
+    const refresh = () => loadProviders({ silent: true });
+    const interval = window.setInterval(refresh, 60000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [isAdmin, loadProviders]);
+
   function handleChange(field, value) {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(field === 'firstName' && !prev.displayFirstName.trim()
+        ? { displayFirstName: value }
+        : {}),
+    }));
     setErrors((prev) => ({ ...prev, [field]: undefined }));
+  }
+
+  function chooseMobilityCategory() {
+    const mobility = tradeCategories.find((category) => category.slug === 'mobilite');
+    if (!mobility) {
+      notify(t('adminProvidersPage.form.tradeCategoriesEmpty'));
+      return;
+    }
+    setForm((prev) => ({
+      ...prev,
+      tradeCategoryIds: prev.tradeCategoryIds.includes(mobility.id)
+        ? prev.tradeCategoryIds
+        : [...prev.tradeCategoryIds, mobility.id],
+    }));
+    setErrors((prev) => ({ ...prev, tradeCategoryIds: undefined }));
   }
 
   function toggleTradeCategory(id) {
@@ -329,6 +378,33 @@ export default function AdminProvidersPage() {
     ],
     [t]
   );
+
+  const availabilityCounts = useMemo(() => providers.reduce((counts, provider) => {
+    if (!isMobilityProvider(provider)) return counts;
+    const status = provider.availabilityStatus || 'offline';
+    counts[status] = (counts[status] || 0) + 1;
+    counts.all += 1;
+    return counts;
+  }, { all: 0, available: 0, busy: 0, offline: 0 }), [providers]);
+
+  const visibleProviders = useMemo(() => [...providers]
+    .filter((provider) => {
+      const query = providerSearch.trim().toLowerCase();
+      if (!query) return true;
+      const vehicle = provider.dispatchPresence?.vehicle;
+      return [provider.displayFirstName, provider.phoneNumber, provider.user?.phone, provider.user?.email, vehicle?.plateNumber, vehicle?.brand, vehicle?.model]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
+    })
+    .filter((provider) => availabilityFilter === 'all' || (isMobilityProvider(provider) && (provider.availabilityStatus || 'offline') === availabilityFilter))
+    .filter((provider) => readinessFilter !== 'ready' || (isMobilityProvider(provider) && provider.availabilityStatus === 'available' && mobilityReadiness(provider).ready))
+    .sort((left, right) => {
+      const leftReady = isMobilityProvider(left) && left.availabilityStatus === 'available' && mobilityReadiness(left).ready;
+      const rightReady = isMobilityProvider(right) && right.availabilityStatus === 'available' && mobilityReadiness(right).ready;
+      if (leftReady !== rightReady) return Number(rightReady) - Number(leftReady);
+      const order = { available: 0, busy: 1, offline: 2 };
+      return (order[left.availabilityStatus || 'offline'] ?? 3) - (order[right.availabilityStatus || 'offline'] ?? 3);
+    }), [availabilityFilter, providerSearch, providers, readinessFilter]);
 
   // La section Mobilite explique que la conformite conditionne les courses, mais ne bloque plus
   // l'activation du compte.
@@ -531,41 +607,57 @@ export default function AdminProvidersPage() {
                 <p className="text-xs text-rose-600 -mt-3">{errors.businessPhone}</p>
               )}
 
-              <AdminField label={t('adminProvidersPage.form.businessEmailLabel')}>
-                <input
-                  type="email"
-                  className="app-input"
-                  value={form.businessEmail}
-                  onChange={(e) => handleChange('businessEmail', e.target.value)}
-                />
-              </AdminField>
+              <details className="md:col-span-2 rounded-xl border border-border bg-surface-main/50 p-3">
+                <summary className="cursor-pointer text-sm font-semibold text-text-primary">
+                  {t('adminProvidersPage.form.advancedTitle')}
+                </summary>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <AdminField label={t('adminProvidersPage.form.businessEmailLabel')}>
+                    <input
+                      type="email"
+                      className="app-input"
+                      value={form.businessEmail}
+                      onChange={(e) => handleChange('businessEmail', e.target.value)}
+                    />
+                  </AdminField>
 
-              <AdminField label={t('adminProvidersPage.form.insuranceExpiresAtLabel')}>
-                <input
-                  type="date"
-                  className="app-input"
-                  value={form.insuranceExpiresAt}
-                  onChange={(e) => handleChange('insuranceExpiresAt', e.target.value)}
-                />
-              </AdminField>
+                  <AdminField label={t('adminProvidersPage.form.insuranceExpiresAtLabel')}>
+                    <input
+                      type="date"
+                      className="app-input"
+                      value={form.insuranceExpiresAt}
+                      onChange={(e) => handleChange('insuranceExpiresAt', e.target.value)}
+                    />
+                  </AdminField>
 
-              <div className="flex items-end pb-1">
-                <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
-                  <input
-                    type="checkbox"
-                    checked={form.hasLiabilityInsurance}
-                    onChange={(e) => handleChange('hasLiabilityInsurance', e.target.checked)}
-                    className="h-4 w-4 rounded border-border text-blue-600 focus:ring-blue-500"
-                  />
-                  <span>{t('adminProvidersPage.form.hasLiabilityInsuranceLabel')}</span>
-                </label>
-              </div>
+                  <div className="flex items-end pb-1">
+                    <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
+                      <input
+                        type="checkbox"
+                        checked={form.hasLiabilityInsurance}
+                        onChange={(e) => handleChange('hasLiabilityInsurance', e.target.checked)}
+                        className="h-4 w-4 rounded border-border text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>{t('adminProvidersPage.form.hasLiabilityInsuranceLabel')}</span>
+                    </label>
+                  </div>
+                </div>
+              </details>
             </div>
 
             <div className="mt-4">
-              <p className="mb-2 block text-xs font-medium text-text-secondary">
-                {t('adminProvidersPage.form.tradeCategoriesLabel')}
-              </p>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="block text-xs font-medium text-text-secondary">
+                  {t('adminProvidersPage.form.tradeCategoriesLabel')}
+                </p>
+                <button
+                  type="button"
+                  onClick={chooseMobilityCategory}
+                  className="rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-500/15 dark:text-blue-300"
+                >
+                  {t('adminProvidersPage.form.mobilityQuickCta')}
+                </button>
+              </div>
               {tradeCategories.length === 0 ? (
                 <p className="text-xs text-text-muted italic">
                   {t('adminProvidersPage.form.tradeCategoriesEmpty')}{' '}
@@ -637,32 +729,81 @@ export default function AdminProvidersPage() {
         </form>
 
         {/* ================= LISTE ================= */}
+        <section className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label={t('adminProvidersPage.availability.title')}>
+          <button
+            type="button"
+            onClick={() => setReadinessFilter(readinessFilter === 'ready' ? 'all' : 'ready')}
+            className={`rounded-2xl border p-4 text-left transition ${readinessFilter === 'ready' ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm' : 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500'}`}
+          >
+            <p className={`text-xs font-semibold uppercase tracking-wide ${readinessFilter === 'ready' ? 'text-emerald-100' : 'text-emerald-700 dark:text-emerald-300'}`}>
+              {t('adminProvidersPage.availability.ready')}
+            </p>
+            <p className="mt-1 text-2xl font-bold">
+              {providers.filter((provider) => isMobilityProvider(provider) && provider.availabilityStatus === 'available' && mobilityReadiness(provider).ready).length}
+            </p>
+          </button>
+          {['available', 'busy', 'offline'].map((availability) => (
+            <button
+              key={availability}
+              type="button"
+              onClick={() => setAvailabilityFilter(availabilityFilter === availability ? 'all' : availability)}
+              className={`rounded-2xl border p-4 text-left transition ${availabilityFilter === availability ? 'border-blue-600 bg-blue-600 text-white shadow-sm' : 'border-border bg-surface-card hover:border-blue-400'}`}
+            >
+              <p className={`text-xs font-semibold uppercase tracking-wide ${availabilityFilter === availability ? 'text-blue-100' : 'text-text-muted'}`}>
+                {t(`adminProvidersPage.availability.${availability}`)}
+              </p>
+              <p className="mt-1 text-2xl font-bold">{availabilityCounts[availability] || 0}</p>
+            </button>
+          ))}
+        </section>
+
+        <details className="mb-5 rounded-2xl border border-border bg-surface-card p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-text-primary">
+            {t('adminProvidersPage.availability.mapTitle')}
+          </summary>
+          <ProviderAvailabilityMap providers={visibleProviders} />
+        </details>
+
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h2 className="text-xl font-semibold text-text-primary">
             {t('adminProvidersPage.table.title')}
           </h2>
-          <AdminField label={t('adminProvidersPage.filters.statusLabel')} className="w-full sm:w-56">
-            <select
-              className="app-input"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              {statusFilterOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </AdminField>
+          <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
+            <AdminField label={t('adminProvidersPage.filters.searchLabel')} className="w-full sm:col-span-2">
+              <input
+                className="app-input"
+                value={providerSearch}
+                onChange={(event) => setProviderSearch(event.target.value)}
+                placeholder={t('adminProvidersPage.filters.searchPlaceholder')}
+              />
+            </AdminField>
+            <AdminField label={t('adminProvidersPage.filters.statusLabel')} className="w-full sm:w-48">
+              <select className="app-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                {statusFilterOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </AdminField>
+            <AdminField label={t('adminProvidersPage.filters.availabilityLabel')} className="w-full sm:w-48">
+              <select className="app-input" value={availabilityFilter} onChange={(e) => setAvailabilityFilter(e.target.value)}>
+                <option value="all">{t('adminProvidersPage.filters.availabilityAll')}</option>
+                {['available', 'busy', 'offline'].map((value) => <option key={value} value={value}>{t(`adminProvidersPage.availability.${value}`)}</option>)}
+              </select>
+            </AdminField>
+            <AdminField label={t('adminProvidersPage.filters.readinessLabel')} className="w-full sm:w-48">
+              <select className="app-input" value={readinessFilter} onChange={(e) => setReadinessFilter(e.target.value)}>
+                <option value="all">{t('adminProvidersPage.filters.readinessAll')}</option>
+                <option value="ready">{t('adminProvidersPage.availability.ready')}</option>
+              </select>
+            </AdminField>
+          </div>
         </div>
 
         {loadingProviders ? (
           <p className="text-center text-text-muted italic py-6">
             {t('adminProvidersPage.loadingProviders')}
           </p>
-        ) : providers.length === 0 ? (
+        ) : visibleProviders.length === 0 ? (
           <p className="text-center text-text-muted italic py-6">
-            {t('adminProvidersPage.table.empty')}
+            {providers.length === 0 ? t('adminProvidersPage.table.empty') : t(readinessFilter === 'ready' ? 'adminProvidersPage.table.emptyReady' : 'adminProvidersPage.table.emptyAvailability')}
           </p>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-border bg-surface-card shadow-sm">
@@ -687,7 +828,7 @@ export default function AdminProvidersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {providers.map((p) => (
+                {visibleProviders.map((p) => (
                   <tr key={p.id} className="hover:bg-surface-main/70 transition-colors">
                     <td className="px-4 sm:px-5 py-3 align-top">
                       <div className="font-medium text-text-primary break-words">
@@ -715,6 +856,13 @@ export default function AdminProvidersPage() {
                           >
                             {t(`adminProvidersPage.availability.${p.availabilityStatus || 'offline'}`)}
                           </span>
+                          {p.dispatchPresence?.liveLocation?.ageSeconds != null ? (
+                            <span className="text-[10px] text-text-muted">
+                              {t('adminProvidersPage.availability.gpsAge', {
+                                seconds: p.dispatchPresence.liveLocation.ageSeconds,
+                              })}
+                            </span>
+                          ) : null}
                           <span
                             className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
                               mobilityReadiness(p).ready
@@ -740,6 +888,15 @@ export default function AdminProvidersPage() {
                     </td>
                     <td className="px-4 sm:px-5 py-3 align-top">
                       <div className="flex flex-wrap gap-1.5">
+                        {buildTelHref(p.phoneNumber || p.user?.phone) ? (
+                          <a
+                            href={buildTelHref(p.phoneNumber || p.user?.phone)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
+                          >
+                            <PhoneCall size={12} aria-hidden="true" />
+                            {t('adminProvidersPage.actions.callDriver')}
+                          </a>
+                        ) : null}
                         {(STATUS_TRANSITIONS[p.status] || []).map((next) => (
                           <button
                             key={next}

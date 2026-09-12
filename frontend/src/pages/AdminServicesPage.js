@@ -649,18 +649,34 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
                   {service.address ? <p className="mt-3 line-clamp-2 text-sm text-text-secondary">{service.address}</p> : null}
                   <div className="mt-4">
                     {service.executionType === 'provider' ? (
-                      <select
-                        value=""
-                        onChange={(event) => handleAssignProvider(service.id, event.target.value)}
-                        disabled={getAssignableProviders(service).length === 0}
-                        className="app-input min-h-12 w-full font-medium"
-                        aria-label={t('serviceAdmin.assignWorker')}
-                      >
-                        <option value="">{t('serviceAdmin.chooseProvider')}</option>
-                        {getAssignableProviders(service).map((provider) => (
-                          <option key={provider.id} value={provider.id}>{provider.displayFirstName}</option>
-                        ))}
-                      </select>
+                      <div className="space-y-2">
+                        {service.requestedVehicleType ? (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/admin/taxi-dispatch?missionId=${service.id}`)}
+                            className="btn-primary flex min-h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-bold"
+                          >
+                            {t('adminServicesPage.assign.openTaxiDispatch')}
+                          </button>
+                        ) : null}
+                        <details>
+                          <summary className="cursor-pointer list-none text-center text-xs font-semibold text-blue-700 hover:underline dark:text-blue-300">
+                            {t('serviceAdmin.manualAssignment')}
+                          </summary>
+                          <select
+                            value=""
+                            onChange={(event) => handleAssignProvider(service.id, event.target.value)}
+                            disabled={getAssignableProviders(service).length === 0}
+                            className="app-input mt-2 min-h-11 w-full font-medium"
+                            aria-label={t('serviceAdmin.assignWorker')}
+                          >
+                            <option value="">{t('serviceAdmin.chooseProvider')}</option>
+                            {getAssignableProviders(service).map((provider) => (
+                              <option key={provider.id} value={provider.id}>{provider.displayFirstName}</option>
+                            ))}
+                          </select>
+                        </details>
+                      </div>
                     ) : (
                       <select
                         value=""

@@ -278,6 +278,7 @@ export default function AdminProviderMobilityPage() {
   const onboardingChecks = [
     Boolean(compliance?.driverEligible),
     vehicles.length > 0,
+    Boolean(compliance?.hasEligibleVehicle),
   ];
   const completedChecks = onboardingChecks.filter(Boolean).length;
   const progressPercent = Math.round((completedChecks / onboardingChecks.length) * 100);
@@ -413,10 +414,11 @@ export default function AdminProviderMobilityPage() {
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
               { value: "driver", complete: onboardingChecks[0] },
               { value: "vehicle", complete: onboardingChecks[1] },
+              { value: "operations", complete: onboardingChecks[2] },
             ].map(({ value, complete }, index) => (
               <button
                 key={value}
@@ -715,9 +717,16 @@ function VehicleForm({
           {!isMotorcycle ? <CheckField label={t("adminProviderMobility.vehicle.airConditioning")} checked={form.hasAirConditioning} onChange={(value) => change("hasAirConditioning", value)} /> : null}
         </div>
       </section>
-      <DocumentFields t={t} form={form} change={change} prefix="registration" numberField="registrationNumber" urlField="registrationDocumentUrl" verifiedField="registrationVerified" providerId={providerId} mediaKind="vehicleRegistration" onUploadStateChange={onUploadStateChange} />
-      <DocumentFields t={t} form={form} change={change} prefix="insurance" numberField="insurancePolicyNumber" urlField="insuranceDocumentUrl" expiryField="insuranceExpiresAt" verifiedField="insuranceVerified" providerId={providerId} mediaKind="vehicleInsurance" onUploadStateChange={onUploadStateChange} />
-      <DocumentFields t={t} form={form} change={change} prefix="inspection" numberField="inspectionCertificateNumber" urlField="inspectionDocumentUrl" expiryField="inspectionExpiresAt" verifiedField="inspectionVerified" providerId={providerId} mediaKind="vehicleInspection" onUploadStateChange={onUploadStateChange} />
+      <details className="mt-5 rounded-xl border border-border p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-text-primary">
+          {t("adminProviderMobility.vehicle.documentsAdvanced")}
+        </summary>
+        <div className="mt-3">
+          <DocumentFields t={t} form={form} change={change} prefix="registration" numberField="registrationNumber" urlField="registrationDocumentUrl" verifiedField="registrationVerified" providerId={providerId} mediaKind="vehicleRegistration" onUploadStateChange={onUploadStateChange} />
+          <DocumentFields t={t} form={form} change={change} prefix="insurance" numberField="insurancePolicyNumber" urlField="insuranceDocumentUrl" expiryField="insuranceExpiresAt" verifiedField="insuranceVerified" providerId={providerId} mediaKind="vehicleInsurance" onUploadStateChange={onUploadStateChange} />
+          <DocumentFields t={t} form={form} change={change} prefix="inspection" numberField="inspectionCertificateNumber" urlField="inspectionDocumentUrl" expiryField="inspectionExpiresAt" verifiedField="inspectionVerified" providerId={providerId} mediaKind="vehicleInspection" onUploadStateChange={onUploadStateChange} />
+        </div>
+      </details>
       {editing ? <div className="mt-5 grid gap-4 md:grid-cols-2">
         <AdminField label={t("adminProviderMobility.vehicle.status")}>
           <select className="app-input" value={form.status} onChange={(e) => change("status", e.target.value)}>

@@ -15,6 +15,7 @@ jest.mock("react-i18next", () => {
   const labels = {
     "homePage.simpleHero.title": "De quoi avez-vous besoin aujourd’hui ?",
     "homePage.simpleHero.chooseAction": "Choisissez un service",
+    "homePage.simpleHero.callCta": "Appeler Teranga pour commander",
     "homePage.simpleHero.otherRequest": "Faire une autre demande",
     "homePage.simpleHero.closeRequest": "Fermer le formulaire",
     "homePage.quickServices.taxi.title": "Teranga Taxi",
@@ -50,6 +51,7 @@ test("shows the three main public actions and keeps the long form collapsed", as
   expect(screen.getByRole("link", { name: /Livraison/ })).toHaveAttribute("href", "/livraison");
   expect(screen.getByRole("heading", { name: "Annonces immobilières" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Voir toutes les annonces/ })).toHaveAttribute("href", "/immobilier");
+  expect(screen.getByRole("link", { name: /Appeler Teranga pour commander/ })).toHaveAttribute("href", "tel:+22370453345");
   expect(screen.queryByText("Formulaire autre demande")).not.toBeInTheDocument();
 
   await userEvent.click(screen.getByRole("button", { name: /Faire une autre demande/ }));

@@ -946,7 +946,7 @@ export default function MissionTrackingPage() {
           track.isExecutor &&
           !track.acceptanceDeadlineAt &&
           EXECUTOR_NEXT_STATUS[track.missionStatus] ? (
-            <div className={stickyExecutorNextStatus ? "hidden md:flex md:flex-col md:gap-2" : "flex flex-col gap-2"}>
+            <div className={stickyExecutorNextStatus ? "hidden md:flex md:flex-col md:gap-2" : "flex w-full flex-col gap-3"}>
               {requiresStartCode ? (
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
                   <label className="mb-2 block text-xs font-semibold text-text-primary" htmlFor="mission-start-code">
@@ -987,7 +987,7 @@ export default function MissionTrackingPage() {
                       )
                 }
                 disabled={actionState?.type === "loading"}
-                className="btn-primary rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
+                className="btn-primary min-h-14 w-full rounded-2xl px-6 py-3 text-base font-bold disabled:opacity-60"
               >
                 {requiresStartCode
                   ? t("missionTracking.startCode.verifyCta")

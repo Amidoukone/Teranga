@@ -672,6 +672,7 @@ const en = {
     unassigned: "No worker",
     assignWorker: "Assign a worker",
     chooseProvider: "Choose a provider",
+    manualAssignment: "Choose manually",
     chooseAgent: "Choose an agent",
     noWorker: "No compatible worker is available in this area.",
   },
@@ -1752,6 +1753,12 @@ const en = {
     kicker: "Assisted dispatch",
     title: "Nearby drivers — ride #{{id}}",
     radius: "Search radius",
+    refresh: "Refresh search",
+    callDriver: "Call this driver",
+    autoRefresh: "Search refreshes automatically while no driver is assigned.",
+    newCandidates: "{{count}} new driver is available.",
+    newCandidates_other: "{{count}} new drivers are available.",
+    dismiss: "Got it",
     loading: "Finding available drivers…",
     empty: "No safe and available driver within {{radius}} km. Expand the radius or call a verified driver.",
     assigned: "A driver is assigned and must now accept the ride.",
@@ -1763,6 +1770,9 @@ const en = {
     positionUnavailable: "Position unavailable — confirm proximity with the driver.",
     fallback: "estimated straight-line distance",
     assign: "Assign this driver",
+    reassign: "Reassign to this driver",
+    assignBest: "Assign the best driver",
+    confirmReassign: "Reassign the ride to {{name}}? The current driver will be replaced.",
     assigning: "Assigning…",
     startCode: "Start code to communicate to the client",
     callAssistance: "Call Teranga assistance",
@@ -1778,6 +1788,7 @@ const en = {
     errors: {
       load: "Unable to find drivers.",
       assign: "Unable to assign this driver.",
+      conflict: "This driver was likely assigned moments ago. The list was refreshed.",
       override: "Unable to authorize the start.",
     },
   },
@@ -1962,6 +1973,7 @@ const en = {
       displayFirstNameLabel: "Name shown to client *",
       businessPhoneLabel: "Business phone *",
       businessEmailLabel: "Business email",
+      advancedTitle: "Administrative information (optional)",
       hasLiabilityInsuranceLabel: "Liability insurance",
       driverChecklistTitle: "Driver file (Mobility trade) — required before a ride",
       mobilityComplianceAfterCreation:
@@ -1971,6 +1983,7 @@ const en = {
       circulationCardVerifiedLabel: "Circulation card verified",
       insuranceExpiresAtLabel: "Insurance expiry",
       tradeCategoriesLabel: "Covered trade categories *",
+      mobilityQuickCta: "Add Taxi",
       tradeCategoriesEmpty: "No active trade category yet.",
       tradeCategoriesEmptyLink: "Create a trade category",
     },
@@ -2004,10 +2017,18 @@ const en = {
     filters: {
       statusLabel: "Status",
       statusAll: "All statuses",
+      searchLabel: "Search for a driver",
+      searchPlaceholder: "Name, phone, email or plate",
+      readinessLabel: "Assignment",
+      readinessAll: "All readiness states",
+      availabilityLabel: "Availability",
+      availabilityAll: "All availability states",
     },
     table: {
       title: "Provider list",
       empty: "No providers for this filter.",
+      emptyReady: "No driver is ready to be assigned.",
+      emptyAvailability: "No driver in this availability state.",
       headers: {
         name: "Name",
         account: "Account",
@@ -2027,9 +2048,14 @@ const en = {
       revoked: "Revoked",
     },
     availability: {
+      title: "Driver availability",
       available: "Available",
       busy: "Busy",
       offline: "Offline",
+      ready: "Ready to assign",
+      gpsAge: "GPS {{seconds}}s ago",
+      mapTitle: "View drivers on the map",
+      mapEmpty: "No driver has a recent GPS position.",
     },
     mobilityState: {
       ready: "Vehicle authorized",
@@ -2042,6 +2068,7 @@ const en = {
       toSuspended: "Suspend",
       toRevoked: "Revoke",
       manageMobility: "Vehicles and compliance",
+      callDriver: "Call",
     },
   },
   adminProviderMobility: {
@@ -2066,6 +2093,7 @@ const en = {
       vehicleRequired: "Add a motorcycle or car first.",
     },
     guide: {
+      operations: "3. Authorize rides",
       title: "Guided registration",
       progress: "{{completed}} of {{total}} essential items completed",
       driver: "Driver and identity",
@@ -2106,6 +2134,7 @@ const en = {
       editMotorcycleTitle: "Edit motorcycle",
       editCarTitle: "Edit car",
       draftHint: "Only the type is needed to save. Optional information does not block rides and can be completed later.",
+      documentsAdvanced: "Add documents and checks later (optional)",
       type: "Type",
       motorcycle: "Motorcycle",
       car: "Car",
@@ -2792,6 +2821,7 @@ const en = {
       viewAll: "View all listings",
     },
     simpleHero: {
+      callCta: "Call Teranga to place an order",
       badge: "Trusted services, accessible to everyone",
       title: "What do you need today?",
       subtitle: "Book a taxi, send a package or discover a property. You can start without creating an account.",
@@ -2904,6 +2934,17 @@ const en = {
     },
   },
   publicTransportOrder: {
+    callFirst: {
+      kicker: "Assisted booking",
+      title: "Would you rather speak to someone?",
+      subtitle: "Call us and a team member will take your booking and guide you.",
+      call: "Call Teranga",
+      whatsapp: "Write on WhatsApp",
+    },
+    online: {
+      title: "Book directly online",
+      subtitle: "Two addresses and a phone number are enough.",
+    },
     backHome: "Back to home",
     noAccountHint: "No existing account needed: your client space is created automatically.",
     taxi: {
@@ -2955,6 +2996,7 @@ const en = {
     hideMap: "Hide the map",
     offline: "No connection. Your information remains saved on this phone.",
     draftRestored: "Your last entry was restored automatically.",
+    clearDraft: "Clear and start over",
     steps: {
       label: "Booking steps",
       number: "Step {{number}}",
@@ -3032,6 +3074,7 @@ const en = {
     descriptionPlaceholder: "E.g. call on arrival, fragile contents, recipient name…",
     offline: "No connection. Your entry remains saved on this phone.",
     draftRestored: "Your last entry was restored automatically.",
+    clearDraft: "Clear and start over",
     steps: {
       label: "Delivery steps",
       number: "Step {{number}}",

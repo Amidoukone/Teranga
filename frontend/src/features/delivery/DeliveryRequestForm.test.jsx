@@ -29,6 +29,7 @@ jest.mock("react-i18next", () => ({
         "deliveryBooking.package.standard.hint": "Jusqu'à 10 kg",
         "deliveryBooking.package.missionTitle": `Livraison — ${options.package || ""}`,
         "deliveryBooking.steps.next": "Continuer",
+        "deliveryBooking.steps.package": "Colis",
         "deliveryBooking.steps.routeTitle": "Trajet du colis",
         "deliveryBooking.pickupLabel": "Point de retrait",
         "deliveryBooking.pickupPlaceholder": "Adresse de retrait",
@@ -105,17 +106,15 @@ describe("DeliveryRequestForm", () => {
   test("calcule le prix selon le type de colis puis crée la livraison", async () => {
     render(<DeliveryRequestForm />);
 
-    await screen.findByText("Que souhaitez-vous livrer ?");
-    await userEvent.click(screen.getByRole("button", { name: /Colis standard/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
+    await screen.findByPlaceholderText("Adresse de retrait");
     await userEvent.type(screen.getByPlaceholderText("Adresse de retrait"), "Sogoniko");
     await userEvent.type(screen.getByPlaceholderText("Adresse de livraison"), "Hamdallaye");
+    await userEvent.type(screen.getByRole("textbox", { name: "Téléphone" }), "+22370000085");
     await userEvent.click(
       screen.getByRole("button", { name: "Voir le prix de la livraison" })
     );
 
     expect(await screen.findByText("Prix estimé")).toBeInTheDocument();
-    await userEvent.type(screen.getByRole("textbox", { name: "Téléphone" }), "+22370000085");
     await userEvent.click(screen.getByRole("button", { name: "Confirmer la livraison" }));
 
     await waitFor(() => expect(submitMissionRequest).toHaveBeenCalledTimes(1));

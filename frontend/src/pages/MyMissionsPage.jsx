@@ -502,11 +502,12 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
                         type="button"
                         onClick={(event) => handleRideOffer(event, m, 'decline')}
                         disabled={Boolean(rideAction)}
-                        className="btn-secondary flex min-h-14 items-center justify-center rounded-2xl px-4 disabled:opacity-60"
+                        className="btn-secondary flex min-h-14 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold disabled:opacity-60"
                         aria-label={t(`${actionTranslationRoot}.decline`)}
                         title={t(`${actionTranslationRoot}.decline`)}
                       >
                         <X size={21} />
+                        <span>{t(`${actionTranslationRoot}.decline`)}</span>
                       </button>
                     </div>
                   ) : null}
