@@ -318,17 +318,39 @@ export default function ServiceDetailPage() {
           ) : null}
         </section>
 
-        <details className="rounded-2xl border border-border/70 bg-surface-card px-5 py-4 text-sm">
-          <summary className="cursor-pointer font-semibold text-text-primary">{t('serviceTracking.moreOptions')}</summary>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link to={`/services/${service.id}/tasks`} className="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5">
-              <BriefcaseBusiness size={16} /> {t('serviceDetailPage.buttons.viewTasks')}
+        <section className="rounded-[24px] border border-border/70 bg-surface-card p-5 shadow-sm" aria-labelledby="service-action-hub-title">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 id="service-action-hub-title" className="text-base font-bold text-text-primary">
+                {t('serviceDetailPage.actionHubTitle')}
+              </h2>
+              <p className="mt-1 text-sm text-text-secondary">
+                {primaryAction ? t('serviceDetailPage.nextAction', { action: primaryAction.label }) : t('serviceDetailPage.actionHubHint')}
+              </p>
+            </div>
+            <span className="app-toolbar-pill">{t('serviceTracking.moreOptions')}</span>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <Link to={`/services/${service.id}/tasks`} className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-main/60 p-4 transition hover:border-blue-400 hover:bg-blue-500/5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-300">
+                <BriefcaseBusiness size={19} aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <strong className="block text-sm text-text-primary">{t('serviceDetailPage.buttons.viewTasks')}</strong>
+                <span className="mt-1 block text-xs text-text-muted">{t('serviceDetailPage.tasksHint')}</span>
+              </span>
             </Link>
-            <Link to={`/services/${service.id}/transactions`} className="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5">
-              <ReceiptText size={16} /> {t('serviceDetailPage.buttons.viewTransactions')}
+            <Link to={`/services/${service.id}/transactions`} className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-main/60 p-4 transition hover:border-blue-400 hover:bg-blue-500/5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                <ReceiptText size={19} aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <strong className="block text-sm text-text-primary">{t('serviceDetailPage.buttons.viewTransactions')}</strong>
+                <span className="mt-1 block text-xs text-text-muted">{t('serviceDetailPage.transactionsHint')}</span>
+              </span>
             </Link>
           </div>
-        </details>
+        </section>
       </div>
 
       {primaryAction ? (

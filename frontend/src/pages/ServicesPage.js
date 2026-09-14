@@ -2,12 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
+  ArrowRight,
   BadgeCheck,
   BriefcaseBusiness,
   CarFront,
   Clock3,
+  MessageCircle,
   MapPin,
   PackageCheck,
+  Phone,
   RefreshCw,
   UserRound,
 } from 'lucide-react';
@@ -15,6 +18,7 @@ import {
 import { getMyServices } from '../services/services';
 import { useLocale } from '../i18n/useLocale';
 import { getRequestNextAction, getRequestProofState } from '../utils/requestLifecycle';
+import { buildTelHref, buildWhatsappHref } from '../utils/phone';
 
 const SERVICE_POLL_MS = 15000;
 const MISSION_TERMINAL_STATUSES = new Set([
@@ -246,6 +250,12 @@ export default function ServicesPage() {
     [visibleServices]
   );
   const history = useMemo(() => visibleServices.filter(isHistoryItem), [visibleServices]);
+  const supportPhone = t('homePage.contact.info.phone');
+  const supportTelHref = buildTelHref(supportPhone);
+  const supportWhatsappHref = buildWhatsappHref(
+    supportPhone,
+    t('serviceOrders.quickAccess.whatsappMessage')
+  );
 
   if (loading) {
     return (
@@ -258,6 +268,71 @@ export default function ServicesPage() {
   return (
     <div className="app-page-wrap">
       <div className="app-page-shell space-y-8">
+        <section
+          className="overflow-hidden rounded-[28px] border border-blue-500/20 bg-gradient-to-br from-blue-600 to-blue-800 p-5 text-white shadow-lg shadow-blue-900/10 sm:p-7"
+          aria-labelledby="services-quick-access-title"
+        >
+          <div className="max-w-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-100">
+              {t('serviceOrders.quickAccess.kicker')}
+            </p>
+            <h1 id="services-quick-access-title" className="mt-2 text-2xl font-bold tracking-[-0.04em] sm:text-3xl">
+              {t('serviceOrders.quickAccess.title')}
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-blue-100 sm:text-base">
+              {t('serviceOrders.quickAccess.subtitle')}
+            </p>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <Link
+              to="/taxi"
+              className="group flex min-h-24 items-center gap-4 rounded-2xl bg-white p-4 text-left text-blue-950 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/50"
+            >
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
+                <CarFront size={24} aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <strong className="block text-base">{t('serviceOrders.quickAccess.taxiTitle')}</strong>
+                <span className="mt-1 block text-xs text-blue-800/70">{t('serviceOrders.quickAccess.taxiHint')}</span>
+              </span>
+              <ArrowRight size={18} className="shrink-0 text-blue-600 transition group-hover:translate-x-1" aria-hidden="true" />
+            </Link>
+            <Link
+              to="/livraison"
+              className="group flex min-h-24 items-center gap-4 rounded-2xl bg-white p-4 text-left text-blue-950 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/50"
+            >
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                <PackageCheck size={24} aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <strong className="block text-base">{t('serviceOrders.quickAccess.deliveryTitle')}</strong>
+                <span className="mt-1 block text-xs text-blue-800/70">{t('serviceOrders.quickAccess.deliveryHint')}</span>
+              </span>
+              <ArrowRight size={18} className="shrink-0 text-emerald-600 transition group-hover:translate-x-1" aria-hidden="true" />
+            </Link>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-white/15 bg-white/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold">{t('serviceOrders.quickAccess.callTitle')}</p>
+              <p className="mt-1 text-xs text-blue-100">{t('serviceOrders.quickAccess.callHint')}</p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {supportTelHref ? (
+                <a href={supportTelHref} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/50">
+                  <Phone size={17} aria-hidden="true" /> {t('serviceOrders.quickAccess.call')}
+                </a>
+              ) : null}
+              {supportWhatsappHref ? (
+                <a href={supportWhatsappHref} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/30 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/50">
+                  <MessageCircle size={17} aria-hidden="true" /> {t('serviceOrders.quickAccess.whatsapp')}
+                </a>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
         <header className="rounded-[28px] border border-border/70 bg-surface-card p-5 shadow-sm sm:p-7">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>

@@ -697,6 +697,12 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
           />
         </div>
 
+        <details className="col-span-1 rounded-xl border border-border bg-surface-card/50 px-3 py-2 sm:col-span-2">
+          <summary className="cursor-pointer text-sm font-semibold text-text-primary">
+            {t('tasksPage.form.advancedDetails')}
+          </summary>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+
         {/* Description */}
         <div className="w-full col-span-1 sm:col-span-2">
           <label className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
@@ -814,6 +820,9 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
             </select>
           </div>
         )}
+
+          </div>
+        </details>
 
         {/* Bouton de soumission */}
         <div className="col-span-1 sm:col-span-2 flex justify-end">

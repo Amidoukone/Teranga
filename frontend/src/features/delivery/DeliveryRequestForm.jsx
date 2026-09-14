@@ -15,6 +15,7 @@ import {
   Phone,
   Route,
   ShieldCheck,
+  SlidersHorizontal,
   ShoppingBag,
   WifiOff,
 } from "lucide-react";
@@ -103,7 +104,7 @@ export default function DeliveryRequestForm() {
     (item) => item.value === initialDraft.packageType
   )
     ? initialDraft.packageType
-    : "small";
+    : "standard";
   const [packageType, setPackageType] = useState(initialPackageType);
   const [pickupAddress, setPickupAddress] = useState(initialDraft.pickupAddress || "");
   const [pickup, setPickup] = useState(() => draftCoordinates(initialDraft.pickup));
@@ -132,6 +133,12 @@ export default function DeliveryRequestForm() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [result, setResult] = useState(null);
+  const [showDetails, setShowDetails] = useState(() => Boolean(
+    initialDraft.description ||
+    initialDraft.recipientName ||
+    initialDraft.recipientPhone ||
+    (Array.isArray(initialDraft.packageHandling) && initialDraft.packageHandling.length)
+  ));
   const [isOnline, setIsOnline] = useState(
     () => typeof navigator === "undefined" || navigator.onLine !== false
   );
@@ -796,6 +803,19 @@ export default function DeliveryRequestForm() {
                 </FormField> : null
               ) : null}
 
+              <button
+                type="button"
+                onClick={() => setShowDetails((current) => !current)}
+                aria-expanded={showDetails}
+                aria-controls="delivery-extra-details"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-text-secondary hover:border-blue-400 hover:text-text-primary"
+              >
+                <SlidersHorizontal size={16} aria-hidden="true" />
+                {t(showDetails ? "deliveryBooking.hideDetails" : "deliveryBooking.addDetails")}
+              </button>
+
+              {showDetails ? <div id="delivery-extra-details" className="space-y-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4">
+              <p className="text-xs leading-relaxed text-text-secondary">{t("deliveryBooking.detailsHint")}</p>
               <FormField label={t("deliveryBooking.descriptionLabel")}>
                 <textarea
                   className={`${inputClass} min-h-20`}
@@ -830,6 +850,8 @@ export default function DeliveryRequestForm() {
                   ))}
                 </div>
               </fieldset>
+              </div> : null}
+
             </div>
 
             <div className="mt-6 flex gap-3">

@@ -543,6 +543,20 @@ const fr = {
     },
   },
   serviceOrders: {
+    quickAccess: {
+      kicker: "Services Teranga",
+      title: "Que souhaitez-vous faire ?",
+      subtitle: "Choisissez une action. Le formulaire adapté s’ouvre directement, sans étape inutile.",
+      taxiTitle: "Commander un taxi",
+      taxiHint: "Départ, destination, confirmation",
+      deliveryTitle: "Envoyer un colis",
+      deliveryHint: "Retrait, destination, confirmation",
+      callTitle: "Vous préférez être accompagné ?",
+      callHint: "Notre équipe peut prendre la commande avec vous par téléphone ou WhatsApp.",
+      call: "Appeler Teranga",
+      whatsapp: "WhatsApp",
+      whatsappMessage: "Bonjour Teranga, j’ai besoin d’aide pour commander un service.",
+    },
     nextAction: {
       qualify: "Prochaine étape : qualification par Teranga.",
       assign: "Prochaine étape : affectation d’un exécutant.",
@@ -859,6 +873,12 @@ const fr = {
     actions: {
       backToProjects: "Retour aux projets",
     },
+    actionHubTitle: "Piloter ce projet",
+    actionHubHint: "Accédez directement aux phases, documents et transactions du projet.",
+    actionHubCount: "{{phases}} phases · {{documents}} documents · {{transactions}} transactions",
+    actionHubPhases: "Phases",
+    actionHubDocuments: "Documents",
+    actionHubTransactions: "Transactions",
     labels: {
       status: "Statut : {{status}}",
       budget: "Budget :",
@@ -893,6 +913,7 @@ const fr = {
     },
     phases: {
       form: {
+        advancedDetails: "Description (facultatif)",
         titlePlaceholder: "Titre *",
         descriptionPlaceholder: "Description",
         startDateLabel: "Date de d\u00E9but",
@@ -912,6 +933,9 @@ const fr = {
       },
     },
     documents: {
+      form: {
+        advancedDetails: "Rattachement et détails (facultatif)",
+      },
       phasePlaceholder: "\u2014 Phase (optionnel) \u2014",
       titlePlaceholder: "Titre (optionnel)",
       notesPlaceholder: "Notes",
@@ -1292,6 +1316,8 @@ const fr = {
       reset: "R\u00E9initialiser",
     },
     form: {
+      quickHint: "Commencez par le type, le montant et le service concerné. Les autres informations sont facultatives.",
+      advancedDetails: "Ajouter des détails et justificatifs (facultatif)",
       amountPlaceholder: "Montant",
       paymentPlaceholder: "M\u00E9thode de paiement",
       servicePlaceholder: "\u2014 Aucun service \u2014",
@@ -3122,6 +3148,9 @@ const fr = {
       },
     },
     estimateCta: "Voir le prix de la livraison",
+    addDetails: "Ajouter des précisions (facultatif)",
+    hideDetails: "Masquer les précisions",
+    detailsHint: "Ces informations sont facultatives. Vous pouvez d’abord demander une livraison avec seulement le retrait, la destination et votre téléphone.",
     recipientTitle: "Qui reçoit le colis ?",
     recipientHint: "Ces informations aident le livreur à remettre le colis au bon destinataire.",
     recipientNameLabel: "Nom du destinataire (facultatif)",
@@ -3880,6 +3909,11 @@ const fr = {
       viewTasks: "Voir les tâches",
       viewTransactions: "Voir les transactions",
     },
+    actionHubTitle: "Gérer ce service",
+    actionHubHint: "Consultez les tâches, les preuves et les mouvements liés à ce service.",
+    nextAction: "Prochaine action : {{action}}",
+    tasksHint: "Découper et suivre les interventions.",
+    transactionsHint: "Consulter les dépenses, recettes et justificatifs.",
     errors: {
       load: "Impossible de charger ce service.",
       forbidden: "Vous n'avez pas accès à ce service.",
@@ -4518,6 +4552,7 @@ const fr = {
       reset: "R\u00E9initialiser tous les filtres",
     },
     form: {
+      advancedDetails: "Ajouter des précisions (facultatif)",
       title: "Cr\u00E9er une nouvelle t\u00E2che",
       subtitle:
         "Renseignez les informations ci-dessous pour organiser clairement le travail \u00E0 effectuer.",
@@ -4630,6 +4665,16 @@ const fr = {
     buttons: {
       hideForm: "Masquer le formulaire",
       showForm: "Ajouter des preuves",
+    },
+    actionHub: {
+      title: "Piloter cette tâche",
+      hint: "Ajoutez une preuve, revenez au service parent ou consultez les transactions liées.",
+      addEvidence: "Ajouter une preuve",
+      addEvidenceHint: "Photo, PDF ou document",
+      parentService: "Voir le service parent",
+      parentServiceHint: "Retrouver les autres tâches",
+      transactions: "Voir les transactions",
+      transactionsHint: "Dépenses et justificatifs",
     },
     loading: "Chargement des preuves\u2026",
     filters: {

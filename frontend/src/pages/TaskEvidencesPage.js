@@ -17,6 +17,7 @@ import { getFeedbackIcon } from '../utils/feedback';
 import { useDeleteConfirm } from '../hooks/useDeleteConfirm';
 import { fixMojibakeText } from '../utils/mojibake';
 import useFocusTrap from '../hooks/useFocusTrap';
+import { ArrowRight, CheckSquare, ReceiptText, Upload } from 'lucide-react';
 
 // ============================================================================
 // Contexte: preuves de tache.
@@ -598,6 +599,30 @@ export default function TaskEvidencesPage() {
             </button>
           </div>
         </div>
+
+        <section className="mb-8 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 sm:p-5" aria-labelledby="task-action-hub-title">
+          <h2 id="task-action-hub-title" className="text-base font-bold text-text-primary">
+            {t('taskEvidencesPage.actionHub.title')}
+          </h2>
+          <p className="mt-1 text-sm text-text-secondary">{t('taskEvidencesPage.actionHub.hint')}</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <button type="button" onClick={() => setShowForm(true)} className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-card p-3 text-left transition hover:border-blue-400">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-300"><Upload size={18} aria-hidden="true" /></span>
+              <span className="min-w-0 flex-1"><strong className="block text-sm text-text-primary">{t('taskEvidencesPage.actionHub.addEvidence')}</strong><span className="text-xs text-text-muted">{t('taskEvidencesPage.actionHub.addEvidenceHint')}</span></span>
+              <ArrowRight size={16} className="shrink-0 text-blue-600" aria-hidden="true" />
+            </button>
+            <button type="button" onClick={handleGoToServiceTasks} className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-card p-3 text-left transition hover:border-blue-400">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"><CheckSquare size={18} aria-hidden="true" /></span>
+              <span className="min-w-0 flex-1"><strong className="block text-sm text-text-primary">{t('taskEvidencesPage.actionHub.parentService')}</strong><span className="text-xs text-text-muted">{t('taskEvidencesPage.actionHub.parentServiceHint')}</span></span>
+              <ArrowRight size={16} className="shrink-0 text-emerald-600" aria-hidden="true" />
+            </button>
+            <button type="button" onClick={handleGoToTransactions} className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-card p-3 text-left transition hover:border-blue-400">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300"><ReceiptText size={18} aria-hidden="true" /></span>
+              <span className="min-w-0 flex-1"><strong className="block text-sm text-text-primary">{t('taskEvidencesPage.actionHub.transactions')}</strong><span className="text-xs text-text-muted">{t('taskEvidencesPage.actionHub.transactionsHint')}</span></span>
+              <ArrowRight size={16} className="shrink-0 text-amber-600" aria-hidden="true" />
+            </button>
+          </div>
+        </section>
 
         {loading && (
           <p className="text-text-muted animate-pulse text-center mb-4 text-sm sm:text-base">

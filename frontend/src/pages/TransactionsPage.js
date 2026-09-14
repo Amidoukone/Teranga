@@ -868,8 +868,14 @@ function TransactionForm({
       onSubmit={handleSubmit}
       className="grid grid-cols-1 gap-4 rounded-2xl border border-border/70 bg-surface-main/55 p-5 sm:grid-cols-2"
     >
+      <div className="sm:col-span-2 rounded-xl border border-blue-500/20 bg-blue-500/5 px-3 py-2 text-xs text-text-secondary">
+        {t('transactionsPage.form.quickHint')}
+      </div>
+
       {/* Type */}
+      <label className="sr-only" htmlFor="transaction-type">{t('transactionsPage.filters.typeLabel')}</label>
       <select
+        id="transaction-type"
         value={form.type}
         onChange={(e) => setForm({ ...form, type: e.target.value })}
         className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary"
@@ -882,7 +888,9 @@ function TransactionForm({
       </select>
 
       {/* Montant */}
+      <label className="sr-only" htmlFor="transaction-amount">{t('transactionsPage.form.amountLabel')}</label>
       <input
+        id="transaction-amount"
         type="number"
         value={form.amount}
         onChange={(e) => setForm({ ...form, amount: e.target.value })}
@@ -892,7 +900,9 @@ function TransactionForm({
       />
 
       {/* Devise */}
+      <label className="sr-only" htmlFor="transaction-currency">{t('transactionsPage.form.currencyLabel')}</label>
       <select
+        id="transaction-currency"
         value={form.currency}
         onChange={(e) => setForm({ ...form, currency: e.target.value })}
         className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary"
@@ -905,7 +915,9 @@ function TransactionForm({
       </select>
 
       {/* Paiement */}
+      <label className="sr-only" htmlFor="transaction-payment">{t('transactionsPage.filters.paymentLabel')}</label>
       <input
+        id="transaction-payment"
         value={form.paymentMethod}
         onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
         placeholder={t('transactionsPage.form.paymentPlaceholder')}
@@ -913,7 +925,9 @@ function TransactionForm({
       />
 
       {/* Service */}
+      <label className="sr-only" htmlFor="transaction-service">{t('transactionsPage.filters.serviceLabel')}</label>
       <select
+        id="transaction-service"
         value={selectedService}
         onChange={handleServiceChange}
         className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary sm:col-span-2"
@@ -926,7 +940,10 @@ function TransactionForm({
 
       {/* Task */}
       {tasks.length > 0 && (
+        <>
+        <label className="sr-only" htmlFor="transaction-task">{t('transactionsPage.form.taskLabel')}</label>
         <select
+          id="transaction-task"
           value={form.taskId}
           onChange={(e) => setForm({ ...form, taskId: e.target.value })}
           className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary sm:col-span-2"
@@ -939,9 +956,13 @@ function TransactionForm({
             </option>
           ))}
         </select>
+        </>
       )}
 
       {/* Projet / Commande */}
+      <details className="sm:col-span-2 rounded-xl border border-border bg-surface-card/50 px-3 py-2">
+        <summary className="cursor-pointer text-sm font-semibold text-text-primary">{t('transactionsPage.form.advancedDetails')}</summary>
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
       {(user.role === 'admin' || user.role === 'agent' || user.role === 'master') && (
         <>
           <input
@@ -977,6 +998,9 @@ function TransactionForm({
         }
         className="sm:col-span-2 rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary"
       />
+
+      </div>
+      </details>
 
       <div className="sm:col-span-2 text-right">
         <button

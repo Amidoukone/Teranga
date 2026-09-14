@@ -5,6 +5,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { ArrowRight, CheckSquare, FileText, ReceiptText } from "lucide-react";
 import { me } from "../services/auth";
 import {
   getProjectById,
@@ -800,12 +801,41 @@ export default function ProjectDetailPage() {
             </div>
           </div>
 
+          <section className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 sm:p-5" aria-labelledby="project-action-hub-title">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 id="project-action-hub-title" className="text-base font-bold text-text-primary">
+                  {t("projectDetail.actionHubTitle")}
+                </h2>
+                <p className="mt-1 text-sm text-text-secondary">{t("projectDetail.actionHubHint")}</p>
+              </div>
+              <span className="app-toolbar-pill">{t("projectDetail.actionHubCount", { phases: phases.length, documents: documents.length, transactions: transactions.length })}</span>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <a href="#project-phases" className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-card p-3 transition hover:border-blue-400">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-300"><CheckSquare size={19} aria-hidden="true" /></span>
+                <span className="min-w-0 flex-1"><strong className="block text-sm text-text-primary">{t("projectDetail.actionHubPhases")}</strong><span className="text-xs text-text-muted">{phases.length}</span></span>
+                <ArrowRight size={16} className="shrink-0 text-blue-600 transition group-hover:translate-x-1" aria-hidden="true" />
+              </a>
+              <a href="#project-documents" className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-card p-3 transition hover:border-blue-400">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300"><FileText size={19} aria-hidden="true" /></span>
+                <span className="min-w-0 flex-1"><strong className="block text-sm text-text-primary">{t("projectDetail.actionHubDocuments")}</strong><span className="text-xs text-text-muted">{documents.length}</span></span>
+                <ArrowRight size={16} className="shrink-0 text-amber-600 transition group-hover:translate-x-1" aria-hidden="true" />
+              </a>
+              <a href="#project-transactions" className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-card p-3 transition hover:border-blue-400">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"><ReceiptText size={19} aria-hidden="true" /></span>
+                <span className="min-w-0 flex-1"><strong className="block text-sm text-text-primary">{t("projectDetail.actionHubTransactions")}</strong><span className="text-xs text-text-muted">{transactions.length}</span></span>
+                <ArrowRight size={16} className="shrink-0 text-emerald-600 transition group-hover:translate-x-1" aria-hidden="true" />
+              </a>
+            </div>
+          </section>
+
           {/* ========================= GRID PRINCIPALE ========================= */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* ----------- LARGE COLUMN : Transactions + Phases ----------- */}
             <div className="lg:col-span-2 space-y-8">
               {/* ---------------- TRANSACTIONS LIEES ---------------- */}
-              <section>
+              <section id="project-transactions" className="scroll-mt-6">
                 <h2 className="text-lg font-semibold text-text-primary mb-3">
                   {t("projectDetail.sections.transactions")}
                 </h2>
@@ -907,7 +937,7 @@ export default function ProjectDetailPage() {
               </section>
 
               {/* ---------------- PHASES DU PROJET ---------------- */}
-              <section>
+              <section id="project-phases" className="scroll-mt-6">
                 <h2 className="text-lg font-semibold text-text-primary mb-3">
                   {t("projectDetail.sections.phases")}
                 </h2>
@@ -925,6 +955,11 @@ export default function ProjectDetailPage() {
                       className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
 
+                    <details className="md:col-span-2 rounded-xl border border-border bg-surface-card/50 px-3 py-2">
+                      <summary className="cursor-pointer text-sm font-semibold text-text-primary">
+                        {t("projectDetail.phases.form.advancedDetails")}
+                      </summary>
+                      <div className="mt-3 grid gap-4 md:grid-cols-2">
                     <input
                       placeholder={t("projectDetail.phases.form.descriptionPlaceholder")}
                       value={phaseForm.description}
@@ -933,6 +968,8 @@ export default function ProjectDetailPage() {
                       }
                       className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
                     />
+                      </div>
+                    </details>
 
                     <input
                       type="date"
@@ -1048,7 +1085,7 @@ export default function ProjectDetailPage() {
 
  {/* Contexte: detail de projet. */}
             <div className="space-y-6">
-              <section>
+              <section id="project-documents" className="scroll-mt-6">
                 <h2 className="text-lg font-semibold text-text-primary mb-3">
                   {t("projectDetail.sections.documents")}
                 </h2>
@@ -1078,6 +1115,11 @@ export default function ProjectDetailPage() {
                       />
                     </div>
 
+                    <details className="sm:col-span-2 rounded-xl border border-border bg-surface-card/50 px-3 py-2">
+                      <summary className="cursor-pointer text-sm font-semibold text-text-primary">
+                        {t("projectDetail.documents.form.advancedDetails")}
+                      </summary>
+                      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <select
                       value={selectedPhaseId}
                       onChange={(e) => setSelectedPhaseId(e.target.value)}
@@ -1128,6 +1170,8 @@ export default function ProjectDetailPage() {
                       onChange={(e) => setNotes(e.target.value)}
                       className="border border-border rounded-lg px-3 py-2 text-xs w-full min-w-0"
                     />
+                      </div>
+                    </details>
 
                     <div className="sm:col-span-2 flex justify-end">
                       <Btn

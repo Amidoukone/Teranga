@@ -365,14 +365,27 @@ html[data-theme="dark"] .disabled\:bg-blue-400:disabled {
   }
 
   label {
-    @apply text-sm font-medium text-text-secondary;
+    @apply mb-1 block text-xs font-bold uppercase tracking-wide text-text-secondary;
   }
 
   input,
   select,
   textarea {
-    @apply w-full rounded-xl border border-border/80 bg-surface-card px-4 py-2 text-sm text-text-primary shadow-sm
+    @apply min-h-11 w-full rounded-xl border border-border/80 bg-surface-card px-4 py-2 text-sm font-medium text-text-primary shadow-sm
       transition focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none;
+  }
+
+  /* Hiérarchie commune : les libellés décrivent, les valeurs se lisent immédiatement. */
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    @apply cursor-not-allowed border-border bg-surface-main text-text-muted shadow-none;
+  }
+
+  input[readonly],
+  select[readonly],
+  textarea[readonly] {
+    @apply border-border bg-surface-main/70 text-text-primary;
   }
 
   input::placeholder,

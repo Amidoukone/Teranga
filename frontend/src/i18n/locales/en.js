@@ -540,6 +540,20 @@ const en = {
     },
   },
   serviceOrders: {
+    quickAccess: {
+      kicker: "Teranga services",
+      title: "What would you like to do?",
+      subtitle: "Choose an action. The right form opens directly, with no unnecessary steps.",
+      taxiTitle: "Book a taxi",
+      taxiHint: "Pickup, destination, confirmation",
+      deliveryTitle: "Send a parcel",
+      deliveryHint: "Pickup, destination, confirmation",
+      callTitle: "Would you rather get help?",
+      callHint: "Our team can take your order with you by phone or WhatsApp.",
+      call: "Call Teranga",
+      whatsapp: "WhatsApp",
+      whatsappMessage: "Hello Teranga, I need help ordering a service.",
+    },
     nextAction: {
       qualify: "Next step: Teranga qualification.",
       assign: "Next step: assign an executor.",
@@ -856,6 +870,12 @@ const en = {
     actions: {
       backToProjects: "Back to projects",
     },
+    actionHubTitle: "Manage this project",
+    actionHubHint: "Jump directly to the project's phases, documents, and transactions.",
+    actionHubCount: "{{phases}} phases · {{documents}} documents · {{transactions}} transactions",
+    actionHubPhases: "Phases",
+    actionHubDocuments: "Documents",
+    actionHubTransactions: "Transactions",
     labels: {
       status: "Status: {{status}}",
       budget: "Budget:",
@@ -890,6 +910,7 @@ const en = {
     },
     phases: {
       form: {
+        advancedDetails: "Description (optional)",
         titlePlaceholder: "Title *",
         descriptionPlaceholder: "Description",
         startDateLabel: "Start date",
@@ -909,6 +930,9 @@ const en = {
       },
     },
     documents: {
+      form: {
+        advancedDetails: "Link and details (optional)",
+      },
       phasePlaceholder: "— Phase (optional) —",
       titlePlaceholder: "Title (optional)",
       notesPlaceholder: "Notes",
@@ -1288,6 +1312,8 @@ const en = {
       reset: "Reset",
     },
     form: {
+      quickHint: "Start with the type, amount, and related service. The other information is optional.",
+      advancedDetails: "Add details and supporting documents (optional)",
       amountPlaceholder: "Amount",
       paymentPlaceholder: "Payment method",
       servicePlaceholder: "— No service —",
@@ -3111,6 +3137,9 @@ const en = {
       },
     },
     estimateCta: "See delivery price",
+    addDetails: "Add details (optional)",
+    hideDetails: "Hide details",
+    detailsHint: "These details are optional. You can first request a delivery with only the pickup, destination, and your phone number.",
     recipientTitle: "Who will receive the package?",
     recipientHint: "This helps the courier hand the package to the right person.",
     recipientNameLabel: "Recipient name (optional)",
@@ -3869,6 +3898,11 @@ const en = {
       viewTasks: "View tasks",
       viewTransactions: "View transactions",
     },
+    actionHubTitle: "Manage this service",
+    actionHubHint: "Review the tasks, evidence, and activity linked to this service.",
+    nextAction: "Next action: {{action}}",
+    tasksHint: "Break down and track the work.",
+    transactionsHint: "Review expenses, revenue, and supporting documents.",
     errors: {
       load: "Unable to load this service.",
       forbidden: "You don't have access to this service.",
@@ -4502,6 +4536,7 @@ const en = {
       reset: "Reset all filters",
     },
     form: {
+      advancedDetails: "Add details (optional)",
       title: "Create a new task",
       subtitle:
         "Fill in the details below to clearly organize the work to be done.",
@@ -4612,6 +4647,16 @@ const en = {
     buttons: {
       hideForm: "Hide form",
       showForm: "Add evidences",
+    },
+    actionHub: {
+      title: "Manage this task",
+      hint: "Add evidence, return to the parent service, or review related transactions.",
+      addEvidence: "Add evidence",
+      addEvidenceHint: "Photo, PDF, or document",
+      parentService: "View parent service",
+      parentServiceHint: "Find the other tasks",
+      transactions: "View transactions",
+      transactionsHint: "Expenses and supporting documents",
     },
     loading: "Loading evidences…",
     filters: {

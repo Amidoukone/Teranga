@@ -35,6 +35,7 @@ jest.mock("react-i18next", () => {
         "mobilityBooking.destinationLabel": "Destination",
         "mobilityBooking.destinationPlaceholder": "Adresse d'arrivée",
         "mobilityBooking.useCurrentLocation": "Utiliser ma position actuelle",
+        "mobilityBooking.steps.vehicle": "Véhicule",
         "mobilityBooking.steps.next": "Continuer",
         "mobilityBooking.steps.back": "Retour",
         "mobilityBooking.estimateCta": "Voir le trajet et le prix",
