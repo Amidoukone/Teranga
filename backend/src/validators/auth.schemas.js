@@ -71,7 +71,11 @@ const regenerateRecoveryCodesSchema = Joi.object({
 
 const updateMeSchema = Joi.object({
   language: Joi.string().allow('', null),
-});
+  email: optionalEmail,
+  phone: optionalPhone,
+  firstName: optionalNameWithoutDigits,
+  lastName: optionalNameWithoutDigits,
+}).or('language', 'email', 'phone', 'firstName', 'lastName');
 
 module.exports = {
   registerSchema,

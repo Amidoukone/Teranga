@@ -84,7 +84,7 @@ function hasCoordinates(value) {
 }
 
 export default function TaxiRideRequestForm() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [initialDraft] = useState(readTaxiDraft);
   const [tradeCategory, setTradeCategory] = useState(null);
   const [countries, setCountries] = useState([]);
@@ -461,6 +461,10 @@ export default function TaxiRideRequestForm() {
           ...(pin.trim() ? { pin: pin.trim() } : {}),
           firstName: firstName.trim() || undefined,
           countryId: Number(countryId),
+          ...(sessionUser?.regionId && String(sessionUser.countryId) === String(countryId)
+            ? { regionId: Number(sessionUser.regionId) }
+            : {}),
+          language: i18n.language,
           requestKind: "trade_category",
         });
         await persistSession(data);

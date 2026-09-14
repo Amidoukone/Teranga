@@ -22,6 +22,7 @@ const {
   rotateRecoveryCodes,
   parseDurationToMs,
   ACCESS_EXPIRES,
+  createClientUser,
 } = require('./auth.controller');
 
 const PICKUP_REQUIRED_SLUGS = ['livraison', 'mobilite'];
@@ -286,17 +287,14 @@ exports.create = async (req, res) => {
           ? String(pin).trim()
           : String(crypto.randomInt(100000, 1000000));
       if (!pin || !String(pin).trim()) generatedPin = effectivePin;
-      const passwordHash = await bcrypt.hash(effectivePin, 10);
-      user = await User.create({
+      ({ user } = await createClientUser({
         phone,
-        passwordHash,
-        firstName: firstName || null,
-        role: 'client',
-        country: geoScope.countryIso || null,
+        password: effectivePin,
+        firstName,
         countryId: geoScope.countryId,
-        regionId: null,
-        language: 'fr',
-      });
+        regionId: req.body?.regionId,
+        language: req.body?.language,
+      }));
       isNewAccount = true;
 
       try {

@@ -296,6 +296,11 @@ const en = {
   dashboard: {
     loading: "Loading dashboard…",
     greeting: "Hello, {{name}}",
+    profileCompletion: {
+      title: "Complete your profile",
+      description: "Add your main information for a smoother experience.",
+      cta: "Complete profile",
+    },
     roleLabel: "Role:",
     provider: {
       greeting: "Hello, {{name}}",
@@ -4132,6 +4137,15 @@ const en = {
     title: "Account settings",
     subtitle:
       "Personalize your experience and access important resources quickly.",
+    profile: {
+      title: "My information",
+      description: "Complete your information to keep one consistent account across services.",
+      fields: { firstName: "First name", lastName: "Last name", email: "Email", phone: "Phone" },
+      save: "Save",
+      saving: "Saving…",
+      saved: "Information saved.",
+      error: "Unable to update your information.",
+    },
     overview: {
       title: "Unified account space",
       description:

@@ -796,6 +796,16 @@ export async function updateMyLanguage(language) {
   return data?.user;
 }
 
+/** Met à jour les informations personnelles du compte connecté. */
+export async function updateMyProfile(payload) {
+  const { data } = await api.patch('/auth/me', payload);
+  if (data?.user) {
+    writeCachedUser(data.user);
+    syncLanguageFromUser(data.user);
+  }
+  return data?.user;
+}
+
 /* ============================================================
    🔹 Utilitaires publics
 ============================================================ */

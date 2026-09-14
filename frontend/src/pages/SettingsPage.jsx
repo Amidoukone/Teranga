@@ -22,6 +22,7 @@ import {
   setThemePreference,
   normalizeTheme,
 } from '../utils/theme';
+import { getLocalUser, updateMyProfile } from '../services/auth';
 
 const THEME_OPTIONS = [
   { key: 'light', icon: Sun },
@@ -32,6 +33,16 @@ const THEME_OPTIONS = [
 export default function SettingsPage() {
   const { t } = useTranslation();
   const [themePreference, setThemePreferenceState] = useState(() => getStoredTheme());
+  const [profile, setProfile] = useState(() => {
+    const user = getLocalUser() || {};
+    return {
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email || '',
+      phone: user.phone || '',
+    };
+  });
+  const [profileState, setProfileState] = useState({ loading: false, message: '', error: '' });
 
   const resolvedTheme = useMemo(
     () => resolveTheme(themePreference),
@@ -51,6 +62,28 @@ export default function SettingsPage() {
   const handleThemeChange = (nextTheme) => {
     const { preference } = setThemePreference(nextTheme);
     setThemePreferenceState(preference);
+  };
+
+  const handleProfileSubmit = async (event) => {
+    event.preventDefault();
+    setProfileState({ loading: true, message: '', error: '' });
+    try {
+      const user = await updateMyProfile(profile);
+      setProfile((current) => ({
+        ...current,
+        firstName: user?.firstName || '',
+        lastName: user?.lastName || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+      }));
+      setProfileState({ loading: false, message: t('settingsPage.profile.saved'), error: '' });
+    } catch (error) {
+      setProfileState({
+        loading: false,
+        message: '',
+        error: error?.response?.data?.error || t('settingsPage.profile.error'),
+      });
+    }
   };
 
   const quickLinks = [
@@ -125,6 +158,42 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="rounded-2xl border border-border/80 bg-surface-card p-5 sm:p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-text-primary">{t('settingsPage.profile.title')}</h2>
+              <p className="mt-1 text-sm text-text-secondary">{t('settingsPage.profile.description')}</p>
+            </div>
+            <form onSubmit={handleProfileSubmit} className="grid gap-4 sm:grid-cols-2">
+              {[
+                ['firstName', 'firstName'],
+                ['lastName', 'lastName'],
+                ['email', 'email'],
+                ['phone', 'phone'],
+              ].map(([field, label]) => (
+                <label key={field} className="space-y-1 text-sm text-text-secondary">
+                  <span>{t(`settingsPage.profile.fields.${label}`)}</span>
+                  <input
+                    value={profile[field]}
+                    type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'}
+                    onChange={(event) => setProfile((current) => ({ ...current, [field]: event.target.value }))}
+                    className="w-full rounded-xl border border-border bg-surface-main px-3 py-2 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+                  />
+                </label>
+              ))}
+              <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+                <button
+                  type="submit"
+                  disabled={profileState.loading}
+                  className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  {profileState.loading ? t('settingsPage.profile.saving') : t('settingsPage.profile.save')}
+                </button>
+                {profileState.message && <span className="text-sm text-emerald-700">{profileState.message}</span>}
+                {profileState.error && <span className="text-sm text-rose-700">{profileState.error}</span>}
+              </div>
+            </form>
           </section>
 
           <section className="rounded-2xl border border-border/80 bg-surface-main/60 p-5">

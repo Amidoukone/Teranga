@@ -299,6 +299,11 @@ const fr = {
   dashboard: {
     loading: "Chargement du tableau de bord...",
     greeting: "Bonjour, {{name}}",
+    profileCompletion: {
+      title: "Finalisez votre profil",
+      description: "Ajoutez vos informations principales pour une expérience plus fluide.",
+      cta: "Compléter le profil",
+    },
     roleLabel: "Rôle :",
     provider: {
       greeting: "Bonjour, {{name}}",
@@ -4145,6 +4150,15 @@ const fr = {
     title: "Param\u00E8tres du compte",
     subtitle:
       "Personnalisez votre exp\u00E9rience et acc\u00E9dez rapidement aux ressources importantes.",
+    profile: {
+      title: "Mes informations",
+      description: "Complétez vos informations pour garder un compte cohérent sur tous les services.",
+      fields: { firstName: "Prénom", lastName: "Nom", email: "Email", phone: "Téléphone" },
+      save: "Enregistrer",
+      saving: "Enregistrement…",
+      saved: "Informations enregistrées.",
+      error: "Impossible de mettre à jour vos informations.",
+    },
     overview: {
       title: "Espace compte unifi\u00E9",
       description:

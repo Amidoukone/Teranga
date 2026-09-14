@@ -17,6 +17,8 @@ const phoneOrderSchema = Joi.object({
   pin: Joi.string().trim().min(4).max(64).allow('', null),
   firstName: Joi.string().trim().max(80).allow('', null),
   countryId: Joi.number().integer().positive().required(),
+  regionId: Joi.number().integer().positive().allow(null),
+  language: Joi.string().valid('fr', 'en').allow('', null),
   requestKind: Joi.string().valid('trade_category', 'classic').required(),
   tradeCategoryId: Joi.number()
     .integer()

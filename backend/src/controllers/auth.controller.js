@@ -530,6 +530,67 @@ async function countryHasActiveMaster(countryId) {
 /* ======================================================
    🧩 Register (inscription)
 ====================================================== */
+/**
+ * Persistance canonique d'un compte client pour tous les points d'entrée.
+ * Les contrôleurs gardent leur logique métier (mot de passe ou PIN), mais
+ * utilisent tous les mêmes normalisations, rôle et scope géographique.
+ */
+async function createClientUser({
+  email,
+  phone,
+  password,
+  firstName,
+  lastName,
+  country,
+  countryId,
+  regionId,
+  language,
+}) {
+  const normalizedEmail = normalizeEmail(email);
+  const normalizedPhone = normalizePhone(phone);
+  const normalizedPassword = typeof password === 'string' ? password.trim() : '';
+
+  const contactConflict = await assertUniqueAuthContact({
+    email: normalizedEmail,
+    phone: normalizedPhone,
+  });
+  if (contactConflict) {
+    const error = new Error(contactConflict);
+    error.status = 400;
+    throw error;
+  }
+
+  const geoScope = await resolveGeoScope({ country, countryId, regionId });
+  if (geoScope?.error) {
+    const error = new Error(geoScope.error);
+    error.status = 400;
+    throw error;
+  }
+
+  if (!(await countryHasActiveMaster(geoScope.countryId))) {
+    const error = new Error(
+      'Nos services ne sont pas disponibles pour le moment dans ce pays.'
+    );
+    error.status = 400;
+    throw error;
+  }
+
+  const user = await User.create({
+    email: normalizedEmail || null,
+    passwordHash: await bcrypt.hash(normalizedPassword, 10),
+    firstName: String(firstName || '').trim() || null,
+    lastName: String(lastName || '').trim() || null,
+    phone: normalizedPhone || null,
+    country: geoScope.countryIso || null,
+    countryId: geoScope.countryId ?? null,
+    regionId: geoScope.regionId ?? null,
+    language: normalizeLanguage(language) || 'fr',
+    role: 'client',
+  });
+
+  return { user, geoScope };
+}
+
 exports.register = async (req, res) => {
   try {
     const rawEmail = req.body?.email;
@@ -545,6 +606,7 @@ exports.register = async (req, res) => {
       lastName,
       country,
       countryId,
+      regionId,
       language: rawLanguage,
     } = req.body || {};
     const language = normalizeLanguage(rawLanguage) || 'fr';
@@ -582,12 +644,11 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: contactConflict });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-
     const trimmedCountry = String(country || '').trim();
     const safeCountryId = toSafeInt(countryId);
+    const safeRegionId = toSafeInt(regionId);
 
-    if (!safeCountryId && !trimmedCountry) {
+    if (!safeCountryId && !trimmedCountry && !safeRegionId) {
       return res.status(400).json({ error: 'Pays requis' });
     }
 
@@ -595,7 +656,7 @@ exports.register = async (req, res) => {
     const geoScope = await resolveGeoScope({
       country: trimmedCountry,
       countryId: safeCountryId,
-      regionId: null,
+      regionId: safeRegionId,
     });
     if (geoScope?.error) {
       return res.status(400).json({ error: geoScope.error });
@@ -608,19 +669,16 @@ exports.register = async (req, res) => {
         .json({ error: 'Nos services ne sont pas disponibles pour le moment dans ce pays.' });
     }
 
-    const user = await User.create({
-      email: email || null,
-      passwordHash,
-      firstName: firstName || null,
-      lastName: lastName || null,
-      phone: phone || null,
-      country: geoScope?.countryIso || (trimmedCountry ? trimmedCountry.toUpperCase() : null),
-      countryId: geoScope?.countryId ?? null,
-      regionId: null,
+    const { user } = await createClientUser({
+      email,
+      phone,
+      password,
+      firstName,
+      lastName,
+      country: trimmedCountry,
+      countryId: safeCountryId,
+      regionId: safeRegionId,
       language,
-      role: 'client', // rôle par défaut cohérent avec ta structure
-      // countryId / regionId restent null pour rétro-compatibilité,
-      // et peuvent être backfill Mali/Bamako via migrations/seed si tu le fais.
     });
 
     let recoveryCodes = [];
@@ -644,6 +702,10 @@ exports.register = async (req, res) => {
     });
   } catch (e) {
     // Gestion spécifique des doublons DB (au cas où la contrainte unique remonte ici)
+    if (e.status === 400) {
+      return res.status(400).json({ error: e.message });
+    }
+
     if (e.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ error: 'Email déjà utilisé' });
     }
@@ -789,17 +851,62 @@ exports.updateMe = async (req, res) => {
       return res.status(401).json({ error: 'Non authentifié' });
     }
 
-    const nextLanguage = normalizeLanguage(req.body?.language);
-    if (!nextLanguage || !SUPPORTED_LANGS.has(nextLanguage)) {
-      return res.status(400).json({ error: 'Langue invalide (fr/en uniquement)' });
-    }
-
     const user = await User.findByPk(userId);
     if (!user) {
       return res.status(404).json({ error: 'Utilisateur introuvable' });
     }
 
-    await user.update({ language: nextLanguage });
+    const body = req.body || {};
+    const updateData = {};
+
+    if (Object.prototype.hasOwnProperty.call(body, 'language')) {
+      const nextLanguage = normalizeLanguage(body.language);
+      if (!nextLanguage || !SUPPORTED_LANGS.has(nextLanguage)) {
+        return res.status(400).json({ error: 'Langue invalide (fr/en uniquement)' });
+      }
+      updateData.language = nextLanguage;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'firstName')) {
+      updateData.firstName = String(body.firstName || '').trim() || null;
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'lastName')) {
+      updateData.lastName = String(body.lastName || '').trim() || null;
+    }
+
+    const hasEmail = Object.prototype.hasOwnProperty.call(body, 'email');
+    const hasPhone = Object.prototype.hasOwnProperty.call(body, 'phone');
+    const nextEmail = hasEmail ? normalizeEmail(body.email) || null : user.email || null;
+    const nextPhone = hasPhone ? normalizePhone(body.phone) || null : user.phone || null;
+
+    if (hasEmail && nextEmail && !isValidEmail(nextEmail)) {
+      return res.status(400).json({ error: 'Email invalide' });
+    }
+    if (hasPhone && nextPhone && !isValidPhone(nextPhone)) {
+      return res.status(400).json({ error: 'Telephone invalide' });
+    }
+    if (hasEmail || hasPhone) {
+      if (!nextEmail && !nextPhone) {
+        return res.status(400).json({ error: 'Email ou telephone requis' });
+      }
+      const conflict = await assertUniqueAuthContact({
+        email: nextEmail,
+        phone: nextPhone,
+        excludeUserId: user.id,
+      });
+      if (conflict) return res.status(409).json({ error: conflict });
+      if (hasEmail && nextEmail !== (user.email || null)) {
+        updateData.email = nextEmail;
+        updateData.emailVerified = false;
+      }
+      if (hasPhone && nextPhone !== (user.phone || null)) {
+        updateData.phone = nextPhone;
+        updateData.phoneVerified = false;
+      }
+    }
+
+    await user.update(updateData);
+    invalidateAuthUserCache(user.id);
 
     const responseBody = {
       user: toAuthUser(user),
@@ -1048,3 +1155,4 @@ exports.resolveGeoScope = resolveGeoScope;
 exports.rotateRecoveryCodes = rotateRecoveryCodes;
 exports.parseDurationToMs = parseDurationToMs;
 exports.ACCESS_EXPIRES = ACCESS_EXPIRES;
+exports.createClientUser = createClientUser;

@@ -1,6 +1,5 @@
 'use strict';
 
-const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { Service, User, Property, TradeCategory } = require('../../models');
 const { normalizePhone, isValidPhone } = require('../utils/contactIdentity');
@@ -9,7 +8,12 @@ const { geocodeAddress } = require('../services/geocoding.service');
 const { estimateMission } = require('../services/priceEstimate.service');
 const { getMissionStartCode } = require('../services/missionSafety.service');
 const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
-const { resolveGeoScope, countryHasActiveMaster, rotateRecoveryCodes } = require('./auth.controller');
+const {
+  resolveGeoScope,
+  countryHasActiveMaster,
+  rotateRecoveryCodes,
+  createClientUser,
+} = require('./auth.controller');
 const { PICKUP_REQUIRED_SLUGS } = require('./mission.controller');
 const { isGlobalAdmin } = require('../utils/geoScope');
 const { resolveDeliveryDetails } = require('../utils/deliveryDetails');
@@ -117,18 +121,14 @@ exports.create = async (req, res) => {
       // jamais silencieusement perdu (le compte doit rester accessible ensuite).
       const effectivePin = pin && String(pin).trim() ? String(pin).trim() : crypto.randomBytes(6).toString('hex');
       if (!pin) generatedPin = effectivePin;
-      const passwordHash = await bcrypt.hash(effectivePin, 10);
-
-      user = await User.create({
+      ({ user } = await createClientUser({
         phone,
-        passwordHash,
-        firstName: firstName || null,
-        role: 'client',
-        country: geoScope.countryIso || null,
+        password: effectivePin,
+        firstName,
         countryId: geoScope.countryId,
-        regionId: null,
-        language: 'fr',
-      });
+        regionId: req.body?.regionId,
+        language: req.body?.language,
+      }));
       isNewAccount = true;
 
       try {

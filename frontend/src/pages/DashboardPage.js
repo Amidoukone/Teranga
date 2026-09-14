@@ -605,6 +605,21 @@ export default function DashboardPage() {
           </div>
         </header>
 
+        {roleKey === 'client' && (!user.firstName || !user.lastName || !user.email) ? (
+          <section className="flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div className="flex items-start gap-3">
+              <UserCog className="mt-0.5 shrink-0 text-amber-700 dark:text-amber-300" size={20} />
+              <div>
+                <h2 className="text-sm font-semibold text-text-primary">{t('dashboard.profileCompletion.title')}</h2>
+                <p className="mt-1 text-sm text-text-secondary">{t('dashboard.profileCompletion.description')}</p>
+              </div>
+            </div>
+            <Link to="/settings" className="inline-flex shrink-0 items-center justify-center rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">
+              {t('dashboard.profileCompletion.cta')}
+            </Link>
+          </section>
+        ) : null}
+
         {/* ------------------------------------------------------------------ */}
  {/* Contexte: tableau de bord global. */}
         {/* ------------------------------------------------------------------ */}
