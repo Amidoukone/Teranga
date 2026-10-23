@@ -44,6 +44,13 @@ test('the queue displays preparation blockers and lets the operator take respons
   userEvent.click(await screen.findByRole('button', { name: 'operations.takeOwnership' }));
   await waitFor(() => expect(updateCoordination).toHaveBeenCalledWith(3, { mode: 'manual', ownerUserId: 10 }));
 });
+
+test('readiness distinguishes technical configuration from automatic offering coverage', async () => {
+  getFieldReadiness.mockResolvedValue({ ready: true, activeOffers: 7, automation: { enabledOffers: 2, manualOffers: 5, availableAgents: 1 }, issues: [] });
+  render(view());
+  expect(await screen.findByText('operations.configurationReady')).toBeInTheDocument();
+  expect(screen.getByText('operations.automationCoverage')).toBeInTheDocument();
+});
 test('a late response from the old territory cannot replace the new queue', async () => {
   let resolveOld;
   getOperations.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }));

@@ -10,7 +10,12 @@ function startMissionCoordinationJob() {
   scheduledTask = cron.schedule('*/1 * * * *', async () => {
     if (running) return;
     running = true;
-    try { await runMissionCoordination(); await runWorkCoordination(); }
+    try {
+      for (const [worker, run] of [['mission', runMissionCoordination], ['work', runWorkCoordination]]) {
+        try { await run(); }
+        catch (error) { logger.error({ err: error, worker }, 'coordination.worker.failed'); }
+      }
+    }
     catch (error) { logger.error({ err: error }, 'coordination.job.failed'); }
     finally { running = false; }
   });

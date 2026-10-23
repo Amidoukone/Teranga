@@ -5,6 +5,7 @@ const { canAccessGeoResource } = require('../utils/geoScope');
 const covers = (resource, user) => canAccessGeoResource(resource, user, { strictRegionScope: true });
 const { normalizePolicy } = require('./missionCoordination.service');
 const { reserveAgent, agentLoad } = require('./agentCapacity.service');
+const { raiseEscalation, remindEscalation } = require('./coordinationSupervision.service');
 const { invalidateNotificationSummary } = require('./notification.service');
 const logger = require('../utils/logger');
 
@@ -64,7 +65,7 @@ async function coordinateWork(type, id, { now = new Date(), configure = null, ac
           const policy = normalizePolicy({ ...operation.policy, ...configure.policy,
             ...(mode === 'automatic' && operation.mode !== 'automatic' ? { searchStartedAt: now.toISOString() } : {}) });
           if (mode === 'automatic' && resource.status !== 'created' && operation.mode !== 'automatic') fail('La demande doit être en attente pour activer l’affectation automatique', 409);
-          await operation.update({ ownerUserId: owner.id, mode, policy, state: 'waiting', reason: null, nextActionAt: now }, { transaction });
+          await operation.update({ ownerUserId: owner.id, mode, policy: { ...policy, supervision: null }, state: 'waiting', reason: null, nextActionAt: now }, { transaction });
           await notify(operation, resource, 'Coordination mise à jour', transaction);
         }
         if (TERMINAL[type].includes(resource.status)) {
@@ -77,34 +78,54 @@ async function coordinateWork(type, id, { now = new Date(), configure = null, ac
           await operation.update({ executorUserId: resource.agentId }, { transaction });
         }
         if (operation.state === 'escalated' && !configure) {
-          await operation.update({ observedStatus: resource.status }, { transaction });
-          return operation;
+          if (operation.observedStatus != null && operation.observedStatus !== resource.status) {
+            await operation.update({ state: 'waiting', reason: null, policy: { ...operation.policy, supervision: null }, nextActionAt: now }, { transaction });
+          } else {
+            await remindEscalation(operation, resource, type, transaction, now);
+            return operation;
+          }
         }
         const escalate = async (reason) => {
-          await operation.update({ state: 'escalated', reason, nextActionAt: null, observedStatus: resource.status }, { transaction });
+          await raiseEscalation(operation, reason, resource.status, transaction, now);
           await notify(operation, resource, 'Une intervention est nécessaire', transaction);
           return operation;
         };
         const owner = operation.ownerUserId ? await db.User.findByPk(operation.ownerUserId, { transaction }) : null;
         if (owner?.role !== 'admin' || !covers(resource, owner)) return escalate('RESPONSABLE_REQUIS');
         const policy = normalizePolicy(operation.policy);
+        const lastAttempt = operation.attempts.at(-1);
+        if (operation.mode === 'automatic' && lastAttempt?.startDeadlineAt && lastAttempt.outcome === 'assigned' && String(lastAttempt.agentId) === String(operation.executorUserId)) {
+          if (resource.status === 'created' && new Date(lastAttempt.startDeadlineAt) > now) {
+            await operation.update({ state: 'offered', nextActionAt: new Date(lastAttempt.startDeadlineAt) }, { transaction });
+            return operation;
+          }
+          if (resource.status === 'created') {
+            if (type === 'project') await resource.update({ agentId: null }, { transaction });
+            await db.AgentCapacity.update({ available: false, availableUntil: null }, { where: { userId: lastAttempt.agentId }, transaction });
+            await operation.update({ executorUserId: null, attempts: operation.attempts.map((attempt, index, list) => index === list.length - 1 ? { ...attempt, outcome: 'no_start', endedAt: now.toISOString() } : attempt), state: 'waiting', reason: 'DEMARRAGE_NON_CONFIRME', nextActionAt: now }, { transaction });
+            await notify(operation, resource, 'Affectation libérée faute de démarrage confirmé', transaction, [lastAttempt.agentId]);
+          } else {
+            await operation.update({ attempts: operation.attempts.map((attempt, index, list) => index === list.length - 1 ? { ...attempt, outcome: 'started', startedAt: now.toISOString() } : attempt) }, { transaction });
+          }
+        }
         if (operation.mode === 'automatic' && !operation.executorUserId && resource.status === 'created') {
           if (operation.nextActionAt && new Date(operation.nextActionAt) > now) return operation;
           if (process.env.MISSION_COORDINATION_ENABLED === 'false') return escalate('COORDINATION_SUSPENDUE');
           const country = resource.countryId ? await db.Country.findByPk(resource.countryId, { transaction }) : null;
           const region = resource.regionId ? await db.Region.findByPk(resource.regionId, { transaction }) : null;
           if (!country?.isActive || (resource.regionId && (!region?.isActive || String(region.countryId) !== String(country.id)))) return escalate('OFFRE_LOCALE_INDISPONIBLE');
-          if (now - new Date(policy.searchStartedAt || operation.createdAt) >= policy.searchMinutes * 60000) return escalate('RECHERCHE_EPUISEE');
-          const agent = await reserveAgent(resource, transaction, now);
+          if (operation.attempts.length >= policy.maxAttempts || now - new Date(policy.searchStartedAt || operation.createdAt) >= policy.searchMinutes * 60000) return escalate('RECHERCHE_EPUISEE');
+          const agent = await reserveAgent(resource, transaction, now, { excludedAgentIds: operation.attempts.filter((attempt) => attempt.agentId).map((attempt) => attempt.agentId) });
           if (!agent) {
             await operation.update({ state: 'waiting', reason: 'AUCUN_EXECUTANT_DISPONIBLE', nextActionAt: new Date(now.getTime() + policy.retrySeconds * 1000) }, { transaction });
             return operation;
           }
           if (type === 'project') await resource.update({ agentId: agent.id }, { transaction });
-          await operation.update({ executorUserId: agent.id, state: 'accepted', reason: null, observedStatus: resource.status,
-            attempts: [...operation.attempts, { agentId: agent.id, assignedAt: now.toISOString(), outcome: 'assigned' }],
-            nextActionAt: new Date(now.getTime() + policy.stageMinutes * 60000) }, { transaction });
-          await notify(operation, resource, 'Un agent prend en charge votre demande', transaction);
+          const startDeadline = new Date(now.getTime() + policy.startMinutes * 60000);
+          await operation.update({ executorUserId: agent.id, state: 'offered', reason: null, observedStatus: resource.status,
+            attempts: [...operation.attempts, { agentId: agent.id, assignedAt: now.toISOString(), startDeadlineAt: startDeadline.toISOString(), outcome: 'assigned' }],
+            nextActionAt: startDeadline }, { transaction });
+          await notify(operation, resource, `Agent affecté : démarrez dans l’application sous ${policy.startMinutes} minutes`, transaction);
           return operation;
         }
         if (operation.executorUserId) {
@@ -135,7 +156,8 @@ async function runWorkCoordination({ now = new Date(), limit = 100 } = {}) {
     const createdField = Model.rawAttributes.created_at ? 'created_at' : 'createdAt';
     const rows = await Model.findAll({ where: { [Op.or]: [
       { '$workCoordination.id$': null, [createdField]: { [Op.gte]: scheduler.startedAt }, status: { [Op.notIn]: TERMINAL[type] } },
-      { '$workCoordination.next_action_at$': { [Op.lte]: now }, '$workCoordination.state$': { [Op.notIn]: ['closed', 'escalated'] } },
+      { '$workCoordination.next_action_at$': { [Op.lte]: now }, '$workCoordination.state$': { [Op.ne]: 'closed' } },
+      { '$workCoordination.state$': 'escalated', '$workCoordination.next_action_at$': null },
       { [Op.and]: [db.sequelize.where(db.sequelize.col(`${MODELS[type]}.status`), Op.ne, db.sequelize.col('workCoordination.observed_status'))] },
     ] }, include: [{ model: db.WorkCoordination, as: 'workCoordination', required: false, attributes: [] }],
     attributes: ['id'], order: [['id', 'ASC']], limit, subQuery: false });

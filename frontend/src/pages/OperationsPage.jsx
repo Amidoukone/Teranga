@@ -48,6 +48,9 @@ function OfferSettings({ entry, onSaved, user }) {
   const [attempts, setAttempts] = useState(policy.maxAttempts || 3);
   const [seconds, setSeconds] = useState(policy.acceptanceSeconds || 120);
   const [required, setRequired] = useState(rules.requiredEvidenceTypes || entry.definition?.requiredEvidenceTypes || []);
+  const [startMinutes, setStartMinutes] = useState(policy.startMinutes || 15);
+  const [escalationMinutes, setEscalationMinutes] = useState(policy.escalationMinutes || 15);
+  const [reminderMinutes, setReminderMinutes] = useState(policy.reminderMinutes || 60);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [isActive, setIsActive] = useState(initial.isActive !== false);
@@ -68,7 +71,7 @@ function OfferSettings({ entry, onSaved, user }) {
     event.preventDefault(); setSaving(true); setMessage('');
     try {
       await updateOperatingOffer(entry.id, { slaMinutes: Number(sla), providerRules: { ...rules, serviceOutcome: outcome,
-        requiredEvidenceTypes: required, coordination: { ...policy, enabled, maxAttempts: Number(attempts), acceptanceSeconds: Number(seconds) } } });
+        requiredEvidenceTypes: required, coordination: { ...policy, enabled, maxAttempts: Number(attempts), acceptanceSeconds: Number(seconds), startMinutes: Number(startMinutes), escalationMinutes: Number(escalationMinutes), reminderMinutes: Number(reminderMinutes) } } });
       setMessage(t('operations.saved')); onSaved();
     } catch (error) { setMessage(error?.response?.data?.error || t('operations.failed')); }
     finally { setSaving(false); }
@@ -80,6 +83,11 @@ function OfferSettings({ entry, onSaved, user }) {
     <div className="flex flex-wrap items-center justify-between gap-2">
       <p className="text-sm font-medium">{t(isActive ? 'operations.offerOpen' : 'operations.offerClosed')}</p>
       <button type="button" disabled={saving || !canManage} onClick={changeAvailability} className="btn-secondary rounded-lg px-3 py-2 text-sm disabled:opacity-50">{t(isActive ? 'operations.suspendOffer' : 'operations.reopenOffer')}</button>
+    </div>
+    <div className="grid gap-3 sm:grid-cols-3">
+      <label className="text-sm" htmlFor={`${prefix}-start`}>{t('operations.startMinutes')}<input id={`${prefix}-start`} type="number" min="1" max="1440" required value={startMinutes} disabled={!canManage} onChange={(event) => setStartMinutes(event.target.value)} className="mt-1 w-full rounded-lg border border-border bg-surface-main p-2" /></label>
+      <label className="text-sm" htmlFor={`${prefix}-escalation`}>{t('operations.escalationMinutes')}<input id={`${prefix}-escalation`} type="number" min="1" max="1440" required value={escalationMinutes} disabled={!canManage} onChange={(event) => setEscalationMinutes(event.target.value)} className="mt-1 w-full rounded-lg border border-border bg-surface-main p-2" /></label>
+      <label className="text-sm" htmlFor={`${prefix}-reminder`}>{t('operations.reminderMinutes')}<input id={`${prefix}-reminder`} type="number" min="5" max="1440" required value={reminderMinutes} disabled={!canManage} onChange={(event) => setReminderMinutes(event.target.value)} className="mt-1 w-full rounded-lg border border-border bg-surface-main p-2" /></label>
     </div>
     <p className="text-xs text-text-secondary">{t('operations.availabilityHint')}</p>
     <label className="block text-sm" htmlFor={`${prefix}-outcome`}>{t('operations.outcome')}</label>
@@ -169,6 +177,7 @@ export default function OperationsPage() {
       {setupError && <p role="alert">{setupError}</p>}
       {!countryId && <p>{t('operations.selectCountry')}</p>}
       {readiness && <><p className="my-2 font-semibold">{t(readiness.ready ? 'operations.configurationReady' : 'operations.configurationIncomplete')}</p>
+        {readiness.automation && <p className="mb-2 text-sm">{t('operations.automationCoverage', { enabled: readiness.automation.enabledOffers, total: readiness.activeOffers, agents: readiness.automation.availableAgents })}</p>}
         <ul className="list-disc space-y-1 pl-5">{readiness.issues.map((issue, index) => <li key={`${issue.code}-${index}`}>{issue.message}</li>)}</ul>
         <p className="mt-3 text-sm text-text-secondary">{t('operations.fieldChecksRemain')}</p></>}
     </section>

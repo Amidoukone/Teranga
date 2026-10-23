@@ -89,8 +89,14 @@ exports.capacity = async (req, res) => {
     if (req.user.role !== 'agent') return res.status(403).json({ error: 'Espace réservé aux agents' });
     const [capacity] = await db.AgentCapacity.findOrCreate({ where: { userId: req.user.id }, defaults: { available: false, maxConcurrent: 1 } });
     // Capacity changes are deliberately restricted to the agent's own profile.
-    if (req.method === 'PATCH') await capacity.update(req.body);
-    return res.json({ capacity, activeAssignments: await agentLoad(req.user.id) });
+    if (req.method === 'PATCH') {
+      const { availableMinutes = 60, ...changes } = req.body;
+      if (changes.available !== undefined) changes.availableUntil = changes.available ? new Date(Date.now() + availableMinutes * 60000) : null;
+      await capacity.update(changes);
+    }
+    const value = capacity.toJSON();
+    const fresh = Boolean(value.availableUntil && new Date(value.availableUntil) > new Date());
+    return res.json({ capacity: { ...value, available: value.available && fresh, availabilityExpired: value.available && !fresh }, activeAssignments: await agentLoad(req.user.id) });
   } catch (error) { return handleError(error, res); }
 };
 exports.mine = async (req, res) => {

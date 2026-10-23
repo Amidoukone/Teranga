@@ -1034,26 +1034,14 @@ exports.listAgent = async (req, res) => {
 exports.startService = async (req, res) => {
   try {
     const id = toSafeInt(req.params.id);
-    const service = await Service.findByPk(id);
-
-    if (!service)
-      return res.status(404).json({ error: "Service introuvable" });
-
-    if (!canAccessByGeoScope(req.user, service)) {
-      return res
-        .status(403)
-        .json({ error: "Service hors scope géographique" });
-    }
-
-    if (service.agentId !== req.user.id)
-      return res.status(403).json({ error: "Non autorisé" });
-
-    if (service.status !== "created")
-      return res.status(400).json({
-        error: "Impossible de démarrer : service déjà démarré ou terminé",
-      });
-
-    await service.update({ status: "in_progress" });
+    const service = await sequelize.transaction(async (transaction) => {
+      const current = await Service.findByPk(id, { transaction, lock: true });
+      if (!current) throw Object.assign(new Error('Service introuvable'), { status: 404 });
+      if (!canAccessByGeoScope(req.user, current) || String(current.agentId) !== String(req.user.id)) throw Object.assign(new Error('Affectation expirée ou service hors de votre périmètre'), { status: 403 });
+      if (current.status !== 'created') throw Object.assign(new Error('Impossible de démarrer : service déjà démarré ou terminé'), { status: 400 });
+      await current.update({ status: 'in_progress' }, { transaction });
+      return current;
+    });
 
     await notifyServiceStatusUpdate({
       actorId: req.user.id,
@@ -1067,6 +1055,7 @@ exports.startService = async (req, res) => {
       service: addLabels(service),
     });
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
     logger.error({ err: e }, "service.start.failed");
     return res.status(500).json({
       error: "Erreur lors du démarrage du service",

@@ -16,15 +16,15 @@ async function agentLoad(userId, transaction) {
   return services.length + projects.length + orders.length;
 }
 
-async function reserveAgent(resource, transaction, now = new Date()) {
-  const candidates = await db.AgentCapacity.findAll({ where: { available: true },
+async function reserveAgent(resource, transaction, now = new Date(), { excludedAgentIds = [] } = {}) {
+  const candidates = await db.AgentCapacity.findAll({ where: { available: true, availableUntil: { [Op.gt]: now }, ...(excludedAgentIds.length ? { userId: { [Op.notIn]: excludedAgentIds } } : {}) },
     include: [{ model: db.User, as: 'user', required: true, where: { role: 'agent', countryId: resource.countryId } }],
     order: [['lastAssignedAt', 'ASC'], ['userId', 'ASC']], transaction });
   for (const candidate of candidates) {
     if (!covers(resource, candidate.user)) continue;
     const capacity = await db.AgentCapacity.findByPk(candidate.userId, { transaction, lock: true });
     const user = await db.User.findByPk(candidate.userId, { transaction });
-    if (!capacity?.available || user?.role !== 'agent' || !covers(resource, user)) continue;
+    if (!capacity?.available || !capacity.availableUntil || new Date(capacity.availableUntil) <= now || user?.role !== 'agent' || !covers(resource, user)) continue;
     if (await agentLoad(candidate.userId, transaction) >= capacity.maxConcurrent) continue;
     await capacity.update({ lastAssignedAt: now }, { transaction });
     return user;

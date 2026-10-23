@@ -1322,7 +1322,7 @@
         "summary": "Read own agent availability, capacity and current assignments",
         "responses": {
           "200": {
-            "description": "Capacity and activeAssignments"
+            "description": "Capacity, availableUntil, availabilityExpired and activeAssignments. available is effective availability and becomes false after expiry."
           },
           "403": {
             "description": "Agent role required"
@@ -1346,6 +1346,13 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 10
+                  },
+                  "availableMinutes": {
+                    "type": "integer",
+                    "minimum": 15,
+                    "maximum": 480,
+                    "default": 60,
+                    "description": "Availability duration when available is explicitly true. Requires the available field; a capacity-only edit does not renew availability."
                   }
                 }
               }

@@ -1137,6 +1137,7 @@ exports.updateStatus = async (req, res) => {
       toStatus,
       actorType,
       actorId: req.user.id,
+      expectedFields: { agentId: service.agentId, providerId: service.providerId, acceptanceDeadlineAt: service.acceptanceDeadlineAt },
     });
 
     await notifyServiceStatusUpdate({

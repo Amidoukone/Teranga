@@ -11,10 +11,11 @@ const { haversineMeters } = require('./mobilityDispatch.service');
 const { getLocationAgeSeconds, getLocationMaxAgeSeconds } = require('./providerPresence.service');
 const { invalidateNotificationSummary } = require('./notification.service');
 const { reserveAgent } = require('./agentCapacity.service');
+const { raiseEscalation, remindEscalation } = require('./coordinationSupervision.service');
 const logger = require('../utils/logger');
 
 const TERMINAL = ['CLOSED', 'CANCELLED_BY_CLIENT', 'NO_EXECUTOR_FOUND', 'RESOLVED_REFUND', 'RESOLVED_CLOSED'];
-const DEFAULT_POLICY = Object.freeze({ enabled: false, maxAttempts: 3, radiusKm: 8, acceptanceSeconds: 120, retrySeconds: 60, searchMinutes: 30, stageMinutes: 60, validationMinutes: 1440 });
+const DEFAULT_POLICY = Object.freeze({ enabled: false, maxAttempts: 3, radiusKm: 8, acceptanceSeconds: 120, retrySeconds: 60, searchMinutes: 30, stageMinutes: 60, startMinutes: 15, escalationMinutes: 15, reminderMinutes: 60, validationMinutes: 1440 });
 const SEARCHING = ['CREATED', 'SEARCHING_EXECUTOR'];
 const same = (a, b) => String(a ?? '') === String(b ?? '');
 const statusOf = (service) => service.missionStatus || service.status;
@@ -24,7 +25,7 @@ const isClosed = (service) => TERMINAL.includes(service.missionStatus) || (!serv
 
 function normalizePolicy(input = {}) {
   const policy = { ...DEFAULT_POLICY, ...input };
-  const bounds = { maxAttempts: [1, 10], acceptanceSeconds: [30, 3600], retrySeconds: [30, 3600], searchMinutes: [1, 1440], stageMinutes: [1, 10080], validationMinutes: [1, 10080] };
+  const bounds = { maxAttempts: [1, 10], acceptanceSeconds: [30, 3600], retrySeconds: [30, 3600], searchMinutes: [1, 1440], stageMinutes: [1, 10080], startMinutes: [1, 1440], escalationMinutes: [1, 1440], reminderMinutes: [5, 1440], validationMinutes: [1, 10080] };
   for (const [field, [min, max]] of Object.entries(bounds)) {
     const number = Number(policy[field]);
     policy[field] = Number.isInteger(number) && number >= min && number <= max ? number : DEFAULT_POLICY[field];
@@ -97,8 +98,8 @@ async function releaseProvider(providerId, service, transaction, { expired = fal
   await provider.update({ availabilityStatus: expired ? 'offline' : 'available' }, { transaction });
 }
 
-async function escalate(operation, service, reason, transaction) {
-  await operation.update({ state: 'escalated', reason, observedStatus: statusOf(service), nextActionAt: null }, { transaction });
+async function escalate(operation, service, reason, transaction, now) {
+  await raiseEscalation(operation, reason, statusOf(service), transaction, now);
   await notify(operation, service, 'Une intervention est nécessaire',
     `Demande #${service.id} : ${reason}. Votre responsable vérifie la suite à donner.`,
     [operation.ownerUserId, service.clientId], transaction);
@@ -186,7 +187,7 @@ async function coordinateMission(serviceId, { now = new Date(), configure = null
               serviceOutcome: offering?.providerRules?.serviceOutcome || offering?.definition?.description || null,
               completionReportRequired: offering?.definition?.executionProfile !== 'mobility' };
           }
-          await operation.update({ ownerUserId: owner.id, mode, policy: normalizePolicy({ ...nextPolicy, ...configure.policy }),
+          await operation.update({ ownerUserId: owner.id, mode, policy: normalizePolicy({ ...nextPolicy, ...configure.policy, supervision: null }),
             state: 'waiting', reason: null, nextActionAt: now }, { transaction });
           await notify(operation, service, 'Coordination mise à jour', `Le suivi de la demande #${service.id} a été mis à jour.`, [owner.id], transaction);
         }
@@ -201,20 +202,40 @@ async function coordinateMission(serviceId, { now = new Date(), configure = null
           await operation.update({ state: 'closed', observedStatus: statusOf(service), nextActionAt: null }, { transaction });
           return operation;
         }
-        if (service.missionStatus === 'DISPUTED' || service.missionStatus === 'RESOLVED_REDO') {
-          if (operation.state !== 'escalated') await escalate(operation, service, 'ARBITRAGE_REQUIS', transaction);
-          return operation;
-        }
         if (operation.state === 'escalated' && !configure) {
-          await operation.update({ observedStatus: currentStatus }, { transaction });
+          if (operation.observedStatus != null && operation.observedStatus !== currentStatus && !['DISPUTED', 'RESOLVED_REDO'].includes(currentStatus)) {
+            await operation.update({ state: 'waiting', reason: null, policy: { ...operation.policy, supervision: null }, nextActionAt: now }, { transaction });
+          } else {
+            await remindEscalation(operation, service, 'service', transaction, now);
+            return operation;
+          }
+        }
+        if (service.missionStatus === 'DISPUTED' || service.missionStatus === 'RESOLVED_REDO') {
+          await escalate(operation, service, 'ARBITRAGE_REQUIS', transaction, now);
           return operation;
         }
         const owner = operation.ownerUserId ? await db.User.findByPk(operation.ownerUserId, { transaction }) : null;
         if (!owner || owner.role !== 'admin' || !covers(service, owner)) {
-          await escalate(operation, service, 'RESPONSABLE_REQUIS', transaction);
+          await escalate(operation, service, 'RESPONSABLE_REQUIS', transaction, now);
           return operation;
         }
         const policy = normalizePolicy(operation.policy);
+        if (operation.mode === 'automatic' && service.executionType === 'agent' && lastAttempt?.startDeadlineAt && lastAttempt.outcome === 'assigned' && same(service.agentId, lastAttempt.agentId)) {
+          const unstarted = service.missionStatus ? service.missionStatus === 'ASSIGNED' : service.status === 'created';
+          if (unstarted && new Date(lastAttempt.startDeadlineAt) > now) {
+            await operation.update({ state: 'offered', nextActionAt: new Date(lastAttempt.startDeadlineAt) }, { transaction });
+            return operation;
+          }
+          if (unstarted) {
+            if (service.missionStatus) await transitionMissionStatus({ service, toStatus: 'SEARCHING_EXECUTOR', actorType: 'system', transaction, extraFields: { agentId: null } });
+            else await service.update({ agentId: null }, { transaction });
+            await db.AgentCapacity.update({ available: false, availableUntil: null }, { where: { userId: lastAttempt.agentId }, transaction });
+            await operation.update({ attempts: operation.attempts.map((attempt, index, list) => index === list.length - 1 ? { ...attempt, outcome: 'no_start', endedAt: now.toISOString() } : attempt), state: 'waiting', reason: 'DEMARRAGE_NON_CONFIRME', nextActionAt: now }, { transaction });
+            await notify(operation, service, 'Affectation libérée', `La demande #${service.id} est remise en recherche faute de démarrage confirmé.`, [operation.ownerUserId, service.clientId, lastAttempt.agentId], transaction);
+          } else {
+            await operation.update({ attempts: operation.attempts.map((attempt, index, list) => index === list.length - 1 ? { ...attempt, outcome: 'started', startedAt: now.toISOString() } : attempt) }, { transaction });
+          }
+        }
         if (lastAttempt?.outcome === 'offered') {
           if (same(service.providerId, lastAttempt.providerId) && service.missionStatus === 'ASSIGNED' && service.acceptanceDeadlineAt && new Date(service.acceptanceDeadlineAt) <= now) {
             await transitionMissionStatus({ service, toStatus: 'SEARCHING_EXECUTOR', actorType: 'system', actorId: null, transaction,
@@ -241,16 +262,16 @@ async function coordinateMission(serviceId, { now = new Date(), configure = null
             const startedAt = configure ? now : history?.createdAt || service.updatedAt || service.createdAt;
             await operation.update({ state: 'accepted', observedStatus: statusOf(service), nextActionAt: new Date(new Date(startedAt).getTime() + minutes * 60000) }, { transaction });
           }
-          if (new Date(operation.nextActionAt) <= now) await escalate(operation, service, 'DELAI_ETAPE_DEPASSE', transaction);
+          if (operation.nextActionAt && new Date(operation.nextActionAt) <= now) await escalate(operation, service, 'DELAI_ETAPE_DEPASSE', transaction, now);
           return operation;
         }
         if (operation.nextActionAt && new Date(operation.nextActionAt) > now) return operation;
         if (process.env.MISSION_COORDINATION_ENABLED === 'false') {
-          await escalate(operation, service, 'COORDINATION_SUSPENDUE', transaction);
+          await escalate(operation, service, 'COORDINATION_SUSPENDUE', transaction, now);
           return operation;
         }
         if ((operation.attempts || []).length >= policy.maxAttempts || now - new Date(policy.searchStartedAt || operation.createdAt) >= policy.searchMinutes * 60000) {
-          await escalate(operation, service, 'RECHERCHE_EPUISEE', transaction);
+          await escalate(operation, service, 'RECHERCHE_EPUISEE', transaction, now);
           return operation;
         }
         const country = service.countryId ? await db.Country.findByPk(service.countryId, { transaction }) : null;
@@ -258,19 +279,19 @@ async function coordinateMission(serviceId, { now = new Date(), configure = null
         const category = service.tradeCategoryId ? await db.TradeCategory.findByPk(service.tradeCategoryId, { transaction }) : null;
         const offering = await activeOffering(service, transaction);
         if (!country?.isActive || (service.regionId && (!region?.isActive || !same(region.countryId, country.id))) || (service.executionType === 'provider' && !category?.isActive) || !offering) {
-          await escalate(operation, service, 'OFFRE_LOCALE_INDISPONIBLE', transaction);
+          await escalate(operation, service, 'OFFRE_LOCALE_INDISPONIBLE', transaction, now);
           return operation;
         }
         if (offering.providerRules?.coordination?.enabled !== true) {
-          await escalate(operation, service, 'AUTOMATISATION_SUSPENDUE', transaction);
+          await escalate(operation, service, 'AUTOMATISATION_SUSPENDUE', transaction, now);
           return operation;
         }
         if (!isOfferingOpen(offering, { timezone: region?.timezone || country.timezone }, now)) {
-          await escalate(operation, service, 'HORAIRES_A_CONFIRMER', transaction);
+          await escalate(operation, service, 'HORAIRES_A_CONFIRMER', transaction, now);
           return operation;
         }
         if (service.executionType === 'agent') {
-          const agent = await reserveAgent(service, transaction, now);
+          const agent = await reserveAgent(service, transaction, now, { excludedAgentIds: operation.attempts.filter((attempt) => attempt.agentId).map((attempt) => attempt.agentId) });
           if (!agent) {
             await operation.update({ state: 'waiting', reason: 'AUCUN_EXECUTANT_DISPONIBLE', nextActionAt: new Date(now.getTime() + policy.retrySeconds * 1000) }, { transaction });
             return operation;
@@ -279,10 +300,11 @@ async function coordinateMission(serviceId, { now = new Date(), configure = null
             if (service.missionStatus === 'CREATED') await transitionMissionStatus({ service, toStatus: 'SEARCHING_EXECUTOR', actorType: 'system', actorId: null, transaction });
             await transitionMissionStatus({ service, toStatus: 'ASSIGNED', actorType: 'system', actorId: null, transaction, extraFields: { agentId: agent.id } });
           } else await service.update({ agentId: agent.id }, { transaction });
-          await operation.update({ state: 'accepted', reason: null, observedStatus: statusOf(service),
-            attempts: [...operation.attempts, { agentId: agent.id, assignedAt: now.toISOString(), outcome: 'assigned' }],
-            nextActionAt: new Date(now.getTime() + policy.stageMinutes * 60000) }, { transaction });
-          await notify(operation, service, 'Un agent prend en charge votre demande', `L’agent prend en charge la demande #${service.id}.`, [operation.ownerUserId, service.clientId, agent.id], transaction);
+          const startDeadline = new Date(now.getTime() + policy.startMinutes * 60000);
+          await operation.update({ state: 'offered', reason: null, observedStatus: statusOf(service),
+            attempts: [...operation.attempts, { agentId: agent.id, assignedAt: now.toISOString(), startDeadlineAt: startDeadline.toISOString(), outcome: 'assigned' }],
+            nextActionAt: startDeadline }, { transaction });
+          await notify(operation, service, 'Demande attribuée à un agent', `Demande #${service.id} : le démarrage doit être déclaré dans l’application sous ${policy.startMinutes} minutes.`, [operation.ownerUserId, service.clientId, agent.id], transaction);
           return operation;
         }
         const candidate = await findCandidate(service, category, country, operation, transaction);
@@ -320,7 +342,7 @@ async function runMissionCoordination({ now = new Date(), limit = 100 } = {}) {
     attributes: ['id'], order: [['id', 'ASC']], limit, subQuery: false,
   });
   const pending = await db.MissionCoordination.findAll({
-    where: { nextActionAt: { [Op.lte]: now }, state: { [Op.notIn]: ['closed', 'escalated'] } },
+    where: { state: { [Op.ne]: 'closed' }, [Op.or]: [{ nextActionAt: { [Op.lte]: now } }, { state: 'escalated', nextActionAt: null }] },
     attributes: ['serviceId'], order: [['nextActionAt', 'ASC'], ['id', 'ASC']], limit,
   });
   // Les étapes qui avancent ou se terminent doivent libérer la capacité sans attendre le SLA.

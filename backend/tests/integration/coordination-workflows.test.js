@@ -68,7 +68,7 @@ beforeEach(async () => {
     await db.MissionStatusHistory.destroy({ where: { serviceId: serviceIds } }); await db.Evidence.destroy({ where: { serviceId: serviceIds } });
     await db.Service.destroy({ where: { id: serviceIds.splice(0) } });
   }
-  await db.AgentCapacity.upsert({ userId: agent.id, available: false, maxConcurrent: 1 });
+  await db.AgentCapacity.upsert({ userId: agent.id, available: false, availableUntil: new Date(Date.now() + 3600000), maxConcurrent: 1 });
   await product.update({ stock: 2 });
 });
 afterAll(async () => {
@@ -371,4 +371,122 @@ test('suspending an offering closes new requests only in its country and preserv
     expect(catalog.body.catalog).toEqual([]);
     expect(catalog.body.configured).toBe(true);
   } finally { await offering.update({ isActive: before.isActive }); }
+});
+
+test('expired availability is excluded and changing capacity does not silently renew it', async () => {
+  if (!ready) return;
+  const declared = await request(app).patch('/api/v1/operations/agent/capacity').set(auth(agent)).send({ available: true, availableMinutes: 15 });
+  expect(declared.status).toBe(200);
+  expect(new Date(declared.body.capacity.availableUntil).getTime()).toBeGreaterThan(Date.now() + 14 * 60000);
+  await db.AgentCapacity.update({ availableUntil: new Date(Date.now() - 60000) }, { where: { userId: agent.id } });
+  const changed = await request(app).patch('/api/v1/operations/agent/capacity').set(auth(agent)).send({ maxConcurrent: 2 });
+  expect(changed.body.capacity).toMatchObject({ available: false, availabilityExpired: true });
+  const s = await service(); await coordinateMission(s.id);
+  expect((await s.reload()).agentId).toBeNull();
+  await request(app).patch('/api/v1/operations/agent/capacity').set(auth(agent)).send({ available: true, availableMinutes: 60 });
+  await coordinateMission(s.id, { now: new Date(Date.now() + 61000) });
+  expect((await s.reload()).agentId).toBe(agent.id);
+});
+
+test('an automatic service without a declared start is reassigned; the previous agent cannot start it late', async () => {
+  if (!ready) return;
+  const backup = await user('agent', country.id);
+  const before = offering.providerRules;
+  try {
+    await db.AgentCapacity.upsert({ userId: backup.id, available: true, availableUntil: new Date(Date.now() + 3600000), maxConcurrent: 1, lastAssignedAt: new Date() });
+    await db.AgentCapacity.update({ available: true, lastAssignedAt: new Date(0) }, { where: { userId: agent.id } });
+    await offering.update({ providerRules: { ...before, coordination: { ...before.coordination, enabled: true, startMinutes: 1, maxAttempts: 3 } } });
+    const s = await service(); const operation = await coordinateMission(s.id);
+    expect((await s.reload()).agentId).toBe(agent.id);
+    expect(operation.state).toBe('offered');
+    await coordinateMission(s.id, { now: new Date(Date.now() + 61000) });
+    expect((await s.reload()).agentId).toBe(backup.id);
+    expect((await operation.reload()).attempts[0].outcome).toBe('no_start');
+    expect((await db.AgentCapacity.findByPk(agent.id)).available).toBe(false);
+    expect((await request(app).post(`/api/v1/services/agent/services/${s.id}/start`).set(auth(agent))).status).toBe(403);
+    expect((await request(app).post(`/api/v1/services/agent/services/${s.id}/start`).set(auth(backup))).status).toBe(200);
+    await coordinateMission(s.id, { now: new Date(Date.now() + 181000) });
+    expect((await s.reload()).agentId).toBe(backup.id);
+    expect((await operation.reload()).attempts.at(-1).outcome).toBe('started');
+  } finally {
+    await offering.update({ providerRules: before });
+    await db.AgentCapacity.update({ available: false }, { where: { userId: backup.id } });
+  }
+});
+
+test.each(['project', 'order'])('an automatic %s is retried only before work starts', async (type) => {
+  if (!ready) return;
+  const backup = await user('agent', country.id);
+  try {
+    await db.AgentCapacity.upsert({ userId: backup.id, available: true, availableUntil: new Date(Date.now() + 3600000), maxConcurrent: 1, lastAssignedAt: new Date() });
+    await db.AgentCapacity.update({ available: true, lastAssignedAt: new Date(0) }, { where: { userId: agent.id } });
+    const resource = type === 'project' ? await project() : await order();
+    const operation = await coordinateWork(type, resource.id, { actor: owner, configure: { mode: 'automatic', policy: { startMinutes: 1 } } });
+    expect(operation.executorUserId).toBe(agent.id);
+    await coordinateWork(type, resource.id, { now: new Date(Date.now() + 61000) });
+    expect((await operation.reload()).executorUserId).toBe(backup.id);
+    const path = `/api/v1/operations/work/${type}/${resource.id}/status`;
+    const status = type === 'project' ? 'in_progress' : 'processing';
+    expect((await request(app).post(path).set(auth(agent)).send({ status })).status).toBe(403);
+    expect((await request(app).post(path).set(auth(backup)).send({ status })).status).toBe(200);
+    await coordinateWork(type, resource.id, { now: new Date(Date.now() + 181000) });
+    expect((await operation.reload()).executorUserId).toBe(backup.id);
+    expect((await resource.reload()).status).toBe(status);
+  } finally { await db.AgentCapacity.update({ available: false }, { where: { userId: backup.id } }); }
+});
+
+test('exhausted unstarted assignments escalate instead of looping or manufacturing completion', async () => {
+  if (!ready) return;
+  const o = await order();
+  await db.AgentCapacity.update({ available: true }, { where: { userId: agent.id } });
+  const operation = await coordinateWork('order', o.id, { actor: owner, configure: { mode: 'automatic', policy: { startMinutes: 1, maxAttempts: 1 } } });
+  await coordinateWork('order', o.id, { now: new Date(Date.now() + 61000) });
+  expect((await operation.reload()).toJSON()).toMatchObject({ state: 'escalated', reason: 'RECHERCHE_EPUISEE', executorUserId: null });
+  expect(operation.nextActionAt).not.toBeNull();
+  expect((await o.reload()).status).toBe('created');
+});
+
+test('unanswered escalations are retried by the scheduler, include an authorized backup and stop on closure', async () => {
+  if (!ready) return;
+  const backup = await user('admin', null);
+  const o = await order();
+  const operation = await coordinateWork('order', o.id, { actor: owner, configure: { policy: { stageMinutes: 1, escalationMinutes: 1, reminderMinutes: 5 } } });
+  const due = new Date(Date.now() + 61000);
+  await coordinateWork('order', o.id, { now: due });
+  const retry = new Date(due.getTime() + 61000);
+  await Promise.all([runWorkCoordination({ now: retry }), runWorkCoordination({ now: retry })]);
+  const reminders = await db.Notification.findAll({ where: { entityType: 'order', entityId: o.id, title: 'Relance de supervision' } });
+  expect(reminders.map((row) => row.userId)).toEqual(expect.arrayContaining([owner.id, backup.id]));
+  expect(reminders.map((row) => row.userId)).not.toContain(outsider.id);
+  expect(new Set(reminders.map((row) => row.userId)).size).toBe(reminders.length);
+  expect((await operation.reload()).policy.supervision.reminderCount).toBe(1);
+  await o.update({ status: 'delivered' });
+  await coordinateWork('order', o.id, { now: retry });
+  expect((await operation.reload()).state).toBe('closed');
+  expect(operation.nextActionAt).toBeNull();
+});
+
+test('a failed supervision notification rolls back the reminder for a later retry', async () => {
+  if (!ready) return;
+  const o = await order();
+  const operation = await coordinateWork('order', o.id, { actor: owner, configure: { policy: { stageMinutes: 1, escalationMinutes: 1 } } });
+  const due = new Date(Date.now() + 61000);
+  await coordinateWork('order', o.id, { now: due });
+  const retry = new Date(due.getTime() + 61000);
+  const failure = jest.spyOn(db.Notification, 'bulkCreate').mockRejectedValueOnce(new Error('Notification persistence unavailable'));
+  try { await expect(coordinateWork('order', o.id, { now: retry })).rejects.toThrow('Notification persistence unavailable'); }
+  finally { failure.mockRestore(); }
+  expect((await operation.reload()).policy.supervision.reminderCount).toBe(0);
+  await coordinateWork('order', o.id, { now: retry });
+  expect((await operation.reload()).policy.supervision.reminderCount).toBe(1);
+});
+
+test('previously escalated records without a deadline are recovered by the worker', async () => {
+  if (!ready) return;
+  const o = await order();
+  const operation = await coordinateWork('order', o.id);
+  await operation.update({ state: 'escalated', reason: 'DELAI_ETAPE_DEPASSE', nextActionAt: null, observedStatus: null });
+  await runWorkCoordination();
+  expect((await operation.reload()).nextActionAt).not.toBeNull();
+  expect(operation.policy.supervision.reminderCount).toBe(1);
 });

@@ -11,6 +11,7 @@ export default function AgentCoordinationPanel() {
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [availableMinutes, setAvailableMinutes] = useState(60);
   const load = useCallback(async () => {
     const [profile, assignments] = await Promise.all([getAgentCapacity(), getAgentAssignments()]);
     setCapacity(profile.capacity); setActiveCount(profile.activeAssignments); setItems(assignments);
@@ -29,7 +30,7 @@ export default function AgentCoordinationPanel() {
   }, [t]);
   async function save(event) {
     event.preventDefault(); setBusy(true); setError('');
-    try { await updateAgentCapacity({ available: capacity.available, maxConcurrent: Number(capacity.maxConcurrent) }); editing.current = false; await load(); }
+    try { await updateAgentCapacity({ available: capacity.available, maxConcurrent: Number(capacity.maxConcurrent), ...(capacity.available ? { availableMinutes: Number(availableMinutes) } : {}) }); editing.current = false; await load(); }
     catch (failure) { setError(failure?.response?.data?.error || t('operations.failed')); }
     finally { setBusy(false); }
   }
@@ -39,9 +40,13 @@ export default function AgentCoordinationPanel() {
     {capacity && <form onSubmit={save} className="flex flex-wrap items-center gap-3">
       <label><input type="checkbox" checked={capacity.available} onChange={(event) => { editing.current = true; setCapacity({ ...capacity, available: event.target.checked }); }} /> {t('agentCoordination.available')}</label>
       <label htmlFor="agent-capacity">{t('agentCoordination.capacity')} <input id="agent-capacity" type="number" min="1" max="10" required value={capacity.maxConcurrent} onChange={(event) => { editing.current = true; setCapacity({ ...capacity, maxConcurrent: event.target.value }); }} className="w-16 rounded-lg border border-border bg-surface-main p-2" /></label>
+      <label htmlFor="agent-available-minutes">{t('agentCoordination.availableMinutes')} <input id="agent-available-minutes" type="number" min="15" max="480" required value={availableMinutes} onChange={(event) => setAvailableMinutes(event.target.value)} className="w-20 rounded-lg border border-border bg-surface-main p-2" /></label>
       <button type="submit" disabled={busy} className="btn-primary rounded-lg px-3 py-2">{t('operations.save')}</button>
       <p className="text-sm">{t('agentCoordination.load', { count: activeCount })}</p>
     </form>}
+    {capacity?.availableUntil && <p className="text-sm">{t('agentCoordination.availableUntil')} : {new Date(capacity.availableUntil).toLocaleString()}</p>}
+    {capacity?.availabilityExpired && <p role="status" className="text-sm">{t('agentCoordination.expired')}</p>}
+    <p className="text-sm text-text-secondary">{t('agentCoordination.startHint')}</p>
     {error && <p role="alert">{error}</p>}
     <div className="grid gap-3 sm:grid-cols-2">{items.map((item) => <WorkAssignmentCard key={`${item.entityType}-${item.id}`} item={item} onSaved={load} />)}</div>
   </section>;

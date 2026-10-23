@@ -9,7 +9,7 @@ const controller = require('../controllers/operations.controller');
 const Joi = require('joi');
 router.use(auth);
 router.get('/agent/capacity', controller.capacity);
-router.patch('/agent/capacity', validateBody(Joi.object({ available: Joi.boolean(), maxConcurrent: Joi.number().integer().min(1).max(10) }).min(1)), controller.capacity);
+router.patch('/agent/capacity', validateBody(Joi.object({ available: Joi.boolean(), maxConcurrent: Joi.number().integer().min(1).max(10), availableMinutes: Joi.number().integer().min(15).max(480) }).with('availableMinutes', 'available').min(1)), controller.capacity);
 router.get('/agent/assignments', controller.mine);
 router.get('/work/:type/:id', controller.detailWork);
 router.post('/work/:type/:id/status', validateBody(Joi.object({ status: Joi.string().valid('in_progress', 'completed', 'validated', 'processing', 'shipped', 'delivered').required(), summary: Joi.string().max(4000).allow('') })), controller.advance);

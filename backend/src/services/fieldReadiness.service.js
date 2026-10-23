@@ -1,4 +1,5 @@
 'use strict';
+const { Op } = require('sequelize');
 
 const { loadPilotReadiness } = require('./pilotReadiness.service');
 const { canAccessGeoResource } = require('../utils/geoScope');
@@ -22,6 +23,7 @@ async function loadFieldReadiness(db, { countryId, regionId = null } = {}) {
   if (!localOwners.length) add('LOCAL_OWNER_MISSING', 'Un responsable local doit couvrir ce territoire.');
   let pilot = null;
   let offerings = [];
+  let automation = { enabledOffers: 0, manualOffers: 0, availableAgents: 0 };
   try {
     await db.MissionCoordination.findOne({ attributes: ['id'] });
     await db.WorkCoordination.findOne({ attributes: ['id'] });
@@ -47,7 +49,10 @@ async function loadFieldReadiness(db, { countryId, regionId = null } = {}) {
     offerings = [...specific.values()];
     const providers = await db.Provider.findAll({ where: { status: 'active', countryCode: country.isoCode }, include: [{ model: db.TradeCategory, as: 'tradeCategories', through: { attributes: [] }, attributes: ['id'] }] });
     const agents = await db.User.findAll({ where: { role: 'agent' } });
-    const capacities = await db.AgentCapacity.findAll({ where: { available: true } });
+    const capacities = await db.AgentCapacity.findAll({ where: { available: true, availableUntil: { [Op.gt]: new Date() } } });
+    const enabledOffers = offerings.filter((offer) => offer.providerRules?.coordination?.enabled === true).length;
+    automation = { enabledOffers, manualOffers: offerings.length - enabledOffers,
+      availableAgents: agents.filter((agent) => String(agent.countryId) === String(countryId) && covers({ countryId, regionId }, agent) && capacities.some((capacity) => String(capacity.userId) === String(agent.id))).length };
     for (const offering of offerings) {
       const label = offering.definition?.name || String(offering.id);
       if (!offering.slaMinutes) add('SERVICE_DEADLINE_MISSING', `${label} : délai d’exécution à définir.`, { availabilityId: offering.id });
@@ -62,14 +67,14 @@ async function loadFieldReadiness(db, { countryId, regionId = null } = {}) {
     }
     if (!offerings.length) add('LOCAL_CATALOG_EMPTY', 'Aucune offre locale active ne peut être exécutée.');
   } catch (error) {
-    if (error.original?.code === 'ER_NO_SUCH_TABLE' || error.parent?.code === 'ER_NO_SUCH_TABLE') add('SCHEMA_INCOMPLETE', 'Les migrations de coordination et de catalogue doivent être appliquées.');
+    if (['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error.original?.code || error.parent?.code)) add('SCHEMA_INCOMPLETE', 'Les migrations de coordination et de catalogue doivent être appliquées.');
     else throw error;
   }
   // Ce contrôle constate une configuration ; les essais d'envoi et de restauration restent des preuves de recette séparées.
   if (!isImageKitConfigured(process.env) && !hasCustomUploadsRoot(process.env)) add('DURABLE_PROOFS_MISSING', 'Configurer un stockage durable pour les justificatifs.');
   return { ready: !issues.some((issue) => issue.severity === 'blocking'), country: { id: country.id, isoCode: country.isoCode, name: country.name },
     regionId, localOwners: localOwners.map((owner) => ({ id: owner.id, name: [owner.firstName, owner.lastName].filter(Boolean).join(' ') || owner.email })),
-    activeOffers: offerings.length, issues, checkedAt: new Date().toISOString(),
+    activeOffers: offerings.length, automation, issues, checkedAt: new Date().toISOString(),
     remainingChecks: ['TEST_NOTIFICATION_DELIVERY', 'TEST_BACKUP_RESTORE', 'TEST_COMPLETE_SERVICE', 'LOCAL_OPERATING_APPROVAL'] };
 }
 module.exports = { loadFieldReadiness };

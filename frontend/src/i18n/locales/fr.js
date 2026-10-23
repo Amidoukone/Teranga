@@ -1,5 +1,7 @@
 const fr = {
   agentCoordination: {
+    availableMinutes: 'Durée de disponibilité (minutes)', availableUntil: 'Disponible jusqu’au', expired: 'Votre disponibilité a expiré. Confirmez-la à nouveau pour recevoir des demandes.',
+    startBefore: 'Démarrer dans l’application avant', startHint: 'Déclarez le démarrage avant de commencer sur le terrain. Sans démarrage dans le délai indiqué, une affectation automatique peut être confiée à un autre agent.',
     title: 'Disponibilité et prises en charge', hint: 'En vous déclarant disponible, vous autorisez les affectations automatiques dans votre périmètre. La charge comprend les services, projets et commandes.',
     available: 'Disponible pour de nouvelles demandes', capacity: 'Capacité simultanée', load: '{{count}} prise(s) en charge active(s)',
     proofHint: 'Ouvrez le détail pour ajouter votre justificatif de réalisation avant de terminer.',
@@ -11,6 +13,8 @@ const fr = {
     fileKind: 'Nature des justificatifs', detectKind: 'Détecter selon le fichier', save: 'Enregistrer le compte rendu',
     saved: 'Compte rendu enregistré. Vous pouvez terminer la prestation lorsque les justificatifs attendus sont présents.', failed: 'Impossible d’enregistrer le compte rendu.' },
   operations: {
+    automationCoverage: '{{enabled}} offre(s) sur {{total}} en recherche automatique ; {{agents}} agent(s) avec une disponibilité valide.',
+    startMinutes: 'Délai de démarrage agent (minutes)', escalationMinutes: 'Première relance du responsable (minutes)', reminderMinutes: 'Relances suivantes (minutes)',
     offerOpen: 'Offre ouverte aux nouvelles demandes', offerClosed: 'Offre suspendue',
     suspendOffer: 'Suspendre cette offre', reopenOffer: 'Rouvrir cette offre',
     offerSuspended: 'Offre suspendue pour les nouvelles demandes.', offerReopened: 'Offre rouverte aux nouvelles demandes.',
@@ -34,7 +38,7 @@ const fr = {
     reasons: { EXECUTANT_HORS_PERIMETRE: 'Vérifier le périmètre et le rôle de l’agent affecté.', RESPONSABLE_REQUIS: 'Désigner un responsable couvrant cette demande.', RECHERCHE_EPUISEE: 'Recherche arrivée à sa limite : contacter le client et proposer une solution.',
       OFFRE_LOCALE_INDISPONIBLE: 'Vérifier le territoire et la disponibilité de l’offre.', HORAIRES_A_CONFIRMER: 'La disponibilité horaire doit être confirmée avant affectation.',
       AUTOMATISATION_SUSPENDUE: 'La recherche automatique a été désactivée sur cette offre.', COORDINATION_SUSPENDUE: 'La recherche automatique est suspendue sur la plateforme.',
-      AUCUN_EXECUTANT_DISPONIBLE: 'Aucun exécutant éligible disponible. Une nouvelle recherche est prévue.', DELAI_ETAPE_DEPASSE: 'Une étape dépasse le délai prévu. Contacter les personnes concernées.', ARBITRAGE_REQUIS: 'Une réclamation ou une reprise nécessite une décision humaine.' },
+      AUCUN_EXECUTANT_DISPONIBLE: 'Aucun exécutant éligible disponible. Une nouvelle recherche est prévue.', DEMARRAGE_NON_CONFIRME: 'L’agent n’a pas confirmé son démarrage. Une nouvelle affectation est recherchée.', DELAI_ETAPE_DEPASSE: 'Une étape dépasse le délai prévu. Contacter les personnes concernées.', ARBITRAGE_REQUIS: 'Une réclamation ou une reprise nécessite une décision humaine.' },
   },
   accessibility: {
     skipToContent: "Aller directement au contenu principal",

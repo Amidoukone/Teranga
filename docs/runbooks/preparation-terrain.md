@@ -4,7 +4,7 @@
 
 Le centre `/admin/operations` relie les demandes ouvertes à un responsable, une prochaine échéance et un état de coordination. Il permet de prendre en charge une demande, de consulter les blocages de préparation et de configurer les offres locales : résultat attendu, délai par étape, justificatifs et recherche automatique.
 
-La recherche automatique couvre les prestataires et les services exécutés par un agent. Les agents se déclarent disponibles et définissent leur capacité simultanée depuis leur espace ; celle-ci tient compte des services, projets et commandes déjà affectés. L’affectation automatique d’un agent vaut prise en charge autorisée par cette disponibilité : les délais de démarrage et d’exécution restent surveillés, sans remplacement automatique d’une personne déjà au travail.
+La recherche automatique couvre les prestataires et les services exécutés par un agent. Les agents déclarent une disponibilité temporaire et définissent leur capacité simultanée depuis leur espace ; celle-ci tient compte des services, projets et commandes déjà affectés. Cette disponibilité autorise une réservation, dont le démarrage doit ensuite être déclaré avant l'échéance. Une réservation sans démarrage peut être réaffectée ; une prestation déjà commencée reste sous la responsabilité de son exécutant et du responsable local.
 
 Le tableau propose trois files : services, projets et commandes. Les projets et commandes ont un responsable, un agent, un délai, une affectation manuelle ou automatique et une escalade. Leur automatisation s’active par demande dans le centre ; elle exige un territoire actif et un agent disponible. Les anciens dossiers restent repris sur décision explicite du responsable. Les connecteurs WhatsApp/SMS sont différés.
 
@@ -102,6 +102,8 @@ Configuration avancée disponible sur `PATCH /api/v1/service-catalog/availabilit
 Conserver les autres clés de `providerRules` lors d’une modification via l’API. `openingHours: null` signifie une offre sans restriction horaire configurée. Les plages utilisent le fuseau de la région, sinon du pays ; début inclus, fin exclue. Les jours sans plage sont fermés. Un format non reconnu ou des horaires fermés provoquent une escalade pour confirmation, sans affectation automatique. Pour une plage traversant minuit, utiliser deux plages sur les jours concernés.
 
 ## Fonctionnement et interventions
+
+Le [suivi des aléas humains](coordination-resiliente.md) décrit l'expiration des disponibilités, la réaffectation avant démarrage et les relances de supervision. Il ajoute la migration `20261023180000-add-agent-availability-expiry.js` et exige une nouvelle confirmation de disponibilité par les agents.
 
 Une offre est proposée à un prestataire actif, disponible, de la filière et du pays, respectant son éventuel périmètre régional. Un prestataire déjà engagé dans une mission active est exclu. Pour mobilité et livraison, l’automatisation exige également une position récente, un véhicule conforme et une distance à vol d’oiseau inférieure au rayon configuré. Sans ces éléments, le responsable conserve l’affectation manuelle.
 

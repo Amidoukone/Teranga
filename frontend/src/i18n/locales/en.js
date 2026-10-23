@@ -1,5 +1,7 @@
 const en = {
   agentCoordination: {
+    availableMinutes: 'Availability duration (minutes)', availableUntil: 'Available until', expired: 'Your availability has expired. Confirm it again to receive requests.',
+    startBefore: 'Start in the application before', startHint: 'Declare the start before working in the field. Without a start within the stated window, an automatic assignment may go to another agent.',
     title: 'Availability and assignments', hint: 'Being available authorizes automatic assignments within your territory. Capacity includes services, projects and orders.',
     available: 'Available for new requests', capacity: 'Concurrent capacity', load: '{{count}} active assignment(s)',
     proofHint: 'Open the details to attach your completion evidence before finishing.',
@@ -11,6 +13,8 @@ const en = {
     fileKind: 'Evidence type', detectKind: 'Detect from file', save: 'Save report',
     saved: 'Report saved. You can complete the service once the required evidence is present.', failed: 'Unable to save the report.' },
   operations: {
+    automationCoverage: '{{enabled}} of {{total}} offerings use automatic search; {{agents}} agent(s) have valid availability.',
+    startMinutes: 'Agent start window (minutes)', escalationMinutes: 'First supervisor reminder (minutes)', reminderMinutes: 'Subsequent reminders (minutes)',
     offerOpen: 'Open to new requests', offerClosed: 'Offering suspended',
     suspendOffer: 'Suspend this offering', reopenOffer: 'Reopen this offering',
     offerSuspended: 'Offering suspended for new requests.', offerReopened: 'Offering reopened for new requests.',
@@ -34,7 +38,7 @@ const en = {
     reasons: { EXECUTANT_HORS_PERIMETRE: 'Check the assigned agent’s role and territory.', RESPONSABLE_REQUIS: 'Assign an owner covering this request.', RECHERCHE_EPUISEE: 'Search limit reached: contact the customer and offer an alternative.',
       OFFRE_LOCALE_INDISPONIBLE: 'Check the territory and the local offering.', HORAIRES_A_CONFIRMER: 'Opening hours need confirmation before assignment.',
       AUTOMATISATION_SUSPENDUE: 'Automatic search has been disabled for this offering.', COORDINATION_SUSPENDUE: 'Automatic search is suspended on the platform.',
-      AUCUN_EXECUTANT_DISPONIBLE: 'No eligible provider is available. Another search is scheduled.', DELAI_ETAPE_DEPASSE: 'A stage exceeded its deadline. Contact the people involved.', ARBITRAGE_REQUIS: 'A complaint or repeat service needs a human decision.' },
+      AUCUN_EXECUTANT_DISPONIBLE: 'No eligible provider is available. Another search is scheduled.', DEMARRAGE_NON_CONFIRME: 'The agent did not confirm the start. Another assignment is being sought.', DELAI_ETAPE_DEPASSE: 'A stage exceeded its deadline. Contact the people involved.', ARBITRAGE_REQUIS: 'A complaint or repeat service needs a human decision.' },
   },
   accessibility: {
     skipToContent: "Skip to main content",

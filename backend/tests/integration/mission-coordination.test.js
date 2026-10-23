@@ -269,8 +269,33 @@ test('technical readiness becomes positive only after the local prerequisites an
     expect(result.status).toBe(200);
     expect(result.body.issues).toEqual([]);
     expect(result.body.ready).toBe(true);
+    expect(result.body.automation).toMatchObject({ enabledOffers: 1, manualOffers: 0 });
     expect(result.body.remainingChecks).toContain('LOCAL_OPERATING_APPROVAL');
   } finally {
     if (previousRoot === undefined) delete process.env.UPLOADS_ROOT; else process.env.UPLOADS_ROOT = previousRoot;
   }
+});
+
+test('a provider already executing remains assigned while unanswered escalation reaches supervisors', async () => {
+  if (!ready) return;
+  const foreignAdmin = await user('admin', otherCountry.id);
+  await offering.update({ providerRules: { serviceOutcome: 'Compte rendu de vérification remis au client', coordination: { enabled: true, stageMinutes: 1, escalationMinutes: 1, maxAttempts: 2, acceptanceSeconds: 30 } } });
+  const service = await mission();
+  const operation = await coordinateMission(service.id);
+  const providerId = (await service.reload()).providerId;
+  const providerToken = await login(await db.User.findByPk(providers[0].userId));
+  expect((await request(app).post(`/api/v1/missions/${service.id}/accept`).set('Authorization', `Bearer ${providerToken}`)).status).toBe(200);
+  expect((await request(app).patch(`/api/v1/missions/${service.id}/status`).set('Authorization', `Bearer ${providerToken}`).send({ toStatus: 'EN_ROUTE' })).status).toBe(200);
+  await coordinateMission(service.id);
+  const overdue = new Date(Date.now() + 61000);
+  await coordinateMission(service.id, { now: overdue });
+  expect((await operation.reload()).state).toBe('escalated');
+  await runMissionCoordination({ now: new Date(overdue.getTime() + 61000) });
+  expect((await service.reload()).providerId).toBe(providerId);
+  expect(service.missionStatus).toBe('EN_ROUTE');
+  expect((await operation.reload()).attempts).toHaveLength(1);
+  expect(operation.policy.supervision.reminderCount).toBe(1);
+  const recipients = (await db.Notification.findAll({ where: { entityType: 'service', entityId: service.id, title: 'Relance de supervision' } })).map((row) => row.userId);
+  expect(recipients).toEqual(expect.arrayContaining([owner.id, admin.id]));
+  expect(recipients).not.toContain(foreignAdmin.id);
 });

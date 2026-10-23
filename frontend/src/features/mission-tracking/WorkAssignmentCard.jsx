@@ -20,6 +20,7 @@ export default function WorkAssignmentCard({ item, onSaved, canAdvance = true, c
   return <article className="space-y-2 rounded-xl border border-border p-3">
     <Link to={`/${item.entityType === 'project' ? 'projects' : 'orders'}/${item.id}`} className="font-semibold underline">{t(`operations.entities.${item.entityType}`)} #{item.id} · {item.title || item.code}</Link>
     <p className="text-sm">{t(`agentCoordination.statuses.${item.status}`, { defaultValue: item.status })}</p>
+    {item.status === 'created' && item.coordination?.attempts?.at(-1)?.startDeadlineAt && <p className="text-sm font-medium">{t('agentCoordination.startBefore')} : {new Date(item.coordination.attempts.at(-1).startDeadlineAt).toLocaleString()}</p>}
     {item.coordination?.policy?.completionReport?.summary && <p className="whitespace-pre-wrap text-sm">{item.coordination.policy.completionReport.summary}</p>}
     {next && <form onSubmit={advance} className="space-y-2">
       {finishing && <><label className="block text-sm" htmlFor={`work-report-${item.entityType}-${item.id}`}>{t('completion.summary')}</label>
