@@ -15,7 +15,7 @@ import {
   getServiceTypeLabel,
 } from "../utils/labels";
 import { me, getAuthHeader } from "../services/auth";
-import { getGeoParams } from "../services/geo";
+import { getServiceById } from "../services/services";
 import { normalizeRole, isMasterUser } from "../utils/role";
 import { useLocale } from "../i18n/useLocale";
 import { useTranslation } from "react-i18next";
@@ -57,7 +57,7 @@ export default function ServiceTasksPage() {
     priority: "normal",
     dueDate: "",
     estimatedCost: "",
-    currency: "XOF",
+    currency: "",
     assignedTo: "",
   });
 
@@ -112,7 +112,6 @@ export default function ServiceTasksPage() {
 
       const { data } = await api.get(`/tasks/service/${id}`, {
         headers: authHeaders,
-        params: getGeoParams(), // Propage le scope geo (pays/region).
       });
 
       const rawTasks = data?.tasks || [];
@@ -148,34 +147,13 @@ export default function ServiceTasksPage() {
         setUser(current);
 
         const roleNow = normalizeRole(current?.role);
+        let executionScope = {};
         if (id) {
           const serviceId = parseInt(id, 10);
           if (Number.isFinite(serviceId)) {
             try {
-              let services = [];
-              if (roleNow === "admin") {
-                const { data } = await api.get("/services", {
-                  headers: authHeaders,
-                  params: getGeoParams(),
-                });
-                services = data?.services || [];
-              } else if (roleNow === "client") {
-                const { data } = await api.get("/services/me", {
-                  headers: authHeaders,
-                  params: getGeoParams(),
-                });
-                services = data?.services || [];
-              } else if (roleNow === "agent") {
-                const { data } = await api.get("/services/agent/services", {
-                  headers: authHeaders,
-                  params: getGeoParams(),
-                });
-                services = data?.services || [];
-              }
-
-              const found = services.find(
-                (s) => String(s.id) === String(serviceId)
-              );
+              const found = await getServiceById(serviceId);
+              executionScope = { countryId: found?.countryId ?? undefined, regionId: found?.regionId ?? undefined };
               if (active) {
                 setServiceInfo(found ? applyLabels(found, "service") : null);
               }
@@ -189,7 +167,7 @@ export default function ServiceTasksPage() {
         if (roleNow === "admin") {
           try {
             const { data: agentsRes } = await api.get("/users", {
-              params: { role: "agent", ...getGeoParams() },
+              params: { role: "agent", ...executionScope },
               headers: authHeaders,
             });
             if (active) setAgents(agentsRes?.users || []);
@@ -226,18 +204,6 @@ export default function ServiceTasksPage() {
     );
   }, [serviceTitle]);
 
-  useEffect(() => {
-    const serviceCurrency = String(serviceInfo?.currency || "").trim().toUpperCase();
-    if (!serviceCurrency) return;
-    setForm((prev) => {
-      const currentCurrency = String(prev.currency || "").trim().toUpperCase();
-      if (!currentCurrency || currentCurrency === "XOF") {
-        return { ...prev, currency: serviceCurrency };
-      }
-      return prev;
-    });
-  }, [serviceInfo]);
-
   /* ============================================================
      Contexte: taches liees au service.
   ============================================================ */
@@ -258,7 +224,7 @@ export default function ServiceTasksPage() {
         dueDate: form.dueDate ? new Date(form.dueDate) : null,
         estimatedCost:
           form.estimatedCost === "" ? null : parseFloat(form.estimatedCost),
-        currency: String(form.currency || "XOF").toUpperCase(),
+        currency: form.currency ? form.currency.toUpperCase() : undefined,
         assignedTo: form.assignedTo ? parseInt(form.assignedTo, 10) : null,
       };
 
@@ -275,7 +241,7 @@ export default function ServiceTasksPage() {
         priority: "normal",
         dueDate: "",
         estimatedCost: "",
-        currency: String(serviceInfo?.currency || "XOF").toUpperCase(),
+        currency: "",
         assignedTo: "",
       });
 
@@ -589,7 +555,8 @@ export default function ServiceTasksPage() {
                     text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500
                   "
                 >
-                  {TASK_CURRENCY_CODES.map((code) => (
+                  <option value="">{t('common.currencyFromService')}{serviceInfo?.currency ? ` (${serviceInfo.currency})` : ''}</option>
+                  {[...new Set([...TASK_CURRENCY_CODES, serviceInfo?.currency, form.currency].filter(Boolean))].map((code) => (
                     <option key={code} value={code}>
                       {t(`currency.${code}`, { defaultValue: code })}
                     </option>

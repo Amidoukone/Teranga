@@ -1,6 +1,6 @@
 'use strict';
 
-const { geocodeAddress, reverseGeocode } = require('../../src/services/geocoding.service');
+const { geocodeAddress, reverseGeocode, reverseGeocodeDetails } = require('../../src/services/geocoding.service');
 
 describe('geocoding.service.geocodeAddress', () => {
   const originalFetch = global.fetch;
@@ -143,6 +143,28 @@ describe('geocoding.service.reverseGeocode', () => {
       expect.stringContaining('latlng=12.575%2C-8.0673'),
       expect.any(Object)
     );
+  });
+
+  test('extracts the country and region of a map pin', async () => {
+    process.env.GOOGLE_MAPS_SERVER_KEY = 'test-key';
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'OK',
+        results: [{
+          formatted_address: 'Abidjan, Côte d’Ivoire',
+          address_components: [
+            { long_name: 'Côte d’Ivoire', short_name: 'CI', types: ['country'] },
+            { long_name: 'Lagunes', short_name: 'Lagunes', types: ['administrative_area_level_1'] },
+          ],
+        }],
+      }),
+    });
+    expect(await reverseGeocodeDetails(5.36, -4.0083)).toEqual({
+      formattedAddress: 'Abidjan, Côte d’Ivoire',
+      countryIso: 'CI',
+      adminAreaName: 'Lagunes',
+    });
   });
 
   test('returns null when the API reports ZERO_RESULTS', async () => {

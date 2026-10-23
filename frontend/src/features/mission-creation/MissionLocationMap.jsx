@@ -3,10 +3,9 @@ import { useTranslation } from "react-i18next";
 
 import { loadGoogleMaps } from "./googleMapsLoader";
 
-// Centre par défaut : Bamako (marché domestique de Teranga) — utilisé uniquement tant
-// qu'aucune position n'est encore choisie.
-const DEFAULT_CENTER = { lat: 12.6392, lng: -8.0029 };
-const DEFAULT_ZOOM = 13;
+// Vue neutre en attendant le centrage sur le pays ou la région choisis.
+const DEFAULT_CENTER = { lat: 0, lng: 0 };
+const DEFAULT_ZOOM = 2;
 const SELECTED_ZOOM = 16;
 
 /**
@@ -16,7 +15,9 @@ const SELECTED_ZOOM = 16;
  * gracieuse si le SDK Google Maps n'est pas chargé (pas de clé, offline) : message explicite
  * plutôt qu'un cadre vide, le champ adresse au-dessus reste utilisable seul (section 4.4).
  */
-export default function MissionLocationMap({ latitude, longitude, onPositionChange, className }) {
+export default function MissionLocationMap({
+  latitude, longitude, onPositionChange, className, countryName, regionName,
+}) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   const mapRef = useRef(null);
@@ -89,6 +90,30 @@ export default function MissionLocationMap({ latitude, longitude, onPositionChan
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sans lieu choisi, montrer le territoire d'exécution plutôt que le centre du pays pilote.
+  useEffect(() => {
+    if (!countryName) return undefined;
+    let cancelled = false;
+    loadGoogleMaps().then((maps) => {
+      if (cancelled || !maps?.places?.PlacesService || !mapRef.current) return;
+      const { latitude: currentLatitude, longitude: currentLongitude } = positionRef.current;
+      if (Number.isFinite(currentLatitude) && Number.isFinite(currentLongitude)) return;
+      const query = regionName ? `${regionName}, ${countryName}` : countryName;
+      new maps.places.PlacesService(mapRef.current).findPlaceFromQuery({
+        query,
+        fields: ["geometry"],
+      }, (results, status) => {
+        if (cancelled || status !== maps.places.PlacesServiceStatus.OK || !results?.[0] || !mapRef.current) return;
+        const latestPosition = positionRef.current;
+        if (Number.isFinite(latestPosition.latitude) && Number.isFinite(latestPosition.longitude)) return;
+        const { geometry } = results[0];
+        if (geometry.viewport) mapRef.current.fitBounds(geometry.viewport);
+        else mapRef.current.panTo(geometry.location);
+      });
+    });
+    return () => { cancelled = true; };
+  }, [countryName, regionName]);
 
   // Recentre/déplace le marqueur si la position change depuis l'extérieur (ex. sélection
   // Places Autocomplete ou choix d'un lieu enregistré) sans re-créer toute la carte.

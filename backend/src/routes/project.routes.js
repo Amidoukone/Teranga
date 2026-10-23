@@ -7,6 +7,7 @@ const auth = require('../middleware/auth.middleware');
 const { requirePermission } = require('../middleware/authorization.middleware');
 const { PERMISSIONS } = require('../constants/permissions');
 const { canAccessGeoResource, isGlobalAdmin } = require('../utils/geoScope');
+const { guardCreation } = require('../middleware/creationRequest.middleware');
 const { validateBody } = require('../middleware/validate.middleware');
 const {
   createProjectSchema,
@@ -29,7 +30,7 @@ router.post(
   '/',
   auth,
   requirePermission(PERMISSIONS.PROJECT_WRITE),
-  validateBody(createProjectSchema),
+  validateBody(createProjectSchema), guardCreation('project'),
   ctrl.create
 );
 router.get('/', auth, requirePermission(PERMISSIONS.PROJECT_READ), ctrl.list);

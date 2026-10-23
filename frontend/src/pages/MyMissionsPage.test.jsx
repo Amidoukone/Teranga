@@ -17,6 +17,7 @@ import {
 
 const mockNavigate = jest.fn();
 
+jest.mock('../features/mission-tracking/AgentCoordinationPanel', () => () => null);
 jest.mock(
   "react-router-dom",
   () => ({

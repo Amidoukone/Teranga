@@ -11,6 +11,7 @@ const {
   Region,
 } = require('../../models');
 const { getUserGeoScope, isGlobalAdmin, canAccessGeoResource } = require('../utils/geoScope');
+const { selectedGeo } = require('../utils/selectedGeo');
 const logger = require('../utils/logger');
 
 function toTrimOrNull(v) {
@@ -127,6 +128,12 @@ exports.listForAdmin = async (req, res) => {
       where = { [Op.or]: buildScopeOr(getUserGeoScope(req.user)) };
     }
 
+    const selected = selectedGeo(req.query);
+    if (selected.countryId || selected.regionId) {
+      const scopeFilters = [{ [Op.or]: buildScopeOr(selected) }];
+      if (where[Op.and]) scopeFilters.push(...where[Op.and]);
+      where[Op.and] = scopeFilters;
+    }
     const tradeCategories = await TradeCategory.findAll({
       where,
       include: GEO_INCLUDE,
@@ -135,6 +142,7 @@ exports.listForAdmin = async (req, res) => {
 
     return res.json({ tradeCategories });
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
     logger.error({ err: e }, 'tradeCategory.list_for_admin.failed');
     return res.status(500).json({ error: 'Erreur lors de la récupération des filières' });
   }

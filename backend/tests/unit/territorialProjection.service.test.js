@@ -72,6 +72,16 @@ describe('territorialProjection service', () => {
     ]);
   });
 
+  test('projects the country time zone to its territory', () => {
+    const data = validLegacyData();
+    data.countries[0].timezone = 'Africa/Bamako';
+    const projection = buildTerritorialProjection(data);
+    expect(projection.territories[0].timezone).toBe('Africa/Bamako');
+    expect(projection.territories[1].timezone).toBe('Africa/Bamako');
+    data.regions[0].timezone = 'Africa/Abidjan';
+    expect(buildTerritorialProjection(data).territories[1].timezone).toBe('Africa/Abidjan');
+  });
+
   test('does not guess when two organizations match an administrator scope', () => {
     const data = validLegacyData();
     data.franchises.push({

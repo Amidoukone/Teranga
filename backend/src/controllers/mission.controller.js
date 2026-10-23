@@ -16,9 +16,10 @@ const {
   Vehicle,
   ExecutorLocation,
 } = require('../../models');
-const { geocodeAddress, reverseGeocode } = require('../services/geocoding.service');
+const { geocodeAddress, reverseGeocode, reverseGeocodeDetails } = require('../services/geocoding.service');
 const { getDistanceMatrix } = require('../services/distanceMatrix.service');
 const { estimateMission } = require('../services/priceEstimate.service');
+const { isServiceAvailable } = require('../services/localCatalog.service');
 const { findEligibleVehicleForProvider } = require('../services/mobilityCompliance.service');
 const { upsertProviderLiveLocation } = require('../services/providerPresence.service');
 const {
@@ -31,15 +32,35 @@ const {
   ACTIVE_STATUSES,
 } = require('../services/missionStatus.service');
 const { notifyServiceCreated, notifyServiceStatusUpdate } = require('../services/serviceNotification.service');
+const { getCompletionState, assertCompletionReady } = require('../services/missionCompletion.service');
+const { createHash } = require('crypto');
+
+function missionRequestHash(body) {
+  const payload = Object.fromEntries(Object.keys(body).filter((key) => key !== 'requestKey').sort().map((key) => [key, body[key]]));
+  return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+}
+async function replayMissionRequest(req, res) {
+  if (!req.body?.requestKey) return false;
+  const existing = await Service.findOne({ where: { clientId: req.user.id, clientRequestKey: req.body.requestKey } });
+  if (!existing) return false;
+  if (existing.requestPayloadHash !== missionRequestHash(req.body)) {
+    res.status(409).json({ error: 'Cette référence correspond déjà à une autre demande. Recommencez avec une nouvelle référence.' });
+  } else {
+    res.status(200).json({ mission: existing, replayed: true, estimate: null, startCode: existing.requestedVehicleType ? getMissionStartCode(existing) : null });
+  }
+  return true;
+}
 const { recalcProviderBadge } = require('../services/providerBadge.service');
 const { getAdminRecipientIds } = require('../services/notification.service');
 const { emitEvent } = require('../services/activity.service');
 const mediaUpload = require('../services/mediaUpload.service');
 const { canAccessGeoResource } = require('../utils/geoScope');
+const { selectedGeo } = require('../utils/selectedGeo');
 const { isProviderCountryMatchesMission } = require('../utils/providerScope');
 const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
 const { resolveDeliveryDetails } = require('../utils/deliveryDetails');
 const { getPagination } = require('../utils/pagination');
+const { createTrackedResource } = require('../services/trackedCreation.service');
 const logger = require('../utils/logger');
 
 const MISSION_ATTACHMENT_LOCAL_FALLBACK_ENV_VAR = 'MISSION_ATTACHMENT_ALLOW_LOCAL_FALLBACK';
@@ -144,6 +165,8 @@ exports.estimate = async (req, res) => {
       executionType,
       tradeCategoryId,
       serviceType,
+      countryId: selectedCountryId,
+      regionId: selectedRegionId,
       address: rawAddress,
       latitude: rawLatitude,
       longitude: rawLongitude,
@@ -171,12 +194,7 @@ exports.estimate = async (req, res) => {
     let geocodedAdminAreaName = null;
 
     if (trimmedAddress) {
-      const geocoded = (await geocodeAddress(trimmedAddress)) || {
-        latitude: null,
-        longitude: null,
-        countryIso: null,
-        adminAreaName: null,
-      };
+      const geocoded = await geocodeAddress(trimmedAddress);
       if (geocoded) {
         geocodedCountryIso = geocoded.countryIso;
         geocodedAdminAreaName = geocoded.adminAreaName;
@@ -184,7 +202,19 @@ exports.estimate = async (req, res) => {
           latitude = geocoded.latitude;
           longitude = geocoded.longitude;
         }
+      } else if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return res.status(400).json({ error: 'Adresse introuvable. Veuillez préciser un lieu plus précis.' });
       }
+    }
+
+    if (selectedCountryId && !geocodedCountryIso &&
+      Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      const details = await reverseGeocodeDetails(latitude, longitude);
+      if (!details?.countryIso) {
+        return res.status(400).json({ error: 'Impossible de vérifier le pays de cette position.' });
+      }
+      geocodedCountryIso = details.countryIso;
+      geocodedAdminAreaName = details.adminAreaName;
     }
 
     const missionGeoScope = await resolveMissionGeoScope({
@@ -192,18 +222,33 @@ exports.estimate = async (req, res) => {
       adminAreaName: geocodedAdminAreaName,
       fallbackCountryId: req.user.countryId ?? null,
       fallbackRegionId: req.user.regionId ?? null,
+      selectedCountryId,
+      selectedRegionId,
       tradeCategoryScope: tradeCategory
         ? { countryId: tradeCategory.countryId, regionId: tradeCategory.regionId }
         : null,
     });
+
+    if (missionGeoScope.error) {
+      return res.status(400).json({ error: missionGeoScope.error });
+    }
+
+    if (!await isServiceAvailable({
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
+      tradeCategoryId: tradeCategory?.id,
+      serviceType: tradeCategory ? null : serviceType,
+    })) {
+      return res.status(409).json({ error: 'Ce service n’est pas disponible dans ce pays ou cette région.' });
+    }
 
     const estimate = await estimateMission({
       user: req.user,
       executionType,
       tradeCategoryId: tradeCategoryId || null,
       serviceType: serviceType || null,
-      countryId: missionGeoScope.error ? null : missionGeoScope.countryId,
-      regionId: missionGeoScope.error ? null : missionGeoScope.regionId,
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
       destinationLatitude: latitude,
       destinationLongitude: longitude,
       pickupLatitude,
@@ -225,10 +270,13 @@ exports.estimate = async (req, res) => {
 ============================================================ */
 exports.create = async (req, res) => {
   try {
+    if (await replayMissionRequest(req, res)) return;
     const {
       executionType,
       tradeCategoryId,
       serviceType,
+      countryId: selectedCountryId,
+      regionId: selectedRegionId,
       title,
       description,
       savedLocationId,
@@ -284,13 +332,8 @@ exports.create = async (req, res) => {
       // (dette 0.5, même règle que missionRequest.controller.js) : géocodage serveur, 400 si
       // l'adresse ne résout à rien — jamais de mission avec une adresse saisie mais des
       // coordonnées nulles.
-      const geocoded = (await geocodeAddress(trimmedAddress)) || {
-        latitude: null,
-        longitude: null,
-        countryIso: null,
-        adminAreaName: null,
-      };
-      if (!geocoded) {
+      const geocoded = await geocodeAddress(trimmedAddress);
+      if (!geocoded || !Number.isFinite(geocoded.latitude) || !Number.isFinite(geocoded.longitude)) {
         return res.status(400).json({
           error: 'Adresse introuvable. Veuillez préciser un lieu plus précis.',
         });
@@ -310,6 +353,16 @@ exports.create = async (req, res) => {
       }
     }
 
+    if (selectedCountryId && !geocodedCountryIso &&
+      Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      const details = await reverseGeocodeDetails(latitude, longitude);
+      if (!details?.countryIso) {
+        return res.status(400).json({ error: 'Impossible de vérifier le pays de cette position.' });
+      }
+      geocodedCountryIso = details.countryIso;
+      geocodedAdminAreaName = details.adminAreaName;
+    }
+
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       latitude = null;
       longitude = null;
@@ -324,11 +377,8 @@ exports.create = async (req, res) => {
     let pickupLongitude = rawPickupLongitude != null ? Number(rawPickupLongitude) : null;
 
     if (pickupAddress && (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude))) {
-      const geocodedPickup = (await geocodeAddress(pickupAddress)) || {
-        latitude: null,
-        longitude: null,
-      };
-      if (!geocodedPickup) {
+      const geocodedPickup = await geocodeAddress(pickupAddress);
+      if (!geocodedPickup || !Number.isFinite(geocodedPickup.latitude) || !Number.isFinite(geocodedPickup.longitude)) {
         return res.status(400).json({
           error: 'Adresse de retrait introuvable. Veuillez préciser un lieu plus précis.',
         });
@@ -355,12 +405,23 @@ exports.create = async (req, res) => {
       adminAreaName: geocodedAdminAreaName,
       fallbackCountryId: req.user.countryId ?? null,
       fallbackRegionId: req.user.regionId ?? null,
+      selectedCountryId,
+      selectedRegionId,
       tradeCategoryScope: tradeCategory
         ? { countryId: tradeCategory.countryId, regionId: tradeCategory.regionId }
         : null,
     });
     if (missionGeoScope.error) {
       return res.status(400).json({ error: missionGeoScope.error });
+    }
+
+    if (!await isServiceAvailable({
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
+      tradeCategoryId: tradeCategory?.id,
+      serviceType: tradeCategory ? null : serviceType,
+    })) {
+      return res.status(409).json({ error: 'Ce service n’est pas disponible dans ce pays ou cette région.' });
     }
 
     const estimate = await estimateMission({
@@ -378,8 +439,10 @@ exports.create = async (req, res) => {
       packageType,
     });
 
-    const service = await Service.create({
+    const service = await createTrackedResource(req, Service, {
       clientId: req.user.id,
+      clientRequestKey: req.body.requestKey || null,
+      requestPayloadHash: req.body.requestKey ? missionRequestHash(req.body) : null,
       agentId: null,
       createdById: req.user.id,
       propertyId: null,
@@ -430,6 +493,7 @@ exports.create = async (req, res) => {
         tradeCategory?.slug === 'mobilite' ? getMissionStartCode(fullService) : null,
     });
   } catch (e) {
+    if (e.name === 'SequelizeUniqueConstraintError' && await replayMissionRequest(req, res)) return;
     if (e.status === 400) return res.status(400).json({ error: e.message });
     logger.error({ err: e }, 'mission.create.failed');
     return res.status(500).json({ error: 'Erreur lors de la création de la mission' });
@@ -567,16 +631,19 @@ async function findActiveProviderForTradeCategory(providerId, tradeCategoryId) {
 
 async function releaseMobilityProviderIfEligible(providerId) {
   if (!providerId) return false;
-  const provider = await Provider.findByPk(providerId);
+  const provider = await Provider.findByPk(providerId, { include: [{ model: TradeCategory, as: 'tradeCategories', attributes: ['slug'], through: { attributes: [] } }] });
   if (!provider) return false;
+  const activeMissionCount = await Service.count({ where: { providerId, missionStatus: { [Op.in]: ACTIVE_STATUSES } } });
+  if (activeMissionCount) return false;
+  const transport = !Array.isArray(provider.tradeCategories) || provider.tradeCategories.some((category) => PICKUP_REQUIRED_SLUGS.includes(category.slug));
   const eligibility =
-    provider.status === 'active'
+    provider.status === 'active' && transport
       ? await findEligibleVehicleForProvider({
           provider,
           requestedVehicleType: null,
         })
       : { vehicle: null };
-  const availabilityStatus = eligibility.vehicle ? 'available' : 'offline';
+  const availabilityStatus = provider.status === 'active' && (!transport || eligibility.vehicle) ? 'available' : 'offline';
   const [released] = await Provider.update(
     { availabilityStatus },
     { where: { id: provider.id, availabilityStatus: 'busy' } }
@@ -1064,6 +1131,7 @@ exports.updateStatus = async (req, res) => {
       }
     }
 
+    if (toStatus === 'COMPLETED') await assertCompletionReady(service);
     let updated = await transitionMissionStatus({
       service,
       toStatus,
@@ -1453,6 +1521,7 @@ exports.track = async (req, res) => {
     return res.status(200).json({
       tradeCategorySlug,
       missionStatus: service.missionStatus,
+      completion: await getCompletionState(service),
       status: service.status,
       title: service.title,
       budget: service.budget,
@@ -1649,11 +1718,10 @@ exports.dispatchRides = async (req, res) => {
     if (String(req.query.history || '') !== '1') {
       where.missionStatus = { [Op.notIn]: RIDE_TERMINAL_STATUSES };
     }
+    const selection = selectedGeo(req.query);
+    where[Op.and] = [selection];
     if (req.user.regionId) where.regionId = req.user.regionId;
-    else if (req.user.countryId) where.countryId = req.user.countryId;
-    else if (Number.isFinite(Number(req.query.countryId))) {
-      where.countryId = Number(req.query.countryId);
-    }
+    if (req.user.countryId) where.countryId = req.user.countryId;
 
     const { rows, count } = await Service.findAndCountAll({
       where,

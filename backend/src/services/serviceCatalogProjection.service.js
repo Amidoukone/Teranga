@@ -64,12 +64,12 @@ function buildCatalogProjection({
   const organizationsById = new Map(
     organizations.map((organization) => [key(organization.id), organization])
   );
-  const activeCountryTerritories = territories.filter(
-    (territory) => territory.type === 'COUNTRY' && territory.isActive !== false
+  const countryTerritories = territories.filter(
+    (territory) => territory.type === 'COUNTRY'
   );
   const operatorSelections = new Map();
 
-  for (const territory of territories.filter((item) => item.isActive !== false)) {
+  for (const territory of territories) {
     const selection = selectOperatingOrganization({
       territory,
       assignments: organizationTerritories,
@@ -147,14 +147,14 @@ function buildCatalogProjection({
     if (scope.regionId) {
       targetTerritories = territories.filter(
         (territory) =>
-          key(territory.regionId) === key(scope.regionId) && territory.isActive !== false
+          key(territory.regionId) === key(scope.regionId)
       );
     } else if (scope.countryId) {
-      targetTerritories = activeCountryTerritories.filter(
+      targetTerritories = countryTerritories.filter(
         (territory) => key(territory.countryId) === key(scope.countryId)
       );
     } else {
-      targetTerritories = activeCountryTerritories;
+      targetTerritories = countryTerritories;
     }
 
     if (targetTerritories.length === 0 && definition.isActive) {
@@ -187,18 +187,28 @@ function buildCatalogProjection({
       }
 
       const country = countriesById.get(key(territory.countryId));
+      if (!country?.currency) {
+        issues.push({
+          severity: 'blocking',
+          code: 'CATALOG_COUNTRY_CURRENCY_MISSING',
+          entityType: 'Country',
+          entityId: territory.countryId,
+          details: { territoryId: territory.id },
+        });
+        continue;
+      }
       availabilities.push({
         definitionCode: definition.code,
         territoryId: territory.id,
         organizationId: selection.organization.id,
-        currency: country?.currency || 'XOF',
+        currency: country.currency,
         basePrice: null,
         slaMinutes: null,
         openingHours: null,
         requiredFields: null,
         providerRules: null,
         version: 1,
-        isActive: definition.isActive,
+        isActive: definition.isActive && country.isActive !== false && territory.isActive !== false,
         validFrom: null,
         validUntil: null,
       });
@@ -235,8 +245,8 @@ async function loadCatalogProjection(db) {
   const [tradeCategories, countries, territories, organizations, organizationTerritories] =
     await Promise.all([
       db.TradeCategory.findAll({ raw: true }),
-      db.Country.findAll({ where: { isActive: true }, raw: true }),
-      db.Territory.findAll({ where: { isActive: true }, raw: true }),
+      db.Country.findAll({ raw: true }),
+      db.Territory.findAll({ raw: true }),
       db.Organization.findAll({ where: { status: 'active' }, raw: true }),
       db.OrganizationTerritory.findAll({ where: { status: 'active' }, raw: true }),
     ]);
@@ -264,7 +274,7 @@ async function applyCatalogProjection(db, projection) {
       definitionsCreated: 0,
       definitionsUpdated: 0,
       availabilitiesCreated: 0,
-      availabilitiesUpdated: 0,
+      availabilitiesExisting: 0,
     };
 
     for (const definition of projection.definitions) {
@@ -286,13 +296,12 @@ async function applyCatalogProjection(db, projection) {
         territoryId: values.territoryId,
         organizationId: values.organizationId,
       };
-      const [instance, created] = await db.ServiceAvailability.findOrCreate({
+      const [, created] = await db.ServiceAvailability.findOrCreate({
         where,
         defaults: values,
         transaction,
       });
-      if (!created) await instance.update(values, { transaction });
-      stats[created ? 'availabilitiesCreated' : 'availabilitiesUpdated'] += 1;
+      stats[created ? 'availabilitiesCreated' : 'availabilitiesExisting'] += 1;
     }
 
     return stats;

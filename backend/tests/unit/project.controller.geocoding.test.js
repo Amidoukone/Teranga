@@ -6,7 +6,8 @@ jest.mock('../../models', () => ({
     create: jest.fn(),
   },
   ProjectPhase: {},
-  Region: { findOne: jest.fn() },
+  Region: { findOne: jest.fn(), findByPk: jest.fn() },
+  Country: { findByPk: jest.fn() },
   User: { findByPk: jest.fn() },
 }));
 
@@ -38,7 +39,7 @@ jest.mock('../../src/services/geocoding.service', () => ({
   geocodeAddress: jest.fn(),
 }));
 
-const { Project, User } = require('../../models');
+const { Project, User, Country, Region } = require('../../models');
 const { geocodeAddress } = require('../../src/services/geocoding.service');
 const controller = require('../../src/controllers/project.controller');
 
@@ -98,6 +99,17 @@ describe('project.controller geocoding (non bloquant)', () => {
       expect.objectContaining({ latitude: null, longitude: null })
     );
     expect(res.status).not.toHaveBeenCalledWith(400);
+  });
+
+  test('uses the execution country currency when none was provided', async () => {
+    Region.findOne.mockResolvedValue(null);
+    Country.findByPk.mockResolvedValue({ currency: 'GHS' });
+    const res = makeRes();
+    await controller.create({
+      user: { id: 10, role: 'admin' },
+      body: { title: 'Projet Accra', type: 'immobilier', countryId: 2 },
+    }, res);
+    expect(Project.create).toHaveBeenCalledWith(expect.objectContaining({ currency: 'GHS', countryId: 2 }));
   });
 
   test('create succeeds without any address at all (localisation optionnelle)', async () => {

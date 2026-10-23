@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import MissionRequestForm from "./MissionRequestForm";
 import { submitMissionRequest, getTradeCategories } from "../services/missionRequests";
 import { getMasterCountries } from "../services/franchises";
+import { getLocalServiceCatalog } from "../services/serviceCatalog";
 import { persistSession } from "../services/auth";
 
 jest.mock(
@@ -14,9 +15,8 @@ jest.mock(
   { virtual: true }
 );
 
-jest.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key, opts) => {
+jest.mock("react-i18next", () => {
+  const t = (key, opts) => {
       const map = {
         "homePage.missionRequest.chooseNeed": "Choisissez votre besoin",
         "homePage.missionRequest.fields.title": "Votre besoin en une phrase",
@@ -59,13 +59,18 @@ jest.mock("react-i18next", () => ({
         "services.type.other": "Autre",
       };
       return map[key] || key;
-    },
-  }),
-}));
+    };
+  return { useTranslation: () => ({ t }) };
+});
 
 jest.mock("../services/missionRequests", () => ({
   submitMissionRequest: jest.fn(),
   getTradeCategories: jest.fn(),
+}));
+
+jest.mock("../services/serviceCatalog", () => ({
+  getLocalServiceCatalog: jest.fn().mockResolvedValue({ configured: false, catalog: [] }),
+  filterLocalServiceChoices: (tradeCategories) => ({ tradeCategories, classicTypes: undefined }),
 }));
 
 jest.mock("../services/franchises", () => ({
@@ -81,6 +86,22 @@ describe("MissionRequestForm (révélation progressive)", () => {
     jest.clearAllMocks();
     getTradeCategories.mockResolvedValue([]);
     getMasterCountries.mockResolvedValue([{ id: 5, name: "Ghana" }]);
+  });
+
+  test("asks for a country before showing services when several countries are open", async () => {
+    getMasterCountries.mockResolvedValue([
+      { id: 5, name: "Ghana" },
+      { id: 6, name: "Mali" },
+    ]);
+    render(<MissionRequestForm />);
+    const countrySelect = await screen.findByRole("combobox", { name: "Pays" });
+    await screen.findByRole("option", { name: "Ghana" });
+    expect(countrySelect).toHaveValue("");
+    expect(screen.queryByRole("button", { name: "Course" })).not.toBeInTheDocument();
+
+    await userEvent.selectOptions(countrySelect, "5");
+    expect(await screen.findByRole("button", { name: "Course" })).toBeInTheDocument();
+    expect(getLocalServiceCatalog).toHaveBeenCalledWith({ countryId: "5" });
   });
 
   test("ne montre les coordonnées qu'après avoir choisi une catégorie et saisi un titre", async () => {
@@ -114,7 +135,7 @@ describe("MissionRequestForm (révélation progressive)", () => {
     render(<MissionRequestForm />);
     await waitFor(() => expect(getMasterCountries).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByRole("button", { name: "Course" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Course" }));
     await userEvent.type(screen.getByPlaceholderText("Ex : Fuite d'eau"), "Course urgente");
 
     await screen.findByText("Vos coordonnées");

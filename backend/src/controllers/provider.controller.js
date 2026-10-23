@@ -7,7 +7,12 @@ const {
   TradeCategory,
   User,
   Vehicle,
+  Country,
+  Region,
 } = require('../../models');
+const { Op } = require('sequelize');
+const { selectedGeo } = require('../utils/selectedGeo');
+const { getUserGeoScope } = require('../utils/geoScope');
 const { getPagination } = require('../utils/pagination');
 const {
   canManageProvider,
@@ -20,6 +25,21 @@ const {
   isValidProviderStatusTransition,
 } = require('../constants/providerStatus');
 const logger = require('../utils/logger');
+async function selectedProviderFilter(req, allowed) {
+  if (allowed.deny) return allowed;
+  const selected = selectedGeo(req.query);
+  const region = selected.regionId ? await Region.findByPk(selected.regionId, { attributes: ['id', 'countryId'] }) : null;
+  if (selected.regionId && (!region || (selected.countryId && String(region.countryId) !== String(selected.countryId)))) throw Object.assign(new Error('Région incompatible avec le pays choisi'), { status: 400 });
+  const countryId = selected.countryId || region?.countryId;
+  let countryCodes = allowed.countryCodes;
+  if (countryId) {
+    const country = await Country.findByPk(countryId, { attributes: ['isoCode'] });
+    const code = country?.isoCode;
+    countryCodes = code && (!countryCodes || countryCodes.includes(code)) ? [code] : [];
+  }
+  const regionIds = [...new Set([getUserGeoScope(req.user).regionId, selected.regionId].filter(Boolean))];
+  return { ...allowed, countryCodes, userWhere: regionIds.length ? { [Op.and]: regionIds.map((regionId) => ({ [Op.or]: [{ regionId: null }, { regionId }] })) } : null };
+}
 const {
   getDriverComplianceIssues,
   getVehicleComplianceIssues,
@@ -244,7 +264,8 @@ exports.updateMyAvailability = async (req, res) => {
 ============================================================ */
 exports.listAvailable = async (req, res) => {
   try {
-    const filter = await getManageableProviderFilter(req.user);
+    const allowed = await getManageableProviderFilter(req.user);
+    const filter = await selectedProviderFilter(req, allowed);
     if (filter.deny) return res.status(403).json({ error: 'Accès interdit' });
 
     const where = { status: 'active', availabilityStatus: 'available' };
@@ -279,6 +300,7 @@ exports.listAvailable = async (req, res) => {
       },
     ];
 
+    if (filter.userWhere) include.push({ model: User, as: 'user', attributes: ['id'], where: filter.userWhere, required: true });
     const candidates = await Provider.findAll({
       where,
       include,
@@ -309,6 +331,7 @@ exports.listAvailable = async (req, res) => {
 
     return res.json({ providers });
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
     logger.error({ err: e }, 'provider.list_available.failed');
     return res.status(500).json({ error: 'Erreur lors de la récupération des chauffeurs disponibles' });
   }
@@ -319,7 +342,8 @@ exports.listAvailable = async (req, res) => {
 ============================================================ */
 exports.list = async (req, res) => {
   try {
-    const filter = await getManageableProviderFilter(req.user);
+    const allowed = await getManageableProviderFilter(req.user);
+    const filter = await selectedProviderFilter(req, allowed);
     if (filter.deny) {
       return res.status(403).json({ error: 'Accès interdit' });
     }
@@ -339,7 +363,7 @@ exports.list = async (req, res) => {
 
     const include = [
       { model: TradeCategory, as: 'tradeCategories', through: { attributes: [] } },
-      { model: User, as: 'user', attributes: ['id', 'email', 'phone', 'role'] },
+      { model: User, as: 'user', attributes: ['id', 'email', 'phone', 'role'], ...(filter.userWhere ? { where: filter.userWhere, required: true } : {}) },
       { model: Vehicle, as: 'vehicles' },
       { model: ProviderLiveLocation, as: 'liveLocation', required: false },
     ];
@@ -364,6 +388,7 @@ exports.list = async (req, res) => {
     }));
     return res.json({ providers, pagination: { page, limit, offset, total: count } });
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
     logger.error({ err: e }, 'provider.list.failed');
     return res.status(500).json({ error: 'Erreur lors de la récupération des prestataires' });
   }

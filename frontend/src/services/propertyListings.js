@@ -3,6 +3,7 @@
 // gérées par l'admin, aucun compte agence. GET /property-listings + GET /property-listings/:id
 // sont publics (pas d'auth) ; le reste réservé admin/master.
 import api from './api';
+import { mergeGeoParams } from './geo';
 
 const UPLOAD_TIMEOUT_MS =
   Number(process.env.REACT_APP_UPLOAD_TIMEOUT_MS) || 120000;
@@ -22,7 +23,7 @@ function buildFormData(fields = {}, photos = []) {
 
 /** GET /v1/property-listings — public, filtres optionnels countryId/regionId/city. */
 export async function listPropertyListings(params = {}) {
-  const { data } = await api.get('/v1/property-listings', { params });
+  const { data } = await api.get('/v1/property-listings', { params: mergeGeoParams(params) });
   return data?.listings || [];
 }
 
@@ -34,7 +35,7 @@ export async function getPropertyListing(id) {
 
 /** GET /v1/property-listings/admin — admin/master, scope géographique, tous statuts. */
 export async function listPropertyListingsAdmin(params = {}) {
-  const { data } = await api.get('/v1/property-listings/admin', { params });
+  const { data } = await api.get('/v1/property-listings/admin', { params: mergeGeoParams(params) });
   return data?.listings || [];
 }
 

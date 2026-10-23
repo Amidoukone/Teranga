@@ -104,6 +104,8 @@ module.exports = (sequelize, DataTypes) => {
   Service.init(
     {
       clientId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+      clientRequestKey: { type: DataTypes.STRING(80), allowNull: true, field: 'client_request_key' },
+      requestPayloadHash: { type: DataTypes.STRING(64), allowNull: true, field: 'request_payload_hash' },
       agentId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
       createdById: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
 

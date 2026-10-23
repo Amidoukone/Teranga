@@ -76,8 +76,8 @@ async function notifyOrderStatusUpdated({ actorId, order }) {
   }
 }
 
-async function syncOrderPaymentTransaction({ order }) {
-  if (!["paid", "delivered"].includes(order.status)) return;
+async function syncOrderPaymentTransaction({ order, transaction }) {
+  if (order.paymentStatus !== "paid") return;
 
   try {
     const existingTx = await Transaction.findOne({
@@ -86,6 +86,8 @@ async function syncOrderPaymentTransaction({ order }) {
         userId: order.userId,
         type: "expense",
       },
+      transaction,
+      ...(transaction ? { lock: true } : {}),
     });
 
     if (!existingTx) {
@@ -101,7 +103,8 @@ async function syncOrderPaymentTransaction({ order }) {
           status: "completed",
           countryId: order.countryId ?? null,
           regionId: order.regionId ?? null,
-        })
+        }),
+        { transaction }
       );
       return;
     }
@@ -116,9 +119,10 @@ async function syncOrderPaymentTransaction({ order }) {
         existingTx.regionId = order.regionId;
       }
 
-      await existingTx.save();
+      await existingTx.save({ transaction });
     }
   } catch (err) {
+    if (transaction) throw err;
     logger.error({ err, orderId: order?.id }, "order.transaction.sync.failed");
   }
 }

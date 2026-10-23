@@ -2,7 +2,7 @@
 
 const { Project, ProjectPhase } = require('../../models');
 const { getLabel } = require('../utils/labels');
-const { getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
+const { getUserGeoScope, isGlobalAdmin, canAccessGeoResource } = require('../utils/geoScope');
 const logger = require('../utils/logger');
 
 const PHASE_STATUSES = {
@@ -86,7 +86,7 @@ function canReadProject(project, user) {
   }
 
   if (user.role === 'agent') {
-    return project.agentId != null && String(project.agentId) === String(user.id);
+    return project.agentId != null && String(project.agentId) === String(user.id) && canAccessGeoResource(project, user);
   }
 
   return false;

@@ -35,6 +35,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       name: { type: DataTypes.STRING(120), allowNull: false },
       code: { type: DataTypes.STRING(30), allowNull: true },
+      timezone: { type: DataTypes.STRING(80), allowNull: true },
       isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

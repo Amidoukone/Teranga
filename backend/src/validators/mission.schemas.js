@@ -30,6 +30,8 @@ const categorySelectionFields = {
 // correction transfrontalière, jamais bloquant (aperçu de prix uniquement).
 const estimateMissionSchema = Joi.object({
   ...categorySelectionFields,
+  countryId: idSchema,
+  regionId: idSchema,
   address: Joi.string().trim().max(255).allow('', null),
   latitude: Joi.number().min(-90).max(90),
   longitude: Joi.number().min(-180).max(180),
@@ -37,7 +39,7 @@ const estimateMissionSchema = Joi.object({
   pickupLongitude: Joi.number().min(-180).max(180),
   requestedVehicleType: requestedVehicleTypeSchema,
   packageType: Joi.string().valid(...DELIVERY_PACKAGE_TYPE_VALUES),
-});
+}).with('regionId', 'countryId');
 
 /**
  * Création de mission guidée, utilisateur déjà authentifié (docs/DEV_SPEC_TERANGA_v3.md
@@ -46,7 +48,10 @@ const estimateMissionSchema = Joi.object({
  * à des coordonnées valides côté contrôleur (géocodage ou coordonnées client déjà résolues).
  */
 const createMissionSchema = Joi.object({
+  requestKey: Joi.string().pattern(/^[a-zA-Z0-9-]{8,80}$/),
   ...categorySelectionFields,
+  countryId: idSchema,
+  regionId: idSchema,
   title: Joi.string().trim().min(3).max(150).required(),
   description: Joi.string().trim().max(2000).allow('', null),
   savedLocationId: idSchema.allow(null),
@@ -67,7 +72,7 @@ const createMissionSchema = Joi.object({
     .items(Joi.string().valid(...DELIVERY_HANDLING_VALUES))
     .unique()
     .max(DELIVERY_HANDLING_VALUES.length),
-});
+}).with('regionId', 'countryId');
 
 /**
  * Assignation manuelle (docs/DEV_SPEC_TERANGA_v3.md section 4.2/3.3) — pas de short-list/Distance

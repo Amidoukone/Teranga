@@ -3,6 +3,14 @@ import { Loader2, Tag, MapPin, Clock, FileText } from "lucide-react";
 
 export default function ConfirmStep({ estimate, loadingEstimate, summary }) {
   const { t } = useTranslation();
+  const locationLabel = (address, coordinates) => address || (coordinates
+    ? t("missionCreation.confirm.gpsPosition", {
+        latitude: Number(coordinates.latitude).toFixed(5),
+        longitude: Number(coordinates.longitude).toFixed(5),
+      })
+    : "");
+  const pickupLabel = locationLabel(summary.pickupAddress, summary.pickupCoordinates);
+  const destinationLabel = locationLabel(summary.address, summary.coordinates);
 
   return (
     <div>
@@ -14,6 +22,17 @@ export default function ConfirmStep({ estimate, loadingEstimate, summary }) {
       </p>
 
       <div className="mt-5 rounded-2xl border border-border bg-surface-main/70 p-4">
+        <div className="mb-3 flex items-start gap-3">
+          <MapPin size={16} className="mt-0.5 shrink-0 text-blue-600" />
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+              {t("missionCreation.confirm.summaryTerritory")}
+            </p>
+            <p className="text-sm text-text-primary">
+              {[summary.countryName, summary.regionName].filter(Boolean).join(" · ")}
+            </p>
+          </div>
+        </div>
         <div className="flex items-start gap-3">
           <Tag size={16} className="mt-0.5 shrink-0 text-blue-600" />
           <div>
@@ -32,7 +51,7 @@ export default function ConfirmStep({ estimate, loadingEstimate, summary }) {
             <p className="text-sm text-text-primary">{summary.title}</p>
           </div>
         </div>
-        {summary.pickupAddress ? (
+        {pickupLabel ? (
           <div className="mt-3 flex items-start gap-3">
             <MapPin size={16} className="mt-0.5 shrink-0 text-blue-600" />
             <div>
@@ -41,22 +60,22 @@ export default function ConfirmStep({ estimate, loadingEstimate, summary }) {
                   ? t("missionCreation.location.departureTitle")
                   : t("missionCreation.location.pickupTitle")}
               </p>
-              <p className="text-sm text-text-primary">{summary.pickupAddress}</p>
+              <p className="text-sm text-text-primary">{pickupLabel}</p>
             </div>
           </div>
         ) : null}
-        {summary.address ? (
+        {destinationLabel ? (
           <div className="mt-3 flex items-start gap-3">
             <MapPin size={16} className="mt-0.5 shrink-0 text-blue-600" />
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                {summary.pickupAddress
+                {pickupLabel
                   ? summary.isMobilite
                     ? t("missionCreation.location.destinationTitle")
                     : t("missionCreation.location.dropoffTitle")
                   : t("missionCreation.confirm.summaryLocation")}
               </p>
-              <p className="text-sm text-text-primary">{summary.address}</p>
+              <p className="text-sm text-text-primary">{destinationLabel}</p>
             </div>
           </div>
         ) : null}

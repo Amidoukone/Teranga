@@ -1,3 +1,4 @@
+import AgentCoordinationPanel from '../features/mission-tracking/AgentCoordinationPanel';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -230,6 +231,8 @@ export default function AgentServicesPage() {
             </div>
           </div>
         </header>
+
+        <AgentCoordinationPanel />
 
         {feedback ? (
           <div className={`app-alert ${feedback.type === 'error' ? 'app-alert-error' : 'app-alert-success'}`}>{feedback.message}</div>

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { loadGoogleMaps } from "../mission-creation/googleMapsLoader";
 
 function hasPoint(value) {
-  return Number.isFinite(Number(value?.latitude)) && Number.isFinite(Number(value?.longitude));
+  return value?.latitude != null && value?.longitude != null && Number.isFinite(Number(value.latitude)) && Number.isFinite(Number(value.longitude));
 }
 
 export default function ProviderAvailabilityMap({ providers = [] }) {
@@ -26,7 +26,7 @@ export default function ProviderAvailabilityMap({ providers = [] }) {
       setAvailable(true);
       const first = mappedProviders[0]?.dispatchPresence?.liveLocation;
       map = new maps.Map(containerRef.current, {
-        center: { lat: Number(first?.latitude) || 12.6392, lng: Number(first?.longitude) || -8.0029 },
+        center: { lat: Number(first?.latitude) || 0, lng: Number(first?.longitude) || 0 },
         zoom: 12,
         streetViewControl: false,
         mapTypeControl: false,

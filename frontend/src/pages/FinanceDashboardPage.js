@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getTransactions } from '../services/transactions';
+import { getAllTransactions } from '../services/transactions';
+import { getTransactionCurrency } from '../utils/currency';
+import { GEO_SELECTION_CHANGED_EVENT } from '../services/geo';
 import { me } from '../services/auth';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
@@ -110,11 +112,16 @@ export default function FinanceDashboardPage() {
   const tRef = useRef(t);
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [selectedCurrency, setSelectedCurrency] = useState('');
+  const [transactionsError, setTransactionsError] = useState(false);
+  const currencies = useMemo(() => [...new Set(transactions.map(getTransactionCurrency))].sort(), [transactions]);
+  const currency = currencies.includes(selectedCurrency) ? selectedCurrency : currencies[0] || 'XOF';
   const [loading, setLoading] = useState(true);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [booting, setBooting] = useState(true);
   const [bootError, setBootError] = useState('');
   const initStartedRef = useRef(false);
+  const transactionsRequestRef = useRef(0);
 
   const roleKey = normalizeRole(user?.role);
   const isAdmin = roleKey === 'admin';
@@ -161,16 +168,22 @@ export default function FinanceDashboardPage() {
   }, [filters.role, roleFilterOptions]);
 
   const loadTransactionsData = useCallback(async () => {
+    const requestId = ++transactionsRequestRef.current;
     try {
       setLoadingTransactions(true);
-      const data = await getTransactions();
+      setTransactionsError(false);
+      setTransactions([]);
+      const data = await getAllTransactions();
+      if (requestId !== transactionsRequestRef.current) return;
       const txs = Array.isArray(data) ? data : data?.transactions || [];
       setTransactions(txs);
     } catch (err) {
+      if (requestId !== transactionsRequestRef.current) return;
       console.error('FinanceDashboardPage load transactions error:', err);
       setTransactions([]);
+      setTransactionsError(true);
     } finally {
-      setLoadingTransactions(false);
+      if (requestId === transactionsRequestRef.current) setLoadingTransactions(false);
     }
   }, []);
 
@@ -242,11 +255,16 @@ export default function FinanceDashboardPage() {
   useEffect(() => {
     if (!user) return;
     loadTransactionsData();
+    window.addEventListener(GEO_SELECTION_CHANGED_EVENT, loadTransactionsData);
+    return () => {
+      transactionsRequestRef.current += 1;
+      window.removeEventListener(GEO_SELECTION_CHANGED_EVENT, loadTransactionsData);
+    };
   }, [user, loadTransactionsData]);
 
  // Contexte: tableau de bord financier.
   const filtered = useMemo(() => {
-    let arr = [...(transactions || [])];
+    let arr = (transactions || []).filter((transaction) => getTransactionCurrency(transaction) === currency);
 
     // Texte libre
     if (filters.q.trim()) {
@@ -299,7 +317,7 @@ export default function FinanceDashboardPage() {
 
  // Contexte: tableau de bord financier.
     if (filters.onlyLinked) {
-      arr = arr.filter((t) => t.service || t.task);
+      arr = arr.filter((t) => t.service || t.task || t.order || t.project);
     }
 
     // Tri
@@ -327,7 +345,7 @@ export default function FinanceDashboardPage() {
     });
 
     return arr;
-  }, [transactions, filters, roleFilterOptions]);
+  }, [transactions, filters, roleFilterOptions, currency]);
 
   const derivedStats = useMemo(() => {
     const totals = {
@@ -370,17 +388,17 @@ export default function FinanceDashboardPage() {
       ...totals,
       balance:
         totals.revenues -
-        (totals.expenses + totals.commissions + totals.adjustments),
+        totals.expenses - totals.commissions + totals.adjustments,
     };
     const totalCount = filtered.length;
 
     return {
       summary,
-      totalIn: summary.revenues || 0,
+      totalIn: summary.revenues + Math.max(summary.adjustments, 0),
       totalOut:
         (summary.expenses || 0) +
         (summary.commissions || 0) +
-        (summary.adjustments || 0),
+        Math.max(-summary.adjustments, 0),
       totalCount,
       totalVolume,
       avgAmount: totalCount > 0 ? totalVolume / totalCount : 0,
@@ -584,7 +602,7 @@ export default function FinanceDashboardPage() {
     },
     {
       name: t('financeDashboardPage.chart.adjustments'),
-      value: summary.adjustments,
+      value: Math.abs(summary.adjustments),
     },
   ];
 
@@ -695,6 +713,7 @@ export default function FinanceDashboardPage() {
             </button>
             <button
               onClick={exportCSV}
+              disabled={loadingTransactions || transactionsError}
               className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium rounded-full shadow-sm border border-border bg-surface-card text-text-primary hover:bg-surface-main transition-transform transform hover:-translate-y-0.5 active:translate-y-0"
             >
               {t('financeDashboardPage.buttons.exportCsv')}
@@ -881,6 +900,15 @@ export default function FinanceDashboardPage() {
           </div>
         </div>
 
+        <div className="mb-4">
+          <label htmlFor="finance-currency" className="mr-3 text-sm font-medium">{t('financeDashboardPage.currencyLabel')}</label>
+          <select id="finance-currency" value={currency} onChange={(event) => setSelectedCurrency(event.target.value)} className="rounded-lg border border-border bg-surface-card px-3 py-2">
+            {(currencies.length ? currencies : [currency]).map((code) => <option key={code} value={code}>{code}</option>)}
+          </select>
+          <p className="mt-2 text-xs text-text-muted">{t('financeDashboardPage.currencyHint')}</p>
+          {transactionsError && <p role="alert" className="mt-2 text-sm text-red-600">{t('financeDashboardPage.transactionsFailed')}</p>}
+        </div>
+
         {/* Solde principal */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
           <h2
@@ -890,7 +918,7 @@ export default function FinanceDashboardPage() {
           >
             {t('financeDashboardPage.balance', {
               amount: formatCurrency(summary.balance),
-              currency: 'XOF',
+              currency,
             })}
           </h2>
         </div>
@@ -910,21 +938,21 @@ export default function FinanceDashboardPage() {
               label={t('financeDashboardPage.stats.totalIn')}
               value={t('financeDashboardPage.currencyValue', {
                 amount: formatCurrency(totalIn),
-                currency: 'XOF',
+                currency,
               })}
             />
             <StatCard
               label={t('financeDashboardPage.stats.totalOut')}
               value={t('financeDashboardPage.currencyValue', {
                 amount: formatCurrency(totalOut),
-                currency: 'XOF',
+                currency,
               })}
             />
             <StatCard
               label={t('financeDashboardPage.stats.balance')}
               value={t('financeDashboardPage.currencyValue', {
                 amount: formatCurrency(summary.balance),
-                currency: 'XOF',
+                currency,
               })}
             />
             <StatCard
@@ -952,7 +980,7 @@ export default function FinanceDashboardPage() {
                     <Cell key={`cell-${index}`} fill={COLORS[index]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(val) => `${formatCurrency(val)} XOF`} />
+                <Tooltip formatter={(val) => `${formatCurrency(val)} ${currency}`} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -969,7 +997,7 @@ export default function FinanceDashboardPage() {
               label={t('financeDashboardPage.insights.average')}
               value={t('financeDashboardPage.currencyValue', {
                 amount: formatCurrency(avgAmount),
-                currency: 'XOF',
+                currency,
               })}
             />
             <InsightCard
@@ -978,7 +1006,7 @@ export default function FinanceDashboardPage() {
                 largestTx
                   ? t('financeDashboardPage.currencyValue', {
                       amount: formatCurrency(largestTx.amount),
-                      currency: 'XOF',
+                      currency,
                     })
                   : t('common.dash')
               }
@@ -1015,6 +1043,7 @@ export default function FinanceDashboardPage() {
               {t('financeDashboardPage.sections.roleDetails')}
             </h3>
             <RoleBreakdown
+              currency={currency}
               transactions={filtered}
               formatCurrency={formatCurrency}
             />
@@ -1064,6 +1093,7 @@ export default function FinanceDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {topCards.map((card) => (
               <TopEntitiesCard
+                currency={currency}
                 key={card.key}
                 title={card.title}
                 items={card.items}
@@ -1084,28 +1114,28 @@ export default function FinanceDashboardPage() {
               label={t('financeDashboardPage.stats.revenues')}
               value={t('financeDashboardPage.currencyValue', {
                 amount: formatCurrency(summary.revenues),
-                currency: 'XOF',
+                currency,
               })}
             />
             <StatCard
               label={t('financeDashboardPage.stats.expenses')}
               value={t('financeDashboardPage.currencyValue', {
                 amount: formatCurrency(summary.expenses),
-                currency: 'XOF',
+                currency,
               })}
             />
             <StatCard
               label={t('financeDashboardPage.stats.commissions')}
               value={t('financeDashboardPage.currencyValue', {
                 amount: formatCurrency(summary.commissions),
-                currency: 'XOF',
+                currency,
               })}
             />
             <StatCard
               label={t('financeDashboardPage.stats.adjustments')}
               value={t('financeDashboardPage.currencyValue', {
                 amount: formatCurrency(summary.adjustments),
-                currency: 'XOF',
+                currency,
               })}
             />
           </div>
@@ -1242,7 +1272,7 @@ function InsightCard({ label, value, hint }) {
   );
 }
 
-function TopEntitiesCard({ title, items, formatCurrency, emptyLabel }) {
+function TopEntitiesCard({ title, items, formatCurrency, emptyLabel, currency }) {
   return (
     <div className="bg-surface-card border border-border rounded-2xl p-4 shadow-sm">
       <h4 className="text-sm font-semibold text-text-primary mb-2 break-words">
@@ -1258,7 +1288,7 @@ function TopEntitiesCard({ title, items, formatCurrency, emptyLabel }) {
                 {item.label}
               </div>
               <div className="text-xs sm:text-sm font-semibold text-text-primary whitespace-nowrap">
-                {formatCurrency(item.total)} XOF
+                {formatCurrency(item.total)} {currency}
               </div>
             </div>
           ))}
@@ -1287,7 +1317,7 @@ function RecentTransactions({ items, formatCurrency, formatDate, t }) {
             >
               <div className="min-w-0">
                 <div className="text-xs sm:text-sm font-semibold text-text-primary break-words line-clamp-1">
-                  {formatCurrency(trx.amount)} XOF
+                  {formatCurrency(trx.amount)} {getTransactionCurrency(trx)}
                 </div>
                 <div className="text-[11px] text-text-muted break-words line-clamp-1">
                   {getTransactionEntityLabel(trx, t)}
@@ -1308,7 +1338,7 @@ function RecentTransactions({ items, formatCurrency, formatDate, t }) {
  * Contexte: tableau de bord financier.
  * Contexte: tableau de bord financier.
  */
-function RoleBreakdown({ transactions, formatCurrency }) {
+function RoleBreakdown({ transactions, formatCurrency, currency }) {
   const { t } = useTranslation();
   const grouped = {
     client: [],
@@ -1339,26 +1369,26 @@ function RoleBreakdown({ transactions, formatCurrency }) {
         <div>
           {t('financeDashboardPage.roleBreakdown.revenues', {
             amount: formatCurrency(sum(list, 'revenue')),
-            currency: 'XOF',
+            currency,
           })}
         </div>
         <div>
           {t('financeDashboardPage.roleBreakdown.expenses', {
             amount: formatCurrency(sum(list, 'expense')),
-            currency: 'XOF',
+            currency,
           })}
         </div>
         <div>
           {t('financeDashboardPage.roleBreakdown.commissions', {
             amount: formatCurrency(sum(list, 'commission')),
-            currency: 'XOF',
+            currency,
           })}
         </div>
         {showAdjustments && (
           <div className="sm:col-span-3">
             {t('financeDashboardPage.roleBreakdown.adjustments', {
               amount: formatCurrency(sum(list, 'adjustment')),
-              currency: 'XOF',
+              currency,
             })}
           </div>
         )}

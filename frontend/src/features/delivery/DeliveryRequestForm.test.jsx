@@ -21,6 +21,7 @@ jest.mock(
 
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
+    i18n: { language: "fr" },
     t: (key, options = {}) => {
       const labels = {
         "deliveryBooking.package.title": "Que souhaitez-vous livrer ?",

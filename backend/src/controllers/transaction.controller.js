@@ -13,17 +13,9 @@ const path = require("path");
 const { Op } = require("sequelize");
 const {
   Transaction,
-  User,
-  Service,
-  Task,
   Order,
   Project,
 } = require("../../models");
-const {
-  applyGeoScopeForModel,
-  getCountryIdByIso,
-  getUserGeoScope,
-} = require("../utils/geoScope");
 
 // 🧱 Service interne Teranga : ACL / WHERE / Pagination
 const {
@@ -39,6 +31,9 @@ const {
 // 📸 ImageKit Helper unifié
 const imageKit = require("../helpers/teranga-imagekit");
 const logger = require('../utils/logger');
+const { normalizeCurrency } = require('../utils/currency');
+const { loadFinancialSummary } = require('../services/financialSummary.service');
+const { resolveTransactionContext } = require('../services/transactionContext.service');
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
 const {
   buildMediaStorageDiagnostics,
@@ -57,7 +52,6 @@ const {
 // 📌 Sets de validation
 const ALLOWED_TYPES = new Set(Object.keys(TRANSACTION_TYPES || {}));
 const ALLOWED_STATUSES = new Set(Object.keys(TRANSACTION_STATUSES || {}));
-const KNOWN_CURRENCIES = new Set(Object.keys(CURRENCY_LABELS || {}));
 const TRANSACTION_MEDIA_STORAGE_ERROR_CODE =
   "TRANSACTION_MEDIA_STORAGE_UNAVAILABLE";
 const TRANSACTION_LOCAL_FALLBACK_ENV_VAR =
@@ -105,11 +99,6 @@ function parseAmount(val) {
   return Number.isFinite(n) ? n : null;
 }
 
-function normalizeCurrency(input, fallback = "XOF") {
-  if (!input) return fallback;
-  const cur = String(input).toUpperCase().trim();
-  return KNOWN_CURRENCIES.has(cur) ? cur : fallback;
-}
 
 function parseBooleanQuery(value, defaultValue = false) {
   if (value === undefined || value === null || value === "") return defaultValue;
@@ -253,81 +242,6 @@ async function removeLocalUpload(filePath) {
   }
 }
 
-/**
- * GEO helper : déduire countryId / regionId depuis modules liés
- * - Non destructif
- * - Compatible legacy
- */
-async function resolveGeoFromLinks({ serviceId, taskId, orderId, projectId }) {
-  const sid = toSafeInt(serviceId);
-  const tid = toSafeInt(taskId);
-  const oid = toSafeInt(orderId);
-  const pid = toSafeInt(projectId);
-
-  const [service, task, order, project] = await Promise.all([
-    sid
-      ? Service.findByPk(sid, { attributes: ["id", "countryId", "regionId"] })
-      : null,
-    tid
-      ? Task.findByPk(tid, { attributes: ["id", "countryId", "regionId"] })
-      : null,
-    oid
-      ? Order.findByPk(oid, {
-          attributes: ["id", "countryId", "regionId", "userId", "status"],
-          include: [
-            {
-              model: User,
-              as: "user",
-              attributes: ["id", "countryId", "regionId", "country"],
-            },
-          ],
-        })
-      : null,
-    pid
-      ? Project.findByPk(pid, {
-          attributes: ["id", "countryId", "regionId"],
-          include: [
-            {
-              model: User,
-              as: "client",
-              attributes: ["id", "country"],
-            },
-          ],
-        })
-      : null,
-  ]);
-
-  const legacyProjectCountryId =
-    project?.countryId == null && project?.client?.country
-      ? await getCountryIdByIso(project.client.country)
-      : null;
-
-  const legacyOrderUserCountryId =
-    order?.countryId == null && order?.user?.country
-      ? await getCountryIdByIso(order.user.country)
-      : null;
-
-  return {
-    countryId:
-      service?.countryId ??
-      task?.countryId ??
-      project?.countryId ??
-      legacyProjectCountryId ??
-      order?.countryId ??
-      order?.user?.countryId ??
-      legacyOrderUserCountryId ??
-      null,
-
-    regionId:
-      service?.regionId ??
-      task?.regionId ??
-      project?.regionId ??
-      order?.regionId ??
-      order?.user?.regionId ??
-      null,
-  };
-}
-
 /* ============================================================================
  *  ⭐ ImageKit Upload sécurisé
  * ============================================================================ */
@@ -426,24 +340,16 @@ async function uploadProofToImageKit(file, fallbackPolicy) {
  * ============================================================================
  */
 exports.create = async (req, res) => {
+  let uploadedProof = null;
+  let persisted = false;
   try {
     const {
-      serviceId,
-      taskId,
-      orderId,
-      projectId,
       type,
       amount,
       currency,
       paymentMethod,
       description,
       status,
-
-      // 🌍 GEO (admin only)
-      countryId,
-      regionId,
-      country_id,
-      region_id,
     } = req.body || {};
 
     if (!type) {
@@ -460,62 +366,28 @@ exports.create = async (req, res) => {
       return res.status(400).json({ error: "Montant invalide" });
     }
 
-    const sid = toSafeInt(serviceId);
-    const tid = toSafeInt(taskId);
-    const oid = toSafeInt(orderId);
-    const pid = toSafeInt(projectId);
-
-    // Chargement des liens (non bloquant si absent)
-    const [service, task, order, project] = await Promise.all([
-      sid ? Service.findByPk(sid) : null,
-      tid ? Task.findByPk(tid) : null,
-      oid ? Order.findByPk(oid) : null,
-      pid ? Project.findByPk(pid) : null,
-    ]);
-
-    /* -------------------------------
-       📎 Upload preuve via ImageKit
-       ------------------------------- */
+    const context = await resolveTransactionContext(req);
+    const { service, task, order, project } = context;
+    const ownerUserId = order?.userId ?? req.user.id;
+    const existing = order ? await Transaction.findOne({ where: { orderId: order.id, userId: ownerUserId, type: txType } }) : null;
+    if (existing && normalizeCurrency(existing.currency) !== normalizeCurrency(currency, context.currency)) {
+      return res.status(409).json({ error: 'Une transaction existe dans une autre devise pour cette commande. Modifiez explicitement cette transaction.' });
+    }
     const fallbackPolicy = resolveLocalFallbackPolicy();
     const up = extractUploadFile(req);
-    const proofFile = up ? await uploadProofToImageKit(up, fallbackPolicy) : null;
-
-    // Owner userId : si transaction liée à une commande -> userId commande
-    const ownerUserId = order?.userId ?? req.user.id;
-
-    // 🌍 GEO (priorité = liens -> override admin -> null)
-    const inferredGeo = await resolveGeoFromLinks({
-      serviceId: sid,
-      taskId: tid,
-      orderId: oid,
-      projectId: pid,
-    });
-
-    const isAdminLike = req.user?.role === "admin";
-    const userScope = getUserGeoScope
-      ? getUserGeoScope(req.user)
-      : { countryId: null, regionId: null };
-    const bodyCountryId = toSafeInt(countryId ?? country_id);
-    const bodyRegionId = toSafeInt(regionId ?? region_id);
-
-    const finalCountryId = isAdminLike
-      ? (inferredGeo.countryId ?? bodyCountryId ?? null)
-      : (inferredGeo.countryId ?? userScope.countryId ?? null);
-
-    const finalRegionId = isAdminLike
-      ? (inferredGeo.regionId ?? bodyRegionId ?? null)
-      : (inferredGeo.regionId ?? userScope.regionId ?? null);
+    const proofFile = up && !existing?.proofFile ? await uploadProofToImageKit(up, fallbackPolicy) : null;
+    uploadedProof = proofFile;
 
     const payload = {
       userId: ownerUserId,
-      serviceId: service?.id || sid || null,
-      taskId: task?.id || tid || null,
-      orderId: order?.id || oid || null,
-      projectId: project?.id || pid || null,
+      serviceId: service?.id || null,
+      taskId: task?.id || null,
+      orderId: order?.id || null,
+      projectId: project?.id || null,
 
       type: txType,
       amount: parsedAmount,
-      currency: normalizeCurrency(currency, "XOF"),
+      currency: normalizeCurrency(currency, context.currency),
       paymentMethod: toTrimOrNull(paymentMethod),
       description: toTrimOrNull(description),
       proofFile,
@@ -523,8 +395,8 @@ exports.create = async (req, res) => {
       status: "pending",
 
       // 🌍 GEO persisté
-      countryId: finalCountryId,
-      regionId: finalRegionId,
+      countryId: context.countryId,
+      regionId: context.regionId,
     };
 
     // 🔄 Auto validation selon statut Order
@@ -543,7 +415,9 @@ exports.create = async (req, res) => {
     // Le paiement reste externe : une clôture manuelle doit être accompagnée
     // d'un reçu ou d'une preuve uploadée. Les clôtures héritées d'une commande
     // conservent leur comportement historique pour éviter toute régression.
-    if (status === "completed" && !hasPaymentProof(payload.proofFile)) {
+    if (status === "completed" && !hasPaymentProof(payload.proofFile || existing?.proofFile)) {
+      if (uploadedProof) await discardProof(uploadedProof);
+      uploadedProof = null;
       return res.status(400).json({
         error: "Une preuve de paiement (reçu) est obligatoire pour clôturer la transaction.",
         code: "PAYMENT_PROOF_REQUIRED",
@@ -552,12 +426,6 @@ exports.create = async (req, res) => {
 
     // 🔄 Prévention doublon (transaction unique par order + type)
     let created = null;
-
-    const existing = order
-      ? await Transaction.findOne({
-          where: { orderId: order.id, userId: ownerUserId, type: txType },
-        })
-      : null;
 
     if (existing) {
       existing.amount = parsedAmount;
@@ -580,6 +448,7 @@ exports.create = async (req, res) => {
       }
 
       await existing.save();
+      persisted = true;
 
       created = await Transaction.findByPk(existing.id, {
         include: COMMON_INCLUDE.concat([
@@ -589,6 +458,7 @@ exports.create = async (req, res) => {
       });
     } else {
       const trx = await Transaction.create(payload);
+      persisted = true;
 
       created = await Transaction.findByPk(trx.id, {
         include: COMMON_INCLUDE.concat([
@@ -603,6 +473,8 @@ exports.create = async (req, res) => {
       transaction: withLabels(created),
     });
   } catch (e) {
+    if (uploadedProof && !persisted) await discardProof(uploadedProof);
+    if (e.status) return res.status(e.status).json({ error: e.message });
     if (e?.code === TRANSACTION_MEDIA_STORAGE_ERROR_CODE) {
       return res.status(503).json({
         error:
@@ -681,12 +553,13 @@ exports.list = async (req, res) => {
     // Recherche fulltext (light)
     if (q && String(q).trim()) {
       const needle = `%${String(q).trim()}%`;
-      where[Op.or] = [
+      const search = [
         { description: { [Op.like]: needle } },
         { paymentMethod: { [Op.like]: needle } },
         { type: { [Op.like]: needle } },
         { status: { [Op.like]: needle } },
       ];
+      where[Op.and] = [...(where[Op.and] || []), { [Op.or]: search }];
     }
 
     const { limit, offset, page } = getPagination(req);
@@ -704,7 +577,7 @@ exports.list = async (req, res) => {
     const baseQuery = {
       where,
       include,
-      order: [[sortKey, sortDir]],
+      order: [[sortKey, sortDir], ...(sortKey !== 'id' ? [['id', sortDir]] : [])],
       limit,
       offset,
       distinct: true,
@@ -773,234 +646,96 @@ exports.detail = async (req, res) => {
  * ✅ GEO: countryId / regionId (admin only)
  * - Recalcule GEO quand les liens changent, sans casser l'existant
  * ============================================================================ */
+async function discardProof(proof) {
+  if (!proof) return;
+  try {
+    if (proof.fileId && isImageKitEnabled()) await imageKit.deleteFile(proof.fileId);
+    const url = extractProofUrl(proof);
+    if (url) await removeLocalUpload(url);
+  } catch (err) {
+    logger.warn({ err }, 'transaction.proof.cleanup.failed');
+  }
+}
+
 exports.update = async (req, res) => {
+  let uploadedProof = null;
+  let persisted = false;
   try {
     const id = toSafeInt(req.params.id);
-    if (!id) return res.status(400).json({ error: "ID invalide" });
+    if (!id) return res.status(400).json({ error: 'ID invalide' });
+    const trx = await Transaction.findByPk(id, { include: COMMON_INCLUDE });
+    if (!trx) return res.status(404).json({ error: 'Transaction introuvable' });
+    if (!await canAccessTransaction(req, trx)) return res.status(403).json({ error: 'Accès interdit' });
 
-    const trx = await Transaction.findByPk(id, {
-      include: COMMON_INCLUDE.concat([
-        { model: Order, as: "order" },
-        { model: Project, as: "project" },
-      ]),
-    });
-
-    if (!trx)
-      return res.status(404).json({ error: "Transaction introuvable" });
-
-    const allowed = await canAccessTransaction(req, trx);
-    if (!allowed) return res.status(403).json({ error: "Accès interdit" });
-
-    const {
-      description,
-      paymentMethod,
-      status,
-      currency,
-      orderId,
-      projectId,
-      serviceId,
-      taskId,
-      type,
-      amount,
-
-      // ✅ GEO (admin only) camelCase + snake_case
-      countryId,
-      regionId,
-      country_id,
-      region_id,
-    } = req.body || {};
-
-    if (description !== undefined) trx.description = toTrimOrNull(description);
-    if (paymentMethod !== undefined)
-      trx.paymentMethod = toTrimOrNull(paymentMethod);
-
-    /* ---------------------------------------
-       📸 Nouvelle preuve : suppr + re-upload
-       --------------------------------------- */
-    const fallbackPolicy = resolveLocalFallbackPolicy();
+    const body = req.body || {};
+    const updates = {};
+    const isAdmin = req.user?.role === 'admin';
+    const linkFields = ['serviceId', 'taskId', 'orderId', 'projectId'];
+    const geoFields = ['countryId', 'regionId', 'country_id', 'region_id'];
+    const scopeChanged = [...linkFields, ...geoFields].some((field) => body[field] !== undefined);
+    const context = scopeChanged ? await resolveTransactionContext(req, { previous: trx }) : {
+      service: trx.service, task: trx.task, order: trx.order, project: trx.project,
+      countryId: trx.countryId, regionId: trx.regionId,
+    };
+    if (scopeChanged) {
+      for (const field of linkFields) {
+        if (body[field] !== undefined) updates[field] = context[field.replace(/Id$/, '')]?.id ?? null;
+      }
+      if (body.orderId !== undefined && context.order) updates.userId = context.order.userId;
+      updates.countryId = context.countryId;
+      updates.regionId = context.regionId;
+    }
+    if (body.description !== undefined) updates.description = toTrimOrNull(body.description);
+    if (body.paymentMethod !== undefined) updates.paymentMethod = toTrimOrNull(body.paymentMethod);
+    for (const field of ['status', 'currency', 'type', 'amount']) {
+      if (body[field] !== undefined && !isAdmin) return res.status(403).json({ error: 'Seul un administrateur peut modifier ce champ financier' });
+    }
+    if (body.status !== undefined) {
+      const status = String(body.status).trim();
+      if (!ALLOWED_STATUSES.has(status)) return res.status(400).json({ error: 'Statut invalide' });
+      updates.status = status;
+    }
+    if (body.currency !== undefined) updates.currency = normalizeCurrency(body.currency, trx.currency || 'XOF');
+    if (body.type !== undefined) {
+      const type = String(body.type).trim();
+      if (!ALLOWED_TYPES.has(type)) return res.status(400).json({ error: 'Type invalide' });
+      updates.type = type;
+    }
+    if (body.amount !== undefined) {
+      const amount = parseAmount(body.amount);
+      if (amount === null) return res.status(400).json({ error: 'Montant invalide' });
+      updates.amount = amount;
+    }
     const up = extractUploadFile(req);
+    const previousProof = trx.proofFile;
+    if (body.status === 'completed' && !hasPaymentProof(previousProof) && !up) {
+      return res.status(400).json({ error: 'Une preuve de paiement est obligatoire pour clôturer la transaction.', code: 'PAYMENT_PROOF_REQUIRED' });
+    }
+    if (context.order && ['paid', 'delivered'].includes(context.order.status)) updates.status = 'completed';
+
+    // La preuve précédente reste disponible jusqu'à la persistance du remplacement.
     if (up) {
-      const previousProof = trx.proofFile;
-
-      if (trx.proofFile?.fileId) {
-        try {
-          await imageKit.deleteFile(trx.proofFile.fileId);
-        } catch (err) {
-          logger.warn({ err }, "transaction.proof.delete_old.failed");
-        }
-      }
-
-      const previousProofUrl = extractProofUrl(previousProof);
-      if (previousProofUrl) {
-        await removeLocalUpload(previousProofUrl);
-      }
-
-      trx.proofFile = await uploadProofToImageKit(up, fallbackPolicy);
-    }
-
-    const isAdmin = req.user?.role === "admin";
-    const isAdminLike = req.user?.role === "admin";
-
-    // Track si liens changent => recalcul GEO non destructif
-    let linkChanged = false;
-
-    if (serviceId !== undefined) {
-      trx.serviceId = toSafeInt(serviceId) || null;
-      linkChanged = true;
-    }
-
-    if (taskId !== undefined) {
-      trx.taskId = toSafeInt(taskId) || null;
-      linkChanged = true;
-    }
-
-    if (orderId !== undefined) {
-      const newOid = toSafeInt(orderId);
-      if (newOid) {
-        const newOrder = await Order.findByPk(newOid);
-        if (!newOrder)
-          return res.status(400).json({ error: "Commande cible introuvable" });
-
-        trx.orderId = newOrder.id;
-        trx.userId = newOrder.userId;
-      } else {
-        trx.orderId = null;
-      }
-      linkChanged = true;
-    }
-
-    if (projectId !== undefined) {
-      const newPid = toSafeInt(projectId);
-      if (newPid) {
-        const newProject = await Project.findByPk(newPid);
-        if (!newProject)
-          return res.status(400).json({ error: "Projet cible introuvable" });
-
-        trx.projectId = newProject.id;
-      } else {
-        trx.projectId = null;
-      }
-      linkChanged = true;
-    }
-
-    // Champs sensibles: admin only (mais status strict admin si tu veux)
-    if (status !== undefined) {
-      const s = String(status).trim();
-      if (!ALLOWED_STATUSES.has(s))
-        return res.status(400).json({ error: "Statut invalide" });
-
-      // ✅ On garde la règle forte: seul admin peut changer le status
-      if (!isAdmin) {
-        return res.status(403).json({
-          error: "Seul un administrateur peut modifier le statut",
-        });
-      }
-
-      trx.status = s;
-
-      if (s === "completed" && !hasPaymentProof(trx.proofFile)) {
-        return res.status(400).json({
-          error: "Une preuve de paiement (reçu) est obligatoire pour clôturer la transaction.",
-          code: "PAYMENT_PROOF_REQUIRED",
-        });
+      uploadedProof = await uploadProofToImageKit(up, resolveLocalFallbackPolicy());
+      updates.proofFile = uploadedProof;
+      if (body.status === 'completed' && !hasPaymentProof(uploadedProof)) {
+        throw Object.assign(new Error('Une preuve de paiement valide est requise'), { status: 400 });
       }
     }
-
-    if (currency !== undefined) {
-      if (!isAdminLike)
-        return res.status(403).json({
-          error: "Seul un admin peut modifier la devise",
-        });
-      trx.currency = normalizeCurrency(currency, trx.currency || "XOF");
-    }
-
-    if (type !== undefined) {
-      if (!isAdminLike)
-        return res.status(403).json({
-          error: "Seul un admin peut modifier le type",
-        });
-
-      const t = String(type).trim();
-      if (!ALLOWED_TYPES.has(t))
-        return res.status(400).json({ error: "Type invalide" });
-      trx.type = t;
-    }
-
-    if (amount !== undefined) {
-      if (!isAdminLike)
-        return res.status(403).json({
-          error: "Seul un admin peut modifier le montant",
-        });
-
-      const n = parseAmount(amount);
-      if (n === null)
-        return res.status(400).json({ error: "Montant invalide" });
-      trx.amount = n;
-    }
-
-    // ✅ GEO (admin only)
-    const geoCountrySent = countryId !== undefined || country_id !== undefined;
-    const geoRegionSent = regionId !== undefined || region_id !== undefined;
-
-    if (isAdminLike) {
-      if (geoCountrySent) trx.countryId = toSafeInt(countryId ?? country_id);
-      if (geoRegionSent) trx.regionId = toSafeInt(regionId ?? region_id);
-    }
-
-    // ✅ Recalc GEO si liens changent OU si geo manquante
-    if (linkChanged || trx.countryId == null || trx.regionId == null) {
-      const inferredGeo = await resolveGeoFromLinks({
-        serviceId: trx.serviceId,
-        taskId: trx.taskId,
-        orderId: trx.orderId,
-        projectId: trx.projectId,
-      });
-
-      // Non-destructif: complète seulement si null,
-      // sauf si admin a explicitement envoyé une valeur (déjà posée au-dessus).
-      if (trx.countryId == null && !geoCountrySent && inferredGeo.countryId != null) {
-        trx.countryId = inferredGeo.countryId;
-      }
-      if (trx.regionId == null && !geoRegionSent && inferredGeo.regionId != null) {
-        trx.regionId = inferredGeo.regionId;
-      }
-    }
-
-    // Finalisation auto si Order payé (nécessite parfois re-fetch)
-    if (trx.order && ["paid", "delivered"].includes(trx.order.status)) {
-      trx.status = "completed";
-    } else if (trx.orderId && !trx.order) {
-      // Si include n'a pas refresh après changement de orderId
-      const ord = await Order.findByPk(trx.orderId, { attributes: ["id", "status"] });
-      if (ord && ["paid", "delivered"].includes(ord.status)) {
-        trx.status = "completed";
-      }
-    }
-
+    Object.assign(trx, updates);
     await trx.save();
-
-    const updated = await Transaction.findByPk(trx.id, {
-      include: COMMON_INCLUDE.concat([
-        { model: Order, as: "order" },
-        { model: Project, as: "project" },
-      ]),
-    });
-
-    return res.json({
-      message: "Transaction mise à jour",
-      transaction: withLabels(updated),
-    });
+    persisted = true;
+    const oldProof = normalizeProofMeta(previousProof);
+    if (uploadedProof && oldProof && (oldProof.fileId !== uploadedProof.fileId || extractProofUrl(oldProof) !== extractProofUrl(uploadedProof))) await discardProof(oldProof);
+    const updated = await Transaction.findByPk(trx.id, { include: COMMON_INCLUDE });
+    return res.json({ message: 'Transaction mise à jour', transaction: withLabels(updated) });
   } catch (e) {
+    if (uploadedProof && !persisted) await discardProof(uploadedProof);
+    if (e.status) return res.status(e.status).json({ error: e.message });
     if (e?.code === TRANSACTION_MEDIA_STORAGE_ERROR_CODE) {
-      return res.status(503).json({
-        error:
-          "Stockage des preuves de transaction indisponible en production. Configurez ImageKit ou un UPLOADS_ROOT persistant.",
-      });
+      return res.status(503).json({ error: 'Stockage des preuves de transaction indisponible en production. Configurez ImageKit ou un UPLOADS_ROOT persistant.' });
     }
-    logger.error({ err: e }, "transaction.update.failed");
-    return res.status(500).json({
-      error: "Erreur lors de la mise à jour de la transaction",
-    });
+    logger.error({ err: e }, 'transaction.update.failed');
+    return res.status(500).json({ error: 'Erreur lors de la mise à jour de la transaction' });
   }
 };
 
@@ -1051,31 +786,7 @@ exports.remove = async (req, res) => {
  * ============================================================================ */
 exports.summary = async (req, res) => {
   try {
-    const where = applyGeoScopeForModel({}, req.user, Transaction);
-    const qCountryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
-    const qRegionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
-    if (qCountryId) where.countryId = qCountryId;
-    if (qRegionId) where.regionId = qRegionId;
-    const [revenues, expenses, commissions, adjustments] = await Promise.all([
-      Transaction.sum("amount", { where: { ...where, type: "revenue" } }),
-      Transaction.sum("amount", { where: { ...where, type: "expense" } }),
-      Transaction.sum("amount", { where: { ...where, type: "commission" } }),
-      Transaction.sum("amount", { where: { ...where, type: "adjustment" } }),
-    ]);
-
-    const balance =
-      (revenues || 0) -
-      (expenses || 0) -
-      (commissions || 0) +
-      (adjustments || 0);
-
-    return res.json({
-      revenues,
-      expenses,
-      commissions,
-      adjustments,
-      balance,
-    });
+    return res.json(await loadFinancialSummary(req));
   } catch (e) {
     logger.error({ err: e }, "transaction.summary.failed");
     return res.status(500).json({
@@ -1089,54 +800,27 @@ exports.summary = async (req, res) => {
  * ============================================================================ */
 exports.report = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate } = req.query || {};
 
     const start = startDate
       ? new Date(startDate)
       : new Date(Date.now() - 30 * 864e5);
     const end = endDate ? new Date(endDate) : new Date();
-
-    const where = applyGeoScopeForModel(
-      { createdAt: { [Op.between]: [start, end] } },
-      req.user,
-      Transaction
-    );
-    const qCountryId = toSafeInt(req.query?.countryId ?? req.query?.country_id);
-    const qRegionId = toSafeInt(req.query?.regionId ?? req.query?.region_id);
-    if (qCountryId) where.countryId = qCountryId;
-    if (qRegionId) where.regionId = qRegionId;
-
-    const transactions = await Transaction.findAll({
-      where,
-      include: [
-        { model: User, as: "user", attributes: ["id", "email", "role"] },
-        { model: Order, as: "order", attributes: ["id", "code", "status"] },
-        { model: Project, as: "project", attributes: ["id", "title", "status"] },
-      ],
-      order: [["createdAt", "ASC"]],
-    });
-
-    const totals = {
-      revenue: 0,
-      expense: 0,
-      commission: 0,
-      adjustment: 0,
-    };
-
-    transactions.forEach((t) => {
-      const k = t.type;
-      totals[k] = (totals[k] || 0) + parseFloat(t.amount || 0);
-    });
-
-    const totalsWithLabels = Object.entries(totals).map(([key, value]) => ({
-      type: key,
-      typeLabel: getLabel(key, TRANSACTION_TYPES),
-      amount: value,
-    }));
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || start > end) {
+      return res.status(400).json({ error: 'Période de rapport invalide' });
+    }
+    const summary = await loadFinancialSummary(req, { createdAt: { [Op.between]: [start, end] } });
+    const toTotals = (item) => ({ revenue: item.revenues, expense: item.expenses, commission: item.commissions, adjustment: item.adjustments });
+    const byCurrency = summary.byCurrency.map((item) => ({ currency: item.currency, count: item.count, balance: item.balance, totals: toTotals(item) }));
+    const totals = toTotals(summary);
+    const totalsWithLabels = byCurrency.flatMap((item) => Object.entries(item.totals).map(([type, amount]) => ({ type, typeLabel: getLabel(type, TRANSACTION_TYPES), amount, currency: item.currency })));
 
     return res.json({
       period: { start, end },
-      count: transactions.length,
+      count: summary.count,
+      currency: summary.currency,
+      multiCurrency: summary.multiCurrency,
+      byCurrency,
       totals,
       totalsWithLabels,
     });

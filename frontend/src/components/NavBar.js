@@ -190,6 +190,7 @@ const ROLE_LINKS = {
 
     { path: "/tasks", labelKey: "nav.tasks" },
     { path: "/admin/services", labelKey: "nav.adminServices" },
+    { path: "/admin/operations", labelKey: "operations.title" },
     { path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations" },
     { path: "/admin/livraisons", labelKey: "nav.deliveryOperations" },
     { path: "/admin/metrics", labelKey: "nav.metrics" },
@@ -328,6 +329,7 @@ function buildSections(role, links, t) {
       byPath("/notifications"),
       byPath("/activities"),
       byPath("/admin/services"),
+      byPath("/admin/operations"),
       byPath("/admin/taxi-dispatch"),
       byPath("/admin/livraisons"),
       byPath("/projects"),

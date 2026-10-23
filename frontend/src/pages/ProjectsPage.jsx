@@ -133,7 +133,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
   const [form, setForm] = useState({
     type: 'expense',
     amount: '',
-    currency: 'XOF',
+    currency: '',
     paymentMethod: '',
     description: '',
     orderId: '',
@@ -147,11 +147,11 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
 
   const currencyOptions = useMemo(
     () =>
-      CURRENCY_CODES.map((code) => ({
+      [...new Set([...CURRENCY_CODES, project.currency, form.currency].filter(Boolean))].map((code) => ({
         value: code,
         label: t(`currency.${code}`, { defaultValue: code }),
       })),
-    [t]
+    [t, project.currency, form.currency]
   );
 
   async function handleSubmit(e) {
@@ -162,7 +162,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
       await createTransaction({
         type: form.type,
         amount: form.amount ? Number(form.amount) : undefined,
-        currency: form.currency,
+        currency: form.currency || undefined,
         description: form.description || undefined,
         paymentMethod: form.paymentMethod || undefined,
         orderId: form.orderId ? Number(form.orderId) : undefined,
@@ -237,6 +237,7 @@ function TransactionInlineForm({ project, currentUser, onClose, onSuccess }) {
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
             className="min-w-0 w-full rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-sm text-text-primary"
           >
+            <option value="">{t('common.currencyFromOperation')}{project.currency ? ` (${project.currency})` : ''}</option>
             {currencyOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -1077,7 +1078,7 @@ export default function ProjectsPage() {
                     <p className="mt-2 text-sm font-medium text-text-primary">
                       {t('projects.card.budget')}{' '}
                       {formatNumber(p.budget)}{' '}
-                      {t('projects.card.currency', { defaultValue: 'XOF' })}
+                      {p.currency || 'XOF'}
                     </p>
                   )}
 

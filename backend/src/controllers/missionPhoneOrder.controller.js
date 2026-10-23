@@ -6,6 +6,7 @@ const { normalizePhone, isValidPhone } = require('../utils/contactIdentity');
 const { notifyServiceCreated } = require('../services/serviceNotification.service');
 const { geocodeAddress } = require('../services/geocoding.service');
 const { estimateMission } = require('../services/priceEstimate.service');
+const { isServiceAvailable } = require('../services/localCatalog.service');
 const { getMissionStartCode } = require('../services/missionSafety.service');
 const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
 const {
@@ -15,8 +16,9 @@ const {
   createClientUser,
 } = require('./auth.controller');
 const { PICKUP_REQUIRED_SLUGS } = require('./mission.controller');
-const { isGlobalAdmin } = require('../utils/geoScope');
+const { isGlobalAdmin, canAccessGeoResource } = require('../utils/geoScope');
 const { resolveDeliveryDetails } = require('../utils/deliveryDetails');
+const { createTrackedResource } = require('../services/trackedCreation.service');
 const logger = require('../utils/logger');
 
 /**
@@ -95,6 +97,7 @@ exports.create = async (req, res) => {
     let isNewAccount = false;
     let recoveryCodes = [];
     let generatedPin = null;
+    let pendingRegistration = null;
 
     if (user) {
       if (user.role !== 'client') {
@@ -121,21 +124,16 @@ exports.create = async (req, res) => {
       // jamais silencieusement perdu (le compte doit rester accessible ensuite).
       const effectivePin = pin && String(pin).trim() ? String(pin).trim() : crypto.randomBytes(6).toString('hex');
       if (!pin) generatedPin = effectivePin;
-      ({ user } = await createClientUser({
+      pendingRegistration = {
+
         phone,
         password: effectivePin,
         firstName,
         countryId: geoScope.countryId,
         regionId: req.body?.regionId,
         language: req.body?.language,
-      }));
-      isNewAccount = true;
-
-      try {
-        recoveryCodes = await rotateRecoveryCodes({ userId: user.id, req });
-      } catch (recoveryErr) {
-        logger.warn({ err: recoveryErr }, 'missionPhoneOrder.create.recovery_codes_generation_failed');
-      }
+      };
+      user = { phone, firstName, countryId: geoScope.countryId, regionId: req.body?.regionId || null };
     }
 
     const trimmedAddress = address ? String(address).trim() : null;
@@ -146,13 +144,8 @@ exports.create = async (req, res) => {
     let geocodedAdminAreaName = null;
 
     if ((!Number.isFinite(latitude) || !Number.isFinite(longitude)) && trimmedAddress) {
-      const geocoded = (await geocodeAddress(trimmedAddress)) || {
-        latitude: null,
-        longitude: null,
-        countryIso: null,
-        adminAreaName: null,
-      };
-      if (!geocoded) {
+      const geocoded = await geocodeAddress(trimmedAddress);
+      if (!geocoded || !Number.isFinite(geocoded.latitude) || !Number.isFinite(geocoded.longitude)) {
         return res.status(400).json({
           error: 'Adresse introuvable. Veuillez préciser un lieu plus précis.',
         });
@@ -174,11 +167,8 @@ exports.create = async (req, res) => {
     let pickupLongitude = rawPickupLongitude != null ? Number(rawPickupLongitude) : null;
 
     if (pickupAddress && (!Number.isFinite(pickupLatitude) || !Number.isFinite(pickupLongitude))) {
-      const geocodedPickup = (await geocodeAddress(pickupAddress)) || {
-        latitude: null,
-        longitude: null,
-      };
-      if (!geocodedPickup) {
+      const geocodedPickup = await geocodeAddress(pickupAddress);
+      if (!geocodedPickup || !Number.isFinite(geocodedPickup.latitude) || !Number.isFinite(geocodedPickup.longitude)) {
         return res.status(400).json({
           error: 'Adresse de départ introuvable. Veuillez préciser un lieu plus précis.',
         });
@@ -203,14 +193,24 @@ exports.create = async (req, res) => {
     const missionGeoScope = await resolveMissionGeoScope({
       countryIso: geocodedCountryIso,
       adminAreaName: geocodedAdminAreaName,
-      fallbackCountryId: user.countryId,
-      fallbackRegionId: user.regionId,
+      fallbackCountryId: countryId || user.countryId,
+      fallbackRegionId: req.body.regionId ?? (String(countryId || user.countryId) === String(user.countryId) ? user.regionId : null),
       tradeCategoryScope: tradeCategory
         ? { countryId: tradeCategory.countryId, regionId: tradeCategory.regionId }
         : null,
     });
     if (missionGeoScope.error) {
       return res.status(400).json({ error: missionGeoScope.error });
+    }
+    if (countryId && String(missionGeoScope.countryId) !== String(countryId)) return res.status(400).json({ error: 'Le lieu doit correspondre au pays choisi.' });
+    if (!canAccessGeoResource(missionGeoScope, req.user)) return res.status(403).json({ error: 'Demande hors de votre périmètre.' });
+    if (!await isServiceAvailable({
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
+      tradeCategoryId: tradeCategory?.id,
+      serviceType: tradeCategory ? null : serviceType,
+    })) {
+      return res.status(409).json({ error: 'Ce service n’est pas disponible dans ce pays ou cette région.' });
     }
 
     const executionType = tradeCategory ? 'provider' : 'agent';
@@ -240,7 +240,18 @@ exports.create = async (req, res) => {
       packageType,
     });
 
-    const service = await Service.create({
+    if (pendingRegistration) {
+      ({ user } = await createClientUser(pendingRegistration));
+      isNewAccount = true;
+
+      try {
+        recoveryCodes = await rotateRecoveryCodes({ userId: user.id, req });
+      } catch (recoveryErr) {
+        logger.warn({ err: recoveryErr }, 'missionPhoneOrder.create.recovery_codes_generation_failed');
+      }
+    }
+
+    const service = await createTrackedResource(req, Service, {
       clientId: user.id,
       agentId: null,
       createdById: req.user.id,

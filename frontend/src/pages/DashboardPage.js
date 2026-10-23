@@ -5,6 +5,9 @@
 // ============================================================================
 
 import { useEffect, useState } from 'react';
+import { useGeo } from '../contexts/GeoContext';
+import { territoryContact } from '../utils/territoryContact';
+import { buildWhatsappHref } from '../utils/phone';
 import {
   ArrowUpRight,
   BarChart3,
@@ -70,6 +73,7 @@ function getInitials(user) {
    PAGE PRINCIPALE
 =========================================================================== */
 export default function DashboardPage() {
+  const geo = useGeo();
   const { formatNumber } = useLocale();
   const { t } = useTranslation();
   const [user, setUser] = useState(null);
@@ -495,12 +499,14 @@ export default function DashboardPage() {
   const firstName = user.firstName || user.phone || user.email || '';
   const shortName =
     (firstName.split(' ')[0] || '').trim() || t("dashboard.careFallbackName");
-  const supportPhoneDisplay = '00223 70453345';
-  const supportPhoneWhatsapp = '22370453345';
+  const supportCountryId = geo.countryId || user.countryId;
+  const supportRegionId = geo.regionId || (String(supportCountryId) === String(user.countryId) ? user.regionId : null);
+  const { phone: supportPhoneDisplay } = territoryContact({
+    country: geo.countries.find((country) => String(country.id) === String(supportCountryId)),
+    region: geo.regions.find((region) => String(region.id) === String(supportRegionId)),
+  });
   const supportEmail = 'teranga.diaspora.platform@gmail.com';
-  const whatsappHref = `https://wa.me/${supportPhoneWhatsapp}?text=${encodeURIComponent(
-    t('dashboard.contactBar.whatsappPrefill')
-  )}`;
+  const whatsappHref = buildWhatsappHref(supportPhoneDisplay, t('dashboard.contactBar.whatsappPrefill'));
   const emailHref = `mailto:${supportEmail}`;
   /* ============================================================================
      Rendu principal.
@@ -524,7 +530,7 @@ export default function DashboardPage() {
               <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                 <span className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-emerald-600/20 bg-white/70 px-2.5 py-1 font-semibold text-emerald-800 dark:border-emerald-300/30 dark:bg-black/20 dark:text-emerald-100">
                   <MessageCircle size={15} />
-                  {supportPhoneDisplay}
+                  {supportPhoneDisplay || t('geo.localContactMissing')}
                 </span>
                 <span className="inline-flex max-w-full items-start gap-1.5 rounded-lg border border-emerald-600/20 bg-white/70 px-2.5 py-1 text-emerald-800 dark:border-emerald-300/30 dark:bg-black/20 dark:text-emerald-100">
                   <Mail size={15} className="mt-0.5 shrink-0" />
@@ -535,7 +541,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <a
+              {whatsappHref && (<a
                 href={whatsappHref}
                 target="_blank"
                 rel="noreferrer"
@@ -543,7 +549,7 @@ export default function DashboardPage() {
               >
                 {t('dashboard.contactBar.whatsappCta')}
                 <ArrowUpRight size={15} />
-              </a>
+              </a>)}
               <a
                 href={emailHref}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-700/30 bg-white/80 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:bg-white dark:bg-transparent dark:text-emerald-100 dark:hover:bg-emerald-900/30"

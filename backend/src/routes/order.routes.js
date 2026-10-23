@@ -9,6 +9,7 @@ const evidenceCtrl = require('../controllers/evidence.controller');
 
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
+const { guardCreation } = require('../middleware/creationRequest.middleware');
 const { validateBody } = require('../middleware/validate.middleware');
 const { writeLimiter } = require('../middleware/rateLimit.middleware');
 const { createOrderSchema, updateOrderSchema } = require('../validators/order.schemas');
@@ -24,7 +25,7 @@ router.post(
   auth,
   requireRoles('admin', 'client'),
   writeLimiter,
-  validateBody(createOrderSchema),
+  validateBody(createOrderSchema), guardCreation('order'),
   ctrl.create
 );
 router.get('/', auth, requireRoles('admin', 'agent', 'client'), ctrl.list);

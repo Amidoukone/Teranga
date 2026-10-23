@@ -15,6 +15,7 @@ export function resolveNotificationLink(n, currentUserRole) {
   }
 
   if (n.entityType === 'service') {
+    if (n?.metadata?.coordinationState && currentUserRole === 'admin') return '/admin/operations';
     const serviceId = n?.metadata?.serviceId || n?.entityId;
     if (!serviceId) return currentUserRole === 'agent' ? '/agent/services' : '/services';
     // Mission filière (executionType='provider', missionStatus renseigné) : ouvre le suivi

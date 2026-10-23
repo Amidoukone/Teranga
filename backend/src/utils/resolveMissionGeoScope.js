@@ -38,7 +38,7 @@ async function matchRegionByName(countryId, adminAreaName) {
   if (!countryId || !adminAreaName) return null;
 
   const candidates = await Region.findAll({
-    where: { countryId },
+    where: { countryId, isActive: true },
     attributes: ['id', 'name'],
   });
   if (!candidates.length) return null;
@@ -95,20 +95,65 @@ async function resolveMissionGeoScope({
   fallbackCountryId = null,
   fallbackRegionId = null,
   tradeCategoryScope = null,
+  selectedCountryId = null,
+  selectedRegionId = null,
 }) {
+  let selectedScope = null;
+  if (selectedCountryId) {
+    selectedScope = await resolveGeoScope({
+      countryId: selectedCountryId,
+      regionId: selectedRegionId,
+    });
+    if (selectedScope.error) return { error: selectedScope.error };
+  }
+
   if (tradeCategoryScope?.countryId) {
+    const scopedCountry = await resolveGeoScope({
+      countryId: tradeCategoryScope.countryId,
+      regionId: tradeCategoryScope.regionId ?? null,
+    });
+    if (scopedCountry.error) return { error: scopedCountry.error };
+    if (countryIso && String(scopedCountry.countryIso).toUpperCase() !== String(countryIso).toUpperCase()) {
+      return { error: 'La destination ne correspond pas au pays de cette filière.' };
+    }
+    if (selectedScope && String(selectedScope.countryId) !== String(scopedCountry.countryId)) {
+      return { error: 'La filière ne couvre pas le pays sélectionné.' };
+    }
+    if (selectedRegionId && tradeCategoryScope.regionId &&
+      String(selectedRegionId) !== String(tradeCategoryScope.regionId)) {
+      return { error: 'La filière ne couvre pas la région sélectionnée.' };
+    }
+    if (selectedRegionId && adminAreaName) {
+      const destinationRegionId = await matchRegionByName(scopedCountry.countryId, adminAreaName);
+      if (destinationRegionId && String(destinationRegionId) !== String(selectedRegionId)) {
+        return { error: 'La destination ne correspond pas à la région sélectionnée.' };
+      }
+    }
     const hasMaster = await countryHasActiveMaster(tradeCategoryScope.countryId);
     if (!hasMaster) {
       return { error: 'Nos services ne sont pas disponibles pour le moment dans ce pays.' };
     }
     return {
       countryId: tradeCategoryScope.countryId,
-      regionId: tradeCategoryScope.regionId ?? null,
+      regionId: tradeCategoryScope.regionId ?? selectedScope?.regionId ?? null,
     };
   }
 
   if (!countryIso) {
-    return { countryId: fallbackCountryId, regionId: fallbackRegionId };
+    if (selectedScope) {
+      const hasMaster = await countryHasActiveMaster(selectedScope.countryId);
+      if (!hasMaster) {
+        return { error: 'Nos services ne sont pas disponibles pour le moment dans ce pays.' };
+      }
+      return { countryId: selectedScope.countryId, regionId: selectedScope.regionId };
+    }
+    if (!fallbackCountryId) return { countryId: null, regionId: null };
+    const fallback = await resolveGeoScope({
+      countryId: fallbackCountryId,
+      regionId: fallbackRegionId,
+    });
+    if (fallback.error) return { error: fallback.error };
+    return { countryId: fallback.countryId, regionId: fallback.regionId };
   }
 
   const geoScope = await resolveGeoScope({ country: countryIso });
@@ -116,14 +161,21 @@ async function resolveMissionGeoScope({
     return { error: geoScope.error };
   }
 
+  if (selectedScope && String(selectedScope.countryId) !== String(geoScope.countryId)) {
+    return { error: 'La destination ne correspond pas au pays sélectionné.' };
+  }
+
   const regionId = await matchRegionByName(geoScope.countryId, adminAreaName);
+  if (selectedRegionId && regionId && String(selectedRegionId) !== String(regionId)) {
+    return { error: 'La destination ne correspond pas à la région sélectionnée.' };
+  }
 
   const hasMaster = await countryHasActiveMaster(geoScope.countryId);
   if (!hasMaster) {
     return { error: 'Nos services ne sont pas disponibles pour le moment dans ce pays.' };
   }
 
-  return { countryId: geoScope.countryId, regionId };
+  return { countryId: geoScope.countryId, regionId: regionId ?? selectedScope?.regionId ?? null };
 }
 
 module.exports = { resolveMissionGeoScope };

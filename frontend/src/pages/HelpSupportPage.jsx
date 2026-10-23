@@ -16,9 +16,18 @@ import {
 } from 'lucide-react';
 
 import SettingsSubpageLayout from '../components/SettingsSubpageLayout';
+import { useGeo } from '../contexts/GeoContext';
+import { territoryContact } from '../utils/territoryContact';
 
 export default function HelpSupportPage() {
   const { t } = useTranslation();
+  const geo = useGeo();
+  const countryId = geo.countryId || geo.user?.countryId;
+  const regionId = geo.regionId || (String(countryId) === String(geo.user?.countryId) ? geo.user?.regionId : null);
+  const { phone } = territoryContact({
+    country: geo.countries.find((country) => String(country.id) === String(countryId)),
+    region: geo.regions.find((region) => String(region.id) === String(regionId)),
+  });
   const requestCards = [
     {
       icon: Wrench,
@@ -52,7 +61,7 @@ export default function HelpSupportPage() {
   ];
   const supportChannels = [
     { icon: Mail, value: t('helpSupportPage.contact.channels.email') },
-    { icon: Phone, value: t('helpSupportPage.contact.channels.phone') },
+    { icon: Phone, value: phone || t('geo.localContactMissing') },
   ];
 
   return (

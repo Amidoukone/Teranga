@@ -72,7 +72,7 @@ export default function TasksPage() {
     priority: 'normal',
     dueDate: '',
     estimatedCost: '',
-    currency: 'XOF',
+    currency: '',
     assignedTo: '',
   });
 
@@ -207,7 +207,7 @@ export default function TasksPage() {
         dueDate: form.dueDate ? new Date(form.dueDate) : null,
         estimatedCost:
           form.estimatedCost === '' ? null : parseFloat(form.estimatedCost),
-        currency: String(form.currency || 'XOF').toUpperCase(),
+        currency: form.currency ? form.currency.toUpperCase() : undefined,
         assignedTo: form.assignedTo ? parseInt(form.assignedTo, 10) : null,
       };
 
@@ -226,7 +226,7 @@ export default function TasksPage() {
         priority: 'normal',
         dueDate: '',
         estimatedCost: '',
-        currency: 'XOF',
+        currency: '',
         assignedTo: '',
       });
 
@@ -619,6 +619,7 @@ function TaskFilters({
 
 function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLike }) {
   const { t } = useTranslation();
+  const serviceCurrency = services.find((service) => String(service.id) === String(form.serviceId))?.currency;
   return (
     <div className="mb-10">
       <h2 className="text-lg sm:text-xl font-semibold text-text-primary mb-3">
@@ -642,7 +643,7 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
           </label>
           <select
             value={form.serviceId}
-            onChange={(e) => setForm({ ...form, serviceId: e.target.value })}
+            onChange={(e) => setForm({ ...form, serviceId: e.target.value, currency: '' })}
             required
             className="
               w-full border border-border rounded-lg px-3 py-2 bg-surface-card text-text-primary
@@ -787,7 +788,8 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
               text-sm sm:text-base focus:ring-2 focus:ring-blue-500
             "
           >
-            {TASK_CURRENCY_CODES.map((code) => (
+            <option value="">{t('common.currencyFromService')}{serviceCurrency ? ` (${serviceCurrency})` : ''}</option>
+            {[...new Set([...TASK_CURRENCY_CODES, serviceCurrency, form.currency].filter(Boolean))].map((code) => (
               <option key={code} value={code}>
                 {t(`currency.${code}`, { defaultValue: code })}
               </option>

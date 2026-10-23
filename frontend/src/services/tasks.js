@@ -56,7 +56,7 @@ export async function createTask(form) {
     currency:
       typeof form?.currency === 'string' && form.currency.trim()
         ? form.currency.trim().toUpperCase()
-        : 'XOF',
+        : undefined,
     dueDate: form?.dueDate ? new Date(form.dueDate) : null,
   });
 

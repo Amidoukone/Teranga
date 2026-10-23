@@ -19,6 +19,7 @@ const bootstrapAdmin = require('./src/utils/bootstrapAdmin');
 const { startMissionThresholdJob } = require('./src/jobs/missionThresholdCheck.job');
 const { startDisputeEscalationJob } = require('./src/jobs/disputeEscalation.job');
 const { startLogisticsAcceptanceJob } = require('./src/jobs/logisticsAcceptance.job');
+const { startMissionCoordinationJob } = require('./src/jobs/missionCoordination.job');
 
 // Activer les logs SQL si disponibles
 if (sequelize?.options) {
@@ -195,5 +196,6 @@ if ((process.env.NODE_ENV || 'development') !== 'test') {
   startMissionThresholdJob();
   startDisputeEscalationJob();
   startLogisticsAcceptanceJob();
+  startMissionCoordinationJob();
 }
 

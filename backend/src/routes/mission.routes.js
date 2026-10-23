@@ -7,9 +7,12 @@ const disputeCtrl = require('../controllers/dispute.controller');
 const phoneOrderCtrl = require('../controllers/missionPhoneOrder.controller');
 const mobilityDispatchCtrl = require('../controllers/mobilityDispatch.controller');
 const safetyCtrl = require('../controllers/missionSafety.controller');
+const completionCtrl = require('../controllers/missionCompletion.controller');
+const uploadEvidence = require('../middleware/uploadEvidence.middleware');
 const auth = require('../middleware/auth.middleware');
 const { requirePermission } = require('../middleware/authorization.middleware');
 const { PERMISSIONS } = require('../constants/permissions');
+const { guardCreation } = require('../middleware/creationRequest.middleware');
 const { validateBody } = require('../middleware/validate.middleware');
 const uploadMissionAttachment = require('../middleware/uploadMissionAttachment.middleware');
 const {
@@ -82,7 +85,7 @@ router.post(
   '/',
   auth,
   requirePermission(PERMISSIONS.MISSION_CLIENT_SELF),
-  validateBody(createMissionSchema),
+  validateBody(createMissionSchema), guardCreation('mission'),
   ctrl.create
 );
 
@@ -93,7 +96,7 @@ router.post(
   '/phone-order',
   auth,
   requirePermission(PERMISSIONS.MISSION_OPERATE),
-  validateBody(phoneOrderSchema),
+  validateBody(phoneOrderSchema), guardCreation('phone-order'),
   phoneOrderCtrl.create
 );
 
@@ -104,6 +107,8 @@ router.post(
   uploadMissionAttachment,
   ctrl.addAttachments
 );
+
+router.post('/:id/completion-report', auth, requirePermission(PERMISSIONS.MISSION_FIELD_EXECUTE), writeLimiter, uploadEvidence.anyCompat(), completionCtrl.submit);
 
 // Assignation manuelle (admin) — moteur de matching automatique reporté au Lot 4.
 router.post(

@@ -29,6 +29,9 @@ export default function LocationStep({
   isMobilite,
   pickupAddress,
   pickupCoordinates,
+  countryIso,
+  countryName,
+  regionName,
   onPickupAddressChange,
   onPickupPlaceSelected,
   onPickupMapPositionChange,
@@ -111,6 +114,7 @@ export default function LocationStep({
               value={pickupAddress}
               onChange={onPickupAddressChange}
               onPlaceSelected={onPickupPlaceSelected}
+              countryIso={countryIso}
             />
           </div>
           <div className="mt-3">
@@ -118,6 +122,8 @@ export default function LocationStep({
               latitude={pickupCoordinates?.latitude}
               longitude={pickupCoordinates?.longitude}
               onPositionChange={onPickupMapPositionChange}
+              countryName={countryName}
+              regionName={regionName}
             />
           </div>
         </div>
@@ -137,6 +143,7 @@ export default function LocationStep({
           value={address}
           onChange={onAddressChange}
           onPlaceSelected={onPlaceSelected}
+          countryIso={countryIso}
         />
       </div>
 
@@ -159,6 +166,8 @@ export default function LocationStep({
           latitude={coordinates?.latitude}
           longitude={coordinates?.longitude}
           onPositionChange={onMapPositionChange}
+          countryName={countryName}
+          regionName={regionName}
         />
         <p className="mt-2 flex items-center gap-1.5 text-xs text-text-muted">
           <MapPin size={13} />

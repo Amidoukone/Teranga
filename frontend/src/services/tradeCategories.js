@@ -1,5 +1,6 @@
 // frontend/src/services/tradeCategories.js
 import api from './api';
+import { mergeGeoParams } from './geo';
 
 // GET /api/v1/trade-categories — public, filières actives (docs/DEV_SPEC_TERANGA_v3.md section 3.3).
 // v1-only (section 0.5) : préfixe explicite /v1. countryId/regionId optionnels : filtrent les
@@ -17,7 +18,7 @@ export async function listTradeCategories({ countryId, regionId } = {}) {
 // GET /api/v1/trade-categories/admin — admin/master, toutes les filières (actives + inactives),
 // pour la page de gestion.
 export async function listTradeCategoriesAdmin() {
-  const { data } = await api.get('/v1/trade-categories/admin');
+  const { data } = await api.get('/v1/trade-categories/admin', { params: mergeGeoParams() });
   return data?.tradeCategories || [];
 }
 

@@ -18,20 +18,21 @@ async function checkDatabase() {
     await db.sequelize.authenticate();
     return true;
   } catch (_err) {
+    if (process.env.REQUIRE_INTEGRATION_DB === 'true') throw _err;
     return false;
   }
 }
 
 async function makeCountry(currency) {
-  const iso = Math.random().toString(36).slice(2, 4).toUpperCase();
-  const country = await db.Country.create({
-    name: `PriceEstimate-${Date.now()}-${iso}`,
-    isoCode: iso,
-    currency,
-    isActive: true,
-  });
-  created.countryIds.push(country.id);
-  return country;
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const iso = String.fromCharCode(65 + Math.floor(Math.random() * 26), 65 + Math.floor(Math.random() * 26));
+    try {
+      const country = await db.Country.create({ name: `PriceEstimate-${Date.now()}-${iso}`, isoCode: iso, currency, isActive: true });
+      created.countryIds.push(country.id);
+      return country;
+    } catch (error) { if (error.name !== 'SequelizeUniqueConstraintError') throw error; }
+  }
+  throw new Error('No unique country code available for the test fixture');
 }
 
 async function makeRegion(countryId) {

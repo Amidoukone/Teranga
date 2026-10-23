@@ -37,6 +37,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 'fr',
         field: 'default_language',
       },
+      timezone: { type: DataTypes.STRING(80), allowNull: true },
       isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

@@ -80,6 +80,29 @@ describe('service catalog projection', () => {
     );
   });
 
+  test('uses the local currency and blocks a country without one', () => {
+    const source = validSource();
+    source.countries[0].currency = 'GHS';
+    expect(buildCatalogProjection(source).availabilities.every((item) => item.currency === 'GHS')).toBe(true);
+
+    source.countries[0].currency = null;
+    const projection = buildCatalogProjection(source);
+    expect(projection.summary.readyToApply).toBe(false);
+    expect(projection.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'CATALOG_COUNTRY_CURRENCY_MISSING' }),
+    ]));
+  });
+
+  test('prepares offerings for an inactive country before launch', () => {
+    const source = validSource();
+    source.countries[0].isActive = false;
+    source.territories[0].isActive = false;
+    const projection = buildCatalogProjection(source);
+    expect(projection.availabilities).toHaveLength(7);
+    expect(projection.availabilities.every((item) => item.isActive === false)).toBe(true);
+    expect(projection.summary.readyToApply).toBe(true);
+  });
+
   test('refuses all writes while the catalog projection has blocking issues', async () => {
     const db = { sequelize: { transaction: jest.fn() } };
     const projection = buildCatalogProjection({
@@ -90,5 +113,22 @@ describe('service catalog projection', () => {
       code: 'SERVICE_CATALOG_PROJECTION_BLOCKED',
     });
     expect(db.sequelize.transaction).not.toHaveBeenCalled();
+  });
+
+  test('does not overwrite a configured local offering on a repeated projection', async () => {
+    const existingOffering = { id: 7, basePrice: 500, currency: 'GHS', update: jest.fn() };
+    const db = {
+      sequelize: { transaction: jest.fn((run) => run('tx')) },
+      ServiceDefinition: { findOrCreate: jest.fn().mockResolvedValue([{ id: 9, update: jest.fn() }, false]) },
+      ServiceAvailability: { findOrCreate: jest.fn().mockResolvedValue([existingOffering, false]) },
+    };
+    const projection = {
+      summary: { readyToApply: true },
+      definitions: [{ code: 'TRADE:TEST', name: 'Test' }],
+      availabilities: [{ definitionCode: 'TRADE:TEST', territoryId: 1, organizationId: 2, currency: 'GHS', basePrice: null }],
+    };
+    const stats = await applyCatalogProjection(db, projection);
+    expect(existingOffering.update).not.toHaveBeenCalled();
+    expect(stats.availabilitiesExisting).toBe(1);
   });
 });

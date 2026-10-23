@@ -65,8 +65,9 @@ async function transitionMissionStatus({
   actorId,
   extraFields = {},
   expectedFields = {},
+  transaction = null,
 }) {
-  return sequelize.transaction(async (t) => {
+  const applyTransition = async (t) => {
     // Le verrou empêche deux opérateurs/jobs de faire partir simultanément la
     // même mission depuis un état devenu périmé entre la lecture et l'écriture.
     await service.reload({ transaction: t, lock: true });
@@ -125,7 +126,8 @@ async function transitionMissionStatus({
     );
 
     return service;
-  });
+  };
+  return transaction ? applyTransition(transaction) : sequelize.transaction(applyTransition);
 }
 
 module.exports = {

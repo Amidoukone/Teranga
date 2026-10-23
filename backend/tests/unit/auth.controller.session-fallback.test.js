@@ -14,6 +14,7 @@ jest.mock('../../models', () => ({
     findByPk: jest.fn(),
     count: jest.fn(),
     update: jest.fn(),
+    create: jest.fn(),
   },
   Country: {
     findOne: jest.fn(),
@@ -62,7 +63,7 @@ jest.mock('../../src/utils/logger', () => ({
 }));
 
 const bcrypt = require('bcrypt');
-const { User, RefreshToken } = require('../../models');
+const { User, Country, Franchise, RefreshToken } = require('../../models');
 const controller = require('../../src/controllers/auth.controller');
 
 function makeReq({
@@ -102,6 +103,25 @@ describe('auth.controller session fallback', () => {
     jest.clearAllMocks();
     RefreshToken.create.mockResolvedValue({ id: 88 });
     User.findAll.mockReset();
+  });
+
+  test('registration uses the country language unless the client chose one', async () => {
+    User.findOne.mockResolvedValue(null);
+    Franchise.count.mockResolvedValue(1);
+    Country.findByPk.mockResolvedValue({ id: 3, isoCode: 'GH', isActive: true, defaultLanguage: 'en' });
+    User.create.mockImplementation(async (values) => ({ id: 42, ...values }));
+
+    const res = makeRes();
+    await controller.register(makeReq({ body: {
+      email: 'ghana@example.com', password: 'Password123!', countryId: 3,
+    } }), res);
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(User.create).toHaveBeenCalledWith(expect.objectContaining({ language: 'en' }));
+
+    await controller.register(makeReq({ body: {
+      email: 'ghana-fr@example.com', password: 'Password123!', countryId: 3, language: 'fr',
+    } }), makeRes());
+    expect(User.create).toHaveBeenLastCalledWith(expect.objectContaining({ language: 'fr' }));
   });
 
   test('login exposes refresh token when fallback header is requested', async () => {

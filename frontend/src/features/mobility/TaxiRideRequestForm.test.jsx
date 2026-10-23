@@ -67,7 +67,7 @@ jest.mock("react-i18next", () => {
       };
       return labels[key] || key;
   };
-  return { useTranslation: () => ({ t }) };
+  return { useTranslation: () => ({ t, i18n: { language: "fr" } }) };
 });
 
 jest.mock("../mission-creation/LocationAutocompleteInput", () =>

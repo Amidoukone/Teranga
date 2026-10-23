@@ -1,3 +1,4 @@
+import AgentCoordinationPanel from '../features/mission-tracking/AgentCoordinationPanel';
 // frontend/src/pages/MyMissionsPage.jsx
 // "Mes missions" — portail agent (superviseur ou exécutant) / prestataire exécutant sur les
 // missions filière (executionType='provider', voir docs/DEV_SPEC_TERANGA_v3.md section 2/3).
@@ -75,6 +76,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     ? 'livraison'
     : null;
 
+  const [isAgent, setIsAgent] = useState(false);
   const [isAllowed, setIsAllowed] = useState(null);
   const [missions, setMissions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -105,7 +107,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
           return;
         }
 
-        setIsAllowed(true);
+        setIsAllowed(true); setIsAgent(role === 'agent');
 
         if (role === 'provider') {
           const [myProvider, presence] = await Promise.all([
@@ -258,6 +260,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
       <div className="max-w-4xl mx-auto bg-surface-card/90 backdrop-blur-sm shadow-xl rounded-2xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {isAgent && <AgentCoordinationPanel />}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-text-primary">

@@ -63,7 +63,7 @@ function isFileLike(value) {
  * Envoie un FormData en essayant plusieurs noms de champ pour le fichier
  * afin d'éviter les erreurs Multer "Unexpected field".
  */
-async function postMultipartResilient(url, payloadFields = {}, file) {
+async function postMultipartResilient(url, payloadFields = {}, file, method = 'post') {
   const fieldCandidates = ['proofFile', 'proof', 'file', 'attachment'];
   let lastError;
 
@@ -77,11 +77,14 @@ async function postMultipartResilient(url, payloadFields = {}, file) {
  // Fichier eventuel sous le nom teste
       if (file) fd.append(fieldName, file);
 
-      const { data } = await api.post(url, fd);
+      const { data } = await api[method](url, fd);
       return data;
     } catch (err) {
       lastError = err;
-      // On retente avec le prochain nom
+      const failure = err?.response?.data;
+      const unexpectedField = failure?.code === 'LIMIT_UNEXPECTED_FILE' || err?.code === 'LIMIT_UNEXPECTED_FILE' ||
+        /unexpected field|champ de fichier inattendu/i.test(failure?.error || failure?.message || err?.message || '');
+      if (!unexpectedField || !file) throw err;
     }
   }
   throw lastError;
@@ -103,7 +106,11 @@ async function postMultipartResilient(url, payloadFields = {}, file) {
  * - proofFileINFO: File
  */
 export async function createTransaction(data) {
+  const linked = ['serviceId', 'taskId', 'orderId', 'projectId'].some((field) => asNumeric(data[field]));
   const payload = mergeGeoPayload({
+    ...(linked ? { countryId: null, regionId: null } : {}),
+    ...(data.countryId !== undefined || data.country_id !== undefined ? { countryId: data.countryId ?? data.country_id } : {}),
+    ...(data.regionId !== undefined || data.region_id !== undefined ? { regionId: data.regionId ?? data.region_id } : {}),
     type: data.type,
     amount: asDecimalString(data.amount),
     currency: data.currency,
@@ -158,6 +165,26 @@ export async function getTransactionsWithMeta(filters = {}) {
   };
 }
 
+// Les statistiques et exports doivent inclure toutes les pages du périmètre.
+export async function getAllTransactions(filters = {}) {
+  const params = { countryId: null, regionId: null, ...mergeGeoParams({ ...filters, limit: 200, sort: filters.sort || '-createdAt' }) };
+  const items = [];
+  let total = null;
+  let offset = 0;
+  while (true) {
+    const page = await getTransactionsWithMeta({ ...params, page: undefined, offset, includeCount: total === null });
+    items.push(...page.items);
+    if (total === null && page.pagination?.total != null) total = Number(page.pagination.total);
+    if (total !== null && items.length >= total) return items;
+    if (!page.items.length) {
+      if (total !== null) throw new Error('Incomplete transaction list');
+      return items;
+    }
+    offset += page.items.length;
+    if (total === null && page.items.length < (page.pagination?.limit || params.limit)) return items;
+  }
+}
+
 /* ------------------- API: Detail -------------------------- */
 export async function getTransactionById(id) {
   const { data } = await api.get(`/transactions/${id}`);
@@ -192,7 +219,7 @@ export async function updateTransaction(id, updates) {
   }
 
   // Avec fichier -> multipart résilient
-  const res = await postMultipartResilient(`/transactions/${id}`, cleanObj(payload), updates.proofFile);
+  const res = await postMultipartResilient(`/transactions/${id}`, cleanObj(payload), updates.proofFile, 'put');
   return applyLabels(res.transaction || res);
 }
 
@@ -203,9 +230,9 @@ export async function deleteTransaction(id) {
 }
 
 /* ------------------- API: Stats & Report ------------------ */
-export async function getFinancialSummary() {
+export async function getFinancialSummary(params = {}) {
   const { data } = await api.get('/transactions/summary', {
-    params: mergeGeoParams(),
+    params: mergeGeoParams(params),
   });
   return data;
 }
@@ -224,12 +251,12 @@ export async function createOrderTransaction(orderId, data = {}) {
 }
 
 export async function getOrderTransactions(orderId, filters = {}) {
-  const params = cleanObj({ ...filters, orderId: asNumeric(orderId) });
+  const params = { countryId: null, regionId: null, ...filters, orderId: asNumeric(orderId) };
   return getTransactions(params);
 }
 
 export async function getOrderTransactionsWithMeta(orderId, filters = {}) {
-  const params = cleanObj({ ...filters, orderId: asNumeric(orderId) });
+  const params = { countryId: null, regionId: null, ...filters, orderId: asNumeric(orderId) };
   return getTransactionsWithMeta(params);
 }
 
@@ -245,7 +272,7 @@ export async function createProjectTransaction(projectId, data = {}) {
  * Liste les transactions dun projet (filtrage cote back via INFOprojectId=)
  */
 export async function getProjectTransactions(projectId, filters = {}) {
-  const params = cleanObj({ ...filters, projectId: asNumeric(projectId) });
+  const params = { countryId: null, regionId: null, ...filters, projectId: asNumeric(projectId) };
   return getTransactions(params);
 }
 
@@ -253,7 +280,7 @@ export async function getProjectTransactions(projectId, filters = {}) {
  * Liste + pagination (meta) des transactions d’un projet
  */
 export async function getProjectTransactionsWithMeta(projectId, filters = {}) {
-  const params = cleanObj({ ...filters, projectId: asNumeric(projectId) });
+  const params = { countryId: null, regionId: null, ...filters, projectId: asNumeric(projectId) };
   return getTransactionsWithMeta(params);
 }
 
@@ -262,6 +289,7 @@ const TransactionsService = {
   createTransaction,
   getTransactions,
   getTransactionsWithMeta,
+  getAllTransactions,
   getTransactionById,
   updateTransaction,
   deleteTransaction,

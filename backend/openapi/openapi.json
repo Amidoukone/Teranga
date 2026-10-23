@@ -10,6 +10,280 @@
     }
   ],
   "paths": {
+    "/operations": {
+      "get": {
+        "summary": "Administrator operational queue, restricted to the caller's territory",
+        "parameters": [
+          {
+            "name": "countryId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "regionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "attention",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "entityType",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "service",
+                "project",
+                "order"
+              ],
+              "default": "service"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operational requests and pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "pagination",
+                    "serverTime"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "pagination": {
+                      "type": "object"
+                    },
+                    "serverTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator role required"
+          },
+          "503": {
+            "description": "Coordination migration required"
+          }
+        }
+      }
+    },
+    "/operations/readiness": {
+      "get": {
+        "summary": "Check local configuration and recent scheduler success before field launch",
+        "parameters": [
+          {
+            "name": "countryId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Technical readiness; remaining operational checks are returned separately",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ready",
+                    "issues",
+                    "remainingChecks"
+                  ],
+                  "properties": {
+                    "ready": {
+                      "type": "boolean"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "remainingChecks": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Outside the administrator territory"
+          }
+        }
+      }
+    },
+    "/operations/{id}": {
+      "patch": {
+        "summary": "Take ownership of a request or change its coordination mode",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "manual",
+                      "automatic"
+                    ]
+                  },
+                  "ownerUserId": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "policy": {
+                    "type": "object"
+                  }
+                },
+                "minProperties": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Persisted coordination"
+          },
+          "400": {
+            "description": "Invalid owner or unsupported execution profile"
+          },
+          "403": {
+            "description": "Outside the administrator territory"
+          },
+          "409": {
+            "description": "Mission no longer awaiting assignment"
+          }
+        }
+      }
+    },
+    "/missions/{id}/completion-report": {
+      "post": {
+        "summary": "Assigned executor submits a completion report and supporting files",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "summary",
+                  "requestKey"
+                ],
+                "properties": {
+                  "summary": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 4000
+                  },
+                  "requestKey": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9-]{8,80}$"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "photo",
+                      "document",
+                      "receipt",
+                      "other"
+                    ]
+                  },
+                  "files": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved report or replay of the same submission"
+          },
+          "400": {
+            "description": "Invalid report or missing proof"
+          },
+          "403": {
+            "description": "Assigned executor required"
+          },
+          "409": {
+            "description": "Mission must be in progress"
+          },
+          "503": {
+            "description": "Durable evidence storage unavailable"
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Healthcheck",
@@ -163,7 +437,9 @@
             "description": "Invalid payload",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -171,7 +447,9 @@
             "description": "Caller is not a provider-role account",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           }
@@ -194,7 +472,9 @@
             "description": "Caller has no manageable scope",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           }
@@ -209,7 +489,9 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "requestBody": {
@@ -227,7 +509,9 @@
             "description": "Updated provider account; Mobility ride readiness is returned separately when applicable",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ProviderResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderResponse"
+                }
               }
             }
           },
@@ -235,7 +519,9 @@
             "description": "Invalid status transition",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -243,7 +529,9 @@
             "description": "Caller does not manage this provider (scope mismatch)",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -251,7 +539,9 @@
             "description": "Provider not found",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           }
@@ -266,7 +556,9 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "requestBody": {
@@ -284,7 +576,9 @@
             "description": "Driver Mobility availability updated",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ProviderResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderResponse"
+                }
               }
             }
           },
@@ -292,7 +586,9 @@
             "description": "Account, driver or selected vehicle is not ready",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -300,7 +596,9 @@
             "description": "Caller does not manage this provider",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -308,7 +606,9 @@
             "description": "Driver already has a ride in progress",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           }
@@ -323,7 +623,9 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "requestBody": {
@@ -351,7 +653,9 @@
             "description": "Caller does not manage this provider (scope mismatch)",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -359,7 +663,9 @@
             "description": "Provider not found",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           }
@@ -373,7 +679,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/MissionEstimateRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/MissionEstimateRequest"
+              }
             }
           }
         },
@@ -382,7 +690,9 @@
             "description": "Estimate",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/MissionEstimateResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/MissionEstimateResponse"
+                }
               }
             }
           },
@@ -390,7 +700,9 @@
             "description": "Invalid category selection",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           }
@@ -404,7 +716,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateMissionRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateMissionRequest"
+              }
             }
           }
         },
@@ -413,7 +727,9 @@
             "description": "Mission created",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/MissionResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/MissionResponse"
+                }
               }
             }
           },
@@ -421,18 +737,42 @@
             "description": "Invalid payload or unresolvable address",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
+          },
+          "409": {
+            "description": "Request key reused, creation pending verification, or public request already created"
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_-]{8,80}$"
+            },
+            "description": "Stable per creation. Resource and receipt commit together; changed content or an unresolved reservation returns 409. Public replay requires normal sign-in and never replays credentials."
+          }
+        ]
       }
     },
     "/missions/{id}/attachments": {
       "post": {
         "summary": "Attach an optional photo and/or voice note to a mission (owner client only)",
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -441,8 +781,14 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "photo": { "type": "string", "format": "binary" },
-                  "voiceNote": { "type": "string", "format": "binary" }
+                  "photo": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "voiceNote": {
+                    "type": "string",
+                    "format": "binary"
+                  }
                 }
               }
             }
@@ -453,7 +799,9 @@
             "description": "Attachments created",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/MissionAttachmentsResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/MissionAttachmentsResponse"
+                }
               }
             }
           },
@@ -461,7 +809,9 @@
             "description": "Caller does not own this mission",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -469,7 +819,9 @@
             "description": "Mission not found",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           }
@@ -480,13 +832,22 @@
       "post": {
         "summary": "Manually assign a provider to a mission (admin only, manual assignment — auto-matching remains Lot 4)",
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/AssignMissionRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/AssignMissionRequest"
+              }
             }
           }
         },
@@ -495,20 +856,30 @@
             "description": "Provider assigned, mission transitioned to ASSIGNED",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/MissionActionResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/MissionActionResponse"
+                }
               }
             }
           },
           "400": {
             "description": "Mission not assignable in its current state, or provider invalid/inactive/wrong trade category",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
             }
           },
           "403": {
             "description": "Mission outside caller's geographic scope",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
             }
           }
         }
@@ -518,13 +889,22 @@
       "patch": {
         "summary": "Transition mission status (section 2 state machine); allowed transitions depend on caller role",
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/UpdateMissionStatusRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMissionStatusRequest"
+              }
             }
           }
         },
@@ -533,20 +913,30 @@
             "description": "Updated mission",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/MissionActionResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/MissionActionResponse"
+                }
               }
             }
           },
           "400": {
             "description": "Invalid transition, or mission has no missionStatus (classic agent flow)",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
             }
           },
           "403": {
             "description": "Caller is not allowed to trigger this transition",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
             }
           }
         }
@@ -556,13 +946,22 @@
       "post": {
         "summary": "Ping the assigned executor's current position (role: agent, provider)",
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/MissionLocationPingRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/MissionLocationPingRequest"
+              }
             }
           }
         },
@@ -570,19 +969,31 @@
           "201": {
             "description": "Position recorded",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/MissionLocationPingResponse" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MissionLocationPingResponse"
+                }
+              }
             }
           },
           "400": {
             "description": "Mission not in an active execution window",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
             }
           },
           "403": {
             "description": "Caller is not the assigned executor",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
             }
           }
         }
@@ -592,19 +1003,34 @@
       "get": {
         "summary": "Live tracking feed for the mission owner (role: client) — status, latest position, ETA",
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "Tracking snapshot",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/MissionTrackResponse" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MissionTrackResponse"
+                }
+              }
             }
           },
           "403": {
             "description": "Caller does not own this mission",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
             }
           }
         }
@@ -618,7 +1044,9 @@
             "description": "Saved locations",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/SavedLocationListResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/SavedLocationListResponse"
+                }
               }
             }
           }
@@ -630,7 +1058,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateSavedLocationRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateSavedLocationRequest"
+              }
             }
           }
         },
@@ -639,7 +1069,9 @@
             "description": "Saved location created",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/SavedLocationResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/SavedLocationResponse"
+                }
               }
             }
           }
@@ -654,7 +1086,9 @@
             "description": "Scoped pricing rules",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/MissionPricingRuleListResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/MissionPricingRuleListResponse"
+                }
               }
             }
           }
@@ -666,7 +1100,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateMissionPricingRuleRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateMissionPricingRuleRequest"
+              }
             }
           }
         },
@@ -675,7 +1111,9 @@
             "description": "Pricing rule created",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/MissionPricingRuleResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/MissionPricingRuleResponse"
+                }
               }
             }
           },
@@ -683,9 +1121,256 @@
             "description": "Caller has no manageable scope for this country/region",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
+          }
+        }
+      }
+    },
+    "/operations/work/{type}/{id}": {
+      "get": {
+        "summary": "Read coordination and completion report as customer, assigned agent or administrator",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "project",
+                "order"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource, coordination and allowed actions"
+          },
+          "400": {
+            "description": "Invalid input or missing completion report"
+          },
+          "403": {
+            "description": "Outside caller permissions or territory"
+          },
+          "409": {
+            "description": "Invalid stage, remaining work, missing proof or capacity exceeded"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Configure work owner, deadlines, automatic mode or manual agent assignment",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "project",
+                "order"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "manual",
+                      "automatic"
+                    ]
+                  },
+                  "ownerUserId": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "executorUserId": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "nullable": true
+                  },
+                  "policy": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Persisted coordination"
+          },
+          "400": {
+            "description": "Invalid input or missing completion report"
+          },
+          "403": {
+            "description": "Outside caller permissions or territory"
+          },
+          "409": {
+            "description": "Invalid stage, remaining work, missing proof or capacity exceeded"
+          }
+        }
+      }
+    },
+    "/operations/work/{type}/{id}/status": {
+      "post": {
+        "summary": "Assigned agent advances work with proof; project customer performs final validation. Delivery does not imply payment.",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "project",
+                "order"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "in_progress",
+                      "completed",
+                      "validated",
+                      "processing",
+                      "shipped",
+                      "delivered"
+                    ]
+                  },
+                  "summary": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "description": "20–4000 characters required for completed or delivered"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated resource and atomic coordination notifications"
+          },
+          "400": {
+            "description": "Invalid input or missing completion report"
+          },
+          "403": {
+            "description": "Outside caller permissions or territory"
+          },
+          "409": {
+            "description": "Invalid stage, remaining work, missing proof or capacity exceeded"
+          }
+        }
+      }
+    },
+    "/operations/agent/capacity": {
+      "get": {
+        "summary": "Read own agent availability, capacity and current assignments",
+        "responses": {
+          "200": {
+            "description": "Capacity and activeAssignments"
+          },
+          "403": {
+            "description": "Agent role required"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Agent explicitly opts in to automatic assignment and sets concurrent capacity",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "available": {
+                    "type": "boolean"
+                  },
+                  "maxConcurrent": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved capacity"
+          },
+          "403": {
+            "description": "Agent role required"
+          }
+        }
+      }
+    },
+    "/operations/agent/assignments": {
+      "get": {
+        "summary": "Read own active project and order assignments within agent territory",
+        "responses": {
+          "200": {
+            "description": "Assigned resources and coordination"
+          },
+          "403": {
+            "description": "Agent role required"
           }
         }
       }
@@ -897,64 +1582,153 @@
       },
       "TradeCategory": {
         "type": "object",
-        "required": ["id", "name", "slug"],
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
         "properties": {
-          "id": { "type": "number" },
-          "name": { "type": "string" },
-          "slug": { "type": "string" },
-          "requiresCompany": { "type": "boolean" },
-          "defaultWarrantyDays": { "type": "number" },
-          "isActive": { "type": "boolean" }
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "requiresCompany": {
+            "type": "boolean"
+          },
+          "defaultWarrantyDays": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
         },
         "additionalProperties": true
       },
       "TradeCategoryListResponse": {
         "type": "object",
-        "required": ["tradeCategories"],
+        "required": [
+          "tradeCategories"
+        ],
         "properties": {
           "tradeCategories": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/TradeCategory" }
+            "items": {
+              "$ref": "#/components/schemas/TradeCategory"
+            }
           }
         },
         "additionalProperties": true
       },
       "Provider": {
         "type": "object",
-        "required": ["id", "userId", "type", "displayFirstName", "status"],
+        "required": [
+          "id",
+          "userId",
+          "type",
+          "displayFirstName",
+          "status"
+        ],
         "properties": {
-          "id": { "type": "number" },
-          "userId": { "type": "number" },
-          "type": { "type": "string", "enum": ["independent", "company"] },
-          "legalName": { "type": ["string", "null"] },
-          "displayFirstName": { "type": "string" },
-          "rccmNumber": { "type": ["string", "null"] },
-          "phoneNumber": { "type": "string" },
-          "email": { "type": ["string", "null"] },
-          "countryCode": { "type": "string" },
+          "id": {
+            "type": "number"
+          },
+          "userId": {
+            "type": "number"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "independent",
+              "company"
+            ]
+          },
+          "legalName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "displayFirstName": {
+            "type": "string"
+          },
+          "rccmNumber": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "countryCode": {
+            "type": "string"
+          },
           "status": {
             "type": "string",
-            "enum": ["pending", "probation", "active", "suspended", "revoked"]
+            "enum": [
+              "pending",
+              "probation",
+              "active",
+              "suspended",
+              "revoked"
+            ]
           },
-          "averageRating": { "type": ["number", "null"] },
-          "completedMissionsCount": { "type": "number" },
-          "hasLiabilityInsurance": { "type": "boolean" },
-          "badgeCertified": { "type": "boolean" }
+          "averageRating": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "completedMissionsCount": {
+            "type": "number"
+          },
+          "hasLiabilityInsurance": {
+            "type": "boolean"
+          },
+          "badgeCertified": {
+            "type": "boolean"
+          }
         },
         "additionalProperties": true
       },
       "ProviderResponse": {
         "type": "object",
-        "required": ["provider"],
+        "required": [
+          "provider"
+        ],
         "properties": {
-          "provider": { "$ref": "#/components/schemas/Provider" },
+          "provider": {
+            "$ref": "#/components/schemas/Provider"
+          },
           "mobilityActivation": {
             "type": "object",
-            "required": ["accountActive", "dispatchReady", "compliance"],
+            "required": [
+              "accountActive",
+              "dispatchReady",
+              "compliance"
+            ],
             "properties": {
-              "accountActive": { "type": "boolean" },
-              "dispatchReady": { "type": "boolean" },
-              "compliance": { "type": "object", "additionalProperties": true }
+              "accountActive": {
+                "type": "boolean"
+              },
+              "dispatchReady": {
+                "type": "boolean"
+              },
+              "compliance": {
+                "type": "object",
+                "additionalProperties": true
+              }
             },
             "additionalProperties": false
           }
@@ -963,11 +1737,16 @@
       },
       "ProviderListResponse": {
         "type": "object",
-        "required": ["providers", "pagination"],
+        "required": [
+          "providers",
+          "pagination"
+        ],
         "properties": {
           "providers": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/Provider" }
+            "items": {
+              "$ref": "#/components/schemas/Provider"
+            }
           },
           "pagination": {
             "type": "object",
@@ -978,20 +1757,53 @@
       },
       "CreateProviderRequest": {
         "type": "object",
-        "required": ["type", "displayFirstName", "phoneNumber", "countryCode", "tradeCategoryIds"],
+        "required": [
+          "type",
+          "displayFirstName",
+          "phoneNumber",
+          "countryCode",
+          "tradeCategoryIds"
+        ],
         "properties": {
-          "type": { "type": "string", "enum": ["independent", "company"] },
-          "legalName": { "type": "string" },
-          "displayFirstName": { "type": "string" },
-          "rccmNumber": { "type": "string" },
-          "phoneNumber": { "type": "string" },
-          "email": { "type": "string" },
-          "countryCode": { "type": "string", "minLength": 2, "maxLength": 2 },
-          "hasLiabilityInsurance": { "type": "boolean" },
-          "insuranceExpiresAt": { "type": "string", "format": "date" },
+          "type": {
+            "type": "string",
+            "enum": [
+              "independent",
+              "company"
+            ]
+          },
+          "legalName": {
+            "type": "string"
+          },
+          "displayFirstName": {
+            "type": "string"
+          },
+          "rccmNumber": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+          },
+          "hasLiabilityInsurance": {
+            "type": "boolean"
+          },
+          "insuranceExpiresAt": {
+            "type": "string",
+            "format": "date"
+          },
           "tradeCategoryIds": {
             "type": "array",
-            "items": { "type": "number" },
+            "items": {
+              "type": "number"
+            },
             "minItems": 1
           }
         },
@@ -999,289 +1811,690 @@
       },
       "UpdateProviderStatusRequest": {
         "type": "object",
-        "required": ["status"],
+        "required": [
+          "status"
+        ],
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["pending", "probation", "active", "suspended", "revoked"]
+            "enum": [
+              "pending",
+              "probation",
+              "active",
+              "suspended",
+              "revoked"
+            ]
           }
         },
         "additionalProperties": false
       },
       "UpdateMobilityAvailabilityRequest": {
         "type": "object",
-        "required": ["availabilityStatus"],
+        "required": [
+          "availabilityStatus"
+        ],
         "properties": {
           "availabilityStatus": {
             "type": "string",
-            "enum": ["available", "offline"]
+            "enum": [
+              "available",
+              "offline"
+            ]
           },
-          "vehicleId": { "type": ["number", "null"] }
+          "vehicleId": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
         },
         "additionalProperties": false
       },
       "ProviderContract": {
         "type": "object",
-        "required": ["id", "providerId", "commissionRate", "signedAt", "status"],
+        "required": [
+          "id",
+          "providerId",
+          "commissionRate",
+          "signedAt",
+          "status"
+        ],
         "properties": {
-          "id": { "type": "number" },
-          "providerId": { "type": "number" },
-          "commissionRate": { "type": "number" },
-          "nonCircumventionMonths": { "type": "number" },
-          "signedAt": { "type": "string", "format": "date-time" },
-          "documentUrl": { "type": ["string", "null"] },
-          "status": { "type": "string", "enum": ["active", "terminated"] }
+          "id": {
+            "type": "number"
+          },
+          "providerId": {
+            "type": "number"
+          },
+          "commissionRate": {
+            "type": "number"
+          },
+          "nonCircumventionMonths": {
+            "type": "number"
+          },
+          "signedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "documentUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "terminated"
+            ]
+          }
         },
         "additionalProperties": true
       },
       "ProviderContractResponse": {
         "type": "object",
-        "required": ["contract"],
+        "required": [
+          "contract"
+        ],
         "properties": {
-          "contract": { "$ref": "#/components/schemas/ProviderContract" }
+          "contract": {
+            "$ref": "#/components/schemas/ProviderContract"
+          }
         },
         "additionalProperties": true
       },
       "CreateProviderContractRequest": {
         "type": "object",
-        "required": ["commissionRate", "signedAt"],
+        "required": [
+          "commissionRate",
+          "signedAt"
+        ],
         "properties": {
-          "commissionRate": { "type": "number", "minimum": 0, "maximum": 100 },
-          "nonCircumventionMonths": { "type": "number" },
-          "signedAt": { "type": "string", "format": "date-time" },
-          "documentUrl": { "type": "string" }
+          "commissionRate": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "nonCircumventionMonths": {
+            "type": "number"
+          },
+          "signedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "documentUrl": {
+            "type": "string"
+          }
         },
         "additionalProperties": false
       },
       "MissionEstimateRequest": {
         "type": "object",
-        "required": ["executionType"],
+        "required": [
+          "executionType"
+        ],
         "properties": {
-          "executionType": { "type": "string", "enum": ["agent", "provider"] },
-          "tradeCategoryId": { "type": "number" },
+          "executionType": {
+            "type": "string",
+            "enum": [
+              "agent",
+              "provider"
+            ]
+          },
+          "tradeCategoryId": {
+            "type": "number"
+          },
           "serviceType": {
             "type": "string",
-            "enum": ["errand", "administrative", "payment", "money_transfer", "other"]
+            "enum": [
+              "errand",
+              "administrative",
+              "payment",
+              "money_transfer",
+              "other"
+            ]
           },
-          "requestedVehicleType": { "type": "string", "enum": ["motorcycle", "car"] },
+          "requestedVehicleType": {
+            "type": "string",
+            "enum": [
+              "motorcycle",
+              "car"
+            ]
+          },
           "packageType": {
             "type": "string",
-            "enum": ["document", "small", "standard", "bulky"]
+            "enum": [
+              "document",
+              "small",
+              "standard",
+              "bulky"
+            ]
           },
-          "pickupLatitude": { "type": "number" },
-          "pickupLongitude": { "type": "number" },
-          "latitude": { "type": "number" },
-          "longitude": { "type": "number" }
+          "pickupLatitude": {
+            "type": "number"
+          },
+          "pickupLongitude": {
+            "type": "number"
+          },
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          }
         },
         "additionalProperties": false
       },
       "MissionEstimate": {
         "type": "object",
-        "required": ["pricingMode", "currency", "estimatedDelayMinutes"],
+        "required": [
+          "pricingMode",
+          "currency",
+          "estimatedDelayMinutes"
+        ],
         "properties": {
-          "pricingMode": { "type": "string", "enum": ["fixed_estimate", "quote_only"] },
-          "currency": { "type": "string" },
-          "basePrice": { "type": ["number", "null"] },
-          "minPrice": { "type": ["number", "null"] },
-          "pricePerKm": { "type": "number" },
-          "priceIncrement": { "type": "number" },
-          "estimatedDelayMinutes": { "type": "number" },
-          "note": { "type": "string" }
+          "pricingMode": {
+            "type": "string",
+            "enum": [
+              "fixed_estimate",
+              "quote_only"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "basePrice": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "minPrice": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "pricePerKm": {
+            "type": "number"
+          },
+          "priceIncrement": {
+            "type": "number"
+          },
+          "estimatedDelayMinutes": {
+            "type": "number"
+          },
+          "note": {
+            "type": "string"
+          }
         },
         "additionalProperties": true
       },
       "MissionEstimateResponse": {
         "type": "object",
-        "required": ["estimate"],
+        "required": [
+          "estimate"
+        ],
         "properties": {
-          "estimate": { "$ref": "#/components/schemas/MissionEstimate" }
+          "estimate": {
+            "$ref": "#/components/schemas/MissionEstimate"
+          }
         },
         "additionalProperties": true
       },
       "CreateMissionRequest": {
         "type": "object",
-        "required": ["executionType", "title"],
+        "required": [
+          "executionType",
+          "title"
+        ],
         "properties": {
-          "executionType": { "type": "string", "enum": ["agent", "provider"] },
-          "tradeCategoryId": { "type": "number" },
+          "executionType": {
+            "type": "string",
+            "enum": [
+              "agent",
+              "provider"
+            ]
+          },
+          "tradeCategoryId": {
+            "type": "number"
+          },
           "serviceType": {
             "type": "string",
-            "enum": ["errand", "administrative", "payment", "money_transfer", "other"]
+            "enum": [
+              "errand",
+              "administrative",
+              "payment",
+              "money_transfer",
+              "other"
+            ]
           },
-          "title": { "type": "string", "minLength": 3, "maxLength": 150 },
-          "description": { "type": "string", "maxLength": 2000 },
+          "title": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 150
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
           "packageType": {
             "type": "string",
-            "enum": ["document", "small", "standard", "bulky"]
+            "enum": [
+              "document",
+              "small",
+              "standard",
+              "bulky"
+            ]
           },
-          "requestedVehicleType": { "type": "string", "enum": ["motorcycle", "car"] },
-          "savedLocationId": { "type": "number" },
-          "pickupAddress": { "type": "string", "maxLength": 255 },
-          "pickupLatitude": { "type": "number" },
-          "pickupLongitude": { "type": "number" },
-          "address": { "type": "string", "maxLength": 255 },
-          "latitude": { "type": "number" },
-          "longitude": { "type": "number" }
+          "requestedVehicleType": {
+            "type": "string",
+            "enum": [
+              "motorcycle",
+              "car"
+            ]
+          },
+          "savedLocationId": {
+            "type": "number"
+          },
+          "pickupAddress": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "pickupLatitude": {
+            "type": "number"
+          },
+          "pickupLongitude": {
+            "type": "number"
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          }
         },
         "additionalProperties": false
       },
       "MissionResponse": {
         "type": "object",
-        "required": ["message", "mission", "estimate"],
+        "required": [
+          "message",
+          "mission",
+          "estimate"
+        ],
         "properties": {
-          "message": { "type": "string" },
-          "mission": { "type": "object", "additionalProperties": true },
-          "estimate": { "$ref": "#/components/schemas/MissionEstimate" }
+          "message": {
+            "type": "string"
+          },
+          "mission": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "estimate": {
+            "$ref": "#/components/schemas/MissionEstimate"
+          }
         },
         "additionalProperties": true
       },
       "MissionAttachmentsResponse": {
         "type": "object",
-        "required": ["message", "attachments"],
+        "required": [
+          "message",
+          "attachments"
+        ],
         "properties": {
-          "message": { "type": "string" },
-          "attachments": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+          "message": {
+            "type": "string"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
         },
         "additionalProperties": true
       },
       "SavedLocation": {
         "type": "object",
-        "required": ["id", "userId", "address", "latitude", "longitude"],
+        "required": [
+          "id",
+          "userId",
+          "address",
+          "latitude",
+          "longitude"
+        ],
         "properties": {
-          "id": { "type": "number" },
-          "userId": { "type": "number" },
-          "label": { "type": ["string", "null"] },
-          "address": { "type": "string" },
-          "latitude": { "type": "number" },
-          "longitude": { "type": "number" }
+          "id": {
+            "type": "number"
+          },
+          "userId": {
+            "type": "number"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "address": {
+            "type": "string"
+          },
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          }
         },
         "additionalProperties": true
       },
       "SavedLocationListResponse": {
         "type": "object",
-        "required": ["savedLocations"],
+        "required": [
+          "savedLocations"
+        ],
         "properties": {
           "savedLocations": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/SavedLocation" }
+            "items": {
+              "$ref": "#/components/schemas/SavedLocation"
+            }
           }
         },
         "additionalProperties": true
       },
       "SavedLocationResponse": {
         "type": "object",
-        "required": ["savedLocation"],
+        "required": [
+          "savedLocation"
+        ],
         "properties": {
-          "savedLocation": { "$ref": "#/components/schemas/SavedLocation" }
+          "savedLocation": {
+            "$ref": "#/components/schemas/SavedLocation"
+          }
         },
         "additionalProperties": true
       },
       "CreateSavedLocationRequest": {
         "type": "object",
-        "required": ["address", "latitude", "longitude"],
+        "required": [
+          "address",
+          "latitude",
+          "longitude"
+        ],
         "properties": {
-          "label": { "type": "string", "maxLength": 80 },
-          "address": { "type": "string", "maxLength": 255 },
-          "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
-          "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+          "label": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          }
         },
         "additionalProperties": false
       },
       "MissionPricingRule": {
         "type": "object",
-        "required": ["id", "countryId", "pricingMode", "estimatedDelayMinutes"],
+        "required": [
+          "id",
+          "countryId",
+          "pricingMode",
+          "estimatedDelayMinutes"
+        ],
         "properties": {
-          "id": { "type": "number" },
-          "countryId": { "type": "number" },
-          "regionId": { "type": ["number", "null"] },
-          "tradeCategoryId": { "type": ["number", "null"] },
-          "serviceType": { "type": ["string", "null"] },
-          "vehicleType": { "type": ["string", "null"], "enum": ["motorcycle", "car", null] },
-          "packageType": {
-            "type": ["string", "null"],
-            "enum": ["document", "small", "standard", "bulky", null]
+          "id": {
+            "type": "number"
           },
-          "pricingMode": { "type": "string", "enum": ["fixed_estimate", "quote_only"] },
-          "basePrice": { "type": ["number", "null"] },
-          "minPrice": { "type": ["number", "null"] },
-          "pricePerKm": { "type": "number" },
-          "priceIncrement": { "type": "number" },
-          "estimatedDelayMinutes": { "type": "number" },
-          "isActive": { "type": "boolean" }
+          "countryId": {
+            "type": "number"
+          },
+          "regionId": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "tradeCategoryId": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "serviceType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicleType": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "motorcycle",
+              "car",
+              null
+            ]
+          },
+          "packageType": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "document",
+              "small",
+              "standard",
+              "bulky",
+              null
+            ]
+          },
+          "pricingMode": {
+            "type": "string",
+            "enum": [
+              "fixed_estimate",
+              "quote_only"
+            ]
+          },
+          "basePrice": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "minPrice": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "pricePerKm": {
+            "type": "number"
+          },
+          "priceIncrement": {
+            "type": "number"
+          },
+          "estimatedDelayMinutes": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
         },
         "additionalProperties": true
       },
       "MissionPricingRuleListResponse": {
         "type": "object",
-        "required": ["pricingRules"],
+        "required": [
+          "pricingRules"
+        ],
         "properties": {
           "pricingRules": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/MissionPricingRule" }
+            "items": {
+              "$ref": "#/components/schemas/MissionPricingRule"
+            }
           }
         },
         "additionalProperties": true
       },
       "MissionPricingRuleResponse": {
         "type": "object",
-        "required": ["pricingRule"],
+        "required": [
+          "pricingRule"
+        ],
         "properties": {
-          "pricingRule": { "$ref": "#/components/schemas/MissionPricingRule" }
+          "pricingRule": {
+            "$ref": "#/components/schemas/MissionPricingRule"
+          }
         },
         "additionalProperties": true
       },
       "CreateMissionPricingRuleRequest": {
         "type": "object",
-        "required": ["countryId", "pricingMode", "estimatedDelayMinutes"],
+        "required": [
+          "countryId",
+          "pricingMode",
+          "estimatedDelayMinutes"
+        ],
         "properties": {
-          "countryId": { "type": "number" },
-          "regionId": { "type": "number" },
-          "tradeCategoryId": { "type": "number" },
+          "countryId": {
+            "type": "number"
+          },
+          "regionId": {
+            "type": "number"
+          },
+          "tradeCategoryId": {
+            "type": "number"
+          },
           "serviceType": {
             "type": "string",
-            "enum": ["errand", "administrative", "payment", "money_transfer", "other"]
+            "enum": [
+              "errand",
+              "administrative",
+              "payment",
+              "money_transfer",
+              "other"
+            ]
           },
-          "vehicleType": { "type": "string", "enum": ["motorcycle", "car"] },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "motorcycle",
+              "car"
+            ]
+          },
           "packageType": {
             "type": "string",
-            "enum": ["document", "small", "standard", "bulky"]
+            "enum": [
+              "document",
+              "small",
+              "standard",
+              "bulky"
+            ]
           },
-          "pricingMode": { "type": "string", "enum": ["fixed_estimate", "quote_only"] },
-          "basePrice": { "type": "number", "minimum": 0 },
-          "minPrice": { "type": "number", "minimum": 0 },
-          "pricePerKm": { "type": "number", "minimum": 0 },
-          "priceIncrement": { "type": "number", "minimum": 0 },
-          "estimatedDelayMinutes": { "type": "number", "minimum": 0 }
+          "pricingMode": {
+            "type": "string",
+            "enum": [
+              "fixed_estimate",
+              "quote_only"
+            ]
+          },
+          "basePrice": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minPrice": {
+            "type": "number",
+            "minimum": 0
+          },
+          "pricePerKm": {
+            "type": "number",
+            "minimum": 0
+          },
+          "priceIncrement": {
+            "type": "number",
+            "minimum": 0
+          },
+          "estimatedDelayMinutes": {
+            "type": "number",
+            "minimum": 0
+          }
         },
         "additionalProperties": false
       },
       "AssignMissionRequest": {
         "type": "object",
-        "required": ["providerId"],
+        "required": [
+          "providerId"
+        ],
         "properties": {
-          "providerId": { "type": "number" }
+          "providerId": {
+            "type": "number"
+          }
         },
         "additionalProperties": false
       },
       "MissionActionResponse": {
         "type": "object",
-        "required": ["mission"],
+        "required": [
+          "mission"
+        ],
         "properties": {
-          "message": { "type": "string" },
-          "mission": { "type": "object", "additionalProperties": true }
+          "message": {
+            "type": "string"
+          },
+          "mission": {
+            "type": "object",
+            "additionalProperties": true
+          }
         },
         "additionalProperties": true
       },
       "UpdateMissionStatusRequest": {
         "type": "object",
-        "required": ["toStatus"],
+        "required": [
+          "toStatus"
+        ],
         "properties": {
           "toStatus": {
             "type": "string",
             "enum": [
-              "CREATED", "SEARCHING_EXECUTOR", "ASSIGNED", "EN_ROUTE", "ON_SITE", "IN_PROGRESS",
-              "COMPLETED", "VALIDATED", "CLOSED", "CANCELLED_BY_CLIENT", "NO_EXECUTOR_FOUND",
-              "DISPUTED", "RESOLVED_REFUND", "RESOLVED_REDO", "RESOLVED_CLOSED"
+              "CREATED",
+              "SEARCHING_EXECUTOR",
+              "ASSIGNED",
+              "EN_ROUTE",
+              "ON_SITE",
+              "IN_PROGRESS",
+              "COMPLETED",
+              "VALIDATED",
+              "CLOSED",
+              "CANCELLED_BY_CLIENT",
+              "NO_EXECUTOR_FOUND",
+              "DISPUTED",
+              "RESOLVED_REFUND",
+              "RESOLVED_REDO",
+              "RESOLVED_CLOSED"
             ]
           }
         },
@@ -1289,54 +2502,119 @@
       },
       "MissionLocationPingRequest": {
         "type": "object",
-        "required": ["latitude", "longitude"],
+        "required": [
+          "latitude",
+          "longitude"
+        ],
         "properties": {
-          "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
-          "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          }
         },
         "additionalProperties": false
       },
       "MissionLocationPingResponse": {
         "type": "object",
-        "required": ["message", "location"],
+        "required": [
+          "message",
+          "location"
+        ],
         "properties": {
-          "message": { "type": "string" },
-          "location": { "type": "object", "additionalProperties": true }
+          "message": {
+            "type": "string"
+          },
+          "location": {
+            "type": "object",
+            "additionalProperties": true
+          }
         },
         "additionalProperties": true
       },
       "MissionTrackPosition": {
         "type": "object",
-        "required": ["latitude", "longitude", "recordedAt"],
+        "required": [
+          "latitude",
+          "longitude",
+          "recordedAt"
+        ],
         "properties": {
-          "latitude": { "type": "number" },
-          "longitude": { "type": "number" },
-          "recordedAt": { "type": "string", "format": "date-time" }
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         },
         "additionalProperties": true
       },
       "MissionTrackResponse": {
         "type": "object",
-        "required": ["missionStatus", "status", "position", "etaMinutes"],
+        "required": [
+          "missionStatus",
+          "status",
+          "position",
+          "etaMinutes"
+        ],
         "properties": {
-          "missionStatus": { "type": ["string", "null"] },
-          "status": { "type": "string" },
-          "title": { "type": "string" },
+          "missionStatus": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
           "destination": {
-            "type": ["object", "null"],
+            "type": [
+              "object",
+              "null"
+            ],
             "properties": {
-              "latitude": { "type": "number" },
-              "longitude": { "type": "number" },
-              "address": { "type": ["string", "null"] }
+              "latitude": {
+                "type": "number"
+              },
+              "longitude": {
+                "type": "number"
+              },
+              "address": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
             }
           },
           "position": {
             "oneOf": [
-              { "$ref": "#/components/schemas/MissionTrackPosition" },
-              { "type": "null" }
+              {
+                "$ref": "#/components/schemas/MissionTrackPosition"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
-          "etaMinutes": { "type": ["number", "null"] }
+          "etaMinutes": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
         },
         "additionalProperties": true
       }

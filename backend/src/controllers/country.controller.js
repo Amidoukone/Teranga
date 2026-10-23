@@ -1,5 +1,6 @@
 'use strict';
 
+const db = require('../../models');
 const {
   Country,
   Region,
@@ -18,10 +19,13 @@ const {
   OrderItem,
   ProjectPhase,
   ProjectDocument,
+  MissionPricingRule,
   sequelize,
-} = require('../../models');
+} = db;
 const { Op } = require('sequelize');
 const { getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
+const { loadPilotReadiness } = require('../services/pilotReadiness.service');
+const { syncCountryTerritories } = require('../services/territorialSync.service');
 const logger = require('../utils/logger');
 
 /* ======================================================
@@ -187,12 +191,12 @@ exports.create = async (req, res) => {
   try {
     if (!requireGlobalAdmin(req, res)) return;
 
-    const { name, isoCode, currency, defaultLanguage, isActive } = req.body || {};
+    const { name, isoCode, currency, defaultLanguage, timezone } = req.body || {};
 
     const trimmedName = toTrimOrNull(name);
     const trimmedIso = toTrimOrNull(isoCode);
 
-    if (!trimmedName || !trimmedIso || trimmedIso.length !== 2) {
+    if (!trimmedName || !trimmedIso || !/^[A-Za-z]{2}$/.test(trimmedIso)) {
       return res
         .status(400)
         .json({ error: 'name et isoCode (2 lettres) requis' });
@@ -208,12 +212,20 @@ exports.create = async (req, res) => {
       });
     }
 
+    const normalizedTimezone = toTrimOrNull(timezone);
+    try {
+      new Intl.DateTimeFormat('fr', { timeZone: normalizedTimezone });
+    } catch (_) {
+      return res.status(400).json({ error: 'Fuseau horaire IANA invalide' });
+    }
+
     const created = await Country.create({
       name: trimmedName,
       isoCode: iso,
-      currency: toTrimOrNull(currency) || 'XOF',
-      defaultLanguage: toTrimOrNull(defaultLanguage) || 'fr',
-      isActive: isActive === undefined ? true : Boolean(isActive),
+      currency: String(currency).trim().toUpperCase(),
+      defaultLanguage: String(defaultLanguage).trim().toLowerCase(),
+      timezone: normalizedTimezone,
+      isActive: false,
     });
 
     return res.status(201).json({ country: created });
@@ -243,7 +255,7 @@ exports.update = async (req, res) => {
     const country = await Country.findByPk(id);
     if (!country) return res.status(404).json({ error: 'Pays introuvable' });
 
-    const { name, isoCode, currency, defaultLanguage, isActive, contactPhone } = req.body || {};
+    const { name, isoCode, currency, defaultLanguage, timezone, isActive, contactPhone } = req.body || {};
 
     if (name !== undefined) {
       country.name = toTrimOrNull(name) || country.name;
@@ -251,7 +263,7 @@ exports.update = async (req, res) => {
 
     if (isoCode !== undefined) {
       const trimmedIso = toTrimOrNull(isoCode);
-      if (!trimmedIso || trimmedIso.length !== 2) {
+      if (!trimmedIso || !/^[A-Za-z]{2}$/.test(trimmedIso)) {
         return res.status(400).json({ error: 'isoCode invalide' });
       }
 
@@ -271,7 +283,11 @@ exports.update = async (req, res) => {
     }
 
     if (currency !== undefined) {
-      country.currency = toTrimOrNull(currency) || country.currency;
+      const nextCurrency = toTrimOrNull(currency)?.toUpperCase() || country.currency;
+      if (nextCurrency !== country.currency && await MissionPricingRule.count({ where: { countryId: country.id, isActive: true, pricingMode: 'fixed_estimate' } })) {
+        return res.status(409).json({ error: 'Désactivez les grilles tarifaires chiffrées avant de changer la devise du pays, puis révisez leurs montants avant réactivation.' });
+      }
+      country.currency = nextCurrency;
     }
 
     if (defaultLanguage !== undefined) {
@@ -279,6 +295,35 @@ exports.update = async (req, res) => {
         toTrimOrNull(defaultLanguage) || country.defaultLanguage;
     }
 
+    if (timezone !== undefined) {
+      try {
+        new Intl.DateTimeFormat('fr', { timeZone: timezone });
+      } catch (_) {
+        return res.status(400).json({ error: 'Fuseau horaire IANA invalide' });
+      }
+      country.timezone = timezone;
+    }
+
+    const validateActiveSettings =
+      (isActive === true && !country.isActive) ||
+      (country.isActive && (defaultLanguage !== undefined || timezone !== undefined));
+    if (validateActiveSettings) {
+      if (!country.timezone) {
+        return res.status(400).json({ error: 'Fuseau horaire requis avant activation du pays' });
+      }
+      if (!['fr', 'en'].includes(String(country.defaultLanguage).split('-')[0])) {
+        return res.status(400).json({ error: 'Traduction de la langue du pays requise avant activation' });
+      }
+    }
+    if (isActive === true && !country.isActive) {
+      const readiness = await loadPilotReadiness(db, country.isoCode);
+      if (!readiness.ready) {
+        return res.status(409).json({
+          error: 'Pays non prêt pour activation',
+          issues: readiness.issues,
+        });
+      }
+    }
     if (isActive !== undefined) {
       country.isActive = Boolean(isActive);
     }
@@ -289,7 +334,10 @@ exports.update = async (req, res) => {
       country.contactPhone = toTrimOrNull(contactPhone);
     }
 
-    await country.save();
+    await sequelize.transaction(async (transaction) => {
+      await country.save({ transaction });
+      await syncCountryTerritories(country, transaction, timezone !== undefined);
+    });
 
     return res.json({ country });
   } catch (e) {

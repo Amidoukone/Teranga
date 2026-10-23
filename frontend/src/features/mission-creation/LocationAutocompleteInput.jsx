@@ -21,11 +21,14 @@ export default function LocationAutocompleteInput({
   placeholder,
   required,
   onFocus,
+  countryIso,
 }) {
   const inputRef = useRef(null);
   const autocompleteRef = useRef(null);
   const onPlaceSelectedRef = useRef(onPlaceSelected);
   onPlaceSelectedRef.current = onPlaceSelected;
+  const countryIsoRef = useRef(countryIso);
+  countryIsoRef.current = countryIso;
 
   useEffect(() => {
     let cancelled = false;
@@ -35,6 +38,9 @@ export default function LocationAutocompleteInput({
 
       const autocomplete = new maps.places.Autocomplete(inputRef.current, {
         fields: ["formatted_address", "geometry"],
+        ...(countryIsoRef.current
+          ? { componentRestrictions: { country: countryIsoRef.current.toLowerCase() } }
+          : {}),
       });
 
       autocomplete.addListener("place_changed", () => {
@@ -59,6 +65,12 @@ export default function LocationAutocompleteInput({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (autocompleteRef.current && countryIso) {
+      autocompleteRef.current.setComponentRestrictions({ country: countryIso.toLowerCase() });
+    }
+  }, [countryIso]);
 
   return (
     <input

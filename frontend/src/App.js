@@ -79,6 +79,7 @@ const PropertyListingDetailPage = lazy(() => import('./pages/PropertyListingDeta
 const PublicTransportOrderPage = lazy(() => import('./pages/PublicTransportOrderPage'));
 const SharedRidePage = lazy(() => import('./pages/SharedRidePage'));
 const AdminServicesPage = lazy(() => import('./pages/AdminServicesPage'));
+const OperationsPage = lazy(() => import('./pages/OperationsPage'));
 const AdminPhoneOrderPage = lazy(() => import('./pages/AdminPhoneOrderPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AdminPropertiesPage = lazy(() => import('./pages/AdminPropertiesPage'));
@@ -1136,6 +1137,8 @@ export default function App() {
                 </RequireAuth>
               }
             />
+
+            <Route path="/admin/operations" element={<RequireAuth><RequireRole allow={['admin']}><OperationsPage /></RequireRole></RequireAuth>} />
 
             <Route
               path="/admin/livraisons"

@@ -1,4 +1,5 @@
 'use strict';
+const { randomBytes } = require('crypto');
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
@@ -138,9 +139,7 @@ module.exports = (sequelize, DataTypes) => {
             ).padStart(2, '0')}${String(d.getDate()).padStart(
               2,
               '0'
-            )}-${Math.floor(Math.random() * 10000)
-              .toString()
-              .padStart(4, '0')}`;
+            )}-${randomBytes(6).toString('hex')}`;
           }
         },
 

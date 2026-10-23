@@ -37,11 +37,11 @@ export default function MissionTrackingMap({ latitude, longitude, destinationLat
         ? { lat: latitude, lng: longitude }
         : hasDestination
         ? { lat: destinationLatitude, lng: destinationLongitude }
-        : { lat: 12.6392, lng: -8.0029 };
+        : { lat: 0, lng: 0 };
 
       mapRef.current = new maps.Map(containerRef.current, {
         center,
-        zoom: DEFAULT_ZOOM,
+        zoom: hasPosition || hasDestination ? DEFAULT_ZOOM : 2,
         streetViewControl: false,
         mapTypeControl: false,
         fullscreenControl: false,

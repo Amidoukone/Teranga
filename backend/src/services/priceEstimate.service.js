@@ -208,7 +208,15 @@ async function estimateMission({
   packageType = null,
 }) {
   const countryId = explicitCountryId ?? user?.countryId ?? null;
-  const regionId = explicitRegionId ?? user?.regionId ?? null;
+  // null désigne explicitement un devis national ; un autre pays ne peut pas
+  // récupérer la région du compte du demandeur.
+  const regionId = explicitRegionId !== undefined
+    ? explicitRegionId
+    : (explicitCountryId == null || String(countryId) === String(user?.countryId))
+      ? user?.regionId ?? null
+      : null;
+
+  let currency = FALLBACK_CURRENCY;
 
   if (!countryId) {
     return buildQuoteOnlyResponse({
@@ -220,7 +228,7 @@ async function estimateMission({
 
   try {
     const country = await Country.findByPk(countryId, { attributes: ['currency'] });
-    const currency = country?.currency || FALLBACK_CURRENCY;
+    currency = country?.currency || FALLBACK_CURRENCY;
 
     const rule = await findBestRule({
       countryId,
@@ -252,7 +260,7 @@ async function estimateMission({
   } catch (err) {
     logger.warn({ err }, 'priceEstimate.service.failed');
     return buildQuoteOnlyResponse({
-      currency: FALLBACK_CURRENCY,
+      currency,
       estimatedDelayMinutes: FALLBACK_DELAY_MINUTES,
       note: FALLBACK_NOTE,
     });

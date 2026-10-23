@@ -3,6 +3,8 @@
 Date: 2026-02-20  
 Scope: `backend` + `frontend`
 
+Préparation terrain : appliquer aussi [le runbook de coordination](runbooks/preparation-terrain.md), les migrations associées et les commandes `field:recipe` / `field:check`. Le centre `/admin/operations` expose les blocages de configuration et de fonctionnement du moteur. Une configuration technique complète doit être accompagnée des essais de mise en service décrits dans ce runbook.
+
 Snapshot maturite actuelle (pour integrations futures):
 - `docs/MATURITY_STATUS_2026-03-07.md`
 

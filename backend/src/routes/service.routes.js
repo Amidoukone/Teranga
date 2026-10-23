@@ -6,6 +6,7 @@ const ctrl = require('../controllers/service.controller');
 const auth = require('../middleware/auth.middleware');
 const { requirePermission } = require('../middleware/authorization.middleware');
 const { PERMISSIONS } = require('../constants/permissions');
+const { guardCreation } = require('../middleware/creationRequest.middleware');
 const { validateBody } = require('../middleware/validate.middleware');
 const {
   createServiceSchema,
@@ -82,7 +83,7 @@ router.post(
   '/',
   auth,
   requirePermission(PERMISSIONS.SERVICE_CREATE),
-  validateBody(createServiceSchema),
+  validateBody(createServiceSchema), guardCreation('service'),
   useHandler('create')
 );
 

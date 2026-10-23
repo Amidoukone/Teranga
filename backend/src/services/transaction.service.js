@@ -249,7 +249,15 @@ function buildWhereWithACL(req) {
       { '$project.clientId$': userId },
     ];
 
-    Object.assign(where, buildStrictGeoFilter(req.user));
+    // Un client conserve l'accès à ses propres opérations dans le pays
+    // d'exécution, même si son compte est rattaché à un autre pays.
+  }
+
+  if (role === 'client' || role === 'agent') {
+    const filters = {};
+    if (qCountryId) filters.countryId = qCountryId;
+    if (qRegionId) filters.regionId = qRegionId;
+    if (Object.keys(filters).length) where[Op.and] = [...(where[Op.and] || []), filters];
   }
 
   // Recherche texte simple (description + paymentMethod)
@@ -379,7 +387,7 @@ async function canAccessTransaction(req, trx) {
         t.userId === userId;
 
       if (!isRelated) return false;
-      return passesGeoScopeForUser(req.user, t);
+      return true;
     }
 
     return false;

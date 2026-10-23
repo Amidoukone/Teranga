@@ -1,3 +1,4 @@
+import WorkProgressPanel from '../features/mission-tracking/WorkProgressPanel';
 // ============================================================
 // OrderDetailPage.jsx Teranga PRODUCTION READY (Option B2)
 // Clean Shop Premium - Responsive - FILE_BASE system (multi-pays)
@@ -552,6 +553,7 @@ export default function OrderDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-10">
       <div className="max-w-6xl mx-auto bg-surface-card shadow-xl rounded-2xl p-5 sm:p-8 border border-border/70">
+        <WorkProgressPanel entityType="order" entityId={order.id} status={order.status} onSaved={init} />
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="min-w-0">
@@ -656,17 +658,16 @@ export default function OrderDetailPage() {
                   {t("orderDetail.actions.markPaid")}
                 </button>
 
-                <button
+                {!order.coordination && (<button
                   className="px-3 py-1 text-xs rounded-lg app-btn-primary"
                   onClick={() =>
                     handleOrderUpdate({
                       orderStatus: 'delivered',
-                      paymentStatus: 'paid',
                     })
                   }
                 >
                   {t("orderDetail.actions.markDelivered")}
-                </button>
+                </button>)}
               </div>
             )}
           </div>

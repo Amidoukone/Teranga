@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import AgentServicesPage from './AgentServicesPage';
 import { getAgentServices, startService } from '../services/services';
 
+jest.mock('../features/mission-tracking/AgentCoordinationPanel', () => () => null);
 jest.mock('react-router-dom', () => ({
   Link: ({ children, to, ...props }) => <a href={to} {...props}>{children}</a>,
 }), { virtual: true });

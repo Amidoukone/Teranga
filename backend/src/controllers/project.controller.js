@@ -1,6 +1,6 @@
 "use strict";
 
-const { Project, ProjectPhase, Region, User } = require("../../models");
+const { Project, ProjectPhase, ProjectDocument, Transaction, Region, User, WorkCoordination } = require("../../models");
 const { getLabel } = require("../utils/labels");
 const { Op } = require("sequelize");
 const {
@@ -16,7 +16,10 @@ const {
 } = require("../services/notification.service");
 const { emitEvent } = require("../services/activity.service");
 const { geocodeAddress } = require("../services/geocoding.service");
+const { createTrackedResource } = require('../services/trackedCreation.service');
 const logger = require('../utils/logger');
+const { normalizeCurrency } = require('../utils/currency');
+const { resolveExecutionTerritory, validateAgentForTerritory } = require('../services/executionTerritory.service');
 
 /* =========================================================
    🏷️ Labels (FR)
@@ -72,7 +75,7 @@ exports.create = async (req, res) => {
       type,
       description,
       budget,
-      currency = "XOF",
+      currency,
       clientId,
       agentId,
 
@@ -165,13 +168,10 @@ exports.create = async (req, res) => {
         : scope.regionId ?? desiredRegionId ?? clientScope.regionId ?? null
       : clientScope.regionId ?? null;
 
-    if (!finalRegionId && finalCountryId) {
-      const fallbackRegion = await Region.findOne({
-        where: { countryId: finalCountryId },
-        order: [["id", "ASC"]],
-      });
-      finalRegionId = fallbackRegion?.id ?? null;
-    }
+    if (!desiredRegionId && !scope.regionId && String(finalCountryId) !== String(clientScope.countryId)) finalRegionId = null;
+    const territory = await resolveExecutionTerritory(finalCountryId, finalRegionId);
+    if (territory.error) return res.status(400).json({ error: territory.error });
+    finalCountryId = territory.countryId;
 
     if (
       isAdminLike(req.user) &&
@@ -181,14 +181,20 @@ exports.create = async (req, res) => {
       return res.status(403).json({ error: "Creation hors scope geographique" });
     }
 
-    const project = await Project.create({
+    const executionCountry = territory.country;
+
+    const assignedAgentId = isAdminLike(req.user) ? toSafeInt(agentId) : null;
+    const assignment = await validateAgentForTerritory(assignedAgentId, { countryId: finalCountryId, regionId: finalRegionId }, req.user);
+    if (assignment.error) return res.status(assignment.status).json({ error: assignment.error });
+
+    const project = await createTrackedResource(req, Project, {
       title: String(title).trim(),
       type: String(type).trim(),
       description: description ?? null,
       budget: budget ?? null,
-      currency: currency || "XOF",
+      currency: normalizeCurrency(currency, executionCountry?.currency || "XOF"),
       clientId: targetClientId,
-      agentId: isAdminLike(req.user) ? toSafeInt(agentId) : null,
+      agentId: assignedAgentId,
       status: "created",
 
       // Multi-pays (non destructif)
@@ -285,7 +291,7 @@ exports.list = async (req, res) => {
     if (regionId) where.regionId = regionId;
 
     where = applyGeoScopeForModel
-      ? applyGeoScopeForModel(where, req.user, Project, { includeClients: true })
+      ? applyGeoScopeForModel(where, req.user, Project)
       : where;
 
     const projects = await Project.findAll({
@@ -363,13 +369,14 @@ exports.detail = async (req, res) => {
       return res.status(403).json({ error: "Accès non autorisé à ce projet" });
     }
 
-    if (!canAccessGeoResource(project, req.user)) {
+    if (req.user.role !== 'client' && !canAccessGeoResource(project, req.user)) {
       return res.status(403).json({ error: "Accès hors scope géographique" });
     }
 
     return res.json({
       project: {
         ...project.toJSON(),
+        coordination: WorkCoordination ? await WorkCoordination.findOne({ where: { entityType: 'project', entityId: project.id } }) : null,
         statusLabel: getLabel(project.status, PROJECT_STATUSES),
       },
     });
@@ -404,6 +411,9 @@ exports.update = async (req, res) => {
     if (!project)
       return res.status(404).json({ error: "Projet introuvable" });
 
+    const coordination = WorkCoordination ? await WorkCoordination.findOne({ where: { entityType: 'project', entityId: project.id } }) : null;
+    if (coordination && req.body.status && req.body.status !== project.status && req.body.status !== 'cancelled') return res.status(409).json({ error: 'Utilisez le suivi opérationnel du projet pour changer son étape et vérifier ses justificatifs.' });
+    if (coordination && project.status !== 'created' && req.body.agentId !== undefined && String(req.body.agentId) !== String(project.agentId)) return res.status(409).json({ error: 'Un projet commencé exige une intervention du responsable avant réaffectation.' });
     const previousStatus = project.status;
     const previousAgentId = project.agentId;
 
@@ -417,20 +427,37 @@ exports.update = async (req, res) => {
       });
     }
 
-    if (!canAccessGeoResource(project, req.user)) {
+    if (req.user.role !== 'client' && !canAccessGeoResource(project, req.user)) {
       return res.status(403).json({ error: "Action hors scope géographique" });
     }
 
     const body = req.body || {};
     const scope = getUserGeoScope(req.user);
-    const nextCountryId =
+    let nextCountryId =
       adminOK && (body.countryId !== undefined || body.country_id !== undefined)
         ? toSafeInt(body.countryId ?? body.country_id)
         : project.countryId;
-    const nextRegionId =
+    let nextRegionId =
       adminOK && (body.regionId !== undefined || body.region_id !== undefined)
         ? toSafeInt(body.regionId ?? body.region_id)
         : project.regionId;
+
+    const countrySent = body.countryId !== undefined || body.country_id !== undefined;
+    const regionSent = body.regionId !== undefined || body.region_id !== undefined;
+    if (adminOK && countrySent && !regionSent && String(nextCountryId) !== String(project.countryId)) nextRegionId = null;
+    const territoryChanged = String(nextCountryId ?? '') !== String(project.countryId ?? '') || String(nextRegionId ?? '') !== String(project.regionId ?? '');
+    if (territoryChanged) {
+      const history = await Promise.all([
+        Transaction.count({ where: { projectId: project.id } }),
+        ProjectPhase.count({ where: { projectId: project.id } }),
+        ProjectDocument.count({ where: { projectId: project.id } }),
+      ]);
+      if (project.status !== 'created' || history.some(Boolean)) return res.status(409).json({ error: 'Le périmètre ne peut plus être déplacé après le début du projet ou la création de son historique' });
+      const territory = await resolveExecutionTerritory(nextCountryId, nextRegionId);
+      if (territory.error) return res.status(400).json({ error: territory.error });
+      nextCountryId = territory.countryId;
+      if (!canAccessGeoResource({ countryId: nextCountryId, regionId: nextRegionId }, req.user)) return res.status(403).json({ error: 'Mise à jour hors scope géographique' });
+    }
 
     if (adminOK && !isGlobalAdmin(req.user)) {
       if (scope.countryId && nextCountryId && nextCountryId !== scope.countryId) {
@@ -443,8 +470,13 @@ exports.update = async (req, res) => {
 
     const nextStatus = adminOK ? body.status ?? project.status : project.status;
     const nextAgentId = adminOK
-      ? toSafeInt(body.agentId ?? project.agentId)
+      ? (body.agentId !== undefined ? toSafeInt(body.agentId) : project.agentId)
       : project.agentId;
+
+    if (territoryChanged || (adminOK && body.agentId !== undefined)) {
+      const assignment = await validateAgentForTerritory(nextAgentId, { countryId: nextCountryId, regionId: nextRegionId }, req.user);
+      if (assignment.error) return res.status(assignment.status).json({ error: assignment.error });
+    }
 
     // Localisation (non bloquante) : re-géocode seulement si adresse/ville change
     // sans lat/lng explicites fournies dans la même requête.
@@ -477,7 +509,7 @@ exports.update = async (req, res) => {
           : project.description,
       budget:
         body.budget !== undefined ? body.budget : project.budget,
-      currency: body.currency ?? project.currency,
+      currency: normalizeCurrency(body.currency, project.currency),
 
       // 🔐 Admin only
       agentId: nextAgentId,
@@ -624,7 +656,7 @@ exports.remove = async (req, res) => {
       });
     }
 
-    if (!canAccessGeoResource(project, req.user)) {
+    if (req.user.role !== 'client' && !canAccessGeoResource(project, req.user)) {
       return res.status(403).json({ error: "Suppression hors scope géographique" });
     }
 

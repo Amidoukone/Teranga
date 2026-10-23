@@ -271,6 +271,117 @@ describe('Mission transfrontalière — routage/tarif selon la destination, pas 
     expect(createRes.body.mission.countryId).not.toBe(originCountry.id);
   });
 
+  test('authenticated locationless request uses the selected foreign country and region', async () => {
+    if (!dbReady) return;
+    const { user, password } = await makeClient(originCountry.id);
+    const token = await loginAndGetToken(user.email, password);
+    const payload = {
+      executionType: 'provider',
+      tradeCategoryId: tradeCategory.id,
+      countryId: destinationCountry.id,
+      regionId: destinationRegion.id,
+    };
+
+    const estimateRes = await request(app)
+      .post('/api/v1/missions/estimate')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+    expect(estimateRes.status).toBe(200);
+    expect(Number(estimateRes.body.estimate.basePrice)).toBe(9999);
+
+    const createRes = await request(app)
+      .post('/api/v1/missions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ ...payload, title: 'Service sans adresse en Côte d’Ivoire' });
+    if (createRes.body?.mission?.id) created.serviceIds.push(createRes.body.mission.id);
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.mission.countryId).toBe(destinationCountry.id);
+    expect(createRes.body.mission.regionId).toBe(destinationRegion.id);
+  });
+
+  test('authenticated estimate rejects a destination outside the selected execution country', async () => {
+    if (!dbReady) return;
+    const { user, password } = await makeClient(originCountry.id);
+    const token = await loginAndGetToken(user.email, password);
+    mockGeocodeResponse({
+      lat: 12.63,
+      lng: -8.00,
+      countryIso: originCountry.isoCode,
+      countryName: originCountry.name,
+      adminAreaName: 'Bamako',
+    });
+
+    const estimateRes = await request(app)
+      .post('/api/v1/missions/estimate')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        executionType: 'provider',
+        tradeCategoryId: tradeCategory.id,
+        countryId: destinationCountry.id,
+        address: 'Bamako, Mali',
+      });
+    expect(estimateRes.status).toBe(400);
+  });
+
+  test('map coordinates are checked against the selected country before quoting or creating', async () => {
+    if (!dbReady) return;
+    const { user, password } = await makeClient(originCountry.id);
+    const token = await loginAndGetToken(user.email, password);
+    const payload = {
+      executionType: 'provider',
+      tradeCategoryId: tradeCategory.id,
+      countryId: destinationCountry.id,
+      latitude: 12.63,
+      longitude: -8.00,
+    };
+    mockGeocodeResponse({
+      lat: 12.63, lng: -8.00,
+      countryIso: originCountry.isoCode,
+      countryName: originCountry.name,
+      adminAreaName: 'Bamako',
+    });
+    const wrongCountry = await request(app)
+      .post('/api/v1/missions/estimate')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+    expect(wrongCountry.status).toBe(400);
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'OK',
+        results: [{ formatted_address: 'Position sans pays', address_components: [] }],
+      }),
+    });
+    const unverifiable = await request(app)
+      .post('/api/v1/missions/estimate')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+    expect(unverifiable.status).toBe(400);
+
+    mockGeocodeResponse({
+      lat: 5.36, lng: -4.0083,
+      countryIso: destinationCountry.isoCode,
+      countryName: destinationCountry.name,
+      adminAreaName: destinationRegion.name,
+    });
+    const destinationPayload = { ...payload, latitude: 5.36, longitude: -4.0083 };
+    const estimateRes = await request(app)
+      .post('/api/v1/missions/estimate')
+      .set('Authorization', `Bearer ${token}`)
+      .send(destinationPayload);
+    expect(estimateRes.status).toBe(200);
+
+    const createRes = await request(app)
+      .post('/api/v1/missions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ ...destinationPayload, title: 'Mission par position GPS' });
+    if (createRes.body?.mission?.id) created.serviceIds.push(createRes.body.mission.id);
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.mission.countryId).toBe(destinationCountry.id);
+    expect(createRes.body.mission.regionId).toBe(destinationRegion.id);
+  });
+
   test('mission creation is rejected when the geocoded destination country is not supported at all', async () => {
     if (!dbReady) return;
     const { user, password } = await makeClient(originCountry.id);
@@ -292,6 +403,17 @@ describe('Mission transfrontalière — routage/tarif selon la destination, pas 
         ],
       }),
     });
+
+    const estimateRes = await request(app)
+      .post('/api/v1/missions/estimate')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        executionType: 'provider',
+        tradeCategoryId: tradeCategory.id,
+        address: 'Rue de Rivoli, Paris',
+      });
+
+    expect(estimateRes.status).toBe(400);
 
     const res = await request(app)
       .post('/api/v1/missions')

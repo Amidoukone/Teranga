@@ -23,6 +23,7 @@ const {
 const { Op } = require('sequelize');
 const { getUserGeoScope, isGlobalAdmin } = require('../utils/geoScope');
 const logger = require('../utils/logger');
+const { syncRegionTerritories } = require('../services/territorialSync.service');
 
 /* ======================================================
    🧩 Helpers
@@ -158,9 +159,13 @@ exports.list = async (req, res) => {
     const rows = await Region.findAll({
       where,
       order: [['name', 'ASC']],
-      include: includeCountry
-        ? [{ model: Country, as: 'country', attributes: ['id', 'name', 'isoCode'] }]
-        : undefined,
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: includeCountry ? ['id', 'name', 'isoCode'] : [],
+        required: !includeInactive,
+        ...(!includeInactive ? { where: { isActive: true } } : {}),
+      }],
     });
 
     return res.json({ regions: rows });
@@ -179,7 +184,7 @@ exports.create = async (req, res) => {
   try {
     if (!requireGlobalAdmin(req, res)) return;
 
-    const { countryId, country_id, name, code, isActive } = req.body || {};
+    const { countryId, country_id, name, code, timezone, isActive } = req.body || {};
 
     const cid = toSafeInt(countryId ?? country_id);
     if (!cid) return res.status(400).json({ error: 'countryId requis' });
@@ -192,11 +197,20 @@ exports.create = async (req, res) => {
 
     const trimmedCodeRaw = toTrimOrNull(code);
     const normalizedCode = trimmedCodeRaw ? trimmedCodeRaw.toUpperCase() : null;
+    const normalizedTimezone = toTrimOrNull(timezone);
+    if (normalizedTimezone) {
+      try {
+        new Intl.DateTimeFormat('fr', { timeZone: normalizedTimezone });
+      } catch (_) {
+        return res.status(400).json({ error: 'Fuseau horaire IANA invalide' });
+      }
+    }
 
     const created = await Region.create({
       countryId: cid,
       name: trimmedName,
       code: normalizedCode,
+      timezone: normalizedTimezone,
       isActive: isActive === undefined ? true : Boolean(isActive),
     });
 
@@ -235,7 +249,7 @@ exports.update = async (req, res) => {
       });
     }
 
-    const { name, code, isActive, contactPhone } = req.body || {};
+    const { name, code, timezone, isActive, contactPhone } = req.body || {};
 
     if (name !== undefined) {
       region.name = toTrimOrNull(name) || region.name;
@@ -244,6 +258,18 @@ exports.update = async (req, res) => {
     if (code !== undefined) {
       const trimmedCodeRaw = toTrimOrNull(code);
       region.code = trimmedCodeRaw ? trimmedCodeRaw.toUpperCase() : null;
+    }
+
+    if (timezone !== undefined) {
+      const normalizedTimezone = toTrimOrNull(timezone);
+      if (normalizedTimezone) {
+        try {
+          new Intl.DateTimeFormat('fr', { timeZone: normalizedTimezone });
+        } catch (_) {
+          return res.status(400).json({ error: 'Fuseau horaire IANA invalide' });
+        }
+      }
+      region.timezone = normalizedTimezone;
     }
 
     if (isActive !== undefined) {
@@ -256,7 +282,10 @@ exports.update = async (req, res) => {
       region.contactPhone = toTrimOrNull(contactPhone);
     }
 
-    await region.save();
+    await sequelize.transaction(async (transaction) => {
+      await region.save({ transaction });
+      await syncRegionTerritories(region, transaction);
+    });
 
     const withCountry = await Region.findByPk(region.id, {
       include: [{ model: Country, as: 'country', attributes: ['id', 'name', 'isoCode'] }],

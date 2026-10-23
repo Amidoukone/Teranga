@@ -116,8 +116,7 @@ function canReadProject(project, user) {
 
   if (user.role === "client") {
     return (
-      String(project.clientId) === String(user.id) &&
-      canAccessGeoResource(project, user)
+      String(project.clientId) === String(user.id)
     );
   }
 
@@ -142,7 +141,7 @@ function canUploadToProject(project, user) {
   if (!project || !user?.role) return false;
 
   const adminOK = isAdmin(user) && canAdminAccessProjectByGeo(project, user);
-  const clientOK = isClientOwner(project, user) && canAccessGeoResource(project, user);
+  const clientOK = isClientOwner(project, user);
   const agentOK = isAssignedAgent(project, user) && canAccessGeoResource(project, user);
 
   return adminOK || clientOK || agentOK;
@@ -157,7 +156,7 @@ function canRemoveDocument(project, user) {
   if (!project || !user?.role) return false;
 
   const adminOK = isAdmin(user) && canAdminAccessProjectByGeo(project, user);
-  const clientOK = canClientModify(project, user) && canAccessGeoResource(project, user);
+  const clientOK = canClientModify(project, user);
 
   return adminOK || clientOK;
 }

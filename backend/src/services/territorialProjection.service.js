@@ -56,7 +56,7 @@ function buildTerritorialProjection({
       countryId: country.id,
       regionId: null,
       name: country.name,
-      timezone: null,
+      timezone: country.timezone || null,
       aliases: [country.isoCode].filter(Boolean),
       isActive: country.isActive !== false,
     });
@@ -81,7 +81,7 @@ function buildTerritorialProjection({
       countryId: region.countryId,
       regionId: region.id,
       name: region.name,
-      timezone: null,
+      timezone: region.timezone || countriesById.get(key(region.countryId))?.timezone || null,
       aliases: [region.code].filter(Boolean),
       isActive: region.isActive !== false,
     });

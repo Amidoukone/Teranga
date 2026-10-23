@@ -8,13 +8,35 @@
 // regionId) renseigné.
 
 const { MissionPricingRule, Country, Region, TradeCategory } = require('../../models');
+const { Op } = require('sequelize');
 const {
   isGlobalAdmin,
   getUserGeoScope,
   applyGeoScopeForModel,
   canAccessGeoResource,
 } = require('../utils/geoScope');
+const { selectedGeo } = require('../utils/selectedGeo');
 const logger = require('../utils/logger');
+const { resolveExecutionTerritory } = require('../services/executionTerritory.service');
+
+async function validateRuleScope(scope, tradeCategoryId) {
+  const territory = await resolveExecutionTerritory(scope.countryId, scope.regionId, { requireActive: false });
+  if (territory.error || !territory.countryId) throw Object.assign(new Error(territory.error || 'Pays de tarification requis'), { status: 400 });
+  if (tradeCategoryId) {
+    const category = await TradeCategory.findByPk(tradeCategoryId);
+    if (!category || (category.countryId && String(category.countryId) !== String(territory.countryId)) ||
+        (category.regionId && String(category.regionId) !== String(scope.regionId))) {
+      throw Object.assign(new Error('Filière incompatible avec le périmètre de tarification'), { status: 400 });
+    }
+  }
+  return territory;
+}
+
+function validatePrice(rule) {
+  if (rule.isActive !== false && rule.pricingMode === 'fixed_estimate' && rule.basePrice == null) {
+    throw Object.assign(new Error('Un tarif de base est requis pour une estimation chiffrée'), { status: 400 });
+  }
+}
 
 const INCLUDE = [
   { model: Country, as: 'country', attributes: ['id', 'name', 'isoCode', 'currency'] },
@@ -45,10 +67,11 @@ function resolveWriteScope(user, payload) {
 
 exports.list = async (req, res) => {
   try {
-    const where = applyGeoScopeForModel({}, req.user, MissionPricingRule);
-    if (where.id === 0) {
+    const actorWhere = applyGeoScopeForModel({}, req.user, MissionPricingRule);
+    if (actorWhere.id === 0) {
       return res.status(403).json({ error: 'Accès interdit' });
     }
+    const where = { [Op.and]: [actorWhere, selectedGeo(req.query)] };
 
     const rules = await MissionPricingRule.findAll({
       where,
@@ -58,6 +81,7 @@ exports.list = async (req, res) => {
 
     return res.status(200).json({ pricingRules: rules });
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
     logger.error({ err: e }, 'missionPricingRule.list.failed');
     return res.status(500).json({ error: 'Erreur lors de la récupération des tarifs' });
   }
@@ -66,6 +90,8 @@ exports.list = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const scope = resolveWriteScope(req.user, req.body);
+    await validateRuleScope(scope, req.body.tradeCategoryId);
+    validatePrice(req.body);
 
     const rule = await MissionPricingRule.create({
       ...req.body,
@@ -95,12 +121,15 @@ exports.update = async (req, res) => {
       return res.status(403).json({ error: 'Accès interdit pour cette règle' });
     }
 
+    await validateRuleScope(rule, rule.tradeCategoryId);
+    validatePrice({ ...(rule.toJSON ? rule.toJSON() : rule), ...req.body });
     Object.assign(rule, req.body, { updatedByUserId: req.user.id });
     await rule.save();
 
     const full = await MissionPricingRule.findByPk(rule.id, { include: INCLUDE });
     return res.status(200).json({ pricingRule: full });
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
     logger.error({ err: e }, 'missionPricingRule.update.failed');
     return res.status(500).json({ error: 'Erreur lors de la mise à jour de la règle' });
   }

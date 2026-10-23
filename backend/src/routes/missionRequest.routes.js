@@ -6,6 +6,7 @@ const {
   guestLimiter,
   publicQuoteLimiter,
 } = require('../middleware/rateLimit.middleware');
+const { guardCreation } = require('../middleware/creationRequest.middleware');
 const { validateBody } = require('../middleware/validate.middleware');
 const {
   createMissionRequestSchema,
@@ -24,6 +25,6 @@ router.post(
   ctrl.estimate
 );
 router.get('/reverse-geocode', publicQuoteLimiter, ctrl.reverseGeocodeLocation);
-router.post('/', guestLimiter, validateBody(createMissionRequestSchema), ctrl.create);
+router.post('/', guestLimiter, validateBody(createMissionRequestSchema), guardCreation('public-request', { publicRequest: true }), ctrl.create);
 
 module.exports = router;

@@ -58,7 +58,14 @@ export async function createProject(form = {}) {
     type: form?.type,
     description: form?.description || null,
     budget: toNumberOrNull(form?.budget),
-    currency: form?.currency || 'XOF',
+    currency: typeof form.currency === 'string' && form.currency.trim()
+      ? form.currency.trim().toUpperCase()
+      : undefined,
+
+    ...(form.countryId !== undefined ? { countryId: form.countryId } : {}),
+    ...(form.country_id !== undefined ? { country_id: form.country_id } : {}),
+    ...(form.regionId !== undefined ? { regionId: form.regionId } : {}),
+    ...(form.region_id !== undefined ? { region_id: form.region_id } : {}),
 
     // Admin uniquement (le backend se charge d’ignorer si non admin)
     clientId:
@@ -108,8 +115,8 @@ export async function updateProject(id, form = {}) {
   if ('budget' in form) {
     payload.budget = toNumberOrNull(form.budget);
   }
-  if ('currency' in form) {
-    payload.currency = form.currency || 'XOF';
+  if (typeof form.currency === 'string' && form.currency.trim()) {
+    payload.currency = form.currency.trim().toUpperCase();
   }
 
  // Champs reserves admin (le backend tranchera selon le role reel)

@@ -71,7 +71,7 @@ export async function createService(form) {
   const normalizedCurrency =
     typeof form?.currency === 'string' && form.currency.trim()
       ? form.currency.trim().toUpperCase()
-      : 'XOF';
+      : undefined;
 
   const payload = mergeGeoPayload({
     ...form,

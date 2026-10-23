@@ -76,7 +76,7 @@ function CategoryChip({ label, Icon, selected, onClick }) {
  * @param {{requestKind: 'trade_category'|'classic'|null, tradeCategoryId?: string, serviceType?: string}} props.value
  * @param {(selection: {requestKind:string, tradeCategoryId?: string, serviceType?: string}) => void} props.onChange
  */
-export default function CategoryPicker({ tradeCategories = [], loading = false, value, onChange }) {
+export default function CategoryPicker({ tradeCategories = [], classicTypes = CLASSIC_SERVICE_TYPES, loading = false, value, onChange }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
 
@@ -88,10 +88,10 @@ export default function CategoryPicker({ tradeCategories = [], loading = false, 
     [normalizedSearch, tradeCategories]
   );
   const visibleClassicTypes = useMemo(
-    () => CLASSIC_SERVICE_TYPES.filter((key) =>
+    () => classicTypes.filter((key) =>
       !normalizedSearch || normalizeSearch(`${t(`services.type.${key}`)} ${key}`).includes(normalizedSearch)
     ),
-    [normalizedSearch, t]
+    [classicTypes, normalizedSearch, t]
   );
 
   const selectTradeCategory = (id) =>

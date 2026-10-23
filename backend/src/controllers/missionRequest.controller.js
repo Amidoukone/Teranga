@@ -7,9 +7,11 @@ const { normalizePhone, isValidPhone } = require('../utils/contactIdentity');
 const { notifyServiceCreated } = require('../services/serviceNotification.service');
 const { geocodeAddress, reverseGeocode } = require('../services/geocoding.service');
 const { estimateMission } = require('../services/priceEstimate.service');
+const { isServiceAvailable } = require('../services/localCatalog.service');
 const { getMissionStartCode } = require('../services/missionSafety.service');
 const { resolveMissionGeoScope } = require('../utils/resolveMissionGeoScope');
 const { resolveDeliveryDetails } = require('../utils/deliveryDetails');
+const { createTrackedResource } = require('../services/trackedCreation.service');
 const logger = require('../utils/logger');
 const {
   signAccess,
@@ -115,6 +117,14 @@ exports.estimate = async (req, res) => {
       },
     });
     if (missionGeoScope.error) return res.status(400).json({ error: missionGeoScope.error });
+    if (countryId && String(missionGeoScope.countryId) !== String(countryId)) return res.status(400).json({ error: 'Le lieu doit correspondre au pays choisi.' });
+    if (!await isServiceAvailable({
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
+      tradeCategoryId: tradeCategory.id,
+    })) {
+      return res.status(409).json({ error: 'Ce service n’est pas disponible dans ce pays ou cette région.' });
+    }
 
     const requestedVehicleType = resolveRequestedVehicleType(
       tradeCategory,
@@ -247,6 +257,7 @@ exports.create = async (req, res) => {
     let isNewAccount = false;
     let recoveryCodes = [];
     let generatedPin = null;
+    let pendingRegistration = null;
 
     if (user) {
       if (user.role !== 'client') {
@@ -287,24 +298,16 @@ exports.create = async (req, res) => {
           ? String(pin).trim()
           : String(crypto.randomInt(100000, 1000000));
       if (!pin || !String(pin).trim()) generatedPin = effectivePin;
-      ({ user } = await createClientUser({
+      pendingRegistration = {
+
         phone,
         password: effectivePin,
         firstName,
         countryId: geoScope.countryId,
         regionId: req.body?.regionId,
         language: req.body?.language,
-      }));
-      isNewAccount = true;
-
-      try {
-        recoveryCodes = await rotateRecoveryCodes({ userId: user.id, req });
-      } catch (recoveryErr) {
-        logger.warn(
-          { err: recoveryErr },
-          'missionRequest.create.recovery_codes_generation_failed'
-        );
-      }
+      };
+      user = { phone, firstName, countryId: geoScope.countryId, regionId: req.body?.regionId || null };
     }
 
     const trimmedAddress = address ? String(address).trim() : null;
@@ -379,14 +382,22 @@ exports.create = async (req, res) => {
     const missionGeoScope = await resolveMissionGeoScope({
       countryIso: geocodedCountryIso,
       adminAreaName: geocodedAdminAreaName,
-      fallbackCountryId: user.countryId,
-      fallbackRegionId: user.regionId,
+      fallbackCountryId: countryId || user.countryId,
+      fallbackRegionId: req.body.regionId ?? (String(countryId || user.countryId) === String(user.countryId) ? user.regionId : null),
       tradeCategoryScope: tradeCategory
         ? { countryId: tradeCategory.countryId, regionId: tradeCategory.regionId }
         : null,
     });
     if (missionGeoScope.error) {
       return res.status(400).json({ error: missionGeoScope.error });
+    }
+    if (!await isServiceAvailable({
+      countryId: missionGeoScope.countryId,
+      regionId: missionGeoScope.regionId,
+      tradeCategoryId: tradeCategory?.id,
+      serviceType: tradeCategory ? null : serviceType,
+    })) {
+      return res.status(409).json({ error: 'Ce service n’est pas disponible dans ce pays ou cette région.' });
     }
 
     const executionType = tradeCategory ? 'provider' : 'agent';
@@ -415,7 +426,21 @@ exports.create = async (req, res) => {
       packageType,
     });
 
-    const service = await Service.create({
+    if (pendingRegistration) {
+      ({ user } = await createClientUser(pendingRegistration));
+      isNewAccount = true;
+
+      try {
+        recoveryCodes = await rotateRecoveryCodes({ userId: user.id, req });
+      } catch (recoveryErr) {
+        logger.warn(
+          { err: recoveryErr },
+          'missionRequest.create.recovery_codes_generation_failed'
+        );
+      }
+    }
+
+    const service = await createTrackedResource(req, Service, {
       clientId: user.id,
       agentId: null,
       createdById: user.id,

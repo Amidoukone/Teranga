@@ -251,6 +251,15 @@ exports.create = async (req, res) => {
         ? trimmedStatus
         : 'active';
 
+    if (trimmedType === 'MASTER' && finalStatus === 'active') {
+      const existingMaster = await Franchise.findOne({
+        where: { type: 'MASTER', countryId: cid, status: 'active' },
+      });
+      if (existingMaster) {
+        return res.status(409).json({ error: 'Un opérateur MASTER actif existe déjà pour ce pays' });
+      }
+    }
+
     const created = await Franchise.create({
       type: trimmedType,
       countryId: cid,
@@ -361,6 +370,21 @@ exports.update = async (req, res) => {
         return res.status(400).json({ error: 'status invalide' });
       }
       franchise.status = trimmedStatus || franchise.status;
+    }
+
+    if (franchise.type === 'REGIONAL' && !franchise.regionId) {
+      return res.status(400).json({ error: 'regionId requis pour un franchisé régional' });
+    }
+    if (franchise.type === 'MASTER' && franchise.regionId) {
+      return res.status(400).json({ error: 'regionId doit être null pour un franchisé MASTER' });
+    }
+    if (franchise.type === 'MASTER' && franchise.status === 'active') {
+      const existingMaster = await Franchise.findOne({
+        where: { type: 'MASTER', countryId: franchise.countryId, status: 'active', id: { [Op.ne]: franchise.id } },
+      });
+      if (existingMaster) {
+        return res.status(409).json({ error: 'Un opérateur MASTER actif existe déjà pour ce pays' });
+      }
     }
 
     await franchise.save();

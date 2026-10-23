@@ -7,6 +7,7 @@ import { getServiceById, validateService } from '../services/services';
 
 const mockNavigate = jest.fn();
 
+jest.mock('../features/mission-tracking/MissionCompletionPanel', () => () => null);
 jest.mock('react-router-dom', () => ({
   Link: ({ children, to, ...props }) => <a href={to} {...props}>{children}</a>,
   useNavigate: () => mockNavigate,

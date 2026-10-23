@@ -1,6 +1,6 @@
 // frontend/src/services/users.js
 import api from './api';
-import { mergeGeoPayload } from './geo';
+import { mergeGeoPayload, mergeGeoParams } from './geo';
 
 /**
  * Recupere les utilisateurs par role (client, agent, admin)
@@ -10,7 +10,7 @@ export async function getUsers(role, options = {}) {
   const q = options?.q?.trim();
   if (q) params.q = q;
   if (options?.adminType) params.adminType = options.adminType;
-  const { data } = await api.get('/users', { params });
+  const { data } = await api.get('/users', { params: mergeGeoParams({ ...options, ...params }) });
   return data.users || [];
 }
 

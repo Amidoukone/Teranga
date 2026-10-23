@@ -222,6 +222,8 @@ function canAccessGeoResource(resource, user, options = {}) {
   const resRegion = resource?.regionId ?? resource?.region_id ?? null;
   const resCountry = resource?.countryId ?? resource?.country_id ?? null;
 
+  if (countryId && resCountry && String(resCountry) !== String(countryId)) return false;
+
   if (regionId) {
     if (String(resRegion) === String(regionId)) return true;
     if (resolveStrictRegionScope(options)) return false;

@@ -95,7 +95,7 @@ async function geocodeAddress(address, { countryIso } = {}) {
  * Retourne `null` en best-effort (adresse introuvable, clé absente, erreur réseau) : ne doit
  * jamais bloquer la capture des coordonnées elles-mêmes.
  */
-async function reverseGeocode(latitude, longitude) {
+async function reverseGeocodeDetails(latitude, longitude) {
   const apiKey = process.env.GOOGLE_MAPS_SERVER_KEY;
 
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
@@ -129,7 +129,15 @@ async function reverseGeocode(latitude, longitude) {
       return null;
     }
 
-    return data.results[0].formatted_address || null;
+    const result = data.results[0];
+    const components = Array.isArray(result.address_components) ? result.address_components : [];
+    const country = components.find((item) => item.types?.includes('country'));
+    const adminArea = components.find((item) => item.types?.includes('administrative_area_level_1'));
+    return {
+      formattedAddress: result.formatted_address || null,
+      countryIso: country?.short_name || null,
+      adminAreaName: adminArea?.long_name || null,
+    };
   } catch (err) {
     logger.warn({ err }, 'geocoding.service.reverse_request_failed');
     return null;
@@ -138,4 +146,9 @@ async function reverseGeocode(latitude, longitude) {
   }
 }
 
-module.exports = { geocodeAddress, reverseGeocode };
+async function reverseGeocode(latitude, longitude) {
+  const details = await reverseGeocodeDetails(latitude, longitude);
+  return details?.formattedAddress || null;
+}
+
+module.exports = { geocodeAddress, reverseGeocode, reverseGeocodeDetails };

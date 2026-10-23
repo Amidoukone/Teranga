@@ -429,9 +429,9 @@ async function resolveGeoScope({ country, countryId, regionId }) {
   let resolvedRegion = null;
   if (resolved.regionId) {
     resolvedRegion = await Region.findByPk(resolved.regionId, {
-      attributes: ['id', 'countryId'],
+      attributes: ['id', 'countryId', 'isActive'],
     });
-    if (!resolvedRegion) {
+    if (!resolvedRegion || resolvedRegion.isActive === false) {
       return { error: 'Région inconnue' };
     }
     if (resolved.countryId && resolvedRegion.countryId !== resolved.countryId) {
@@ -575,6 +575,12 @@ async function createClientUser({
     throw error;
   }
 
+  const countrySettings = await Country.findByPk(geoScope.countryId, {
+    attributes: ['defaultLanguage'],
+  });
+  const accountLanguage =
+    normalizeLanguage(language) || normalizeLanguage(countrySettings?.defaultLanguage) || 'fr';
+
   const user = await User.create({
     email: normalizedEmail || null,
     passwordHash: await bcrypt.hash(normalizedPassword, 10),
@@ -584,7 +590,7 @@ async function createClientUser({
     country: geoScope.countryIso || null,
     countryId: geoScope.countryId ?? null,
     regionId: geoScope.regionId ?? null,
-    language: normalizeLanguage(language) || 'fr',
+    language: accountLanguage,
     role: 'client',
   });
 
@@ -609,7 +615,7 @@ exports.register = async (req, res) => {
       regionId,
       language: rawLanguage,
     } = req.body || {};
-    const language = normalizeLanguage(rawLanguage) || 'fr';
+    const language = normalizeLanguage(rawLanguage);
 
     // Champs requis
     if (!email && !phone) {

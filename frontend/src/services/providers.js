@@ -1,9 +1,10 @@
 // frontend/src/services/providers.js
 import api from './api';
+import { mergeGeoParams } from './geo';
 
 // v1-only (docs/DEV_SPEC_TERANGA_v3.md section 0.5) : préfixe explicite /v1.
 export async function listProviders(params = {}) {
-  const { data } = await api.get('/v1/providers', { params });
+  const { data } = await api.get('/v1/providers', { params: mergeGeoParams(params) });
   return data?.providers || [];
 }
 
@@ -115,6 +116,6 @@ export async function updateMyLiveLocation(payload) {
  * géographique (filière Mobilité, statut active + available), docs/DEV_SPEC_TERANGA_v5_PHASE2.md §3.3.
  */
 export async function listAvailableProviders(params = {}) {
-  const { data } = await api.get('/v1/providers/available', { params });
+  const { data } = await api.get('/v1/providers/available', { params: mergeGeoParams(params) });
   return data?.providers || [];
 }

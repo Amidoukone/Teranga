@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { getCountries } from '../services/countries';
 import { getRegions } from '../services/regions';
 import { getGeoSelection, setGeoSelection } from '../services/geo';
@@ -18,6 +18,7 @@ export function GeoProvider({ children }) {
   const [regionId, setRegionId] = useState(initial.regionId);
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
+  const regionRequest = useRef(0);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(getLocalUser());
   const [token, setToken] = useState(getToken());
@@ -43,6 +44,8 @@ export function GeoProvider({ children }) {
   }, []);
 
   const refreshRegions = useCallback(async (nextCountryId) => {
+    const request = ++regionRequest.current;
+    setRegions([]);
     if (!nextCountryId || !isAuthenticated) {
       setRegions([]);
       setRegionId(null);
@@ -50,10 +53,10 @@ export function GeoProvider({ children }) {
     }
     try {
       const list = await getRegions({ countryId: nextCountryId });
-      setRegions(list || []);
+      if (request === regionRequest.current) setRegions((list || []).filter((region) => String(region.countryId ?? region.country_id) === String(nextCountryId)));
     } catch (e) {
       console.error('GeoContext load regions error:', e);
-      setRegions([]);
+      if (request === regionRequest.current) setRegions([]);
     }
   }, [isAuthenticated]);
 
@@ -88,7 +91,7 @@ export function GeoProvider({ children }) {
       }
       if (active) setLoading(true);
       try {
-        const list = await getCountries();
+        const list = await getCountries(canSelect ? { includeInactive: true } : {});
         if (active) setCountries(list || []);
       } catch (e) {
         if (active) setCountries([]);
@@ -100,7 +103,7 @@ export function GeoProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [clearSelection, isAuthenticated]);
+  }, [clearSelection, isAuthenticated, canSelect, scopedCountryId, scopedRegionId]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -126,6 +129,7 @@ export function GeoProvider({ children }) {
 
   useEffect(() => {
     refreshRegions(regionSourceCountryId);
+    return () => { regionRequest.current += 1; };
   }, [regionSourceCountryId, refreshRegions]);
 
   useEffect(() => {
@@ -134,14 +138,20 @@ export function GeoProvider({ children }) {
 
   const setCountry = useCallback((next) => {
     if (!canSelect) return;
+    // Persist before routes remount and issue their first request for the new country.
+    regionRequest.current += 1;
+    setRegions([]);
+    setGeoSelection({ countryId: next || null, regionId: null });
     setCountryId(next || null);
     setRegionId(null);
   }, [canSelect]);
 
   const setRegion = useCallback((next) => {
     if (!canSelect) return;
+    if (next && !regions.some((region) => String(region.id) === String(next) && String(region.countryId ?? region.country_id) === String(countryId))) return;
+    setGeoSelection({ countryId, regionId: next || null });
     setRegionId(next || null);
-  }, [canSelect]);
+  }, [canSelect, countryId, regions]);
 
   const value = useMemo(
     () => ({

@@ -1,6 +1,6 @@
 "use strict";
 
-const { Task, Service, User, Property } = require("../../models");
+const { Task, Service, User, Property, Country } = require("../../models");
 const { Op } = require("sequelize");
 
 // 🌍 Geo scope utils (strict)
@@ -27,6 +27,7 @@ const {
 } = require("../services/notification.service");
 const { emitEvent } = require("../services/activity.service");
 const logger = require('../utils/logger');
+const { normalizeCurrency } = require('../utils/currency');
 
 /* ============================================================
    🧩 Helpers généraux
@@ -49,24 +50,18 @@ function toNullableNumber(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-const KNOWN_CURRENCIES = new Set(Object.keys(CURRENCY_LABELS || {}));
-
-function normalizeCurrency(input, fallback = "XOF") {
-  if (!input) return fallback;
-  const cur = String(input).toUpperCase().trim();
-  return KNOWN_CURRENCIES.has(cur) ? cur : fallback;
-}
-
 /**
  * ✅ Vérifie qu'une ressource est dans le scope geo du user (admin scoped)
  * - priorité région
  * - fallback pays
  */
 function canAccessByGeoScope(user, resource) {
+  if (user?.role === 'client') return true; // La relation métier est vérifiée séparément.
   return canAccessGeoResource(resource, user);
 }
 
 function applyTaskGeoScope(where = {}, user) {
+  if (user?.role === 'client') return where;
   return applyGeoScopeForModel
     ? applyGeoScopeForModel(where, user, Task, { includeClients: true })
     : where;
@@ -207,7 +202,7 @@ exports.create = async (req, res) => {
     let service = null;
     if (sid) {
       service = await Service.findByPk(sid, {
-        attributes: ["id", "propertyId", "countryId", "regionId", "clientId", "agentId"],
+        attributes: ["id", "propertyId", "countryId", "regionId", "clientId", "agentId", "currency"],
       });
       if (!pid && service) pid = service.propertyId || null;
     }
@@ -218,6 +213,21 @@ exports.create = async (req, res) => {
         })
       : null;
 
+    if ((sid && !service) || (pid && !property)) {
+      return res.status(400).json({ error: 'Service ou bien lié introuvable' });
+    }
+    if ((service?.countryId && property?.countryId && String(service.countryId) !== String(property.countryId)) ||
+        (service?.regionId && property?.regionId && String(service.regionId) !== String(property.regionId))) {
+      return res.status(400).json({ error: 'Service et bien de périmètres géographiques différents' });
+    }
+    if (req.user?.role === 'client' && ((service && String(service.clientId) !== String(req.user.id)) ||
+        (property && String(property.ownerId) !== String(req.user.id)))) {
+      return res.status(403).json({ error: 'Service ou bien non autorisé pour ce client' });
+    }
+    if (req.user?.role === 'client' && !service && !property) {
+      return res.status(400).json({ error: 'Un service ou un bien est requis pour créer une tâche' });
+    }
+
     const geoCountryId = service?.countryId ?? property?.countryId ?? null;
     const geoRegionId = service?.regionId ?? property?.regionId ?? null;
 
@@ -227,18 +237,31 @@ exports.create = async (req, res) => {
       return res.status(403).json({ error: "Création hors scope géographique" });
     }
 
+    const assignedAgentId = toSafeInt(assignedTo);
+    if (assignedAgentId) {
+      if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Assignation réservée à un administrateur' });
+      const agent = await User.findByPk(assignedAgentId);
+      if (!agent || agent.role !== 'agent' || !canAccessGeoResource(pseudo, agent)) {
+        return res.status(400).json({ error: 'Agent indisponible dans le périmètre de la tâche' });
+      }
+    }
+
+    const country = !service?.currency && geoCountryId
+      ? await Country.findByPk(geoCountryId, { attributes: ['currency'] })
+      : null;
+
     const created = await Task.create({
       serviceId: sid || null,
       propertyId: pid || null,
       creatorId: req.user.id,
-      assignedTo: assignedTo ? toSafeInt(assignedTo) : null,
+      assignedTo: assignedAgentId,
       title: String(title).trim(),
       type: String(type).trim(),
       description: toTrimOrNull(description),
       priority: priority || "normal",
       dueDate: dueDate ? new Date(dueDate) : null,
       estimatedCost: toNullableNumber(estimatedCost),
-      currency: normalizeCurrency(currency, service?.currency || "XOF"),
+      currency: normalizeCurrency(currency, service?.currency || country?.currency || "XOF"),
       status: "created",
       countryId: geoCountryId,
       regionId: geoRegionId,

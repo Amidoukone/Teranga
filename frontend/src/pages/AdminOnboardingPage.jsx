@@ -41,6 +41,9 @@ export default function AdminOnboardingPage() {
   const [countryForm, setCountryForm] = useState({
     name: "",
     isoCode: "",
+    currency: "",
+    defaultLanguage: "",
+    timezone: "",
   });
   const [createdCountry, setCreatedCountry] = useState(null);
 
@@ -48,6 +51,7 @@ export default function AdminOnboardingPage() {
   const [regionForm, setRegionForm] = useState({
     name: "",
     code: "",
+    timezone: "",
   });
   const [regionsCreated, setRegionsCreated] = useState([]);
 
@@ -55,6 +59,7 @@ export default function AdminOnboardingPage() {
   const [masterForm, setMasterForm] = useState({
     email: "",
     password: "",
+    operatorLegalName: "",
     scope: "country", // "country" | "region"
     regionId: "",
   });
@@ -77,12 +82,16 @@ export default function AdminOnboardingPage() {
   const [countryDraft, setCountryDraft] = useState({
     name: "",
     isoCode: "",
+    currency: "",
+    defaultLanguage: "",
+    timezone: "",
     isActive: true,
     contactPhone: "",
   });
   const [regionDraft, setRegionDraft] = useState({
     name: "",
     code: "",
+    timezone: "",
     isActive: true,
     contactPhone: "",
   });
@@ -145,7 +154,10 @@ export default function AdminOnboardingPage() {
   const isCountryFormValid = useMemo(() => {
     const name = countryForm.name.trim();
     const iso = countryForm.isoCode.trim().toUpperCase();
-    return name.length >= 2 && iso.length === 2;
+    return name.length >= 2 && /^[A-Z]{2}$/.test(iso) &&
+      /^[A-Z]{3}$/.test(countryForm.currency.trim().toUpperCase()) &&
+      /^[a-z]{2,3}(-[a-z]{2})?$/.test(countryForm.defaultLanguage.trim().toLowerCase()) &&
+      countryForm.timezone.trim().length > 0;
   }, [countryForm]);
 
   const isRegionFormValid = useMemo(() => {
@@ -163,6 +175,7 @@ export default function AdminOnboardingPage() {
 
     if (!email.includes("@")) return false;
     if (!pwd || pwd.length < 6) return false;
+    if (masterForm.operatorLegalName.trim().length < 2) return false;
 
     if (masterForm.scope === "region") {
       return Boolean(masterForm.regionId);
@@ -229,6 +242,9 @@ export default function AdminOnboardingPage() {
     setCountryDraft({
       name: country.name || "",
       isoCode: country.isoCode || "",
+      currency: country.currency || "",
+      defaultLanguage: country.defaultLanguage || "",
+      timezone: country.timezone || "",
       isActive: Boolean(country.isActive),
       contactPhone: country.contactPhone || "",
     });
@@ -236,25 +252,40 @@ export default function AdminOnboardingPage() {
 
   async function saveCountryEdit() {
     if (!editingCountryId) return;
+    const original = countryLookup.get(String(editingCountryId));
     const trimmedName = countryDraft.name.trim();
     const trimmedIso = countryDraft.isoCode.trim().toUpperCase();
+    const normalizedCurrency = countryDraft.currency.trim().toUpperCase();
+    const normalizedLanguage = countryDraft.defaultLanguage.trim().toLowerCase();
+    const normalizedTimezone = countryDraft.timezone.trim();
+    const activating = countryDraft.isActive && !original?.isActive;
 
-    if (trimmedName.length < 2 || trimmedIso.length !== 2) {
+    if (trimmedName.length < 2 || !/^[A-Z]{2}$/.test(trimmedIso) ||
+      (normalizedCurrency && !/^[A-Z]{3}$/.test(normalizedCurrency)) ||
+      (normalizedLanguage && !/^[a-z]{2,3}(-[a-z]{2})?$/.test(normalizedLanguage)) ||
+      (activating && (!normalizedCurrency || !normalizedLanguage || !normalizedTimezone))) {
       notify(t("adminOnboardingPage.errors.countryEditValidation"));
       return;
     }
 
     try {
-      await updateCountry(editingCountryId, {
+      const payload = {
         name: trimmedName,
         isoCode: trimmedIso,
-        isActive: countryDraft.isActive,
         contactPhone: countryDraft.contactPhone.trim(),
-      });
+      };
+      if (normalizedCurrency && normalizedCurrency !== original?.currency) payload.currency = normalizedCurrency;
+      if (normalizedLanguage && normalizedLanguage !== original?.defaultLanguage) payload.defaultLanguage = normalizedLanguage;
+      if (normalizedTimezone && normalizedTimezone !== original?.timezone) payload.timezone = normalizedTimezone;
+      if (countryDraft.isActive !== Boolean(original?.isActive)) payload.isActive = countryDraft.isActive;
+      await updateCountry(editingCountryId, payload);
       setEditingCountryId(null);
       await loadCountries();
     } catch (err) {
-      notify(err?.response?.data?.error || t("adminOnboardingPage.errors.countryEdit"));
+      const issues = err?.response?.data?.issues;
+      notify(Array.isArray(issues) && issues.length
+        ? issues.map((item) => item.message).join(" ")
+        : err?.response?.data?.error || t("adminOnboardingPage.errors.countryEdit"));
     }
   }
 
@@ -301,6 +332,7 @@ export default function AdminOnboardingPage() {
     setRegionDraft({
       name: region.name || "",
       code: region.code || "",
+      timezone: region.timezone || "",
       isActive: Boolean(region.isActive),
       contactPhone: region.contactPhone || "",
     });
@@ -320,6 +352,7 @@ export default function AdminOnboardingPage() {
       await updateRegion(editingRegionId, {
         name: trimmedName,
         code: trimmedCode || null,
+        timezone: regionDraft.timezone.trim() || null,
         isActive: regionDraft.isActive,
         contactPhone: regionDraft.contactPhone.trim(),
       });
@@ -375,6 +408,9 @@ export default function AdminOnboardingPage() {
       const payload = {
         name: countryForm.name.trim(),
         isoCode: countryForm.isoCode.trim().toUpperCase(),
+        currency: countryForm.currency.trim().toUpperCase(),
+        defaultLanguage: countryForm.defaultLanguage.trim().toLowerCase(),
+        timezone: countryForm.timezone.trim(),
       };
 
       const { data } = await api.post("/countries", payload);
@@ -387,6 +423,7 @@ export default function AdminOnboardingPage() {
       setRegionsCreated([]);
       setMasterForm((m) => ({
         ...m,
+        operatorLegalName: "",
         scope: "country",
         regionId: "",
       }));
@@ -412,13 +449,14 @@ export default function AdminOnboardingPage() {
       const payload = {
         name: regionForm.name.trim(),
         code: regionForm.code.trim().toUpperCase(),
+        timezone: regionForm.timezone.trim() || null,
         countryId: createdCountry.id,
       };
 
       const { data } = await api.post("/regions", payload);
 
       setRegionsCreated((r) => [...r, data.region]);
-      setRegionForm({ name: "", code: "" });
+      setRegionForm({ name: "", code: "", timezone: "" });
       await loadRegions();
     } catch (err) {
       notify(err?.response?.data?.error || t("adminOnboardingPage.errors.regionCreate"));
@@ -443,6 +481,25 @@ export default function AdminOnboardingPage() {
 
     setLoadingMaster(true);
     try {
+      const { data: franchiseData } = await api.get('/franchises', {
+        params: { countryId: createdCountry.id },
+      });
+      const existingMasters = (franchiseData?.franchises || []).filter(
+        (item) => item.type === 'MASTER' && String(item.countryId) === String(createdCountry.id)
+      );
+      if (existingMasters.length > 1 || (existingMasters.length === 1 && existingMasters[0].status !== 'active')) {
+        throw new Error(t('adminOnboardingPage.errors.operatorConflict'));
+      }
+      if (existingMasters.length === 0) {
+        await api.post('/franchises', {
+          type: 'MASTER',
+          countryId: createdCountry.id,
+          regionId: null,
+          legalName: masterForm.operatorLegalName.trim(),
+          status: 'active',
+        });
+      }
+
       const payload = {
         email: masterForm.email.trim(),
         password: masterForm.password,
@@ -471,7 +528,7 @@ export default function AdminOnboardingPage() {
       notify(t("adminOnboardingPage.success.masterCreated"));
       window.location.href = "/admin/users";
     } catch (err) {
-      notify(err?.response?.data?.error || t("adminOnboardingPage.errors.masterCreate"));
+      notify(err?.response?.data?.error || err?.message || t("adminOnboardingPage.errors.masterCreate"));
     } finally {
       setLoadingMaster(false);
     }
@@ -578,6 +635,27 @@ export default function AdminOnboardingPage() {
                               }))
                             }
                             className="w-full border border-border rounded-lg p-2 text-xs bg-surface-card text-text-primary"
+                          />
+                          <input
+                            aria-label={t("adminOnboardingPage.placeholders.currency")}
+                            placeholder={t("adminOnboardingPage.placeholders.currency")}
+                            value={countryDraft.currency}
+                            onChange={(e) => setCountryDraft((d) => ({ ...d, currency: e.target.value }))}
+                            className="app-input-compact w-full p-2"
+                          />
+                          <input
+                            aria-label={t("adminOnboardingPage.placeholders.language")}
+                            placeholder={t("adminOnboardingPage.placeholders.language")}
+                            value={countryDraft.defaultLanguage}
+                            onChange={(e) => setCountryDraft((d) => ({ ...d, defaultLanguage: e.target.value }))}
+                            className="app-input-compact w-full p-2"
+                          />
+                          <input
+                            aria-label={t("adminOnboardingPage.placeholders.timezone")}
+                            placeholder={t("adminOnboardingPage.placeholders.timezone")}
+                            value={countryDraft.timezone}
+                            onChange={(e) => setCountryDraft((d) => ({ ...d, timezone: e.target.value }))}
+                            className="app-input-compact w-full p-2"
                           />
                           <input
                             value={countryDraft.contactPhone}
@@ -719,6 +797,13 @@ export default function AdminOnboardingPage() {
                             placeholder={t("adminOnboardingPage.form.contactPhonePlaceholder")}
                             className="app-input-compact w-full p-2"
                           />
+                          <input
+                            aria-label={t("adminOnboardingPage.placeholders.regionTimezone")}
+                            placeholder={t("adminOnboardingPage.placeholders.regionTimezone")}
+                            value={regionDraft.timezone}
+                            onChange={(e) => setRegionDraft((d) => ({ ...d, timezone: e.target.value }))}
+                            className="app-input-compact w-full p-2"
+                          />
                           <label className="flex items-center gap-2 text-xs text-text-secondary">
                             <input
                               type="checkbox"
@@ -836,6 +921,32 @@ export default function AdminOnboardingPage() {
               className="app-input"
             />
 
+            <input
+              placeholder={t("adminOnboardingPage.placeholders.currency")}
+              aria-label={t("adminOnboardingPage.placeholders.currency")}
+              value={countryForm.currency}
+              onChange={(e) => setCountryForm({ ...countryForm, currency: e.target.value })}
+              className="app-input"
+            />
+
+            <input
+              placeholder={t("adminOnboardingPage.placeholders.language")}
+              aria-label={t("adminOnboardingPage.placeholders.language")}
+              value={countryForm.defaultLanguage}
+              onChange={(e) => setCountryForm({ ...countryForm, defaultLanguage: e.target.value })}
+              className="app-input"
+            />
+
+            <input
+              placeholder={t("adminOnboardingPage.placeholders.timezone")}
+              aria-label={t("adminOnboardingPage.placeholders.timezone")}
+              value={countryForm.timezone}
+              onChange={(e) => setCountryForm({ ...countryForm, timezone: e.target.value })}
+              className="app-input"
+            />
+
+            <p className="text-xs text-text-muted">{t("adminOnboardingPage.hints.countryDraft")}</p>
+
             <button
               disabled={!isCountryFormValid || loadingCountry}
               className="app-btn-primary px-6 py-2 rounded-full text-sm font-medium"
@@ -892,6 +1003,14 @@ export default function AdminOnboardingPage() {
               className="app-input"
             />
 
+            <input
+              placeholder={t("adminOnboardingPage.placeholders.regionTimezone")}
+              aria-label={t("adminOnboardingPage.placeholders.regionTimezone")}
+              value={regionForm.timezone}
+              onChange={(e) => setRegionForm({ ...regionForm, timezone: e.target.value })}
+              className="app-input"
+            />
+
             <AdminActionsRow className="gap-3">
               <button
                 disabled={!isRegionFormValid || loadingRegion}
@@ -937,6 +1056,14 @@ export default function AdminOnboardingPage() {
               onChange={(e) =>
                 setMasterForm({ ...masterForm, email: e.target.value })
               }
+              className="app-input"
+            />
+
+            <input
+              placeholder={t("adminOnboardingPage.placeholders.operatorLegalName")}
+              aria-label={t("adminOnboardingPage.placeholders.operatorLegalName")}
+              value={masterForm.operatorLegalName}
+              onChange={(e) => setMasterForm({ ...masterForm, operatorLegalName: e.target.value })}
               className="app-input"
             />
 

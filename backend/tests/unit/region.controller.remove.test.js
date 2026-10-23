@@ -5,8 +5,10 @@ const { Op } = require('sequelize');
 jest.mock('../../models', () => ({
   Region: {
     findByPk: jest.fn(),
+    findAll: jest.fn(),
+    create: jest.fn(),
   },
-  Country: {},
+  Country: { findByPk: jest.fn() },
   User: {
     update: jest.fn(),
   },
@@ -73,6 +75,7 @@ jest.mock('../../src/utils/logger', () => ({
 
 const {
   Region,
+  Country,
   User,
   Franchise,
   Property,
@@ -91,6 +94,34 @@ const {
   sequelize,
 } = require('../../models');
 const controller = require('../../src/controllers/region.controller');
+
+test('ordinary region list only joins active countries', async () => {
+  Region.findAll.mockResolvedValue([]);
+  const res = makeRes();
+  await controller.list({ user: { role: 'client' }, query: {} }, res);
+  expect(Region.findAll).toHaveBeenCalledWith(expect.objectContaining({
+    include: [expect.objectContaining({ required: true, where: { isActive: true } })],
+  }));
+});
+
+test('region creation accepts an IANA override and rejects an invalid one', async () => {
+  Country.findByPk.mockResolvedValue({ id: 2 });
+  Region.create.mockResolvedValue({ id: 9 });
+  Region.findByPk.mockResolvedValue({ id: 9, timezone: 'Africa/Abidjan' });
+  const res = makeRes();
+  await controller.create({ user: { role: 'admin' }, body: {
+    countryId: 2, name: 'Abidjan', code: 'ABJ', timezone: 'Africa/Abidjan',
+  } }, res);
+  expect(Region.create).toHaveBeenCalledWith(expect.objectContaining({ timezone: 'Africa/Abidjan' }));
+
+  Region.create.mockClear();
+  const invalid = makeRes();
+  await controller.create({ user: { role: 'admin' }, body: {
+    countryId: 2, name: 'Abidjan', timezone: 'Bad/Zone',
+  } }, invalid);
+  expect(invalid.status).toHaveBeenCalledWith(400);
+  expect(Region.create).not.toHaveBeenCalled();
+});
 
 function makeRes() {
   const res = {

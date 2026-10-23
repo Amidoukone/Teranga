@@ -16,6 +16,7 @@ import {
 import { me } from '../services/auth';
 import { getCountries } from '../services/countries';
 import { getRegions } from '../services/regions';
+import { getOrderById } from '../services/orders';
 import {
   applyLabels,
   TRANSACTION_TYPES,
@@ -147,6 +148,7 @@ export default function OrderTransactionsPage() {
 
   // Liste
   const [transactions, setTransactions] = useState([]);
+  const [orderCurrency, setOrderCurrency] = useState('');
   const [loading, setLoading] = useState(false); // chargement liste
   const [creating, setCreating] = useState(false); // Etat creation (verrou formulaire).
   const [deletingIds, setDeletingIds] = useState({});
@@ -161,7 +163,7 @@ export default function OrderTransactionsPage() {
   const [form, setForm] = useState({
     type: 'revenue',
     amount: '',
-    currency: 'XOF',
+    currency: '',
     paymentMethod: '',
     description: '',
     proofFile: null,
@@ -247,6 +249,16 @@ export default function OrderTransactionsPage() {
       setLoading(false);
     }
   }, [id, t]);
+
+  useEffect(() => {
+    let active = true;
+    setOrderCurrency('');
+    setForm((previous) => ({ ...previous, currency: '' }));
+    getOrderById(id).then((order) => {
+      if (active) setOrderCurrency(order?.currency || '');
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [id]);
 
   /* ============================================================
       Init user + data
@@ -377,7 +389,7 @@ export default function OrderTransactionsPage() {
     setForm({
       type: 'revenue',
       amount: '',
-      currency: 'XOF',
+      currency: '',
       paymentMethod: '',
       description: '',
       proofFile: null,
@@ -545,6 +557,7 @@ export default function OrderTransactionsPage() {
             handleSubmit={handleSubmit}
             loading={loading}
             creating={creating} // Passe l'etat de creation au formulaire.
+            orderCurrency={orderCurrency}
           />
         )}
 
@@ -649,7 +662,7 @@ function TransactionFilters({ filters, setFilters, count }) {
 /* ============================================================
    FORMULAIRE
 ============================================================ */
-function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
+function TransactionForm({ form, setForm, handleSubmit, loading, creating, orderCurrency }) {
   const isSubmitting = loading || creating;
   const { t } = useTranslation();
 
@@ -706,9 +719,10 @@ function TransactionForm({ form, setForm, handleSubmit, loading, creating }) {
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
             className="w-full border rounded-lg px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
           >
-            {Object.keys(CURRENCY_LABELS).map((key) => (
+            <option value="">{t('common.currencyFromOperation')}{orderCurrency ? ` (${orderCurrency})` : ''}</option>
+            {[...new Set([...Object.keys(CURRENCY_LABELS), orderCurrency, form.currency].filter(Boolean))].map((key) => (
               <option key={key} value={key}>
-                {t(`currency.${key}`)}
+                {t(`currency.${key}`, { defaultValue: key })}
               </option>
             ))}
           </select>

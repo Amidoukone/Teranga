@@ -2,6 +2,8 @@
 
 const {
   Service,
+  Task,
+  Transaction,
   User,
   Property,
   Country,
@@ -9,6 +11,7 @@ const {
   Provider,
   Sequelize,
   sequelize,
+  MissionCoordination,
 } = require("../../models");
 const { Op } = require("sequelize");
 const {
@@ -32,7 +35,12 @@ const {
   getCountryIdByIso,
 } = require("../utils/geoScope");
 const { getPagination } = require("../utils/pagination");
+const { getCompletionState, assertCompletionReady } = require('../services/missionCompletion.service');
+const { createTrackedResource } = require('../services/trackedCreation.service');
 const logger = require('../utils/logger');
+const { normalizeCurrency } = require('../utils/currency');
+const { resolveExecutionTerritory } = require('../services/executionTerritory.service');
+const { isServiceAvailable } = require('../services/localCatalog.service');
 
 /* ============================================================
    🔧 Helpers généraux
@@ -53,14 +61,6 @@ function toTrimOrNull(v) {
 function toSafeInt(v, fallback = null) {
   const n = parseInt(v, 10);
   return Number.isNaN(n) ? fallback : n;
-}
-
-const KNOWN_CURRENCIES = new Set(Object.keys(CURRENCY_LABELS || {}));
-
-function normalizeCurrency(input, fallback = "XOF") {
-  if (!input) return fallback;
-  const cur = String(input).toUpperCase().trim();
-  return KNOWN_CURRENCIES.has(cur) ? cur : fallback;
 }
 
 function isTrue(x) {
@@ -107,6 +107,7 @@ async function resolveCountryIdFromLegacy(countryValue) {
 }
 
 function canAccessByGeoScope(user, resource) {
+  if (user?.role === 'client') return true; // Propriété vérifiée par les ACL métier.
   return canAccessGeoResource(resource, user);
 }
 
@@ -133,6 +134,7 @@ async function canAssignAgentByGeoScope(service, agent) {
 }
 
 function applyServiceGeoScope(where = {}, user) {
+  if (user?.role === 'client') return where;
   return applyGeoScopeForModel
     ? applyGeoScopeForModel(where, user, Service, { includeClients: true })
     : where;
@@ -263,7 +265,7 @@ exports.create = async (req, res) => {
         ? desiredCountryId ?? clientScope.countryId ?? null
         : clientScope.countryId ?? null);
 
-    const resolvedRegionId =
+    let resolvedRegionId =
       property?.regionId ??
       (req.user.role === "admin"
         ? desiredRegionId ?? clientScope.regionId ?? null
@@ -272,6 +274,11 @@ exports.create = async (req, res) => {
     if (resolvedCountryId === null && targetClient?.country) {
       resolvedCountryId = await resolveCountryIdFromLegacy(targetClient.country);
     }
+    if (!property?.regionId && !desiredRegionId && String(resolvedCountryId) !== String(clientScope.countryId)) resolvedRegionId = null;
+
+    const territory = await resolveExecutionTerritory(resolvedCountryId, resolvedRegionId);
+    if (territory.error) return res.status(400).json({ error: territory.error });
+    resolvedCountryId = territory.countryId;
 
     if (
       !canAccessByGeoScope(req.user, {
@@ -284,7 +291,13 @@ exports.create = async (req, res) => {
       });
     }
 
-    const service = await Service.create({
+    const executionCountry = territory.country;
+
+    if (!await isServiceAvailable({ countryId: resolvedCountryId, regionId: resolvedRegionId, tradeCategoryId: tradeCategory?.id, serviceType: type })) {
+      return res.status(409).json({ error: 'Service indisponible dans le catalogue local actif' });
+    }
+
+    const service = await createTrackedResource(req, Service, {
       clientId: targetClientId,
       agentId: null,
       createdById: req.user.id,
@@ -296,7 +309,7 @@ exports.create = async (req, res) => {
       contactPhone: toTrimOrNull(contactPhone),
       address: toTrimOrNull(address),
       budget: toNullableNumber(budget),
-      currency: normalizeCurrency(currency, "XOF"),
+      currency: normalizeCurrency(currency, executionCountry?.currency || "XOF"),
       status: "created",
       countryId: resolvedCountryId,
       regionId: resolvedRegionId,
@@ -616,7 +629,7 @@ exports.assignAgent = async (req, res) => {
         .json({ error: "serviceId et agentId requis" });
 
     const result = await sequelize.transaction(async (t) => {
-      const service = await Service.findByPk(serviceId, { transaction: t });
+      const service = await Service.findByPk(serviceId, { transaction: t, lock: true });
       if (!service)
         throw Object.assign(new Error("Service introuvable"), { status: 404 });
 
@@ -665,8 +678,9 @@ exports.assignAgent = async (req, res) => {
         );
       }
 
+      if (service.status !== 'created' && String(service.agentId) !== String(agent.id)) throw Object.assign(new Error('Un service commencé doit être repris par le responsable avant réaffectation'), { status: 409 });
       await service.update(
-        { agentId: agent.id, status: "created" },
+        { agentId: agent.id, status: service.status },
         { transaction: t }
       );
 
@@ -775,6 +789,8 @@ exports.updateService = async (req, res) => {
       if (!nextStatus || !ALLOWED_STATUSES.has(nextStatus)) {
         return res.status(400).json({ error: "Statut de service invalide" });
       }
+      const coordination = MissionCoordination ? await MissionCoordination.findOne({ where: { serviceId: service.id } }) : null;
+      if (coordination && nextStatus !== service.status) return res.status(409).json({ error: 'Utilisez les actions de démarrage, de compte rendu et de validation du service pour changer son étape.' });
       updates.status = nextStatus;
     }
 
@@ -797,7 +813,7 @@ exports.updateService = async (req, res) => {
             .status(400)
             .json({ error: "Bien immobilier introuvable" });
 
-        if (req.user.role !== "admin" && String(property.ownerId) !== String(req.user.id)) {
+        if (String(property.ownerId) !== String(service.clientId)) {
           return res.status(403).json({
             error: "Ce bien n'appartient pas à l'utilisateur connecté",
           });
@@ -805,19 +821,40 @@ exports.updateService = async (req, res) => {
 
         updates.propertyId = newPid;
         updates.countryId = property.countryId ?? service.countryId;
-        updates.regionId = property.regionId ?? service.regionId;
+        updates.regionId = property.regionId ?? (String(updates.countryId) === String(service.countryId) ? service.regionId : null);
       }
     }
 
     const nextScope = {
-      countryId: updates.countryId ?? service.countryId,
-      regionId: updates.regionId ?? service.regionId,
+      countryId: updates.countryId !== undefined ? updates.countryId : service.countryId,
+      regionId: updates.regionId !== undefined ? updates.regionId : service.regionId,
     };
 
     if (!canAccessByGeoScope(req.user, nextScope)) {
       return res
         .status(403)
         .json({ error: "Mise à jour hors scope géographique" });
+    }
+
+    const territoryChanged = String(nextScope.countryId ?? '') !== String(service.countryId ?? '') || String(nextScope.regionId ?? '') !== String(service.regionId ?? '');
+    if (territoryChanged) {
+      const history = await Promise.all([
+        Task.count({ where: { serviceId: service.id } }),
+        Transaction.count({ where: { serviceId: service.id } }),
+      ]);
+      if (service.status !== 'created' || history.some(Boolean)) return res.status(409).json({ error: 'Le périmètre ne peut plus être déplacé après le début du service ou la création de son historique' });
+      const territory = await resolveExecutionTerritory(nextScope.countryId, nextScope.regionId);
+      if (territory.error) return res.status(400).json({ error: territory.error });
+      updates.countryId = territory.countryId;
+      if (service.agentId) {
+        const agent = await User.findByPk(service.agentId);
+        if (!await canAssignAgentByGeoScope(nextScope, agent)) return res.status(409).json({ error: 'L’agent affecté ne couvre pas le nouveau périmètre du service' });
+      }
+    }
+    if (territoryChanged || (updates.type !== undefined && updates.type !== service.type)) {
+      if (!await isServiceAvailable({ ...nextScope, tradeCategoryId: service.tradeCategoryId, serviceType: updates.type || service.type })) {
+        return res.status(409).json({ error: 'Service indisponible dans le catalogue local actif' });
+      }
     }
 
     const previousStatus = service.status;
@@ -1008,12 +1045,6 @@ exports.startService = async (req, res) => {
         .json({ error: "Service hors scope géographique" });
     }
 
-    if (!canAccessByGeoScope(req.user, service)) {
-      return res
-        .status(403)
-        .json({ error: "Service hors scope géographique" });
-    }
-
     if (service.agentId !== req.user.id)
       return res.status(403).json({ error: "Non autorisé" });
 
@@ -1068,6 +1099,7 @@ exports.completeService = async (req, res) => {
         error: "Service non démarré ou déjà terminé",
       });
 
+    await assertCompletionReady(service);
     await service.update({ status: "completed" });
 
     await notifyServiceStatusUpdate({
@@ -1083,8 +1115,8 @@ exports.completeService = async (req, res) => {
     });
   } catch (e) {
     logger.error({ err: e }, "service.complete.failed");
-    return res.status(500).json({
-      error: "Erreur lors de la finalisation du service",
+    return res.status(e.status || 500).json({
+      error: e.status ? e.message : "Erreur lors de la finalisation du service",
     });
   }
 };
@@ -1160,14 +1192,14 @@ exports.getById = async (req, res) => {
         return res.status(403).json({ error: "Non autorisé" });
       }
     } else if (req.user.role === "agent") {
-      if (service.agentId !== req.user.id) {
+      if (service.agentId !== req.user.id || !canAccessByGeoScope(req.user, service)) {
         return res.status(403).json({ error: "Non autorisé" });
       }
     } else {
       return res.status(403).json({ error: "Non autorisé" });
     }
 
-    return res.json({ service: addLabels(service) });
+    return res.json({ service: { ...addLabels(service), completion: await getCompletionState(service) } });
   } catch (e) {
     logger.error({ err: e }, "service.getById.failed");
     return res.status(500).json({ error: "Erreur lors de la récupération du service" });

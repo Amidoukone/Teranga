@@ -1,11 +1,22 @@
 // frontend/src/services/missions.js
 import api from './api';
+import { mergeGeoParams } from './geo';
 
 // Création de mission guidée, utilisateur authentifié (docs/DEV_SPEC_TERANGA_v3.md section 4.1).
 // ⚠️ Comme missionRequests.js : ces routes sont v1-only (section 0.5), l'instance `api` cible
 // /api (legacy) par défaut — préfixe explicite /v1 nécessaire.
 
 const UPLOAD_TIMEOUT_MS = Number(process.env.REACT_APP_UPLOAD_TIMEOUT_MS) || 120000;
+
+export async function submitMissionCompletion(missionId, { summary, files = [], kind, requestKey }) {
+  const payload = new FormData();
+  payload.append('summary', summary);
+  payload.append('requestKey', requestKey);
+  if (kind) payload.append('kind', kind);
+  files.forEach((file) => payload.append('files', file));
+  const { data } = await api.post(`/v1/missions/${missionId}/completion-report`, payload, { timeout: UPLOAD_TIMEOUT_MS });
+  return data.completion;
+}
 
 /**
  * POST /api/v1/missions/estimate — aucune écriture, calcul d'estimation pour l'étape 4.
@@ -222,6 +233,6 @@ export async function getMyDeliveries(params = {}) {
 
 /** File de courses Taxi visible par l'opérateur/admin de ce périmètre. */
 export async function getTaxiDispatchQueue(params = {}) {
-  const { data } = await api.get('/v1/missions/rides/dispatch', { params });
+  const { data } = await api.get('/v1/missions/rides/dispatch', { params: mergeGeoParams(params) });
   return data;
 }

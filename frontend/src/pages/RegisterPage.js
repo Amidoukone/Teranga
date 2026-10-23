@@ -15,6 +15,7 @@ import {
 import { getMasterCountries } from "../services/franchises";
 import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
 import { buildAuthFeedbackState } from "../utils/authFeedback";
+import { getStoredLanguage } from "../i18n";
 
 /* ==========================================================
    Suggestions de pays ISO2
@@ -151,7 +152,7 @@ function normalizePhone(value) {
 }
 
 export default function RegisterPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [form, setForm] = useState(() => {
     const savedCountry = localStorage.getItem("teranga_register_country") || "ML";
     return {
@@ -300,7 +301,7 @@ export default function RegisterPage() {
         lastName: String(form.lastName || "").trim(),
         phone: normalizePhone(form.phone) || undefined,
         country: countryISO2, // multi-pays safe : ISO2 canonique
-        language: i18n.language || "fr",
+        language: getStoredLanguage() || undefined,
       };
 
       await register(payload);

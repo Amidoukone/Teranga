@@ -1,3 +1,4 @@
+import WorkProgressPanel from '../features/mission-tracking/WorkProgressPanel';
 // ============================================================
 // frontend/src/pages/ProjectDetailPage.jsx
 // Contexte: detail de projet.
@@ -25,7 +26,8 @@ import {
   PROJECT_STATUSES,
   getProjectStatusTone,
 } from "../utils/labels";
-import { getTransactions, createTransaction } from "../services/transactions";
+import { getAllTransactions, createTransaction } from "../services/transactions";
+import { summarizeTransactionsByCurrency } from "../utils/currency";
 import { Badge } from "../components/ui";
 import { normalizeRole, isMasterUser } from "../utils/role";
 import { useLocale } from "../i18n/useLocale";
@@ -194,7 +196,7 @@ function getTransactionAuthorLabel(transaction, dashLabel = "-") {
 /* ============================================================
    Sous-composant formulaire.
 ============================================================ */
-function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
+function ProjectTransactionForm({ projectId, projectCurrency, currentUser, onSuccess }) {
   const { t } = useTranslation();
   const canSeeOrder =
     normalizeRole(currentUser?.role) === "admin" ||
@@ -202,7 +204,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
   const [form, setForm] = useState({
     type: "expense",
     amount: "",
-    currency: "XOF",
+    currency: "",
     paymentMethod: "",
     description: "",
     orderId: "",
@@ -211,11 +213,11 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
   const [saving, setSaving] = useState(false);
   const currencyOptions = useMemo(
     () =>
-      CURRENCY_CODES.map((code) => ({
+      [...new Set([...CURRENCY_CODES, projectCurrency, form.currency].filter(Boolean))].map((code) => ({
         value: code,
         label: t(`currency.${code}`, { defaultValue: code }),
       })),
-    [t]
+    [t, projectCurrency, form.currency]
   );
 
   async function handleSubmit(e) {
@@ -226,7 +228,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       await createTransaction({
         type: form.type,
         amount: form.amount === "" ? undefined : Number(form.amount),
-        currency: form.currency,
+        currency: form.currency || undefined,
         paymentMethod: form.paymentMethod || undefined,
         description: form.description || undefined,
         orderId: form.orderId ? Number(form.orderId) : undefined,
@@ -239,7 +241,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
       setForm({
         type: "expense",
         amount: "",
-        currency: "XOF",
+        currency: "",
         paymentMethod: "",
         description: "",
         orderId: "",
@@ -306,6 +308,7 @@ function ProjectTransactionForm({ projectId, currentUser, onSuccess }) {
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
             className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
           >
+            <option value="">{t('common.currencyFromOperation')}{projectCurrency ? ` (${projectCurrency})` : ''}</option>
             {currencyOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -467,12 +470,12 @@ export default function ProjectDetailPage() {
   const loadProject = useCallback(async (pid) => {
     if (!pid) return;
     try {
-      const [p, phs, docs, trxs] = await Promise.all([
+      const [p, phs, docs] = await Promise.all([
         getProjectById(pid),
         getProjectPhases(pid),
         getProjectDocuments(pid),
-        getTransactions({ projectId: pid }),
       ]);
+      const trxs = await getAllTransactions({ projectId: pid, countryId: p?.countryId ?? null, regionId: p?.regionId ?? null });
 
       if (!isMounted.current) return;
 
@@ -531,17 +534,10 @@ export default function ProjectDetailPage() {
   /* ============================================================
      Filtrage et tri cote interface utilisateur.
   ============================================================ */
-  const totals = useMemo(() => {
-    const rev = transactions
-      .filter((t) => t.type === "revenue")
-      .reduce((s, t) => s + Number(t.amount || 0), 0);
-
-    const exp = transactions
-      .filter((t) => t.type === "expense")
-      .reduce((s, t) => s + Number(t.amount || 0), 0);
-
-    return { revenues: rev, expenses: exp, balance: rev - exp };
-  }, [transactions]);
+  const totalsByCurrency = useMemo(() => {
+    const totals = summarizeTransactionsByCurrency(transactions);
+    return totals.length ? totals : [{ currency: project?.currency || 'XOF', revenues: 0, expenses: 0, balance: 0 }];
+  }, [transactions, project?.currency]);
 
   /* ============================================================
      Contexte: detail d un projet.
@@ -711,6 +707,7 @@ export default function ProjectDetailPage() {
 
         {/* CARD */}
         <div className="bg-surface-card shadow-lg rounded-3xl border border-border/70 p-6 md:p-8 space-y-10">
+          <WorkProgressPanel entityType="project" entityId={project.id} status={project.status} onSaved={() => loadProject(project.id)} />
           {/* HEADER */}
           <div className="flex flex-col md:flex-row md:justify-between gap-6">
             <div className="space-y-3 flex-1 min-w-0">
@@ -723,7 +720,7 @@ export default function ProjectDetailPage() {
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
-                {isAdmin ? (
+                {isAdmin && !project.coordination ? (
                   <select
                     value={project.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
@@ -748,7 +745,7 @@ export default function ProjectDetailPage() {
                 <Badge tone="success">
                   {t("projectDetail.labels.budget")}{" "}
                   {formatNumber(project.budget || 0)}{" "}
-                  {t("projects.card.currency", { defaultValue: "XOF" })}
+                  {project.currency || 'XOF'}
                 </Badge>
 
                 {isClient && (
@@ -769,12 +766,12 @@ export default function ProjectDetailPage() {
                 {t("projectDetail.finance.title")}
               </h3>
 
-              <div className="space-y-2 text-sm mt-2">
+              {totalsByCurrency.map((totals) => <div key={totals.currency} role="group" className="space-y-2 text-sm mt-2" aria-label={totals.currency}>
                 <div className="flex justify-between">
                   <span>{t("projectDetail.finance.revenues")}</span>
                   <span className="font-semibold text-emerald-700">
                     {formatNumber(totals.revenues)}{" "}
-                    {t("projects.card.currency", { defaultValue: "XOF" })}
+                    {totals.currency}
                   </span>
                 </div>
 
@@ -782,7 +779,7 @@ export default function ProjectDetailPage() {
                   <span>{t("projectDetail.finance.expenses")}</span>
                   <span className="font-semibold text-rose-700">
                     {formatNumber(totals.expenses)}{" "}
-                    {t("projects.card.currency", { defaultValue: "XOF" })}
+                    {totals.currency}
                   </span>
                 </div>
 
@@ -794,10 +791,10 @@ export default function ProjectDetailPage() {
                     }`}
                   >
                     {formatNumber(totals.balance)}{" "}
-                    {t("projects.card.currency", { defaultValue: "XOF" })}
+                    {totals.currency}
                   </span>
                 </div>
-              </div>
+              </div>)}
             </div>
           </div>
 
@@ -843,6 +840,7 @@ export default function ProjectDetailPage() {
                 {(isAdmin || isAssignedAgent) && (
                   <ProjectTransactionForm
                     projectId={project.id}
+                    projectCurrency={project.currency}
                     currentUser={user}
                     onSuccess={() => loadProject(project.id)}
                   />

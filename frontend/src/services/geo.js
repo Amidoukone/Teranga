@@ -46,22 +46,30 @@ export function getGeoParams() {
 }
 
 export function mergeGeoParams(params = {}) {
-  const geo = getGeoParams();
-  return { ...geo, ...params };
+  return mergeGeoPayload(params);
 }
 
 export function mergeGeoPayload(payload = {}) {
   const geo = getGeoParams();
+  const hasCountry = payload.countryId !== undefined || payload.country_id !== undefined;
+  const hasRegion = payload.regionId !== undefined || payload.region_id !== undefined;
+  const countryId = payload.countryId !== undefined ? payload.countryId : payload.country_id;
+  // Un pays explicite remplace aussi sa région héritée si le pays change.
+  // Les alias snake_case doivent pouvoir remplacer la sélection courante.
+  if (hasCountry) {
+    if (String(countryId ?? '') !== String(geo.countryId ?? '')) delete geo.regionId;
+    delete geo.countryId;
+  }
+  if (hasRegion) delete geo.regionId;
   return { ...geo, ...payload };
 }
 
 export function appendGeoFormData(formData) {
   if (!formData) return;
-  const { countryId, regionId } = getGeoSelection();
-  if (countryId && !formData.has('countryId') && !formData.has('country_id')) {
-    formData.append('countryId', String(countryId));
-  }
-  if (regionId && !formData.has('regionId') && !formData.has('region_id')) {
-    formData.append('regionId', String(regionId));
+  const merged = mergeGeoPayload(Object.fromEntries(formData.entries()));
+  for (const field of ['countryId', 'regionId']) {
+    if (merged[field] != null && !formData.has(field)) {
+      formData.append(field, String(merged[field]));
+    }
   }
 }

@@ -1,4 +1,37 @@
 const fr = {
+  agentCoordination: {
+    title: 'Disponibilité et prises en charge', hint: 'En vous déclarant disponible, vous autorisez les affectations automatiques dans votre périmètre. La charge comprend les services, projets et commandes.',
+    available: 'Disponible pour de nouvelles demandes', capacity: 'Capacité simultanée', load: '{{count}} prise(s) en charge active(s)',
+    proofHint: 'Ouvrez le détail pour ajouter votre justificatif de réalisation avant de terminer.',
+    statuses: { validated: 'Projet validé', delivered: 'Commande livrée', cancelled: 'Annulée', refunded: 'Remboursée', created: 'À démarrer', in_progress: 'En cours', completed: 'Validation du client attendue', processing: 'En préparation', paid: 'Paiement enregistré', shipped: 'En livraison' },
+    actions: { validated: 'Confirmer la réalisation du projet', in_progress: 'Démarrer le projet', completed: 'Remettre au client', processing: 'Commencer la préparation', shipped: 'Confirmer l’expédition', delivered: 'Confirmer la livraison' },
+  },
+  completion: { title: 'Compte rendu de la prestation', summary: 'Travaux réalisés, résultat et points à signaler', requiredFiles: 'Justificatifs attendus',
+    files: 'Ajouter des justificatifs', filesHint: 'Trois fichiers maximum par envoi. Les fichiers déjà enregistrés sont conservés.',
+    fileKind: 'Nature des justificatifs', detectKind: 'Détecter selon le fichier', save: 'Enregistrer le compte rendu',
+    saved: 'Compte rendu enregistré. Vous pouvez terminer la prestation lorsque les justificatifs attendus sont présents.', failed: 'Impossible d’enregistrer le compte rendu.' },
+  operations: {
+    executor: 'Agent chargé de la demande', entityType: 'Type de demande', entities: { service: 'Services', project: 'Projets', order: 'Commandes' },
+    title: 'Centre des opérations', subtitle: 'Chaque demande, son responsable et sa prochaine action.',
+    readiness: 'Préparation du territoire', selectCountry: 'Choisissez un pays pour vérifier sa préparation.',
+    configurationReady: 'Configuration technique complète', configurationIncomplete: 'Préparation à compléter',
+    fieldChecksRemain: 'Avant ouverture : vérifier les notifications, restaurer une sauvegarde, réaliser une prestation complète et faire valider l’organisation locale.',
+    queue: 'Demandes ouvertes', attentionOnly: 'Intervention nécessaire', refresh: 'Actualiser', loading: 'Chargement des opérations…',
+    empty: 'Aucune demande dans ce périmètre.', failed: 'Impossible de charger ou enregistrer les opérations.',
+    state: 'Suivi', owner: 'Responsable', nextAction: 'Prochaine échéance', attempts: 'Propositions envoyées', toDefine: 'À définir',
+    takeOwnership: 'Prendre en charge', startAutomatic: 'Lancer la recherche automatique', assignManually: 'Affectation manuelle',
+    previous: 'Précédent', next: 'Suivant', catalog: 'Organisation des services locaux',
+    outcome: 'Résultat attendu et limites du service', sla: 'Délai par étape (minutes)', maxAttempts: 'Propositions maximum', acceptanceSeconds: 'Délai de réponse (secondes)',
+    enableAutomatic: 'Activer la recherche automatique pour les nouvelles demandes', proofs: 'Justificatifs attendus',
+    activationHint: 'L’automatisation exige une offre active, un responsable et un exécutant disponible. Les demandes déjà en cours conservent leur suivi.',
+    save: 'Enregistrer', saving: 'Enregistrement…', saved: 'Organisation du service enregistrée.',
+    evidence: { photo: 'Photo', document: 'Document', receipt: 'Reçu', other: 'Autre fichier' },
+    states: { waiting: 'En attente de prise en charge', offered: 'Réponse de l’exécutant attendue', accepted: 'Exécution ou validation en cours', escalated: 'Intervention du responsable nécessaire', closed: 'Clôturée' },
+    reasons: { EXECUTANT_HORS_PERIMETRE: 'Vérifier le périmètre et le rôle de l’agent affecté.', RESPONSABLE_REQUIS: 'Désigner un responsable couvrant cette demande.', RECHERCHE_EPUISEE: 'Recherche arrivée à sa limite : contacter le client et proposer une solution.',
+      OFFRE_LOCALE_INDISPONIBLE: 'Vérifier le territoire et la disponibilité de l’offre.', HORAIRES_A_CONFIRMER: 'La disponibilité horaire doit être confirmée avant affectation.',
+      AUTOMATISATION_SUSPENDUE: 'La recherche automatique a été désactivée sur cette offre.', COORDINATION_SUSPENDUE: 'La recherche automatique est suspendue sur la plateforme.',
+      AUCUN_EXECUTANT_DISPONIBLE: 'Aucun exécutant éligible disponible. Une nouvelle recherche est prévue.', DELAI_ETAPE_DEPASSE: 'Une étape dépasse le délai prévu. Contacter les personnes concernées.', ARBITRAGE_REQUIS: 'Une réclamation ou une reprise nécessite une décision humaine.' },
+  },
   accessibility: {
     skipToContent: "Aller directement au contenu principal",
   },
@@ -250,6 +283,8 @@ const fr = {
     },
   },
   common: {
+    currencyFromOperation: "Devise de l’opération",
+    currencyFromService: "Devise du service",
     loading: "Chargement\u2026",
     refresh: "Rafra\u00EEchir",
     back: "Retour",
@@ -2561,9 +2596,14 @@ const fr = {
     placeholders: {
       countryName: "Nom du pays",
       iso2: "Code ISO2 (ex : NE, ML)",
+      currency: "Devise ISO 4217 (ex. XOF, GHS)",
+      language: "Langue par défaut (ex. fr, en)",
+      timezone: "Fuseau horaire IANA (ex. Africa/Bamako)",
       regionName: "Nom de la r\u00E9gion",
       regionCode: "Code r\u00E9gion (ex : BKO)",
+      regionTimezone: "Fuseau IANA de la région (facultatif, sinon pays)",
       masterEmail: "Email du master",
+      operatorLegalName: "Raison sociale de l'opérateur local",
       masterPassword: "Mot de passe (min 6)",
     },
     options: {
@@ -2572,6 +2612,7 @@ const fr = {
       selectRegion: "Choisir une r\u00E9gion",
     },
     hints: {
+      countryDraft: "Le pays est créé inactif. Configurez ses régions, son catalogue et son équipe avant de l'activer.",
       noRegionsForMaster:
         "Aucune r\u00E9gion cr\u00E9\u00E9e. Ajoute au moins une r\u00E9gion \u00E0 l\u2019\u00E9tape 2, ou repasse en \\\"MASTER du pays\\\".",
       countryForceDeleteAdminWarning:
@@ -2599,6 +2640,7 @@ const fr = {
       masterValidationCountry: "Email + mot de passe (6+) requis.",
       masterValidationRegion: "Email + mot de passe (6+) + r\u00E9gion requise.",
       masterCreate: "Erreur cr\u00E9ation MASTER",
+      operatorConflict: "Un opérateur principal existe déjà pour ce pays mais doit être vérifié avant de continuer.",
     },
     success: {
       masterCreated: "MASTER cr\u00E9\u00E9 avec succ\u00E8s !",
@@ -2710,6 +2752,9 @@ const fr = {
     },
   },
   financeDashboardPage: {
+    currencyLabel: "Devise du bilan",
+    currencyHint: "Les totaux et les comparaisons portent sur une seule devise à la fois.",
+    transactionsFailed: "Impossible de charger toutes les transactions. Rechargez les données avant d’utiliser ce bilan.",
     title: "Aper\u00E7u financier",
     descriptions: {
       admin: "Vue globale des flux (tous r\u00F4les).",
@@ -3236,6 +3281,12 @@ const fr = {
     category: {
       title: "Quel est votre besoin ?",
       subtitle: "Choisissez une filière métier ou un service classique Teranga.",
+      countryLabel: "Pays d’exécution",
+      countryPlaceholder: "Choisir un pays",
+      regionLabel: "Région d’exécution (facultatif)",
+      regionPlaceholder: "Tout le pays",
+      regionHint: "Précisez la région pour voir ses services locaux.",
+      chooseCountryFirst: "Choisissez d’abord le pays où le service sera rendu.",
     },
     location: {
       title: "Où intervenir ?",
@@ -3283,11 +3334,13 @@ const fr = {
       },
     },
     confirm: {
+      summaryTerritory: "Pays et région d’exécution",
       title: "Confirmez votre demande",
       subtitle: "Vérifiez les informations avant l'envoi. Le prix reste indicatif et confirmé sur place.",
       summaryCategory: "Catégorie",
       summaryTitle: "Besoin",
       summaryLocation: "Lieu",
+      gpsPosition: "Repère GPS : {{latitude}}, {{longitude}}",
       loadingEstimate: "Calcul de l'estimation…",
       priceValue: "Environ {{amount}} {{currency}}",
       startingFrom: "À partir de {{amount}} {{currency}}",
@@ -4804,6 +4857,8 @@ const fr = {
     perPage: "{{count}} / page",
   },
   geo: {
+    configuring: 'En préparation',
+    localContactMissing: 'Contact local à configurer',
     loading: "Chargement des zones...",
     scope: "P\u00E9rim\u00E8tre",
     countryLabel: "Pays",

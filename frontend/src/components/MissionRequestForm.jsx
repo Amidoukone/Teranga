@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { submitMissionRequest, getTradeCategories } from "../services/missionRequests";
+import { getLocalServiceCatalog, filterLocalServiceChoices } from "../services/serviceCatalog";
 import { getMasterCountries } from "../services/franchises";
 import { persistSession } from "../services/auth";
 import AuthFeedbackBanner from "./AuthFeedbackBanner";
@@ -17,6 +18,7 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
   const { t } = useTranslation();
 
   const [tradeCategories, setTradeCategories] = useState([]);
+  const [classicTypes, setClassicTypes] = useState(undefined);
   const [countries, setCountries] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
 
@@ -42,43 +44,71 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
     let cancelled = false;
     (async () => {
       try {
-        const [categories, countryList] = await Promise.all([
-          getTradeCategories(),
-          getMasterCountries(),
+        const countryList = await getMasterCountries();
+        if (cancelled) return;
+        setCountries(countryList);
+        if (countryList.length === 1) setCountryId(String(countryList[0].id));
+        else setLoadingOptions(false);
+      } catch (_err) {
+        if (!cancelled) {
+          setFeedback({ type: "error", message: t("homePage.missionRequest.loadError") });
+          setLoadingOptions(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
+
+  useEffect(() => {
+    if (!countryId) return;
+    let cancelled = false;
+    setLoadingOptions(true);
+    (async () => {
+      try {
+        const [categories, catalog] = await Promise.all([
+          getTradeCategories({ countryId }),
+          getLocalServiceCatalog({ countryId }),
         ]);
         if (cancelled) return;
-        setTradeCategories(categories);
-        setCountries(countryList);
-        if (countryList[0]) setCountryId(String(countryList[0].id));
-        if (initialTradeCategorySlug) {
-          const initialCategory = categories.find((tc) => tc.slug === initialTradeCategorySlug);
-          if (initialCategory) {
-            setRequestKind("trade_category");
-            setTradeCategoryId(String(initialCategory.id));
-            setServiceType("");
-            setTitle(initialTitle);
-            setFeedback(null);
-          } else {
-            setFeedback({
-              type: "error",
-              message: t("homePage.missionRequest.errors.serviceUnavailable"),
-            });
-          }
+        const choices = filterLocalServiceChoices(categories, catalog);
+        setTradeCategories(choices.tradeCategories);
+        setClassicTypes(choices.classicTypes);
+        const initialCategory = initialTradeCategorySlug
+          ? choices.tradeCategories.find((item) => item.slug === initialTradeCategorySlug)
+          : null;
+        if (initialTradeCategorySlug && !initialCategory) {
+          setRequestKind(null);
+          setTradeCategoryId("");
+          setFeedback({ type: "error", message: t("homePage.missionRequest.errors.serviceUnavailable") });
+        } else if (initialCategory) {
+          setRequestKind("trade_category");
+          setTradeCategoryId(String(initialCategory.id));
+          setServiceType("");
+          setTitle(initialTitle);
+          setFeedback(null);
         } else {
+          setRequestKind(null);
+          setTradeCategoryId("");
+          setServiceType("");
           setFeedback(null);
         }
       } catch (_err) {
         if (!cancelled) {
+          setTradeCategories([]);
+          setClassicTypes([]);
+          setRequestKind(null);
+          setTradeCategoryId("");
+          setServiceType("");
           setFeedback({ type: "error", message: t("homePage.missionRequest.loadError") });
         }
       } finally {
         if (!cancelled) setLoadingOptions(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [initialTitle, initialTradeCategorySlug, t]);
+    return () => { cancelled = true; };
+  }, [countryId, initialTitle, initialTradeCategorySlug, t]);
 
   const selectedTradeCategory = tradeCategoryId
     ? tradeCategories.find((tc) => String(tc.id) === String(tradeCategoryId))
@@ -250,11 +280,29 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
         </div>
       ) : null}
 
+      <div className="mb-5">
+        <FormField
+          label={t("homePage.missionRequest.fields.country")}
+          hint={t("homePage.missionRequest.identity.countryHint")}
+        >
+          <select className={inputClass} value={countryId} onChange={(e) => setCountryId(e.target.value)}>
+            <option value="">{t("homePage.missionRequest.fields.countryPlaceholder")}</option>
+            {countries.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </FormField>
+      </div>
+
       <fieldset className="m-0 border-0 p-0">
         <legend className="mb-1 block px-0 text-sm font-medium text-text-primary">
           {t("homePage.missionRequest.chooseNeed")}
         </legend>
-        {initialTradeCategorySlug ? (
+        {!countryId ? (
+          <p className="text-sm text-text-muted" role="status">
+            {t("homePage.missionRequest.fields.countryPlaceholder")}
+          </p>
+        ) : initialTradeCategorySlug ? (
           selectedTradeCategory ? (
             <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm font-semibold text-blue-800 dark:text-blue-200">
               {selectedTradeCategory.name}
@@ -265,6 +313,7 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
         ) : (
           <CategoryPicker
             tradeCategories={tradeCategories}
+            classicTypes={classicTypes}
             loading={loadingOptions}
             value={{ requestKind, tradeCategoryId, serviceType }}
             onChange={handleCategoryChange}
@@ -399,25 +448,6 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
             />
-          </FormField>
-
-          <FormField
-            label={t("homePage.missionRequest.fields.country")}
-            hint={t("homePage.missionRequest.identity.countryHint")}
-          >
-            <select
-              className={inputClass}
-              value={countryId}
-              onChange={(e) => setCountryId(e.target.value)}
-              disabled={loadingOptions}
-            >
-              <option value="">{t("homePage.missionRequest.fields.countryPlaceholder")}</option>
-              {countries.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
           </FormField>
 
           <Button

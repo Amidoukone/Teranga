@@ -4,12 +4,10 @@ const Joi = require('joi');
 const {
   TRANSACTION_TYPES,
   TRANSACTION_STATUSES,
-  CURRENCY_LABELS,
 } = require('../utils/labels');
 
 const ALLOWED_TRANSACTION_TYPES = Object.keys(TRANSACTION_TYPES || {});
 const ALLOWED_TRANSACTION_STATUSES = Object.keys(TRANSACTION_STATUSES || {});
-const ALLOWED_CURRENCIES = Object.keys(CURRENCY_LABELS || {});
 
 const numericLike = Joi.alternatives().try(
   Joi.number(),
@@ -31,7 +29,7 @@ const createTransactionSchema = Joi.object({
   currency: Joi.string()
     .trim()
     .uppercase()
-    .valid(...ALLOWED_CURRENCIES)
+    .pattern(/^[A-Z]{3}$/)
     .allow('', null),
   paymentMethod: Joi.string().trim().max(255).allow('', null),
   description: Joi.string().trim().max(5000).allow('', null),
@@ -58,7 +56,7 @@ const updateTransactionSchema = Joi.object({
   currency: Joi.string()
     .trim()
     .uppercase()
-    .valid(...ALLOWED_CURRENCIES)
+    .pattern(/^[A-Z]{3}$/)
     .allow('', null),
   paymentMethod: Joi.string().trim().max(255).allow('', null),
   description: Joi.string().trim().max(5000).allow('', null),

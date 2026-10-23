@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 
 import { getTradeCategories } from "../../services/missionRequests";
+import { getMasterCountries } from "../../services/franchises";
+import { getRegions } from "../../services/regions";
+import { getLocalServiceCatalog, filterLocalServiceChoices } from "../../services/serviceCatalog";
 import { listSavedLocations, createSavedLocation } from "../../services/savedLocations";
 import { estimateMission, createMission, uploadMissionAttachments } from "../../services/missions";
 import { me } from "../../services/auth";
@@ -20,8 +23,14 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
   const { t } = useTranslation();
 
   const [step, setStep] = useState(1);
+  const submission = useRef(null);
 
   const [tradeCategories, setTradeCategories] = useState([]);
+  const [classicTypes, setClassicTypes] = useState(undefined);
+  const [countries, setCountries] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [countryId, setCountryId] = useState("");
+  const [regionId, setRegionId] = useState("");
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [savedLocations, setSavedLocations] = useState([]);
   const [loadingSavedLocations, setLoadingSavedLocations] = useState(true);
@@ -55,40 +64,17 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
     let cancelled = false;
     (async () => {
       try {
-        // Le scope du compte (countryId/regionId) filtre les filières proposées à l'étape
-        // Catégorie — la destination réelle n'est pas encore connue à ce stade du wizard
-        // (adresse saisie à l'étape suivante), voir tradeCategory.controller.js buildScopeOr.
-        // Best-effort : si `me()` échoue, on retombe sur le catalogue global (comportement
-        // précédent), jamais bloquant pour le wizard.
-        let userScope = {};
-        try {
-          const { user } = await me();
-          userScope = { countryId: user?.countryId, regionId: user?.regionId };
-        } catch (_meErr) {
-          userScope = {};
-        }
-
-        const [categories, locations] = await Promise.all([
-          getTradeCategories(userScope),
-          listSavedLocations(),
+        const [countryList, locations, session] = await Promise.all([
+          getMasterCountries(),
+          listSavedLocations().catch(() => []),
+          me().catch(() => ({ user: null })),
         ]);
         if (cancelled) return;
-        const visibleCategories = serviceOnly
-          ? categories.filter((item) => !["mobilite", "livraison"].includes(item.slug))
-          : categories;
-        setTradeCategories(visibleCategories);
-        const preferredCategory = preferredCategorySlug
-          ? visibleCategories.find((item) => item.slug === preferredCategorySlug)
-          : null;
-        if (preferredCategory) {
-          setCategory((current) => current.requestKind
-            ? current
-            : {
-                requestKind: "trade_category",
-                tradeCategoryId: String(preferredCategory.id),
-                serviceType: "",
-              });
-        }
+        setCountries(countryList);
+        const accountCountry = countryList.find((item) => String(item.id) === String(session.user?.countryId));
+        const initialCountry = accountCountry || (countryList.length === 1 ? countryList[0] : null);
+        setCountryId(initialCountry ? String(initialCountry.id) : "");
+        setRegionId(accountCountry && session.user?.regionId ? String(session.user.regionId) : "");
         setSavedLocations(locations);
       } catch (_err) {
         if (!cancelled) {
@@ -96,7 +82,6 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
         }
       } finally {
         if (!cancelled) {
-          setLoadingOptions(false);
           setLoadingSavedLocations(false);
         }
       }
@@ -104,7 +89,65 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
     return () => {
       cancelled = true;
     };
-  }, [preferredCategorySlug, serviceOnly, t]);
+  }, [t]);
+
+  useEffect(() => {
+    if (!countryId) {
+      setLoadingOptions(false);
+      return;
+    }
+    let cancelled = false;
+    getRegions({ countryId }).then((items) => {
+      if (cancelled) return;
+      setRegions(items);
+      setRegionId((current) => current && !items.some((item) => String(item.id) === String(current)) ? "" : current);
+    }).catch(() => {
+      if (!cancelled) setRegions([]);
+    });
+    return () => { cancelled = true; };
+  }, [countryId]);
+
+  useEffect(() => {
+    if (!countryId) return;
+    let cancelled = false;
+    setLoadingOptions(true);
+    (async () => {
+      try {
+        const scope = { countryId, ...(regionId ? { regionId } : {}) };
+        const [categories, catalog] = await Promise.all([
+          getTradeCategories(scope),
+          getLocalServiceCatalog(scope),
+        ]);
+        if (cancelled) return;
+        const localChoices = filterLocalServiceChoices(
+          regionId ? categories : categories.filter((item) => !item.regionId),
+          catalog
+        );
+        const visibleCategories = serviceOnly
+          ? localChoices.tradeCategories.filter((item) => !["mobilite", "livraison"].includes(item.slug))
+          : localChoices.tradeCategories;
+        setTradeCategories(visibleCategories);
+        setClassicTypes(localChoices.classicTypes);
+        const preferredCategory = preferredCategorySlug
+          ? visibleCategories.find((item) => item.slug === preferredCategorySlug)
+          : null;
+        setCategory(preferredCategory
+          ? { requestKind: "trade_category", tradeCategoryId: String(preferredCategory.id), serviceType: "" }
+          : { requestKind: null, tradeCategoryId: "", serviceType: "" });
+        setFeedback(null);
+      } catch (_err) {
+        if (!cancelled) {
+          setTradeCategories([]);
+          setClassicTypes([]);
+          setCategory({ requestKind: null, tradeCategoryId: "", serviceType: "" });
+          setFeedback({ type: "error", message: t("missionCreation.errors.loadOptions") });
+        }
+      } finally {
+        if (!cancelled) setLoadingOptions(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [countryId, regionId, preferredCategorySlug, serviceOnly, t]);
 
   const executionType = category.requestKind === "trade_category" ? "provider" : "agent";
 
@@ -124,7 +167,7 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
     : "";
 
   const canGoNext = () => {
-    if (step === 1) return Boolean(category.requestKind);
+    if (step === 1) return Boolean(countryId && category.requestKind && !loadingOptions);
     if (step === 3) return title.trim().length >= 3;
     return true;
   };
@@ -140,6 +183,8 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
       setLoadingEstimate(true);
       try {
         const data = await estimateMission({
+          countryId: Number(countryId),
+          ...(regionId ? { regionId: Number(regionId) } : {}),
           executionType,
           tradeCategoryId: category.tradeCategoryId ? Number(category.tradeCategoryId) : undefined,
           serviceType: category.serviceType || undefined,
@@ -152,8 +197,13 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
           pickupLongitude: pickupCoordinates?.longitude,
         });
         setEstimate(data);
-      } catch (_err) {
+      } catch (error) {
         setEstimate(null);
+        setFeedback({
+          type: "error",
+          message: error?.response?.data?.error || t("missionCreation.errors.submitFailed"),
+        });
+        return;
       } finally {
         setLoadingEstimate(false);
       }
@@ -188,7 +238,9 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
 
   const handleMapPositionChange = ({ latitude, longitude }) => {
     setCoordinates({ latitude, longitude });
+    setAddress("");
     setSavedLocationId(null);
+    setSaveThisLocation(false);
   };
 
   // Distinct de handleAddressChange (qui efface les coordonnées quand l'utilisateur tape un
@@ -213,6 +265,7 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
 
   const handlePickupMapPositionChange = ({ latitude, longitude }) => {
     setPickupCoordinates({ latitude, longitude });
+    setPickupAddress("");
   };
 
   const resetWizard = () => {
@@ -234,11 +287,24 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
     setFeedback(null);
   };
 
+  const clearLocation = () => {
+    setAddress("");
+    setCoordinates(null);
+    setSavedLocationId(null);
+    setSaveThisLocation(false);
+    setNewLocationLabel("");
+    setPickupAddress("");
+    setPickupCoordinates(null);
+    setEstimate(null);
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     setFeedback(null);
     try {
       const payload = {
+        countryId: Number(countryId),
+        ...(regionId ? { regionId: Number(regionId) } : {}),
         executionType,
         title: title.trim(),
         description: description.trim() || undefined,
@@ -262,7 +328,11 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
         if (pickupCoordinates?.longitude != null) payload.pickupLongitude = pickupCoordinates.longitude;
       }
 
-      const data = await createMission(payload);
+      const fingerprint = JSON.stringify(payload);
+      if (submission.current?.fingerprint !== fingerprint) {
+        submission.current = { fingerprint, requestKey: window.crypto?.randomUUID?.() || `mission-${Date.now()}-${Math.random().toString(36).slice(2)}` };
+      }
+      const data = await createMission({ ...payload, requestKey: submission.current.requestKey });
       const missionId = data?.mission?.id;
 
       if (saveThisLocation && !savedLocationId && address.trim() && coordinates?.latitude != null) {
@@ -347,7 +417,26 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
 
       {step === 1 ? (
         <CategoryStep
+          countries={countries}
+          regions={regions}
+          countryId={countryId}
+          regionId={regionId}
+          onCountryChange={(value) => {
+            if (value !== countryId) clearLocation();
+            setCountryId(value);
+            setRegionId("");
+            setRegions([]);
+            setCategory({ requestKind: null, tradeCategoryId: "", serviceType: "" });
+            setLoadingOptions(Boolean(value));
+          }}
+          onRegionChange={(value) => {
+            if (value !== regionId) clearLocation();
+            setRegionId(value);
+            setCategory({ requestKind: null, tradeCategoryId: "", serviceType: "" });
+            setLoadingOptions(true);
+          }}
           tradeCategories={tradeCategories}
+          classicTypes={classicTypes}
           loading={loadingOptions}
           value={category}
           onChange={setCategory}
@@ -373,6 +462,9 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
           isMobilite={isMobilite}
           pickupAddress={pickupAddress}
           pickupCoordinates={pickupCoordinates}
+          countryIso={countries.find((item) => String(item.id) === countryId)?.isoCode || ""}
+          countryName={countries.find((item) => String(item.id) === countryId)?.name || ""}
+          regionName={regions.find((item) => String(item.id) === regionId)?.name || ""}
           onPickupAddressChange={handlePickupAddressChange}
           onPickupPlaceSelected={handlePickupPlaceSelected}
           onPickupMapPositionChange={handlePickupMapPositionChange}
@@ -397,10 +489,14 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
           estimate={estimate}
           loadingEstimate={loadingEstimate}
           summary={{
+            countryName: countries.find((item) => String(item.id) === countryId)?.name || "",
+            regionName: regions.find((item) => String(item.id) === regionId)?.name || "",
             categoryLabel,
             title,
             address,
+            coordinates,
             pickupAddress: requiresPickup ? pickupAddress : "",
+            pickupCoordinates: requiresPickup ? pickupCoordinates : null,
             isMobilite,
           }}
         />

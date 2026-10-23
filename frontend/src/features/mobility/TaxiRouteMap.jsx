@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { loadGoogleMaps } from "../mission-creation/googleMapsLoader";
 
-const DEFAULT_CENTER = { lat: 12.6392, lng: -8.0029 };
+const DEFAULT_CENTER = { lat: 0, lng: 0 };
 
 function isCoordinatePair(value) {
   return Number.isFinite(value?.latitude) && Number.isFinite(value?.longitude);
@@ -66,7 +66,7 @@ export default function TaxiRouteMap({
 
       mapRef.current = new maps.Map(containerRef.current, {
         center,
-        zoom: isCoordinatePair(pickup) || isCoordinatePair(destination) ? 15 : 12,
+        zoom: isCoordinatePair(pickup) || isCoordinatePair(destination) ? 15 : 2,
         streetViewControl: false,
         mapTypeControl: false,
         fullscreenControl: false,

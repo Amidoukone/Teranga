@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { me, getAuthHeader } from "../services/auth";
 import { getTransactions, createTransaction } from "../services/transactions";
+import { getServiceById } from "../services/services";
 import api from "../services/api";
 import { applyLabels, CURRENCY_LABELS, TRANSACTION_TYPES } from "../utils/labels";
 import { useLocale } from "../i18n/useLocale";
@@ -120,6 +121,7 @@ export default function ServiceTransactionsPage() {
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [serviceCurrency, setServiceCurrency] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -128,7 +130,7 @@ export default function ServiceTransactionsPage() {
     type: "expense",
     amount: "",
  // Contexte: transactions de service.
-    currency: "XOF",
+    currency: "",
     description: "",
     taskId: "",
     proofFile: null,
@@ -146,12 +148,24 @@ export default function ServiceTransactionsPage() {
     return Number.isFinite(parsed) ? String(parsed) : "";
   }, [location.search]);
 
+  useEffect(() => {
+    let active = true;
+    setServiceCurrency('');
+    setForm((prev) => ({ ...prev, currency: '' }));
+    getServiceById(id).then((service) => {
+      if (active) setServiceCurrency(service?.currency || '');
+    }).catch(() => {
+      // La création peut toujours hériter de la devise côté serveur.
+    });
+    return () => { active = false; };
+  }, [id]);
+
   /* ============================================================================
      Charge les transactions.
   ============================================================================ */
   const fetchTransactions = useCallback(async () => {
     try {
-      const data = await getTransactions({ serviceId: id });
+      const data = await getTransactions({ serviceId: id, countryId: null, regionId: null });
 
       const list = Array.isArray(data)
         ? data
@@ -256,7 +270,7 @@ export default function ServiceTransactionsPage() {
         taskId: form.taskId ? parseInt(form.taskId, 10) : undefined,
         type: form.type,
         amount: amountNum,
-        currency: form.currency || "XOF",
+        currency: form.currency || undefined,
         description: form.description || undefined,
         proofFile: form.proofFile || null,
       };
@@ -268,7 +282,7 @@ export default function ServiceTransactionsPage() {
       setForm({
         type: "expense",
         amount: "",
-        currency: "XOF",
+        currency: "",
         description: "",
         taskId: "",
         proofFile: null,
@@ -376,6 +390,7 @@ export default function ServiceTransactionsPage() {
             form={form}
             setForm={setForm}
             tasks={tasks}
+            serviceCurrency={serviceCurrency}
             submitting={submitting}
             handleSubmit={handleSubmit}
           />
@@ -395,15 +410,15 @@ export default function ServiceTransactionsPage() {
 /* ============================================================================
    Soumission protegee (anti double-clic).
 ============================================================================ */
-function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
+function TransactionForm({ form, setForm, tasks, serviceCurrency, submitting, handleSubmit }) {
   const { t } = useTranslation();
   const currencyOptions = useMemo(
     () =>
-      SERVICE_CURRENCY_CODES.map((code) => ({
+      [...new Set([...SERVICE_CURRENCY_CODES, serviceCurrency, form.currency].filter(Boolean))].map((code) => ({
         value: code,
         label: t(`currency.${code}`, { defaultValue: code }),
       })),
-    [t]
+    [t, form.currency, serviceCurrency]
   );
 
   return (
@@ -445,12 +460,14 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
         </FormGroup>
 
         {/* Devise (multi-pays) */}
-        <FormGroup label={t("serviceTransactions.form.currencyLabel")}>
+        <FormGroup label={t("serviceTransactions.form.currencyLabel")} htmlFor="service-transaction-currency">
           <select
+            id="service-transaction-currency"
             value={form.currency}
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
             className={FORM_INPUT}
           >
+            <option value="">{t('common.currencyFromService')}{serviceCurrency ? ` (${serviceCurrency})` : ''}</option>
             {currencyOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -532,10 +549,10 @@ function TransactionForm({ form, setForm, tasks, submitting, handleSubmit }) {
 /* ============================================================================
    Sous-composant formulaire.
 ============================================================================ */
-function FormGroup({ label, children, full }) {
+function FormGroup({ label, children, full, htmlFor }) {
   return (
     <div className={full ? "col-span-1 sm:col-span-2" : ""}>
-      <label className="block text-sm font-medium text-text-primary mb-1">
+      <label htmlFor={htmlFor} className="block text-sm font-medium text-text-primary mb-1">
         {label}
       </label>
       {children}

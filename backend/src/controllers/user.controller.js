@@ -13,6 +13,7 @@ const {
   assertGlobalAdminOnly,
 } = require('../services/userAccess.service');
 const { invalidateAuthUserCache } = require('../services/authCache.service');
+const { selectedGeo } = require('../utils/selectedGeo');
 const logger = require('../utils/logger');
 const { normalizePhone, isValidPhone } = require('../utils/contactIdentity');
 
@@ -459,6 +460,15 @@ exports.listByRole = async (req, res) => {
       }
     }
 
+    const selection = selectedGeo(req.query);
+    const selectionClauses = [];
+    if (selection.countryId) {
+      const iso = await getCountryIsoById(selection.countryId);
+      selectionClauses.push({ [Op.or]: [{ countryId: selection.countryId }, ...(iso ? [{ countryId: null, regionId: null, country: iso }] : [])] });
+    }
+    if (selection.regionId) selectionClauses.push({ regionId: selection.regionId });
+    finalWhere = { [Op.and]: [finalWhere, ...selectionClauses] };
+
     const users = await User.findAll({
       where: finalWhere,
       attributes: [
@@ -479,6 +489,7 @@ exports.listByRole = async (req, res) => {
 
     return res.json({ users });
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
     logger.error({ err: e }, 'Erreur listByRole');
     return res
       .status(500)

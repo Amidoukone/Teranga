@@ -16,6 +16,7 @@ import {
   createMissionRating,
 } from "../services/missions";
 import MissionTrackingMap from "../features/mission-tracking/MissionTrackingMap";
+import MissionCompletionPanel from "../features/mission-tracking/MissionCompletionPanel";
 import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
 import { Modal, FormField, Button } from "../components/ui";
 import { buildTelHref } from "../utils/phone";
@@ -879,6 +880,7 @@ export default function MissionTrackingPage() {
           </div>
         ) : null}
 
+        <MissionCompletionPanel key={id} missionId={id} completion={track.completion} canSubmit={track.isExecutor && track.missionStatus === 'IN_PROGRESS'} onSaved={() => load({ skipEta: true })} />
         <div className="mt-5 flex flex-wrap gap-3">
           {track.viewerRole === "client" && track.missionStatus === "COMPLETED" ? (
             <button

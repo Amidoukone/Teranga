@@ -15,6 +15,7 @@ import {
   UserRound,
 } from 'lucide-react';
 
+import MissionCompletionPanel from '../features/mission-tracking/MissionCompletionPanel';
 import { me } from '../services/auth';
 import {
   completeService,
@@ -270,6 +271,7 @@ export default function ServiceDetailPage() {
             </button>
           ) : null}
         </section>
+        <MissionCompletionPanel key={service.id} missionId={service.id} completion={service.completion} canSubmit={role === 'agent' && service.status === 'in_progress'} onSaved={() => load({ silent: true })} />
 
         <section className="rounded-[24px] border border-border/70 bg-surface-card p-5 shadow-sm">
           <h2 className="text-base font-bold text-text-primary">{t('serviceTracking.detailsTitle')}</h2>

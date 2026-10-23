@@ -1,4 +1,37 @@
 const en = {
+  agentCoordination: {
+    title: 'Availability and assignments', hint: 'Being available authorizes automatic assignments within your territory. Capacity includes services, projects and orders.',
+    available: 'Available for new requests', capacity: 'Concurrent capacity', load: '{{count}} active assignment(s)',
+    proofHint: 'Open the details to attach your completion evidence before finishing.',
+    statuses: { validated: 'Project validated', delivered: 'Order delivered', cancelled: 'Cancelled', refunded: 'Refunded', created: 'Ready to start', in_progress: 'In progress', completed: 'Awaiting customer validation', processing: 'Preparing', paid: 'Payment recorded', shipped: 'In delivery' },
+    actions: { validated: 'Confirm project completion', in_progress: 'Start project', completed: 'Submit to customer', processing: 'Start preparation', shipped: 'Confirm shipment', delivered: 'Confirm delivery' },
+  },
+  completion: { title: 'Service completion report', summary: 'Work performed, outcome and issues to report', requiredFiles: 'Required evidence',
+    files: 'Add supporting files', filesHint: 'Up to three files per submission. Previously saved files are retained.',
+    fileKind: 'Evidence type', detectKind: 'Detect from file', save: 'Save report',
+    saved: 'Report saved. You can complete the service once the required evidence is present.', failed: 'Unable to save the report.' },
+  operations: {
+    executor: 'Assigned agent', entityType: 'Request type', entities: { service: 'Services', project: 'Projects', order: 'Orders' },
+    title: 'Operations centre', subtitle: 'Every request, its owner and its next action.',
+    readiness: 'Territory readiness', selectCountry: 'Choose a country to check its readiness.',
+    configurationReady: 'Technical configuration complete', configurationIncomplete: 'Preparation required',
+    fieldChecksRemain: 'Before opening: test notifications, restore a backup, complete a service and approve local operations.',
+    queue: 'Open requests', attentionOnly: 'Intervention needed', refresh: 'Refresh', loading: 'Loading operations…',
+    empty: 'No requests in this scope.', failed: 'Unable to load or save operations.',
+    state: 'Progress', owner: 'Owner', nextAction: 'Next deadline', attempts: 'Offers sent', toDefine: 'To be defined',
+    takeOwnership: 'Take ownership', startAutomatic: 'Start automatic search', assignManually: 'Manual assignment',
+    previous: 'Previous', next: 'Next', catalog: 'Local service operations',
+    outcome: 'Expected outcome and service limits', sla: 'Time per stage (minutes)', maxAttempts: 'Maximum offers', acceptanceSeconds: 'Response window (seconds)',
+    enableAutomatic: 'Enable automatic search for new requests', proofs: 'Required evidence',
+    activationHint: 'Automation requires an active offering, an owner and an available executor. Requests already in progress keep their current workflow.',
+    save: 'Save', saving: 'Saving…', saved: 'Service settings saved.',
+    evidence: { photo: 'Photo', document: 'Document', receipt: 'Receipt', other: 'Other file' },
+    states: { waiting: 'Awaiting intake', offered: 'Awaiting provider response', accepted: 'Execution or validation in progress', escalated: 'Owner intervention required', closed: 'Closed' },
+    reasons: { EXECUTANT_HORS_PERIMETRE: 'Check the assigned agent’s role and territory.', RESPONSABLE_REQUIS: 'Assign an owner covering this request.', RECHERCHE_EPUISEE: 'Search limit reached: contact the customer and offer an alternative.',
+      OFFRE_LOCALE_INDISPONIBLE: 'Check the territory and the local offering.', HORAIRES_A_CONFIRMER: 'Opening hours need confirmation before assignment.',
+      AUTOMATISATION_SUSPENDUE: 'Automatic search has been disabled for this offering.', COORDINATION_SUSPENDUE: 'Automatic search is suspended on the platform.',
+      AUCUN_EXECUTANT_DISPONIBLE: 'No eligible provider is available. Another search is scheduled.', DELAI_ETAPE_DEPASSE: 'A stage exceeded its deadline. Contact the people involved.', ARBITRAGE_REQUIS: 'A complaint or repeat service needs a human decision.' },
+  },
   accessibility: {
     skipToContent: "Skip to main content",
   },
@@ -247,6 +280,8 @@ const en = {
     },
   },
   common: {
+    currencyFromOperation: "Operation currency",
+    currencyFromService: "Service currency",
     loading: "Loading…",
     refresh: "Refresh",
     back: "Back",
@@ -2556,9 +2591,14 @@ const en = {
     placeholders: {
       countryName: "Country name",
       iso2: "ISO2 code (e.g., NE, ML)",
+      currency: "ISO 4217 currency (e.g. XOF, GHS)",
+      language: "Default language (e.g. fr, en)",
+      timezone: "IANA time zone (e.g. Africa/Bamako)",
       regionName: "Region name",
       regionCode: "Region code (e.g., BKO)",
+      regionTimezone: "Region IANA time zone (optional, otherwise country)",
       masterEmail: "Master email",
+      operatorLegalName: "Local operator legal name",
       masterPassword: "Password (min 6)",
     },
     options: {
@@ -2567,6 +2607,7 @@ const en = {
       selectRegion: "Select a region",
     },
     hints: {
+      countryDraft: "The country starts inactive. Configure its regions, catalog and team before activating it.",
       noRegionsForMaster:
         "No region created. Add at least one region in step 2, or switch back to \"MASTER for the country\".",
       countryForceDeleteAdminWarning:
@@ -2591,6 +2632,7 @@ const en = {
       masterValidationCountry: "Email + password (6+) required.",
       masterValidationRegion: "Email + password (6+) + region required.",
       masterCreate: "Error creating MASTER",
+      operatorConflict: "A primary operator already exists for this country and must be reviewed before continuing.",
     },
     success: {
       masterCreated: "MASTER created successfully!",
@@ -2702,6 +2744,9 @@ const en = {
     },
   },
   financeDashboardPage: {
+    currencyLabel: "Statement currency",
+    currencyHint: "Totals and comparisons use one currency at a time.",
+    transactionsFailed: "Unable to load all transactions. Reload the data before using this statement.",
     title: "Finance overview",
     descriptions: {
       admin: "Global financial overview (all roles).",
@@ -3225,6 +3270,12 @@ const en = {
     category: {
       title: "What do you need?",
       subtitle: "Choose a trade/specialty or a classic Teranga service.",
+      countryLabel: "Service country",
+      countryPlaceholder: "Choose a country",
+      regionLabel: "Service region (optional)",
+      regionPlaceholder: "Anywhere in the country",
+      regionHint: "Choose a region to see its local services.",
+      chooseCountryFirst: "Choose the country where the service will take place.",
     },
     location: {
       title: "Where should it happen?",
@@ -3272,11 +3323,13 @@ const en = {
       },
     },
     confirm: {
+      summaryTerritory: "Service country and region",
       title: "Confirm your request",
       subtitle: "Review the details before sending. The price stays indicative and is confirmed on site.",
       summaryCategory: "Category",
       summaryTitle: "Need",
       summaryLocation: "Location",
+      gpsPosition: "GPS pin: {{latitude}}, {{longitude}}",
       loadingEstimate: "Computing estimate…",
       priceValue: "About {{amount}} {{currency}}",
       startingFrom: "Starting from {{amount}} {{currency}}",
@@ -4786,6 +4839,8 @@ const en = {
     perPage: "{{count}} / page",
   },
   geo: {
+    configuring: 'In preparation',
+    localContactMissing: 'Local contact not configured',
     loading: "Loading locations…",
     scope: "Scope",
     countryLabel: "Country",

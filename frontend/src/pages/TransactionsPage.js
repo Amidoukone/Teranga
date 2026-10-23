@@ -168,7 +168,7 @@ export default function TransactionsPage() {
   const [form, setForm] = useState({
     type: 'expense',
     amount: '',
-    currency: 'XOF',
+    currency: '',
     paymentMethod: '',
     description: '',
     serviceId: '',
@@ -330,6 +330,7 @@ export default function TransactionsPage() {
       ...f,
       serviceId,
       taskId: '',
+      currency: '',
     }));
 
     if (!serviceId) {
@@ -452,7 +453,7 @@ export default function TransactionsPage() {
     setForm({
       type: 'expense',
       amount: '',
-      currency: 'XOF',
+      currency: '',
       paymentMethod: '',
       description: '',
       serviceId: '',
@@ -862,6 +863,7 @@ function TransactionForm({
   user,
 }) {
   const { t } = useTranslation();
+  const serviceCurrency = services.find((service) => String(service.id) === String(form.serviceId))?.currency;
 
   return (
     <form
@@ -907,7 +909,8 @@ function TransactionForm({
         onChange={(e) => setForm({ ...form, currency: e.target.value })}
         className="rounded-lg border border-border/80 bg-surface-card px-3 py-2 text-text-primary"
       >
-        {CURRENCY_CODES.map((code) => (
+        <option value="">{t('common.currencyFromOperation')}{serviceCurrency ? ` (${serviceCurrency})` : ''}</option>
+        {[...new Set([...CURRENCY_CODES, serviceCurrency, form.currency].filter(Boolean))].map((code) => (
           <option key={code} value={code}>
             {t(`currency.${code}`, { defaultValue: code })}
           </option>

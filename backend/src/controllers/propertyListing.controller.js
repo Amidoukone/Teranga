@@ -6,6 +6,7 @@
 // pays à défaut), pas le contact d'origine du bien.
 
 const { PropertyListing, Country, Region, User } = require('../../models');
+const { Op } = require('sequelize');
 const {
   isGlobalAdmin,
   getUserGeoScope,
@@ -13,6 +14,7 @@ const {
   canAccessGeoResource,
 } = require('../utils/geoScope');
 const mediaUpload = require('../services/mediaUpload.service');
+const { selectedGeo } = require('../utils/selectedGeo');
 const logger = require('../utils/logger');
 
 const PROPERTY_LISTING_LOCAL_FALLBACK_ENV_VAR = 'PROPERTY_LISTING_ALLOW_LOCAL_FALLBACK';
@@ -172,6 +174,7 @@ exports.listForAdmin = async (req, res) => {
     let where = applyGeoScopeForModel({}, req.user, PropertyListing);
     if (where.id === 0) return res.status(403).json({ error: 'Accès interdit' });
     if (req.query?.status) where = { ...where, status: req.query.status };
+    where = { [Op.and]: [where, selectedGeo(req.query)] };
 
     const listings = await PropertyListing.findAll({
       where,
@@ -181,6 +184,7 @@ exports.listForAdmin = async (req, res) => {
 
     return res.json({ listings });
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
     logger.error({ err: e }, 'propertyListing.list_for_admin.failed');
     return res.status(500).json({ error: 'Erreur lors de la récupération des annonces' });
   }

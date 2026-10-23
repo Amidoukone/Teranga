@@ -1,5 +1,6 @@
 // frontend/src/services/api.js
 import axios from 'axios';
+import { protectCreation, settleCreation } from './creationRequests';
 import { fixMojibakeDeep } from '../utils/mojibake';
 
 /**
@@ -205,7 +206,7 @@ export function getFileUrl(filePath) {
 }
 
 /* ---------- Intercepteur: injecter token ---------- */
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
   const skipAuthHeader = Boolean(config?.skipAuthHeader);
 
   if (skipAuthHeader) {
@@ -266,7 +267,7 @@ api.interceptors.request.use((config) => {
   if (config.__retryCount === undefined) config.__retryCount = 0;
   if (config.__flippedHost === undefined) config.__flippedHost = false;
 
-  return config;
+  return protectCreation(config);
 });
 
 function getCookieValue(name) {
@@ -460,6 +461,7 @@ function tryFlipDevHostOnce(cfg) {
 /* ---------- Intercepteur: gestion d’erreurs ---------- */
 api.interceptors.response.use(
   (response) => {
+    settleCreation(response.config, response.status);
     if (shouldNormalizeMojibake(response) && response?.data !== undefined) {
       response.data = fixMojibakeDeep(response.data);
     }
@@ -491,6 +493,7 @@ api.interceptors.response.use(
     }
 
     const status = error?.response?.status;
+    settleCreation(error?.config, status);
     let cfg = error?.config || {};
     const url = cfg?.url;
     const method = cfg?.method;
