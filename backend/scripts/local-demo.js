@@ -3,7 +3,9 @@
 // Local preview only. Never use the integration server bootstrap (which resets its DB)
 // to offer a persistent, interactive demo.
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.demo.local'), quiet: true });
 process.env.NODE_ENV = 'test';
+if (process.env.TERANGA_DEMO_JWT_SECRET) process.env.JWT_SECRET = process.env.TERANGA_DEMO_JWT_SECRET;
 process.env.MISSION_COORDINATION_ENABLED = 'true';
 process.env.CORS_ORIGINS = 'http://127.0.0.1:3001,http://localhost:3001';
 process.env.UPLOADS_ROOT = path.resolve(__dirname, '../uploads');
@@ -14,12 +16,13 @@ db.sequelize.options.logging = false;
 const { coordinateMission } = require('../src/services/missionCoordination.service');
 const { coordinateWork } = require('../src/services/workCoordination.service');
 
-const PASSWORD = 'TerangaDemo2026!';
 const prefix = '[Démo] ';
 async function ensure(Model, where, defaults) {
   return (await Model.findOrCreate({ where, defaults: { ...where, ...defaults } }))[0];
 }
 async function main() {
+  const password = process.env.TERANGA_DEMO_PASSWORD;
+  if (!password || password.trim().length < 16 || Buffer.byteLength(password, 'utf8') > 72) throw new Error('Define TERANGA_DEMO_PASSWORD with 16 or more characters and at most 72 UTF-8 bytes. No default demo password is provided.');
   const config = db.sequelize.config;
   if (config.database !== (process.env.DB_NAME_TEST || 'teranga_test') || !['localhost', '127.0.0.1', '::1'].includes(config.host)) throw new Error('A local test database is required for these demo accounts.');
   await db.sequelize.authenticate();
@@ -31,9 +34,9 @@ async function main() {
   const accounts = {};
   for (const [role, firstName] of [['admin', 'Coordination Démo'], ['agent', 'Awa Démo'], ['client', 'Mariam Démo']]) {
     const email = `${role}.demo@teranga.test`;
-    const account = await ensure(db.User, { email }, { role, firstName, passwordHash: await bcrypt.hash(PASSWORD, 10),
+    const account = await ensure(db.User, { email }, { role, firstName, passwordHash: await bcrypt.hash(password, 10),
       country: 'ML', countryId: country.id, regionId: role === 'admin' ? null : region.id, language: 'fr', emailVerified: true });
-    if (!(await bcrypt.compare(PASSWORD, account.passwordHash))) await account.update({ passwordHash: await bcrypt.hash(PASSWORD, 10) });
+    if (!(await bcrypt.compare(password, account.passwordHash))) await account.update({ passwordHash: await bcrypt.hash(password, 10) });
     accounts[role] = account;
   }
   const { admin, agent, client } = accounts;
@@ -70,7 +73,7 @@ async function main() {
   await ensure(db.OrderItem, { orderId: order.id, name: 'Kit de fournitures — démonstration' }, { quantity: 2, price: 5000, total: 10000 });
   if (Number(order.subtotal) === 0) await order.update({ subtotal: 10000 });
   await coordinateWork('order', order.id);
-  console.log(JSON.stringify({ localDemo: true, accounts: Object.fromEntries(Object.entries(accounts).map(([role, user]) => [role, user.email])), password: PASSWORD,
+  console.log(JSON.stringify({ localDemo: true, accounts: Object.fromEntries(Object.entries(accounts).map(([role, user]) => [role, user.email])),
     interface: 'http://127.0.0.1:3001/login', operations: 'http://127.0.0.1:3001/admin/operations' }, null, 2));
   if (!process.argv.includes('--serve')) { await db.sequelize.close(); return; }
   const app = require('../src/app');
