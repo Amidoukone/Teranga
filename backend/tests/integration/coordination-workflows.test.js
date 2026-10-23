@@ -8,6 +8,7 @@ const db = require('../../models');
 const app = require('../../src/app');
 const { coordinateMission } = require('../../src/services/missionCoordination.service');
 const { coordinateWork, runWorkCoordination } = require('../../src/services/workCoordination.service');
+const { suspendOffer } = require('../../scripts/suspend-service-offer');
 let ready = false;
 let country, foreign, owner, agent, client, outsider, territory, org, definition, offering, product;
 const users = [], serviceIds = [], projectIds = [], orderIds = [], receiptIds = [];
@@ -347,4 +348,27 @@ test('switching the selected country filters users, providers and pricing withou
     if (rules.length) await db.MissionPricingRule.destroy({ where: { id: rules.map((row) => row.id) } });
     if (createdProviders.length) await db.Provider.destroy({ where: { id: createdProviders } });
   }
+});
+
+test('suspending an offering closes new requests only in its country and preserves existing work', async () => {
+  if (!ready) return;
+  const existingService = await service();
+  const before = (await offering.reload()).toJSON();
+  const args = { countryCode: country.isoCode, availabilityId: offering.id };
+  try {
+    await expect(suspendOffer(db, { ...args, countryCode: foreign.isoCode, apply: true })).rejects.toThrow('selected country');
+    expect((await offering.reload()).isActive).toBe(before.isActive);
+    expect((await suspendOffer(db, args)).applied).toBe(false);
+    expect((await offering.reload()).toJSON()).toEqual(before);
+    expect(await suspendOffer(db, { ...args, apply: true })).toMatchObject({ applied: true, changed: true, offering: { isActive: false } });
+    expect((await suspendOffer(db, { ...args, apply: true })).changed).toBe(false);
+    const after = (await offering.reload()).toJSON();
+    expect(after.providerRules).toEqual(before.providerRules);
+    expect(after.slaMinutes).toBe(before.slaMinutes);
+    expect((await existingService.reload()).status).toBe('created');
+    const catalog = await request(app).get('/api/v1/service-catalog').query({ countryId: country.id });
+    expect(catalog.status).toBe(200);
+    expect(catalog.body.catalog).toEqual([]);
+    expect(catalog.body.configured).toBe(true);
+  } finally { await offering.update({ isActive: before.isActive }); }
 });

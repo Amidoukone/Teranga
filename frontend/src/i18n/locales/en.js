@@ -11,6 +11,10 @@ const en = {
     fileKind: 'Evidence type', detectKind: 'Detect from file', save: 'Save report',
     saved: 'Report saved. You can complete the service once the required evidence is present.', failed: 'Unable to save the report.' },
   operations: {
+    offerOpen: 'Open to new requests', offerClosed: 'Offering suspended',
+    suspendOffer: 'Suspend this offering', reopenOffer: 'Reopen this offering',
+    offerSuspended: 'Offering suspended for new requests.', offerReopened: 'Offering reopened for new requests.',
+    availabilityHint: 'Suspension closes new requests for this local offering. Existing cases remain under supervision.',
     executor: 'Assigned agent', entityType: 'Request type', entities: { service: 'Services', project: 'Projects', order: 'Orders' },
     title: 'Operations centre', subtitle: 'Every request, its owner and its next action.',
     readiness: 'Territory readiness', selectCountry: 'Choose a country to check its readiness.',

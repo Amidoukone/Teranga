@@ -66,3 +66,31 @@ test('an operator can configure the local outcome, deadline, evidence and automa
   userEvent.click(screen.getByRole('button', { name: 'operations.save' }));
   await waitFor(() => expect(updateOperatingOffer).toHaveBeenCalledWith(7, expect.objectContaining({ slaMinutes: 90, providerRules: expect.objectContaining({ requiredEvidenceTypes: ['document'], coordination: expect.objectContaining({ enabled: true }) }) })));
 });
+
+test('an incomplete offering can be suspended without submitting blank required settings', async () => {
+  getOperatingCatalog.mockResolvedValue([{ id: 1, definition: { name: 'Electricity', legacyTradeCategoryId: 3 }, territory: { name: 'Mali' }, offering: { isActive: true, slaMinutes: null, providerRules: null } }]);
+  render(view());
+  userEvent.click(await screen.findByRole('button', { name: 'operations.suspendOffer' }));
+  await waitFor(() => expect(updateOperatingOffer).toHaveBeenCalledWith(1, { isActive: false }));
+  expect(await screen.findByText('operations.offerSuspended')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'operations.reopenOffer' })).toBeInTheDocument();
+  expect(screen.getByLabelText('operations.outcome')).toHaveValue('');
+});
+
+test('reopening a suspended offering preserves its execution settings', async () => {
+  getOperatingCatalog.mockResolvedValue([{ id: 1, definition: { name: 'Electricity', legacyTradeCategoryId: 3 }, territory: { name: 'Mali' }, offering: { isActive: false, slaMinutes: 120, providerRules: { serviceOutcome: 'Intervention and report agreed with the client' } } }]);
+  render(view());
+  userEvent.click(await screen.findByRole('button', { name: 'operations.reopenOffer' }));
+  await waitFor(() => expect(updateOperatingOffer).toHaveBeenCalledWith(1, { isActive: true }));
+  expect(await screen.findByText('operations.offerReopened')).toBeInTheDocument();
+  expect(screen.getByLabelText('operations.sla')).toHaveValue(120);
+});
+
+test('a failed suspension preserves the current availability and displays the error', async () => {
+  getOperatingCatalog.mockResolvedValue([{ id: 1, definition: { name: 'Electricity' }, territory: { name: 'Mali' }, offering: { isActive: true } }]);
+  updateOperatingOffer.mockRejectedValue({ response: { data: { error: 'Offer outside your territory' } } });
+  render(view());
+  userEvent.click(await screen.findByRole('button', { name: 'operations.suspendOffer' }));
+  expect(await screen.findByText('Offer outside your territory')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'operations.suspendOffer' })).toBeEnabled();
+});

@@ -22,6 +22,7 @@
     "data:project-territories:json": "node scripts/project-territorial-governance.js --json --fail-on-blocking",
     "data:project-territories:apply": "node scripts/project-territorial-governance.js --apply --fail-on-blocking",
     "data:prepare-country": "node scripts/prepare-country.js",
+    "data:suspend-offer": "node scripts/suspend-service-offer.js",
     "data:prepare-mali": "node scripts/prepare-country.js --country=ML --operator=Teranga --phone=+22370453345 --currency=XOF --language=fr --timezone=Africa/Bamako",
     "data:project-service-catalog": "node scripts/project-service-catalog.js --fail-on-blocking",
     "data:project-service-catalog:json": "node scripts/project-service-catalog.js --json --fail-on-blocking",

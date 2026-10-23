@@ -59,6 +59,8 @@ Pour un autre pays, `data:prepare-country` exige explicitement toutes les option
 
 ### Configuration des offres
 
+Pour la reprise du Mali, consulter la [proposition de configuration des offres](configuration-offres-mali.md), qui détaille la suspension de l'électricité et les seuils de suivi à valider avant enregistrement.
+
 Ces projections ne déplacent ni clients, ni commandes, ni missions historiques. Le catalogue conserve les paramètres des offres locales déjà présentes. Sa première projection crée les offres à partir des catégories globales et locales du pays : vérifier la couverture des services existants et préparer leurs délais, résultats et justificatifs avant d'activer l'automatisation.
 
 - Définir devise, langue, fuseau horaire et numéro d’assistance. Vérifier l’éventuelle surcharge régionale.

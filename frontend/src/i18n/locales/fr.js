@@ -11,6 +11,10 @@ const fr = {
     fileKind: 'Nature des justificatifs', detectKind: 'Détecter selon le fichier', save: 'Enregistrer le compte rendu',
     saved: 'Compte rendu enregistré. Vous pouvez terminer la prestation lorsque les justificatifs attendus sont présents.', failed: 'Impossible d’enregistrer le compte rendu.' },
   operations: {
+    offerOpen: 'Offre ouverte aux nouvelles demandes', offerClosed: 'Offre suspendue',
+    suspendOffer: 'Suspendre cette offre', reopenOffer: 'Rouvrir cette offre',
+    offerSuspended: 'Offre suspendue pour les nouvelles demandes.', offerReopened: 'Offre rouverte aux nouvelles demandes.',
+    availabilityHint: 'La suspension ferme les nouvelles demandes pour cette offre locale. Les dossiers existants restent suivis.',
     executor: 'Agent chargé de la demande', entityType: 'Type de demande', entities: { service: 'Services', project: 'Projets', order: 'Commandes' },
     title: 'Centre des opérations', subtitle: 'Chaque demande, son responsable et sa prochaine action.',
     readiness: 'Préparation du territoire', selectCountry: 'Choisissez un pays pour vérifier sa préparation.',

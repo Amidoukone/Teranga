@@ -50,7 +50,20 @@ function OfferSettings({ entry, onSaved, user }) {
   const [required, setRequired] = useState(rules.requiredEvidenceTypes || entry.definition?.requiredEvidenceTypes || []);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [isActive, setIsActive] = useState(initial.isActive !== false);
+  useEffect(() => { setIsActive(initial.isActive !== false); }, [initial.isActive]);
   const canManage = !user?.regionId || String(user.regionId) === String(entry.territory?.regionId);
+  async function changeAvailability() {
+    const next = !isActive;
+    setSaving(true); setMessage('');
+    try {
+      await updateOperatingOffer(entry.id, { isActive: next });
+      setIsActive(next);
+      setMessage(t(next ? 'operations.offerReopened' : 'operations.offerSuspended'));
+      await onSaved();
+    } catch (error) { setMessage(error?.response?.data?.error || t('operations.failed')); }
+    finally { setSaving(false); }
+  }
   async function save(event) {
     event.preventDefault(); setSaving(true); setMessage('');
     try {
@@ -64,6 +77,11 @@ function OfferSettings({ entry, onSaved, user }) {
   return <form onSubmit={save} className="space-y-3 rounded-2xl border border-border bg-surface-card p-4">
     <h3 className="font-semibold">{entry.definition?.name} · {entry.territory?.name}</h3>
     <p className="text-sm text-text-secondary">{entry.operatingOrganization?.displayName || entry.operatingOrganization?.legalName}</p>
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <p className="text-sm font-medium">{t(isActive ? 'operations.offerOpen' : 'operations.offerClosed')}</p>
+      <button type="button" disabled={saving || !canManage} onClick={changeAvailability} className="btn-secondary rounded-lg px-3 py-2 text-sm disabled:opacity-50">{t(isActive ? 'operations.suspendOffer' : 'operations.reopenOffer')}</button>
+    </div>
+    <p className="text-xs text-text-secondary">{t('operations.availabilityHint')}</p>
     <label className="block text-sm" htmlFor={`${prefix}-outcome`}>{t('operations.outcome')}</label>
     <textarea id={`${prefix}-outcome`} value={outcome} onChange={(event) => setOutcome(event.target.value)} minLength={10} maxLength={2000} required disabled={!canManage} className="w-full rounded-lg border border-border bg-surface-main p-2" />
     <div className="grid gap-3 sm:grid-cols-3">
