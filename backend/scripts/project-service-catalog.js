@@ -7,25 +7,18 @@ dotenv.config({ path: path.resolve(__dirname, '..', '.env.production'), quiet: t
 dotenv.config({ path: path.resolve(__dirname, '..', '.env'), quiet: true });
 
 const db = require('../models');
+const { projectionArgs } = require('../src/utils/projectionCountry');
 const {
   loadCatalogProjection,
   applyCatalogProjection,
 } = require('../src/services/serviceCatalogProjection.service');
 
-function parseArgs(argv) {
-  return {
-    apply: argv.includes('--apply'),
-    json: argv.includes('--json'),
-    failOnBlocking: argv.includes('--fail-on-blocking'),
-  };
-}
-
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = projectionArgs(process.argv.slice(2));
   await db.sequelize.authenticate();
 
   try {
-    const projection = await loadCatalogProjection(db);
+    const projection = await loadCatalogProjection(db, { countryCode: args.countryCode });
     let writeStats = null;
     if (args.apply && projection.summary.readyToApply) {
       writeStats = await applyCatalogProjection(db, projection);
@@ -33,13 +26,14 @@ async function main() {
 
     const output = {
       mode: args.apply ? 'apply' : 'dry-run',
+      scope: args.countryCode || 'all',
       summary: projection.summary,
       issues: projection.issues,
       writeStats,
     };
     if (args.json) console.log(JSON.stringify(output, null, 2));
     else {
-      console.log(`[service-catalog-projection] mode: ${output.mode}`);
+      console.log(`[service-catalog-projection] mode: ${output.mode}; scope: ${output.scope}`);
       console.table(output.summary);
       if (output.issues.length) console.table(output.issues);
       if (writeStats) console.table(writeStats);

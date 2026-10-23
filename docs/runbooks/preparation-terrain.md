@@ -22,6 +22,24 @@ Le moteur tourne chaque minute. Les traitements d’une même mission sont séri
 
 ## Préparer un territoire
 
+Pour reprendre un pays existant indépendamment des pays encore en préparation, les deux projections acceptent `--country=ML`. Depuis le shell Render, après déploiement du code compatible :
+
+```sh
+NODE_ENV=production npm run data:project-territories:json -- --country=ML
+# Seulement après correction des anomalies et readyToApply: true :
+NODE_ENV=production npm run data:project-territories:apply -- --country=ML
+NODE_ENV=production npm run data:project-service-catalog:json -- --country=ML
+# Après validation du catalogue projeté et readyToApply: true :
+NODE_ENV=production npm run data:project-service-catalog:apply -- --country=ML
+NODE_ENV=production npm run field:check -- --country=ML
+```
+
+Sans `--country`, les projections gardent leur périmètre de tous les pays. Le champ `scope` du résultat précise le périmètre utilisé. Un code inconnu, vide ou une option mal orthographiée provoque un échec sans écriture. Le siège, les administrateurs globaux et les définitions communes restent partagés ; les territoires, rattachements locaux et offres projetés concernent uniquement le pays sélectionné.
+
+`COUNTRY_ADMIN_SCOPE_AMBIGUOUS` avec `organizationCandidates: []` signifie qu'aucun opérateur MASTER existant ne correspond au pays de l'administrateur. Confirmer l'organisation qui exécute réellement les services, puis créer son rattachement au pays existant avant de relancer le diagnostic. Ne pas recréer le pays ou le compte administrateur, ni deviner une organisation. Le filtrage par pays ne contourne pas ce blocage local.
+
+Ces projections ne déplacent ni clients, ni commandes, ni missions historiques. Le catalogue conserve les paramètres des offres locales déjà présentes. Sa première projection crée les offres à partir des catégories globales et locales du pays : vérifier la couverture des services existants et préparer leurs délais, résultats et justificatifs avant d'activer l'automatisation.
+
 - Définir devise, langue, fuseau horaire et numéro d’assistance. Vérifier l’éventuelle surcharge régionale.
 - Désigner un responsable administrateur local, son organisation et son périmètre.
 - Vérifier les affectations territoriales et rôles via le contrôle pilote existant.

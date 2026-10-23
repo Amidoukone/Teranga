@@ -3,6 +3,7 @@
 const {
   buildCatalogProjection,
   applyCatalogProjection,
+  loadCatalogProjection,
 } = require('../../src/services/serviceCatalogProjection.service');
 
 function validSource() {
@@ -11,7 +12,7 @@ function validSource() {
       { id: 10, name: 'Plomberie', slug: 'plomberie', isActive: true },
       { id: 11, name: 'Taxi', slug: 'mobilite', isActive: true },
     ],
-    countries: [{ id: 1, name: 'Mali', currency: 'XOF', isActive: true }],
+    countries: [{ id: 1, name: 'Mali', isoCode: 'ML', currency: 'XOF', isActive: true }],
     territories: [
       { id: 100, type: 'COUNTRY', countryId: 1, regionId: null, isActive: true },
     ],
@@ -23,6 +24,39 @@ function validSource() {
 }
 
 describe('service catalog projection', () => {
+  function sourceDb(data) {
+    return Object.fromEntries([
+      ['Country', data.countries], ['Territory', data.territories],
+      ['Organization', data.organizations], ['OrganizationTerritory', data.organizationTerritories],
+      ['TradeCategory', data.tradeCategories],
+    ].map(([model, rows]) => [model, { findAll: jest.fn().mockResolvedValue(rows) }]));
+  }
+
+  test('excludes foreign offerings and blockers from a country-scoped projection', async () => {
+    const data = validSource();
+    data.countries.push({ id: 2, name: 'Other country', isoCode: 'CI', currency: 'XOF', isActive: true });
+    data.territories.push({ id: 101, type: 'COUNTRY', countryId: 2, isActive: true });
+    data.tradeCategories.push({ id: 12, name: 'Foreign trade', slug: 'foreign', countryId: 2, isActive: true });
+    const db = sourceDb(data);
+    expect((await loadCatalogProjection(db)).summary.readyToApply).toBe(false);
+    const plan = await loadCatalogProjection(db, { countryCode: 'ML' });
+    expect(plan.summary.readyToApply).toBe(true);
+    expect(plan.definitions.some((row) => row.code === 'TRADE:FOREIGN')).toBe(false);
+    expect(plan.availabilities).toHaveLength(7);
+    expect(plan.availabilities.every((row) => row.territoryId === 100 && row.organizationId === 200)).toBe(true);
+    await expect(loadCatalogProjection(db, { countryCode: 'SN' })).rejects.toThrow('not found: SN');
+  });
+
+  test('retains local categories whose regional territory is missing as blockers', async () => {
+    const data = validSource();
+    data.tradeCategories.push({ id: 12, name: 'Regional trade', slug: 'regional', countryId: 1, regionId: 999, isActive: true });
+    const plan = await loadCatalogProjection(sourceDb(data), { countryCode: 'ML' });
+    expect(plan.summary.readyToApply).toBe(false);
+    expect(plan.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'CATALOG_DEFINITION_WITHOUT_TERRITORY', entityId: 'TRADE:REGIONAL' }),
+    ]));
+  });
+
   test('projects global and classic offerings into the operated country', () => {
     const projection = buildCatalogProjection(validSource());
 

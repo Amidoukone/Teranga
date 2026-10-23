@@ -15,6 +15,10 @@ Depuis `backend` :
 npm.cmd run data:project-service-catalog:json
 ```
 
+Pour traiter uniquement un pays existant, ajouter `-- --country=ML` aux commandes de diagnostic et d'application. La projection territoriale accepte le même filtre. Les anomalies des autres pays ne bloquent alors pas la préparation du pays sélectionné. Son propre opérateur, ses territoires et sa devise restent obligatoires. Un code pays absent de la base ou une option invalide provoque un échec sans écriture. Le résultat expose `scope: "ML"` ; sans filtre, il expose `scope: "all"`.
+
+Les définitions globales de services restent communes. Seules les offres du pays sélectionné sont projetées ; aucune offre d'un autre pays n'est créée ou mise à jour. Une définition locale du pays dont le territoire régional manque reste une anomalie bloquante.
+
 La projection peut être appliquée uniquement si `readyToApply` vaut `true` et si `blockingIssues` vaut `0` :
 
 ```powershell

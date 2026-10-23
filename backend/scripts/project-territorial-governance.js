@@ -7,26 +7,20 @@ dotenv.config({ path: path.resolve(__dirname, '..', '.env.production'), quiet: t
 dotenv.config({ path: path.resolve(__dirname, '..', '.env'), quiet: true });
 
 const db = require('../models');
+const { projectionArgs } = require('../src/utils/projectionCountry');
 const {
   loadLegacyProjection,
   applyTerritorialProjection,
 } = require('../src/services/territorialProjection.service');
 
-function parseArgs(argv) {
-  return {
-    apply: argv.includes('--apply'),
-    json: argv.includes('--json'),
-    failOnBlocking: argv.includes('--fail-on-blocking'),
-  };
-}
-
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = projectionArgs(process.argv.slice(2));
   await db.sequelize.authenticate();
 
   try {
     const projection = await loadLegacyProjection(db, {
       headquartersName: process.env.TERANGA_HEADQUARTERS_NAME || 'Teranga',
+      countryCode: args.countryCode,
     });
     let writeStats = null;
 
@@ -39,6 +33,7 @@ async function main() {
         JSON.stringify(
           {
             mode: args.apply ? 'apply' : 'dry-run',
+            scope: args.countryCode || 'all',
             summary: projection.summary,
             issues: projection.issues,
             writeStats,
@@ -48,7 +43,7 @@ async function main() {
         )
       );
     } else {
-      console.log(`[territorial-projection] mode: ${args.apply ? 'apply' : 'dry-run'}`);
+      console.log(`[territorial-projection] mode: ${args.apply ? 'apply' : 'dry-run'}; scope: ${args.countryCode || 'all'}`);
       console.table(projection.summary);
       if (projection.issues.length > 0) console.table(projection.issues);
       if (writeStats) console.table(writeStats);

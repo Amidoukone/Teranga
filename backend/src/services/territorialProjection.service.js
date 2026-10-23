@@ -1,4 +1,5 @@
 'use strict';
+const { projectionCountry } = require('../utils/projectionCountry');
 
 function key(value) {
   return value === null || value === undefined ? null : String(value);
@@ -283,6 +284,18 @@ async function loadLegacyProjection(db, options = {}) {
     db.Franchise.findAll({ raw: true }),
     db.User.findAll({ where: { role: 'admin' }, raw: true }),
   ]);
+
+  const country = projectionCountry(countries, options.countryCode);
+  if (country) {
+    const localRegions = regions.filter((row) => key(row.countryId) === key(country.id));
+    const regionIds = new Set(localRegions.map((row) => key(row.id)));
+    return buildTerritorialProjection({
+      countries: [country], regions: localRegions,
+      franchises: franchises.filter((row) => key(row.countryId) === key(country.id) || regionIds.has(key(row.regionId))),
+      users: users.filter((row) => (row.countryId == null && row.regionId == null) || key(row.countryId) === key(country.id) || regionIds.has(key(row.regionId))),
+      headquartersName: options.headquartersName,
+    });
+  }
 
   return buildTerritorialProjection({
     countries,

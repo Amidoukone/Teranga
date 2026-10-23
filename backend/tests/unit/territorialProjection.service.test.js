@@ -3,6 +3,7 @@
 const {
   buildTerritorialProjection,
   applyTerritorialProjection,
+  loadLegacyProjection,
 } = require('../../src/services/territorialProjection.service');
 
 function validLegacyData() {
@@ -41,6 +42,40 @@ function validLegacyData() {
 }
 
 describe('territorialProjection service', () => {
+  function sourceDb(data) {
+    return Object.fromEntries([
+      ['Country', data.countries], ['Region', data.regions],
+      ['Franchise', data.franchises], ['User', data.users],
+    ].map(([model, rows]) => [model, { findAll: jest.fn().mockResolvedValue(rows) }]));
+  }
+
+  test('prepares Mali independently of a country whose operator is missing', async () => {
+    const data = validLegacyData();
+    data.countries.push({ id: 2, name: 'Other country', isoCode: 'CI', isActive: true });
+    data.users.push({ id: 23, role: 'admin', countryId: 2, regionId: null });
+    const db = sourceDb(data);
+    expect((await loadLegacyProjection(db)).summary.readyToApply).toBe(false);
+    const plan = await loadLegacyProjection(db, { countryCode: 'ML' });
+    expect(plan.summary.readyToApply).toBe(true);
+    expect(plan.territories.map((row) => row.countryId)).toEqual([1, 1]);
+    expect(plan.memberships.map((row) => row.userId)).toEqual([1, 2, 3]);
+    expect(plan.organizations.map((row) => row.code).sort()).toEqual(['LEGACY:FRANCHISE:100', 'LEGACY:FRANCHISE:101', 'TERANGA-HQ']);
+    await expect(loadLegacyProjection(db, { countryCode: 'SN' })).rejects.toThrow('not found: SN');
+  });
+
+  test('retains missing operators and incoherent regional records as local blockers', async () => {
+    const data = validLegacyData();
+    data.franchises = [];
+    const plan = await loadLegacyProjection(sourceDb(data), { countryCode: 'ML' });
+    expect(plan.summary.readyToApply).toBe(false);
+    expect(plan.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'COUNTRY_ADMIN_SCOPE_AMBIGUOUS' })]));
+    data.franchises = [{ id: 101, type: 'REGIONAL', countryId: 2, regionId: 10 }];
+    const incoherent = await loadLegacyProjection(sourceDb(data), { countryCode: 'ML' });
+    expect(incoherent.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'FRANCHISE_WITH_UNKNOWN_COUNTRY', entityId: 101 }),
+    ]));
+  });
+
   test('builds stable territories, organizations and admin memberships', () => {
     const projection = buildTerritorialProjection(validLegacyData());
 

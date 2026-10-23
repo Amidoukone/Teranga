@@ -1,4 +1,5 @@
 'use strict';
+const { projectionCountry } = require('../utils/projectionCountry');
 
 const {
   CLASSIC_CATALOG_DEFINITIONS,
@@ -241,7 +242,7 @@ function buildCatalogProjection({
   };
 }
 
-async function loadCatalogProjection(db) {
+async function loadCatalogProjection(db, options = {}) {
   const [tradeCategories, countries, territories, organizations, organizationTerritories] =
     await Promise.all([
       db.TradeCategory.findAll({ raw: true }),
@@ -251,6 +252,20 @@ async function loadCatalogProjection(db) {
       db.OrganizationTerritory.findAll({ where: { status: 'active' }, raw: true }),
     ]);
 
+  const country = projectionCountry(countries, options.countryCode);
+  if (country) {
+    const localTerritories = territories.filter((row) => key(row.countryId) === key(country.id));
+    const territoryIds = new Set(localTerritories.map((row) => key(row.id)));
+    const regionIds = new Set(localTerritories.filter((row) => row.regionId != null).map((row) => key(row.regionId)));
+    const localAssignments = organizationTerritories.filter((row) => territoryIds.has(key(row.territoryId)));
+    const operatorIds = new Set(localAssignments.map((row) => key(row.organizationId)));
+    return buildCatalogProjection({
+      countries: [country], territories: localTerritories, organizationTerritories: localAssignments,
+      organizations: organizations.filter((row) => operatorIds.has(key(row.id))),
+      tradeCategories: tradeCategories.filter((row) => key(row.countryId) === key(country.id)
+        || (row.countryId == null && (row.regionId == null || regionIds.has(key(row.regionId))))),
+    });
+  }
   return buildCatalogProjection({
     tradeCategories,
     countries,
