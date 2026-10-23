@@ -34,7 +34,7 @@ afterAll(async () => {
 });
 
 test('preparation rolls back on failure, is safe to repeat concurrently and preserves existing data', async () => {
-  const input = { countryCode: country.isoCode, operator: 'Teranga', phone: '+223 70668364', currency: 'XOF', language: 'fr', timezone: 'Africa/Bamako' };
+  const input = { countryCode: country.isoCode, operator: 'Teranga', phone: '+223 70453345', currency: 'XOF', language: 'fr', timezone: 'Africa/Bamako' };
   const original = (await country.reload()).toJSON();
   const foreignOriginal = (await foreign.reload()).toJSON();
   const preview = await prepareCountry(db, input);
@@ -56,7 +56,7 @@ test('preparation rolls back on failure, is safe to repeat concurrently and pres
   const repeated = await prepareCountry(db, input, { apply: true });
   expect(repeated.settingsChanges).toEqual({});
   expect(repeated.operator.action).toBe('reuse');
-  expect((await country.reload()).toJSON()).toMatchObject({ id: original.id, isActive: false, timezone: 'Africa/Bamako', contactPhone: '+22370668364' });
+  expect((await country.reload()).toJSON()).toMatchObject({ id: original.id, isActive: false, timezone: 'Africa/Bamako', contactPhone: '+22370453345' });
   expect((await foreign.reload()).toJSON()).toEqual(foreignOriginal);
   expect((await admin.reload()).countryId).toBe(country.id);
   expect((await loadLegacyProjection(db, { countryCode: country.isoCode })).summary.readyToApply).toBe(true);

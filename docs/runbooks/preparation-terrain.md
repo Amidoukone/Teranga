@@ -40,7 +40,7 @@ Sans `--country`, les projections gardent leur périmètre de tous les pays. Le 
 
 ### Reprise du Mali existant
 
-L'exploitant confirmé est Teranga et son assistance est `+223 70668364`. La commande suivante prépare le pays **existant** identifié par `ML`, sans dépendre de son identifiant numérique : XOF, français, `Africa/Bamako`, assistance et opérateur MASTER Teranga. Le premier appel est en lecture seule :
+L'exploitant confirmé est Teranga et son assistance est `+223 70453345`. La commande suivante prépare le pays **existant** identifié par `ML`, sans dépendre de son identifiant numérique : XOF, français, `Africa/Bamako`, assistance et opérateur MASTER Teranga. Le premier appel est en lecture seule :
 
 ```sh
 NODE_ENV=production npm run data:prepare-mali
@@ -52,6 +52,8 @@ NODE_ENV=production npm run data:project-service-catalog:json -- --country=ML
 La préparation applique les paramètres et crée l'opérateur dans une seule transaction, avec verrou du pays pour les exécutions concurrentes. Elle réutilise un opérateur déjà conforme. Plusieurs MASTER, un opérateur différent ou inactif, une organisation MASTER distincte ou l'absence d'administrateur national provoquent un blocage sans écriture. Le statut actif/inactif du pays est conservé, les comptes restent inchangés et aucun autre pays n'est modifié. Aucune offre ni automatisation n'est activée par cette préparation ; le catalogue fait l'objet de son propre diagnostic puis de la projection décrite plus haut. Le contrôle terrain peut ensuite signaler les résultats attendus et délais encore manquants.
 
 Les coordonnées publiques de Teranga sont alignées sur ce numéro. Pour les pays disponibles et l'assistance d'une mission, le numéro provient de la région correspondante ou du pays ; la variable globale `TERANGA_ASSISTANCE_PHONE` ne remplace plus un contact local manquant. Une région d'un autre pays n'est jamais utilisée comme assistance de la mission.
+
+Si la préparation du Mali a déjà été appliquée avec un ancien numéro, relancer `NODE_ENV=production npm run data:prepare-mali -- --apply` après déploiement du code corrigé pour mettre à jour le contact enregistré. Le pays et l'opérateur existants sont réutilisés.
 
 Pour un autre pays, `data:prepare-country` exige explicitement toutes les options `--country`, `--operator`, `--phone`, `--currency`, `--language` et `--timezone` sous la forme `--option=valeur` ; `--apply` reste facultatif et seul autorise l'écriture. Les valeurs du Mali ne servent pas de défaut aux autres pays.
 

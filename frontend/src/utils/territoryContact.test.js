@@ -6,6 +6,6 @@ test('Côte d’Ivoire never inherits Mali assistance', () => {
   expect(territoryContact({ country, region: { countryId: 2, contactPhone: '+2250100000000' } }).phone).toBe('+2250100000000');
 });
 test('existing Mali assistance remains available when its legacy configuration is empty', () => {
-  expect(territoryContact({ country: { id: 1, isoCode: 'ML' } }).phone).toBe('+223 70668364');
+  expect(territoryContact({ country: { id: 1, isoCode: 'ML' } }).phone).toBe('+223 70453345');
   expect(territoryContact({}).phone).toBeNull();
 });

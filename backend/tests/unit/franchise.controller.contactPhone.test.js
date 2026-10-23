@@ -48,7 +48,7 @@ test("listMasterCountries exposes the configured assistance phone", async () => 
 
 test("an unconfigured country never inherits another country's assistance number", async () => {
   const previous = process.env.TERANGA_ASSISTANCE_PHONE;
-  process.env.TERANGA_ASSISTANCE_PHONE = '+22370668364';
+  process.env.TERANGA_ASSISTANCE_PHONE = '+22370453345';
   try {
     Franchise.findAll.mockResolvedValue([{ countryId: 4 }]);
     User.findAll.mockResolvedValue([]);

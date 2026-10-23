@@ -3,7 +3,7 @@
 const { prepareCountry, validatePreparation } = require('../../src/services/countryPreparation.service');
 const { parseArgs } = require('../../scripts/prepare-country');
 
-const input = { countryCode: 'ML', operator: 'Teranga', phone: '+223 70668364', currency: 'XOF', language: 'fr', timezone: 'Africa/Bamako' };
+const input = { countryCode: 'ML', operator: 'Teranga', phone: '+223 70453345', currency: 'XOF', language: 'fr', timezone: 'Africa/Bamako' };
 
 function source({ masters = [], organizations = [], territories = [], assignments = [], admins = [{ id: 37 }] } = {}) {
   const country = { id: 5, name: 'Mali', isActive: false, currency: 'XOF', defaultLanguage: 'fr', timezone: null, contactPhone: null, update: jest.fn() };
@@ -25,7 +25,7 @@ test('dry-run reports changes and the existing administrator without any writes'
   const db = source();
   const result = await prepareCountry(db, input);
   expect(result).toMatchObject({ mode: 'dry-run', scope: 'ML', country: { id: 5, isActive: false }, applied: false, readyToApply: true, administratorIds: [37], operator: { action: 'create' } });
-  expect(result.settingsChanges).toEqual({ timezone: { from: null, to: 'Africa/Bamako' }, contactPhone: { from: null, to: '+22370668364' } });
+  expect(result.settingsChanges).toEqual({ timezone: { from: null, to: 'Africa/Bamako' }, contactPhone: { from: null, to: '+22370453345' } });
   expect(db.sequelize.transaction).not.toHaveBeenCalled();
   expect(db.country.update).not.toHaveBeenCalled();
   expect(db.Franchise.create).not.toHaveBeenCalled();
@@ -36,7 +36,7 @@ test('locks the country and prepares settings and operator in the same transacti
   const result = await prepareCountry(db, input, { apply: true });
   expect(result.applied).toBe(true);
   expect(db.Country.findOne).toHaveBeenCalledWith({ where: { isoCode: 'ML' }, transaction: db.transaction, lock: 'UPDATE' });
-  expect(db.country.update).toHaveBeenCalledWith({ currency: 'XOF', defaultLanguage: 'fr', timezone: 'Africa/Bamako', contactPhone: '+22370668364' }, { transaction: db.transaction });
+  expect(db.country.update).toHaveBeenCalledWith({ currency: 'XOF', defaultLanguage: 'fr', timezone: 'Africa/Bamako', contactPhone: '+22370453345' }, { transaction: db.transaction });
   expect(db.Franchise.create).toHaveBeenCalledWith({ type: 'MASTER', countryId: 5, regionId: null, legalName: 'Teranga', status: 'active' }, { transaction: db.transaction });
 });
 
@@ -72,7 +72,7 @@ test('never creates a missing country', async () => {
 });
 
 test.each([
-  { countryCode: '' }, { phone: '70668364' }, { timezone: '' },
+  { countryCode: '' }, { phone: '70453345' }, { timezone: '' },
   { timezone: 'Africa/Unknown' }, { operator: '' }, { currency: '' }, { language: '' },
 ])('requires explicit validated local configuration: %j', (changes) => {
   expect(() => validatePreparation({ ...input, ...changes })).toThrow();
