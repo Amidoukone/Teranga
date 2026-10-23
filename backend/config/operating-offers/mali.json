@@ -1,0 +1,34 @@
+{
+  "countryCode": "ML",
+  "offers": [
+    { "code": "TRADE:ELECTRICITE", "action": "suspend" },
+    {
+      "code": "TRADE:LIVRAISON", "action": "configure", "slaMinutes": 120,
+      "serviceOutcome": "Colis remis au destinataire convenu, confirmation de réception et incident éventuel consignés."
+    },
+    {
+      "code": "TRADE:MOBILITE", "action": "configure", "slaMinutes": 60,
+      "serviceOutcome": "Trajet convenu réalisé et arrivée confirmée par le client."
+    },
+    {
+      "code": "CLASSIC:ERRAND", "action": "configure", "slaMinutes": 240,
+      "serviceOutcome": "Commission convenue exécutée, objets ou documents remis et compte rendu fourni."
+    },
+    {
+      "code": "CLASSIC:ADMINISTRATIVE", "action": "configure", "slaMinutes": 1440,
+      "serviceOutcome": "Étape convenue du dossier réalisée, justificatif ou référence transmis et prochaine étape précisée."
+    },
+    {
+      "code": "CLASSIC:PAYMENT", "action": "configure", "slaMinutes": 120,
+      "serviceOutcome": "Paiement demandé effectué au bénéficiaire convenu, montant et justificatif transmis au client."
+    },
+    {
+      "code": "CLASSIC:MONEY_TRANSFER", "action": "configure", "slaMinutes": 120,
+      "serviceOutcome": "Transfert demandé réalisé vers le destinataire convenu et justificatif de l'opération transmis."
+    },
+    {
+      "code": "CLASSIC:OTHER", "action": "configure", "slaMinutes": 1440,
+      "serviceOutcome": "Étape et résultat convenus avec le client documentés, compte rendu et justificatifs adaptés remis."
+    }
+  ]
+}
