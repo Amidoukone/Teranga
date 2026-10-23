@@ -38,6 +38,25 @@ Sans `--country`, les projections gardent leur périmètre de tous les pays. Le 
 
 `COUNTRY_ADMIN_SCOPE_AMBIGUOUS` avec `organizationCandidates: []` signifie qu'aucun opérateur MASTER existant ne correspond au pays de l'administrateur. Confirmer l'organisation qui exécute réellement les services, puis créer son rattachement au pays existant avant de relancer le diagnostic. Ne pas recréer le pays ou le compte administrateur, ni deviner une organisation. Le filtrage par pays ne contourne pas ce blocage local.
 
+### Reprise du Mali existant
+
+L'exploitant confirmé est Teranga et son assistance est `+223 70668364`. La commande suivante prépare le pays **existant** identifié par `ML`, sans dépendre de son identifiant numérique : XOF, français, `Africa/Bamako`, assistance et opérateur MASTER Teranga. Le premier appel est en lecture seule :
+
+```sh
+NODE_ENV=production npm run data:prepare-mali
+NODE_ENV=production npm run data:prepare-mali -- --apply
+NODE_ENV=production npm run data:project-territories:apply -- --country=ML
+NODE_ENV=production npm run data:project-service-catalog:json -- --country=ML
+```
+
+La préparation applique les paramètres et crée l'opérateur dans une seule transaction, avec verrou du pays pour les exécutions concurrentes. Elle réutilise un opérateur déjà conforme. Plusieurs MASTER, un opérateur différent ou inactif, une organisation MASTER distincte ou l'absence d'administrateur national provoquent un blocage sans écriture. Le statut actif/inactif du pays est conservé, les comptes restent inchangés et aucun autre pays n'est modifié. Aucune offre ni automatisation n'est activée par cette préparation ; le catalogue fait l'objet de son propre diagnostic puis de la projection décrite plus haut. Le contrôle terrain peut ensuite signaler les résultats attendus et délais encore manquants.
+
+Les coordonnées publiques de Teranga sont alignées sur ce numéro. Pour les pays disponibles et l'assistance d'une mission, le numéro provient de la région correspondante ou du pays ; la variable globale `TERANGA_ASSISTANCE_PHONE` ne remplace plus un contact local manquant. Une région d'un autre pays n'est jamais utilisée comme assistance de la mission.
+
+Pour un autre pays, `data:prepare-country` exige explicitement toutes les options `--country`, `--operator`, `--phone`, `--currency`, `--language` et `--timezone` sous la forme `--option=valeur` ; `--apply` reste facultatif et seul autorise l'écriture. Les valeurs du Mali ne servent pas de défaut aux autres pays.
+
+### Configuration des offres
+
 Ces projections ne déplacent ni clients, ni commandes, ni missions historiques. Le catalogue conserve les paramètres des offres locales déjà présentes. Sa première projection crée les offres à partir des catégories globales et locales du pays : vérifier la couverture des services existants et préparer leurs délais, résultats et justificatifs avant d'activer l'automatisation.
 
 - Définir devise, langue, fuseau horaire et numéro d’assistance. Vérifier l’éventuelle surcharge régionale.

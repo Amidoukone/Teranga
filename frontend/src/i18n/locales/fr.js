@@ -3008,7 +3008,7 @@ const fr = {
       ctaEmail: "Envoyer un email",
       info: {
         email: "teranga.diaspora.platform@gmail.com",
-        phone: "00223 70453345",
+        phone: "+223 70668364",
         address: "Sebenicoro, Bamako - Mali",
       },
       note:
@@ -4348,7 +4348,7 @@ const fr = {
         "Pour les demandes urgentes ou sensibles, notre \u00E9quipe vous r\u00E9pond via les canaux officiels Teranga.",
       channels: {
         email: "teranga.diaspora.platform@gmail.com",
-        phone: "00223 70453345",
+        phone: "+223 70668364",
         hours:
           "Assistance prioritaire : r\u00E9ponse initiale sous 24 h selon la nature de la demande.",
       },

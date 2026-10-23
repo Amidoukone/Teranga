@@ -60,15 +60,17 @@ function serializeOptionalPosition(location, now = new Date()) {
 }
 
 async function resolveAssistancePhone(service) {
+  let countryId = service.countryId;
   if (service.regionId) {
-    const region = await Region.findByPk(service.regionId, { attributes: ['contactPhone'] });
-    if (region?.contactPhone) return region.contactPhone;
+    const region = await Region.findByPk(service.regionId, { attributes: ['contactPhone', 'countryId'] });
+    if (!countryId) countryId = region?.countryId;
+    if (countryId && String(region?.countryId) === String(countryId) && region?.contactPhone) return region.contactPhone;
   }
-  if (service.countryId) {
-    const country = await Country.findByPk(service.countryId, { attributes: ['contactPhone'] });
+  if (countryId) {
+    const country = await Country.findByPk(countryId, { attributes: ['contactPhone'] });
     if (country?.contactPhone) return country.contactPhone;
   }
-  return process.env.TERANGA_ASSISTANCE_PHONE || null;
+  return null;
 }
 
 async function createMissionShareToken({ serviceId, createdByUserId, ttlHours }) {

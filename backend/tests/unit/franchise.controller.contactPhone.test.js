@@ -45,3 +45,19 @@ test("listMasterCountries exposes the configured assistance phone", async () => 
     ],
   });
 });
+
+test("an unconfigured country never inherits another country's assistance number", async () => {
+  const previous = process.env.TERANGA_ASSISTANCE_PHONE;
+  process.env.TERANGA_ASSISTANCE_PHONE = '+22370668364';
+  try {
+    Franchise.findAll.mockResolvedValue([{ countryId: 4 }]);
+    User.findAll.mockResolvedValue([]);
+    Country.findAll.mockResolvedValue([{ id: 4, name: "Cote d'Ivoire", isoCode: 'CI', contactPhone: null }]);
+    const res = { json: jest.fn(), status: jest.fn().mockReturnThis() };
+    await controller.listMasterCountries({}, res);
+    expect(res.json).toHaveBeenCalledWith({ countries: [expect.objectContaining({ id: 4, contactPhone: null })] });
+  } finally {
+    if (previous === undefined) delete process.env.TERANGA_ASSISTANCE_PHONE;
+    else process.env.TERANGA_ASSISTANCE_PHONE = previous;
+  }
+});

@@ -148,7 +148,7 @@ exports.listMasterCountries = async (req, res) => {
         id: country.id,
         name: country.name,
         isoCode: iso,
-        contactPhone: country.contactPhone || process.env.TERANGA_ASSISTANCE_PHONE || null,
+        contactPhone: country.contactPhone || null,
       });
     }
 
