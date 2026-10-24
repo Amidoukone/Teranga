@@ -55,11 +55,11 @@ const ServiceTasksPage = lazy(() => import('./pages/ServiceTasksPage'));
 const ServiceTransactionsPage = lazy(() => import('./pages/ServiceTransactionsPage'));
 const TasksPage = lazy(() => import('./pages/TasksPage'));
 const TaskEvidencesPage = lazy(() => import('./pages/TaskEvidencesPage'));
+const TaskWorkspacePage = lazy(() => import('./pages/TaskWorkspacePage'));
 const TransactionsPage = lazy(() => import('./pages/TransactionsPage'));
 const FinanceDashboardPage = lazy(() => import('./pages/FinanceDashboardPage'));
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
-const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
-const ActivityCenterPage = lazy(() => import('./pages/ActivityCenterPage'));
+const OperationsCenterPage = lazy(() => import('./pages/OperationsCenterPage'));
 
 // Contexte: routage et guardes d'acces.
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
@@ -79,7 +79,6 @@ const PropertyListingDetailPage = lazy(() => import('./pages/PropertyListingDeta
 const PublicTransportOrderPage = lazy(() => import('./pages/PublicTransportOrderPage'));
 const SharedRidePage = lazy(() => import('./pages/SharedRidePage'));
 const AdminServicesPage = lazy(() => import('./pages/AdminServicesPage'));
-const OperationsPage = lazy(() => import('./pages/OperationsPage'));
 const AdminPhoneOrderPage = lazy(() => import('./pages/AdminPhoneOrderPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AdminPropertiesPage = lazy(() => import('./pages/AdminPropertiesPage'));
@@ -171,7 +170,7 @@ function getLikelyNextPaths(pathname, hasSession, role) {
     return [
       '/dashboard',
       '/services',
-      '/notifications',
+      '/operations',
       '/settings',
       '/admin/services',
       '/admin/users',
@@ -183,8 +182,7 @@ function getLikelyNextPaths(pathname, hasSession, role) {
     return [
       '/agent/services',
       '/services',
-      '/notifications',
-      '/activities',
+      '/operations',
       '/settings',
     ];
   }
@@ -193,7 +191,7 @@ function getLikelyNextPaths(pathname, hasSession, role) {
     return [
       '/chauffeur/courses',
       '/dashboard',
-      '/notifications',
+      '/operations',
       '/settings',
     ];
   }
@@ -203,7 +201,7 @@ function getLikelyNextPaths(pathname, hasSession, role) {
     '/demandes/nouvelle',
     '/demandes',
     '/dossiers',
-    '/notifications',
+    '/operations',
     '/settings',
   ];
 }
@@ -879,6 +877,8 @@ export default function App() {
               }
             />
 
+            <Route path="/tasks/:id" element={<RequireAuth><TaskWorkspacePage /></RequireAuth>} />
+
             <Route
               path="/transactions"
               element={
@@ -904,16 +904,18 @@ export default function App() {
             />
 
             <Route
-              path="/notifications"
+              path="/operations"
               element={
                 <RequireAuth>
                   <>
-                    <SetSeo title={t('seo.pages.notifications.title')} />
-                    <NotificationsPage />
+                    <SetSeo title={t('operations.title')} />
+                    <OperationsCenterPage />
                   </>
                 </RequireAuth>
               }
             />
+
+            <Route path="/notifications" element={<RequireAuth><Navigate to="/operations?vue=a-lire" replace /></RequireAuth>} />
 
             <Route
               path="/settings"
@@ -929,14 +931,7 @@ export default function App() {
 
             <Route
               path="/activities"
-              element={
-                <RequireAuth>
-                  <>
-                    <SetSeo title={t('seo.pages.activities.title')} />
-                    <ActivityCenterPage />
-                  </>
-                </RequireAuth>
-              }
+              element={<RequireAuth><Navigate to="/operations?vue=historique" replace /></RequireAuth>}
             />
 
             <Route
@@ -1138,7 +1133,7 @@ export default function App() {
               }
             />
 
-            <Route path="/admin/operations" element={<RequireAuth><RequireRole allow={['admin']}><OperationsPage /></RequireRole></RequireAuth>} />
+            <Route path="/admin/operations" element={<RequireAuth><RequireRole allow={['admin']}><Navigate to="/operations?vue=coordonner" replace /></RequireRole></RequireAuth>} />
 
             <Route
               path="/admin/livraisons"

@@ -3,7 +3,8 @@
 // les litiges de son scope géographique, marque le premier contact, puis résout avec
 // justification obligatoire. Miroir du modèle d'ouverture côté client dans MissionTrackingPage.js.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, MessageCircle } from 'lucide-react';
 
@@ -25,6 +26,11 @@ const STATUS_TONE = {
 export default function AdminDisputesPage() {
   const { t } = useTranslation();
   const { formatDate } = useLocale();
+  const [searchParams,setSearchParams] = useSearchParams();
+  const rawFocus = Number(searchParams.get('serviceId'));
+  const focusedId = Number.isSafeInteger(rawFocus) && rawFocus > 0 ? rawFocus : null;
+  const version = useRef(0);
+  const active = useRef(true);
 
   const [tab, setTab] = useState('active');
   const [disputes, setDisputes] = useState([]);
@@ -36,22 +42,28 @@ export default function AdminDisputesPage() {
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState(null);
+  const visibleDisputes = disputes.filter((dispute)=>(!focusedId || Number(dispute.serviceId)===focusedId) && (tab==='resolved' ? dispute.status==='resolved' : ['open','investigating'].includes(dispute.status)));
+  useEffect(()=>{setResolveTarget(null);},[focusedId]);
 
   const load = useCallback(async () => {
+    if (!active.current) return;
+    const epoch = ++version.current;
     setLoading(true);
     try {
       const params = tab === 'resolved' ? { status: 'resolved' } : {};
+      if (focusedId) params.serviceId = focusedId;
       const list = await listMissionDisputes(params);
-      setDisputes(list);
+      if (active.current && epoch === version.current) setDisputes(list);
     } catch (_err) {
-      notify(t('adminDisputesPage.errors.load'));
+      if (active.current && epoch === version.current) notify(t('adminDisputesPage.errors.load'));
     } finally {
-      setLoading(false);
+      if (active.current && epoch === version.current) setLoading(false);
     }
-  }, [tab, t]);
+  }, [tab, t, focusedId]);
 
   useEffect(() => {
-    load();
+    active.current = true; load();
+    return () => { active.current = false; version.current += 1; };
   }, [load]);
 
   async function handleMarkInvestigating(dispute) {
@@ -100,6 +112,8 @@ export default function AdminDisputesPage() {
         subtitle={t('adminDisputesPage.subtitle')}
       />
 
+      {focusedId && <div className="mb-4 rounded-xl border border-blue-500/30 p-3 text-sm">{t('workspaceQueue.focusedCase',{id:focusedId})}<button type="button" onClick={()=>setSearchParams({})} className="ml-3 min-h-11 underline">{t('workspaceQueue.allProblems')}</button><Link to="/operations" className="ml-3 inline-flex min-h-11 items-center underline">{t('workspaceQueue.back')}</Link></div>}
+
       <div className="mb-5 flex gap-2">
         {STATUS_TABS.map((key) => (
           <button
@@ -119,13 +133,13 @@ export default function AdminDisputesPage() {
 
       {loading ? (
         <p className="text-sm text-text-secondary">{t('adminDisputesPage.loading')}</p>
-      ) : disputes.length === 0 ? (
+      ) : visibleDisputes.length === 0 ? (
         <div className="rounded-2xl border border-border bg-surface-card/70 py-10 text-center text-sm text-text-secondary">
           {t('adminDisputesPage.empty')}
         </div>
       ) : (
         <div className="grid gap-4">
-          {disputes.map((dispute) => (
+          {visibleDisputes.map((dispute) => (
             <div key={dispute.id} className="rounded-2xl border border-border bg-surface-card p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">

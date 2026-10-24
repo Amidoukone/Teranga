@@ -33,7 +33,7 @@ export default function HelpSupportPage() {
   const tel = buildTelHref(phone);
   const whatsapp = buildWhatsappHref(phone, message);
   const email = t('homePage.contact.info.email');
-  const requestsPath = { client: '/demandes', agent: '/agent/services', provider: '/dashboard', admin: '/admin/operations' }[geo.user?.role] || '/login';
+  const requestsPath = { client: '/demandes', agent: '/agent/services', provider: '/dashboard', admin: '/operations' }[geo.user?.role] || '/login';
   return <div className="app-page-wrap"><div className="app-page-shell max-w-3xl space-y-5">
     <SetSeo title={t('seo.pages.helpSupport.title')} />
     <header><h1 className="app-page-headline">{t('requestHelp.title')}</h1><p className="mt-2 text-text-secondary">{t('requestHelp.hint')}</p></header>

@@ -1,7 +1,13 @@
 import experience from './experience.en';
+import serviceSteps from './serviceSteps.en';
+import workspaceQueue from './workspaceQueue.en';
+import operationsCenter from './operationsCenter.en';
 
 const en = {
   ...experience,
+  serviceSteps,
+  workspaceQueue,
+  operationsCenter,
   agentCoordination: {
     availableMinutes: 'Availability duration (minutes)', availableUntil: 'Available until', expired: 'Your availability has expired. Confirm it again to receive requests.',
     startBefore: 'Start in the application before', startHint: 'Declare the start before working in the field. Without a start within the stated window, an automatic assignment may go to another agent.',

@@ -27,6 +27,11 @@ test('the customer can review the submitted report and supporting document', () 
   expect(screen.queryByRole('button', { name: 'completion.save' })).not.toBeInTheDocument();
 });
 
+test('receipt requirements expose the file type choice without an extra step', () => {
+  render(<MissionCompletionPanel missionId={4} completion={{ required: true, requiredEvidenceTypes: ['receipt'] }} canSubmit />);
+  expect(screen.getByLabelText('completion.fileKind')).toBeVisible();
+});
+
 test('a delayed upload freezes its content and prevents duplicate submissions', async () => {
   let resolveSave;
   submitMissionCompletion.mockReturnValue(new Promise((resolve) => { resolveSave = resolve; }));

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import MissionCompletionPanel from '../features/mission-tracking/MissionCompletionPanel';
+import ServiceStepsPanel from '../features/service-workspace/ServiceStepsPanel';
 import RequestProgress from '../components/RequestProgress';
 import RequestHelp from '../components/RequestHelp';
 import RequestAmounts from '../components/RequestAmounts';
@@ -30,6 +31,7 @@ import { normalizeRole } from '../utils/role';
 import { buildTelHref, buildWhatsappHref } from '../utils/phone';
 import { useLocale } from '../i18n/useLocale';
 import { focusCompletionReport, needsCompletionReport } from '../utils/completion';
+import { getRequestDetailPath, getRequestReturnPath } from '../utils/requestLifecycle';
 
 const SERVICE_POLL_MS = 15000;
 const TERMINAL_STATUSES = new Set(['validated']);
@@ -51,10 +53,15 @@ function displayUser(user) {
 }
 
 export default function ServiceDetailPage() {
+  const { id } = useParams();
+  return <ServiceDetail key={id} id={id} />;
+}
+
+function ServiceDetail({ id }) {
   const { t } = useTranslation();
   const { formatDate, formatNumber } = useLocale();
   const navigate = useNavigate();
-  const { id } = useParams();
+  const location = useLocation();
   const [role, setRole] = useState(null);
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -74,7 +81,7 @@ export default function ServiceDetailPage() {
       const data = await getServiceById(id);
       if (epoch !== loadVersion.current) return;
       if (data?.missionStatus) {
-        navigate(`/missions/${id}/track`, { replace: true });
+        navigate(getRequestDetailPath(data, undefined, role || 'client'), { replace: true, state: location.state });
         return;
       }
       setService(data);
@@ -94,7 +101,7 @@ export default function ServiceDetailPage() {
     } finally {
       if (epoch === loadVersion.current) setLoading(false);
     }
-  }, [id, navigate, t]);
+  }, [id, navigate, t, role, location.state]);
 
   useEffect(() => {
     let active = true;
@@ -104,11 +111,12 @@ export default function ServiceDetailPage() {
         if (!user) navigate('/login');
         else setRole(normalizeRole(user.role));
       })
-      .catch(() => navigate('/login'));
+      .catch(() => { if (active) navigate('/login'); });
     return () => { active = false; };
   }, [navigate]);
 
   useEffect(() => {
+    if (!role) return undefined;
     load();
 
     function refreshIfVisible() {
@@ -126,7 +134,7 @@ export default function ServiceDetailPage() {
       window.removeEventListener('focus', refreshIfVisible);
       document.removeEventListener('visibilitychange', refreshIfVisible);
     };
-  }, [load]);
+  }, [load, role]);
 
   const runAction = useCallback(async (name) => {
     if (name === 'report') { focusCompletionReport(); return; }
@@ -165,7 +173,7 @@ export default function ServiceDetailPage() {
     return null;
   }, [role, service?.status, service?.completion, t]);
 
-  const backTo = role === 'agent' ? '/agent/services' : role === 'admin' ? '/admin/services' : '/services';
+  const backTo = getRequestReturnPath(location.state?.from, role === 'agent' ? '/agent/services' : role === 'admin' ? '/admin/services' : '/demandes');
   const counterpart = role === 'agent' ? service?.client : service?.agent;
   const telHref = buildTelHref(counterpart?.phone);
   const whatsappHref = buildWhatsappHref(
@@ -184,7 +192,7 @@ export default function ServiceDetailPage() {
   if (error || !service) {
     return (
       <div className="mx-auto max-w-xl px-6 py-10">
-        <div className="app-alert app-alert-error">{error || t('serviceDetailPage.errors.load')}</div>
+        <div role="alert" className="app-alert app-alert-error">{error || t('serviceDetailPage.errors.load')} <button type="button" onClick={() => load()} className="underline">{t('serviceOrders.retry')}</button></div>
         <Link to={backTo} className="btn-secondary mt-4 inline-flex rounded-full px-5 py-2.5 text-sm">
           {t('serviceDetailPage.backToServices')}
         </Link>
@@ -205,7 +213,7 @@ export default function ServiceDetailPage() {
           <ArrowLeft size={16} aria-hidden="true" /> {t('serviceDetailPage.backToServices')}
         </Link>
 
-        <section className="rounded-[28px] border border-border/70 bg-surface-card p-5 shadow-sm sm:p-7">
+        <section>
           <p className="page-kicker">{t('serviceTracking.kicker')}</p>
           <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
@@ -213,7 +221,7 @@ export default function ServiceDetailPage() {
                 {service.title || t('serviceDetailPage.fallbackTitle', { id: service.id })}
               </h1>
               <p className="mt-1 text-sm text-text-muted">
-                {service.typeLabel || t(`services.type.${service.type}`, { defaultValue: service.type })}
+                {service.typeLabel || (service.type ? t(`services.type.${service.type}`, { defaultValue: service.type }) : t('serviceOrders.filters.service'))}
                 {' · '}{t('serviceTracking.reference', { id: service.id })}
               </p>
             </div>
@@ -239,24 +247,15 @@ export default function ServiceDetailPage() {
             </div>
           ) : null}
 
-          {primaryAction ? (
-            <button
-              type="button"
-              onClick={() => runAction(primaryAction.name)}
-              disabled={Boolean(action)}
-              className="btn-primary mt-5 hidden min-h-12 items-center justify-center rounded-2xl px-6 text-sm font-bold sm:inline-flex"
-            >
-              {action === primaryAction.name ? <Loader2 size={17} className="mr-2 animate-spin" /> : <CheckCircle2 size={17} className="mr-2" />}
-              {primaryAction.label}
-            </button>
-          ) : null}
         </section>
+        {primaryAction && ['start', 'report'].includes(primaryAction.name) && <section aria-label={t('requestWorkspace.next')} className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-4"><h2 className="font-semibold">{t('requestWorkspace.next')}</h2><p className="mt-2 text-sm text-text-secondary">{t(primaryAction.name === 'report' ? 'requestWorkspace.prepareHint' : 'requestWorkspace.startHint')}</p><button type="button" onClick={() => runAction(primaryAction.name)} disabled={Boolean(action)} className="btn-primary mt-3 inline-flex min-h-12 items-center justify-center rounded-xl px-5 text-sm font-semibold">{primaryAction.label}</button></section>}
         <MissionCompletionPanel key={service.id} missionId={service.id} completion={service.completion} canSubmit={role === 'agent' && service.status === 'in_progress'} onSaved={() => load({ silent: true })} />
-        <RequestHelp id={service.id} title={service.title} phone={service.assistancePhone} />
+        {primaryAction && ['complete', 'validate'].includes(primaryAction.name) && <section aria-label={t('requestWorkspace.next')} className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-4"><h2 className="font-semibold">{t('requestWorkspace.next')}</h2><p className="mt-2 text-sm text-text-secondary">{t(primaryAction.name === 'validate' ? 'requestWorkspace.confirmHint' : service.completion?.report?.summary ? 'requestWorkspace.readyHint' : 'serviceSteps.handoverHint')}</p><button type="button" onClick={() => runAction(primaryAction.name)} disabled={Boolean(action)} className="btn-primary mt-3 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold">{action ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <CheckCircle2 size={17} aria-hidden="true" />}{primaryAction.label}</button></section>}
+        <ServiceStepsPanel serviceId={service.id} />
         {role === 'client' && <RequestAmounts request={service} />}
 
-        <section className="rounded-[24px] border border-border/70 bg-surface-card p-5 shadow-sm">
-          <h2 className="text-base font-bold text-text-primary">{t('serviceTracking.detailsTitle')}</h2>
+        <details className="rounded-2xl border border-border bg-surface-card p-4">
+          <summary className="cursor-pointer font-semibold">{t('serviceTracking.detailsTitle')}</summary>
           {service.description ? <p className="mt-2 whitespace-pre-line text-sm text-text-secondary">{service.description}</p> : null}
           <div className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
             {service.address ? (
@@ -300,30 +299,11 @@ export default function ServiceDetailPage() {
               ) : null}
             </div>
           ) : null}
-        </section>
+        </details>
 
-        <section className="rounded-[24px] border border-border/70 bg-surface-card p-5 shadow-sm" aria-labelledby="service-action-hub-title">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 id="service-action-hub-title" className="text-base font-bold text-text-primary">
-                {t('serviceDetailPage.actionHubTitle')}
-              </h2>
-              <p className="mt-1 text-sm text-text-secondary">
-                {primaryAction ? t('serviceDetailPage.nextAction', { action: primaryAction.label }) : t('serviceDetailPage.actionHubHint')}
-              </p>
-            </div>
-            <span className="app-toolbar-pill">{t('serviceTracking.moreOptions')}</span>
-          </div>
+        <details className="rounded-2xl border border-border bg-surface-card p-4">
+          <summary className="cursor-pointer font-semibold">{t('requestWorkspace.otherOptions')}</summary>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Link to={`/services/${service.id}/tasks`} className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-main/60 p-4 transition hover:border-blue-400 hover:bg-blue-500/5">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-300">
-                <BriefcaseBusiness size={19} aria-hidden="true" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <strong className="block text-sm text-text-primary">{t('serviceDetailPage.buttons.viewTasks')}</strong>
-                <span className="mt-1 block text-xs text-text-muted">{t('serviceDetailPage.tasksHint')}</span>
-              </span>
-            </Link>
             <Link to={`/services/${service.id}/transactions`} className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-main/60 p-4 transition hover:border-blue-400 hover:bg-blue-500/5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
                 <ReceiptText size={19} aria-hidden="true" />
@@ -334,22 +314,9 @@ export default function ServiceDetailPage() {
               </span>
             </Link>
           </div>
-        </section>
+        </details>
+        <details className="rounded-2xl border border-border p-4"><summary className="cursor-pointer font-semibold">{t('requestHelp.title')}</summary><div className="mt-3"><RequestHelp id={service.id} title={service.title} phone={service.assistancePhone} /></div></details>
       </div>
-
-      {primaryAction ? (
-        <div className="fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 border-t border-border bg-surface-card/95 p-3 shadow-2xl backdrop-blur sm:hidden">
-          <button
-            type="button"
-            onClick={() => runAction(primaryAction.name)}
-            disabled={Boolean(action)}
-            className="btn-primary flex min-h-12 w-full items-center justify-center rounded-2xl px-5 text-sm font-bold"
-          >
-            {action === primaryAction.name ? <Loader2 size={17} className="mr-2 animate-spin" /> : <CheckCircle2 size={17} className="mr-2" />}
-            {primaryAction.label}
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }

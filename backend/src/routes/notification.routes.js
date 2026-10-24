@@ -5,18 +5,19 @@ const ctrl = require('../controllers/notification.controller');
 const auth = require('../middleware/auth.middleware');
 const { requireRoles } = require('../middleware/roles.middleware');
 const { writeLimiter } = require('../middleware/rateLimit.middleware');
+const personalRoles = ['client', 'agent', 'admin', 'provider', 'category_manager'];
 
 // Toutes les notifications (tous rôles connectés)
-router.get('/', auth, requireRoles('client', 'agent', 'admin'), ctrl.list);
+router.get('/', auth, requireRoles(...personalRoles), ctrl.list);
 
 // Résumé (badge/counts)
-router.get('/summary', auth, requireRoles('client', 'agent', 'admin'), ctrl.summary);
+router.get('/summary', auth, requireRoles(...personalRoles), ctrl.summary);
 
 // Marquer une notification comme lue
 router.patch(
   '/:id/read',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requireRoles(...personalRoles),
   ctrl.markRead
 );
 
@@ -24,7 +25,7 @@ router.patch(
 router.patch(
   '/read-all',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requireRoles(...personalRoles),
   ctrl.markAllRead
 );
 
@@ -32,7 +33,7 @@ router.patch(
 router.delete(
   '/cleanup',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requireRoles(...personalRoles),
   writeLimiter,
   ctrl.cleanup
 );
@@ -41,7 +42,7 @@ router.delete(
 router.delete(
   '/:id',
   auth,
-  requireRoles('client', 'agent', 'admin'),
+  requireRoles(...personalRoles),
   writeLimiter,
   ctrl.removeOne
 );

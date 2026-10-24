@@ -5,8 +5,11 @@ import api from '../services/api';
 import { me } from '../services/auth';
 import { listProviders } from '../services/providers';
 
-jest.mock('react-router-dom', () => ({ useNavigate: () => jest.fn() }), { virtual: true });
-jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key) => key }) }));
+const mockNavigate = jest.fn();
+let mockSearch = '';
+const mockTranslate = (key) => key;
+jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate, useSearchParams: () => [new URLSearchParams(mockSearch), jest.fn()], Link: ({ to, children }) => <a href={to}>{children}</a> }), { virtual: true });
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: mockTranslate }) }));
 jest.mock('../services/api', () => ({
   __esModule: true,
   default: { get: jest.fn(), post: jest.fn() },
@@ -21,6 +24,7 @@ jest.mock('../utils/role', () => ({ normalizeRole: (role) => role, isMasterUser:
 describe('AdminServicesPage simplifiée', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSearch = '';
     me.mockResolvedValue({ user: { id: 1, role: 'admin' } });
     listProviders.mockResolvedValue([]);
     api.get.mockImplementation((url) => {
@@ -62,6 +66,14 @@ describe('AdminServicesPage simplifiée', () => {
       agentId: '7',
     }));
     expect(api.get.mock.calls.some(([url]) => url.includes('excludeTradeCategorySlug=mobilite%2Clivraison'))).toBe(true);
+  });
+
+  test('a focused coordination link requests only that service', async () => {
+    mockSearch = '?demande=21';
+    render(<AdminServicesPage />);
+    expect(await screen.findByText('coordinationWorkspace.focusedAssignment')).toBeInTheDocument();
+    await waitFor(() => expect(api.get.mock.calls.some(([url]) => url.startsWith('/services?') && new URLSearchParams(url.split('?')[1]).get('id') === '21')).toBe(true));
+    expect(screen.getByRole('link', { name: 'operations.title' })).toHaveAttribute('href', '/operations?vue=coordonner&type=service&demande=21');
   });
 
   test('ne propose que les chauffeurs pour une course taxi', async () => {

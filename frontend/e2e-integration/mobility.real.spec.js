@@ -74,7 +74,7 @@ test('mobilite reelle: commande, PIN client et notification admin vers le dispat
     .filter({ hasText: /Course Teranga en voiture/i })
     .first();
   await expect(missionNotification).toBeVisible();
-  await missionNotification.getByRole('button', { name: /Voir/i }).click();
+  await missionNotification.getByRole('button', { name: /Ouvrir le service/i }).click();
 
   await expect(page).toHaveURL(
     new RegExp(`/admin/taxi-dispatch\\?missionId=${missionId}$`)

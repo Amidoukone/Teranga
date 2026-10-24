@@ -71,7 +71,7 @@ function isTrue(x) {
 }
 
 function buildServiceOrder(sort) {
-  if (!sort) return [["createdAt", "DESC"]];
+  if (!sort) return [["createdAt", "DESC"], ["id", "DESC"]];
   const raw = String(sort);
   const desc = raw.startsWith("-");
   const key = desc ? raw.slice(1) : raw;
@@ -79,11 +79,11 @@ function buildServiceOrder(sort) {
 
   switch (key) {
     case "createdAt":
-      return [["createdAt", dir]];
+      return [["createdAt", dir], ["id", dir]];
     case "title":
-      return [["title", dir]];
+      return [["title", dir], ["id", dir]];
     default:
-      return [["createdAt", "DESC"]];
+      return [["createdAt", "DESC"], ["id", "DESC"]];
   }
 }
 
@@ -359,6 +359,10 @@ exports.listClient = async (req, res) => {
   try {
     const { limit, offset, page } = getPagination(req, 25, 100);
     const { clientId } = req.query;
+    const view = toTrimOrNull(req.query?.view);
+    if (view && !['all', 'review', 'ongoing', 'active', 'history'].includes(view)) return res.status(400).json({ error: 'Vue de demandes invalide' });
+    const kind = toTrimOrNull(req.query?.kind);
+    if (kind && !['all', 'service', 'taxi', 'delivery'].includes(kind)) return res.status(400).json({ error: 'Type de demande invalide' });
     const q = toTrimOrNull(req.query?.q);
     const status = toTrimOrNull(req.query?.status);
     const type = canonicalizeServiceType(req.query?.type, null);
@@ -373,6 +377,22 @@ exports.listClient = async (req, res) => {
 
     let where = {};
     const andWhere = [];
+
+    // Sélectionner les priorités avant pagination, même pour un ancien dossier.
+    const terminal = ['VALIDATED', 'CLOSED', 'CANCELLED_BY_CLIENT', 'NO_EXECUTOR_FOUND', 'RESOLVED_REFUND', 'RESOLVED_REDO', 'RESOLVED_CLOSED'];
+    if (view === 'history') andWhere.push({ [Op.or]: [{ missionStatus: { [Op.in]: terminal } }, { missionStatus: null, status: 'validated' }] });
+    if (view === 'active') andWhere.push({ [Op.or]: [{ missionStatus: { [Op.notIn]: terminal } }, { missionStatus: null, status: { [Op.ne]: 'validated' } }] });
+    if (view === 'review') andWhere.push({ [Op.or]: [{ missionStatus: 'COMPLETED' }, { missionStatus: null, status: 'completed' }] });
+    if (view === 'ongoing') andWhere.push({ [Op.or]: [
+      { missionStatus: { [Op.notIn]: ['COMPLETED', 'VALIDATED', 'CLOSED', 'CANCELLED_BY_CLIENT', 'NO_EXECUTOR_FOUND', 'RESOLVED_REFUND', 'RESOLVED_REDO', 'RESOLVED_CLOSED'] } },
+      { missionStatus: null, status: { [Op.notIn]: ['completed', 'validated'] } },
+    ] });
+
+    if (kind && kind !== 'all') {
+      const categories = await TradeCategory.findAll({ where: { slug: { [Op.in]: kind === 'taxi' ? ['mobilite'] : kind === 'delivery' ? ['livraison'] : ['mobilite', 'livraison'] } }, attributes: ['id'] });
+      const ids = categories.map((category) => category.id);
+      andWhere.push(kind === 'service' ? { [Op.or]: [{ tradeCategoryId: null }, { tradeCategoryId: { [Op.notIn]: ids } }] } : { tradeCategoryId: { [Op.in]: ids } });
+    }
 
     if (req.user.role === "admin") {
       if (clientId) where.clientId = toSafeInt(clientId);
@@ -406,8 +426,11 @@ exports.listClient = async (req, res) => {
 
     if (q) {
       const like = { [Op.like]: `%${q}%` };
+      const reference = /^#?([1-9][0-9]*)$/.exec(q);
+      const referenceId = reference ? Number(reference[1]) : null;
       andWhere.push({
         [Op.or]: [
+          ...(Number.isSafeInteger(referenceId) ? [{ id: referenceId }] : []),
           { title: like },
           { description: like },
           { address: like },
@@ -507,6 +530,11 @@ exports.listAll = async (req, res) => {
 
     let where = {};
     const andWhere = [];
+    if (req.query.id) {
+      const id = Number(req.query.id);
+      if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Demande invalide' });
+      andWhere.push({ id });
+    }
 
     if (status && ALLOWED_STATUSES.has(status)) where.status = status;
     if (unassigned) {

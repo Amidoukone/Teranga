@@ -120,8 +120,8 @@ export async function getNotificationSummary(options = {}) {
   }
 }
 
-export async function markNotificationRead(id) {
-  const { data } = await api.patch(`/notifications/${id}/read`);
+export async function markNotificationRead(id, version) {
+  const { data } = await api.patch(`/notifications/${id}/read`, version ? { version } : undefined);
   invalidateNotificationSummaryCache();
   return data;
 }

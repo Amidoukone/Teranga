@@ -151,6 +151,39 @@ test('agent work lists paginate active services separately from completed histor
   expect((await request(app).get(`${path}?view=unknown`).set(auth(agent))).status).toBe(400);
 });
 
+test.each(['service', 'project', 'order'])('%s queue filters and prioritises before pagination without widening the territory', async (type) => {
+  if (!ready) throw new Error('The operations recipe requires MySQL');
+  const create = type === 'service' ? service : type === 'project' ? project : order;
+  for (let index = 0; index < 26; index += 1) await create();
+  const urgent = await create();
+  if (type === 'service') await db.MissionCoordination.create({ serviceId: urgent.id, ownerUserId: owner.id, mode: 'automatic', state: 'escalated', nextActionAt: new Date(), policy: {}, attempts: [] });
+  else await db.WorkCoordination.create({ entityType: type, entityId: urgent.id, ownerUserId: owner.id, mode: 'automatic', state: 'escalated', nextActionAt: new Date(), policy: {}, attempts: [] });
+  const path = '/api/v1/operations';
+  const result = await request(app).get(path).set(auth(owner)).query({ entityType: type, limit: 1 });
+  expect(result.status).toBe(200); expect(result.body.items[0].id).toBe(urgent.id); expect(result.body.pagination.total).toBe(27);
+  const mine = await request(app).get(path).set(auth(owner)).query({ entityType: type, owner: 'me', limit: 1 });
+  expect(mine.status).toBe(200); expect(mine.body.pagination.total).toBe(1); expect(mine.body.items[0].id).toBe(urgent.id);
+  const search = await request(app).get(path).set(auth(owner)).query({ entityType: type, q: `#${urgent.id}`, attention: true });
+  expect(search.status).toBe(200); expect(search.body.items.map((item) => item.id)).toEqual([urgent.id]);
+  expect((await request(app).get(path).set(auth(outsider)).query({ entityType: type, q: `#${urgent.id}`, owner: 'me' })).body.items).toHaveLength(0);
+  expect((await request(app).get(path).set(auth(owner)).query({ entityType: type, owner: String(outsider.id) })).status).toBe(400);
+  if (type === 'service') {
+    expect((await request(app).get('/api/v1/services').set(auth(owner)).query({ id: urgent.id })).body.services.map((item) => item.id)).toEqual([urgent.id]);
+    expect((await request(app).get('/api/v1/services').set(auth(outsider)).query({ id: urgent.id })).body.services).toHaveLength(0);
+  }
+});
+
+test.each(['service', 'project', 'order'])('taking responsibility for %s preserves its automatic search', async (type) => {
+  if (!ready) throw new Error('The operations recipe requires MySQL');
+  const resource = await (type === 'service' ? service() : type === 'project' ? project() : order());
+  if (type === 'service') await coordinateMission(resource.id, { actor: owner, configure: { mode: 'automatic' } });
+  else await coordinateWork(type, resource.id, { actor: owner, configure: { mode: 'automatic' } });
+  const path = type === 'service' ? `/api/v1/operations/${resource.id}` : `/api/v1/operations/work/${type}/${resource.id}`;
+  const result = await request(app).patch(path).set(auth(owner)).send({ ownerUserId: owner.id });
+  expect(result.status).toBe(200); expect(result.body.coordination.mode).toBe('automatic'); expect(result.body.coordination.ownerUserId).toBe(owner.id);
+  expect((await resource.reload()).status).toBe('created');
+});
+
 test('an agent restricted to a region is not automatically assigned to an unresolved region', async () => {
   if (!ready) return;
   const region = await db.Region.create({ name: 'Région de recette', code: `WR-${Date.now()}`, countryId: country.id, isActive: true });

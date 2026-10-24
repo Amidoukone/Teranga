@@ -10,10 +10,174 @@
     }
   ],
   "paths": {
+    "/operations/workspace": {
+      "get": {
+        "summary": "Read a role-specific queue of cases to act on or follow",
+        "description": "Read-only projection for clients, agents, providers and administrators. Authorizations and explicit territory filters are applied before grouping and pagination. Authorized steps join an accessible service or project; tasks with no accessible parent remain limited interventions. One card per typed case. Action/following counts cover the filtered case set; unread counts are personal notifications and do not indicate pending work. Reading never changes work or notification states. A missing family is an explicit service error, not an empty queue.",
+        "parameters": [
+          { "name": "view", "in": "query", "schema": { "type": "string", "enum": ["action", "following"], "default": "action" } },
+          { "name": "kind", "in": "query", "schema": { "type": "string", "enum": ["all", "service", "project", "order", "task"], "default": "all" } },
+          { "name": "q", "in": "query", "schema": { "type": "string", "maxLength": 100 }, "description": "Case or authorized step title, order code, or a numeric reference with optional #." },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100000, "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
+          { "name": "countryId", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "regionId", "in": "query", "schema": { "type": "integer", "minimum": 1 } }
+        ],
+        "responses": {
+          "200": { "description": "Items with typed identity, title, current state, pending-step counts, optional next-action target, and exact pagination/summary counts. Action targets are navigation hints; writes retain their original server authorization and prerequisite checks.", "content": { "application/json": { "schema": {
+            "type": "object", "required": ["items", "pagination", "summary"], "properties": {
+              "items": { "type": "array", "items": { "type": "object", "required": ["key", "kind", "id", "title", "action"], "properties": {
+                "key": { "type": "string" }, "kind": { "type": "string", "enum": ["service", "project", "order", "task"] }, "id": { "type": "integer" }, "title": { "type": "string" },
+                "openStepCount": { "type": "integer", "minimum": 0 }, "actionStepCount": { "type": "integer", "minimum": 0 },
+                "action": { "type": "object", "nullable": true, "properties": { "code": { "type": "string", "enum": ["result_review", "coordinate", "resolve", "service_execute", "project_execute", "order_execute", "step_start", "step_complete", "step_review", "step_assign"] }, "kind": { "type": "string", "enum": ["service", "project", "order", "task"] }, "id": { "type": "integer" } } }
+              } } },
+              "pagination": { "type": "object", "properties": { "page": { "type": "integer" }, "limit": { "type": "integer" }, "total": { "type": "integer" } } },
+              "summary": { "type": "object", "properties": { "action": { "type": "integer" }, "following": { "type": "integer" }, "unread": { "type": "integer" } } }
+            }
+          } } } },
+          "400": { "description": "Invalid queue filters" }, "401": { "description": "Authentication required" }, "403": { "description": "Unsupported role" }, "503": { "description": "The queue could not be computed; no partial success is reported" }
+        }
+      }
+    },
+    "/tasks/{id}/workspace": {
+      "get": {
+        "summary": "Read a limited task workspace with its existing capabilities",
+        "description": "Task ownership/assignment and geographic rules are checked. Parent service/property details and creator/email information are omitted. parentServiceId is only provided when the actor may read that service. Task progress, administrative review and evidence use existing write routes and do not complete a parent case.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
+        "responses": { "200": { "description": "Task, viewer and nullable parentServiceId" }, "400": { "description": "Invalid reference" }, "401": { "description": "Authentication required" }, "403": { "description": "Role not allowed" }, "404": { "description": "Task not found within the caller's access" } }
+      }
+    },
+    "/missions/disputes": {
+      "get": {
+        "summary": "Read mission disputes within the administrator's territory",
+        "parameters": [
+          { "name": "serviceId", "in": "query", "schema": { "type": "integer", "minimum": 1 }, "description": "Optional exact case from the work queue; geographic checks remain applied." },
+          { "name": "status", "in": "query", "schema": { "type": "string" }, "description": "Omitting status returns open and investigating disputes." }
+        ],
+        "responses": { "200": { "description": "Authorized disputes, optionally restricted to one case" }, "400": { "description": "Invalid case reference" }, "403": { "description": "Administrative access required" } }
+      }
+    },
+    "/tasks/service/{serviceId}": {
+      "get": {
+        "summary": "Read authorized work steps in a service case",
+        "description": "Without workspace=true the legacy full-list response is preserved. The workspace response adds a stable paginated list, exact authorized total, viewer identity, per-step capabilities and a service context only if the viewer can access that service. Assignment to a task alone does not grant service access. Capabilities are a snapshot: writes recheck existing role, assignment and territory rules. Step review is administrative and does not confirm the service result.",
+        "parameters": [
+          { "name": "serviceId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "workspace", "in": "query", "schema": { "type": "boolean", "default": false } },
+          { "name": "taskId", "in": "query", "schema": { "type": "integer", "minimum": 1 }, "description": "Optional exact step in workspace mode. Service membership and task access restrictions apply before pagination; old steps remain reachable." },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } }
+        ],
+        "responses": {
+          "200": { "description": "Authorized steps. In workspace mode: tasks with capabilities, pagination.total, viewer, canCreate and nullable serviceContext." },
+          "401": { "description": "Authentication required" },
+          "403": { "description": "Role not allowed" }
+        }
+      }
+    },
+    "/services/me": {
+      "get": {
+        "summary": "List the caller's requests, optionally restricted to home priorities",
+        "description": "Clients always see their own requests; administrators keep their existing territory restrictions. Views are applied before counting and pagination. Mission status takes precedence over the legacy service status. Omitting view preserves the existing list.",
+        "parameters": [
+          { "name": "view", "in": "query", "schema": { "type": "string", "enum": ["all", "review", "ongoing", "active", "history"], "default": "all" }, "description": "review: results awaiting client confirmation. ongoing: nonterminal requests excluding results awaiting confirmation. active: all nonterminal requests including results to review. history: terminal requests." },
+          { "name": "kind", "in": "query", "schema": { "type": "string", "enum": ["all", "service", "taxi", "delivery"] }, "description": "Family filter applied before counting and pagination; category identifiers are resolved by slug." },
+          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Text search or an exact numeric reference, optionally prefixed with #." },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "minimum": 0 } },
+          { "name": "sort", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Authorized requests and the total matching the view", "content": { "application/json": { "schema": {
+            "type": "object", "required": ["services", "pagination"], "properties": {
+              "services": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+              "pagination": { "type": "object", "required": ["total"], "properties": { "total": { "type": "integer" } } }
+            }
+          } } } },
+          "400": { "description": "Invalid view" },
+          "401": { "description": "Authentication required" }
+        }
+      }
+    },
+    "/operations/updates": {
+      "get": {
+        "summary": "Personal operations updates for any authenticated role",
+        "description": "Combines notifications and activity history for the authenticated recipient only. Reconciles duplicate source copies before filtering and pagination. Does not grant coordination rights or change reading state.",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100000, "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 15 } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["all", "read", "unread"], "default": "all" } },
+          { "name": "entityType", "in": "query", "schema": { "type": "string", "enum": ["service", "project", "order", "task", "evidence", "user"] } },
+          { "name": "progress", "in": "query", "schema": { "type": "string", "enum": ["new", "in_progress", "done"] } },
+          { "name": "action", "in": "query", "schema": { "type": "string", "maxLength": 60 } },
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Personal paginated history, with an unfiltered unread count",
+            "content": { "application/json": { "schema": {
+              "type": "object", "required": ["items", "pagination", "summary"],
+              "properties": {
+                "items": { "type": "array", "items": { "$ref": "#/components/schemas/OperationUpdate" } },
+                "pagination": { "type": "object", "required": ["page", "limit", "total"], "properties": {
+                  "page": { "type": "integer" }, "limit": { "type": "integer" }, "total": { "type": "integer" }
+                } },
+                "summary": { "type": "object", "required": ["unread"], "properties": { "unread": { "type": "integer" } } }
+              }
+            } } }
+          },
+          "400": { "description": "Invalid or unknown filters, or inverted date range" },
+          "401": { "description": "Authentication required" }
+        }
+      }
+    },
+    "/operations/updates/cleanup": {
+      "delete": {
+        "summary": "Remove the caller's read information older than 30 days",
+        "description": "Keeps unread notifications, their related activity history, other recipients' information and all business records and evidence.",
+        "responses": {
+          "200": { "description": "Number of physical source rows removed", "content": { "application/json": { "schema": {
+            "type": "object", "required": ["deleted"], "properties": { "deleted": { "type": "integer", "minimum": 0 } }
+          } } } },
+          "401": { "description": "Authentication required" },
+          "429": { "description": "Write rate limit exceeded" }
+        }
+      }
+    },
+    "/operations/updates/{source}/{id}": {
+      "delete": {
+        "summary": "Remove one personal update and its duplicate source copy atomically",
+        "description": "Requires the version returned by GET /operations/updates. Business records and evidence are preserved.",
+        "parameters": [
+          { "name": "source", "in": "path", "required": true, "schema": { "type": "string", "enum": ["notification", "activity"] } },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["version"], "additionalProperties": false,
+          "properties": { "version": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" } }
+        } } } },
+        "responses": {
+          "200": { "description": "Information removed", "content": { "application/json": { "schema": {
+            "type": "object", "required": ["deleted"], "properties": { "deleted": { "type": "boolean" } }
+          } } } },
+          "400": { "description": "Invalid source, identifier or version" },
+          "401": { "description": "Authentication required" },
+          "404": { "description": "Information not found for the caller" },
+          "409": { "description": "Information changed since it was displayed; refresh before removing" },
+          "429": { "description": "Write rate limit exceeded" }
+        }
+      }
+    },
     "/operations": {
       "get": {
         "summary": "Administrator operational queue, restricted to the caller's territory",
+        "description": "Escalated requests are ordered first, then dated next actions, before pagination. Search and ownership filters apply equally to services, projects and orders.",
         "parameters": [
+          { "name": "owner", "in": "query", "schema": { "type": "string", "enum": ["me"] }, "description": "Only requests followed by the authenticated administrator; does not widen territorial access." },
+          { "name": "q", "in": "query", "schema": { "type": "string", "maxLength": 100 }, "description": "Service or project title, order code, or exact numeric reference optionally prefixed with #." },
+          { "name": "id", "in": "query", "description": "Focus one request within the caller's existing territory and permissions", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "open", "in": "query", "description": "Use false to include closed requests when focusing a historical update", "schema": { "type": "boolean" } },
           {
             "name": "countryId",
             "in": "query",
@@ -1385,6 +1549,28 @@
   },
   "components": {
     "schemas": {
+      "OperationUpdate": {
+        "type": "object",
+        "required": ["key", "id", "source", "notificationId", "activityId", "version", "entityType", "status", "occurredAt"],
+        "properties": {
+          "key": { "type": "string", "description": "Stable source-qualified display key" },
+          "id": { "type": "integer" },
+          "source": { "type": "string", "enum": ["notification", "activity"] },
+          "notificationId": { "type": "integer", "nullable": true },
+          "activityId": { "type": "integer", "nullable": true },
+          "version": { "type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Opaque revision required when reading or removing the displayed update" },
+          "entityType": { "type": "string" },
+          "entityId": { "type": "integer", "nullable": true },
+          "title": { "type": "string", "nullable": true },
+          "message": { "type": "string", "nullable": true },
+          "status": { "type": "string", "enum": ["read", "unread"], "description": "Reading state; independent of business workflow" },
+          "entityStatus": { "type": "string", "nullable": true },
+          "progress": { "type": "string", "nullable": true },
+          "metadata": { "type": "object", "nullable": true, "additionalProperties": true },
+          "occurredAt": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": true
+      },
       "HealthResponse": {
         "type": "object",
         "required": [

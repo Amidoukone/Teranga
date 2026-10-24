@@ -9,6 +9,7 @@ import { mergeGeoParams, mergeGeoPayload } from './geo';
 export async function getMyServices(params = {}, options = {}) {
   const { data } = await api.get('/services/me', {
     params: mergeGeoParams(params),
+    ...(options.signal ? { signal: options.signal } : {}),
   });
   const items = data.services || [];
   const pagination = data?.pagination || null;

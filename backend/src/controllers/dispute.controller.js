@@ -32,6 +32,11 @@ exports.list = async (req, res) => {
     const where = statusFilter
       ? { status: statusFilter }
       : { status: { [Op.in]: ['open', 'investigating'] } };
+    if (req.query.serviceId) {
+      const serviceId = Number(req.query.serviceId);
+      if (!Number.isSafeInteger(serviceId) || serviceId <= 0) return res.status(400).json({ error: 'Dossier invalide' });
+      where.serviceId = serviceId;
+    }
 
     const disputes = await MissionDispute.findAll({
       where,

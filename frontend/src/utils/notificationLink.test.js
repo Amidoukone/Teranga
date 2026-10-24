@@ -1,6 +1,15 @@
 import { resolveNotificationLink } from "./notificationLink";
 
 describe("resolveNotificationLink", () => {
+  test('step and evidence updates use the permission-aware service entry with an exact step reference', () => {
+    expect(resolveNotificationLink({ entityType: 'task', entityId: 27, metadata: { serviceId: 14 } }, 'agent')).toBe('/services/14/tasks?etape=27#steps');
+    expect(resolveNotificationLink({ entityType: 'evidence', entityId: 72, metadata: { serviceId: 14, taskId: 27 } }, 'client')).toBe('/services/14/tasks?etape=27&pieces=1#steps');
+    expect(resolveNotificationLink({ entityType: 'evidence', entityId: 72, metadata: { taskId: 27 } }, 'client')).toBe('/tasks/27/evidences');
+  });
+  test('opens the exact coordination request in the single operations centre', () => {
+    expect(resolveNotificationLink({ entityType: 'service', entityId: 48, metadata: { coordinationState: 'escalated' } }, 'admin')).toBe('/operations?vue=coordonner&type=service&demande=48');
+    expect(resolveNotificationLink({ entityType: 'service', entityId: 48, metadata: { coordinationState: 'escalated' } }, 'client')).toBe('/services/48');
+  });
   const mobilityNotification = {
     entityType: "service",
     entityId: 81,
@@ -36,6 +45,6 @@ describe("resolveNotificationLink", () => {
         },
         "admin"
       )
-    ).toBe("/admin/services");
+    ).toBe("/admin/services?demande=90");
   });
 });

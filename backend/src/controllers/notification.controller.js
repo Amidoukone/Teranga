@@ -1,6 +1,7 @@
 "use strict";
 
 const { Notification, User } = require("../../models");
+const { readOperationNotice } = require('../services/operationUpdates.service');
 const { Op } = require("sequelize");
 const { getPagination } = require("../utils/pagination");
 const logger = require('../utils/logger');
@@ -109,6 +110,13 @@ exports.markRead = async (req, res) => {
     const id = toSafeInt(req.params?.id);
     if (!id) return res.status(400).json({ error: "ID invalide" });
 
+    if (req.body?.version) {
+      if (!/^[a-f0-9]{64}$/.test(req.body.version)) return res.status(400).json({ error: 'Référence de lecture invalide' });
+      const notice = await readOperationNotice(require('../../models'), req.user.id, id, req.body.version);
+      invalidateNotificationSummary(req.user.id);
+      return res.json({ message: 'Information marquée comme lue', notification: notice.toJSON() });
+    }
+
     const notif = await Notification.findOne({
       where: { id, userId: req.user.id },
     });
@@ -116,7 +124,7 @@ exports.markRead = async (req, res) => {
     if (!notif) return res.status(404).json({ error: "Notification introuvable" });
 
     if (notif.status !== "read") {
-      await notif.update({ status: "read", readAt: new Date() });
+      await notif.update({ status: "read", readAt: new Date() }, { silent: true });
     }
 
     invalidateNotificationSummary(req.user.id);
@@ -127,6 +135,7 @@ exports.markRead = async (req, res) => {
     });
   } catch (e) {
     logger.error("markRead notification:", e);
+    if (e.status) return res.status(e.status).json({ error: e.message });
     return res.status(500).json({
       error: "Erreur lors de la mise à jour de la notification",
     });
@@ -141,7 +150,7 @@ exports.markAllRead = async (req, res) => {
 
     const [count] = await Notification.update(
       { status: "read", readAt: new Date() },
-      { where: { userId: req.user.id, status: "unread" } }
+      { where: { userId: req.user.id, status: "unread" }, silent: true }
     );
 
     invalidateNotificationSummary(req.user.id);

@@ -1,5 +1,9 @@
 import api from './api';
 import { mergeGeoParams } from './geo';
+export async function getWorkspace(filters = {}) {
+  const { data } = await api.get('/v1/operations/workspace', { params: filters });
+  return data;
+}
 
 export async function getOperations(filters = {}) {
   const { data } = await api.get('/v1/operations', { params: mergeGeoParams(filters) });
@@ -9,6 +13,10 @@ export async function updateCoordination(serviceId, payload, entityType = 'servi
   const path = entityType === 'service' ? String(serviceId) : `work/${entityType}/${serviceId}`;
   const { data } = await api.patch(`/v1/operations/${path}`, payload);
   return data.coordination;
+}
+export async function assignClassicAgent(serviceId, agentId) {
+  const { data } = await api.post('/services/assign', { serviceId, agentId });
+  return data.service;
 }
 export async function getAgentCapacity() {
   const { data } = await api.get('/v1/operations/agent/capacity'); return data;

@@ -1,0 +1,22 @@
+const serviceSteps = {
+  title: 'Étapes de réalisation', count: '{{count}} étape(s)', intro: 'Organisez le travail dans ce dossier si plusieurs étapes sont utiles.',
+  separate: 'Les justificatifs d’une étape restent distincts du compte rendu final du service.',
+  handoverHint: 'Remettez le résultat lorsque la réalisation du service est terminée.',
+  focused: 'Étape #{{id}}', allSteps: 'Voir toutes les étapes', focusMissing: 'Cette étape n’est plus disponible dans ce dossier ou dans vos accès.',
+  add: 'Ajouter une étape', organize: 'Organiser la réalisation en étapes', cancel: 'Fermer', create: 'Créer l’étape',
+  name: 'Que faut-il réaliser ?', description: 'Précisions', advanced: 'Délai, priorité et coût estimé', type: 'Type de travail', priority: 'Priorité', due: 'Échéance', cost: 'Coût estimé', currency: 'Devise',
+  assignee: 'Intervenant de l’étape', unassigned: 'À affecter par le responsable', assign: 'Affecter', assignmentChanged: 'L’affectation a changé. Vérifiez l’intervenant avant de continuer.',
+  currentAgent: 'Agent #{{id}} actuellement affecté', agentsFailed: 'La liste des agents est indisponible.',
+  start: 'Commencer l’étape', complete: 'Terminer l’étape', validate: 'Contrôler l’étape', validatedHint: 'Étape contrôlée par le responsable. La confirmation du service reste distincte.',
+  completedHint: 'Étape réalisée, en attente du contrôle du responsable.', assignedElsewhere: 'Cette étape est confiée à un autre intervenant.',
+  proofs: 'Justificatifs de cette étape', files: 'Ajouter des justificatifs à l’étape', notes: 'Précisions sur les pièces', upload: 'Ajouter les pièces',
+  noProof: 'Aucun justificatif pour cette étape.', proofHint: 'Ces pièces documentent cette étape. Elles ne remettent pas le résultat du service.',
+  view: 'Ouvrir {{name}}', remove: 'Supprimer {{name}}', refreshProofs: 'Actualiser les pièces', deleteHint: 'L’auteur peut supprimer une pièce pendant l’heure suivant son ajout, selon ses droits.',
+  olderProofs: 'Toutes les pièces et les options de consultation', saved: 'Étape enregistrée.', proofSaved: 'Justificatifs ajoutés à l’étape.',
+  refresh: 'Actualiser les étapes', failed: 'Les étapes sont indisponibles. Vous pouvez continuer à consulter le service.',
+  actionFailed: 'Cette action n’a pas abouti. Actualisez avant de réessayer si son résultat est incertain.',
+  partialUpload: 'Certaines pièces n’ont pas été ajoutées. Vérifiez la liste avant de renvoyer les fichiers manquants.',
+  empty: 'Aucune étape ne correspond à cette page.', loading: 'Chargement des étapes…', loadingProofs: 'Chargement des justificatifs…',
+  transactions: 'Frais et règlements de l’étape', back: 'Retour au dossier du service', legacy: 'Les étapes et leurs justificatifs sont accessibles ici, sans changer de module.',
+};
+export default serviceSteps;

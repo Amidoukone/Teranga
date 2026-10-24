@@ -66,15 +66,23 @@ test.describe('E2E Integration Reelle - Parcours critiques', () => {
     await expect(page.getByText(uniqueTitle).first()).toBeVisible();
   });
 
-  test('notifications: affiche les notifications reelles', async ({
+  test('centre des opérations : lecture et historique avec les données réelles', async ({
     page,
     request,
   }) => {
     await setupAuthenticatedPage(page, request);
 
     await page.goto('/notifications');
-    await expect(page).toHaveURL(/\/notifications$/);
-    await expect(page.getByText(SEEDED_NOTIFICATION_TITLE).first()).toBeVisible();
+    await expect(page).toHaveURL(/\/operations\?vue=a-lire$/);
+    const card = page.getByRole('article', { name: SEEDED_NOTIFICATION_TITLE });
+    await expect(card).toBeVisible();
+    const read = page.waitForResponse((response) => /\/notifications\/\d+\/read$/.test(response.url()) && response.request().method() === 'PATCH');
+    await card.getByRole('button', { name: 'Marquer comme lu', exact: true }).click();
+    expect((await read).status()).toBe(200);
+    await expect(card).toHaveCount(0);
+    await page.getByRole('main').getByRole('button', { name: 'Tout le suivi', exact: true }).click();
+    await expect(card).toHaveCount(1);
+    await expect(card.getByRole('button', { name: 'Marquer comme lu', exact: true })).toHaveCount(0);
   });
 
   test('orders: affiche les donnees reelles et cree une commande', async ({

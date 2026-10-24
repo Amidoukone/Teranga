@@ -1,14 +1,14 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import OperationsPage from './OperationsPage';
-import { getAssignableAgents, getFieldReadiness, getOperatingCatalog, getOperations, updateCoordination, updateOperatingOffer } from '../services/operations';
+import { assignClassicAgent, getAssignableAgents, getFieldReadiness, getOperatingCatalog, getOperations, updateCoordination, updateOperatingOffer } from '../services/operations';
 let mockScope = { countryId: 1, regionId: null };
 const mockTranslate = (key) => key;
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: mockTranslate, i18n: { language: 'fr' } }) }));
 jest.mock('react-router-dom', () => ({ Link: ({ children, to, ...props }) => <a href={to} {...props}>{children}</a> }), { virtual: true });
 jest.mock('../contexts/GeoContext', () => ({ useGeo: () => mockScope }));
 jest.mock('../services/auth', () => ({ getLocalUser: () => ({ id: 10, role: 'admin' }) }));
-jest.mock('../services/operations', () => ({ getAssignableAgents: jest.fn(), getFieldReadiness: jest.fn(), getOperatingCatalog: jest.fn(), getOperations: jest.fn(), updateCoordination: jest.fn(), updateOperatingOffer: jest.fn() }));
+jest.mock('../services/operations', () => ({ assignClassicAgent: jest.fn(), getAssignableAgents: jest.fn(), getFieldReadiness: jest.fn(), getOperatingCatalog: jest.fn(), getOperations: jest.fn(), updateCoordination: jest.fn(), updateOperatingOffer: jest.fn() }));
 const view = () => <OperationsPage initialEntityType="service" />;
 beforeEach(() => {
   jest.resetAllMocks(); mockScope = { countryId: 1, regionId: null };
@@ -17,6 +17,7 @@ beforeEach(() => {
   getAssignableAgents.mockResolvedValue([]);
   getFieldReadiness.mockResolvedValue({ ready: false, issues: [{ code: 'ASSISTANCE_MISSING', message: 'Assistance à renseigner' }] });
   updateCoordination.mockResolvedValue({}); updateOperatingOffer.mockResolvedValue({});
+  assignClassicAgent.mockResolvedValue({});
 });
 
 test('switching to orders uses the typed coordination API even when identifiers overlap', async () => {
@@ -26,13 +27,15 @@ test('switching to orders uses the typed coordination API even when identifiers 
   fireEvent.change(screen.getByLabelText('operations.entityType'), { target: { value: 'order' } });
   await screen.findByText(/Commande locale/);
   userEvent.click(screen.getByRole('button', { name: 'operations.takeOwnership' }));
-  await waitFor(() => expect(updateCoordination).toHaveBeenCalledWith(3, { mode: 'manual', ownerUserId: 10 }, 'order'));
+  await waitFor(() => expect(updateCoordination).toHaveBeenCalledWith(3, { ownerUserId: 10 }, 'order'));
 });
 
 test('changing only a deadline preserves an active automatic search', async () => {
   getOperations.mockResolvedValue({ items: [{ id: 8, title: 'Commande en recherche', status: 'created', coordination: { mode: 'automatic', state: 'waiting', executorUserId: null, policy: { stageMinutes: 60 } } }], pagination: { total: 1 } });
   render(view());
   fireEvent.change(await screen.findByLabelText('operations.entityType'), { target: { value: 'order' } });
+  fireEvent.click(await screen.findByText('coordinationWorkspace.assignmentOptions'));
+  fireEvent.click(screen.getByRole('button', { name: 'operationsCenter.adjustAssignment' }));
   fireEvent.change(await screen.findByLabelText('operations.sla'), { target: { value: '120' } });
   userEvent.click(screen.getByRole('button', { name: 'operations.save' }));
   await waitFor(() => expect(updateCoordination).toHaveBeenCalledWith(8, { policy: { stageMinutes: 120 } }, 'order'));
@@ -42,7 +45,7 @@ test('the queue displays preparation blockers and lets the operator take respons
   render(view());
   expect(await screen.findByText('Assistance à renseigner')).toBeInTheDocument();
   userEvent.click(await screen.findByRole('button', { name: 'operations.takeOwnership' }));
-  await waitFor(() => expect(updateCoordination).toHaveBeenCalledWith(3, { mode: 'manual', ownerUserId: 10 }));
+  await waitFor(() => expect(updateCoordination).toHaveBeenCalledWith(3, { ownerUserId: 10 }));
 });
 
 test('readiness distinguishes technical configuration from automatic offering coverage', async () => {
@@ -113,7 +116,7 @@ test('the shared queue preserves entity types when all three requests have the s
   expect(screen.getByRole('link', { name: /Dossier service/ })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: /Dossier order/ })).toBeInTheDocument();
   userEvent.click(within(project).getByRole('button', { name: 'operations.takeOwnership' }));
-  await waitFor(() => expect(updateCoordination).toHaveBeenCalledWith(3, { mode: 'manual', ownerUserId: 10 }, 'project'));
+  await waitFor(() => expect(updateCoordination).toHaveBeenCalledWith(3, { ownerUserId: 10 }, 'project'));
 });
 
 test('a failed request family does not hide other families from the shared queue', async () => {
@@ -122,4 +125,66 @@ test('a failed request family does not hide other families from the shared queue
   expect(await screen.findByText('operationsOverview.partial')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: /Dossier service/ })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: /Dossier project/ })).toBeInTheDocument();
+});
+
+test('taking responsibility does not disable an automatic search', async () => {
+  getOperations.mockResolvedValue({ items: [{ id: 9, title: 'Recherche en cours', status: 'created', coordination: { mode: 'automatic', state: 'waiting' } }], pagination: { total: 1 } });
+  render(view());
+  userEvent.click(await screen.findByRole('button', { name: 'operations.takeOwnership' }));
+  await waitFor(() => expect(updateCoordination).toHaveBeenCalledWith(9, { ownerUserId: 10 }));
+});
+
+test('a classic service can be assigned directly without loading setup panels', async () => {
+  getOperations.mockResolvedValue({ items: [{ id: 7, title: 'Document à retirer', status: 'created', executionType: 'agent', countryId: 1, coordination: { mode: 'automatic' } }], pagination: { total: 1 } });
+  getAssignableAgents.mockResolvedValue([{ id: 42, firstName: 'Awa', countryId: 1 }, { id: 43, firstName: 'Autre pays', countryId: 2 }]);
+  render(<OperationsPage embedded initialEntityType="service" />);
+  await screen.findByText('Document à retirer');
+  expect(getOperatingCatalog).not.toHaveBeenCalled(); expect(getFieldReadiness).not.toHaveBeenCalled(); expect(getAssignableAgents).not.toHaveBeenCalled();
+  userEvent.click(screen.getByText('coordinationWorkspace.assignmentOptions'));
+  userEvent.click(screen.getByRole('button', { name: 'operations.assignManually' }));
+  const agents = await screen.findByRole('combobox', { name: 'operations.executor' });
+  await waitFor(() => expect(agents).toBeEnabled());
+  expect(within(agents).queryByRole('option', { name: 'Autre pays' })).not.toBeInTheDocument();
+  fireEvent.change(agents, { target: { value: '42' } });
+  userEvent.click(screen.getByRole('button', { name: 'operations.save' }));
+  await waitFor(() => expect(assignClassicAgent).toHaveBeenCalledWith(7, 42));
+});
+
+test('the current agent remains selected when absent from the list and an edited deadline survives refresh', async () => {
+  getOperations.mockResolvedValue({ items: [{ id: 7, title: 'Commande affectée', status: 'created', countryId: 1, coordination: { executorUserId: 999, policy: { stageMinutes: 60 } } }], pagination: { total: 1 } });
+  render(<OperationsPage initialEntityType="order" />);
+  userEvent.click(await screen.findByText('coordinationWorkspace.assignmentOptions'));
+  userEvent.click(screen.getByRole('button', { name: 'operationsCenter.adjustAssignment' }));
+  const agents = await screen.findByRole('combobox', { name: 'operations.executor' });
+  expect(agents).toHaveValue('999');
+  fireEvent.change(screen.getByLabelText('operations.sla'), { target: { value: '240' } });
+  await act(async () => window.dispatchEvent(new Event('online')));
+  expect(screen.getByLabelText('operations.sla')).toHaveValue(240);
+  getOperations.mockResolvedValue({ items: [{ id: 7, title: 'Commande affectée', status: 'created', countryId: 1, coordination: { executorUserId: 888, policy: { stageMinutes: 60 } } }], pagination: { total: 1 } });
+  await act(async () => window.dispatchEvent(new Event('online')));
+  expect(await screen.findByRole('alert')).toHaveTextContent('coordinationWorkspace.assignmentChanged');
+  expect(screen.getByRole('button', { name: 'operations.save' })).toBeDisabled();
+  userEvent.click(screen.getByRole('button', { name: 'coordinationWorkspace.reviewAssignment' }));
+  expect(screen.getByLabelText('operations.sla')).toHaveValue(240);
+  expect(agents).toHaveValue('888');
+});
+
+test('mine and search filters are sent to all request families', async () => {
+  render(<OperationsPage />);
+  await screen.findByText('operationsOverview.limit');
+  userEvent.click(screen.getByRole('button', { name: 'coordinationWorkspace.viewsLabel.mine' }));
+  fireEvent.change(screen.getByLabelText('coordinationWorkspace.search'), { target: { value: '#18' } });
+  userEvent.click(screen.getByRole('button', { name: 'requestWorkspace.find' }));
+  await waitFor(() => expect(getOperations).toHaveBeenCalledWith(expect.objectContaining({ entityType: 'order', owner: 'me', q: '#18' })));
+});
+
+test('offline refresh retains the queue while forbidden access clears it', async () => {
+  getOperations.mockResolvedValue({ items: [{ id: 7, title: 'Demande conservée', status: 'created' }], pagination: { total: 1 } });
+  render(view()); await screen.findByText('Demande conservée');
+  getOperations.mockRejectedValueOnce(new Error('Offline'));
+  userEvent.click(screen.getByRole('button', { name: 'operations.refresh' }));
+  await screen.findByRole('alert'); expect(screen.getByText('Demande conservée')).toBeInTheDocument();
+  getOperations.mockRejectedValueOnce({ response: { status: 403 } });
+  userEvent.click(screen.getByRole('button', { name: 'operations.refresh' }));
+  await waitFor(() => expect(screen.queryByText('Demande conservée')).not.toBeInTheDocument());
 });

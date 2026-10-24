@@ -1,0 +1,20 @@
+const operationsCenter = {
+  kicker: 'Un seul espace pour suivre et agir', subtitle: 'Retrouvez les informations qui vous concernent et ouvrez directement le bon dossier.',
+  adminHint: 'Prenez en charge les demandes, consultez les informations à lire et retrouvez les étapes passées.',
+  views: 'Vues du centre des opérations', coordination: 'Demandes à coordonner', unread: 'À lire', history: 'Tout le suivi',
+  personalUpdates: 'Votre suivi', feedHint: 'Les étapes les plus récentes apparaissent en premier. Chaque information ouvre le dossier concerné.',
+  filters: 'Filtrer le suivi', type: 'Type de dossier', event: 'Événement', from: 'Depuis le', to: 'Jusqu’au', clearFilters: 'Effacer les filtres',
+  filtersActive: 'Filtres actifs', progress: 'Avancement', noMatches: 'Aucun résultat pour ces filtres', filterHint: 'Modifiez ou effacez les filtres pour retrouver les autres informations.',
+  upToDate: 'Vous êtes à jour', noHistory: 'Aucune information à afficher', emptyHint: 'Les nouvelles informations apparaîtront ici. Vos demandes restent accessibles dans votre espace.',
+  loadFailed: 'Le suivi ne peut pas être actualisé. Les informations déjà chargées sont conservées. Réessayez lorsque la connexion revient.',
+  accessChanged: 'Votre accès a changé. Reconnectez-vous pour retrouver votre suivi.', actionFailed: 'Cette action n’a pas pu être enregistrée. Réessayez.',
+  readFailed: 'Le dossier est ouvert, mais la lecture n’a pas pu être confirmée. L’information reste à lire.',
+  information: 'Information', toRead: 'À lire', examine: 'Examiner la demande', markRead: 'Marquer comme lu', more: 'Autres actions',
+  open: { service: 'Ouvrir le service', project: 'Ouvrir le projet', order: 'Ouvrir la commande', task: 'Ouvrir la tâche', evidence: 'Consulter le justificatif', user: 'Ouvrir mon espace', default: 'Ouvrir le dossier' },
+  entities: { service: 'Service', project: 'Projet', order: 'Commande', task: 'Tâche', evidence: 'Justificatif', user: 'Compte' },
+  remove: 'Retirer cette information', removeConfirm: 'Retirer cette information de votre suivi ? Le dossier et ses justificatifs seront conservés.',
+  manageReading: 'Gérer mon suivi', readingHint: 'Marquer une information comme lue ne termine pas la prestation. Les actions sur la demande se font dans son dossier.',
+  markAllRead: 'Tout marquer comme lu', cleanup: 'Nettoyer les anciennes informations', cleanupConfirm: 'Retirer les informations lues de plus de 30 jours ? Les informations encore à lire et les dossiers seront conservés.',
+  adjustAssignment: 'Modifier l’affectation ou le délai', focused: 'Demande n° {{id}}', allRequests: 'Voir toutes les demandes',
+};
+export default operationsCenter;

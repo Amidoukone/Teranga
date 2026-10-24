@@ -25,6 +25,7 @@ jest.mock('../services/services', () => ({ getServiceById: jest.fn() }));
 jest.mock('../services/transactions', () => ({ createTransaction: jest.fn(), getTransactions: jest.fn() }));
 jest.mock('../services/api', () => ({ get: jest.fn(), post: jest.fn() }));
 jest.mock('../utils/notify', () => ({ notify: jest.fn() }));
+jest.mock('../contexts/GeoContext', () => ({ useGeo: () => ({ user: { id: 4 }, countryId: 1 }) }));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -57,13 +58,17 @@ test('a service transaction can explicitly select a country currency absent from
 });
 
 test('tasks use the service currency without fetching all services or substituting XOF', async () => {
+  api.get.mockResolvedValue({ data: { tasks: [], pagination: { total: 0 }, canCreate: true, viewer: { id: 4, role: 'admin' }, serviceContext: { id: 14, title: 'Service Accra', currency: 'GHS' } } });
   render(<ServiceTasksPage />);
+  await userEvent.click(await screen.findByRole('button', { name: 'serviceSteps.add' }));
   const inherited = await screen.findByRole('option', { name: 'common.currencyFromService (GHS)', hidden: true });
   expect(inherited.selected).toBe(true);
-  expect(getServiceById).toHaveBeenCalledWith(14);
+  expect(api.get).toHaveBeenCalledWith('/tasks/service/14', expect.objectContaining({ params: { workspace: true, page: 1, limit: 20 } }));
   expect(api.get).not.toHaveBeenCalledWith('/services/me', expect.anything());
-  const submit = screen.getByRole('button', { name: 'tasksPage.form.submit' });
+  await userEvent.type(screen.getByLabelText('serviceSteps.name'), 'Contrôle du document');
+  const submit = screen.getByRole('button', { name: 'serviceSteps.create' });
   await userEvent.click(submit);
   await waitFor(() => expect(api.post).toHaveBeenCalledWith('/tasks', expect.objectContaining({ serviceId: 14, currency: undefined }), expect.anything()));
+  await userEvent.click(await screen.findByRole('button', { name: 'serviceSteps.add' }));
   expect(screen.getByRole('option', { name: 'common.currencyFromService (GHS)', hidden: true }).selected).toBe(true);
 });

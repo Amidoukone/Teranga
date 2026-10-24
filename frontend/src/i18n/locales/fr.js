@@ -1,7 +1,13 @@
 import experience from './experience.fr';
+import serviceSteps from './serviceSteps.fr';
+import workspaceQueue from './workspaceQueue.fr';
+import operationsCenter from './operationsCenter.fr';
 
 const fr = {
   ...experience,
+  serviceSteps,
+  workspaceQueue,
+  operationsCenter,
   agentCoordination: {
     availableMinutes: 'Durée de disponibilité (minutes)', availableUntil: 'Disponible jusqu’au', expired: 'Votre disponibilité a expiré. Confirmez-la à nouveau pour recevoir des demandes.',
     startBefore: 'Démarrer dans l’application avant', startHint: 'Déclarez le démarrage avant de commencer sur le terrain. Sans démarrage dans le délai indiqué, une affectation automatique peut être confiée à un autre agent.',

@@ -17,6 +17,7 @@ import {
 import { getAgentServices, startService } from '../services/services';
 import { buildTelHref, buildWhatsappHref } from '../utils/phone';
 import { useLocale } from '../i18n/useLocale';
+import WorkspaceHeader from '../components/WorkspaceHeader';
 
 const SERVICE_POLL_MS = 15000;
 
@@ -49,7 +50,7 @@ function AssignedServiceCard({ service, acting, onAction }) {
   const currency = String(service.currency || 'XOF').toUpperCase();
 
   return (
-    <article className="rounded-[24px] border border-border/70 bg-surface-card p-5 shadow-sm">
+    <article aria-labelledby={`assigned-service-${service.id}`} className="rounded-2xl border border-border bg-surface-card p-4 sm:p-5">
       <div className="flex items-start gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white">
           <BriefcaseBusiness size={20} aria-hidden="true" />
@@ -60,7 +61,7 @@ function AssignedServiceCard({ service, acting, onAction }) {
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
                 {service.typeLabel || t(`services.type.${service.type}`, { defaultValue: service.type })}
               </p>
-              <h3 className="mt-1 font-bold text-text-primary break-words">{service.title}</h3>
+              <h3 id={`assigned-service-${service.id}`} className="mt-1 font-bold text-text-primary break-words">{service.title}</h3>
             </div>
             <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusTone(service.status)}`}>
               {t(`services.status.${service.status}`, { defaultValue: service.status })}
@@ -99,7 +100,7 @@ function AssignedServiceCard({ service, acting, onAction }) {
               <button
                 type="button"
                 onClick={() => onAction(service.id, 'start')}
-                disabled={acting === service.id}
+                disabled={Boolean(acting)}
                 className="btn-primary flex min-h-12 items-center justify-center rounded-xl px-4 text-sm font-bold"
               >
                 {acting === service.id ? <Loader2 size={17} className="mr-2 animate-spin" /> : null}
@@ -117,13 +118,13 @@ function AssignedServiceCard({ service, acting, onAction }) {
                 {t('serviceOrders.view')}
               </Link>
             )}
-            <Link to={`/services/${service.id}`} className="btn-secondary flex min-h-11 items-center justify-center rounded-xl px-4 text-sm">
+            {['created', 'in_progress'].includes(service.status) && <Link to={`/services/${service.id}`} className="btn-secondary flex min-h-11 items-center justify-center rounded-xl px-4 text-sm">
               {t('serviceAgent.details')}
-            </Link>
+            </Link>}
           </div>
 
           {(telHref || whatsappHref) ? (
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <details className="mt-3"><summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">{t('workspace.contactClient')}</summary><div className="grid grid-cols-2 gap-2">
               {telHref ? (
                 <a href={telHref} className="btn-secondary flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm">
                   <Phone size={15} /> {t('serviceTracking.actions.call')}
@@ -134,7 +135,7 @@ function AssignedServiceCard({ service, acting, onAction }) {
                   <MessageCircle size={15} /> WhatsApp
                 </a>
               ) : null}
-            </div>
+            </div></details>
           ) : null}
         </div>
       </div>
@@ -212,41 +213,29 @@ export default function AgentServicesPage() {
     }
   }, [load, t]);
 
-  if (loading) {
-    return <div className="flex min-h-[55vh] items-center justify-center text-sm text-text-muted">{t('agentServicesPage.loading.list')}</div>;
-  }
-
   return (
     <div className="app-page-wrap">
-      <div className="app-page-shell space-y-8">
-        <header className="rounded-[28px] border border-border/70 bg-surface-card p-5 shadow-sm sm:p-7">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="page-kicker">{t('serviceAgent.kicker')}</p>
-              <h1 className="app-page-headline">{t('serviceAgent.title')}</h1>
-              <p className="mt-2 text-sm text-text-secondary">{t('serviceAgent.subtitle')}</p>
-            </div>
-            <button type="button" onClick={() => load()} disabled={refreshing} className="btn-secondary flex h-11 w-11 shrink-0 items-center justify-center rounded-full" aria-label={t('serviceOrders.refresh')}>
-              <RefreshCw size={17} className={refreshing ? 'animate-spin' : ''} />
-            </button>
-          </div>
-          <button type="button" disabled={Boolean(acting) || refreshing} onClick={() => { setServices([]); setOffset(0); setView(view === 'active' ? 'history' : 'active'); }} className="btn-secondary mt-4 min-h-11 rounded-xl px-4 text-sm">{t(view === 'active' ? 'fieldWorkspace.showHistory' : 'fieldWorkspace.showActive')}</button>
-        </header>
-
+      <div className="app-page-shell max-w-4xl space-y-6">
+        <WorkspaceHeader title={t('fieldWorkspace.title')} hint={t('workspace.fieldHint')} />
         <AgentCoordinationPanel />
-        <Link to="/missions/mine" className="btn-secondary inline-flex min-h-11 items-center rounded-xl px-4 text-sm">{t('fieldWorkspace.supervised')}</Link>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button type="button" aria-pressed={view === 'history'} disabled={Boolean(acting) || refreshing} onClick={() => { setServices([]); setOffset(0); setView(view === 'active' ? 'history' : 'active'); }} className="btn-secondary min-h-11 rounded-xl px-4 text-sm">{t(view === 'active' ? 'fieldWorkspace.showHistory' : 'fieldWorkspace.showActive')}</button>
+          <button type="button" onClick={() => load()} disabled={refreshing} className="btn-secondary inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm"><RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />{t('serviceOrders.refresh')}</button>
+        </div>
 
         {feedback ? (
-          <div className={`app-alert ${feedback.type === 'error' ? 'app-alert-error' : 'app-alert-success'}`}>{feedback.message}</div>
+          <div role={feedback.type === 'error' ? 'alert' : 'status'} className={`app-alert ${feedback.type === 'error' ? 'app-alert-error' : 'app-alert-success'}`}>{feedback.message}{feedback.type === 'error' && <button type="button" onClick={() => load()} className="ml-2 underline">{t('serviceOrders.retry')}</button>}</div>
         ) : null}
 
-        {!services.length ? (
+        {loading && <p role="status">{t('agentServicesPage.loading.list')}</p>}
+        {!loading && !services.length && feedback?.type !== 'error' ? (
           <div className="rounded-[28px] border border-dashed border-border bg-surface-card px-6 py-12 text-center">
             <BadgeCheck size={34} className="mx-auto text-blue-600" />
-            <h2 className="mt-4 font-bold text-text-primary">{t('serviceAgent.emptyTitle')}</h2>
-            <p className="mt-2 text-sm text-text-muted">{t('serviceAgent.emptyHint')}</p>
+            <h2 className="mt-4 font-bold text-text-primary">{t(view === 'history' ? 'workspace.emptyHistory' : 'serviceAgent.emptyTitle')}</h2>
+            {view === 'active' && <p className="mt-2 text-sm text-text-muted">{t('serviceAgent.emptyHint')}</p>}
           </div>
-        ) : (
+        ) : services.length > 0 ? (
           <>
             <section>
               <h2 className="mb-3 text-lg font-bold text-text-primary">{t(view === 'active' ? 'serviceAgent.activeTitle' : 'serviceAgent.historyTitle')}</h2>
@@ -257,12 +246,13 @@ export default function AgentServicesPage() {
               ) : <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-text-muted">{t('serviceAgent.activeEmpty')}</p>}
             </section>
           </>
-        )}
+        ) : null}
         {total > 25 && <nav aria-label={t('serviceAgent.title')} className="flex items-center justify-between gap-3">
           <button type="button" disabled={offset === 0 || refreshing} onClick={() => setOffset(Math.max(0, offset - 25))} className="btn-secondary min-h-11 rounded-xl px-4 disabled:opacity-50">{t('operations.previous')}</button>
           <p className="text-sm">{offset + 1}–{offset + services.length} / {total}</p>
           <button type="button" disabled={offset + 25 >= total || refreshing} onClick={() => setOffset(offset + 25)} className="btn-secondary min-h-11 rounded-xl px-4 disabled:opacity-50">{t('operations.next')}</button>
         </nav>}
+        <Link to="/missions/mine" className="inline-flex min-h-11 items-center text-sm font-semibold text-blue-700 dark:text-blue-300">{t('fieldWorkspace.supervised')}</Link>
       </div>
     </div>
   );

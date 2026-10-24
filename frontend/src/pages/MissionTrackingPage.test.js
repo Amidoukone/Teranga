@@ -2,7 +2,8 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import MissionTrackingPage from "./MissionTrackingPage";
-import { getMissionTrack, pingMissionLocation } from "../services/missions";
+import { getMissionTrack, pingMissionLocation, updateMissionStatus } from "../services/missions";
+jest.mock('../features/service-workspace/ServiceStepsPanel', () => () => null);
 jest.mock('../i18n/useLocale', () => ({ useLocale: () => ({ formatNumber: String }) }));
 
 jest.mock(
@@ -58,6 +59,26 @@ beforeEach(() => {
     configurable: true,
     value: undefined,
   });
+});
+
+test('the submitted report is displayed before the single client confirmation action', async () => {
+  getMissionTrack.mockResolvedValue({ id: 81, title: 'Résultat livré', missionStatus: 'COMPLETED', viewerRole: 'client', isExecutor: false, tradeCategorySlug: 'plomberie', completion: { report: { summary: 'Travaux remis avec leurs justificatifs', attachments: [{ id: 1, originalName: 'resultat.pdf', filePath: '/uploads/resultat.pdf' }] } } });
+  render(<MissionTrackingPage />);
+  const proof = await screen.findByRole('link', { name: 'resultat.pdf' });
+  const button = screen.getByRole('button', { name: 'missionTracking.validateCta' });
+  expect(proof.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'missionTracking.reportProblemCta' })).toBeInTheDocument();
+  updateMissionStatus.mockRejectedValueOnce({ response: { data: { error: 'La demande a changé, actualisez son état.' } } });
+  fireEvent.click(button);
+  const error = await screen.findByText('La demande a changé, actualisez son état.');
+  expect(error.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'resultat.pdf' })).toBeInTheDocument();
+});
+
+test('a finished nontransport mission opens a new service request', async () => {
+  getMissionTrack.mockResolvedValue({ id: 81, title: 'Travail confirmé', missionStatus: 'CLOSED', viewerRole: 'client', isExecutor: false, tradeCategorySlug: 'plomberie' });
+  render(<MissionTrackingPage />);
+  expect(await screen.findByRole('link', { name: 'serviceMission.terminal.newRequest' })).toHaveAttribute('href', '/demandes/nouvelle');
 });
 
 test('an offline refresh preserves the executor report draft and a successful refresh resumes tracking', async () => {
@@ -263,7 +284,7 @@ test("donne au prestataire une action principale pour un service", async () => {
   expect(
     (await screen.findAllByRole("button", { name: "serviceMission.executorCta.EN_ROUTE" })).length
   ).toBeGreaterThanOrEqual(1);
-  expect(screen.getByRole("link", { name: "missionTracking.backToMyMissions" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: /requestWorkspace.back/ })).toHaveAttribute(
     "href",
     "/prestataire/services"
   );

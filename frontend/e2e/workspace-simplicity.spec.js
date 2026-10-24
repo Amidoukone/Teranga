@@ -18,12 +18,13 @@ for (const width of [360, 1440]) {
     await page.route('**/api/**', async (route) => {
       const path = new URL(route.request().url()).pathname.replace(/^\/api(?:\/v1)?/, '');
       if (path !== '/services/me') return route.fallback();
-      return route.fulfill({ json: { services: [{ id: 1, title: 'Intervention à vérifier', status: 'completed' }, { id: 2, title: 'Démarche en cours', status: 'in_progress' }], pagination: { total: 2 } } });
+      const review = new URL(route.request().url()).searchParams.get('view') === 'review';
+      return route.fulfill({ json: { services: review ? [{ id: 1, title: 'Intervention à vérifier', status: 'completed' }] : [{ id: 2, title: 'Démarche en cours', status: 'in_progress' }], pagination: { total: 1 } } });
     });
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Une réponse est attendue de votre part' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Vérifier le résultat' })).toHaveAttribute('href', '/services/1');
-    await expect(page.getByRole('heading', { name: 'Vos demandes en cours' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Vos demandes en cours/ })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Demander un service', exact: true })).toBeVisible();
     await expect(page.getByText('Compléter le profil', { exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
@@ -31,7 +32,7 @@ for (const width of [360, 1440]) {
   });
 }
 
-test('agent home declares availability in one action without changing capacity', async ({ page }) => {
+test('agent home declares availability in one action without changing capacity', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 360, height: 900 });
   await setup(page, 'agent');
   let available = false;
@@ -52,10 +53,11 @@ test('agent home declares availability in one action without changing capacity',
   await expect(page.getByRole('button', { name: 'Me rendre indisponible', exact: true })).toBeVisible();
   expect(saved).toEqual({ available: true, availableMinutes: 120 });
   await expect(page.getByLabel('Capacité simultanée')).toBeHidden();
+  await page.screenshot({ path: testInfo.outputPath('agent-home.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
 });
 
-test('provider home shows current jobs before history and can become available', async ({ page }) => {
+test('provider home shows current jobs before history and can become available', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 360, height: 900 });
   await setup(page, 'provider');
   await page.route('**/api/**', async (route) => {
@@ -70,12 +72,59 @@ test('provider home shows current jobs before history and can become available',
   await page.goto('/dashboard');
   await expect(page.getByRole('heading', { name: 'Mon travail' })).toBeVisible();
   await expect(page.getByText('Réparation en cours')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Poursuivre l’intervention', exact: true })).toHaveAttribute('href', '/missions/10/track');
+  await page.screenshot({ path: testInfo.outputPath('provider-home.png'), fullPage: true });
   await page.getByRole('button', { name: 'Me rendre disponible', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Me rendre indisponible', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Voir les demandes terminées' }).click();
   await expect(page.getByText('Ancien travail')).toBeVisible();
   await expect(page.getByText('Réparation en cours')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
+});
+
+for (const width of [360, 1440]) {
+  test(`management keeps operational actions usable when financial figures fail at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await setup(page, 'admin');
+    const reads = [];
+    await page.route('**/api/**', async (route) => {
+      const path = new URL(route.request().url()).pathname.replace(/^\/api(?:\/v1)?/, '');
+      if (path === '/dashboard/summary' || path === '/transactions/summary') {
+        reads.push(path);
+        return route.fulfill({ status: 503, json: { error: 'Indisponible' } });
+      }
+      return route.fallback();
+    });
+    await page.goto('/dashboard');
+    const main = page.getByRole('main');
+    await expect(main.getByRole('link', { name: 'Traiter les demandes', exact: true })).toHaveAttribute('href', '/operations');
+    expect(reads).toEqual([]);
+    await expect(main.getByRole('link', { name: 'Agents', exact: true })).toBeHidden();
+    await main.getByText('Outils de gestion', { exact: true }).click();
+    await expect(main.getByRole('link', { name: 'Agents', exact: true })).toBeVisible();
+    await main.getByText('Consulter les montants par devise', { exact: true }).click();
+    await expect(main.getByRole('alert')).toContainText('Le résumé financier est indisponible');
+    await expect(main.getByRole('link', { name: 'Traiter les demandes', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
+    await page.screenshot({ path: testInfo.outputPath('management-home.png'), fullPage: true });
+  });
+}
+
+test('the client can open all results requiring review from a bounded home preview', async ({ page }) => {
+  await setup(page);
+  const rows = Array.from({ length: 5 }, (_, index) => ({ id: index + 10, title: `Résultat à examiner ${index + 1}`, status: 'completed' }));
+  await page.route('**/api/**', async (route) => {
+    const url = new URL(route.request().url());
+    if (!/\/services\/me$/.test(url.pathname)) return route.fallback();
+    const review = url.searchParams.get('view') === 'review';
+    return route.fulfill({ json: { services: review ? rows.slice(0, Number(url.searchParams.get('limit') || 100)) : [], pagination: { total: review ? 5 : 0 } } });
+  });
+  await page.goto('/dashboard');
+  const main = page.getByRole('main');
+  await expect(main.getByRole('article')).toHaveCount(3);
+  await main.getByRole('link', { name: 'Voir les 5 résultats à vérifier', exact: true }).click();
+  await expect(page).toHaveURL(/\/demandes\?vue=a-verifier$/);
+  await expect(main.getByText('Résultat à examiner 5')).toBeVisible();
 });
 
 test('the operations overview keeps overlapping identifiers tied to their request type', async ({ page }) => {

@@ -43,16 +43,16 @@ export default function MissionCompletionPanel({ missionId, completion, canSubmi
     <h2 className="font-semibold">{t('completion.title')}</h2>
     {completion.expectedOutcome && <p className="text-sm">{completion.expectedOutcome}</p>}
     {completion.requiredEvidenceTypes?.length > 0 && <p className="text-sm">{t('completion.requiredFiles')}: {completion.requiredEvidenceTypes.map((value) => t(`operations.evidence.${value}`)).join(', ')}</p>}
-    {completion.report && <><p className="whitespace-pre-wrap text-sm">{completion.report.summary}</p>
+    {completion.report && <>{!canSubmit && <p className="whitespace-pre-wrap text-sm">{completion.report.summary}</p>}
       <ul className="space-y-1">{completion.report.attachments?.map((file) => <li key={file.id}>{fileUrl(file.filePath) && <a href={fileUrl(file.filePath)} target="_blank" rel="noreferrer" className="text-sm underline">{file.originalName || t(`operations.evidence.${file.kind}`)}</a>}</li>)}</ul></>}
     {canSubmit && <form onSubmit={submit} className="space-y-3">
       <fieldset disabled={saving} className="space-y-3 disabled:opacity-60">
       <label htmlFor="completion-summary" className="block text-sm">{t('completion.summary')}</label>
       <textarea id="completion-summary" value={summary} minLength={20} maxLength={4000} required onChange={(event) => { dirty.current = true; setSaved(false); setSummary(event.target.value); requestKey.current = newKey(); }} className="min-h-28 w-full rounded-lg border border-border bg-surface-main p-3" />
-      <label htmlFor="completion-kind" className="block text-sm">{t('completion.fileKind')}</label>
+      <details open={Boolean(kind) || completion.requiredEvidenceTypes?.some((value) => ['receipt', 'other'].includes(value))} className="rounded-xl border border-border p-3"><summary className="cursor-pointer text-sm font-medium">{t('requestWorkspace.advancedFiles')}</summary><p className="my-2 text-xs text-text-secondary">{t('requestWorkspace.automaticFiles')}</p><label htmlFor="completion-kind" className="block text-sm">{t('completion.fileKind')}</label>
       <select id="completion-kind" value={kind} onChange={(event) => { setKind(event.target.value); requestKey.current = newKey(); }} className="w-full rounded-lg border border-border bg-surface-main p-2">
         <option value="">{t('completion.detectKind')}</option>{['photo', 'document', 'receipt', 'other'].map((value) => <option key={value} value={value}>{t(`operations.evidence.${value}`)}</option>)}
-      </select>
+      </select></details>
       <label htmlFor="completion-files" className="block text-sm">{t('completion.files')}</label>
       <input key={inputVersion} id="completion-files" type="file" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx" onChange={(event) => { setFiles(Array.from(event.target.files || [])); requestKey.current = newKey(); }} className="block w-full text-sm" />
       <p className="text-xs text-text-secondary">{t('completion.filesHint')}</p>

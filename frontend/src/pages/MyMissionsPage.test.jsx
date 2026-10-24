@@ -87,6 +87,15 @@ describe("MyMissionsPage - disponibilité réseau faible", () => {
     ).not.toBeInTheDocument();
   });
 
+  test('a provider profile failure keeps existing work accessible without redirecting to login', async () => {
+    getMyProvider.mockRejectedValueOnce(Error('Network unavailable'));
+    getMyMissions.mockResolvedValue({ missions: [{ id: 61, title: 'Travail accessible', missionStatus: 'IN_PROGRESS' }] });
+    render(<MyMissionsPage workspace user={{ id: 7, role: 'provider' }} />);
+    expect(await screen.findByRole('link', { name: 'workspace.continueWork' })).toHaveAttribute('href', '/missions/61/track');
+    expect(await screen.findByRole('alert')).toHaveTextContent('workspace.providerUnavailable');
+    expect(mockNavigate).not.toHaveBeenCalled(); expect(me).not.toHaveBeenCalled();
+  });
+
   test("le chauffeur accepte une course en une action depuis sa liste", async () => {
     acceptMission.mockResolvedValue({ id: 31 });
     declineMission.mockResolvedValue({ id: 31 });

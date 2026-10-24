@@ -61,12 +61,12 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
         if (body.executorUserId) {
           expect(body).toEqual({ executorUserId: 42, mode: 'manual', policy: { stageMinutes: 120 } });
           orderAssigned = true;
-        } else expect(body).toEqual({ mode: 'manual', ownerUserId: context.user.id });
+        } else expect(body).toEqual({ ownerUserId: context.user.id });
         orderOwned = true; return json({ coordination: { state: 'accepted' } });
       }
       if (path === '/operations/501' && route.request().method() === 'PATCH') {
         const body = route.request().postDataJSON();
-        expect(body).toEqual({ mode: 'manual', ownerUserId: context.user.id });
+        expect(body).toEqual({ ownerUserId: context.user.id });
         owned = true; return json({ coordination: { state: 'accepted' } });
       }
       if (path === '/operations') {
@@ -79,6 +79,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await page.goto('/admin/operations');
     await expect(page.getByRole('heading', { name: /Centre des opérations|Operations centre/i })).toBeVisible();
     await page.getByLabel(/Type de demande|Request type/i).selectOption('service');
+    await page.getByText('Préparation du territoire', { exact: true }).click();
     await expect(page.getByText('Assistance locale à renseigner')).toBeVisible();
     await expect(page.getByRole('link', { name: /Vérification avant travaux/ })).toBeVisible();
     await page.getByRole('button', { name: /Prendre en charge|Take ownership/i }).click();
@@ -88,6 +89,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(page.getByRole('link', { name: /Commande terrain/ })).toHaveAttribute('href', '/orders/501');
     await page.getByRole('button', { name: /Prendre en charge|Take ownership/i }).click();
     await expect.poll(() => orderOwned).toBe(true);
+    await page.getByText('Organiser la prise en charge', { exact: true }).click();
+    await page.getByText('Modifier l’affectation ou le délai', { exact: true }).click();
     await page.getByLabel(/Agent chargé de la demande|Assigned agent/i).selectOption('42');
     await page.getByLabel(/Délai par étape|Time per stage/i).fill('120');
     await page.getByRole('button', { name: /^(Enregistrer|Save)$/i }).click();

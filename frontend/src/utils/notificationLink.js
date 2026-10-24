@@ -1,7 +1,10 @@
 // frontend/src/utils/notificationLink.js
-// Résout la route de destination d'un clic sur une notification/activité — logique partagée
-// entre NotificationsPage.jsx et ActivityCenterPage.jsx (auparavant dupliquée à l'identique
-// dans les deux fichiers).
+// Ouvre le dossier concerné depuis le suivi du centre des opérations.
+const reference = (value) => Number.isSafeInteger(Number(value)) && Number(value) > 0 ? String(Number(value)) : null;
+function stepEntry(serviceId, taskId, evidence = false) {
+  const parent = reference(serviceId), step = reference(taskId);
+  return parent && step ? `/services/${parent}/tasks?etape=${step}${evidence ? '&pieces=1' : ''}#steps` : null;
+}
 export function resolveNotificationLink(n, currentUserRole) {
   if (!n) return '/dashboard';
 
@@ -10,13 +13,13 @@ export function resolveNotificationLink(n, currentUserRole) {
 
   if (n.entityType === 'task') {
     const serviceId = n?.metadata?.serviceId;
-    if (serviceId) return `/services/${serviceId}/tasks`;
+    if (serviceId) return stepEntry(serviceId, n.entityId) || `/services/${serviceId}/tasks`;
     return '/tasks';
   }
 
   if (n.entityType === 'service') {
-    if (n?.metadata?.coordinationState && currentUserRole === 'admin') return '/admin/operations';
     const serviceId = n?.metadata?.serviceId || n?.entityId;
+    if (n?.metadata?.coordinationState && currentUserRole === 'admin') return `/operations?vue=coordonner&type=service${serviceId ? `&demande=${encodeURIComponent(serviceId)}` : ''}`;
     if (!serviceId) return currentUserRole === 'agent' ? '/agent/services' : '/services';
     // Mission filière (executionType='provider', missionStatus renseigné) : ouvre le suivi
     // dédié. Service classique : ouvre le service lui-même — pas directement ses tâches, un
@@ -30,7 +33,7 @@ export function resolveNotificationLink(n, currentUserRole) {
         if (n?.metadata?.requestedVehicleType) {
           return `/admin/taxi-dispatch?missionId=${serviceId}`;
         }
-        return '/admin/services';
+        return `/admin/services?demande=${serviceId}`;
       }
       if (n?.metadata?.requestedVehicleType) {
         return `/courses/${serviceId}`;
@@ -43,8 +46,10 @@ export function resolveNotificationLink(n, currentUserRole) {
   if (n.entityType === 'evidence') {
     const taskId = n?.metadata?.taskId;
     const orderId = n?.metadata?.orderId;
-    if (taskId) return `/tasks/${taskId}/evidences`;
+    if (taskId) return stepEntry(n.metadata?.serviceId, taskId, true) || `/tasks/${taskId}/evidences`;
     if (orderId) return `/orders/${orderId}`;
+    if (n?.metadata?.projectId) return `/projects/${n.metadata.projectId}`;
+    if (n?.metadata?.serviceId) return `/services/${n.metadata.serviceId}`;
   }
 
   return '/dashboard';

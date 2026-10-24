@@ -34,6 +34,16 @@ export async function getTasksByService(serviceId) {
   return tasks.map((t) => applyLabels(t));
 }
 
+export async function getServiceSteps(serviceId, { page = 1, limit = 20, taskId } = {}) {
+  const { data } = await api.get(`/tasks/service/${serviceId}`, { params: { workspace: true, page, limit, ...(taskId ? { taskId } : {}) } });
+  return data;
+}
+
+export async function getTaskWorkspace(id) {
+  const { data } = await api.get(`/tasks/${id}/workspace`);
+  return data;
+}
+
 /**
  * Creer une tache
  * @param {object} form - Données du formulaire

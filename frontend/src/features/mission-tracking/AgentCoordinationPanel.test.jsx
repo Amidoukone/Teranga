@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AgentCoordinationPanel from './AgentCoordinationPanel';
 import WorkProgressPanel from './WorkProgressPanel';
@@ -54,4 +54,28 @@ test('the customer can validate a completed project from its detail page', async
   await waitFor(() => expect(advanceAssignment).toHaveBeenCalledWith('project', 7, { status: 'validated' }));
   await waitFor(() => expect(onSaved).toHaveBeenCalled());
   expect(screen.getByText('Travaux remis avec justificatif.')).toBeInTheDocument();
+});
+
+test('a delayed advancement freezes the report and cannot submit twice', async () => {
+  let resolveAdvance;
+  advanceAssignment.mockImplementationOnce(() => new Promise((resolve) => { resolveAdvance = resolve; }));
+  getAgentAssignments.mockResolvedValue([{ id: 4, code: 'CMD-4', entityType: 'order', status: 'shipped', coordination: {} }]);
+  render(<AgentCoordinationPanel />);
+  const summary = await screen.findByLabelText('completion.summary');
+  fireEvent.change(summary, { target: { value: 'La commande est remise au destinataire avec ses justificatifs.' } });
+  userEvent.click(screen.getByRole('button', { name: 'agentCoordination.actions.delivered' }));
+  userEvent.click(screen.getByRole('button', { name: 'agentCoordination.actions.delivered' }));
+  expect(advanceAssignment).toHaveBeenCalledTimes(1); expect(summary).toBeDisabled();
+  await act(async () => resolveAdvance({}));
+});
+
+test('a previous project response cannot replace the current order actions', async () => {
+  let resolveOld;
+  getWorkProgress.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }));
+  const view = render(<WorkProgressPanel entityType="project" entityId={7} status="completed" />);
+  getWorkProgress.mockResolvedValue({ item: { id: 7, code: 'Commande actuelle', entityType: 'order', status: 'processing', coordination: {} }, canAdvance: true });
+  view.rerender(<WorkProgressPanel entityType="order" entityId={7} status="processing" />);
+  await screen.findByRole('button', { name: 'agentCoordination.actions.shipped' });
+  await act(async () => resolveOld({ item: { id: 7, title: 'Ancien projet', entityType: 'project', status: 'completed', coordination: {} }, canValidate: true }));
+  expect(screen.queryByRole('button', { name: 'agentCoordination.actions.validated' })).not.toBeInTheDocument();
 });

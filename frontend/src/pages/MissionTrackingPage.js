@@ -17,6 +17,7 @@ import {
 } from "../services/missions";
 import MissionTrackingMap from "../features/mission-tracking/MissionTrackingMap";
 import MissionCompletionPanel from "../features/mission-tracking/MissionCompletionPanel";
+import ServiceStepsPanel from '../features/service-workspace/ServiceStepsPanel';
 import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
 import RequestProgress from "../components/RequestProgress";
 import RequestHelp from "../components/RequestHelp";
@@ -24,6 +25,7 @@ import RequestAmounts from "../components/RequestAmounts";
 import { Modal, FormField, Button } from "../components/ui";
 import { buildTelHref } from "../utils/phone";
 import { focusCompletionReport, needsCompletionReport } from "../utils/completion";
+import { getBookingPath, getRequestReturnPath } from '../utils/requestLifecycle';
 
 // Même idiome que NavBar.js (poll notifications) : intervalle configurable, pause si l'onglet
 // n'est pas visible — docs/DEV_SPEC_TERANGA_v3.md section 4.2 recommande 5-10s.
@@ -134,9 +136,13 @@ function isDocumentVisible() {
 }
 
 export default function MissionTrackingPage() {
-  const { t } = useTranslation();
   const { id } = useParams();
   const location = useLocation();
+  return <MissionTracking key={`${id}:${location.pathname}`} id={id} location={location} />;
+}
+
+function MissionTracking({ id, location }) {
+  const { t } = useTranslation();
   const isRideRoute = location.pathname.startsWith("/courses/");
   const isDeliveryRoute = location.pathname.startsWith("/livraisons/");
 
@@ -473,7 +479,7 @@ export default function MissionTrackingPage() {
       <div className="mx-auto max-w-xl px-6 py-10">
         <AuthFeedbackBanner type="error" message={error || t("missionTracking.errors.load")} />
         <Link
-          to={isRideRoute ? "/courses" : isDeliveryRoute ? "/livraisons" : "/services"}
+          to={getRequestReturnPath(location.state?.from, isRideRoute ? '/courses' : isDeliveryRoute ? '/livraisons' : '/demandes')}
           className="btn-secondary mt-4 inline-block rounded-full px-6 py-2.5 text-sm"
         >
           {isRideRoute
@@ -508,28 +514,33 @@ export default function MissionTrackingPage() {
     track.isExecutor &&
     isTaxiMission &&
     track.missionStatus === "ON_SITE";
-  const stickyExecutorNextStatus =
+  const executorNextStatus =
     track.viewerRole !== "client" &&
     track.isExecutor &&
     !track.acceptanceDeadlineAt &&
     ["ASSIGNED", "EN_ROUTE", "ON_SITE", "IN_PROGRESS"].includes(track.missionStatus)
       ? EXECUTOR_NEXT_STATUS[track.missionStatus]
       : null;
+  const stickyExecutorNextStatus = isTaxiMission || isDeliveryMission ? executorNextStatus : null;
   const executorCtaRoot = isDeliveryMission
     ? "deliveryOrders.executorCta"
     : !isTaxiMission
     ? "serviceMission.executorCta"
     : "missionTracking.executorCta";
   const transitionExtra =
-    stickyExecutorNextStatus === "COMPLETED" &&
+    executorNextStatus === "COMPLETED" &&
     isDeliveryMission &&
     collectedAmountInput.trim() !== ""
       ? { collectedAmount: Number(collectedAmountInput) }
       : undefined;
-  const reportNeeded = stickyExecutorNextStatus === 'COMPLETED' && needsCompletionReport(track.completion);
+  const reportNeeded = executorNextStatus === 'COMPLETED' && needsCompletionReport(track.completion);
+  const reviewing = track.viewerRole === 'client' && track.missionStatus === 'COMPLETED';
+  const backTo = getRequestReturnPath(location.state?.from, track.viewerRole === 'client' ? '/demandes' : isTaxiMission ? '/chauffeur/courses' : isDeliveryMission ? '/livreur/livraisons' : track.viewerRole === 'provider' ? '/prestataire/services' : '/missions/mine');
+  const completionPanel = <MissionCompletionPanel key={id} missionId={id} completion={track.completion} canSubmit={track.isExecutor && track.missionStatus === 'IN_PROGRESS'} onSaved={() => load({ skipEta: true })} />;
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-10">
+    <div className="app-page-wrap"><div className="app-page-shell max-w-3xl">
+      <Link to={backTo} className="mb-4 inline-flex min-h-11 items-center text-sm font-medium text-text-secondary">← {t('requestWorkspace.back')}</Link>
       <p className="page-kicker">
         {isTaxiMission
           ? "Teranga Taxi"
@@ -565,6 +576,13 @@ export default function MissionTrackingPage() {
           <RequestProgress request={track} />
         </>
       ) : null}
+
+      {reviewing && <section aria-label={t('requestWorkspace.next')} className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
+        <h2 className="font-semibold">{t('requestWorkspace.next')}</h2><p className="mt-2 text-sm text-text-secondary">{t('requestWorkspace.reviewFirst')}</p>
+        {completionPanel}
+        <div className="mt-4 flex flex-wrap gap-3"><button type="button" onClick={() => handleTransition('VALIDATED')} disabled={actionState?.type === 'loading'} className="btn-primary min-h-12 rounded-xl px-5 text-sm font-semibold">{t(isDeliveryMission ? 'deliveryOrders.validateCta' : 'missionTracking.validateCta')}</button><button type="button" onClick={openDisputeModal} className="btn-secondary min-h-12 rounded-xl px-4 text-sm">{t('missionTracking.reportProblemCta')}</button></div>
+        {actionState?.type === 'error' && <div className="mt-3"><AuthFeedbackBanner type="error" message={actionState.message} /></div>}
+      </section>}
 
       <div className="mt-6 rounded-2xl border border-border bg-surface-card p-5">
         <div className="flex items-center justify-between gap-3">
@@ -758,7 +776,7 @@ export default function MissionTrackingPage() {
             <p className="mt-1 text-sm text-text-secondary">
               {t(`${clientSimpleTranslationRoot}.terminal.${track.missionStatus}.hint`)}
             </p>
-            <Link to={isDeliveryMission ? "/livraison" : "/taxi"} className="btn-primary mt-3 inline-flex min-h-11 items-center rounded-full px-5 py-2.5 text-sm">
+            <Link to={getBookingPath(track.tradeCategorySlug)} className="btn-primary mt-3 inline-flex min-h-11 items-center rounded-full px-5 py-2.5 text-sm">
               {t(`${clientSimpleTranslationRoot}.terminal.newRequest`)}
             </Link>
           </div>
@@ -810,39 +828,14 @@ export default function MissionTrackingPage() {
           />
         ) : null}
 
-        {actionState?.type === "error" ? (
+        {!reviewing && actionState?.type === "error" ? (
           <div className="mt-4">
             <AuthFeedbackBanner type="error" message={actionState.message} />
           </div>
         ) : null}
 
-        <MissionCompletionPanel key={id} missionId={id} completion={track.completion} canSubmit={track.isExecutor && track.missionStatus === 'IN_PROGRESS'} onSaved={() => load({ skipEta: true })} />
-        <RequestHelp id={id} title={track.title} phone={track.assistancePhone} />
-        {track.viewerRole === 'client' && <RequestAmounts request={track} />}
+        {!reviewing && completionPanel}
         <div className="mt-5 flex flex-wrap gap-3">
-          {track.viewerRole === "client" && track.missionStatus === "COMPLETED" ? (
-            <button
-              type="button"
-              onClick={() => handleTransition("VALIDATED")}
-              disabled={actionState?.type === "loading"}
-              className="btn-primary rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
-            >
-              {isDeliveryMission
-                ? t("deliveryOrders.validateCta")
-                : t("missionTracking.validateCta")}
-            </button>
-          ) : null}
-
-          {track.viewerRole === "client" && track.missionStatus === "COMPLETED" ? (
-            <button
-              type="button"
-              onClick={openDisputeModal}
-              className="btn-secondary inline-flex items-center gap-1.5 rounded-full px-6 py-2.5 text-sm"
-            >
-              <AlertTriangle size={14} />
-              {t("missionTracking.reportProblemCta")}
-            </button>
-          ) : null}
 
           {track.viewerRole === "client" && ["ASSIGNED", "EN_ROUTE"].includes(track.missionStatus) ? (
             <button
@@ -960,34 +953,12 @@ export default function MissionTrackingPage() {
             <p className="text-sm text-text-muted">{t("missionTracking.supervisorReadOnly")}</p>
           ) : null}
 
-          <Link
-            to={
-              isTaxiMission
-                ? track.viewerRole === "client"
-                  ? "/courses"
-                  : "/chauffeur/courses"
-                : isDeliveryMission
-                ? track.viewerRole === "client"
-                  ? "/livraisons"
-                  : "/livreur/livraisons"
-                : track.viewerRole === "client"
-                ? "/services"
-                : track.viewerRole === "provider"
-                ? "/prestataire/services"
-                : "/missions/mine"
-            }
-            className="btn-secondary rounded-full px-6 py-2.5 text-sm"
-          >
-            {isTaxiMission
-              ? t("taxiRides.backToRides")
-              : isDeliveryMission
-              ? t("deliveryOrders.backToDeliveries")
-              : track.viewerRole === "client"
-              ? t("missionTracking.backToServices")
-              : t("missionTracking.backToMyMissions")}
-          </Link>
         </div>
 
+        {track.viewerRole === 'client' && <div className="mt-5"><RequestAmounts request={track} /></div>}
+        <details className="mt-5 rounded-2xl border border-border p-4"><summary className="cursor-pointer font-semibold">{t('requestHelp.title')}</summary><div className="mt-3"><RequestHelp id={id} title={track.title} phone={track.assistancePhone} /></div></details>
+
+        {!transportTranslationRoot && ['client', 'agent', 'admin'].includes(track.viewerRole) && <ServiceStepsPanel serviceId={id} />}
         {track.viewerRole === "client" && track.rating ? (
           <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
             <p className="font-semibold text-emerald-800 dark:text-emerald-200">
@@ -1053,6 +1024,7 @@ export default function MissionTrackingPage() {
         ) : null}
       </div>
 
+      </div>
       {stickyExecutorNextStatus ? (
         <div className="fixed inset-x-0 bottom-24 z-40 px-3 md:hidden">
           <div className="mx-auto max-w-md rounded-3xl border border-border/70 bg-surface-card/95 p-3 shadow-2xl backdrop-blur-xl">

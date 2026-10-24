@@ -1,0 +1,22 @@
+const serviceSteps = {
+  title: 'Work steps', count: '{{count}} step(s)', intro: 'Organize the work in this case when several steps are useful.',
+  separate: 'Step evidence remains separate from the service’s final completion report.',
+  handoverHint: 'Submit the result once the service work is complete.',
+  focused: 'Step #{{id}}', allSteps: 'View all steps', focusMissing: 'This step is no longer available in this case or within your access.',
+  add: 'Add a step', organize: 'Organize the work into steps', cancel: 'Close', create: 'Create step',
+  name: 'What needs to be done?', description: 'Details', advanced: 'Deadline, priority and estimated cost', type: 'Work type', priority: 'Priority', due: 'Deadline', cost: 'Estimated cost', currency: 'Currency',
+  assignee: 'Step assignee', unassigned: 'Awaiting assignment by the coordinator', assign: 'Assign', assignmentChanged: 'The assignment changed. Review the assignee before continuing.',
+  currentAgent: 'Agent #{{id}} currently assigned', agentsFailed: 'The agent list is unavailable.',
+  start: 'Start step', complete: 'Complete step', validate: 'Review step', validatedHint: 'Step reviewed by the coordinator. Service acceptance remains separate.',
+  completedHint: 'Step completed, awaiting coordinator review.', assignedElsewhere: 'This step is assigned to another person.',
+  proofs: 'Evidence for this step', files: 'Add evidence to the step', notes: 'Notes about these files', upload: 'Add files',
+  noProof: 'No evidence for this step yet.', proofHint: 'These files document this step. They do not submit the service result.',
+  view: 'Open {{name}}', remove: 'Delete {{name}}', refreshProofs: 'Refresh files', deleteHint: 'Authors may delete a file within one hour of adding it, subject to their permissions.',
+  olderProofs: 'All files and viewing options', saved: 'Step saved.', proofSaved: 'Step evidence added.',
+  refresh: 'Refresh steps', failed: 'Steps are unavailable. You can continue viewing the service.',
+  actionFailed: 'The action did not complete. Refresh before retrying if its result is uncertain.',
+  partialUpload: 'Some files were not added. Check the list before sending only the missing files again.',
+  empty: 'No steps on this page.', loading: 'Loading steps…', loadingProofs: 'Loading evidence…',
+  transactions: 'Step expenses and payments', back: 'Back to the service case', legacy: 'Steps and their evidence are available here without switching modules.',
+};
+export default serviceSteps;

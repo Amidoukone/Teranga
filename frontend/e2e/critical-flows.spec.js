@@ -27,11 +27,11 @@ test.describe('E2E Critical Flows', () => {
     await expect(page.getByText(ctx.state.tasks[0].title)).toBeVisible();
   });
 
-  test('notifications page renders incoming notifications', async ({ page }) => {
+  test('old notifications links open the unified operations centre', async ({ page }) => {
     const ctx = await setupAuthenticatedPage(page);
     await page.goto('/notifications');
 
-    await expect(page).toHaveURL(/\/notifications$/);
+    await expect(page).toHaveURL(/\/operations\?vue=a-lire$/);
     await expect(
       page.getByText(ctx.state.notifications[0].metadata.title)
     ).toBeVisible();

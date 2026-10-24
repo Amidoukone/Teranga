@@ -27,8 +27,8 @@ export default function DashboardPage() {
   if (!user) return <p role="status" className="p-6 text-text-secondary">{t('dashboard.loading')}</p>;
   const role = normalizeRole(user.role);
   if (role === 'client') return <ClientHome key={user.id} user={user} />;
-  if (role === 'agent') return <AgentServicesPage />;
-  if (role === 'provider') return <MyMissionsPage workspace />;
-  if (role === 'admin') return <ManagementHome />;
+  if (role === 'agent') return <AgentServicesPage key={user.id} />;
+  if (role === 'provider') return <MyMissionsPage key={user.id} workspace user={user} />;
+  if (role === 'admin') return <ManagementHome key={user.id} />;
   return <Link to="/help-support">{t('nav.helpSupport')}</Link>;
 }

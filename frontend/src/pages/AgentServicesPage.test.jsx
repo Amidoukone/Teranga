@@ -48,4 +48,13 @@ describe('AgentServicesPage simplifiée', () => {
     userEvent.click(screen.getByRole('button', { name: 'fieldWorkspace.showHistory' }));
     await waitFor(() => expect(getAgentServices).toHaveBeenCalledWith({ view: 'history', offset: 0, limit: 25 }, { withPagination: true }));
   });
+
+  test('a completed intervention has one case link and keeps contact actions secondary', async () => {
+    getAgentServices.mockResolvedValue({ items: [{ id: 9, title: 'Résultat remis', status: 'completed', client: { phone: '+22370000000' } }], pagination: { total: 1 } });
+    render(<AgentServicesPage />);
+    expect(await screen.findByRole('link', { name: 'serviceOrders.view' })).toHaveAttribute('href', '/services/9');
+    expect(screen.queryByRole('link', { name: 'serviceAgent.details' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'serviceTracking.actions.call', hidden: true })).not.toBeVisible();
+    expect(screen.getByRole('link', { name: 'operations.title' })).toHaveAttribute('href', '/operations');
+  });
 });

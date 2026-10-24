@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import { me } from '../services/auth';
 import { normalizeRole, isMasterUser } from '../utils/role';
@@ -21,6 +21,12 @@ function isDocumentVisible() {
 }
 
 export default function AdminServicesPage({ tradeCategorySlug = null }) {
+  const [params, setParams] = useSearchParams();
+  const focusedId = /^[1-9][0-9]*$/.test(params.get('demande') || '') ? params.get('demande') : null;
+  return <AdminServices key={`${tradeCategorySlug}:${focusedId}`} tradeCategorySlug={tradeCategorySlug} focusedId={focusedId} clearFocus={() => { const next = new URLSearchParams(params); next.delete('demande'); setParams(next); }} />;
+}
+
+function AdminServices({ tradeCategorySlug, focusedId, clearFocus }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const isDriverOnlyView = ['mobilite', 'livraison'].includes(tradeCategorySlug);
@@ -33,6 +39,8 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
   const [agents, setAgents] = useState([]);
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const readVersion = useRef(0);
 
   // Édition inline du prix (budget) d'une mission par l'admin.
   const [editingBudgetId, setEditingBudgetId] = useState(null);
@@ -216,11 +224,13 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
      Charge la liste des services.
   ============================================================ */
   const loadServices = useCallback(async () => {
+    const version = ++readVersion.current;
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (tradeCategorySlug) params.set('tradeCategorySlug', tradeCategorySlug);
-      else params.set('excludeTradeCategorySlug', 'mobilite,livraison');
+      else if (!focusedId) params.set('excludeTradeCategorySlug', 'mobilite,livraison');
+      if (focusedId) params.set('id', focusedId);
 
       if (status !== 'all') params.set('status', status);
       if (onlyUnassigned) params.set('unassigned', '1');
@@ -230,6 +240,7 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
       params.set('offset', String(offset));
 
       const { data } = await api.get(`/services?${params.toString()}`);
+      if (version !== readVersion.current) return;
 
       const items = Array.isArray(data?.services) ? [...data.services] : [];
       items.sort((left, right) => {
@@ -238,13 +249,15 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
         return Number(leftAssigned) - Number(rightAssigned);
       });
       setServices(items);
+      setLoadError('');
     } catch (e) {
       console.error('AdminServicesPage load services error:', e);
-      setServices([]);
+      if (version === readVersion.current) { setLoadError(e?.response?.data?.error || t('operations.failed')); if ([401, 403].includes(e?.response?.status)) setServices([]); }
     } finally {
-      setLoading(false);
+      if (version === readVersion.current) setLoading(false);
     }
-  }, [status, onlyUnassigned, q, limit, offset, tradeCategorySlug]);
+  }, [status, onlyUnassigned, q, limit, offset, tradeCategorySlug, focusedId, t]);
+  useEffect(() => () => { readVersion.current += 1; }, []);
 
   /* ============================================================
      Initialisation au montage.
@@ -428,8 +441,10 @@ export default function AdminServicesPage({ tradeCategorySlug = null }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
-      <div className="max-w-6xl mx-auto bg-surface-card/90 backdrop-blur-sm shadow-xl rounded-2xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div className="app-page-wrap">
+      <div className="app-page-shell space-y-5">
+        {focusedId && <div className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-4 text-sm"><p className="font-semibold">{t('coordinationWorkspace.focusedAssignment', { id: focusedId })}</p><div className="mt-2 flex flex-wrap gap-4"><Link to={`/operations?vue=coordonner&type=service&demande=${focusedId}`} className="inline-flex min-h-11 items-center font-semibold text-blue-700 dark:text-blue-300">{t('operations.title')}</Link><button type="button" onClick={clearFocus} className="min-h-11 underline">{t('coordinationWorkspace.allServices')}</button></div></div>}
+        {loadError && <div role="alert" className="app-alert app-alert-error">{loadError} <button type="button" onClick={loadServices} className="underline">{t('serviceOrders.retry')}</button></div>}
  {/* Contexte: administration des services. */}
         <AdminPageHeader
           title={

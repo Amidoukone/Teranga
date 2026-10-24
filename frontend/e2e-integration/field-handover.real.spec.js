@@ -1,12 +1,10 @@
 const { test, expect } = require('@playwright/test');
-const { API_BASE_URL, E2E_CLIENT_PASSWORD, loginAsSeededClient, seedAuthenticatedSession, blockExternalTracking } = require('./support/realApi');
+const { loginAsSeededAgent, loginAsSeededClient, seedAuthenticatedSession, blockExternalTracking } = require('./support/realApi');
 
 test('terrain réel : démarrage, preuve consultable, remise et validation du client sur mobile', async ({ page, request, browser }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   await blockExternalTracking(page);
-  const login = await request.post(`${API_BASE_URL}/auth/login`, { data: { email: 'e2e.real.agent@example.com', password: E2E_CLIENT_PASSWORD } });
-  expect(login.ok()).toBeTruthy();
-  const agent = await login.json();
+  const agent = await loginAsSeededAgent(request);
   await seedAuthenticatedSession(page, agent.user, agent.token);
   await page.goto('/agent/services');
   const card = page.getByRole('article').filter({ hasText: 'Service E2E Reelle - Entretien Villa' });

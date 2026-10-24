@@ -37,6 +37,7 @@ const CLIENT_NEXT_ACTIONS = {
 export function getRequestNextAction(request = {}, actor = 'operations') {
   const status = String(request.missionStatus || request.status || '').toUpperCase();
   if (actor === 'client') {
+    if (!request.missionStatus && status === 'VALIDATED') return 'done';
     if (status === 'CREATED' && (request.agentId || request.agent)) return 'assigned';
     return CLIENT_NEXT_ACTIONS[status] || 'follow';
   }
@@ -57,8 +58,8 @@ export function getRequestDetailPath(request = {}, categorySlug, actor = 'client
   if (request.missionStatus) {
     if (actor === 'admin') {
       if (slug === 'mobilite' || (request.requestedVehicleType && slug !== 'livraison')) return `/admin/taxi-dispatch?missionId=${request.id}`;
-      if (slug === 'livraison') return '/admin/livraisons';
-      return '/admin/services';
+      if (slug === 'livraison') return `/admin/livraisons?demande=${request.id}`;
+      return `/admin/services?demande=${request.id}`;
     }
     if (slug === 'mobilite') return `/courses/${request.id}`;
     if (slug === 'livraison') return `/livraisons/${request.id}`;
@@ -97,4 +98,10 @@ export function getBookingPath(slug) {
   if (slug === 'mobilite') return '/taxi';
   if (slug === 'livraison') return '/livraison';
   return '/demandes/nouvelle';
+}
+
+export function getRequestReturnPath(from, fallback = '/demandes') {
+  return typeof from === 'string' && from.length <= 2048 && !/[\\\r\n]/.test(from) &&
+    /^\/(?:demandes|services|dashboard|agent\/services|missions\/mine|prestataire\/services|chauffeur\/courses|livreur\/livraisons|operations|admin\/services)(?:\?[^#]*)?$/.test(from)
+    ? from : fallback;
 }

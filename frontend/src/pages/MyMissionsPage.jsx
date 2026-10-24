@@ -1,4 +1,5 @@
 import AgentCoordinationPanel from '../features/mission-tracking/AgentCoordinationPanel';
+import WorkspaceHeader from '../components/WorkspaceHeader';
 // frontend/src/pages/MyMissionsPage.jsx
 // "Mes missions" — portail agent (superviseur ou exécutant) / prestataire exécutant sur les
 // missions filière (executionType='provider', voir docs/DEV_SPEC_TERANGA_v3.md section 2/3).
@@ -60,7 +61,7 @@ function missionDetailPath(mission) {
   return `/missions/${mission.id}/track`;
 }
 
-export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = false, serviceOnly = false, workspace = false }) {
+export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = false, serviceOnly = false, workspace = false, user: verifiedUser }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const transportOnly = mobilityOnly || deliveryOnly;
@@ -74,7 +75,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
   const [isAgent, setIsAgent] = useState(false);
   const [isAllowed, setIsAllowed] = useState(null);
   const [missions, setMissions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [provider, setProvider] = useState(null);
   const [dispatchPresence, setDispatchPresence] = useState(null);
@@ -86,13 +87,17 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
   const loadVersion = useRef(0);
+  const offerMutation = useRef(false);
+  const availabilityMutation = useRef(false);
+  const [providerFailed, setProviderFailed] = useState(false);
+  const [profileAttempt, setProfileAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
 
     async function checkAccess() {
       try {
-        const { user } = await me();
+        const user = verifiedUser || (await me()).user;
         if (!active) return;
 
         if (!user) {
@@ -109,8 +114,9 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
         setIsAllowed(true); setIsAgent(role === 'agent');
 
         if (role === 'provider') {
+          setProviderFailed(false);
           const [myProvider, presence] = await Promise.all([
-            getMyProvider(),
+            getMyProvider().catch(() => { if (active) setProviderFailed(true); return null; }),
             getMyDispatchPresence().catch(() => null),
           ]);
           if (active) {
@@ -130,7 +136,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     return () => {
       active = false;
     };
-  }, [navigate]);
+  }, [navigate, verifiedUser, profileAttempt]);
 
   const loadMissions = useCallback(async ({ silent = false } = {}) => {
     const version = ++loadVersion.current;
@@ -166,6 +172,8 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
   async function handleRideOffer(event, mission, action) {
     event.preventDefault();
     event.stopPropagation();
+    if (offerMutation.current) return;
+    offerMutation.current = true;
     const missionId = mission.id;
     setRideAction({ missionId, action });
     setError(null);
@@ -180,6 +188,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     } catch (requestError) {
       setError(requestError?.response?.data?.error || t('myMissionsPage.errors.load'));
     } finally {
+      offerMutation.current = false;
       setRideAction(null);
     }
   }
@@ -204,6 +213,8 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
   }, [isAllowed, loadMissions, serviceOnly, transportOnly]);
 
   async function handleAvailabilityChange(availabilityStatus) {
+    if (availabilityMutation.current) return;
+    availabilityMutation.current = true;
     setSavingAvailability(true);
     setAvailabilityError(null);
     try {
@@ -247,6 +258,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
         e?.response?.data?.error || e?.message || t('myMissionsPage.errors.availability')
       );
     } finally {
+      availabilityMutation.current = false;
       setSavingAvailability(false);
     }
   }
@@ -260,40 +272,26 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-8 sm:py-10">
-      <div className="max-w-4xl mx-auto bg-surface-card/90 backdrop-blur-sm shadow-xl rounded-2xl border border-border/70 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {isAgent && <AgentCoordinationPanel />}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-text-primary">
-              {workspace ? t('fieldWorkspace.title') : serviceOnly
+    <div className="app-page-wrap">
+      <div className="app-page-shell max-w-4xl space-y-6">
+        <WorkspaceHeader title={workspace ? t('fieldWorkspace.title') : serviceOnly
                 ? t('serviceProvider.title')
                 : transportOnly
                 ? t(`${transportTranslationRoot}.driverTitle`)
-                : t('myMissionsPage.title')}
-            </h1>
-            <p className="mt-1 text-sm text-text-secondary">
-              {workspace ? t('fieldWorkspace.hint') : serviceOnly
+                : t('myMissionsPage.title')} hint={workspace ? t('workspace.fieldHint') : serviceOnly
                 ? t('serviceProvider.subtitle')
                 : transportOnly
                 ? t(`${transportTranslationRoot}.driverSubtitle`)
-                : t('myMissionsPage.subtitle')}
-            </p>
-          </div>
-          <button
-            onClick={() => loadMissions()}
-            disabled={loading}
-            className="app-btn-primary inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-full shadow-sm self-start sm:self-auto"
-          >
-            {loading ? t('myMissionsPage.loading') : t('myMissionsPage.buttons.refresh')}
-          </button>
-        </div>
+                : t('myMissionsPage.subtitle')} />
+        {isAgent && <AgentCoordinationPanel />}
 
         {error && (
-          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
+          <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
             {error === true ? t('myMissionsPage.errors.load') : error}
           </div>
         )}
+
+        {providerFailed && <div role="alert" className="app-alert app-alert-error">{t('workspace.providerUnavailable')} <button type="button" onClick={() => setProfileAttempt((value) => value + 1)} className="underline">{t('serviceOrders.retry')}</button></div>}
 
         {provider ? (
           <section className="mb-6 rounded-3xl border border-border bg-surface-main/60 p-4 sm:p-5">
@@ -351,12 +349,12 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
           </section>
         ) : null}
 
-        <button type="button" aria-pressed={showHistory} onClick={() => { setMissions([]); setOffset(0); setShowHistory((value) => !value); }} className="btn-secondary mb-4 min-h-11 rounded-xl px-4 text-sm">{t(showHistory ? 'fieldWorkspace.showActive' : 'fieldWorkspace.showHistory')}</button>
+        <div className="flex flex-wrap items-center justify-between gap-3"><button type="button" aria-pressed={showHistory} onClick={() => { setMissions([]); setOffset(0); setShowHistory((value) => !value); }} className="btn-secondary min-h-11 rounded-xl px-4 text-sm">{t(showHistory ? 'fieldWorkspace.showActive' : 'fieldWorkspace.showHistory')}</button><button type="button" onClick={() => loadMissions()} disabled={loading} className="btn-secondary min-h-11 rounded-xl px-4 text-sm">{t('myMissionsPage.buttons.refresh')}</button></div>
         {(total > 100 || offset > 0) && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm"><button type="button" disabled={!offset || loading} onClick={() => setOffset((value) => Math.max(0, value - 100))} className="btn-secondary min-h-11 rounded-xl px-4">{t('operations.previous')}</button><span>{offset + 1}–{offset + missions.length} / {total}</span><button type="button" disabled={offset + 100 >= total || loading} onClick={() => setOffset((value) => value + 100)} className="btn-secondary min-h-11 rounded-xl px-4">{t('operations.next')}</button></div>}
 
         {!loading && missions.length === 0 && !error ? (
           <p className="text-center text-text-muted italic py-10">
-            {serviceOnly
+            {showHistory ? t('workspace.emptyHistory') : serviceOnly
               ? t('serviceProvider.empty')
               : transportOnly
               ? t(`${transportTranslationRoot}.driverEmpty`)
@@ -364,7 +362,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
           </p>
         ) : (
           <ul className="space-y-3">
-            {missions.filter((mission) => showHistory ? isRequestHistory(mission) : !isRequestHistory(mission)).sort((a, b) => Number(Boolean(b.acceptanceDeadlineAt)) - Number(Boolean(a.acceptanceDeadlineAt)) || Number(a.missionStatus === 'COMPLETED') - Number(b.missionStatus === 'COMPLETED')).map((m) => {
+            {missions.filter((mission) => showHistory ? isRequestHistory(mission) : !isRequestHistory(mission)).sort((a, b) => Number(Boolean(b.acceptanceDeadlineAt)) - Number(Boolean(a.acceptanceDeadlineAt)) || Number(a.missionStatus === 'COMPLETED') - Number(b.missionStatus === 'COMPLETED')).map((m, index, list) => {
               const isOffer = Boolean(m.acceptanceDeadlineAt);
               const VehicleIcon = m.requestedVehicleType === 'car' ? CarFront : Bike;
               const missionTranslationRoot =
@@ -376,18 +374,16 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
               const actionTranslationRoot =
                 missionTranslationRoot || (serviceOnly ? 'serviceProvider' : 'myMissionsPage');
               return (
-                <li
-                  key={m.id}
+                <li key={m.id} className="space-y-3">
+                  {!showHistory && (index === 0 || Boolean(list[index - 1].acceptanceDeadlineAt) !== isOffer) && <h2 className="pt-2 text-lg font-bold">{t(isOffer ? 'workspace.offers' : 'workspace.jobs')}</h2>}
+                  <article aria-labelledby={`mission-card-${m.id}`}
                   className={`rounded-3xl border p-4 transition-colors ${
                     isOffer
                       ? 'border-blue-500/40 bg-blue-500/10 shadow-sm'
                       : 'border-border bg-surface-main/60'
                   }`}
                 >
-                  <Link
-                    to={missionDetailPath(m)}
-                    className="block"
-                  >
+                  <div>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="flex min-w-0 gap-3">
                         {transportOnly ? (
@@ -401,9 +397,9 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
                               {t(`${actionTranslationRoot}.newOffer`)}
                             </p>
                           ) : null}
-                          <div className="font-medium text-text-primary break-words">
+                          <h3 id={`mission-card-${m.id}`} className="font-medium text-text-primary break-words">
                             {m.title || t('myMissionsPage.missionFallback', { id: m.id })}
-                          </div>
+                          </h3>
                           <div className="mt-0.5 text-xs text-text-muted">
                             {m.tradeCategory?.name || t('myMissionsPage.tradeCategoryUnknown')}
                           </div>
@@ -436,7 +432,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
                         })}
                       </span>
                     </div>
-                  </Link>
+                  </div>
                   {isOffer ? (
                     <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
                       <button
@@ -465,6 +461,8 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
                       </button>
                     </div>
                   ) : null}
+                  <Link to={missionDetailPath(m)} className={`${isOffer ? 'text-blue-700 underline dark:text-blue-300' : 'btn-primary rounded-xl px-4'} mt-3 inline-flex min-h-12 items-center justify-center text-sm font-semibold`}>{t(isOffer ? 'serviceAgent.details' : ['COMPLETED', 'VALIDATED', 'CLOSED'].includes(m.missionStatus) ? 'workspace.viewReport' : ['EN_ROUTE', 'ON_SITE', 'IN_PROGRESS'].includes(m.missionStatus) ? 'workspace.continueWork' : 'workspace.openWork')}</Link>
+                  </article>
                 </li>
               );
             })}

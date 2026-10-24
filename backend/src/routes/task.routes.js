@@ -25,6 +25,7 @@ router.post(
 
 // 📋 Lister les tâches
 router.get('/', auth, requireRoles('client', 'agent', 'admin'), ctrl.list);
+router.get('/:id/workspace', auth, requireRoles('client', 'agent', 'admin'), ctrl.readWorkspace);
 
 // 📋 Lister les tâches d’un service
 router.get(

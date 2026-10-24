@@ -95,6 +95,8 @@ async function blockExternalTracking(page) {
 }
 
 let seededClientSession = null;
+let seededAdminSession = null;
+let seededAgentSession = null;
 
 async function loginAsSeededClient(request) {
   // Une session de recette par worker, comme un client qui reste connecté.
@@ -119,6 +121,7 @@ async function loginAsSeededClient(request) {
 }
 
 async function loginAsSeededAdmin(request) {
+  if (seededAdminSession) return seededAdminSession;
   const response = await request.post(`${API_BASE_URL}/auth/login`, {
     data: {
       email: E2E_ADMIN_EMAIL,
@@ -132,10 +135,19 @@ async function loginAsSeededAdmin(request) {
     `API admin login failed: ${JSON.stringify(body)}`
   ).toBeTruthy();
 
-  return {
+  seededAdminSession = {
     token: body.token,
     user: body.user,
   };
+  return seededAdminSession;
+}
+
+async function loginAsSeededAgent(request) {
+  if (seededAgentSession) return seededAgentSession;
+  const response = await request.post(`${API_BASE_URL}/auth/login`, { data: { email: 'e2e.real.agent@example.com', password: E2E_CLIENT_PASSWORD } });
+  expect(response.ok()).toBeTruthy();
+  seededAgentSession = await response.json();
+  return seededAgentSession;
 }
 
 async function seedAuthenticatedSession(page, user, token) {
@@ -166,6 +178,7 @@ module.exports = {
   blockExternalTracking,
   getMasterCountries,
   loginAsSeededAdmin,
+  loginAsSeededAgent,
   loginAsSeededClient,
   registerDisposableClient,
   seedUiPreferences,

@@ -19,10 +19,36 @@ function handleError(error, res) {
   return res.status(500).json({ error: 'Impossible de charger le suivi opérationnel' });
 }
 
+function queueFilters(req, alias, textField) {
+  const clauses = [];
+  if (req.query.owner && req.query.owner !== 'me') throw Object.assign(new Error('Filtre de responsable invalide'), { status: 400 });
+  if (req.query.owner === 'me') clauses.push({ [`$${alias}.owner_user_id$`]: req.user.id });
+  const q = String(req.query.q || '').trim().slice(0, 100);
+  if (q) {
+    const reference = /^#?([1-9][0-9]*)$/.exec(q);
+    const id = reference ? Number(reference[1]) : null;
+    clauses.push({ [Op.or]: [{ [textField]: { [Op.like]: `%${q}%` } }, ...(Number.isSafeInteger(id) ? [{ id }] : [])] });
+  }
+  return clauses;
+}
+// Les alias sont des constantes internes ; les priorités précèdent la pagination.
+function queueOrder(alias) {
+  return [
+    [db.sequelize.literal(`CASE WHEN \`${alias}\`.\`state\` = 'escalated' THEN 0 ELSE 1 END`), 'ASC'],
+    [db.sequelize.literal(`CASE WHEN \`${alias}\`.\`next_action_at\` IS NULL THEN 1 ELSE 0 END`), 'ASC'],
+    [{ model: alias === 'coordination' ? db.MissionCoordination : db.WorkCoordination, as: alias }, 'nextActionAt', 'ASC'],
+  ];
+}
+
 exports.list = async (req, res) => {
   try {
     if (req.query.entityType && req.query.entityType !== 'service') return await listWork(req, res);
-    const clauses = [];
+    const clauses = queueFilters(req, 'coordination', 'title');
+    if (req.query.id) {
+      const id = Number(req.query.id);
+      if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Demande invalide' });
+      clauses.push({ id });
+    }
     for (const field of ['countryId', 'regionId']) {
       if (req.query[field]) {
         const value = Number(req.query[field]);
@@ -30,7 +56,6 @@ exports.list = async (req, res) => {
         clauses.push({ [field]: value });
       }
     }
-    if (req.query.q) clauses.push({ [Op.or]: [{ title: { [Op.like]: `%${String(req.query.q).slice(0, 100)}%` } }, ...(Number.isInteger(Number(req.query.q)) ? [{ id: Number(req.query.q) }] : [])] });
     if (req.query.attention === 'true') clauses.push({ '$coordination.state$': 'escalated' });
     if (req.query.open !== 'false') clauses.push({ [Op.or]: [
       { missionStatus: { [Op.notIn]: TERMINAL } },
@@ -43,10 +68,12 @@ exports.list = async (req, res) => {
       where, include: [
         { model: db.MissionCoordination, as: 'coordination', required: false, include: [{ model: db.User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email'] }] },
         { model: db.TradeCategory, as: 'tradeCategory', attributes: ['id', 'name', 'slug'] },
+        { model: db.User, as: 'agent', attributes: ['id', 'firstName', 'lastName'] },
+        { model: db.Provider, as: 'provider', attributes: ['id', 'displayFirstName'] },
         { model: db.Country, as: 'country', attributes: ['id', 'name', 'currency'] },
         { model: db.Region, as: 'region', attributes: ['id', 'name'] },
       ],
-      order: [['createdAt', 'ASC'], ['id', 'ASC']], limit: pagination.limit, offset: pagination.offset,
+      order: [...queueOrder('coordination'), ['createdAt', 'ASC'], ['id', 'ASC']], limit: pagination.limit, offset: pagination.offset,
       distinct: true, subQuery: false,
     });
     return res.json({ items: rows, pagination: { ...pagination, total: count }, serverTime: new Date().toISOString() });
@@ -56,7 +83,12 @@ exports.list = async (req, res) => {
 async function listWork(req, res) {
   const type = req.query.entityType;
   const Model = modelFor(type);
-  const clauses = [applyGeoScopeForModel({}, req.user, Model)];
+  const clauses = [applyGeoScopeForModel({}, req.user, Model), ...queueFilters(req, 'workCoordination', type === 'order' ? 'code' : 'title')];
+  if (req.query.id) {
+    const id = Number(req.query.id);
+    if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Demande invalide' });
+    clauses.push({ id });
+  }
   for (const field of ['countryId', 'regionId']) if (req.query[field]) {
     const value = Number(req.query[field]);
     if (!Number.isSafeInteger(value) || value <= 0) return res.status(400).json({ error: 'Périmètre invalide' });
@@ -72,7 +104,7 @@ async function listWork(req, res) {
     ] },
     { model: db.Country, as: 'country', attributes: ['id', 'name', 'currency'] },
     { model: db.Region, as: 'region', attributes: ['id', 'name'] },
-  ], order: [[Model.rawAttributes.created_at ? 'created_at' : 'createdAt', 'ASC'], ['id', 'ASC']], limit: pagination.limit, offset: pagination.offset, distinct: true, subQuery: false });
+  ], order: [...queueOrder('workCoordination'), [Model.rawAttributes.created_at ? 'created_at' : 'createdAt', 'ASC'], ['id', 'ASC']], limit: pagination.limit, offset: pagination.offset, distinct: true, subQuery: false });
   return res.json({ items: rows.map((row) => ({ ...row.toJSON(), entityType: type, title: row.title || row.code,
     coordination: row.workCoordination })), pagination: { ...pagination, total: count }, serverTime: new Date().toISOString() });
 }

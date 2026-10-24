@@ -1,42 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useGeo } from '../contexts/GeoContext';
-import { getLocalUser } from '../services/auth';
-import { getAssignableAgents, getFieldReadiness, getOperatingCatalog, getOperations, updateCoordination, updateOperatingOffer } from '../services/operations';
-import { getRequestDetailPath } from '../utils/requestLifecycle';
-
-function WorkSettings({ item, agents, onSaved }) {
-  const { t } = useTranslation();
-  const [agentId, setAgentId] = useState(item.coordination?.executorUserId || item.agentId || '');
-  const [minutes, setMinutes] = useState(item.coordination?.policy?.stageMinutes || (item.entityType === 'project' ? 1440 : 60));
-  const [dirty, setDirty] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    if (!dirty) { setAgentId(item.coordination?.executorUserId || item.agentId || ''); setMinutes(item.coordination?.policy?.stageMinutes || (item.entityType === 'project' ? 1440 : 60)); }
-  }, [dirty, item]);
-  async function save(event) {
-    event.preventDefault(); setBusy(true); setError('');
-    try {
-      const assignmentChanged = String(agentId || '') !== String(item.coordination?.executorUserId || item.agentId || '');
-      await updateCoordination(item.id, { ...(item.status === 'created' && assignmentChanged ? { executorUserId: agentId ? Number(agentId) : null, mode: 'manual' } : {}), policy: { stageMinutes: Number(minutes) } }, item.entityType);
-      setDirty(false); await onSaved();
-    } catch (failure) { setError(failure?.response?.data?.error || t('operations.failed')); }
-    finally { setBusy(false); }
-  }
-  const choices = agents.filter((agent) => (!agent.countryId || String(agent.countryId) === String(item.countryId)) && (!agent.regionId || String(agent.regionId) === String(item.regionId)));
-  return <form onSubmit={save} className="space-y-2 border-t border-border pt-3">
-    {item.status === 'created' && <label className="block text-sm" htmlFor={`executor-${item.entityType}-${item.id}`}>{t('operations.executor')}
-      <select id={`executor-${item.entityType}-${item.id}`} value={agentId} onChange={(event) => { setAgentId(event.target.value); setDirty(true); }} className="ml-2 rounded-lg border border-border bg-surface-main p-2">
-        <option value="">{t('operations.toDefine')}</option>{choices.map((agent) => <option key={agent.id} value={agent.id}>{[agent.firstName, agent.lastName].filter(Boolean).join(' ') || agent.email || `#${agent.id}`}</option>)}
-      </select></label>}
-    <label className="block text-sm" htmlFor={`deadline-${item.entityType}-${item.id}`}>{t('operations.sla')}
-      <input id={`deadline-${item.entityType}-${item.id}`} type="number" min="1" max="10080" required value={minutes} onChange={(event) => { setMinutes(event.target.value); setDirty(true); }} className="ml-2 w-24 rounded-lg border border-border bg-surface-main p-2" /></label>
-    <button type="submit" disabled={busy} className="btn-secondary rounded-lg px-3 py-2 text-sm">{t('operations.save')}</button>
-    {error && <p role="alert">{error}</p>}
-  </form>;
-}
+import { updateOperatingOffer } from '../services/operations';
+import OperationsQueue from '../features/mission-tracking/OperationsQueue';
 
 function OfferSettings({ entry, onSaved, user }) {
   const { t } = useTranslation();
@@ -53,11 +18,13 @@ function OfferSettings({ entry, onSaved, user }) {
   const [escalationMinutes, setEscalationMinutes] = useState(policy.escalationMinutes || 15);
   const [reminderMinutes, setReminderMinutes] = useState(policy.reminderMinutes || 60);
   const [saving, setSaving] = useState(false);
+  const sending = useRef(false);
   const [message, setMessage] = useState('');
   const [isActive, setIsActive] = useState(initial.isActive !== false);
   useEffect(() => { setIsActive(initial.isActive !== false); }, [initial.isActive]);
   const canManage = !user?.regionId || String(user.regionId) === String(entry.territory?.regionId);
   async function changeAvailability() {
+    if (sending.current) return; sending.current = true;
     const next = !isActive;
     setSaving(true); setMessage('');
     try {
@@ -66,16 +33,16 @@ function OfferSettings({ entry, onSaved, user }) {
       setMessage(t(next ? 'operations.offerReopened' : 'operations.offerSuspended'));
       await onSaved();
     } catch (error) { setMessage(error?.response?.data?.error || t('operations.failed')); }
-    finally { setSaving(false); }
+    finally { sending.current = false; setSaving(false); }
   }
   async function save(event) {
-    event.preventDefault(); setSaving(true); setMessage('');
+    event.preventDefault(); if (sending.current) return; sending.current = true; setSaving(true); setMessage('');
     try {
       await updateOperatingOffer(entry.id, { slaMinutes: Number(sla), providerRules: { ...rules, serviceOutcome: outcome,
         requiredEvidenceTypes: required, coordination: { ...policy, enabled, maxAttempts: Number(attempts), acceptanceSeconds: Number(seconds), startMinutes: Number(startMinutes), escalationMinutes: Number(escalationMinutes), reminderMinutes: Number(reminderMinutes) } } });
       setMessage(t('operations.saved')); onSaved();
     } catch (error) { setMessage(error?.response?.data?.error || t('operations.failed')); }
-    finally { setSaving(false); }
+    finally { sending.current = false; setSaving(false); }
   }
   const prefix = `offer-${entry.id}`;
   return <form onSubmit={save} className="space-y-3 rounded-2xl border border-border bg-surface-card p-4">
@@ -111,129 +78,6 @@ function OfferSettings({ entry, onSaved, user }) {
   </form>;
 }
 
-export default function OperationsPage({ initialEntityType = 'all' }) {
-  const { t, i18n } = useTranslation();
-  const { countryId, regionId } = useGeo();
-  const [items, setItems] = useState([]);
-  const [catalog, setCatalog] = useState([]);
-  const [agents, setAgents] = useState([]);
-  const [readiness, setReadiness] = useState(null);
-  const [error, setError] = useState('');
-  const [setupError, setSetupError] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(null);
-  const [entityType, setEntityType] = useState(initialEntityType);
-  const [totals, setTotals] = useState({});
-  const [attention, setAttention] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [user] = useState(getLocalUser);
-  const generation = useRef(0);
-  const boardRequest = useRef(0);
-  const setupRequest = useRef(0);
-  const mutation = useRef(false);
-  const loadBoard = useCallback(async () => {
-    const epoch = generation.current;
-    const request = ++boardRequest.current;
-    try {
-      const types = entityType === 'all' ? ['service', 'project', 'order'] : [entityType];
-      const results = await Promise.allSettled(types.map((type) => getOperations({ countryId, regionId, entityType: type, attention: attention ? true : undefined, limit: 25, offset: entityType === 'all' ? 0 : offset })));
-      if (generation.current !== epoch || boardRequest.current !== request) return;
-      const loaded = []; const counts = {}; const failed = [];
-      results.forEach((result, index) => {
-        const type = types[index];
-        if (result.status === 'rejected') { failed.push(type); return; }
-        counts[type] = result.value.pagination?.total || 0;
-        loaded.push(...(result.value.items || []).map((item) => ({ ...item, entityType: type })));
-      });
-      const deadline = (item) => item.coordination?.nextActionAt ? new Date(item.coordination.nextActionAt).getTime() : Infinity;
-      if (entityType === 'all') loaded.sort((a, b) => Number(b.coordination?.state === 'escalated') - Number(a.coordination?.state === 'escalated') || deadline(a) - deadline(b));
-      setItems(loaded); setTotals(counts); setTotal(Object.values(counts).reduce((sum, count) => sum + count, 0));
-      setError(failed.length ? t('operationsOverview.partial', { types: failed.map((type) => t(`operations.entities.${type}`)).join(', ') }) : '');
-    } catch (failure) {
-      if (generation.current === epoch && boardRequest.current === request) { setItems([]); setTotal(0); setError(failure?.response?.data?.error || t('operations.failed')); }
-    } finally { if (generation.current === epoch && boardRequest.current === request) setLoading(false); }
-  }, [countryId, regionId, entityType, attention, offset, t]);
-  const loadSetup = useCallback(async () => {
-    const epoch = generation.current;
-    const request = ++setupRequest.current;
-    try {
-      const [offers, check, executors] = await Promise.all([getOperatingCatalog({ countryId, regionId }), countryId ? getFieldReadiness({ countryId, regionId }) : Promise.resolve(null), entityType === 'service' ? Promise.resolve([]) : getAssignableAgents({ countryId, regionId })]);
-      if (generation.current !== epoch || setupRequest.current !== request) return;
-      setCatalog(offers); setReadiness(check); setAgents(executors); setSetupError('');
-    } catch (failure) { if (generation.current === epoch && setupRequest.current === request) { setReadiness(null); setCatalog([]); setSetupError(failure?.response?.data?.error || t('operations.failed')); } }
-  }, [countryId, regionId, entityType, t]);
-  useEffect(() => {
-    setOffset(0);
-  }, [countryId, regionId]);
-  useEffect(() => {
-    generation.current += 1; setItems([]); setTotals({}); setTotal(0); setReadiness(null); setCatalog([]); setLoading(true);
-    loadBoard(); loadSetup();
-    const timer = setInterval(() => { if (document.visibilityState === 'visible') loadBoard(); }, 15000);
-    return () => { generation.current += 1; clearInterval(timer); };
-  }, [loadBoard, loadSetup]);
-  async function configure(item, mode) {
-    if (mutation.current) return;
-    mutation.current = true;
-    const epoch = generation.current;
-    const type = item.entityType || entityType;
-    setBusy(`${type}:${item.id}`);
-    try {
-      const payload = { mode, ...(user?.id ? { ownerUserId: user.id } : {}) };
-      if (type === 'service') await updateCoordination(item.id, payload);
-      else await updateCoordination(item.id, payload, type);
-      if (generation.current === epoch) await loadBoard();
-    } catch (failure) { if (generation.current === epoch) setError(failure?.response?.data?.error || t('operations.failed')); }
-    finally { mutation.current = false; setBusy(null); }
-  }
-  const date = (value) => value ? new Date(value).toLocaleString(i18n.language) : t('operations.toDefine');
-  return <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 text-text-primary">
-    <header><h1 className="text-2xl font-bold">{t('operations.title')}</h1><p className="mt-2 text-text-secondary">{t('operations.subtitle')}</p></header>
-    <section aria-label={t('operations.readiness')} className="rounded-2xl border border-border bg-surface-card p-4">
-      <h2 className="text-lg font-semibold">{t('operations.readiness')}</h2>
-      {setupError && <p role="alert">{setupError}</p>}
-      {!countryId && <p>{t('operations.selectCountry')}</p>}
-      {readiness && <><p className="my-2 font-semibold">{t(readiness.ready ? 'operations.configurationReady' : 'operations.configurationIncomplete')}</p>
-        {readiness.automation && <p className="mb-2 text-sm">{t('operations.automationCoverage', { enabled: readiness.automation.enabledOffers, total: readiness.activeOffers, agents: readiness.automation.availableAgents })}</p>}
-        <ul className="list-disc space-y-1 pl-5">{readiness.issues.map((issue, index) => <li key={`${issue.code}-${index}`}>{issue.message}</li>)}</ul>
-        <p className="mt-3 text-sm text-text-secondary">{t('operations.fieldChecksRemain')}</p></>}
-    </section>
-    <section aria-label={t('operations.queue')} className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">{t('operations.queue')}</h2>
-        <label className="text-sm"><input type="checkbox" checked={attention} onChange={(event) => { setAttention(event.target.checked); setOffset(0); }} /> {t('operations.attentionOnly')}</label>
-        <button type="button" onClick={() => { loadBoard(); loadSetup(); }} className="btn-secondary rounded-lg px-4 py-2">{t('operations.refresh')}</button>
-      </div>
-      <label htmlFor="operation-type" className="block text-sm">{t('operations.entityType')} <select id="operation-type" value={entityType} onChange={(event) => { setEntityType(event.target.value); setOffset(0); }} className="rounded-lg border border-border bg-surface-main p-2"><option value="all">{t('operationsOverview.all')}</option>{['service', 'project', 'order'].map((type) => <option key={type} value={type}>{t(`operations.entities.${type}`)}</option>)}</select></label>
-      {entityType === 'all' && <div className="flex flex-wrap gap-2">{Object.entries(totals).map(([type, count]) => <button key={type} type="button" onClick={() => { setEntityType(type); setOffset(0); }} className="btn-secondary min-h-11 rounded-xl px-4 py-2 text-sm">{t(`operations.entities.${type}`)} ({count})</button>)}<p className="w-full text-xs text-text-secondary">{t('operationsOverview.limit')}</p></div>}
-      {error && <p role="alert">{error}</p>}
-      {loading && <p role="status">{t('operations.loading')}</p>}
-      {!loading && !error && !items.length && <p>{t('operations.empty')}</p>}
-      <div className="grid gap-4 lg:grid-cols-2">{items.map((item) => {
-        const type = item.entityType;
-        return <article key={`${type}-${item.id}`} aria-labelledby={`operation-${type}-${item.id}`} className="space-y-3 rounded-2xl border border-border bg-surface-card p-4">
-        <p className="text-xs font-semibold text-text-secondary">{t(`operations.entities.${type}`)}</p>
-        <h3 id={`operation-${type}-${item.id}`} className="font-semibold"><Link to={type === 'service' ? getRequestDetailPath(item, undefined, 'admin') : `/${type === 'project' ? 'projects' : 'orders'}/${item.id}`} className="underline">#{item.id} · {item.title}</Link></h3>
-        <p className="text-sm">{item.country?.name} {item.region?.name ? `· ${item.region.name}` : ''} · {item.tradeCategory?.name || item.type}</p>
-        <p>{t('operations.state')}: {t(`operations.states.${item.coordination?.state || 'waiting'}`)}</p>
-        <p className="text-sm">{t('operations.owner')}: {[item.coordination?.owner?.firstName, item.coordination?.owner?.lastName].filter(Boolean).join(' ') || item.coordination?.owner?.email || t('operations.toDefine')}</p>
-        <p className="text-sm">{t('operations.nextAction')}: {date(item.coordination?.nextActionAt)}</p>
-        <p className="text-sm">{t('operations.attempts')}: {item.coordination?.attempts?.length || 0}</p>
-        {item.coordination?.reason && <p className="text-sm text-amber-700 dark:text-amber-300">{t(`operations.reasons.${item.coordination.reason}`, { defaultValue: item.coordination.reason })}</p>}
-        <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={Boolean(busy)} onClick={() => configure(item, 'manual')} className="btn-secondary rounded-lg px-3 py-2 text-sm">{t('operations.takeOwnership')}</button>
-          {((type === 'service' && (['CREATED', 'SEARCHING_EXECUTOR'].includes(item.missionStatus) || (!item.missionStatus && item.status === 'created' && !item.agentId))) || (type !== 'service' && item.status === 'created' && !item.agentId && !item.coordination?.executorUserId)) && <button type="button" disabled={Boolean(busy)} onClick={() => configure(item, 'automatic')} className="btn-primary rounded-lg px-3 py-2 text-sm">{t('operations.startAutomatic')}</button>}
-          <Link to={type === 'service' ? '/admin/services' : type === 'project' ? '/admin/projects' : '/orders'} className="btn-secondary rounded-lg px-3 py-2 text-sm">{t('operations.assignManually')}</Link>
-        </div>
-        {type !== 'service' && <WorkSettings item={item} agents={agents} onSaved={loadBoard} />}
-      </article>; })}</div>
-      {entityType !== 'all' && <div className="flex items-center justify-between gap-3"><button type="button" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 25))} className="btn-secondary rounded-lg px-3 py-2 disabled:opacity-50">{t('operations.previous')}</button>
-        <p className="text-sm">{items.length ? offset + 1 : 0}–{offset + items.length} / {total}</p>
-        <button type="button" disabled={offset + 25 >= total} onClick={() => setOffset(offset + 25)} className="btn-secondary rounded-lg px-3 py-2 disabled:opacity-50">{t('operations.next')}</button></div>}
-    </section>
-    <details className="space-y-4 rounded-2xl border border-border bg-surface-card p-4"><summary className="cursor-pointer text-lg font-semibold">{t('operations.catalog')}</summary>
-      <section aria-label={t('operations.catalog')}>
-      <div className="grid gap-4 lg:grid-cols-2">{catalog.map((entry) => <OfferSettings key={entry.id} entry={entry} user={user} onSaved={loadSetup} />)}</div>
-      </section>
-    </details>
-  </main>;
+export default function OperationsPage(props) {
+  return <OperationsQueue {...props} renderOffer={(entry, onSaved, user) => <OfferSettings key={entry.id} entry={entry} onSaved={onSaved} user={user} />} />;
 }

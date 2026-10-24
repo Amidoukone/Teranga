@@ -145,7 +145,9 @@ function parsePagination(urlString) {
 
 function paginate(items, urlString) {
   const { page, limit } = parsePagination(urlString);
-  const start = (page - 1) * limit;
+  const rawOffset = new URL(urlString).searchParams.get('offset');
+  const offset = rawOffset === null ? null : Number(rawOffset);
+  const start = Number.isSafeInteger(offset) && offset >= 0 ? offset : (page - 1) * limit;
   const slice = items.slice(start, start + limit);
   return {
     items: slice,
@@ -276,6 +278,25 @@ async function installApiMocks(page, options = {}) {
       return;
     }
 
+    if (method === 'GET' && path === '/operations/workspace') {
+      const params = new URL(request.url()).searchParams;
+      let items = state.workspaceItems;
+      if (!items) {
+        items = user.role === 'provider' ? [] : state.services.filter((item)=>!['validated','cancelled'].includes(item.status)).map((item)=>({ ...item,key:`service:${item.id}`,kind:'service',openStepCount:0,actionStepCount:0,
+          action:user.role==='client' && item.status==='completed' ? {code:'result_review',kind:'service',id:item.id} : user.role==='admin' ? {code:'coordinate',kind:'service',id:item.id} : null }));
+      }
+      const q=(params.get('q')||'').toLowerCase(),kind=params.get('kind')||'all';
+      const filtered=items.filter((item)=>(kind==='all'||item.kind===kind)&&(!q||String(item.title).toLowerCase().includes(q)||String(item.id)===q.replace('#','')));
+      const action=filtered.filter((item)=>item.action).length,following=filtered.length-action;
+      const visible=filtered.filter((item)=>params.get('view')==='following' ? !item.action : Boolean(item.action));
+      const paged=paginate(visible,request.url());
+      return fulfillJson(route,200,{items:paged.items,pagination:paged.pagination,summary:{action,following,unread:computeNotificationSummary(state.notifications).unread}});
+    }
+    if (method === 'GET' && /^\/tasks\/\d+\/workspace$/.test(path)) {
+      const task=state.tasks.find((item)=>Number(item.id)===Number(path.split('/')[2]));
+      if(!task)return fulfillJson(route,404,{error:'Intervention introuvable'});
+      return fulfillJson(route,200,{task:{...task,capabilities:{canStart:task.status==='created'&&(user.role==='admin'||task.assignedTo===user.id),canComplete:task.status==='in_progress'&&(user.role==='admin'||task.assignedTo===user.id),canValidate:task.status==='completed'&&user.role==='admin',canAccessEvidence:true}},viewer:{id:user.id,role:user.role},parentServiceId:null});
+    }
     if (method === 'GET' && path === '/dashboard/summary') {
       await fulfillJson(route, 200, {
         services: { total: state.services.length },
@@ -287,7 +308,17 @@ async function installApiMocks(page, options = {}) {
     }
 
     if (method === 'GET' && path === '/services/me') {
-      const paged = paginate(state.services, request.url());
+      const query = new URL(request.url()).searchParams;
+      const view = query.get('view');
+      const terminal = ['VALIDATED', 'CLOSED', 'CANCELLED_BY_CLIENT', 'NO_EXECUTOR_FOUND', 'RESOLVED_REFUND', 'RESOLVED_REDO', 'RESOLVED_CLOSED'];
+      const items = state.services.filter((item) => {
+        const status = String(item.missionStatus || item.status || '').toUpperCase();
+        return view === 'review' ? status === 'COMPLETED' : view === 'history' ? terminal.includes(status) : view === 'active' ? !terminal.includes(status) : view === 'ongoing' ? status !== 'COMPLETED' && !terminal.includes(status) : true;
+      }).filter((item) => {
+        const kind = item.tradeCategory?.slug === 'mobilite' ? 'taxi' : item.tradeCategory?.slug === 'livraison' ? 'delivery' : 'service';
+        return (!query.get('kind') || query.get('kind') === 'all' || query.get('kind') === kind) && (!query.get('q') || String(item.title).toLowerCase().includes(query.get('q').toLowerCase()));
+      });
+      const paged = paginate(items, request.url());
       await fulfillJson(route, 200, {
         services: paged.items,
         pagination: paged.pagination,
@@ -327,6 +358,22 @@ async function installApiMocks(page, options = {}) {
       return;
     }
 
+    if (method === 'GET' && /^\/tasks\/service\/\d+$/.test(path)) {
+      const serviceId = Number(path.split('/').pop());
+      const taskId = Number(new URL(request.url()).searchParams.get('taskId'));
+      const tasks = state.tasks.filter((item) => Number(item.serviceId) === serviceId && (!taskId || Number(item.id) === taskId));
+      if (new URL(request.url()).searchParams.get('workspace') !== 'true') return fulfillJson(route, 200, { tasks });
+      const service = state.services.find((item) => Number(item.id) === serviceId) || null;
+      const paged = paginate(tasks, request.url());
+      return fulfillJson(route, 200, { tasks: paged.items.map((item) => ({ ...item, capabilities: {
+        canStart: (user.role === 'admin' || item.assignedTo === user.id) && item.status === 'created',
+        canComplete: (user.role === 'admin' || item.assignedTo === user.id) && item.status === 'in_progress',
+        canValidate: user.role === 'admin' && item.status === 'completed', canAssign: user.role === 'admin' && item.status === 'created', canAccessEvidence: true,
+      } })), pagination: paged.pagination, viewer: { id: user.id, role: user.role }, canCreate: Boolean(service && ['client', 'admin'].includes(user.role)), serviceContext: service });
+    }
+    if (method === 'GET' && /^\/tasks\/\d+\/evidences$/.test(path)) {
+      return fulfillJson(route, 200, { evidences: (state.evidences || []).filter((item) => Number(item.taskId) === Number(path.split('/')[2])) });
+    }
     if (method === 'GET' && path === '/tasks') {
       await fulfillJson(route, 200, { tasks: state.tasks });
       return;
@@ -340,8 +387,10 @@ async function installApiMocks(page, options = {}) {
         description: body.description || '',
         type: body.type || 'other',
         priority: body.priority || 'normal',
-        status: 'pending',
+        status: 'created',
         serviceId: Number(body.serviceId) || state.services[0]?.id || null,
+        assignedTo: body.assignedTo ? Number(body.assignedTo) : null,
+        currency: body.currency || state.services.find((item) => Number(item.id) === Number(body.serviceId))?.currency || 'XOF',
         createdAt: nowIso(),
         updatedAt: nowIso(),
       };
@@ -381,6 +430,22 @@ async function installApiMocks(page, options = {}) {
     if (method === 'GET' && path === '/notifications/summary') {
       await fulfillJson(route, 200, computeNotificationSummary(state.notifications));
       return;
+    }
+
+    if (method === 'GET' && path === '/operations/updates') {
+      const params = new URL(request.url()).searchParams;
+      const items = state.notifications.filter((item) => (!params.get('status') || params.get('status') === 'all' || item.status === params.get('status')) && (!params.get('entityType') || params.get('entityType') === item.entityType))
+        .map((item) => ({ ...item, key: `notification:${item.id}`, source: 'notification', notificationId: item.id, activityId: null,
+          version: 'a'.repeat(64), occurredAt: item.updatedAt || item.createdAt }));
+      const paged = paginate(items, request.url());
+      return fulfillJson(route, 200, { items: paged.items, pagination: paged.pagination, summary: computeNotificationSummary(state.notifications) });
+    }
+    if (method === 'DELETE' && /^\/operations\/updates\/notification\/\d+$/.test(path)) {
+      state.notifications = state.notifications.filter((item) => String(item.id) !== path.split('/').pop());
+      return fulfillJson(route, 200, { deleted: true });
+    }
+    if (method === 'DELETE' && path === '/operations/updates/cleanup') {
+      return fulfillJson(route, 200, { deleted: 0 });
     }
 
     if (method === 'PATCH' && path === '/notifications/read-all') {

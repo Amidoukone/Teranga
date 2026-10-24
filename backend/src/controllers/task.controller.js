@@ -1,6 +1,6 @@
 "use strict";
 
-const { Task, Service, User, Property, Country } = require("../../models");
+const { Task, Service, User, Property, Country, TradeCategory } = require("../../models");
 const { Op } = require("sequelize");
 
 // 🌍 Geo scope utils (strict)
@@ -28,6 +28,7 @@ const {
 const { emitEvent } = require("../services/activity.service");
 const logger = require('../utils/logger');
 const { normalizeCurrency } = require('../utils/currency');
+const { taskCapabilities } = require('../utils/taskAccess');
 
 /* ============================================================
    🧩 Helpers généraux
@@ -379,6 +380,29 @@ exports.list = async (req, res) => {
   }
 };
 
+// Dossier limité d'une intervention : ne renvoie pas les détails du parent
+// lorsqu'un acteur possède seulement un droit sur cette tâche.
+exports.readWorkspace = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Étape invalide' });
+    let where = { id };
+    if (req.user.role === 'agent') where[Op.or] = [{ assignedTo: req.user.id }, { '$service.agentId$': req.user.id }];
+    if (req.user.role === 'client') where[Op.or] = [{ creatorId: req.user.id }, { '$service.clientId$': req.user.id }, { '$property.ownerId$': req.user.id }];
+    where = applyTaskGeoScope(where, req.user);
+    const task = await Task.findOne({ where, include: BASE_INCLUDES.map((include) => include.as === 'service' ? { ...include, attributes: [...include.attributes, 'parentServiceId'] } : include) });
+    if (!task || !canAccessByGeoScope(req.user,task)) return res.status(404).json({ error: 'Intervention introuvable dans vos accès' });
+    const value = addLabels(task);
+    const parent = task.service;
+    const canReadParent = parent && (req.user.role === 'client' ? parent.clientId === req.user.id && !parent.parentServiceId
+      : canAccessByGeoScope(req.user, parent) && (req.user.role === 'admin' || parent.agentId === req.user.id));
+    const { service, property, creator, ...safe } = value;
+    if (safe.assignee) safe.assignee = { id: safe.assignee.id, firstName: safe.assignee.firstName, lastName: safe.assignee.lastName };
+    res.set('Cache-Control', 'no-store');
+    return res.json({ task: { ...safe, capabilities: taskCapabilities(task.toJSON(), req.user) }, viewer: { id: req.user.id, role: req.user.role }, parentServiceId: canReadParent ? parent.id : null });
+  } catch (error) { logger.error({ err: error }, 'task.workspace.failed'); return res.status(503).json({ error: 'Intervention indisponible' }); }
+};
+
 /* ============================================================
    🔹 LIST BY SERVICE
    - ACL existante conservée
@@ -411,6 +435,27 @@ exports.listByService = async (req, res) => {
 
     // 🌍 GeoScope (admin scoped)
     where = applyTaskGeoScope(where, req.user);
+
+    if (req.query.workspace === 'true') {
+      const pagination = getPagination(req, 20, 100);
+      if (req.query.taskId) {
+        const taskId = Number(req.query.taskId);
+        if (!Number.isSafeInteger(taskId) || taskId <= 0) return res.status(400).json({ error: 'Étape invalide' });
+        where.id = taskId;
+      }
+      const service = await Service.findByPk(serviceId, { attributes: ['id', 'title', 'clientId', 'agentId', 'currency', 'countryId', 'regionId', 'missionStatus', 'requestedVehicleType'],
+        include: [{ model: TradeCategory, as: 'tradeCategory', attributes: ['slug'] }] });
+      const canRead = service && (req.user.role === 'client' ? service.clientId === req.user.id
+        : canAccessByGeoScope(req.user, service) && (req.user.role === 'admin' || service.agentId === req.user.id));
+      const { rows, count } = await Task.findAndCountAll({ where, include: BASE_INCLUDES,
+        order: [['createdAt', 'DESC'], ['id', 'DESC']], limit: pagination.limit, offset: pagination.offset,
+        distinct: true, subQuery: false });
+      return res.json({ tasks: rows.map((task) => ({ ...addLabels(task), capabilities: taskCapabilities(task.toJSON(), req.user) })),
+        pagination: { ...pagination, total: count },
+        viewer: { id: req.user.id, role: req.user.role },
+        canCreate: Boolean(canRead && ['client', 'admin'].includes(req.user.role)),
+        serviceContext: canRead ? service : null });
+    }
 
     const tasks = await Task.findAll({
       where,

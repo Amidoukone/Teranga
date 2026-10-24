@@ -89,7 +89,7 @@ function getBestEffortPosition() {
  * @param {string} [notes]
  * @returns {Promise<Array>} Liste des preuves creees
  */
-export async function uploadEvidences(taskId, files = [], notes = '') {
+export async function uploadEvidences(taskId, files = [], notes = '', { withMetadata = false } = {}) {
   if (!taskId) throw new Error('taskId requis pour upload');
   assertFiles(files);
 
@@ -114,7 +114,7 @@ export async function uploadEvidences(taskId, files = [], notes = '') {
     timeout: UPLOAD_TIMEOUT_MS,
   });
 
-  return asEvidenceArray(data);
+  return withMetadata ? { ...data, evidences: asEvidenceArray(data) } : asEvidenceArray(data);
 }
 
 /**

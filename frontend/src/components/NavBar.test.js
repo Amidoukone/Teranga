@@ -8,7 +8,7 @@ import {
   getToken,
   hasSessionHint,
 } from "../services/auth";
-import { getNotificationSummary } from "../services/notifications";
+import { getNotificationSummary, markAllNotificationsRead } from "../services/notifications";
 
 const mockNavigate = jest.fn();
 
@@ -93,6 +93,7 @@ describe("NavBar logout flow", () => {
     getToken.mockReturnValue("test-token");
     hasSessionHint.mockReturnValue(true);
     getNotificationSummary.mockResolvedValue({ unread: 0, byProgress: {} });
+    markAllNotificationsRead.mockClear();
   });
 
   test("redirects to login with a logout success message", async () => {
@@ -210,7 +211,22 @@ describe("NavBar logout flow", () => {
     render(<NavBar />);
     const links = await screen.findAllByRole("link", { name: "operations.title" });
     expect(links.length).toBeGreaterThanOrEqual(2);
-    links.forEach((link) => expect(link).toHaveAttribute("href", "/admin/operations"));
+    links.forEach((link) => expect(link).toHaveAttribute("href", expect.stringMatching(/^\/operations(?:\?|$)/)));
+  });
+
+  test.each(['client', 'agent', 'provider', 'admin'])('keeps one named centre for %s and opening it does not mark everything read', async (role) => {
+    const account = { ...mockUser, role };
+    getLocalUser.mockReturnValue(account); me.mockResolvedValue({ user: account });
+    getNotificationSummary.mockResolvedValue({ unread: 3, byProgress: {} });
+    render(<NavBar />);
+    const links = await screen.findAllByRole('link', { name: 'operations.title' });
+    const shortcut = links.find((link) => link.getAttribute('href') === '/operations?vue=a-lire');
+    expect(shortcut).toBeDefined();
+    shortcut.addEventListener('click', (event) => event.preventDefault());
+    fireEvent.click(shortcut);
+    expect(markAllNotificationsRead).not.toHaveBeenCalled();
+    expect(screen.queryByRole('link', { name: 'nav.notifications' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav.activities' })).not.toBeInTheDocument();
   });
 
   test("keeps client technical objects out of the navigation", async () => {

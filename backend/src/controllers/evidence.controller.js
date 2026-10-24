@@ -24,6 +24,7 @@ const logger = require('../utils/logger');
 const { resolveUploadsRoot } = require("../utils/uploadsRoot");
 const { buildMediaStorageDiagnostics } = require("../utils/mediaStorageDiagnostics");
 const { resolveLocationFlag } = require("../utils/evidenceProximity");
+const { canAccessTaskEvidence: canAccessTask } = require('../utils/taskAccess');
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
 const EVIDENCE_MEDIA_STORAGE_ERROR_CODE = "EVIDENCE_MEDIA_STORAGE_UNAVAILABLE";
 const EVIDENCE_LOCAL_FALLBACK_ENV_VAR = "EVIDENCE_ALLOW_LOCAL_FALLBACK";
@@ -230,39 +231,6 @@ async function loadTaskForAcl(taskId) {
   }
 
   return t;
-}
-
-function canAccessTask(user, task) {
-  if (!user || !task) return false;
-
-  // ✅ Admin global => OK
-  if (isGlobalAdmin(user)) return true;
-
-  // ✅ Admin scoped => autorisé mais limité par scope geo
-  if (user.role === "admin") return canAccessGeoScope(user, task);
-
-  if (user.role === "agent") {
-    // ACL métier existante
-    let ok = false;
-    if (task.assignedTo === user.id) ok = true;
-    if (task.service && task.service.agentId === user.id) ok = true;
-
-    // ✅ + scope geo
-    return ok && canAccessGeoScope(user, task.service || task.property || task);
-  }
-
-  if (user.role === "client") {
-    // ACL métier existante
-    let ok = false;
-    if (task.creatorId === user.id) ok = true;
-    if (task.service && task.service.clientId === user.id) ok = true;
-    if (task.property && task.property.ownerId === user.id) ok = true;
-
-    // ✅ + scope geo strict
-    return ok && canAccessGeoScope(user, task.service || task.property || task);
-  }
-
-  return false;
 }
 
 /* ======================================================

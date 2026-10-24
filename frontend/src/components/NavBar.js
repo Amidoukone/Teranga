@@ -19,7 +19,6 @@ import { normalizeRole } from "../utils/roles";
 import { useTranslation } from "react-i18next";
 import {
   getNotificationSummary,
-  markAllNotificationsRead,
 } from "../services/notifications";
 
 import {
@@ -49,7 +48,6 @@ import {
   ChevronDown,
   ChevronRight,
   Check,
-  Bell,
   Banknote,
   Briefcase,
   AlertTriangle,
@@ -133,9 +131,8 @@ const ACCOUNT_LINK_PATHS = new Set([
 
 const ROLE_LINKS = {
   client: [
-    { path: "/dashboard", labelKey: "nav.dashboard" },
-    { path: "/notifications", labelKey: "nav.notifications" },
-    { path: "/activities", labelKey: "nav.activities" },
+    { path: "/dashboard", labelKey: "nav.home" },
+    { path: "/operations", labelKey: "operations.title" },
     { path: "/demandes/nouvelle", labelKey: "nav.newRequest" },
     { path: "/demandes", labelKey: "nav.myRequests", exact: true },
     { path: "/dossiers", labelKey: "nav.myCases" },
@@ -148,9 +145,8 @@ const ROLE_LINKS = {
     LEGAL_LINK,
   ],
   agent: [
-    { path: "/dashboard", labelKey: "nav.dashboard" },
-    { path: "/notifications", labelKey: "nav.notifications" },
-    { path: "/activities", labelKey: "nav.activities" },
+    { path: "/dashboard", labelKey: "nav.home" },
+    { path: "/operations", labelKey: "operations.title" },
     { path: "/projects", labelKey: "nav.projects" },
     { path: "/agent/services", labelKey: "nav.services" },
     { path: "/missions/mine", labelKey: "nav.myMissions" },
@@ -166,9 +162,8 @@ const ROLE_LINKS = {
     LEGAL_LINK,
   ],
   provider: [
-    { path: "/dashboard", labelKey: "nav.dashboard" },
-    { path: "/notifications", labelKey: "nav.notifications" },
-    { path: "/activities", labelKey: "nav.activities" },
+    { path: "/dashboard", labelKey: "nav.home" },
+    { path: "/operations", labelKey: "operations.title" },
     { path: "/chauffeur/courses", labelKey: "nav.myRides" },
     { path: "/livreur/livraisons", labelKey: "nav.myDeliveries" },
     { path: "/prestataire/services", labelKey: "nav.services" },
@@ -180,9 +175,8 @@ const ROLE_LINKS = {
     LEGAL_LINK,
   ],
   admin: [
-    { path: "/dashboard", labelKey: "nav.dashboard" },
-    { path: "/notifications", labelKey: "nav.notifications" },
-    { path: "/activities", labelKey: "nav.activities" },
+    { path: "/dashboard", labelKey: "nav.home" },
+    { path: "/operations", labelKey: "operations.title" },
     { path: "/projects", labelKey: "nav.projects" },
     { path: "/admin/projects", labelKey: "nav.adminProjects" },
 
@@ -190,7 +184,6 @@ const ROLE_LINKS = {
 
     { path: "/tasks", labelKey: "nav.tasks" },
     { path: "/admin/services", labelKey: "nav.adminServices" },
-    { path: "/admin/operations", labelKey: "operations.title" },
     { path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations" },
     { path: "/admin/livraisons", labelKey: "nav.deliveryOperations" },
     { path: "/admin/metrics", labelKey: "nav.metrics" },
@@ -240,7 +233,7 @@ const BOTTOM_LINKS = {
   ],
   admin: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
-    { key: "operations", path: "/admin/operations", labelKey: "operations.title", icon: ListChecks },
+    { key: "operations", path: "/operations", labelKey: "operations.title", icon: ListChecks },
     { key: "taxiRides", path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations", icon: CarFront },
     { key: "deliveries", path: "/admin/livraisons", labelKey: "nav.deliveryOperations", icon: Package },
   ],
@@ -252,8 +245,7 @@ const BOTTOM_LINKS = {
 
 const ICON_BY_PATH_PREFIX = [
   { prefix: "/dashboard", icon: LayoutDashboard },
-  { prefix: "/notifications", icon: Bell },
-  { prefix: "/activities", icon: BarChart3 },
+  { prefix: "/operations", icon: ListChecks },
   { prefix: "/projects", icon: FolderKanban },
   { prefix: "/properties", icon: Building2 },
   { prefix: "/dossiers", icon: FolderKanban },
@@ -328,10 +320,8 @@ function buildSections(role, links, t) {
   if (role === "admin") {
     pushSection(t("nav.sections.operations"), [
       byPath("/dashboard"),
-      byPath("/notifications"),
-      byPath("/activities"),
+      byPath("/operations"),
       byPath("/admin/services"),
-      byPath("/admin/operations"),
       byPath("/admin/taxi-dispatch"),
       byPath("/admin/livraisons"),
       byPath("/projects"),
@@ -367,8 +357,7 @@ function buildSections(role, links, t) {
   } else {
     pushSection(t("nav.sections.activity"), [
       byPath("/dashboard"),
-      byPath("/notifications"),
-      byPath("/activities"),
+      byPath("/operations"),
     ]);
 
     pushSection(t("nav.sections.mobility"), [
@@ -532,23 +521,6 @@ function NavBar() {
       setNotificationSummary((prev) => prev || { unread: 0, byProgress: {} });
     }
   }, [user]);
-
-  const handleOpenNotifications = useCallback(async () => {
-    if (!unreadCount) return;
-    setNotificationSummary((prev) => ({
-      ...(prev || {}),
-      unread: 0,
-    }));
-    try {
-      await markAllNotificationsRead();
-    } catch (e) {
-      console.error("NavBar mark all notifications read error:", e);
-    } finally {
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("notifications:refresh"));
-      }
-    }
-  }, [unreadCount]);
 
   /* LOAD USER (unchanged logic) */
   useEffect(() => {
@@ -843,7 +815,7 @@ function NavBar() {
   const desktopPrimaryTabs = useMemo(() => {
     const candidates =
       role === "admin"
-        ? ["/dashboard", "/admin/operations", "/admin/taxi-dispatch", "/admin/livraisons"]
+        ? ["/dashboard", "/operations", "/admin/taxi-dispatch", "/admin/livraisons"]
         : role === "client"
         ? ["/dashboard", "/demandes/nouvelle", "/demandes", "/dossiers"]
         : role === "provider"
@@ -914,13 +886,13 @@ function NavBar() {
 
   const NotificationBell = (
     <Link
-      to="/notifications"
-      {...withRouteWarmup("/notifications", { onClick: handleOpenNotifications })}
+      to="/operations?vue=a-lire"
+      {...withRouteWarmup("/operations")}
       className="relative inline-flex items-center justify-center w-10 h-10 rounded-2xl border border-border/60 bg-surface-main/40 hover:bg-surface-main/70 transition focus:outline-none focus:ring-4 focus:ring-primary/10"
-      aria-label={t("nav.notifications")}
-      title={t("nav.notifications")}
+      aria-label={t("operations.title")}
+      title={t("operations.title")}
     >
-      <Bell size={18} className="text-text-secondary" />
+      <ListChecks size={18} className="text-text-secondary" />
       {unreadCount > 0 && (
         <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[0.65rem] font-semibold flex items-center justify-center">
           {unreadCount > 99 ? "99+" : unreadCount}

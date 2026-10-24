@@ -1,0 +1,20 @@
+const operationsCenter = {
+  kicker: 'One place to follow up and act', subtitle: 'Find updates that concern you and open the right case directly.',
+  adminHint: 'Take ownership of requests, read new updates and review earlier steps.',
+  views: 'Operations centre views', coordination: 'Requests to coordinate', unread: 'To read', history: 'All updates',
+  personalUpdates: 'Your updates', feedHint: 'The latest steps appear first. Each update opens the relevant case.',
+  filters: 'Filter updates', type: 'Case type', event: 'Event', from: 'From', to: 'Until', clearFilters: 'Clear filters',
+  filtersActive: 'Filters active', progress: 'Progress', noMatches: 'No updates match these filters', filterHint: 'Change or clear the filters to find other updates.',
+  upToDate: 'You are up to date', noHistory: 'No updates to display', emptyHint: 'New updates will appear here. Your requests remain available in your workspace.',
+  loadFailed: 'Updates could not be refreshed. Previously loaded information has been kept. Try again when your connection returns.',
+  accessChanged: 'Your access has changed. Sign in again to view your updates.', actionFailed: 'This action could not be saved. Please try again.',
+  readFailed: 'The case is open, but reading could not be confirmed. The update remains unread.',
+  information: 'Update', toRead: 'To read', examine: 'Review the request', markRead: 'Mark as read', more: 'More actions',
+  open: { service: 'Open service', project: 'Open project', order: 'Open order', task: 'Open task', evidence: 'View supporting file', user: 'Open my workspace', default: 'Open case' },
+  entities: { service: 'Service', project: 'Project', order: 'Order', task: 'Task', evidence: 'Supporting file', user: 'Account' },
+  remove: 'Remove this update', removeConfirm: 'Remove this update from your feed? The case and its supporting files will be kept.',
+  manageReading: 'Manage my updates', readingHint: 'Marking an update as read does not complete the service. Request actions remain in the case itself.',
+  markAllRead: 'Mark all as read', cleanup: 'Clear older updates', cleanupConfirm: 'Remove read updates older than 30 days? Unread updates and cases will be kept.',
+  adjustAssignment: 'Change assignment or deadline', focused: 'Request #{{id}}', allRequests: 'View all requests',
+};
+export default operationsCenter;
