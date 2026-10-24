@@ -11,6 +11,27 @@ jobs:
   backend:
     name: Backend - lint + tests
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: teranga_recipe_only
+          MYSQL_ROOT_HOST: '%'
+          MYSQL_DATABASE: teranga_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pteranga_recipe_only"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      NODE_ENV: test
+      DB_HOST: 127.0.0.1
+      DB_USER: root
+      DB_PASSWORD: teranga_recipe_only
+      DB_NAME_TEST: teranga_test
+      REQUIRE_INTEGRATION_DB: 'true'
     defaults:
       run:
         working-directory: backend
@@ -30,6 +51,11 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Prepare isolated integration database
+        run: |
+          node -e "require('fs').appendFileSync(process.env.GITHUB_ENV, 'JWT_SECRET=' + require('crypto').randomBytes(32).toString('hex') + '\n')"
+          npm run e2e:integration:migrate
 
       - name: Tests
         run: npm test

@@ -29,3 +29,9 @@ Cette correction ne change pas les mots de passe de comptes déjà créés et ne
 | Navigateur, vrai serveur et MySQL isolé | 9 scénarios réussis lors de la préparation |
 
 L'état des migrations, le stockage durable et la réception réelle des notifications restent à vérifier dans l'environnement hébergé. Le poste ne dispose pas de sa configuration de production. La publication du code ne constitue pas une décision d'ouverture terrain.
+
+## Vérification du premier push
+
+Le premier passage GitHub a validé l'interface, ses scénarios navigateur et la recette MySQL de restauration. Le job backend historique échouait faute de serveur MySQL : les tests d'intégration exigeant la base ne pouvaient pas s'exécuter.
+
+Le workflow backend provisionne désormais un MySQL éphémère, une base de test et le schéma via le migrateur d'intégration existant. Il exige explicitement la connexion MySQL et génère sa clé JWT de test à chaque exécution, sans secret stocké dans le dépôt. Cette préparation a été reproduite localement sur une base neuve isolée : migrations réussies et **506 tests réussis**. Elle ne modifie ni la connexion ni les migrations de production.
