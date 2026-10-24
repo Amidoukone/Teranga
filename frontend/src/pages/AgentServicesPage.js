@@ -1,5 +1,5 @@
 import AgentCoordinationPanel from '../features/mission-tracking/AgentCoordinationPanel';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -14,7 +14,7 @@ import {
   UserRound,
 } from 'lucide-react';
 
-import { completeService, getAgentServices, startService } from '../services/services';
+import { getAgentServices, startService } from '../services/services';
 import { buildTelHref, buildWhatsappHref } from '../utils/phone';
 import { useLocale } from '../i18n/useLocale';
 
@@ -106,15 +106,12 @@ function AssignedServiceCard({ service, acting, onAction }) {
                 {t('serviceTracking.actions.start')}
               </button>
             ) : service.status === 'in_progress' ? (
-              <button
-                type="button"
-                onClick={() => onAction(service.id, 'complete')}
-                disabled={acting === service.id}
+              <Link
+                to={`/services/${service.id}#completion-report`}
                 className="btn-primary flex min-h-12 items-center justify-center rounded-xl px-4 text-sm font-bold"
               >
-                {acting === service.id ? <Loader2 size={17} className="mr-2 animate-spin" /> : null}
-                {t('serviceTracking.actions.complete')}
-              </button>
+                {t('completion.prepare')}
+              </Link>
             ) : (
               <Link to={`/services/${service.id}`} className="btn-primary flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold">
                 {t('serviceOrders.view')}
@@ -152,19 +149,32 @@ export default function AgentServicesPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [acting, setActing] = useState(null);
   const [feedback, setFeedback] = useState(null);
+  const [view, setView] = useState('active');
+  const [offset, setOffset] = useState(0);
+  const [total, setTotal] = useState(0);
+  const generation = useRef(0);
+  const mutation = useRef(false);
 
   const load = useCallback(async ({ silent = false } = {}) => {
+    const epoch = ++generation.current;
     if (!silent) setRefreshing(true);
     try {
-      setServices(await getAgentServices());
+      const data = await getAgentServices({ view, offset, limit: 25 }, { withPagination: true });
+      if (epoch !== generation.current) return;
+      if (!data.items.length && offset > 0 && data.pagination?.total <= offset) {
+        setOffset(Math.max(0, Math.floor((data.pagination.total - 1) / 25) * 25));
+        return;
+      }
+      setServices(data.items);
+      setTotal(data.pagination?.total ?? data.items.length);
       setFeedback(null);
     } catch (_error) {
+      if (epoch !== generation.current) return;
       setFeedback({ type: 'error', message: t('agentServicesPage.errors.load') });
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (epoch === generation.current) { setLoading(false); setRefreshing(false); }
     }
-  }, [t]);
+  }, [t, view, offset]);
 
   useEffect(() => {
     load();
@@ -175,6 +185,7 @@ export default function AgentServicesPage() {
     window.addEventListener('focus', refreshIfVisible);
     document.addEventListener('visibilitychange', refreshIfVisible);
     return () => {
+      generation.current += 1;
       clearInterval(interval);
       window.removeEventListener('focus', refreshIfVisible);
       document.removeEventListener('visibilitychange', refreshIfVisible);
@@ -182,11 +193,12 @@ export default function AgentServicesPage() {
   }, [load]);
 
   const handleAction = useCallback(async (id, action) => {
+    if (mutation.current) return;
+    mutation.current = true;
     setActing(id);
     setFeedback(null);
     try {
-      if (action === 'start') await startService(id);
-      else await completeService(id);
+      await startService(id);
       await load({ silent: true });
       setFeedback({ type: 'success', message: t(`serviceTracking.success.${action}`) });
     } catch (e) {
@@ -195,12 +207,10 @@ export default function AgentServicesPage() {
         message: e?.response?.data?.error || t('agentServicesPage.errors.updateStatus'),
       });
     } finally {
+      mutation.current = false;
       setActing(null);
     }
   }, [load, t]);
-
-  const active = useMemo(() => services.filter((item) => item.status !== 'validated'), [services]);
-  const history = useMemo(() => services.filter((item) => item.status === 'validated'), [services]);
 
   if (loading) {
     return <div className="flex min-h-[55vh] items-center justify-center text-sm text-text-muted">{t('agentServicesPage.loading.list')}</div>;
@@ -220,19 +230,11 @@ export default function AgentServicesPage() {
               <RefreshCw size={17} className={refreshing ? 'animate-spin' : ''} />
             </button>
           </div>
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-blue-500/25 bg-blue-500/10 px-4 py-3">
-              <p className="text-2xl font-bold text-text-primary">{active.length}</p>
-              <p className="text-xs text-text-secondary">{t('serviceAgent.active')}</p>
-            </div>
-            <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
-              <p className="text-2xl font-bold text-text-primary">{history.length}</p>
-              <p className="text-xs text-text-secondary">{t('serviceAgent.completed')}</p>
-            </div>
-          </div>
+          <button type="button" disabled={Boolean(acting) || refreshing} onClick={() => { setServices([]); setOffset(0); setView(view === 'active' ? 'history' : 'active'); }} className="btn-secondary mt-4 min-h-11 rounded-xl px-4 text-sm">{t(view === 'active' ? 'fieldWorkspace.showHistory' : 'fieldWorkspace.showActive')}</button>
         </header>
 
         <AgentCoordinationPanel />
+        <Link to="/missions/mine" className="btn-secondary inline-flex min-h-11 items-center rounded-xl px-4 text-sm">{t('fieldWorkspace.supervised')}</Link>
 
         {feedback ? (
           <div className={`app-alert ${feedback.type === 'error' ? 'app-alert-error' : 'app-alert-success'}`}>{feedback.message}</div>
@@ -247,23 +249,20 @@ export default function AgentServicesPage() {
         ) : (
           <>
             <section>
-              <h2 className="mb-3 text-lg font-bold text-text-primary">{t('serviceAgent.activeTitle')}</h2>
-              {active.length ? (
+              <h2 className="mb-3 text-lg font-bold text-text-primary">{t(view === 'active' ? 'serviceAgent.activeTitle' : 'serviceAgent.historyTitle')}</h2>
+              {services.length ? (
                 <div className="grid gap-4 lg:grid-cols-2">
-                  {active.map((service) => <AssignedServiceCard key={service.id} service={service} acting={acting} onAction={handleAction} />)}
+                  {[...services].sort((a, b) => Number(a.status === 'completed') - Number(b.status === 'completed')).map((service) => <AssignedServiceCard key={service.id} service={service} acting={acting} onAction={handleAction} />)}
                 </div>
               ) : <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-text-muted">{t('serviceAgent.activeEmpty')}</p>}
             </section>
-            {history.length ? (
-              <section>
-                <h2 className="mb-3 text-lg font-bold text-text-primary">{t('serviceAgent.historyTitle')}</h2>
-                <div className="grid gap-4 lg:grid-cols-2">
-                  {history.map((service) => <AssignedServiceCard key={service.id} service={service} acting={acting} onAction={handleAction} />)}
-                </div>
-              </section>
-            ) : null}
           </>
         )}
+        {total > 25 && <nav aria-label={t('serviceAgent.title')} className="flex items-center justify-between gap-3">
+          <button type="button" disabled={offset === 0 || refreshing} onClick={() => setOffset(Math.max(0, offset - 25))} className="btn-secondary min-h-11 rounded-xl px-4 disabled:opacity-50">{t('operations.previous')}</button>
+          <p className="text-sm">{offset + 1}–{offset + services.length} / {total}</p>
+          <button type="button" disabled={offset + 25 >= total || refreshing} onClick={() => setOffset(offset + 25)} className="btn-secondary min-h-11 rounded-xl px-4 disabled:opacity-50">{t('operations.next')}</button>
+        </nav>}
       </div>
     </div>
   );

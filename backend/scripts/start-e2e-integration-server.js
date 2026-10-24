@@ -13,6 +13,9 @@ dotenv.config({ path: path.resolve(backendRoot, '.env') });
 
 process.env.NODE_ENV = 'test';
 process.env.PORT = parentPort || '5001';
+// Chaque lancement travaille sur une base neuve, jamais sur la base de développement
+// ou sur une base de tests existante. CREATE échoue si ce nom existe déjà.
+process.env.DB_NAME_TEST = process.env.E2E_DB_NAME || `teranga_e2e_${Date.now()}_${process.pid}`;
 
 function runNodeScript(scriptPath, args = [], extraEnv = {}) {
   const result = spawnSync(process.execPath, [scriptPath, ...args], {
@@ -34,16 +37,12 @@ function runNodeScript(scriptPath, args = [], extraEnv = {}) {
   }
 }
 
-function sanitizeDbName(input) {
-  return String(input || '').replace(/`/g, '').trim();
-}
-
-async function recreateTestDatabase() {
+async function createIsolatedTestDatabase() {
   const config = require(path.resolve(backendRoot, 'config', 'config.js')).test;
-  const database = sanitizeDbName(config.database);
+  const database = config.database;
 
-  if (!database) {
-    throw new Error('[e2e:integration:server] missing test database name');
+  if (!/^teranga_e2e_[a-zA-Z0-9_]+$/.test(database || '') || !['localhost', '127.0.0.1', '::1'].includes(config.host)) {
+    throw new Error('[e2e:integration:server] requires a local, new teranga_e2e_* database');
   }
 
   const connection = await mysql.createConnection({
@@ -53,15 +52,13 @@ async function recreateTestDatabase() {
     password: config.password || '',
   });
 
-  await connection.query(`DROP DATABASE IF EXISTS \`${database}\``);
-  await connection.query(
-    `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-  );
-  await connection.end();
+  try {
+    await connection.query(`CREATE DATABASE \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+  } finally { await connection.end(); }
 }
 
 async function main() {
-  await recreateTestDatabase();
+  await createIsolatedTestDatabase();
   runNodeScript(path.resolve(__dirname, 'e2e-integration-migrate.js'), [], {
     NODE_ENV: 'test',
   });

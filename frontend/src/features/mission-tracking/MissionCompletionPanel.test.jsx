@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MissionCompletionPanel from './MissionCompletionPanel';
 import { submitMissionCompletion } from '../../services/missions';
@@ -25,4 +25,18 @@ test('the customer can review the submitted report and supporting document', () 
   expect(screen.getByText('Résultat de la prestation')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'rapport.pdf' })).toHaveAttribute('href', 'https://api.example.com/uploads/mission-completions/report.pdf');
   expect(screen.queryByRole('button', { name: 'completion.save' })).not.toBeInTheDocument();
+});
+
+test('a delayed upload freezes its content and prevents duplicate submissions', async () => {
+  let resolveSave;
+  submitMissionCompletion.mockReturnValue(new Promise((resolve) => { resolveSave = resolve; }));
+  render(<MissionCompletionPanel missionId={4} completion={{ required: true }} canSubmit />);
+  userEvent.type(screen.getByLabelText('completion.summary'), 'Les documents sont remis au bénéficiaire.');
+  userEvent.click(screen.getByRole('button', { name: 'completion.save' }));
+  expect(screen.getByLabelText('completion.summary')).toBeDisabled();
+  expect(screen.getByLabelText('completion.files')).toBeDisabled();
+  userEvent.click(screen.getByRole('button', { name: 'operations.saving' }));
+  expect(submitMissionCompletion).toHaveBeenCalledTimes(1);
+  await act(async () => resolveSave({}));
+  expect(screen.getByLabelText('completion.summary')).toBeEnabled();
 });

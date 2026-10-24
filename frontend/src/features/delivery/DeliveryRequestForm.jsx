@@ -85,7 +85,7 @@ function hasCoordinates(value) {
   return Number.isFinite(value?.latitude) && Number.isFinite(value?.longitude);
 }
 
-export default function DeliveryRequestForm() {
+export default function DeliveryRequestForm({ preferredCountryId = null, onCountrySelected } = {}) {
   const { t, i18n } = useTranslation();
   const [initialDraft] = useState(readDeliveryDraft);
   const [tradeCategory, setTradeCategory] = useState(null);
@@ -167,8 +167,8 @@ export default function DeliveryRequestForm() {
         const draftCountry = countryList.find(
           (country) => String(country.id) === String(initialDraft.countryId)
         );
-        const initialCountryId =
-          verifiedUser?.countryId || draftCountry?.id || countryList[0]?.id || null;
+        const requestedCountry = countryList.find((country) => String(country.id) === String(preferredCountryId));
+        const initialCountryId = preferredCountryId ? requestedCountry?.id || null : draftCountry?.id || verifiedUser?.countryId || countryList[0]?.id || null;
         setCountryId(initialCountryId ? String(initialCountryId) : "");
 
         const categoryList = initialCountryId
@@ -194,7 +194,7 @@ export default function DeliveryRequestForm() {
     return () => {
       cancelled = true;
     };
-  }, [initialDraft.countryId, t]);
+  }, [initialDraft.countryId, preferredCountryId, t]);
 
   useEffect(() => {
     const updateConnection = () => setIsOnline(navigator.onLine !== false);
@@ -254,6 +254,7 @@ export default function DeliveryRequestForm() {
     () => countries.find((country) => String(country.id) === String(countryId)) || null,
     [countries, countryId]
   );
+  useEffect(() => { onCountrySelected?.(selectedCountry || null); }, [selectedCountry, onCountrySelected]);
   const assistanceTelHref = buildTelHref(selectedCountry?.contactPhone);
   const assistanceWhatsappHref = buildWhatsappHref(
     selectedCountry?.contactPhone,

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ImagePlus, X } from "lucide-react";
 
@@ -18,6 +19,13 @@ export default function DescriptionStep({
   onVoiceNoteChange,
 }) {
   const { t } = useTranslation();
+  const [photoUrl, setPhotoUrl] = useState(null);
+  useEffect(() => {
+    if (!photo) { setPhotoUrl(null); return undefined; }
+    const url = URL.createObjectURL(photo);
+    setPhotoUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photo]);
 
   return (
     <div>
@@ -30,24 +38,32 @@ export default function DescriptionStep({
 
       <div className="mt-5 space-y-4">
         <div>
-          <label className={labelClass}>{t("missionCreation.description.titleLabel")}</label>
+          <label htmlFor="mission-title" className={labelClass}>{t("missionCreation.description.titleLabel")}</label>
           <input
+            id="mission-title"
             type="text"
             className={inputClass}
             placeholder={t("missionCreation.description.titlePlaceholder")}
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
             required
+            minLength={3}
+            maxLength={150}
           />
         </div>
 
+        <details open={description || photo || voiceNote ? true : undefined} className="rounded-xl border border-border p-3">
+          <summary className="cursor-pointer text-sm font-medium text-text-secondary">{t("missionCreation.description.addDetails")}</summary>
+        <div className="mt-4 space-y-4">
         <div>
-          <label className={labelClass}>{t("missionCreation.description.descriptionLabel")}</label>
+          <label htmlFor="mission-description" className={labelClass}>{t("missionCreation.description.descriptionLabel")}</label>
           <textarea
+            id="mission-description"
             className={`${inputClass} min-h-[96px]`}
             placeholder={t("missionCreation.description.descriptionPlaceholder")}
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
+            maxLength={2000}
           />
         </div>
 
@@ -56,7 +72,7 @@ export default function DescriptionStep({
           {photo ? (
             <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-card p-2">
               <img
-                src={URL.createObjectURL(photo)}
+                src={photoUrl || undefined}
                 alt={photo.name}
                 className="h-14 w-14 rounded-lg object-cover"
               />
@@ -85,6 +101,8 @@ export default function DescriptionStep({
         </div>
 
         <VoiceNoteRecorder value={voiceNote} onChange={onVoiceNoteChange} />
+        </div>
+        </details>
       </div>
     </div>
   );

@@ -148,9 +148,13 @@ npm.cmd run field:check -- --country=ML --region=123
 
 La recette exige MySQL de test et les migrations, sans ignorer les scénarios si la base manque. Elle couvre l’affectation, le refus, l’expiration, l’escalade, la concurrence, le rollback des notifications, la reprise, les droits territoriaux, le compte rendu, les doublons et la validation client. `field:check` est en lecture seule et utilise l’environnement de base configuré ; exécuter d’abord sur préproduction. Il renvoie un code d’échec si des prérequis manquent.
 
-Le contrôle technique exige aussi un passage réussi de chacun des deux suivis (missions, puis projets/commandes) dans les cinq dernières minutes. Une configuration positive conserve explicitement quatre validations de mise en service : réception réelle des notifications, restauration de sauvegarde, prestation complète dans l’environnement déployé et validation de l’organisation locale. Le résultat technique seul ne vaut pas autorisation d’ouverture.
+Le contrôle technique exige aussi un passage réussi de chacun des deux suivis (missions, puis projets/commandes) dans les cinq dernières minutes. Une configuration positive conserve explicitement cinq validations de mise en service : persistance des justificatifs après redémarrage, réception réelle des notifications, restauration de sauvegarde, prestation complète dans l'environnement déployé et validation de l'organisation locale. Le résultat technique seul ne vaut pas autorisation d'ouverture.
+
+Le [guide de vérification du déploiement](verification-deploiement.md) détaille les commandes `migrations:check`, `release:check`, `proofs:check`, `backup:counts` et `backup:rehearse`, ainsi que la fiche de recette à conserver. Le contrôle des migrations est en lecture seule ; l'essai de restauration crée une base locale neuve avec un compte d'import limité à cette seule base.
 
 ## Critère de départ terrain
+
+Le [bilan du 24 octobre 2026](../PREPARATION_TERRAIN_2026-10-24.md) détaille les corrections et les résultats locaux, ainsi que les preuves à conserver sur l'environnement déployé. La commande `npm run field:recipe` couvre les affectations, les reprises, les devises locales, les comptes rendus, les règlements justifiés et le diagnostic de préparation ; elle exige une base MySQL de test disponible. Le serveur d'intégration navigateur crée une nouvelle base locale `teranga_e2e_*` sans supprimer de base existante.
 
 Les tests, contrôles de code et compilation doivent réussir. Les migrations et paramètres doivent être vérifiés dans l’environnement déployé. Pour chaque offre ouverte : responsable nommé, assistance joignable, délai réaliste, prix ou devis confirmé, exécutants disponibles, compte rendu et justificatifs relus par un client test. Les refus, absences de réponse, coupures et litiges doivent avoir un responsable et une suite observable dans le centre des opérations.
 

@@ -5,6 +5,8 @@
 // homepage, Lot 2) : ici pas de bootstrap de compte, le client a déjà une session.
 
 const { Op } = require('sequelize');
+const { MISSION_HISTORY_STATUSES } = require('../constants/missionStatus');
+const { getServicePaymentState } = require('../services/servicePaymentState.service');
 const {
   Service,
   User,
@@ -1519,8 +1521,10 @@ exports.track = async (req, res) => {
         service.missionStatus
       );
 
+    const paymentState = req.user.role === 'client' ? await getServicePaymentState(service).catch((error) => { logger.warn({ err: error, serviceId: service.id }, 'mission.paymentState.unavailable'); return null; }) : null;
     return res.status(200).json({
       tradeCategorySlug,
+      paymentState,
       missionStatus: service.missionStatus,
       completion: await getCompletionState(service),
       status: service.status,
@@ -1568,6 +1572,7 @@ exports.track = async (req, res) => {
 ============================================================ */
 exports.mine = async (req, res) => {
   try {
+    if (req.query.view && !['active', 'history'].includes(req.query.view)) return res.status(400).json({ error: 'Vue de missions invalide' });
     const { limit, offset, page } = getPagination(req);
     const tradeCategorySlug = String(req.query.tradeCategorySlug || '').trim();
 
@@ -1594,6 +1599,12 @@ exports.mine = async (req, res) => {
       where.tradeCategoryId = categoryIds.length ? { [Op.in]: categoryIds } : -1;
     }
 
+    if (req.query.view) where[Op.and] = [{ missionStatus: { [req.query.view === 'history' ? Op.in : Op.notIn]: MISSION_HISTORY_STATUSES } }];
+    if (req.query.excludeTradeCategorySlug) {
+      const slugs = String(req.query.excludeTradeCategorySlug).slice(0, 100).split(',').map((value) => value.trim()).filter(Boolean);
+      const categories = await TradeCategory.findAll({ where: { slug: { [Op.in]: slugs } }, attributes: ['id'] });
+      if (categories.length) where[Op.and] = [...(where[Op.and] || []), { tradeCategoryId: { [Op.notIn]: categories.map((category) => category.id) } }];
+    }
     const { rows, count } = await Service.findAndCountAll({
       where,
       include: [

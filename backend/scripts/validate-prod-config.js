@@ -1,14 +1,10 @@
 'use strict';
 
-const path = require('path');
-const dotenv = require('dotenv');
+const { loadOperationalEnv } = require('./operational-env');
 const { validateProdConfig } = require('../src/utils/validateProdConfig');
 
-const envProductionPath = path.resolve(__dirname, '..', '.env.production');
-const envPath = path.resolve(__dirname, '..', '.env');
-
-dotenv.config({ path: envProductionPath });
-dotenv.config({ path: envPath });
+process.env.NODE_ENV = 'production';
+loadOperationalEnv();
 
 const result = validateProdConfig({
   ...process.env,

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
 
-const STEP_KEYS = ["category", "location", "description", "confirm"];
+const STEP_KEYS = ["category", "details", "confirm"];
 
 export default function WizardProgress({ currentStep }) {
   const { t } = useTranslation();
@@ -38,7 +38,7 @@ export default function WizardProgress({ currentStep }) {
                 {isDone ? <Check size={14} aria-hidden="true" /> : stepNumber}
               </span>
               <span
-                className={`hidden text-[0.68rem] font-medium sm:block ${
+                className={`text-[0.68rem] font-medium ${
                   isActive ? "text-text-primary" : "text-text-muted"
                 }`}
               >

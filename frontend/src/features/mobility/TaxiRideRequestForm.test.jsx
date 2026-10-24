@@ -115,6 +115,15 @@ describe("TaxiRideRequestForm", () => {
     persistSession.mockResolvedValue(undefined);
   });
 
+  test('the service country selected in the general request takes precedence over the account country', async () => {
+    getMasterCountries.mockResolvedValue([{ id: 1, name: 'Mali', contactPhone: '+22370000000' }, { id: 2, name: 'Côte d’Ivoire', contactPhone: '+2250700000000' }]);
+    me.mockResolvedValue({ user: { id: 7, role: 'client', countryId: 1 } });
+    const onCountrySelected = jest.fn();
+    render(<TaxiRideRequestForm preferredCountryId="2" onCountrySelected={onCountrySelected} />);
+    await waitFor(() => expect(getTradeCategories).toHaveBeenCalledWith({ countryId: 2 }));
+    await waitFor(() => expect(onCountrySelected).toHaveBeenCalledWith(expect.objectContaining({ id: 2, contactPhone: '+2250700000000' })));
+  });
+
   async function enterRouteAndEstimate(phone) {
     await screen.findByPlaceholderText("Adresse de départ");
     await userEvent.type(screen.getByPlaceholderText("Adresse de départ"), "Sébénikoro");

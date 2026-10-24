@@ -1,16 +1,19 @@
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 
 import MissionCreationWizard from "../features/mission-creation/MissionCreationWizard";
+import { getBookingPath } from "../utils/requestLifecycle";
 
 export default function MissionCreatePage({ serviceOnly = false, unified = false }) {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const preferredCategorySlug = unified ? searchParams.get("categorie") : null;
+  if (['mobilite', 'livraison'].includes(preferredCategorySlug)) return <Navigate to={getBookingPath(preferredCategorySlug)} replace />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-6 py-10">
+    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-0 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-xl text-center">
         {serviceOnly || unified ? (
           <Link
@@ -36,6 +39,7 @@ export default function MissionCreatePage({ serviceOnly = false, unified = false
         <MissionCreationWizard
           serviceOnly={serviceOnly}
           preferredCategorySlug={preferredCategorySlug}
+          onTransportSelected={(slug, countryId) => navigate(`${getBookingPath(slug)}?pays=${encodeURIComponent(countryId)}`)}
         />
       </div>
     </div>

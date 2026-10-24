@@ -1,4 +1,7 @@
+import experience from './experience.en';
+
 const en = {
+  ...experience,
   agentCoordination: {
     availableMinutes: 'Availability duration (minutes)', availableUntil: 'Available until', expired: 'Your availability has expired. Confirm it again to receive requests.',
     startBefore: 'Start in the application before', startHint: 'Declare the start before working in the field. Without a start within the stated window, an automatic assignment may go to another agent.',
@@ -8,7 +11,7 @@ const en = {
     statuses: { validated: 'Project validated', delivered: 'Order delivered', cancelled: 'Cancelled', refunded: 'Refunded', created: 'Ready to start', in_progress: 'In progress', completed: 'Awaiting customer validation', processing: 'Preparing', paid: 'Payment recorded', shipped: 'In delivery' },
     actions: { validated: 'Confirm project completion', in_progress: 'Start project', completed: 'Submit to customer', processing: 'Start preparation', shipped: 'Confirm shipment', delivered: 'Confirm delivery' },
   },
-  completion: { title: 'Service completion report', summary: 'Work performed, outcome and issues to report', requiredFiles: 'Required evidence',
+  completion: { connectionInterrupted: 'Refresh interrupted. Your last information and input are retained. Try again when the connection returns.', prepare: 'Prepare the customer handover', title: 'Service completion report', summary: 'Work performed, outcome and issues to report', requiredFiles: 'Required evidence',
     files: 'Add supporting files', filesHint: 'Up to three files per submission. Previously saved files are retained.',
     fileKind: 'Evidence type', detectKind: 'Detect from file', save: 'Save report',
     saved: 'Report saved. You can complete the service once the required evidence is present.', failed: 'Unable to save the report.' },
@@ -588,6 +591,22 @@ const en = {
     },
   },
   serviceOrders: {
+    clientNextAction: {
+      received: "Request received. Teranga is arranging its handling.",
+      searching: "Teranga is looking for an available executor.",
+      assigned: "An executor is assigned. You can follow their progress.",
+      onTheWay: "Your executor is on the way.",
+      onSite: "Your executor has arrived on site.",
+      inProgress: "Work is in progress. The executor is preparing the report and supporting evidence.",
+      validate: "Your turn: review the result and confirm completion or report a problem.",
+      confirmed: "You confirmed the result. Teranga is completing the closure.",
+      done: "Request completed. You can still view its history.",
+      cancelled: "Request cancelled. You can still view its history.",
+      assistance: "No executor found. Contact Teranga to arrange the next step.",
+      resolve: "A problem was reported. Teranga is following its resolution.",
+      resolved: "The problem has been addressed. Review the decision and the next steps for your request.",
+      follow: "Open your request to follow its progress.",
+    },
     quickAccess: {
       kicker: "Teranga services",
       title: "What would you like to do?",
@@ -611,6 +630,7 @@ const en = {
       close: "Next step: administrative closure.",
       done: "Request completed.",
       retry: "Next step: search for another executor.",
+      resolve: "Next step: address the reported problem.",
       follow: "Next step: follow progress.",
     },
     proofRequired: "Proof required",
@@ -2910,12 +2930,12 @@ const en = {
       callCta: "Call Teranga to place an order",
       badge: "Trusted services, accessible to everyone",
       title: "What do you need today?",
-      subtitle: "Book a taxi, send a package or discover a property. You can start without creating an account.",
+      subtitle: "Describe your need: Teranga arranges its handling and execution on the ground. For you or your loved ones, even from abroad.",
       chooseAction: "Choose a service",
       flowLabel: "How Teranga works",
       flow: { request: "I request", execution: "Teranga executes", tracking: "I track", validation: "I validate" },
       whatsapp: "Talk to Teranga on WhatsApp",
-      otherRequest: "Make another request",
+      otherRequest: "Request a service",
       closeRequest: "Close the form",
       trustLabel: "Teranga commitments",
       trust: {
@@ -2953,8 +2973,8 @@ const en = {
       chooseNeed: "Choose your need",
       loadingOptions: "Loading categories…",
       fields: {
-        country: "Country",
-        countryPlaceholder: "Choose your country",
+        country: "Service country",
+        countryPlaceholder: "Choose the service country",
         phone: "Phone number",
         phonePlaceholder: "+223 00 00 00 00",
         pin: "Secret code (4 digits min.)",
@@ -2974,8 +2994,8 @@ const en = {
       },
       identity: {
         title: "Your contact details",
-        hint: "So we can send you updates on your request and create your secure client space.",
-        countryHint: "Used for your account — it doesn't need to match the mission's country.",
+        hint: "Your phone number and code let you access tracking in your client space.",
+        countryHint: "Choose the country where the service is needed, even if you live elsewhere.",
       },
       submit: "Send my request",
       submitting: "Sending…",
@@ -3265,6 +3285,7 @@ const en = {
     wizard: {
       steps: {
         category: "Category",
+        details: "Your need",
         location: "Location",
         description: "Description",
         confirm: "Confirmation",
@@ -3277,7 +3298,7 @@ const en = {
     },
     category: {
       title: "What do you need?",
-      subtitle: "Choose a trade/specialty or a classic Teranga service.",
+      subtitle: "Choose the country where the service will take place, then the service you need.",
       countryLabel: "Service country",
       countryPlaceholder: "Choose a country",
       regionLabel: "Service region (optional)",
@@ -3290,6 +3311,11 @@ const en = {
       subtitle: "Enter an address, drop a pin on the map, or pick a saved location. This stays optional for needs with no location (payment, money transfer...).",
       mapUnavailable: "Map unavailable right now — use the address field above.",
       mapHint: "Click on the map or drag the pin to fine-tune the exact position.",
+      showMap: "Locate on the map",
+      hideMap: "Hide the map",
+      loadingMap: "Loading the map…",
+      positionSelected: "Position saved",
+      simpleHint: "A neighborhood, city and landmark can help describe the location. The map is optional.",
       useCurrentLocation: "Use my current location",
       locating: "Locating...",
       geolocationUnsupported: "Geolocation isn't available on this device.",
@@ -3310,6 +3336,7 @@ const en = {
       destinationTitle: "Destination",
     },
     description: {
+      addDetails: "Add details, a photo or a voice message (optional)",
       title: "Describe your need",
       subtitle: "A short title, details if needed, and a photo or voice note to be well understood.",
       titleLabel: "Your need in one sentence",
@@ -3356,6 +3383,7 @@ const en = {
       reference: "Your mission reference: #{{id}}",
       trackCta: "Track my mission",
       newRequestCta: "Create another mission",
+      attachmentWarning: "Your request was created, but the attachments were not sent. Contact Teranga to share them using your request reference.",
     },
   },
   missionPricingAdmin: {

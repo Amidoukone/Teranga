@@ -35,9 +35,8 @@ test('mobilite reelle: commande, PIN client et notification admin vers le dispat
   await seedMobilityDraft(page);
 
   await page.goto('/taxi');
-  await expect(page.getByRole('heading', { name: /Quel v.hicule souhaitez-vous/i })).toBeVisible();
-  await page.getByRole('button', { name: /Voiture/i }).click();
-  await page.getByRole('button', { name: /Continuer/i }).click();
+  await expect(page.getByRole('heading', { name: 'Où allons-nous ?' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Véhicule : Voiture', exact: true })).toBeVisible();
 
   await expect(page.getByLabel(/Point de d.part/i)).toHaveValue('ACI 2000, Bamako');
   await expect(page.getByLabel(/Destination/i)).toHaveValue('Badalabougou, Bamako');
@@ -62,7 +61,7 @@ test('mobilite reelle: commande, PIN client et notification admin vers le dispat
   await expect(page.getByText(startCode, { exact: true })).toBeVisible();
 
   await page.getByRole('link', { name: /Suivre ma course/i }).click();
-  await expect(page).toHaveURL(new RegExp(`/missions/${missionId}/track$`));
+  await expect(page).toHaveURL(new RegExp(`/courses/${missionId}$`));
   await expect(page.getByText(startCode, { exact: true })).toBeVisible();
 
   const adminSession = await loginAsSeededAdmin(request);

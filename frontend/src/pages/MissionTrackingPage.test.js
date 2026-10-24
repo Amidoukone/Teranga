@@ -1,8 +1,9 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import MissionTrackingPage from "./MissionTrackingPage";
 import { getMissionTrack, pingMissionLocation } from "../services/missions";
+jest.mock('../i18n/useLocale', () => ({ useLocale: () => ({ formatNumber: String }) }));
 
 jest.mock(
   "react-router-dom",
@@ -14,9 +15,8 @@ jest.mock(
   { virtual: true }
 );
 
-jest.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key, options = {}) => {
+jest.mock("react-i18next", () => {
+  const t = (key, options = {}) => {
       const labels = {
         "missionTracking.kicker": "Suivi de course",
         "missionTracking.refresh": "Actualiser",
@@ -31,9 +31,9 @@ jest.mock("react-i18next", () => ({
         "deliveryOrders.liveStatus.IN_PROGRESS.hint": "Le livreur se dirige vers la destination",
       };
       return labels[key] || options.defaultValue || key;
-    },
-  }),
-}));
+  };
+  return { useTranslation: () => ({ t }) };
+});
 
 jest.mock("../services/missions", () => ({
   acceptMission: jest.fn(),
@@ -58,6 +58,21 @@ beforeEach(() => {
     configurable: true,
     value: undefined,
   });
+});
+
+test('an offline refresh preserves the executor report draft and a successful refresh resumes tracking', async () => {
+  const track = { id: 81, title: 'Prestation', missionStatus: 'IN_PROGRESS', viewerRole: 'provider', isExecutor: true, tradeCategorySlug: 'plomberie', completion: { required: true, requiredEvidenceTypes: ['photo'] } };
+  getMissionTrack.mockResolvedValue(track);
+  render(<MissionTrackingPage />);
+  const summary = await screen.findByLabelText('completion.summary');
+  fireEvent.change(summary, { target: { value: 'Le travail a été réalisé sur place, justificatif à déposer.' } });
+  getMissionTrack.mockRejectedValueOnce(new Error('Offline'));
+  fireEvent.focus(window);
+  expect(await screen.findByText('completion.connectionInterrupted')).toBeInTheDocument();
+  expect(screen.getByLabelText('completion.summary')).toHaveValue('Le travail a été réalisé sur place, justificatif à déposer.');
+  fireEvent.focus(window);
+  await waitFor(() => expect(screen.queryByText('completion.connectionInterrupted')).not.toBeInTheDocument());
+  expect(screen.getByLabelText('completion.summary')).toHaveValue('Le travail a été réalisé sur place, justificatif à déposer.');
 });
 
 test("affiche le code de départ au client dès la création de la course", async () => {
@@ -100,7 +115,7 @@ test("annonce clairement au client que son chauffeur est arrivé", async () => {
   expect(screen.getByRole("status")).toHaveTextContent(
     "Rejoignez le point de départ"
   );
-  expect(screen.getByRole("listitem", { name: "taxiRides.progress.arrived" })).toHaveAttribute(
+  expect(screen.getByRole("listitem", { name: "requestProgress.execution" })).toHaveAttribute(
     "aria-current",
     "step"
   );
@@ -166,7 +181,7 @@ test("annonce clairement au client que son colis est en chemin", async () => {
     "Le livreur se dirige vers la destination"
   );
   expect(
-    screen.getByRole("listitem", { name: "deliveryOrders.progress.delivery" })
+    screen.getByRole("listitem", { name: "requestProgress.execution" })
   ).toHaveAttribute("aria-current", "step");
 });
 
@@ -228,7 +243,7 @@ test("montre clairement au client qu'un service est en cours", async () => {
     "serviceMission.liveStatus.IN_PROGRESS.title"
   );
   expect(
-    screen.getByRole("listitem", { name: "serviceMission.progress.work" })
+    screen.getByRole("listitem", { name: "requestProgress.execution" })
   ).toHaveAttribute("aria-current", "step");
 });
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import MissionCreationWizard from "./MissionCreationWizard";
@@ -9,7 +9,8 @@ import { getMasterCountries } from "../../services/franchises";
 import { getRegions } from "../../services/regions";
 import { listSavedLocations } from "../../services/savedLocations";
 import { me } from "../../services/auth";
-import { estimateMission, createMission } from "../../services/missions";
+import { estimateMission, createMission, uploadMissionAttachments } from "../../services/missions";
+import { saveRequestDraft } from '../../utils/requestDraft';
 
 jest.mock("react-router-dom", () => ({ Link: ({ children, to }) => <a href={to}>{children}</a> }), { virtual: true });
 jest.mock("react-i18next", () => {
@@ -53,14 +54,91 @@ jest.mock("./steps/LocationStep", () => ({
     </button>
   </div>
 ));
-jest.mock("./steps/DescriptionStep", () => ({ title, onTitleChange }) => (
+jest.mock("./steps/DescriptionStep", () => ({ title, onTitleChange, onPhotoChange }) => (
+  <div>
   <input aria-label="Titre de la mission" value={title} onChange={(event) => onTitleChange(event.target.value)} />
+  <button type="button" onClick={() => onPhotoChange(new File(['photo'], 'besoin.jpg', { type: 'image/jpeg' }))}>Ajouter une photo au besoin</button>
+  </div>
 ));
 jest.mock("./steps/ConfirmStep", () => ({ summary }) => (
   <div>{summary.countryName} · {summary.regionName}</div>
 ));
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => { jest.clearAllMocks(); sessionStorage.clear(); });
+
+function setupSimpleMission(slug = 'plomberie') {
+  getMasterCountries.mockResolvedValue([{ id: 1, name: 'Mali' }]);
+  getRegions.mockResolvedValue([]);
+  me.mockResolvedValue({ user: { id: 5, countryId: 1 } });
+  listSavedLocations.mockResolvedValue([]);
+  getTradeCategories.mockResolvedValue([{ id: 10, name: 'Service local', slug }]);
+  getLocalServiceCatalog.mockResolvedValue({ catalog: [{ definition: { legacyTradeCategoryId: 10 } }] });
+}
+
+test('three steps keep confirmation and prevent duplicate estimates and submissions on a slow network', async () => {
+  setupSimpleMission();
+  let resolveEstimate;
+  let resolveCreation;
+  estimateMission.mockImplementationOnce(() => new Promise((resolve) => { resolveEstimate = resolve; }));
+  createMission.mockImplementationOnce(() => new Promise((resolve) => { resolveCreation = resolve; }));
+  render(<MissionCreationWizard />);
+  expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuemax', '3');
+  await userEvent.click(await screen.findByRole('button', { name: 'Service local' }));
+  userEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.next' }));
+  await userEvent.type(screen.getByRole('textbox', { name: 'Titre de la mission' }), 'Réparer la fuite');
+  fireEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.next' }));
+  fireEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.next' }));
+  expect(estimateMission).toHaveBeenCalledTimes(1);
+  expect(createMission).not.toHaveBeenCalled();
+  await act(async () => resolveEstimate({ basePrice: 5000, currency: 'XOF' }));
+  fireEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.confirm' }));
+  fireEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.submitting' }));
+  expect(createMission).toHaveBeenCalledTimes(1);
+  await act(async () => resolveCreation({ mission: { id: 101, missionStatus: 'CREATED' } }));
+  expect(screen.getByRole('link', { name: 'missionCreation.success.trackCta' })).toHaveAttribute('href', '/missions/101/track');
+});
+
+test('transport requires both locations before estimating or confirming', async () => {
+  setupSimpleMission('livraison');
+  render(<MissionCreationWizard />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Service local' }));
+  userEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.next' }));
+  await userEvent.type(screen.getByRole('textbox', { name: 'Titre de la mission' }), 'Livrer un colis');
+  userEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.next' }));
+  expect(await screen.findByText('missionCreation.errors.stepIncomplete')).toBeInTheDocument();
+  expect(estimateMission).not.toHaveBeenCalled();
+  expect(createMission).not.toHaveBeenCalled();
+});
+
+test('restoring a draft keeps its text and country but still requires choosing an available service', async () => {
+  setupSimpleMission();
+  saveRequestDraft('mission', 5, { title: 'Besoin conservé', countryId: '1', address: 'Près du marché' });
+  render(<MissionCreationWizard />);
+  await screen.findByText('requestDraft.restored');
+  expect(createMission).not.toHaveBeenCalled();
+  await userEvent.click(await screen.findByRole('button', { name: 'Service local' }));
+  userEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.next' }));
+  expect(screen.getByRole('textbox', { name: 'Titre de la mission' })).toHaveValue('Besoin conservé');
+  expect(screen.getByTestId('destination-address')).toHaveTextContent('Près du marché');
+});
+
+test('an attachment retry never recreates an already accepted request', async () => {
+  setupSimpleMission();
+  estimateMission.mockResolvedValue({ basePrice: 5000, currency: 'XOF' });
+  createMission.mockResolvedValue({ mission: { id: 102, missionStatus: 'CREATED' } });
+  uploadMissionAttachments.mockRejectedValueOnce(new Error('Network failure')).mockResolvedValueOnce({});
+  render(<MissionCreationWizard />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Service local' }));
+  userEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.next' }));
+  await userEvent.type(screen.getByRole('textbox', { name: 'Titre de la mission' }), 'Réparer la fuite');
+  userEvent.click(screen.getByRole('button', { name: 'Ajouter une photo au besoin' }));
+  userEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.next' }));
+  userEvent.click(await screen.findByRole('button', { name: 'missionCreation.wizard.confirm' }));
+  userEvent.click(await screen.findByRole('button', { name: 'requestDraft.retryAttachments' }));
+  await waitFor(() => expect(uploadMissionAttachments).toHaveBeenCalledTimes(2));
+  expect(createMission).toHaveBeenCalledTimes(1);
+  expect(uploadMissionAttachments.mock.calls[1][0]).toBe(102);
+});
 
 test("un client du Mali choisit la Côte d’Ivoire et envoie le pays et la région au devis et à la création", async () => {
   getMasterCountries.mockResolvedValue([
@@ -109,7 +187,6 @@ test("un client du Mali choisit la Côte d’Ivoire et envoie le pays et la rég
   await userEvent.click(await screen.findByRole("button", { name: "Service Abidjan" }));
   await userEvent.click(screen.getByRole("button", { name: "missionCreation.wizard.next" }));
   expect(screen.getByTestId("destination-address")).toBeEmptyDOMElement();
-  await userEvent.click(screen.getByRole("button", { name: "missionCreation.wizard.next" }));
   await userEvent.type(screen.getByRole("textbox", { name: "Titre de la mission" }), "Réparer la fuite");
   await userEvent.click(screen.getByRole("button", { name: "missionCreation.wizard.next" }));
 
@@ -148,7 +225,6 @@ test("déplacer les repères efface les adresses périmées et le lieu enregistr
   expect(screen.getByTestId("destination-address")).toBeEmptyDOMElement();
   expect(screen.getByTestId("pickup-address")).toBeEmptyDOMElement();
 
-  await userEvent.click(screen.getByRole("button", { name: "missionCreation.wizard.next" }));
   await userEvent.type(screen.getByRole("textbox", { name: "Titre de la mission" }), "Livrer un colis");
   await userEvent.click(screen.getByRole("button", { name: "missionCreation.wizard.next" }));
   await waitFor(() => expect(estimateMission).toHaveBeenCalledWith(expect.objectContaining({

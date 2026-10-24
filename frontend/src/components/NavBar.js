@@ -234,11 +234,13 @@ const BOTTOM_LINKS = {
   ],
   provider: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
+    { key: "services", path: "/prestataire/services", labelKey: "nav.services", icon: Wrench },
     { key: "myRides", path: "/chauffeur/courses", labelKey: "nav.myRides", icon: CarFront },
     { key: "myDeliveries", path: "/livreur/livraisons", labelKey: "nav.myDeliveries", icon: Package },
   ],
   admin: [
     { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
+    { key: "operations", path: "/admin/operations", labelKey: "operations.title", icon: ListChecks },
     { key: "taxiRides", path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations", icon: CarFront },
     { key: "deliveries", path: "/admin/livraisons", labelKey: "nav.deliveryOperations", icon: Package },
   ],
@@ -841,11 +843,11 @@ function NavBar() {
   const desktopPrimaryTabs = useMemo(() => {
     const candidates =
       role === "admin"
-        ? ["/dashboard", "/admin/taxi-dispatch", "/admin/livraisons"]
+        ? ["/dashboard", "/admin/operations", "/admin/taxi-dispatch", "/admin/livraisons"]
         : role === "client"
         ? ["/dashboard", "/demandes/nouvelle", "/demandes", "/dossiers"]
         : role === "provider"
-        ? ["/dashboard", "/chauffeur/courses", "/livreur/livraisons"]
+        ? ["/dashboard", "/prestataire/services", "/chauffeur/courses", "/livreur/livraisons"]
         : ["/dashboard", servicePrimaryPath, "/tasks"];
 
     const tabs = [];

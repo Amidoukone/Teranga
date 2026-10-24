@@ -4,6 +4,7 @@ process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'teranga_sprint2_test_secret';
 
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const request = require('supertest');
 const app = require('../../src/app');
 const db = require('../../models');
@@ -226,7 +227,7 @@ describe('Sprint 2 - auth/register/multi-country/permissions', () => {
       .set('Authorization', `Bearer ${login.token}`)
       .send({
         email: `new_admin_${Date.now()}@example.com`,
-        password: 'Admin123!',
+        password: crypto.randomUUID(),
         role: 'admin',
         firstName: 'New',
         lastName: 'Admin',
@@ -254,7 +255,7 @@ describe('Sprint 2 - auth/register/multi-country/permissions', () => {
       .set('Authorization', `Bearer ${login.token}`)
       .send({
         email: `scoped_admin_${Date.now()}@example.com`,
-        password: 'Admin123!',
+        password: crypto.randomUUID(),
         role: 'admin',
         firstName: 'Scoped',
         lastName: 'Admin',

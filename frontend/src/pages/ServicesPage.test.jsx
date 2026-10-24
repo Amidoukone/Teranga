@@ -13,6 +13,7 @@ jest.mock('react-i18next', () => {
 });
 
 jest.mock('../services/services', () => ({ getMyServices: jest.fn() }));
+jest.mock('../hooks/useTerritorySupport', () => () => ({ phone: '+22370453345' }));
 jest.mock('../i18n/useLocale', () => ({
   useLocale: () => ({
     formatDate: (value) => value,
@@ -59,6 +60,9 @@ describe('ServicesPage unified requests', () => {
     expect(await screen.findByText('City hall errand')).toBeInTheDocument();
     expect(screen.getByText('Airport ride')).toBeInTheDocument();
     expect(screen.getByText('Family parcel')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('homePage.simpleHero.otherRequest'));
+    expect(screen.getByText('serviceOrders.clientNextAction.inProgress')).toBeInTheDocument();
+    expect(screen.queryByText(/serviceOrders.proofRequired/)).not.toBeInTheDocument();
 
     expect(screen.getAllByRole('link', { name: 'serviceOrders.newRequest' })[0]).toHaveAttribute(
       'href',
@@ -66,11 +70,11 @@ describe('ServicesPage unified requests', () => {
     );
     expect(screen.getByRole('link', { name: 'serviceOrders.newTaxi' })).toHaveAttribute(
       'href',
-      '/demandes/nouvelle?categorie=mobilite'
+      '/taxi'
     );
     expect(screen.getByRole('link', { name: 'serviceOrders.newDelivery' })).toHaveAttribute(
       'href',
-      '/demandes/nouvelle?categorie=livraison'
+      '/livraison'
     );
     const followHrefs = screen
       .getAllByRole('link', { name: 'serviceOrders.follow' })

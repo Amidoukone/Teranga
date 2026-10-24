@@ -19,7 +19,7 @@ export async function submitMissionCompletion(missionId, { summary, files = [], 
 }
 
 /**
- * POST /api/v1/missions/estimate — aucune écriture, calcul d'estimation pour l'étape 4.
+ * POST /api/v1/missions/estimate — aucune écriture, estimation avant confirmation.
  */
 export async function estimateMission(payload) {
   const { data } = await api.post('/v1/missions/estimate', payload);

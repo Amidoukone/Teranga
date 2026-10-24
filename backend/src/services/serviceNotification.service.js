@@ -140,7 +140,10 @@ async function notifyServiceStatusUpdate({ actorId, service, title, status }) {
       },
       countryId: service.countryId,
       regionId: service.regionId,
-      notificationMode: "update",
+      // createNotifications met à jour la notification existante et crée celle
+      // d'un nouveau destinataire (agent réaffecté, client sans notification).
+      // La nouvelle étape doit redevenir non lue pour être remarquée.
+      notificationMode: "create",
     });
   } catch (err) {
     logger.warn({ err, status }, "Notification service status échouée");

@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MapPin, Star, LocateFixed, Loader2 } from "lucide-react";
 
 import LocationAutocompleteInput from "../LocationAutocompleteInput";
-import MissionLocationMap from "../MissionLocationMap";
 import { reverseGeocodeLocation } from "../../../services/missions";
 import { notify } from "../../../utils/notify";
+
+const MissionLocationMap = lazy(() => import("../MissionLocationMap"));
 
 const inputClass =
   "w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500";
@@ -38,6 +39,8 @@ export default function LocationStep({
 }) {
   const { t } = useTranslation();
   const [locating, setLocating] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const [showPickupMap, setShowPickupMap] = useState(false);
 
   function handleUseCurrentLocation() {
     if (!navigator.geolocation) {
@@ -50,8 +53,11 @@ export default function LocationStep({
       async (position) => {
         const latitude = position.coords.latitude;
         const longitude = position.coords.longitude;
-        const resolvedAddress = await reverseGeocodeLocation({ latitude, longitude });
-        setLocating(false);
+        // Conserver le repère GPS même si le réseau ne permet pas de nommer le lieu.
+        let resolvedAddress = null;
+        try { resolvedAddress = await reverseGeocodeLocation({ latitude, longitude }); }
+        catch (_error) { /* Les coordonnées restent utilisables. */ }
+        finally { setLocating(false); }
         onCurrentLocationResolved({ latitude, longitude, address: resolvedAddress });
       },
       () => {
@@ -103,12 +109,13 @@ export default function LocationStep({
               : t("missionCreation.location.pickupSubtitle")}
           </p>
           <div className="mt-3">
-            <label className={labelClass}>
+            <label htmlFor="mission-pickup-address" className={labelClass}>
               {isMobilite
                 ? t("missionCreation.location.departureAddressLabel")
                 : t("missionCreation.location.pickupAddressLabel")}
             </label>
             <LocationAutocompleteInput
+              id="mission-pickup-address"
               className={inputClass}
               placeholder={t("missionCreation.location.pickupAddressPlaceholder")}
               value={pickupAddress}
@@ -118,6 +125,11 @@ export default function LocationStep({
             />
           </div>
           <div className="mt-3">
+            <button type="button" aria-expanded={showPickupMap} onClick={() => setShowPickupMap((value) => !value)} className="btn-secondary min-h-11 rounded-xl px-4 py-2 text-sm">
+              {t(showPickupMap ? "missionCreation.location.hideMap" : "missionCreation.location.showMap")}
+              {pickupCoordinates ? ` · ${t("missionCreation.location.positionSelected")}` : ""}
+            </button>
+            {showPickupMap ? <Suspense fallback={<p role="status">{t("missionCreation.location.loadingMap")}</p>}>
             <MissionLocationMap
               latitude={pickupCoordinates?.latitude}
               longitude={pickupCoordinates?.longitude}
@@ -125,12 +137,13 @@ export default function LocationStep({
               countryName={countryName}
               regionName={regionName}
             />
+            </Suspense> : null}
           </div>
         </div>
       ) : null}
 
       <div className="mt-5">
-        <label className={labelClass}>
+        <label htmlFor="mission-address" className={labelClass}>
           {requiresPickup
             ? isMobilite
               ? t("missionCreation.location.destinationTitle")
@@ -138,6 +151,7 @@ export default function LocationStep({
             : t("missionCreation.location.addressLabel")}
         </label>
         <LocationAutocompleteInput
+          id="mission-address"
           className={inputClass}
           placeholder={t("missionCreation.location.addressPlaceholder")}
           value={address}
@@ -162,6 +176,11 @@ export default function LocationStep({
       </div>
 
       <div className="mt-4">
+        <button type="button" aria-expanded={showMap} onClick={() => setShowMap((value) => !value)} className="btn-secondary min-h-11 rounded-xl px-4 py-2 text-sm">
+          {t(showMap ? "missionCreation.location.hideMap" : "missionCreation.location.showMap")}
+          {coordinates ? ` · ${t("missionCreation.location.positionSelected")}` : ""}
+        </button>
+        {showMap ? <Suspense fallback={<p role="status">{t("missionCreation.location.loadingMap")}</p>}>
         <MissionLocationMap
           latitude={coordinates?.latitude}
           longitude={coordinates?.longitude}
@@ -169,9 +188,10 @@ export default function LocationStep({
           countryName={countryName}
           regionName={regionName}
         />
+        </Suspense> : null}
         <p className="mt-2 flex items-center gap-1.5 text-xs text-text-muted">
           <MapPin size={13} />
-          {t("missionCreation.location.mapHint")}
+          {t(showMap ? "missionCreation.location.mapHint" : "missionCreation.location.simpleHint")}
         </p>
       </div>
 

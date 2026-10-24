@@ -19,6 +19,7 @@ test('Mali to Côte d’Ivoire changes the request scope and never reuses Mali r
     if (path === '/operations/readiness') return json({ ready: false, issues: [] });
     if (path === '/service-catalog/admin') return json({ catalog: [] });
     if (path === '/operations') {
+      if (url.searchParams.get('entityType') !== 'service') return json({ items: [], pagination: { total: 0 } });
       lastScope = { countryId: url.searchParams.get('countryId'), regionId: url.searchParams.get('regionId') };
       const items = lastScope.countryId === '2' ? [] : [{ id: 501, title: 'Dossier existant au Mali', country: { name: 'Mali' }, coordination: { state: 'waiting' } }];
       return json({ items, pagination: { total: items.length } });
@@ -69,6 +70,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
         owned = true; return json({ coordination: { state: 'accepted' } });
       }
       if (path === '/operations') {
+        if (new URL(route.request().url()).searchParams.get('entityType') === 'project') return json({ items: [], pagination: { total: 0 } });
         if (new URL(route.request().url()).searchParams.get('entityType') === 'order') return json({ items: [{ id: 501, entityType: 'order', title: 'Commande terrain', status: 'created', countryId: 1, country: { name: 'Mali' }, coordination: { state: orderOwned ? 'accepted' : 'waiting', owner: orderOwned ? { email: context.user.email } : null, executorUserId: orderAssigned ? 42 : null, policy: { stageMinutes: orderAssigned ? 120 : 60 } } }], pagination: { total: 1 } });
         return json({ items: [{ id: 501, title: 'Vérification avant travaux', executionType: 'provider', missionStatus: 'CREATED', country: { name: 'Mali' }, coordination: { state: owned ? 'accepted' : 'escalated', owner: owned ? { email: context.user.email } : null } }], pagination: { total: 1 } });
       }
@@ -76,6 +78,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     });
     await page.goto('/admin/operations');
     await expect(page.getByRole('heading', { name: /Centre des opérations|Operations centre/i })).toBeVisible();
+    await page.getByLabel(/Type de demande|Request type/i).selectOption('service');
     await expect(page.getByText('Assistance locale à renseigner')).toBeVisible();
     await expect(page.getByRole('link', { name: /Vérification avant travaux/ })).toBeVisible();
     await page.getByRole('button', { name: /Prendre en charge|Take ownership/i }).click();

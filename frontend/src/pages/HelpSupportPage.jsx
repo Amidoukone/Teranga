@@ -1,222 +1,55 @@
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  LifeBuoy,
-  MessageSquareWarning,
-  ShieldCheck,
-  FileText,
-  Lock,
-  Wrench,
-  ClipboardList,
-  FolderKanban,
-  CheckCircle2,
-  Mail,
-  Phone,
-  ArrowRight,
-} from 'lucide-react';
-
-import SettingsSubpageLayout from '../components/SettingsSubpageLayout';
 import { useGeo } from '../contexts/GeoContext';
-import { territoryContact } from '../utils/territoryContact';
+import useTerritorySupport from '../hooks/useTerritorySupport';
+import { getServiceById } from '../services/services';
+import { getMissionTrack } from '../services/missions';
+import { buildTelHref, buildWhatsappHref } from '../utils/phone';
+import SetSeo from '../components/SetSeo';
 
 export default function HelpSupportPage() {
   const { t } = useTranslation();
+  const [params] = useSearchParams();
   const geo = useGeo();
-  const countryId = geo.countryId || geo.user?.countryId;
-  const regionId = geo.regionId || (String(countryId) === String(geo.user?.countryId) ? geo.user?.regionId : null);
-  const { phone } = territoryContact({
-    country: geo.countries.find((country) => String(country.id) === String(countryId)),
-    region: geo.regions.find((region) => String(region.id) === String(regionId)),
-  });
-  const requestCards = [
-    {
-      icon: Wrench,
-      title: t('helpSupportPage.requestTypes.cards.service.title'),
-      description: t('helpSupportPage.requestTypes.cards.service.description'),
-    },
-    {
-      icon: ClipboardList,
-      title: t('helpSupportPage.requestTypes.cards.task.title'),
-      description: t('helpSupportPage.requestTypes.cards.task.description'),
-    },
-    {
-      icon: FolderKanban,
-      title: t('helpSupportPage.requestTypes.cards.project.title'),
-      description: t('helpSupportPage.requestTypes.cards.project.description'),
-    },
-  ];
-  const supportSteps = [
-    {
-      title: t('helpSupportPage.journey.steps.step1.title'),
-      description: t('helpSupportPage.journey.steps.step1.description'),
-    },
-    {
-      title: t('helpSupportPage.journey.steps.step2.title'),
-      description: t('helpSupportPage.journey.steps.step2.description'),
-    },
-    {
-      title: t('helpSupportPage.journey.steps.step3.title'),
-      description: t('helpSupportPage.journey.steps.step3.description'),
-    },
-  ];
-  const supportChannels = [
-    { icon: Mail, value: t('helpSupportPage.contact.channels.email') },
-    { icon: Phone, value: phone || t('geo.localContactMissing') },
-  ];
-
-  return (
-    <SettingsSubpageLayout
-      seoTitle={t('seo.pages.helpSupport.title')}
-      seoDescription={t('seo.pages.helpSupport.description')}
-      kicker={t('helpSupportPage.kicker')}
-      title={t('helpSupportPage.title')}
-      subtitle={t('helpSupportPage.subtitle')}
-    >
-      <section className="rounded-2xl border border-amber-500/30 bg-amber-500/15 p-5 text-amber-800 dark:text-amber-300">
-        <div className="mb-2 flex items-center gap-2 font-semibold">
-          <MessageSquareWarning size={18} />
-          <span>{t('helpSupportPage.comingSoon.title')}</span>
-        </div>
-        <p className="text-sm">{t('helpSupportPage.comingSoon.description')}</p>
-
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <div className="rounded-xl border border-amber-500/30 bg-white/60 px-3 py-2 text-xs text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
-            {t('helpSupportPage.highlights.openToAll')}
-          </div>
-          <div className="rounded-xl border border-amber-500/30 bg-white/60 px-3 py-2 text-xs text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
-            {t('helpSupportPage.highlights.fieldAgents')}
-          </div>
-          <div className="rounded-xl border border-amber-500/30 bg-white/60 px-3 py-2 text-xs text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
-            {t('helpSupportPage.highlights.africaMission')}
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-text-primary">{t('helpSupportPage.requestTypes.title')}</h2>
-          <p className="mt-1 text-sm text-text-secondary">{t('helpSupportPage.requestTypes.subtitle')}</p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          {requestCards.map(({ icon: Icon, title, description }) => (
-            <article
-              key={title}
-              className="rounded-2xl border border-border/80 bg-surface-card p-5"
-            >
-              <div className="mb-2 flex items-center gap-2 text-text-primary">
-                <Icon size={18} />
-                <h3 className="text-base font-semibold">{title}</h3>
-              </div>
-              <p className="text-sm text-text-secondary">{description}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-text-primary">{t('helpSupportPage.resources.title')}</h2>
-          <p className="mt-1 text-sm text-text-secondary">{t('helpSupportPage.resources.subtitle')}</p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <Link
-            to="/account/security"
-            className="rounded-2xl border border-border/80 bg-surface-card p-5 transition hover:bg-surface-main/70 hover:border-blue-500/30"
-          >
-            <div className="mb-2 flex items-center gap-2 text-text-primary">
-              <ShieldCheck size={18} />
-              <h3 className="text-base font-semibold">{t('helpSupportPage.cards.security.title')}</h3>
-            </div>
-            <p className="text-sm text-text-secondary">{t('helpSupportPage.cards.security.description')}</p>
-          </Link>
-
-          <Link
-            to="/privacy"
-            className="rounded-2xl border border-border/80 bg-surface-card p-5 transition hover:bg-surface-main/70 hover:border-blue-500/30"
-          >
-            <div className="mb-2 flex items-center gap-2 text-text-primary">
-              <Lock size={18} />
-              <h3 className="text-base font-semibold">{t('helpSupportPage.cards.privacy.title')}</h3>
-            </div>
-            <p className="text-sm text-text-secondary">{t('helpSupportPage.cards.privacy.description')}</p>
-          </Link>
-
-          <Link
-            to="/terms"
-            className="rounded-2xl border border-border/80 bg-surface-card p-5 transition hover:bg-surface-main/70 hover:border-blue-500/30"
-          >
-            <div className="mb-2 flex items-center gap-2 text-text-primary">
-              <FileText size={18} />
-              <h3 className="text-base font-semibold">{t('helpSupportPage.cards.terms.title')}</h3>
-            </div>
-            <p className="text-sm text-text-secondary">{t('helpSupportPage.cards.terms.description')}</p>
-          </Link>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-border/80 bg-surface-main/60 p-5">
-        <h2 className="text-lg font-semibold text-text-primary">{t('helpSupportPage.journey.title')}</h2>
-        <p className="mt-1 text-sm text-text-secondary">{t('helpSupportPage.journey.subtitle')}</p>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {supportSteps.map((step, index) => (
-            <div key={step.title} className="rounded-xl border border-border/80 bg-surface-card p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-500/15 text-xs font-semibold text-blue-700 dark:text-blue-300">
-                  {index + 1}
-                </span>
-                <h3 className="text-sm font-semibold text-text-primary">{step.title}</h3>
-              </div>
-              <p className="text-sm text-text-secondary">{step.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-border/80 bg-surface-main/60 p-5">
-        <div className="mb-2 flex items-center gap-2 text-text-primary">
-          <LifeBuoy size={18} />
-          <h2 className="text-base font-semibold">{t('helpSupportPage.contact.title')}</h2>
-        </div>
-        <p className="text-sm text-text-secondary">{t('helpSupportPage.contact.description')}</p>
-
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="space-y-3">
-            {supportChannels.map(({ icon: Icon, value }) => (
-              <div key={value} className="flex max-w-full items-start gap-2 text-text-secondary">
-                <Icon size={16} className="mt-0.5 shrink-0 text-blue-600" />
-                <span className="min-w-0 break-all text-sm leading-snug">{value}</span>
-              </div>
-            ))}
-
-            <div className="flex items-start gap-2 text-text-secondary">
-              <CheckCircle2 size={16} className="mt-0.5 text-blue-600" />
-              <span className="text-sm">{t('helpSupportPage.contact.channels.hours')}</span>
-            </div>
-
-            <p className="text-xs text-text-muted">{t('helpSupportPage.contact.note')}</p>
-          </div>
-
-          <div className="rounded-xl border border-border/80 bg-surface-card p-4">
-            <h3 className="text-sm font-semibold text-text-primary">{t('helpSupportPage.contact.actionsTitle')}</h3>
-            <p className="mt-2 text-sm text-text-secondary">{t('helpSupportPage.contact.actionsDescription')}</p>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link to="/login" className="btn-primary rounded-full px-4 py-2 text-xs inline-flex items-center gap-2">
-                {t('helpSupportPage.contact.actions.login')}
-                <ArrowRight size={14} />
-              </Link>
-              <Link to="/register" className="btn-secondary rounded-full px-4 py-2 text-xs">
-                {t('helpSupportPage.contact.actions.register')}
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-    </SettingsSubpageLayout>
-  );
+  const local = useTerritorySupport();
+  const id = /^\d+$/.test(params.get('demande') || '') ? params.get('demande') : null;
+  const [request, setRequest] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setRequest(null); setFailed(false);
+    if (!id || !geo.user) { setLoading(false); return undefined; }
+    setLoading(true);
+    const load = geo.user.role === 'provider' ? getMissionTrack(id, { skipEta: 1 }) : getServiceById(id);
+    load.then((value) => { if (active) setRequest(value); }).catch(() => { if (active) setFailed(true); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [id, geo.user, attempt]);
+  // Une référence précise utilise son propre territoire, jamais celui du compte par défaut.
+  const phone = id ? request?.assistancePhone : local.phone;
+  const message = id ? t('requestHelp.message', { id, title: request?.title || '' }) : t('serviceOrders.quickAccess.whatsappMessage');
+  const tel = buildTelHref(phone);
+  const whatsapp = buildWhatsappHref(phone, message);
+  const email = t('homePage.contact.info.email');
+  const requestsPath = { client: '/demandes', agent: '/agent/services', provider: '/dashboard', admin: '/admin/operations' }[geo.user?.role] || '/login';
+  return <div className="app-page-wrap"><div className="app-page-shell max-w-3xl space-y-5">
+    <SetSeo title={t('seo.pages.helpSupport.title')} />
+    <header><h1 className="app-page-headline">{t('requestHelp.title')}</h1><p className="mt-2 text-text-secondary">{t('requestHelp.hint')}</p></header>
+    {id && <p className="rounded-xl border border-border p-3 text-sm">{t('requestHelp.reference', { id })}</p>}
+    {loading && <p role="status">{t('serviceOrders.loading')}</p>}
+    {failed && <p role="alert">{t('requestHelp.loadError')} <button type="button" onClick={() => setAttempt((value) => value + 1)} className="underline">{t('serviceOrders.retry')}</button></p>}
+    <section className="rounded-2xl border border-border bg-surface-card p-5">
+      <h2 className="font-semibold">{t('requestHelp.contact')}</h2>
+      <div className="mt-4 flex flex-wrap gap-3">{tel && <a href={tel} className="btn-secondary min-h-12 rounded-xl px-5 py-3">{t('requestHelp.call')}</a>}{whatsapp && <a href={whatsapp} target="_blank" rel="noreferrer" className="btn-primary min-h-12 rounded-xl px-5 py-3">{t('requestHelp.whatsapp')}</a>}</div>
+      {!loading && !tel && <p className="mt-3 text-sm text-text-secondary">{t('requestHelp.missing')}</p>}
+      {!loading && !tel && email.includes('@') && <a href={`mailto:${email}?subject=${encodeURIComponent(id ? `Teranga #${id}` : 'Teranga')}&body=${encodeURIComponent(message)}`} className="btn-secondary mt-3 inline-flex min-h-11 items-center rounded-xl px-4 text-sm">{t('requestHelp.email')}</a>}
+    </section>
+    <nav aria-label={t('requestHelp.options')} className="grid gap-3 sm:grid-cols-2">
+      <Link to={requestsPath} className="btn-secondary min-h-12 rounded-xl px-4 py-3 text-center">{t('requestHelp.findRequest')}</Link>
+      <Link to={geo.user ? '/settings' : '/login'} className="btn-secondary min-h-12 rounded-xl px-4 py-3 text-center">{t('nav.security')}</Link>
+    </nav>
+    <details className="rounded-2xl border border-border p-4"><summary className="cursor-pointer font-semibold">{t('requestHelp.resources')}</summary><div className="mt-3 flex flex-wrap gap-4 text-sm"><Link to="/terms">{t('footer.links.terms')}</Link><Link to="/privacy">{t('footer.links.privacy')}</Link></div></details>
+  </div></div>;
 }
-
-

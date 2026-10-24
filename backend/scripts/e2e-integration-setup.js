@@ -377,7 +377,16 @@ async function main() {
   const country = await ensureCountry();
   const region = await ensureRegion(country.id);
   await ensureMasterFranchise(country.id);
-  await ensureMobilityPricing(country.id);
+  const mobilityCategory = await ensureMobilityPricing(country.id);
+  const [territory] = await db.Territory.findOrCreate({ where: { code: 'ML-E2E' }, defaults: { code: 'ML-E2E', name: 'Mali E2E', type: 'COUNTRY', countryId: country.id, isActive: true } });
+  const [organization] = await db.Organization.findOrCreate({ where: { code: 'ML-E2E' }, defaults: { code: 'ML-E2E', type: 'MASTER', legalName: 'Opérateur E2E', countryId: country.id, status: 'active' } });
+  for (const [code, executionProfile, mapping] of [
+    ['OTHER-E2E', 'agent', { legacyServiceType: 'other' }],
+    ['MOBILITY-E2E', 'mobility', { legacyTradeCategoryId: mobilityCategory.id }],
+  ]) {
+    const [definition] = await db.ServiceDefinition.findOrCreate({ where: { code }, defaults: { code, name: code, executionProfile, ...mapping } });
+    await db.ServiceAvailability.findOrCreate({ where: { serviceDefinitionId: definition.id, territoryId: territory.id, organizationId: organization.id }, defaults: { currency: 'XOF', slaMinutes: 60, providerRules: { serviceOutcome: 'Prestation vérifiable remise au client.', requiredEvidenceTypes: executionProfile === 'agent' ? ['photo'] : [], coordination: { enabled: true } } } });
+  }
 
   await ensureUser({
     email: FIXTURE.adminEmail,
@@ -398,8 +407,14 @@ async function main() {
     regionId: region.id,
     countryIso: FIXTURE.countryIso,
   });
+  const agent = await ensureUser({ email: 'e2e.real.agent@example.com', firstName: 'Ete', lastName: 'Agent', role: 'agent', countryId: country.id, regionId: region.id, countryIso: country.isoCode });
 
   const service = await ensureService(client, country.id, region.id);
+  await service.update({ agentId: agent.id });
+  await db.MissionCoordination.findOrCreate({ where: { serviceId: service.id }, defaults: {
+    ownerUserId: null, mode: 'manual', state: 'waiting', observedStatus: 'created', nextActionAt: new Date(), attempts: [],
+    policy: { enabled: false, completionReportRequired: true, serviceOutcome: 'Document remis au bénéficiaire avec justificatif.', requiredEvidenceTypes: ['photo'] },
+  } });
   const task = await ensureTask(client, service, country.id, region.id);
   const order = await ensureOrder(client, country.id, region.id);
   const notification = await ensureNotification(

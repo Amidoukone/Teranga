@@ -37,6 +37,43 @@ jobs:
       - name: Contract tests
         run: npm run test:contract
 
+  deployment-tools:
+    name: Deployment tools - isolated MySQL restore
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: teranga_recipe_only
+          MYSQL_ROOT_HOST: '%'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pteranga_recipe_only"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_USER: root
+      DB_PASSWORD: teranga_recipe_only
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Deployment and backup recipe (MySQL required)
+        run: npm run backup:recipe
+
   frontend:
     name: Frontend - lint + tests + build
     runs-on: ubuntu-latest

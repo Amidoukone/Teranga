@@ -1,9 +1,7 @@
-const path = require('path');
-const dotenv = require('dotenv');
+const { loadRuntimeEnv } = require('../src/utils/runtimeEnv');
 const { buildMysqlDialectOptions } = require('../src/utils/mysqlConnectionOptions');
 
-dotenv.config();
-dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
+loadRuntimeEnv();
 
 const productionDialectOptions = buildMysqlDialectOptions({
   env: process.env,

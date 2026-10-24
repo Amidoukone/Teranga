@@ -21,7 +21,7 @@ jest.mock('../i18n/useLocale', () => ({
 describe('AgentServicesPage simplifiée', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    getAgentServices.mockResolvedValue([
+    getAgentServices.mockResolvedValue({ items: [
       {
         id: 9,
         title: 'Récupérer un document',
@@ -29,7 +29,7 @@ describe('AgentServicesPage simplifiée', () => {
         status: 'created',
         client: { firstName: 'Awa', phone: '+22370000000' },
       },
-    ]);
+    ], pagination: { total: 1 } });
     startService.mockResolvedValue({ id: 9, status: 'in_progress' });
   });
 
@@ -37,5 +37,15 @@ describe('AgentServicesPage simplifiée', () => {
     render(<AgentServicesPage />);
     await userEvent.click(await screen.findByRole('button', { name: 'serviceTracking.actions.start' }));
     await waitFor(() => expect(startService).toHaveBeenCalledWith(9));
+  });
+
+  test('ouvre la remise au client et charge toutes les pages sans mélanger les archives', async () => {
+    getAgentServices.mockResolvedValue({ items: [{ id: 9, title: 'Document à remettre', status: 'in_progress' }], pagination: { total: 26 } });
+    render(<AgentServicesPage />);
+    expect(await screen.findByRole('link', { name: 'completion.prepare' })).toHaveAttribute('href', '/services/9#completion-report');
+    userEvent.click(screen.getByRole('button', { name: 'operations.next' }));
+    await waitFor(() => expect(getAgentServices).toHaveBeenCalledWith({ view: 'active', offset: 25, limit: 25 }, { withPagination: true }));
+    userEvent.click(screen.getByRole('button', { name: 'fieldWorkspace.showHistory' }));
+    await waitFor(() => expect(getAgentServices).toHaveBeenCalledWith({ view: 'history', offset: 0, limit: 25 }, { withPagination: true }));
   });
 });

@@ -5,12 +5,13 @@ import AgentCoordinationPanel from '../features/mission-tracking/AgentCoordinati
 // Les missions classiques agent (executionType='agent') restent sur AgentServicesPage.js /
 // GET /services/agent/services — non dupliquées ici (GET /v1/missions/mine les exclut déjà).
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Bike, CarFront, Check, Loader2, MapPin, PackageCheck, Power, X } from 'lucide-react';
 import { me } from '../services/auth';
 import { normalizeRole } from '../utils/role';
+import { isRequestHistory } from '../utils/requestLifecycle';
 import { acceptMission, declineMission, getMyMissions } from '../services/missions';
 import {
   getMyDispatchPresence,
@@ -19,17 +20,11 @@ import {
   updateMyLiveLocation,
 } from '../services/providers';
 
-const AVAILABILITY_VALUES = ['available', 'busy', 'offline'];
 const DRIVER_RIDES_POLL_MS = (() => {
   const raw = Number.parseInt(String(process.env.REACT_APP_DRIVER_RIDES_POLL_MS || ''), 10);
   if (!Number.isFinite(raw) || raw < 30000) return 60000;
   return raw;
 })();
-const AVAILABILITY_TONE = {
-  available: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30',
-  busy: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
-  offline: 'bg-surface-main text-text-secondary border border-border',
-};
 
 function isDocumentVisible() {
   return typeof document === 'undefined' || document.visibilityState === 'visible';
@@ -65,7 +60,7 @@ function missionDetailPath(mission) {
   return `/missions/${mission.id}/track`;
 }
 
-export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = false, serviceOnly = false }) {
+export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = false, serviceOnly = false, workspace = false }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const transportOnly = mobilityOnly || deliveryOnly;
@@ -87,6 +82,10 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
   const [savingAvailability, setSavingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState(null);
   const [rideAction, setRideAction] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [total, setTotal] = useState(0);
+  const loadVersion = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -134,6 +133,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
   }, [navigate]);
 
   const loadMissions = useCallback(async ({ silent = false } = {}) => {
+    const version = ++loadVersion.current;
     if (!silent) {
       setLoading(true);
       setError(null);
@@ -141,25 +141,27 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     try {
       const data = await getMyMissions(
         selectedTradeCategorySlug
-          ? { tradeCategorySlug: selectedTradeCategorySlug, limit: 100 }
-          : {}
+          ? { tradeCategorySlug: selectedTradeCategorySlug, limit: 100, view: showHistory ? 'history' : 'active', offset }
+          : { limit: 100, view: showHistory ? 'history' : 'active', offset, ...(serviceOnly ? { excludeTradeCategorySlug: 'mobilite,livraison' } : {}) }
       );
+      if (loadVersion.current !== version) return;
       const items = Array.isArray(data?.missions) ? data.missions : [];
       setMissions(
         serviceOnly
           ? items.filter((mission) => !['mobilite', 'livraison'].includes(mission.tradeCategory?.slug))
           : items
       );
+      setTotal(data?.pagination?.total ?? items.length);
     } catch (e) {
       console.error('MyMissionsPage load missions error:', e);
-      if (!silent) {
+      if (!silent && loadVersion.current === version) {
         setError(true);
         setMissions([]);
       }
     } finally {
-      if (!silent) setLoading(false);
+      if (!silent && loadVersion.current === version) setLoading(false);
     }
-  }, [selectedTradeCategorySlug, serviceOnly]);
+  }, [selectedTradeCategorySlug, serviceOnly, showHistory, offset]);
 
   async function handleRideOffer(event, mission, action) {
     event.preventDefault();
@@ -185,7 +187,6 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
   useEffect(() => {
     if (!isAllowed) return undefined;
     loadMissions();
-    if (!transportOnly && !serviceOnly) return undefined;
 
     const refreshIfVisible = () => {
       if (isDocumentVisible()) loadMissions({ silent: true });
@@ -195,6 +196,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     document.addEventListener('visibilitychange', refreshIfVisible);
 
     return () => {
+      loadVersion.current += 1;
       window.clearInterval(interval);
       window.removeEventListener('focus', refreshIfVisible);
       document.removeEventListener('visibilitychange', refreshIfVisible);
@@ -264,14 +266,14 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-text-primary">
-              {serviceOnly
+              {workspace ? t('fieldWorkspace.title') : serviceOnly
                 ? t('serviceProvider.title')
                 : transportOnly
                 ? t(`${transportTranslationRoot}.driverTitle`)
                 : t('myMissionsPage.title')}
             </h1>
             <p className="mt-1 text-sm text-text-secondary">
-              {serviceOnly
+              {workspace ? t('fieldWorkspace.hint') : serviceOnly
                 ? t('serviceProvider.subtitle')
                 : transportOnly
                 ? t(`${transportTranslationRoot}.driverSubtitle`)
@@ -293,23 +295,19 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
           </div>
         )}
 
-        {provider && transportOnly ? (
+        {provider ? (
           <section className="mb-6 rounded-3xl border border-border bg-surface-main/60 p-4 sm:p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-text-primary">
                   {provider.availabilityStatus === 'available'
-                    ? t(`${transportTranslationRoot}.driverAvailable`)
+                    ? t('fieldWorkspace.available')
                     : provider.availabilityStatus === 'busy'
-                    ? t(`${transportTranslationRoot}.driverBusy`)
-                    : t(`${transportTranslationRoot}.driverOffline`)}
+                    ? t('fieldWorkspace.busy')
+                    : t('fieldWorkspace.offline')}
                 </p>
                 <p className="mt-1 text-xs text-text-secondary">
-                  {provider.availabilityStatus === 'available'
-                    ? t(`${transportTranslationRoot}.driverAvailableHint`)
-                    : provider.availabilityStatus === 'busy'
-                    ? t(`${transportTranslationRoot}.driverBusyHint`)
-                    : t(`${transportTranslationRoot}.driverOfflineHint`)}
+                  {t('fieldWorkspace.providerHint')}
                 </p>
               </div>
               <button
@@ -326,10 +324,10 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
               >
                 {savingAvailability ? <Loader2 className="animate-spin" size={18} /> : <Power size={18} />}
                 {provider.availabilityStatus === 'available'
-                  ? t(`${transportTranslationRoot}.goOffline`)
+                  ? t('fieldWorkspace.goOffline')
                   : provider.availabilityStatus === 'busy'
-                  ? t(`${transportTranslationRoot}.rideInProgress`)
-                  : t(`${transportTranslationRoot}.goAvailable`)}
+                  ? t('fieldWorkspace.busy')
+                  : t('fieldWorkspace.goAvailable')}
               </button>
             </div>
             {dispatchPresence?.eligibleVehicles?.length > 1 ? (
@@ -351,57 +349,10 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
               <p className="mt-3 text-sm text-rose-600 dark:text-rose-300">{availabilityError}</p>
             ) : null}
           </section>
-        ) : provider ? (
-          <div className="mb-6 rounded-2xl border border-border bg-surface-main/60 px-4 py-3">
-            <p className="mb-2 text-xs font-medium text-text-secondary">
-              {t('myMissionsPage.availability.label')}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {AVAILABILITY_VALUES.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  disabled={savingAvailability}
-                  onClick={() => handleAvailabilityChange(value)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition disabled:opacity-60 ${
-                    provider.availabilityStatus === value
-                      ? AVAILABILITY_TONE[value]
-                      : 'border border-border text-text-secondary hover:text-text-primary'
-                  }`}
-                >
-                  {t(`myMissionsPage.availability.${value}`)}
-                </button>
-              ))}
-            </div>
-            {dispatchPresence?.eligibleVehicles?.length ? (
-              <div className="mt-3 max-w-sm">
-                <label className="mb-1 block text-xs font-medium text-text-secondary">
-                  {t('myMissionsPage.availability.activeVehicle')}
-                </label>
-                <select
-                  className="app-input"
-                  value={activeVehicleId}
-                  disabled={provider.availabilityStatus === 'busy'}
-                  onChange={(event) => setActiveVehicleId(event.target.value)}
-                >
-                  {dispatchPresence.eligibleVehicles.map((vehicle) => (
-                    <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.brand} {vehicle.model} · {vehicle.plateNumber}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-[11px] text-text-muted">
-                  {dispatchPresence.liveLocation?.isFresh
-                    ? t('myMissionsPage.availability.gpsFresh')
-                    : t('myMissionsPage.availability.gpsRequired')}
-                </p>
-              </div>
-            ) : null}
-            {availabilityError ? (
-              <p className="mt-3 text-xs text-rose-600 dark:text-rose-300">{availabilityError}</p>
-            ) : null}
-          </div>
         ) : null}
+
+        <button type="button" aria-pressed={showHistory} onClick={() => { setMissions([]); setOffset(0); setShowHistory((value) => !value); }} className="btn-secondary mb-4 min-h-11 rounded-xl px-4 text-sm">{t(showHistory ? 'fieldWorkspace.showActive' : 'fieldWorkspace.showHistory')}</button>
+        {(total > 100 || offset > 0) && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm"><button type="button" disabled={!offset || loading} onClick={() => setOffset((value) => Math.max(0, value - 100))} className="btn-secondary min-h-11 rounded-xl px-4">{t('operations.previous')}</button><span>{offset + 1}–{offset + missions.length} / {total}</span><button type="button" disabled={offset + 100 >= total || loading} onClick={() => setOffset((value) => value + 100)} className="btn-secondary min-h-11 rounded-xl px-4">{t('operations.next')}</button></div>}
 
         {!loading && missions.length === 0 && !error ? (
           <p className="text-center text-text-muted italic py-10">
@@ -413,7 +364,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
           </p>
         ) : (
           <ul className="space-y-3">
-            {missions.map((m) => {
+            {missions.filter((mission) => showHistory ? isRequestHistory(mission) : !isRequestHistory(mission)).sort((a, b) => Number(Boolean(b.acceptanceDeadlineAt)) - Number(Boolean(a.acceptanceDeadlineAt)) || Number(a.missionStatus === 'COMPLETED') - Number(b.missionStatus === 'COMPLETED')).map((m) => {
               const isOffer = Boolean(m.acceptanceDeadlineAt);
               const VehicleIcon = m.requestedVehicleType === 'car' ? CarFront : Bike;
               const missionTranslationRoot =

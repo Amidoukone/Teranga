@@ -105,4 +105,22 @@ describe("mission.controller dedicated transport lists", () => {
       }),
     );
   });
+
+  test('the active work filter preserves the assigned agent scope before pagination', async () => {
+    const { Op } = require('sequelize');
+    const req = { user: { id: 7, role: 'agent' }, query: { view: 'active', limit: '100' } };
+    await ctrl.mine(req, makeRes());
+    const options = Service.findAndCountAll.mock.calls[0][0];
+    expect(options.where.agentId).toBe(7);
+    expect(options.where.missionStatus[Op.ne]).toBeNull();
+    expect(options.where[Op.and][0].missionStatus[Op.notIn]).toContain('VALIDATED');
+    expect(options.where[Op.and][0].missionStatus[Op.notIn]).not.toContain('COMPLETED');
+  });
+
+  test('history filtering cannot grant a client access to the executor list', async () => {
+    const res = makeRes();
+    await ctrl.mine({ user: { id: 7, role: 'client' }, query: { view: 'history' } }, res);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(Service.findAndCountAll).not.toHaveBeenCalled();
+  });
 });

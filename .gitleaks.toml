@@ -1,0 +1,19 @@
+title = "Teranga secret detection"
+
+[extend]
+useDefault = true
+
+# Exact non-secret values only; no source directory is excluded from scanning.
+[[allowlists]]
+description = "Public JWT placeholder in the production environment template"
+condition = "AND"
+paths = ['''(^|[/\\])backend[/\\]\.env\.production\.example$''']
+regexTarget = "secret"
+regexes = ['''^replace-with-strong-secret-min-32-chars$''']
+
+[[allowlists]]
+description = "Migration filename, not an API key, in the local demo migration list"
+condition = "AND"
+paths = ['''(^|[/\\])backend[/\\]scripts[/\\]local-demo\.js$''']
+regexTarget = "secret"
+regexes = ['''^20261023110000-extend-operational-coordination$''']

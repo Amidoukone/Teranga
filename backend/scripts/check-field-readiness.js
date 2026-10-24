@@ -1,12 +1,12 @@
 'use strict';
-const option = process.argv.slice(2).find((value) => value.startsWith('--country='));
-const countryCode = option?.split('=')[1]?.toUpperCase();
-const regionOption = process.argv.slice(2).find((value) => value.startsWith('--region='));
-const regionId = regionOption ? Number(regionOption.split('=')[1]) : null;
-if (!/^[A-Z]{2}$/.test(countryCode || '') || (regionOption && (!Number.isSafeInteger(regionId) || regionId <= 0))) {
-  console.error('Usage: npm run field:check -- --country=ML [--region=123]');
-  process.exitCode = 2;
-} else {
+const { parseFieldCheckOptions } = require('../src/utils/fieldCheckOptions');
+const { loadOperationalEnv } = require('./operational-env');
+let options;
+try { options = parseFieldCheckOptions(process.argv.slice(2)); }
+catch (error) { console.error(error.message); process.exitCode = 2; }
+if (options) {
+  const { countryCode, regionId } = options;
+  loadOperationalEnv({ defaultEnv: 'development' });
   const db = require('../models');
   const { loadFieldReadiness } = require('../src/services/fieldReadiness.service');
   db.sequelize.options.logging = false;

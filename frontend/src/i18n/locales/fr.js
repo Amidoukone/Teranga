@@ -1,4 +1,7 @@
+import experience from './experience.fr';
+
 const fr = {
+  ...experience,
   agentCoordination: {
     availableMinutes: 'Durée de disponibilité (minutes)', availableUntil: 'Disponible jusqu’au', expired: 'Votre disponibilité a expiré. Confirmez-la à nouveau pour recevoir des demandes.',
     startBefore: 'Démarrer dans l’application avant', startHint: 'Déclarez le démarrage avant de commencer sur le terrain. Sans démarrage dans le délai indiqué, une affectation automatique peut être confiée à un autre agent.',
@@ -8,7 +11,7 @@ const fr = {
     statuses: { validated: 'Projet validé', delivered: 'Commande livrée', cancelled: 'Annulée', refunded: 'Remboursée', created: 'À démarrer', in_progress: 'En cours', completed: 'Validation du client attendue', processing: 'En préparation', paid: 'Paiement enregistré', shipped: 'En livraison' },
     actions: { validated: 'Confirmer la réalisation du projet', in_progress: 'Démarrer le projet', completed: 'Remettre au client', processing: 'Commencer la préparation', shipped: 'Confirmer l’expédition', delivered: 'Confirmer la livraison' },
   },
-  completion: { title: 'Compte rendu de la prestation', summary: 'Travaux réalisés, résultat et points à signaler', requiredFiles: 'Justificatifs attendus',
+  completion: { connectionInterrupted: 'Actualisation interrompue. Les dernières informations et votre saisie sont conservées. Réessayez quand la connexion revient.', prepare: 'Préparer la remise au client', title: 'Compte rendu de la prestation', summary: 'Travaux réalisés, résultat et points à signaler', requiredFiles: 'Justificatifs attendus',
     files: 'Ajouter des justificatifs', filesHint: 'Trois fichiers maximum par envoi. Les fichiers déjà enregistrés sont conservés.',
     fileKind: 'Nature des justificatifs', detectKind: 'Détecter selon le fichier', save: 'Enregistrer le compte rendu',
     saved: 'Compte rendu enregistré. Vous pouvez terminer la prestation lorsque les justificatifs attendus sont présents.', failed: 'Impossible d’enregistrer le compte rendu.' },
@@ -591,6 +594,22 @@ const fr = {
     },
   },
   serviceOrders: {
+    clientNextAction: {
+      received: "Demande reçue. Teranga organise sa prise en charge.",
+      searching: "Teranga recherche un intervenant disponible.",
+      assigned: "Un intervenant est affecté. Vous pouvez suivre sa prise en charge.",
+      onTheWay: "Votre intervenant est en route.",
+      onSite: "Votre intervenant est arrivé sur place.",
+      inProgress: "Le travail est en cours. L’intervenant prépare le compte rendu et les justificatifs.",
+      validate: "À vous : consultez le résultat et confirmez sa réalisation ou signalez un problème.",
+      confirmed: "Vous avez confirmé le résultat. Teranga termine la clôture.",
+      done: "Demande terminée. Le suivi reste consultable.",
+      cancelled: "Demande annulée. Le suivi reste consultable.",
+      assistance: "Aucun intervenant trouvé. Contactez Teranga pour organiser la suite.",
+      resolve: "Un problème est signalé. Teranga suit sa résolution.",
+      resolved: "Le problème a été traité. Consultez la décision et les suites de votre demande.",
+      follow: "Consultez votre demande pour suivre son avancement.",
+    },
     quickAccess: {
       kicker: "Services Teranga",
       title: "Que souhaitez-vous faire ?",
@@ -614,6 +633,7 @@ const fr = {
       close: "Prochaine étape : clôture administrative.",
       done: "Demande terminée.",
       retry: "Prochaine étape : relancer la recherche d’un exécutant.",
+      resolve: "Prochaine étape : traiter le problème signalé.",
       follow: "Prochaine étape : suivre l’avancement.",
     },
     proofRequired: "Preuve à fournir",
@@ -2918,12 +2938,12 @@ const fr = {
       callCta: "Appeler Teranga pour commander",
       badge: "Services de confiance, accessibles à tous",
       title: "De quoi avez-vous besoin aujourd’hui ?",
-      subtitle: "Commandez un taxi, envoyez un colis ou découvrez un bien immobilier. Vous pouvez commencer sans créer de compte.",
+      subtitle: "Décrivez votre besoin : Teranga organise sa prise en charge et son exécution sur le terrain. Pour vous ou vos proches, même à distance.",
       chooseAction: "Choisissez un service",
       flowLabel: "Comment fonctionne Teranga",
       flow: { request: "Je demande", execution: "Teranga exécute", tracking: "Je suis", validation: "Je valide" },
       whatsapp: "Parler à Teranga sur WhatsApp",
-      otherRequest: "Faire une autre demande",
+      otherRequest: "Demander un service",
       closeRequest: "Fermer le formulaire",
       trustLabel: "Les engagements Teranga",
       trust: {
@@ -2961,8 +2981,8 @@ const fr = {
       chooseNeed: "Choisissez votre besoin",
       loadingOptions: "Chargement des catégories…",
       fields: {
-        country: "Pays",
-        countryPlaceholder: "Choisissez votre pays",
+        country: "Pays du service",
+        countryPlaceholder: "Choisissez le pays du service",
         phone: "Numéro de téléphone",
         phonePlaceholder: "+223 00 00 00 00",
         pin: "Code secret (4 chiffres min.)",
@@ -2982,8 +3002,8 @@ const fr = {
       },
       identity: {
         title: "Vos coordonnées",
-        hint: "Pour vous envoyer le suivi de votre demande et créer votre espace client sécurisé.",
-        countryHint: "Utilisé pour votre compte — pas besoin que ce soit le pays de la mission.",
+        hint: "Votre numéro et votre code vous permettent de retrouver le suivi dans votre espace client.",
+        countryHint: "Choisissez le pays où le service est demandé, même si vous vivez ailleurs.",
       },
       submit: "Envoyer ma demande",
       submitting: "Envoi en cours…",
@@ -3276,6 +3296,7 @@ const fr = {
     wizard: {
       steps: {
         category: "Catégorie",
+        details: "Votre besoin",
         location: "Lieu",
         description: "Description",
         confirm: "Confirmation",
@@ -3288,7 +3309,7 @@ const fr = {
     },
     category: {
       title: "Quel est votre besoin ?",
-      subtitle: "Choisissez une filière métier ou un service classique Teranga.",
+      subtitle: "Choisissez le pays où le service sera rendu, puis le service dont vous avez besoin.",
       countryLabel: "Pays d’exécution",
       countryPlaceholder: "Choisir un pays",
       regionLabel: "Région d’exécution (facultatif)",
@@ -3301,6 +3322,11 @@ const fr = {
       subtitle: "Indiquez une adresse, déposez une épingle sur la carte, ou choisissez un lieu enregistré. Ce champ reste optionnel pour les besoins sans lieu (paiement, transfert d'argent...).",
       mapUnavailable: "Carte indisponible pour le moment — utilisez le champ adresse ci-dessus.",
       mapHint: "Cliquez sur la carte ou faites glisser le repère pour ajuster la position exacte.",
+      showMap: "Préciser sur la carte",
+      hideMap: "Masquer la carte",
+      loadingMap: "Chargement de la carte…",
+      positionSelected: "Position enregistrée",
+      simpleHint: "Un quartier, une ville et un point de repère peuvent vous aider à indiquer le lieu. La carte est facultative.",
       useCurrentLocation: "Utiliser ma position actuelle",
       locating: "Localisation en cours...",
       geolocationUnsupported: "La géolocalisation n'est pas disponible sur cet appareil.",
@@ -3321,6 +3347,7 @@ const fr = {
       destinationTitle: "Destination",
     },
     description: {
+      addDetails: "Ajouter des détails, une photo ou un message vocal (facultatif)",
       title: "Décrivez votre besoin",
       subtitle: "Un titre court, des détails si besoin, et une photo ou note vocale pour être bien compris.",
       titleLabel: "Votre besoin en une phrase",
@@ -3367,6 +3394,7 @@ const fr = {
       reference: "Référence de votre mission : #{{id}}",
       trackCta: "Suivre ma mission",
       newRequestCta: "Créer une autre mission",
+      attachmentWarning: "Votre demande est créée, mais les pièces jointes n’ont pas été envoyées. Contactez Teranga pour les transmettre en indiquant la référence de la demande.",
     },
   },
   missionPricingAdmin: {

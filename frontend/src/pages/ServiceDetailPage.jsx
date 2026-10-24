@@ -16,6 +16,9 @@ import {
 } from 'lucide-react';
 
 import MissionCompletionPanel from '../features/mission-tracking/MissionCompletionPanel';
+import RequestProgress from '../components/RequestProgress';
+import RequestHelp from '../components/RequestHelp';
+import RequestAmounts from '../components/RequestAmounts';
 import { me } from '../services/auth';
 import {
   completeService,
@@ -26,21 +29,13 @@ import {
 import { normalizeRole } from '../utils/role';
 import { buildTelHref, buildWhatsappHref } from '../utils/phone';
 import { useLocale } from '../i18n/useLocale';
+import { focusCompletionReport, needsCompletionReport } from '../utils/completion';
 
 const SERVICE_POLL_MS = 15000;
 const TERMINAL_STATUSES = new Set(['validated']);
-const PROGRESS_STEPS = ['request', 'assigned', 'inProgress', 'confirmed'];
 
 function isDocumentVisible() {
   return typeof document === 'undefined' || document.visibilityState === 'visible';
-}
-
-function progressIndex(service) {
-  if (service?.status === 'validated') return 4;
-  if (service?.status === 'completed') return 3;
-  if (service?.status === 'in_progress') return 2;
-  if (service?.agent) return 1;
-  return 0;
 }
 
 function statusTone(status) {
@@ -55,39 +50,6 @@ function displayUser(user) {
   return [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || null;
 }
 
-function ServiceProgress({ service, t }) {
-  const currentIndex = progressIndex(service);
-  return (
-    <ol
-      className="mt-5 grid grid-cols-4 gap-1 rounded-2xl border border-border/70 bg-surface-main/60 p-3"
-      aria-label={t('serviceTracking.progress.label')}
-    >
-      {PROGRESS_STEPS.map((step, index) => {
-        const complete = index < currentIndex;
-        const current = index === currentIndex;
-        return (
-          <li key={step} aria-current={current ? 'step' : undefined} className="flex min-w-0 flex-col items-center text-center">
-            <span
-              className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold ${
-                complete
-                  ? 'border-emerald-600 bg-emerald-600 text-white'
-                  : current
-                  ? 'border-blue-600 bg-blue-600 text-white ring-4 ring-blue-500/15'
-                  : 'border-border bg-surface-card text-text-muted'
-              }`}
-            >
-              {complete ? '✓' : index + 1}
-            </span>
-            <span className={`mt-1.5 text-[10px] leading-tight sm:text-xs ${complete || current ? 'font-semibold text-text-primary' : 'text-text-muted'}`}>
-              {t(`serviceTracking.progress.${step}`)}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
 export default function ServiceDetailPage() {
   const { t } = useTranslation();
   const { formatDate, formatNumber } = useLocale();
@@ -97,29 +59,40 @@ export default function ServiceDetailPage() {
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshError, setRefreshError] = useState(false);
   const [action, setAction] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const serviceRef = useRef(service);
+  const loadVersion = useRef(0);
+  const mutation = useRef(false);
   serviceRef.current = service;
 
   const load = useCallback(async ({ silent = false } = {}) => {
+    const epoch = ++loadVersion.current;
     if (!silent) setLoading(true);
     try {
       const data = await getServiceById(id);
+      if (epoch !== loadVersion.current) return;
       if (data?.missionStatus) {
         navigate(`/missions/${id}/track`, { replace: true });
         return;
       }
       setService(data);
       setError(null);
+      setRefreshError(false);
     } catch (e) {
+      if (epoch !== loadVersion.current) return;
+      if (String(serviceRef.current?.id) === String(id) && ![401, 403, 404].includes(e?.response?.status)) {
+        setRefreshError(true);
+        return;
+      }
       setError(
         e?.response?.status === 403
           ? t('serviceDetailPage.errors.forbidden')
           : t('serviceDetailPage.errors.load')
       );
     } finally {
-      setLoading(false);
+      if (epoch === loadVersion.current) setLoading(false);
     }
   }, [id, navigate, t]);
 
@@ -148,6 +121,7 @@ export default function ServiceDetailPage() {
     window.addEventListener('focus', refreshIfVisible);
     document.addEventListener('visibilitychange', refreshIfVisible);
     return () => {
+      loadVersion.current += 1;
       clearInterval(interval);
       window.removeEventListener('focus', refreshIfVisible);
       document.removeEventListener('visibilitychange', refreshIfVisible);
@@ -155,6 +129,9 @@ export default function ServiceDetailPage() {
   }, [load]);
 
   const runAction = useCallback(async (name) => {
+    if (name === 'report') { focusCompletionReport(); return; }
+    if (mutation.current) return;
+    mutation.current = true;
     setAction(name);
     setFeedback(null);
     try {
@@ -169,6 +146,7 @@ export default function ServiceDetailPage() {
         message: e?.response?.data?.error || t('serviceTracking.errors.action'),
       });
     } finally {
+      mutation.current = false;
       setAction(null);
     }
   }, [id, load, t]);
@@ -178,13 +156,14 @@ export default function ServiceDetailPage() {
       return { name: 'start', label: t('serviceTracking.actions.start') };
     }
     if (role === 'agent' && service?.status === 'in_progress') {
+      if (needsCompletionReport(service.completion)) return { name: 'report', label: t('completion.prepare') };
       return { name: 'complete', label: t('serviceTracking.actions.complete') };
     }
     if (role === 'client' && service?.status === 'completed') {
       return { name: 'validate', label: t('serviceTracking.actions.validate') };
     }
     return null;
-  }, [role, service?.status, t]);
+  }, [role, service?.status, service?.completion, t]);
 
   const backTo = role === 'agent' ? '/agent/services' : role === 'admin' ? '/admin/services' : '/services';
   const counterpart = role === 'agent' ? service?.client : service?.agent;
@@ -251,7 +230,8 @@ export default function ServiceDetailPage() {
             </div>
           </div>
 
-          <ServiceProgress service={service} t={t} />
+          <RequestProgress request={service} />
+          {refreshError && <div role="alert" className="app-alert app-alert-error mt-4"><p>{t('completion.connectionInterrupted')}</p><button type="button" onClick={() => load({ silent: true })} className="btn-secondary mt-2 min-h-11 rounded-xl px-4">{t('operations.refresh')}</button></div>}
 
           {feedback ? (
             <div className={`app-alert mt-5 ${feedback.type === 'error' ? 'app-alert-error' : 'app-alert-success'}`}>
@@ -272,6 +252,8 @@ export default function ServiceDetailPage() {
           ) : null}
         </section>
         <MissionCompletionPanel key={service.id} missionId={service.id} completion={service.completion} canSubmit={role === 'agent' && service.status === 'in_progress'} onSaved={() => load({ silent: true })} />
+        <RequestHelp id={service.id} title={service.title} phone={service.assistancePhone} />
+        {role === 'client' && <RequestAmounts request={service} />}
 
         <section className="rounded-[24px] border border-border/70 bg-surface-card p-5 shadow-sm">
           <h2 className="text-base font-bold text-text-primary">{t('serviceTracking.detailsTitle')}</h2>
@@ -291,7 +273,7 @@ export default function ServiceDetailPage() {
                   : t('serviceTracking.notAssigned')}
               </span>
             </div>
-            {Number.isFinite(budget) ? (
+            {role !== 'client' && Number.isFinite(budget) ? (
               <p className="font-semibold text-text-primary">
                 {t('serviceTracking.budget', {
                   amount: formatNumber(budget),

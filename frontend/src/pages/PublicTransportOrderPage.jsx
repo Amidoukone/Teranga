@@ -1,18 +1,22 @@
 import { ArrowLeft, CarFront, MessageCircle, Phone, Truck } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import TaxiRideRequestForm from "../features/mobility/TaxiRideRequestForm";
 import DeliveryRequestForm from "../features/delivery/DeliveryRequestForm";
 import SetSeo from "../components/SetSeo";
 import { buildTelHref, buildWhatsappHref } from "../utils/phone";
+import { territoryContact } from "../utils/territoryContact";
 
 export default function PublicTransportOrderPage({ serviceSlug }) {
   const { t } = useTranslation();
+  const [params] = useSearchParams();
+  const [country, setCountry] = useState(null);
   const isTaxi = serviceSlug === "mobilite";
   const Icon = isTaxi ? CarFront : Truck;
   const translationRoot = isTaxi ? "publicTransportOrder.taxi" : "publicTransportOrder.delivery";
-  const supportPhone = t("homePage.contact.info.phone");
+  const supportPhone = territoryContact({ country }).phone;
   const telHref = buildTelHref(supportPhone);
   const whatsappHref = buildWhatsappHref(
     supportPhone,
@@ -75,7 +79,7 @@ export default function PublicTransportOrderPage({ serviceSlug }) {
           <p className="mt-1 text-xs text-text-secondary">{t("publicTransportOrder.online.subtitle")}</p>
         </div>
 
-        {isTaxi ? <TaxiRideRequestForm /> : <DeliveryRequestForm />}
+        {isTaxi ? <TaxiRideRequestForm preferredCountryId={params.get('pays')} onCountrySelected={setCountry} /> : <DeliveryRequestForm preferredCountryId={params.get('pays')} onCountrySelected={setCountry} />}
       </div>
     </main>
   );

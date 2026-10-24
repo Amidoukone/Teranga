@@ -36,6 +36,8 @@ const {
 } = require("../utils/geoScope");
 const { getPagination } = require("../utils/pagination");
 const { getCompletionState, assertCompletionReady } = require('../services/missionCompletion.service');
+const { resolveAssistancePhone } = require('../services/missionSafety.service');
+const { getServicePaymentState } = require('../services/servicePaymentState.service');
 const { createTrackedResource } = require('../services/trackedCreation.service');
 const logger = require('../utils/logger');
 const { normalizeCurrency } = require('../utils/currency');
@@ -943,6 +945,8 @@ exports.deleteService = async (req, res) => {
 exports.listAgent = async (req, res) => {
   try {
     const { limit, offset, page } = getPagination(req, 25, 100);
+    const view = toTrimOrNull(req.query?.view);
+    if (view && !['active', 'history'].includes(view)) return res.status(400).json({ error: 'Vue de travail invalide' });
     const q = toTrimOrNull(req.query?.q);
     const status = toTrimOrNull(req.query?.status);
     const type = canonicalizeServiceType(req.query?.type, null);
@@ -958,6 +962,8 @@ exports.listAgent = async (req, res) => {
       executionType: "agent",
       tradeCategoryId: null,
     };
+    if (view === 'active') where.status = { [Op.ne]: 'validated' };
+    if (view === 'history') where.status = 'validated';
     const andWhere = [];
 
     if (status && ALLOWED_STATUSES.has(status)) where.status = status;
@@ -1038,6 +1044,7 @@ exports.startService = async (req, res) => {
       const current = await Service.findByPk(id, { transaction, lock: true });
       if (!current) throw Object.assign(new Error('Service introuvable'), { status: 404 });
       if (!canAccessByGeoScope(req.user, current) || String(current.agentId) !== String(req.user.id)) throw Object.assign(new Error('Affectation expirée ou service hors de votre périmètre'), { status: 403 });
+      if (current.missionStatus || current.executionType !== 'agent' || current.tradeCategoryId) throw Object.assign(new Error('Utilisez le suivi de mission pour ce service'), { status: 400 });
       if (current.status !== 'created') throw Object.assign(new Error('Impossible de démarrer : service déjà démarré ou terminé'), { status: 400 });
       await current.update({ status: 'in_progress' }, { transaction });
       return current;
@@ -1069,27 +1076,16 @@ exports.startService = async (req, res) => {
 exports.completeService = async (req, res) => {
   try {
     const id = toSafeInt(req.params.id);
-    const service = await Service.findByPk(id);
-
-    if (!service)
-      return res.status(404).json({ error: "Service introuvable" });
-
-    if (!canAccessByGeoScope(req.user, service)) {
-      return res
-        .status(403)
-        .json({ error: "Service hors scope geographique" });
-    }
-
-    if (service.agentId !== req.user.id)
-      return res.status(403).json({ error: "Non autorisé" });
-
-    if (service.status !== "in_progress")
-      return res.status(400).json({
-        error: "Service non démarré ou déjà terminé",
-      });
-
-    await assertCompletionReady(service);
-    await service.update({ status: "completed" });
+    const service = await sequelize.transaction(async (transaction) => {
+      const current = await Service.findByPk(id, { transaction, lock: true });
+      if (!current) throw Object.assign(new Error('Service introuvable'), { status: 404 });
+      if (!canAccessByGeoScope(req.user, current) || String(current.agentId) !== String(req.user.id)) throw Object.assign(new Error('Affectation expirée ou service hors de votre périmètre'), { status: 403 });
+      if (current.missionStatus || current.executionType !== 'agent' || current.tradeCategoryId) throw Object.assign(new Error('Utilisez le suivi de mission pour ce service'), { status: 400 });
+      if (current.status !== 'in_progress') throw Object.assign(new Error('Service non démarré ou déjà terminé'), { status: 400 });
+      await assertCompletionReady(current, { transaction });
+      await current.update({ status: 'completed' }, { transaction });
+      return current;
+    });
 
     await notifyServiceStatusUpdate({
       actorId: req.user.id,
@@ -1118,24 +1114,15 @@ exports.completeService = async (req, res) => {
 exports.validateService = async (req, res) => {
   try {
     const id = toSafeInt(req.params.id);
-    const service = await Service.findByPk(id);
-
-    if (!service) return res.status(404).json({ error: "Service introuvable" });
-    if (String(service.clientId) !== String(req.user.id)) {
-      return res.status(403).json({ error: "Non autorise" });
-    }
-    if (service.executionType !== "agent" || service.tradeCategoryId) {
-      return res.status(400).json({
-        error: "Utilisez le suivi de mission pour confirmer ce service",
-      });
-    }
-    if (service.status !== "completed") {
-      return res.status(400).json({
-        error: "Le service doit etre termine avant confirmation",
-      });
-    }
-
-    await service.update({ status: "validated" });
+    const service = await sequelize.transaction(async (transaction) => {
+      const current = await Service.findByPk(id, { transaction, lock: true });
+      if (!current) throw Object.assign(new Error('Service introuvable'), { status: 404 });
+      if (String(current.clientId) !== String(req.user.id)) throw Object.assign(new Error('Non autorisé'), { status: 403 });
+      if (current.missionStatus || current.executionType !== 'agent' || current.tradeCategoryId) throw Object.assign(new Error('Utilisez le suivi de mission pour confirmer ce service'), { status: 400 });
+      if (current.status !== 'completed') throw Object.assign(new Error('Le service doit être terminé avant confirmation'), { status: 400 });
+      await current.update({ status: 'validated' }, { transaction });
+      return current;
+    });
     await notifyServiceStatusUpdate({
       actorId: req.user.id,
       service,
@@ -1149,7 +1136,7 @@ exports.validateService = async (req, res) => {
     });
   } catch (e) {
     logger.error({ err: e }, "service.validate.failed");
-    return res.status(500).json({ error: "Erreur lors de la validation du service" });
+    return res.status(e.status || 500).json({ error: e.status ? e.message : "Erreur lors de la validation du service" });
   }
 };
 
@@ -1188,7 +1175,11 @@ exports.getById = async (req, res) => {
       return res.status(403).json({ error: "Non autorisé" });
     }
 
-    return res.json({ service: { ...addLabels(service), completion: await getCompletionState(service) } });
+    const [completion, assistancePhone, paymentState] = await Promise.all([
+      getCompletionState(service), resolveAssistancePhone(service),
+      getServicePaymentState(service).catch((error) => { logger.warn({ err: error, serviceId: id }, 'service.paymentState.unavailable'); return null; }),
+    ]);
+    return res.json({ service: { ...addLabels(service), completion, assistancePhone, paymentState } });
   } catch (e) {
     logger.error({ err: e }, "service.getById.failed");
     return res.status(500).json({ error: "Erreur lors de la récupération du service" });

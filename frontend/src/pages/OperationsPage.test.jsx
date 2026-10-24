@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import OperationsPage from './OperationsPage';
 import { getAssignableAgents, getFieldReadiness, getOperatingCatalog, getOperations, updateCoordination, updateOperatingOffer } from '../services/operations';
@@ -9,7 +9,7 @@ jest.mock('react-router-dom', () => ({ Link: ({ children, to, ...props }) => <a 
 jest.mock('../contexts/GeoContext', () => ({ useGeo: () => mockScope }));
 jest.mock('../services/auth', () => ({ getLocalUser: () => ({ id: 10, role: 'admin' }) }));
 jest.mock('../services/operations', () => ({ getAssignableAgents: jest.fn(), getFieldReadiness: jest.fn(), getOperatingCatalog: jest.fn(), getOperations: jest.fn(), updateCoordination: jest.fn(), updateOperatingOffer: jest.fn() }));
-const view = () => <OperationsPage />;
+const view = () => <OperationsPage initialEntityType="service" />;
 beforeEach(() => {
   jest.resetAllMocks(); mockScope = { countryId: 1, regionId: null };
   getOperations.mockResolvedValue({ items: [], pagination: { total: 0 } });
@@ -66,6 +66,7 @@ test('a late response from the old territory cannot replace the new queue', asyn
 test('an operator can configure the local outcome, deadline, evidence and automatic search', async () => {
   getOperatingCatalog.mockResolvedValue([{ id: 7, definition: { name: 'Vérification', legacyTradeCategoryId: 3 }, territory: { name: 'Zone pilote' }, offering: { slaMinutes: 60, providerRules: { serviceOutcome: 'Compte rendu détaillé pour le client', coordination: { enabled: false } } } }]);
   render(view());
+  userEvent.click(screen.getByText('operations.catalog'));
   const enabled = await screen.findByRole('checkbox', { name: 'operations.enableAutomatic' });
   userEvent.click(enabled);
   fireEvent.change(screen.getByLabelText('operations.sla'), { target: { value: '90' } });
@@ -77,6 +78,7 @@ test('an operator can configure the local outcome, deadline, evidence and automa
 test('an incomplete offering can be suspended without submitting blank required settings', async () => {
   getOperatingCatalog.mockResolvedValue([{ id: 1, definition: { name: 'Electricity', legacyTradeCategoryId: 3 }, territory: { name: 'Mali' }, offering: { isActive: true, slaMinutes: null, providerRules: null } }]);
   render(view());
+  userEvent.click(screen.getByText('operations.catalog'));
   userEvent.click(await screen.findByRole('button', { name: 'operations.suspendOffer' }));
   await waitFor(() => expect(updateOperatingOffer).toHaveBeenCalledWith(1, { isActive: false }));
   expect(await screen.findByText('operations.offerSuspended')).toBeInTheDocument();
@@ -87,6 +89,7 @@ test('an incomplete offering can be suspended without submitting blank required 
 test('reopening a suspended offering preserves its execution settings', async () => {
   getOperatingCatalog.mockResolvedValue([{ id: 1, definition: { name: 'Electricity', legacyTradeCategoryId: 3 }, territory: { name: 'Mali' }, offering: { isActive: false, slaMinutes: 120, providerRules: { serviceOutcome: 'Intervention and report agreed with the client' } } }]);
   render(view());
+  userEvent.click(screen.getByText('operations.catalog'));
   userEvent.click(await screen.findByRole('button', { name: 'operations.reopenOffer' }));
   await waitFor(() => expect(updateOperatingOffer).toHaveBeenCalledWith(1, { isActive: true }));
   expect(await screen.findByText('operations.offerReopened')).toBeInTheDocument();
@@ -97,7 +100,26 @@ test('a failed suspension preserves the current availability and displays the er
   getOperatingCatalog.mockResolvedValue([{ id: 1, definition: { name: 'Electricity' }, territory: { name: 'Mali' }, offering: { isActive: true } }]);
   updateOperatingOffer.mockRejectedValue({ response: { data: { error: 'Offer outside your territory' } } });
   render(view());
+  userEvent.click(screen.getByText('operations.catalog'));
   userEvent.click(await screen.findByRole('button', { name: 'operations.suspendOffer' }));
   expect(await screen.findByText('Offer outside your territory')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'operations.suspendOffer' })).toBeEnabled();
+});
+
+test('the shared queue preserves entity types when all three requests have the same identifier', async () => {
+  getOperations.mockImplementation(async ({ entityType }) => ({ items: [{ id: 3, title: `Dossier ${entityType}`, status: 'created', coordination: { state: entityType === 'project' ? 'escalated' : 'waiting' } }], pagination: { total: 1 } }));
+  render(<OperationsPage />);
+  const project = await screen.findByRole('article', { name: /Dossier project/ });
+  expect(screen.getByRole('link', { name: /Dossier service/ })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Dossier order/ })).toBeInTheDocument();
+  userEvent.click(within(project).getByRole('button', { name: 'operations.takeOwnership' }));
+  await waitFor(() => expect(updateCoordination).toHaveBeenCalledWith(3, { mode: 'manual', ownerUserId: 10 }, 'project'));
+});
+
+test('a failed request family does not hide other families from the shared queue', async () => {
+  getOperations.mockImplementation(({ entityType }) => entityType === 'order' ? Promise.reject(new Error('Network failure')) : Promise.resolve({ items: [{ id: 1, title: `Dossier ${entityType}` }], pagination: { total: 1 } }));
+  render(<OperationsPage />);
+  expect(await screen.findByText('operationsOverview.partial')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Dossier service/ })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Dossier project/ })).toBeInTheDocument();
 });

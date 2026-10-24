@@ -16,14 +16,22 @@ import CategoryStep from "./steps/CategoryStep";
 import LocationStep from "./steps/LocationStep";
 import DescriptionStep from "./steps/DescriptionStep";
 import ConfirmStep from "./steps/ConfirmStep";
+import { getRequestDetailPath } from "../../utils/requestLifecycle";
+import { clearRequestDraft, readRequestDraft, saveRequestDraft } from "../../utils/requestDraft";
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 3;
 
-export default function MissionCreationWizard({ serviceOnly = false, preferredCategorySlug = null }) {
+export default function MissionCreationWizard({ serviceOnly = false, preferredCategorySlug = null, onTransportSelected }) {
   const { t } = useTranslation();
 
   const [step, setStep] = useState(1);
+  const wizardPanel = useRef(null);
   const submission = useRef(null);
+  const sending = useRef(false);
+  const estimating = useRef(false);
+  const draftActor = useRef(null);
+  const [draftReady, setDraftReady] = useState(false);
+  const [restoredDraft, setRestoredDraft] = useState(false);
 
   const [tradeCategories, setTradeCategories] = useState([]);
   const [classicTypes, setClassicTypes] = useState(undefined);
@@ -59,6 +67,15 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [result, setResult] = useState(null);
+  const [attachmentWarning, setAttachmentWarning] = useState(false);
+
+  useEffect(() => {
+    const heading = wizardPanel.current?.querySelector('h2');
+    if (!heading) return;
+    heading.setAttribute('tabindex', '-1');
+    heading.focus({ preventScroll: true });
+    wizardPanel.current.scrollIntoView?.({ block: 'start', behavior: 'instant' });
+  }, [step]);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,10 +88,18 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
         ]);
         if (cancelled) return;
         setCountries(countryList);
+        draftActor.current = session.user?.id || null;
+        const draft = session.user?.id ? readRequestDraft('mission', session.user.id) : {};
+        const draftCountry = countryList.find((item) => String(item.id) === draft.countryId);
         const accountCountry = countryList.find((item) => String(item.id) === String(session.user?.countryId));
-        const initialCountry = accountCountry || (countryList.length === 1 ? countryList[0] : null);
+        const initialCountry = draftCountry || accountCountry || (countryList.length === 1 ? countryList[0] : null);
         setCountryId(initialCountry ? String(initialCountry.id) : "");
-        setRegionId(accountCountry && session.user?.regionId ? String(session.user.regionId) : "");
+        setRegionId(draftCountry ? draft.regionId || '' : accountCountry && session.user?.regionId ? String(session.user.regionId) : "");
+        setTitle(draft.title || ''); setDescription(draft.description || '');
+        if (draftCountry) { setAddress(draft.address || ''); setCoordinates(draft.coordinates || null); setPickupAddress(draft.pickupAddress || ''); setPickupCoordinates(draft.pickupCoordinates || null); }
+        submission.current = draft.submission || null;
+        setRestoredDraft(Boolean(draft.title || draft.description || draft.address));
+        setDraftReady(true);
         setSavedLocations(locations);
       } catch (_err) {
         if (!cancelled) {
@@ -90,6 +115,11 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
       cancelled = true;
     };
   }, [t]);
+
+  useEffect(() => {
+    if (!draftReady || !draftActor.current || result) return;
+    saveRequestDraft('mission', draftActor.current, { countryId, regionId, title, description, address, coordinates, pickupAddress, pickupCoordinates, submission: submission.current });
+  }, [draftReady, countryId, regionId, title, description, address, coordinates, pickupAddress, pickupCoordinates, result]);
 
   useEffect(() => {
     if (!countryId) {
@@ -168,18 +198,23 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
 
   const canGoNext = () => {
     if (step === 1) return Boolean(countryId && category.requestKind && !loadingOptions);
-    if (step === 3) return title.trim().length >= 3;
+    if (step === 2) return title.trim().length >= 3 && (!requiresPickup || (
+      Boolean(pickupAddress.trim() || pickupCoordinates) && Boolean(address.trim() || coordinates)
+    ));
     return true;
   };
 
   const goNext = async () => {
+    if (estimating.current || sending.current) return;
     if (!canGoNext()) {
       setFeedback({ type: "error", message: t("missionCreation.errors.stepIncomplete") });
       return;
     }
     setFeedback(null);
 
-    if (step === 3) {
+    if (step === 1 && requiresPickup && onTransportSelected) { onTransportSelected(selectedTradeCategorySlug, countryId); return; }
+    if (step === 2) {
+      estimating.current = true;
       setLoadingEstimate(true);
       try {
         const data = await estimateMission({
@@ -205,6 +240,7 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
         });
         return;
       } finally {
+        estimating.current = false;
         setLoadingEstimate(false);
       }
     }
@@ -269,6 +305,9 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
   };
 
   const resetWizard = () => {
+    clearRequestDraft('mission', draftActor.current);
+    setRestoredDraft(false);
+    submission.current = null;
     setStep(1);
     setCategory({ requestKind: null, tradeCategoryId: "", serviceType: "" });
     setAddress("");
@@ -285,6 +324,7 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
     setEstimate(null);
     setResult(null);
     setFeedback(null);
+    setAttachmentWarning(false);
   };
 
   const clearLocation = () => {
@@ -299,6 +339,8 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
   };
 
   const handleSubmit = async () => {
+    if (sending.current || estimating.current || step !== TOTAL_STEPS) return;
+    sending.current = true;
     setSubmitting(true);
     setFeedback(null);
     try {
@@ -332,8 +374,10 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
       if (submission.current?.fingerprint !== fingerprint) {
         submission.current = { fingerprint, requestKey: window.crypto?.randomUUID?.() || `mission-${Date.now()}-${Math.random().toString(36).slice(2)}` };
       }
+      saveRequestDraft('mission', draftActor.current, { countryId, regionId, title, description, address, coordinates, pickupAddress, pickupCoordinates, submission: submission.current });
       const data = await createMission({ ...payload, requestKey: submission.current.requestKey });
       const missionId = data?.mission?.id;
+      clearRequestDraft('mission', draftActor.current);
 
       if (saveThisLocation && !savedLocationId && address.trim() && coordinates?.latitude != null) {
         try {
@@ -352,7 +396,7 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
         try {
           await uploadMissionAttachments(missionId, { photo, voiceNote });
         } catch (_err) {
-          // Non bloquant : la mission est déjà créée, seules les pièces jointes échouent.
+          setAttachmentWarning(true);
         }
       }
 
@@ -364,14 +408,25 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
         message: backendMessage || t("missionCreation.errors.submitFailed"),
       });
     } finally {
+      sending.current = false;
       setSubmitting(false);
     }
+  };
+
+  const retryAttachments = async () => {
+    if (sending.current || !result?.mission?.id) return;
+    sending.current = true; setSubmitting(true);
+    try { await uploadMissionAttachments(result.mission.id, { photo, voiceNote }); setAttachmentWarning(false); }
+    catch (_error) { setAttachmentWarning(true); }
+    finally { sending.current = false; setSubmitting(false); }
   };
 
   if (result) {
     return (
       <div className="mx-auto max-w-xl rounded-[28px] border border-border/70 bg-surface-card p-6 shadow-sm sm:p-8">
         <AuthFeedbackBanner type="success" message={t("missionCreation.success.message")} />
+        {attachmentWarning ? <p role="status" className="mt-3 text-sm text-amber-800 dark:text-amber-200">{t("missionCreation.success.attachmentWarning")}</p> : null}
+        {attachmentWarning && <button type="button" disabled={submitting} onClick={retryAttachments} className="btn-secondary mt-3 min-h-11 rounded-xl px-4">{t(submitting ? 'operations.saving' : 'requestDraft.retryAttachments')}</button>}
         <h3 className="mt-5 text-lg font-semibold text-text-primary">
           {t("missionCreation.success.title")}
         </h3>
@@ -380,15 +435,7 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
-            to={
-              result.mission?.missionStatus
-                ? selectedTradeCategorySlug === "livraison"
-                  ? `/livraisons/${result.mission.id}`
-                  : selectedTradeCategorySlug === "mobilite"
-                  ? `/courses/${result.mission.id}`
-                  : `/missions/${result.mission.id}/track`
-                : `/services/${result.mission.id}`
-            }
+            to={getRequestDetailPath(result.mission, selectedTradeCategorySlug)}
             className="btn-primary rounded-full px-6 py-2.5 text-sm"
           >
             {t("missionCreation.success.trackCta")}
@@ -396,6 +443,7 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
           <button
             type="button"
             onClick={resetWizard}
+            disabled={submitting}
             className="btn-secondary rounded-full px-6 py-2.5 text-sm"
           >
             {t("missionCreation.success.newRequestCta")}
@@ -406,8 +454,9 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
   }
 
   return (
-    <div className="mx-auto max-w-xl rounded-[28px] border border-border/70 bg-surface-card p-6 shadow-sm sm:p-8">
+    <div ref={wizardPanel} className="mx-auto max-w-xl scroll-mt-24 rounded-[28px] border border-border/70 bg-surface-card p-6 shadow-sm sm:p-8">
       <WizardProgress currentStep={step} />
+      {restoredDraft && <div className="mb-4 text-sm text-text-secondary"><p role="status">{t('requestDraft.restored')}</p><button type="button" onClick={resetWizard} className="mt-2 min-h-11 underline">{t('requestDraft.clear')}</button></div>}
 
       {feedback ? (
         <div className="mb-5">
@@ -444,6 +493,17 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
       ) : null}
 
       {step === 2 ? (
+        <div className="space-y-7">
+        <DescriptionStep
+          title={title}
+          onTitleChange={setTitle}
+          description={description}
+          onDescriptionChange={setDescription}
+          photo={photo}
+          onPhotoChange={setPhoto}
+          voiceNote={voiceNote}
+          onVoiceNoteChange={setVoiceNote}
+        />
         <LocationStep
           address={address}
           coordinates={coordinates}
@@ -469,22 +529,10 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
           onPickupPlaceSelected={handlePickupPlaceSelected}
           onPickupMapPositionChange={handlePickupMapPositionChange}
         />
+        </div>
       ) : null}
 
       {step === 3 ? (
-        <DescriptionStep
-          title={title}
-          onTitleChange={setTitle}
-          description={description}
-          onDescriptionChange={setDescription}
-          photo={photo}
-          onPhotoChange={setPhoto}
-          voiceNote={voiceNote}
-          onVoiceNoteChange={setVoiceNote}
-        />
-      ) : null}
-
-      {step === 4 ? (
         <ConfirmStep
           estimate={estimate}
           loadingEstimate={loadingEstimate}
@@ -507,7 +555,7 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
           <button
             type="button"
             onClick={goBack}
-            disabled={submitting}
+            disabled={submitting || loadingEstimate}
             className="btn-secondary inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm disabled:opacity-60"
           >
             <ArrowLeft size={16} />
@@ -521,8 +569,10 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
           <button
             type="button"
             onClick={goNext}
-            className="btn-primary inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm"
+            disabled={loadingEstimate || loadingOptions}
+            className="btn-primary inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
           >
+            {loadingEstimate ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : null}
             {t("missionCreation.wizard.next")}
             <ArrowRight size={16} />
           </button>

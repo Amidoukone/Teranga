@@ -18,8 +18,12 @@ import {
 import MissionTrackingMap from "../features/mission-tracking/MissionTrackingMap";
 import MissionCompletionPanel from "../features/mission-tracking/MissionCompletionPanel";
 import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
+import RequestProgress from "../components/RequestProgress";
+import RequestHelp from "../components/RequestHelp";
+import RequestAmounts from "../components/RequestAmounts";
 import { Modal, FormField, Button } from "../components/ui";
 import { buildTelHref } from "../utils/phone";
+import { focusCompletionReport, needsCompletionReport } from "../utils/completion";
 
 // Même idiome que NavBar.js (poll notifications) : intervalle configurable, pause si l'onglet
 // n'est pas visible — docs/DEV_SPEC_TERANGA_v3.md section 4.2 recommande 5-10s.
@@ -82,27 +86,6 @@ const DRIVER_LOCATION_POLL_MS = (() => {
   return raw;
 })();
 
-const CLIENT_RIDE_PROGRESS_STEPS = [
-  { key: "driver", status: "ASSIGNED" },
-  { key: "enRoute", status: "EN_ROUTE" },
-  { key: "arrived", status: "ON_SITE" },
-  { key: "trip", status: "IN_PROGRESS" },
-];
-
-const CLIENT_DELIVERY_PROGRESS_STEPS = [
-  { key: "courier", status: "ASSIGNED" },
-  { key: "enRoute", status: "EN_ROUTE" },
-  { key: "pickup", status: "ON_SITE" },
-  { key: "delivery", status: "IN_PROGRESS" },
-];
-
-const CLIENT_SERVICE_PROGRESS_STEPS = [
-  { key: "provider", status: "ASSIGNED" },
-  { key: "enRoute", status: "EN_ROUTE" },
-  { key: "onSite", status: "ON_SITE" },
-  { key: "work", status: "IN_PROGRESS" },
-];
-
 const CLIENT_DELIVERY_STATUS_ICONS = {
   CREATED: Clock,
   SEARCHING_EXECUTOR: Clock,
@@ -111,23 +94,6 @@ const CLIENT_DELIVERY_STATUS_ICONS = {
   ON_SITE: MapPin,
   IN_PROGRESS: Truck,
   COMPLETED: PackageCheck,
-};
-
-const CLIENT_RIDE_PROGRESS_INDEX = {
-  CREATED: -1,
-  SEARCHING_EXECUTOR: -1,
-  ASSIGNED: 0,
-  EN_ROUTE: 1,
-  ON_SITE: 2,
-  IN_PROGRESS: 3,
-  COMPLETED: 3,
-  VALIDATED: 3,
-  CLOSED: 3,
-  CANCELLED_BY_CLIENT: 3,
-  NO_EXECUTOR_FOUND: 3,
-  RESOLVED_REFUND: 3,
-  RESOLVED_REDO: 3,
-  RESOLVED_CLOSED: 3,
 };
 
 function ClientRideStatus({ status, t, translationRoot = "taxiRides" }) {
@@ -160,51 +126,6 @@ function ClientRideStatus({ status, t, translationRoot = "taxiRides" }) {
         </p>
       </div>
     </div>
-  );
-}
-
-function ClientRideProgress({ status, t, translationRoot = "taxiRides" }) {
-  const currentIndex = CLIENT_RIDE_PROGRESS_INDEX[status] ?? -1;
-  const steps =
-    translationRoot === "deliveryOrders"
-      ? CLIENT_DELIVERY_PROGRESS_STEPS
-      : translationRoot === "serviceMission"
-      ? CLIENT_SERVICE_PROGRESS_STEPS
-      : CLIENT_RIDE_PROGRESS_STEPS;
-
-  return (
-    <ol
-      className="mt-3 grid grid-cols-4 gap-1 rounded-2xl border border-border/70 bg-surface-card p-3"
-      aria-label={t(`${translationRoot}.progress.label`)}
-    >
-      {steps.map((step, index) => {
-        const complete = index < currentIndex || (currentIndex === 3 && index === 3 && ["COMPLETED", "VALIDATED", "CLOSED"].includes(status));
-        const current = index === currentIndex && !complete;
-        return (
-          <li
-            key={step.status}
-            aria-label={t(`${translationRoot}.progress.${step.key}`)}
-            aria-current={current ? "step" : undefined}
-            className="flex min-w-0 flex-col items-center text-center"
-          >
-            <span
-              className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold ${
-                complete
-                  ? "border-emerald-600 bg-emerald-600 text-white"
-                  : current
-                  ? "border-blue-600 bg-blue-600 text-white ring-4 ring-blue-500/15"
-                  : "border-border bg-surface-main text-text-muted"
-              }`}
-            >
-              {complete ? "✓" : index + 1}
-            </span>
-            <span className={`mt-1.5 text-[10px] leading-tight sm:text-xs ${current || complete ? "font-semibold text-text-primary" : "text-text-muted"}`}>
-              {t(`${translationRoot}.progress.${step.key}`)}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
   );
 }
 
@@ -243,6 +164,10 @@ export default function MissionTrackingPage() {
   const headingRef = useRef(null);
 
   const trackRef = useRef(track);
+  const loadedId = useRef(null);
+  const [refreshError, setRefreshError] = useState(false);
+  const loadVersion = useRef(0);
+  const transitionPending = useRef(false);
   const locationPermissionDeniedRef = useRef(false);
   trackRef.current = track;
 
@@ -251,22 +176,32 @@ export default function MissionTrackingPage() {
   }, [track?.missionStatus]);
 
   const load = useCallback(async ({ skipEta = false } = {}) => {
+    const epoch = ++loadVersion.current;
     try {
       const data = await getMissionTrack(id, skipEta ? { skipEta: 1 } : {});
+      if (epoch !== loadVersion.current) return;
+      loadedId.current = id;
       setTrack((current) =>
         skipEta && data?.etaMinutes == null && current?.etaMinutes != null
           ? { ...data, etaMinutes: current.etaMinutes }
           : data
       );
       setError(null);
+      setRefreshError(false);
     } catch (_err) {
+      if (epoch !== loadVersion.current) return;
+      if (trackRef.current && loadedId.current === id && ![401, 403, 404].includes(_err?.response?.status)) {
+        setRefreshError(true);
+        return;
+      }
       setError(t("missionTracking.errors.load"));
     } finally {
-      setLoading(false);
+      if (epoch === loadVersion.current) setLoading(false);
     }
   }, [id, t]);
 
   useEffect(() => {
+    if (loadedId.current !== id) setLoading(true);
     load();
 
     function refreshSilentlyIfVisible() {
@@ -287,11 +222,12 @@ export default function MissionTrackingPage() {
     document.addEventListener("visibilitychange", refreshFullyIfVisible);
 
     return () => {
+      loadVersion.current += 1;
       clearInterval(interval);
       window.removeEventListener("focus", refreshFullyIfVisible);
       document.removeEventListener("visibilitychange", refreshFullyIfVisible);
     };
-  }, [load]);
+  }, [id, load]);
 
   useEffect(() => {
     const isTaxiMission = track?.tradeCategorySlug === "mobilite";
@@ -370,6 +306,8 @@ export default function MissionTrackingPage() {
   ]);
 
   const handleTransition = async (toStatus, extra) => {
+    if (transitionPending.current) return;
+    transitionPending.current = true;
     setActionState({ type: "loading" });
     try {
       await updateMissionStatus(id, toStatus, extra);
@@ -380,7 +318,7 @@ export default function MissionTrackingPage() {
         type: "error",
         message: requestError?.response?.data?.error || t("missionTracking.errors.action"),
       });
-    }
+    } finally { transitionPending.current = false; }
   };
 
   const handleVerifyStartCode = async () => {
@@ -588,6 +526,7 @@ export default function MissionTrackingPage() {
     collectedAmountInput.trim() !== ""
       ? { collectedAmount: Number(collectedAmountInput) }
       : undefined;
+  const reportNeeded = stickyExecutorNextStatus === 'COMPLETED' && needsCompletionReport(track.completion);
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
@@ -615,6 +554,7 @@ export default function MissionTrackingPage() {
         </button>
       </div>
 
+      {refreshError && <p role="alert" className="app-alert app-alert-error mt-4">{t('completion.connectionInterrupted')}</p>}
       {clientSimpleTranslationRoot ? (
         <>
           <ClientRideStatus
@@ -622,11 +562,7 @@ export default function MissionTrackingPage() {
             t={t}
             translationRoot={clientSimpleTranslationRoot}
           />
-          <ClientRideProgress
-            status={track.missionStatus}
-            t={t}
-            translationRoot={clientSimpleTranslationRoot}
-          />
+          <RequestProgress request={track} />
         </>
       ) : null}
 
@@ -881,6 +817,8 @@ export default function MissionTrackingPage() {
         ) : null}
 
         <MissionCompletionPanel key={id} missionId={id} completion={track.completion} canSubmit={track.isExecutor && track.missionStatus === 'IN_PROGRESS'} onSaved={() => load({ skipEta: true })} />
+        <RequestHelp id={id} title={track.title} phone={track.assistancePhone} />
+        {track.viewerRole === 'client' && <RequestAmounts request={track} />}
         <div className="mt-5 flex flex-wrap gap-3">
           {track.viewerRole === "client" && track.missionStatus === "COMPLETED" ? (
             <button
@@ -981,7 +919,7 @@ export default function MissionTrackingPage() {
               <button
                 type="button"
                 onClick={() =>
-                  requiresStartCode
+                  reportNeeded ? focusCompletionReport() : requiresStartCode
                     ? handleVerifyStartCode()
                     : handleTransition(
                         EXECUTOR_NEXT_STATUS[track.missionStatus],
@@ -991,7 +929,7 @@ export default function MissionTrackingPage() {
                 disabled={actionState?.type === "loading"}
                 className="btn-primary min-h-14 w-full rounded-2xl px-6 py-3 text-base font-bold disabled:opacity-60"
               >
-                {requiresStartCode
+                {reportNeeded ? t('completion.prepare') : requiresStartCode
                   ? t("missionTracking.startCode.verifyCta")
                   : t(`${executorCtaRoot}.${EXECUTOR_NEXT_STATUS[track.missionStatus]}`)}
               </button>
@@ -1148,7 +1086,7 @@ export default function MissionTrackingPage() {
             <button
               type="button"
               onClick={() =>
-                requiresStartCode
+                reportNeeded ? focusCompletionReport() : requiresStartCode
                   ? handleVerifyStartCode()
                   : handleTransition(stickyExecutorNextStatus, transitionExtra)
               }
@@ -1156,7 +1094,7 @@ export default function MissionTrackingPage() {
               className="btn-primary flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-6 text-base font-bold disabled:opacity-60"
             >
               {actionState?.type === "loading" ? <Loader2 className="animate-spin" size={20} /> : null}
-              {requiresStartCode
+              {reportNeeded ? t('completion.prepare') : requiresStartCode
                 ? t("missionTracking.startCode.verifyCta")
                 : t(`${executorCtaRoot}.${stickyExecutorNextStatus}`)}
             </button>

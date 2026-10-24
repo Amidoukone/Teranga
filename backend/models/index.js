@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
-require('dotenv').config();
+require('../src/utils/runtimeEnv').loadRuntimeEnv();
 const { recordSqlQuery } = require('../src/utils/requestPerf');
 const {
   buildMysqlDialectOptions,

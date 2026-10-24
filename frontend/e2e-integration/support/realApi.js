@@ -1,7 +1,7 @@
 const { expect } = require('@playwright/test');
 
 const API_BASE_URL =
-  process.env.E2E_API_BASE_URL || 'http://127.0.0.1:5001/api';
+  process.env.E2E_API_BASE_URL || `http://127.0.0.1:${process.env.E2E_BACKEND_PORT || '5001'}/api`;
 
 const E2E_CLIENT_EMAIL =
   process.env.E2E_CLIENT_EMAIL || 'e2e.real.client@example.com';
@@ -94,7 +94,13 @@ async function blockExternalTracking(page) {
   });
 }
 
+let seededClientSession = null;
+
 async function loginAsSeededClient(request) {
+  // Une session de recette par worker, comme un client qui reste connecté.
+  // Les scénarios d'authentification utilisent leurs propres comptes jetables.
+  // Réouvrir une session pour chaque écran épuiserait le quota réel du serveur.
+  if (seededClientSession) return seededClientSession;
   const response = await request.post(`${API_BASE_URL}/auth/login`, {
     data: {
       email: E2E_CLIENT_EMAIL,
@@ -105,10 +111,11 @@ async function loginAsSeededClient(request) {
   const body = await response.json().catch(() => ({}));
   expect(response.ok(), `API login failed: ${JSON.stringify(body)}`).toBeTruthy();
 
-  return {
+  seededClientSession = {
     token: body.token,
     user: body.user,
   };
+  return seededClientSession;
 }
 
 async function loginAsSeededAdmin(request) {

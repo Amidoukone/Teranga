@@ -14,24 +14,26 @@ beforeEach(() => {
   getAgentAssignments.mockResolvedValue([]); updateAgentCapacity.mockResolvedValue({}); advanceAssignment.mockResolvedValue({});
 });
 
-test('the agent explicitly enables assignment and configures simultaneous capacity', async () => {
+test('the agent enables assignment in one action and capacity changes never renew availability', async () => {
   render(<AgentCoordinationPanel />);
-  userEvent.click(await screen.findByRole('checkbox', { name: 'agentCoordination.available' }));
+  userEvent.click(await screen.findByRole('button', { name: 'fieldWorkspace.goAvailable' }));
+  await waitFor(() => expect(updateAgentCapacity).toHaveBeenCalledWith({ available: true, availableMinutes: 60 }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'fieldWorkspace.goAvailable' })).toBeEnabled());
+  userEvent.click(screen.getByText('fieldWorkspace.settings'));
   fireEvent.change(screen.getByLabelText('agentCoordination.capacity'), { target: { value: '2' } });
   userEvent.click(screen.getByRole('button', { name: 'operations.save' }));
-  await waitFor(() => expect(updateAgentCapacity).toHaveBeenCalledWith({ available: true, maxConcurrent: 2, availableMinutes: 60 }));
+  await waitFor(() => expect(updateAgentCapacity).toHaveBeenCalledWith({ maxConcurrent: 2 }));
 });
 
 test('expired availability requires a new explicit declaration', async () => {
   getAgentCapacity.mockResolvedValue({ capacity: { available: false, availableUntil: '2026-10-23T10:00:00Z', availabilityExpired: true, maxConcurrent: 1 }, activeAssignments: 0 });
   render(<AgentCoordinationPanel />);
   expect(await screen.findByText('agentCoordination.expired')).toBeInTheDocument();
-  expect(screen.getByRole('checkbox', { name: 'agentCoordination.available' })).not.toBeChecked();
+  expect(screen.getByRole('button', { name: 'fieldWorkspace.goAvailable' })).toBeEnabled();
   expect(updateAgentCapacity).not.toHaveBeenCalled();
-  userEvent.click(screen.getByRole('checkbox', { name: 'agentCoordination.available' }));
-  fireEvent.change(screen.getByLabelText('agentCoordination.availableMinutes'), { target: { value: '30' } });
-  userEvent.click(screen.getByRole('button', { name: 'operations.save' }));
-  await waitFor(() => expect(updateAgentCapacity).toHaveBeenCalledWith({ available: true, maxConcurrent: 1, availableMinutes: 30 }));
+  userEvent.selectOptions(screen.getByLabelText('fieldWorkspace.duration'), '30');
+  userEvent.click(screen.getByRole('button', { name: 'fieldWorkspace.goAvailable' }));
+  await waitFor(() => expect(updateAgentCapacity).toHaveBeenCalledWith({ available: true, availableMinutes: 30 }));
 });
 
 test('an assigned order requires a summary and exposes a missing proof response', async () => {

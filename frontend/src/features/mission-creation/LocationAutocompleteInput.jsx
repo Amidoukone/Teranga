@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { loadGoogleMaps } from "./googleMapsLoader";
 
@@ -22,7 +22,12 @@ export default function LocationAutocompleteInput({
   required,
   onFocus,
   countryIso,
+  id,
+  maxLength = 255,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }) {
+  const [activated, setActivated] = useState(false);
   const inputRef = useRef(null);
   const autocompleteRef = useRef(null);
   const onPlaceSelectedRef = useRef(onPlaceSelected);
@@ -31,6 +36,7 @@ export default function LocationAutocompleteInput({
   countryIsoRef.current = countryIso;
 
   useEffect(() => {
+    if (!activated) return undefined;
     let cancelled = false;
 
     loadGoogleMaps().then((maps) => {
@@ -56,7 +62,7 @@ export default function LocationAutocompleteInput({
       });
 
       autocompleteRef.current = autocomplete;
-    });
+    }).catch(() => { /* La saisie libre reste disponible sans suggestions. */ });
 
     return () => {
       cancelled = true;
@@ -64,23 +70,27 @@ export default function LocationAutocompleteInput({
         window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
-  }, []);
+  }, [activated]);
 
   useEffect(() => {
-    if (autocompleteRef.current && countryIso) {
-      autocompleteRef.current.setComponentRestrictions({ country: countryIso.toLowerCase() });
+    if (autocompleteRef.current) {
+      autocompleteRef.current.setComponentRestrictions(countryIso ? { country: countryIso.toLowerCase() } : {});
     }
   }, [countryIso]);
 
   return (
     <input
       ref={inputRef}
+      id={id}
       type="text"
       className={className}
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      onFocus={onFocus}
+      onFocus={(event) => { setActivated(true); onFocus?.(event); }}
+      maxLength={maxLength}
+      aria-invalid={ariaInvalid}
+      aria-describedby={ariaDescribedBy}
       autoComplete="off"
       required={required}
     />

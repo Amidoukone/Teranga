@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -17,8 +17,9 @@ import {
 
 import { getMyServices } from '../services/services';
 import { useLocale } from '../i18n/useLocale';
-import { getRequestNextAction, getRequestProofState } from '../utils/requestLifecycle';
+import { getRequestNextAction, getRequestKind, getRequestDetailPath, needsClientAction } from '../utils/requestLifecycle';
 import { buildTelHref, buildWhatsappHref } from '../utils/phone';
+import useTerritorySupport from '../hooks/useTerritorySupport';
 
 const SERVICE_POLL_MS = 15000;
 const MISSION_TERMINAL_STATUSES = new Set([
@@ -43,19 +44,11 @@ function isHistoryItem(service) {
 }
 
 function requestKind(service) {
-  const slug = service?.tradeCategory?.slug;
-  if (slug === 'mobilite') return 'taxi';
-  if (slug === 'livraison') return 'delivery';
-  return 'service';
+  return getRequestKind(service);
 }
 
 function detailPath(service) {
-  const kind = requestKind(service);
-  if (kind === 'taxi') return `/courses/${service.id}`;
-  if (kind === 'delivery') return `/livraisons/${service.id}`;
-  return service?.missionStatus
-    ? `/missions/${service.id}/track`
-    : `/services/${service.id}`;
+  return getRequestDetailPath(service);
 }
 
 function statusTone(service) {
@@ -87,8 +80,7 @@ function ServiceCard({ service }) {
   const statusLabel = missionStatus
     ? t(`missionTracking.status.${missionStatus}`, { defaultValue: missionStatus })
     : t(`services.status.${service.status}`, { defaultValue: service.status });
-  const nextAction = getRequestNextAction(service);
-  const proofState = getRequestProofState(service);
+  const nextAction = getRequestNextAction(service, 'client');
   const typeLabel =
     service.tradeCategory?.name ||
     service.typeLabel ||
@@ -149,15 +141,14 @@ function ServiceCard({ service }) {
           ) : null}
 
           <p className="mt-3 text-xs text-text-secondary" aria-live="polite">
-            {t(`serviceOrders.nextAction.${nextAction}`, { defaultValue: t('serviceOrders.nextAction.follow') })}
-            {nextAction === 'proof' && proofState === 'missing' ? ` · ${t('serviceOrders.proofRequired', { defaultValue: 'Preuve à fournir' })}` : ''}
+            {t(`serviceOrders.clientNextAction.${nextAction}`)}
           </p>
 
           <Link
             to={detailPath(service)}
             className="btn-primary mt-4 flex min-h-11 w-full items-center justify-center rounded-xl px-4 text-sm font-semibold sm:w-auto"
           >
-            {isHistoryItem(service) ? t('serviceOrders.view') : t('serviceOrders.follow')}
+            {isHistoryItem(service) ? t('serviceOrders.view') : needsClientAction(service) ? t('clientHome.review') : t('serviceOrders.follow')}
           </Link>
         </div>
       </div>
@@ -195,26 +186,33 @@ export default function ServicesPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [offset, setOffset] = useState(0);
+  const [total, setTotal] = useState(0);
+  const requestVersion = useRef(0);
+  const support = useTerritorySupport();
 
   const load = useCallback(async ({ silent = false } = {}) => {
+    const version = ++requestVersion.current;
     if (!silent) setRefreshing(true);
     try {
       const result = await getMyServices(
         {
           limit: 100,
           sort: '-createdAt',
+          ...(offset ? { offset } : {}),
         },
         { withPagination: true }
       );
+      if (requestVersion.current !== version) return;
       setServices(Array.isArray(result?.items) ? result.items : []);
+      setTotal(result?.pagination?.total ?? result?.items?.length ?? 0);
       setError(null);
     } catch (_error) {
-      setError(t('serviceOrders.loadError'));
+      if (requestVersion.current === version) setError(t('serviceOrders.loadError'));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestVersion.current === version) { setLoading(false); setRefreshing(false); }
     }
-  }, [t]);
+  }, [t, offset]);
 
   useEffect(() => {
     load();
@@ -227,6 +225,7 @@ export default function ServicesPage() {
     window.addEventListener('focus', refreshIfVisible);
     document.addEventListener('visibilitychange', refreshIfVisible);
     return () => {
+      requestVersion.current += 1;
       clearInterval(interval);
       window.removeEventListener('focus', refreshIfVisible);
       document.removeEventListener('visibilitychange', refreshIfVisible);
@@ -246,11 +245,11 @@ export default function ServicesPage() {
     [filter, services]
   );
   const active = useMemo(
-    () => visibleServices.filter((service) => !isHistoryItem(service)),
+    () => visibleServices.filter((service) => !isHistoryItem(service)).sort((a, b) => Number(needsClientAction(b)) - Number(needsClientAction(a))),
     [visibleServices]
   );
   const history = useMemo(() => visibleServices.filter(isHistoryItem), [visibleServices]);
-  const supportPhone = t('homePage.contact.info.phone');
+  const supportPhone = support.phone;
   const supportTelHref = buildTelHref(supportPhone);
   const supportWhatsappHref = buildWhatsappHref(
     supportPhone,
@@ -268,17 +267,18 @@ export default function ServicesPage() {
   return (
     <div className="app-page-wrap">
       <div className="app-page-shell space-y-8">
-        <section
+        <details
           className="overflow-hidden rounded-[28px] border border-blue-500/20 bg-gradient-to-br from-blue-600 to-blue-800 p-5 text-white shadow-lg shadow-blue-900/10 sm:p-7"
           aria-labelledby="services-quick-access-title"
         >
+          <summary id="services-quick-access-title" className="cursor-pointer text-base font-semibold">{t('homePage.simpleHero.otherRequest')}</summary>
           <div className="max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-100">
               {t('serviceOrders.quickAccess.kicker')}
             </p>
-            <h1 id="services-quick-access-title" className="mt-2 text-2xl font-bold tracking-[-0.04em] sm:text-3xl">
+            <h2 className="mt-2 text-2xl font-bold tracking-[-0.04em] sm:text-3xl">
               {t('serviceOrders.quickAccess.title')}
-            </h1>
+            </h2>
             <p className="mt-2 text-sm leading-relaxed text-blue-100 sm:text-base">
               {t('serviceOrders.quickAccess.subtitle')}
             </p>
@@ -331,7 +331,7 @@ export default function ServicesPage() {
               ) : null}
             </div>
           </div>
-        </section>
+        </details>
 
         <header className="rounded-[28px] border border-border/70 bg-surface-card p-5 shadow-sm sm:p-7">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -342,13 +342,13 @@ export default function ServicesPage() {
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">
               <Link
-                to="/demandes/nouvelle?categorie=mobilite"
+              to="/taxi"
                 className="btn-secondary flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold"
               >
                 {t('serviceOrders.newTaxi')}
               </Link>
               <Link
-                to="/demandes/nouvelle?categorie=livraison"
+                to="/livraison"
                 className="btn-secondary flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold"
               >
                 {t('serviceOrders.newDelivery')}
@@ -457,6 +457,11 @@ export default function ServicesPage() {
           <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
           {refreshing ? t('serviceOrders.refreshing') : t('serviceOrders.refresh')}
         </button>
+        {(total > 100 || offset > 0) && <nav aria-label={t('pagination.label')} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <button type="button" disabled={offset === 0 || refreshing} onClick={() => { setLoading(true); setServices([]); setOffset((value) => Math.max(0, value - 100)); }} className="btn-secondary min-h-11 rounded-xl px-4">{t('operations.previous')}</button>
+          <span>{offset + 1}–{offset + services.length} / {total}</span>
+          <button type="button" disabled={offset + 100 >= total || refreshing} onClick={() => { setLoading(true); setServices([]); setOffset((value) => value + 100); }} className="btn-secondary min-h-11 rounded-xl px-4">{t('operations.next')}</button>
+        </nav>}
       </div>
     </div>
   );

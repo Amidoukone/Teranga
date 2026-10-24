@@ -120,6 +120,37 @@ test('the operator can activate agent automation through the catalogue and the s
   expect(configured.body.coordination.policy.completionReportRequired).toBe(true);
 });
 
+test('classic service shortcuts cannot bypass the mission workflow and concurrent completions publish once', async () => {
+  if (!ready) throw new Error('The field recipe requires MySQL');
+  const mission = await service({ agentId: agent.id, missionStatus: 'ASSIGNED' });
+  const path = (id, action) => `/api/v1/services/agent/services/${id}/${action}`;
+  expect((await request(app).post(path(mission.id, 'start')).set(auth(agent))).status).toBe(400);
+  await mission.update({ status: 'in_progress' });
+  expect((await request(app).post(path(mission.id, 'complete')).set(auth(agent))).status).toBe(400);
+  expect((await mission.reload()).missionStatus).toBe('ASSIGNED');
+  const classic = await service({ agentId: agent.id, status: 'in_progress' });
+  const results = await Promise.all([0, 1].map(() => request(app).post(path(classic.id, 'complete')).set(auth(agent))));
+  expect(results.map((result) => result.status).sort()).toEqual([200, 400]);
+  expect((await classic.reload()).status).toBe('completed');
+  expect(await db.Notification.count({ where: { userId: client.id, entityType: 'service', entityId: classic.id, entityStatus: 'completed' } })).toBe(1);
+  const validation = await Promise.all([0, 1].map(() => request(app).post(`/api/v1/services/${classic.id}/validate`).set(auth(client))));
+  expect(validation.map((result) => result.status).sort()).toEqual([200, 400]);
+});
+
+test('agent work lists paginate active services separately from completed history', async () => {
+  if (!ready) throw new Error('The field recipe requires MySQL');
+  const archived = await service({ agentId: agent.id, status: 'validated' });
+  const active = await service({ agentId: agent.id, status: 'in_progress' });
+  const path = '/api/v1/services/agent/services';
+  const current = await request(app).get(`${path}?view=active&limit=1`).set(auth(agent));
+  expect(current.status).toBe(200);
+  expect(current.body.services.map((item) => item.id)).toEqual([active.id]);
+  expect(current.body.pagination.total).toBe(1);
+  const history = await request(app).get(`${path}?view=history&limit=1`).set(auth(agent));
+  expect(history.body.services.map((item) => item.id)).toEqual([archived.id]);
+  expect((await request(app).get(`${path}?view=unknown`).set(auth(agent))).status).toBe(400);
+});
+
 test('an agent restricted to a region is not automatically assigned to an unresolved region', async () => {
   if (!ready) return;
   const region = await db.Region.create({ name: 'Région de recette', code: `WR-${Date.now()}`, countryId: country.id, isActive: true });

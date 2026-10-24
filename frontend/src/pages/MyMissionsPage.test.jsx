@@ -74,7 +74,7 @@ describe("MyMissionsPage - disponibilité réseau faible", () => {
 
     await userEvent.click(
       await screen.findByRole("button", {
-        name: "myMissionsPage.availability.available",
+        name: "fieldWorkspace.goAvailable",
       }),
     );
 
@@ -117,6 +117,7 @@ describe("MyMissionsPage - disponibilité réseau faible", () => {
     expect(getMyMissions).toHaveBeenCalledWith({
       tradeCategorySlug: "mobilite",
       limit: 100,
+      view: 'active', offset: 0,
     });
   });
 
@@ -158,6 +159,7 @@ describe("MyMissionsPage - disponibilité réseau faible", () => {
     expect(getMyMissions).toHaveBeenCalledWith({
       tradeCategorySlug: "livraison",
       limit: 100,
+      view: 'active', offset: 0,
     });
   });
 
@@ -183,6 +185,6 @@ describe("MyMissionsPage - disponibilité réseau faible", () => {
 
     expect(await screen.findByText("Reparer une fuite")).toBeInTheDocument();
     expect(screen.queryByText("Livrer un colis")).not.toBeInTheDocument();
-    expect(getMyMissions).toHaveBeenCalledWith({});
+    expect(getMyMissions).toHaveBeenCalledWith({ limit: 100, view: 'active', offset: 0, excludeTradeCategorySlug: 'mobilite,livraison' });
   });
 });

@@ -5,6 +5,8 @@ Scope: `backend` + `frontend`
 
 Préparation terrain : appliquer aussi [le runbook de coordination](runbooks/preparation-terrain.md), les migrations associées et les commandes `field:recipe` / `field:check`. Le centre `/admin/operations` expose les blocages de configuration et de fonctionnement du moteur. Une configuration technique complète doit être accompagnée des essais de mise en service décrits dans ce runbook.
 
+Vérification du déploiement : suivre le [guide exécutable](runbooks/verification-deploiement.md) pour le suivi des migrations en lecture seule, le contrôle global `release:check`, la persistance des justificatifs après redémarrage et l'essai de restauration dans une base locale neuve. Conserver les résultats dans la [fiche de recette](RECETTE_DEPLOIEMENT_MODELE.md).
+
 Snapshot maturite actuelle (pour integrations futures):
 - `docs/MATURITY_STATUS_2026-03-07.md`
 

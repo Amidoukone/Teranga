@@ -5,10 +5,6 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3001';
 const backendPort = process.env.E2E_BACKEND_PORT || '5001';
 const apiBaseUrl =
   process.env.E2E_API_BASE_URL || `http://127.0.0.1:${backendPort}/api`;
-const runScript = (script) =>
-  process.platform === 'win32'
-    ? `cmd /c npm.cmd run ${script}`
-    : `npm run ${script}`;
 
 function resolveFrontendPort(url) {
   try {
@@ -45,7 +41,7 @@ module.exports = defineConfig({
     ? undefined
     : [
         {
-          command: runScript('e2e:integration:server'),
+          command: 'node scripts/start-e2e-integration-server.js',
           cwd: backendCwd,
           url: `http://127.0.0.1:${backendPort}/api/health`,
           reuseExistingServer: !process.env.CI,
@@ -61,7 +57,7 @@ module.exports = defineConfig({
           },
         },
         {
-          command: runScript('start'),
+          command: 'node node_modules/react-scripts/scripts/start.js',
           cwd: frontendCwd,
           url: baseURL,
           reuseExistingServer: !process.env.CI,
@@ -72,6 +68,7 @@ module.exports = defineConfig({
             CI: 'true',
             PORT: String(frontendPort),
             REACT_APP_API_BASE_URL: apiBaseUrl,
+            REACT_APP_FILE_BASE_URL: new URL(apiBaseUrl).origin,
             REACT_APP_AUTH_STORAGE: 'localstorage',
           },
         },

@@ -22,11 +22,12 @@ export async function getMyServices(params = {}, options = {}) {
  * Liste des services assignes a lagent
  * GET /api/services/agent/services
  */
-export async function getAgentServices() {
+export async function getAgentServices(params = {}, options = {}) {
   const { data } = await api.get('/services/agent/services', {
-    params: mergeGeoParams(),
+    params: mergeGeoParams(params),
   });
-  return data.services || [];
+  const items = data.services || [];
+  return options.withPagination ? { items, pagination: data.pagination || null } : items;
 }
 
 /**

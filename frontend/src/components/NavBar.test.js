@@ -191,17 +191,26 @@ describe("NavBar logout flow", () => {
     ].forEach((section) => expect(within(panel).getByText(section)).toBeInTheDocument());
   });
 
-  test("moves generic service jobs into More for providers", async () => {
+  test("keeps service jobs directly accessible for providers on desktop and mobile", async () => {
     const providerUser = { ...mockUser, role: "provider" };
     getLocalUser.mockReturnValue(providerUser);
     me.mockResolvedValue({ user: providerUser });
 
     render(<NavBar />);
 
-    expect(screen.queryByRole("link", { name: "nav.services" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "nav.openMoreMenu" }));
-    const serviceLink = await screen.findByRole("link", { name: "nav.services" });
-    expect(serviceLink).toHaveAttribute("href", "/prestataire/services");
+    const links = await screen.findAllByRole("link", { name: "nav.services" });
+    expect(links.length).toBeGreaterThanOrEqual(2);
+    links.forEach((link) => expect(link).toHaveAttribute("href", "/prestataire/services"));
+  });
+
+  test("keeps the coordination centre directly accessible for admins on desktop and mobile", async () => {
+    const adminUser = { ...mockUser, role: "admin", countryId: 1 };
+    getLocalUser.mockReturnValue(adminUser);
+    me.mockResolvedValue({ user: adminUser });
+    render(<NavBar />);
+    const links = await screen.findAllByRole("link", { name: "operations.title" });
+    expect(links.length).toBeGreaterThanOrEqual(2);
+    links.forEach((link) => expect(link).toHaveAttribute("href", "/admin/operations"));
   });
 
   test("keeps client technical objects out of the navigation", async () => {

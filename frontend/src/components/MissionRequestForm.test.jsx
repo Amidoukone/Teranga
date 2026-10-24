@@ -83,6 +83,7 @@ jest.mock("../services/auth", () => ({
 
 describe("MissionRequestForm (révélation progressive)", () => {
   beforeEach(() => {
+    sessionStorage.clear();
     jest.clearAllMocks();
     getTradeCategories.mockResolvedValue([]);
     getMasterCountries.mockResolvedValue([{ id: 5, name: "Ghana" }]);
@@ -102,6 +103,21 @@ describe("MissionRequestForm (révélation progressive)", () => {
     await userEvent.selectOptions(countrySelect, "5");
     expect(await screen.findByRole("button", { name: "Course" })).toBeInTheDocument();
     expect(getLocalServiceCatalog).toHaveBeenCalledWith({ countryId: "5" });
+  });
+
+  test("clearing the service country immediately removes stale choices and submission controls", async () => {
+    getMasterCountries.mockResolvedValue([{ id: 5, name: 'Ghana' }, { id: 6, name: 'Mali' }]);
+    render(<MissionRequestForm />);
+    await screen.findByRole('option', { name: 'Ghana' });
+    const country = screen.getByRole('combobox', { name: 'Pays' });
+    await userEvent.selectOptions(country, '5');
+    await userEvent.click(await screen.findByRole('button', { name: 'Course' }));
+    await userEvent.type(screen.getByPlaceholderText("Ex : Fuite d'eau"), 'Course urgente');
+    expect(screen.getByRole('button', { name: 'Envoyer ma demande' })).toBeInTheDocument();
+    await userEvent.selectOptions(country, '');
+    expect(screen.queryByRole('button', { name: 'Course' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Envoyer ma demande' })).not.toBeInTheDocument();
+    expect(submitMissionRequest).not.toHaveBeenCalled();
   });
 
   test("ne montre les coordonnées qu'après avoir choisi une catégorie et saisi un titre", async () => {
@@ -156,6 +172,7 @@ describe("MissionRequestForm (révélation progressive)", () => {
       })
     );
     expect(await screen.findByText("Demande reçue")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Suivre" })).toHaveAttribute("href", "/services/42");
   });
 
   test("préselectionne Taxi et soumet départ et destination sans compte préalable", async () => {

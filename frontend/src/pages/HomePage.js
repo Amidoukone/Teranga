@@ -12,7 +12,6 @@ import {
   Sparkles,
   Truck,
   UserRoundCheck,
-  X,
 } from "lucide-react";
 
 import MissionRequestForm from "../components/MissionRequestForm";
@@ -84,6 +83,23 @@ export default function HomePage() {
               <h2 id="home-services-title" className="text-center text-sm font-semibold text-text-secondary">
                 {t("homePage.simpleHero.chooseAction")}
               </h2>
+              <button
+                type="button"
+                onClick={() => setShowRequestForm((current) => !current)}
+                aria-expanded={showRequestForm}
+                aria-controls="home-other-request"
+                className="btn-primary mt-4 flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl px-5 py-4 text-base font-semibold"
+              >
+                <Sparkles size={21} aria-hidden="true" />
+                {t(showRequestForm ? "homePage.simpleHero.closeRequest" : "homePage.simpleHero.otherRequest")}
+                <ChevronDown size={18} aria-hidden="true" />
+              </button>
+
+              {showRequestForm ? (
+                <div id="home-other-request" className="mt-5 scroll-mt-24">
+                  <MissionRequestForm />
+                </div>
+              ) : null}
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <Link
                   to="/taxi"
@@ -150,7 +166,7 @@ export default function HomePage() {
                 </section>
               </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3">
                 {whatsappHref ? (
                   <a
                     href={whatsappHref}
@@ -162,17 +178,6 @@ export default function HomePage() {
                     {t("homePage.simpleHero.whatsapp")}
                   </a>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={() => setShowRequestForm((current) => !current)}
-                  aria-expanded={showRequestForm}
-                  aria-controls="home-other-request"
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-border bg-surface-card px-5 py-3 text-sm font-semibold text-text-primary shadow-sm hover:border-blue-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30"
-                >
-                  {showRequestForm ? <X size={18} aria-hidden="true" /> : <Sparkles size={18} aria-hidden="true" />}
-                  {t(showRequestForm ? "homePage.simpleHero.closeRequest" : "homePage.simpleHero.otherRequest")}
-                  {!showRequestForm ? <ChevronDown size={17} aria-hidden="true" /> : null}
-                </button>
               </div>
 
               {telHref ? (
@@ -185,11 +190,6 @@ export default function HomePage() {
                 </a>
               ) : null}
 
-              {showRequestForm ? (
-                <div id="home-other-request" className="mt-5 scroll-mt-24">
-                  <MissionRequestForm />
-                </div>
-              ) : null}
             </section>
 
             <ul className="mx-auto mt-8 grid max-w-5xl gap-3 sm:grid-cols-3" aria-label={t("homePage.simpleHero.trustLabel")}>

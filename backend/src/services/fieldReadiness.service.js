@@ -6,6 +6,14 @@ const { canAccessGeoResource } = require('../utils/geoScope');
 const covers = (resource, user) => canAccessGeoResource(resource, user, { strictRegionScope: true });
 const { activeOfferingWhere, activeCatalogIncludes } = require('./localCatalog.service');
 const { isImageKitConfigured, hasCustomUploadsRoot } = require('../utils/mediaStoragePolicy');
+const { toComplianceSummary } = require('./mobilityCompliance.service');
+const { isLocationFresh } = require('./providerPresence.service');
+const { ACTIVE_STATUSES } = require('./missionStatus.service');
+const { agentLoad } = require('./agentCapacity.service');
+function hasRecentSuccess(state) {
+  const age = Date.now() - new Date(state?.lastSuccessAt || '').getTime();
+  return Number.isFinite(age) && age >= -60000 && age <= 5 * 60000;
+}
 
 async function loadFieldReadiness(db, { countryId, regionId = null } = {}) {
   const issues = [];
@@ -30,9 +38,9 @@ async function loadFieldReadiness(db, { countryId, regionId = null } = {}) {
     await db.AgentCapacity.findOne({ attributes: ['userId'] });
     await db.CreationRequest.findOne({ attributes: ['id'] });
     const workScheduler = await db.OperationSchedulerState.findByPk('work_coordination');
-    if (!workScheduler?.lastSuccessAt || Date.now() - new Date(workScheduler.lastSuccessAt).getTime() > 5 * 60000 || workScheduler.lastError) add('WORK_SCHEDULER_NOT_RUNNING', 'Le suivi des projets et commandes doit avoir réussi dans les cinq dernières minutes.');
+    if (!hasRecentSuccess(workScheduler) || workScheduler.lastError) add('WORK_SCHEDULER_NOT_RUNNING', 'Le suivi des projets et commandes doit avoir réussi dans les cinq dernières minutes.');
     const scheduler = await db.OperationSchedulerState.findByPk('mission_coordination');
-    if (!scheduler?.lastSuccessAt || Date.now() - new Date(scheduler.lastSuccessAt).getTime() > 5 * 60000) add('SCHEDULER_NOT_RUNNING', 'Le traitement de coordination doit avoir réussi dans les cinq dernières minutes.');
+    if (!hasRecentSuccess(scheduler)) add('SCHEDULER_NOT_RUNNING', 'Le traitement de coordination doit avoir réussi dans les cinq dernières minutes.');
     if (scheduler?.lastError) add('SCHEDULER_FAILURE', 'Le dernier traitement de coordination contient des demandes en échec.');
     const schema = await db.sequelize.getQueryInterface().describeTable('services');
     if (!schema.client_request_key || !schema.request_payload_hash) add('REQUEST_KEYS_MISSING', 'Appliquer la migration de protection contre les demandes en double.');
@@ -47,20 +55,44 @@ async function loadFieldReadiness(db, { countryId, regionId = null } = {}) {
       if (!specific.has(key) || offering.territory?.type === 'REGION') specific.set(key, offering);
     }
     offerings = [...specific.values()];
-    const providers = await db.Provider.findAll({ where: { status: 'active', countryCode: country.isoCode }, include: [{ model: db.TradeCategory, as: 'tradeCategories', through: { attributes: [] }, attributes: ['id'] }] });
+    const providers = await db.Provider.findAll({ where: { status: 'active', countryCode: country.isoCode }, include: [
+      { model: db.TradeCategory, as: 'tradeCategories', through: { attributes: [] }, attributes: ['id', 'slug', 'isActive'] },
+      { model: db.User, as: 'user', required: true, attributes: ['id', 'regionId'] },
+      { model: db.ProviderLiveLocation, as: 'liveLocation', required: false },
+      { model: db.Vehicle, as: 'vehicles', required: false },
+    ] });
+    const scopedProviders = providers.filter((provider) => !provider.user?.regionId || String(provider.user.regionId) === String(regionId));
+    const occupied = await db.Service.findAll({ where: { providerId: { [Op.in]: scopedProviders.map((provider) => provider.id) }, missionStatus: { [Op.in]: ACTIVE_STATUSES } }, attributes: ['providerId'] });
     const agents = await db.User.findAll({ where: { role: 'agent' } });
     const capacities = await db.AgentCapacity.findAll({ where: { available: true, availableUntil: { [Op.gt]: new Date() } } });
+    const availableAgents = [];
+    for (const agent of agents) {
+      const capacity = capacities.find((entry) => String(entry.userId) === String(agent.id));
+      if (String(agent.countryId) === String(countryId) && covers({ countryId, regionId }, agent) && capacity && await agentLoad(agent.id) < capacity.maxConcurrent) availableAgents.push(agent);
+    }
     const enabledOffers = offerings.filter((offer) => offer.providerRules?.coordination?.enabled === true).length;
     automation = { enabledOffers, manualOffers: offerings.length - enabledOffers,
-      availableAgents: agents.filter((agent) => String(agent.countryId) === String(countryId) && covers({ countryId, regionId }, agent) && capacities.some((capacity) => String(capacity.userId) === String(agent.id))).length };
+      availableAgents: availableAgents.length };
     for (const offering of offerings) {
       const label = offering.definition?.name || String(offering.id);
       if (!offering.slaMinutes) add('SERVICE_DEADLINE_MISSING', `${label} : délai d’exécution à définir.`, { availabilityId: offering.id });
       if (!(offering.providerRules?.serviceOutcome || offering.definition?.description)?.trim()) add('SERVICE_RESULT_MISSING', `${label} : résultat attendu à décrire.`, { availabilityId: offering.id });
-      if (offering.definition?.legacyTradeCategoryId && !providers.some((provider) => provider.tradeCategories?.some((category) => String(category.id) === String(offering.definition.legacyTradeCategoryId)))) {
-        add('SERVICE_EXECUTOR_MISSING', `${label} : aucun prestataire actif ne couvre cette filière dans le pays.`, { availabilityId: offering.id });
+      const eligibleProviders = scopedProviders.filter((provider) => provider.tradeCategories?.some((category) => category.isActive && String(category.id) === String(offering.definition?.legacyTradeCategoryId)));
+      if (offering.definition?.legacyTradeCategoryId && !eligibleProviders.length) {
+        add('SERVICE_EXECUTOR_MISSING', `${label} : aucun prestataire actif ne couvre cette filière dans le périmètre sélectionné.`, { availabilityId: offering.id });
       }
-      if (offering.definition?.executionProfile === 'agent' && offering.providerRules?.coordination?.enabled && !agents.some((agent) => String(agent.countryId) === String(countryId) && covers({ countryId, regionId }, agent) && capacities.some((capacity) => String(capacity.userId) === String(agent.id)))) add('AGENT_AVAILABILITY_MISSING', `${label} : aucun agent disponible n’a activé sa prise en charge automatique.`, { availabilityId: offering.id });
+      if (offering.definition?.legacyTradeCategoryId && eligibleProviders.length && offering.providerRules?.coordination?.enabled === true) {
+        const available = eligibleProviders.some((provider) => {
+          if (provider.availabilityStatus !== 'available' || occupied.some((mission) => String(mission.providerId) === String(provider.id))) return false;
+          const category = provider.tradeCategories.find((entry) => String(entry.id) === String(offering.definition.legacyTradeCategoryId));
+          if (!['mobilite', 'livraison'].includes(category?.slug)) return true;
+          const compliance = toComplianceSummary(provider);
+          return isLocationFresh(provider.liveLocation) && compliance.driverEligible && compliance.hasEligibleVehicle &&
+            (!provider.liveLocation?.vehicleId || compliance.vehicles.some((vehicle) => vehicle.eligible && String(vehicle.id) === String(provider.liveLocation.vehicleId)));
+        });
+        if (!available) add('PROVIDER_AVAILABILITY_MISSING', `${label} : aucun prestataire libre et éligible pour la recherche automatique. Pour un transport, vérifier aussi le véhicule et la position récente.`, { availabilityId: offering.id });
+      }
+      if (offering.definition?.executionProfile === 'agent' && offering.providerRules?.coordination?.enabled && !availableAgents.length) add('AGENT_AVAILABILITY_MISSING', `${label} : aucun agent avec une disponibilité valide et une place libre n’a activé sa prise en charge automatique.`, { availabilityId: offering.id });
       if (offering.definition?.executionProfile === 'agent' && !agents.some((agent) => covers({ countryId, regionId }, agent))) {
         add('SERVICE_AGENT_MISSING', `${label} : aucun agent ne couvre ce territoire.`, { availabilityId: offering.id });
       }
@@ -75,6 +107,6 @@ async function loadFieldReadiness(db, { countryId, regionId = null } = {}) {
   return { ready: !issues.some((issue) => issue.severity === 'blocking'), country: { id: country.id, isoCode: country.isoCode, name: country.name },
     regionId, localOwners: localOwners.map((owner) => ({ id: owner.id, name: [owner.firstName, owner.lastName].filter(Boolean).join(' ') || owner.email })),
     activeOffers: offerings.length, automation, issues, checkedAt: new Date().toISOString(),
-    remainingChecks: ['TEST_NOTIFICATION_DELIVERY', 'TEST_BACKUP_RESTORE', 'TEST_COMPLETE_SERVICE', 'LOCAL_OPERATING_APPROVAL'] };
+    remainingChecks: ['TEST_PROOF_PERSISTENCE', 'TEST_NOTIFICATION_DELIVERY', 'TEST_BACKUP_RESTORE', 'TEST_COMPLETE_SERVICE', 'LOCAL_OPERATING_APPROVAL'] };
 }
 module.exports = { loadFieldReadiness };

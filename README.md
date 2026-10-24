@@ -4,6 +4,11 @@
 Mettre en place Teranga comme une franchise panafricaine pilotée par un siège central (Teranga OS) et opérée localement par pays/région, afin d’assurer des standards communs tout en permettant l’adaptation locale et l’inclusion de toutes les diasporas africaines.
 
 ## Documentation de référence
+- [Contrôle des secrets et validation avant publication](docs/CONTROLE_PUBLICATION_2026-10-24.md)
+- [Vérifier le déploiement, la persistance des justificatifs et la restauration](docs/runbooks/verification-deploiement.md)
+- [Préparation terrain : corrections, recette réelle et conditions d'ouverture du 24 octobre 2026](docs/PREPARATION_TERRAIN_2026-10-24.md)
+- [Simplification des espaces par rôle, des commandes et de la reprise après interruption](docs/SIMPLIFICATION_PARCOURS_2026-10-24.md)
+- [Simplicité des parcours et efficacité des services — audit et corrections du 24 octobre 2026](docs/AUDIT_SIMPLICITE_SERVICES_2026-10-24.md)
 - [Plan d’exécution des améliorations](docs/PLAN_EXECUTION.md)
 - [Checklist Go-Live exécutable](docs/GO_LIVE_CHECKLIST.md)
 - [Snapshot maturite actuelle (2026-03-07)](docs/MATURITY_STATUS_2026-03-07.md)
@@ -19,6 +24,7 @@ Mettre en place Teranga comme une franchise panafricaine pilotée par un siège 
 - `BOOTSTRAP_ADMIN_ALLOW_DEFAULTS` : en dev, autorise des valeurs par défaut si email/mot de passe manquants (`true/false`, défaut `true`).
 - `BOOTSTRAP_ADMIN_DEFAULT_EMAIL` : email par défaut utilisé en dev si absent.
 - `BOOTSTRAP_ADMIN_DEFAULT_PASSWORD` : mot de passe par défaut utilisé en dev si absent.
+- Le seeder administrateur local exige `SEED_ADMIN_EMAIL` et `SEED_ADMIN_PASSWORD` (16 caractères minimum, 72 octets UTF-8 maximum), sans valeur par défaut. Il refuse la production, où le bootstrap contrôlé reste le parcours prévu.
 - `METRICS_TOKEN` : token d’accès à `/api/metrics` (recommandé en prod).
 - `SLOW_REQUEST_THRESHOLD_MS` : seuil (ms) pour signaler les requêtes lentes (défaut 1500).
 - `PASSWORD_RESET_EXPIRES` : durée du token de réinitialisation (ex: `30m`).

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -10,12 +10,17 @@ import AuthFeedbackBanner from "./AuthFeedbackBanner";
 import LocationAutocompleteInput from "../features/mission-creation/LocationAutocompleteInput";
 import CategoryPicker from "../features/mission-creation/CategoryPicker";
 import { Button, FormField } from "./ui";
+import { getRequestDetailPath } from "../utils/requestLifecycle";
+import { readRequestDraft, saveRequestDraft, clearRequestDraft } from "../utils/requestDraft";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500";
 
 export default function MissionRequestForm({ initialTradeCategorySlug = null, initialTitle = "" }) {
   const { t } = useTranslation();
+  const draftScope = `public-${initialTradeCategorySlug || 'general'}`;
+  const [draft] = useState(() => readRequestDraft(draftScope));
+  const [draftReady, setDraftReady] = useState(false);
 
   const [tradeCategories, setTradeCategories] = useState([]);
   const [classicTypes, setClassicTypes] = useState(undefined);
@@ -29,16 +34,17 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [firstName, setFirstName] = useState("");
-  const [title, setTitle] = useState(initialTitle);
-  const [description, setDescription] = useState("");
-  const [address, setAddress] = useState("");
-  const [coordinates, setCoordinates] = useState(null);
-  const [pickupAddress, setPickupAddress] = useState("");
-  const [pickupCoordinates, setPickupCoordinates] = useState(null);
+  const [title, setTitle] = useState(initialTitle || draft.title || '');
+  const [description, setDescription] = useState(draft.description || '');
+  const [address, setAddress] = useState(draft.address || '');
+  const [coordinates, setCoordinates] = useState(draft.coordinates || null);
+  const [pickupAddress, setPickupAddress] = useState(draft.pickupAddress || '');
+  const [pickupCoordinates, setPickupCoordinates] = useState(draft.pickupCoordinates || null);
 
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [result, setResult] = useState(null);
+  const sending = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,8 +53,12 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
         const countryList = await getMasterCountries();
         if (cancelled) return;
         setCountries(countryList);
-        if (countryList.length === 1) setCountryId(String(countryList[0].id));
+        const restoredCountry = countryList.find((item) => String(item.id) === draft.countryId);
+        if (restoredCountry) setCountryId(String(restoredCountry.id));
+        else if (countryList.length === 1) setCountryId(String(countryList[0].id));
         else setLoadingOptions(false);
+        if (!restoredCountry && draft.countryId) { setAddress(''); setCoordinates(null); setPickupAddress(''); setPickupCoordinates(null); }
+        setDraftReady(true);
       } catch (_err) {
         if (!cancelled) {
           setFeedback({ type: "error", message: t("homePage.missionRequest.loadError") });
@@ -59,7 +69,12 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [t, draft]);
+
+  useEffect(() => {
+    if (!draftReady || result) return;
+    saveRequestDraft(draftScope, null, { countryId, title, description, address, coordinates, pickupAddress, pickupCoordinates });
+  }, [draftReady, draftScope, countryId, title, description, address, coordinates, pickupAddress, pickupCoordinates, result]);
 
   useEffect(() => {
     if (!countryId) return;
@@ -119,6 +134,7 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
   const isMobilite = selectedTradeCategorySlug === "mobilite";
 
   const resetForNewRequest = () => {
+    clearRequestDraft(draftScope);
     setResult(null);
     setFeedback(null);
     const initialCategory = initialTradeCategorySlug
@@ -149,14 +165,15 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
   // Révélation progressive : un choix à la fois plutôt qu'un mur de champs
   // (design thinking — réduire la charge cognitive, cf. section 12.2 du BM
   // "création de mission en moins de 60 secondes").
-  const showDetails = Boolean(requestKind);
+  const showDetails = Boolean(countryId && requestKind && !loadingOptions);
   const showIdentity = showDetails && title.trim().length >= 3;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (sending.current || loadingOptions) return;
     setFeedback(null);
 
-    if (!requestKind || !phone.trim() || !pin.trim() || !countryId || !title.trim()) {
+    if (!requestKind || !phone.trim() || !pin.trim() || !countryId || title.trim().length < 3) {
       setFeedback({ type: "error", message: t("homePage.missionRequest.errors.required") });
       return;
     }
@@ -176,6 +193,7 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
       return;
     }
 
+    sending.current = true;
     setSubmitting(true);
     try {
       const payload = {
@@ -202,8 +220,7 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
       }
 
       const data = await submitMissionRequest(payload);
-      await persistSession(data);
-
+      clearRequestDraft(draftScope);
       setResult(data);
       setFeedback({
         type: "success",
@@ -211,6 +228,9 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
           ? t("homePage.missionRequest.successNewAccount")
           : t("homePage.missionRequest.successExisting"),
       });
+      // La demande existe déjà : un échec de connexion ne doit jamais inviter à la recréer.
+      try { await persistSession(data); }
+      catch (_error) { setFeedback({ type: 'success', message: t('requestDraft.createdSessionFailed') }); }
     } catch (error) {
       const status = error?.response?.status;
       const backendMessage = error?.response?.data?.error;
@@ -220,6 +240,7 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
           : backendMessage || t("homePage.missionRequest.errors.generic");
       setFeedback({ type: "error", message });
     } finally {
+      sending.current = false;
       setSubmitting(false);
     }
   };
@@ -244,15 +265,7 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
         ) : null}
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
-            to={
-              result.service?.missionStatus
-                ? selectedTradeCategorySlug === "livraison"
-                  ? `/livraisons/${result.service.id}`
-                  : selectedTradeCategorySlug === "mobilite"
-                  ? `/courses/${result.service.id}`
-                  : `/missions/${result.service.id}/track`
-                : "/services"
-            }
+            to={getRequestDetailPath(result.service, selectedTradeCategorySlug)}
             className="btn-primary rounded-full px-6 py-2.5 text-sm"
           >
             {t("homePage.missionRequest.trackCta")}
@@ -272,6 +285,7 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
   return (
     <form
       onSubmit={handleSubmit}
+      aria-busy={submitting}
       className="mx-auto max-w-xl rounded-[28px] border border-border/70 bg-surface-card p-6 shadow-sm sm:p-8"
     >
       {feedback ? (
@@ -280,12 +294,25 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
         </div>
       ) : null}
 
+      <fieldset disabled={submitting} className="m-0 min-w-0 border-0 p-0">
       <div className="mb-5">
         <FormField
           label={t("homePage.missionRequest.fields.country")}
           hint={t("homePage.missionRequest.identity.countryHint")}
         >
-          <select className={inputClass} value={countryId} onChange={(e) => setCountryId(e.target.value)}>
+          <select className={inputClass} value={countryId} disabled={submitting} onChange={(e) => {
+            setCountryId(e.target.value);
+            setRequestKind(null);
+            setTradeCategoryId("");
+            setServiceType("");
+            setTradeCategories([]);
+            setClassicTypes([]);
+            setAddress("");
+            setCoordinates(null);
+            setPickupAddress("");
+            setPickupCoordinates(null);
+            setLoadingOptions(Boolean(e.target.value));
+          }}>
             <option value="">{t("homePage.missionRequest.fields.countryPlaceholder")}</option>
             {countries.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
@@ -330,7 +357,8 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
               placeholder={t("homePage.missionRequest.fields.titlePlaceholder")}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              autoFocus
+              minLength={3}
+              maxLength={150}
               required
             />
           </FormField>
@@ -388,14 +416,18 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
             />
           </FormField>
 
+          <details>
+            <summary className="cursor-pointer text-sm font-medium text-text-secondary">{t("homePage.missionRequest.fields.description")}</summary>
           <FormField label={t("homePage.missionRequest.fields.description")}>
             <textarea
               className={`${inputClass} min-h-[88px]`}
               placeholder={t("homePage.missionRequest.fields.descriptionPlaceholder")}
               value={description}
+              maxLength={2000}
               onChange={(e) => setDescription(e.target.value)}
             />
           </FormField>
+          </details>
         </div>
       ) : null}
 
@@ -414,6 +446,7 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
             <FormField label={t("homePage.missionRequest.fields.phone")} required>
               <input
                 type="tel"
+                autoComplete="tel"
                 className={inputClass}
                 placeholder={t("homePage.missionRequest.fields.phonePlaceholder")}
                 value={phone}
@@ -430,25 +463,32 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
               <input
                 type="password"
                 inputMode="numeric"
+                autoComplete="current-password"
                 className={inputClass}
                 placeholder={t("homePage.missionRequest.fields.pinPlaceholder")}
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 minLength={4}
+                maxLength={64}
                 required
               />
             </FormField>
           </div>
 
+          <details>
+            <summary className="cursor-pointer text-sm font-medium text-text-secondary">{t("homePage.missionRequest.fields.firstName")}</summary>
           <FormField label={t("homePage.missionRequest.fields.firstName")}>
             <input
               type="text"
+              autoComplete="given-name"
+              maxLength={80}
               className={inputClass}
               placeholder={t("homePage.missionRequest.fields.firstNamePlaceholder")}
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
             />
           </FormField>
+          </details>
 
           <Button
             type="submit"
@@ -464,6 +504,7 @@ export default function MissionRequestForm({ initialTradeCategorySlug = null, in
           </Button>
         </div>
       ) : null}
+      </fieldset>
     </form>
   );
 }
