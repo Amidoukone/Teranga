@@ -35,6 +35,12 @@ test('receipt replacement uses the update HTTP method and multipart payload', as
   expect(api.post).not.toHaveBeenCalled();
 });
 
+test('clearing a description preserves the explicit edit without resending financial fields', async () => {
+  api.put.mockResolvedValue({ data: { transaction: { id: 7 } } });
+  await updateTransaction(7, { description: '', paymentMethod: '' });
+  expect(api.put).toHaveBeenCalledWith('/transactions/7', { description: '', paymentMethod: '' });
+});
+
 test('a rejected payment is not resubmitted with every upload field name', async () => {
   const error = { response: { status: 409, data: { error: 'Devise incompatible' } } };
   api.post.mockRejectedValue(error);

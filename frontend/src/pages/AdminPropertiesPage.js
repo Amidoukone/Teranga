@@ -8,6 +8,7 @@
 // ============================================================================
 
 import { useEffect, useRef, useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   getAllProperties,
@@ -1145,7 +1146,8 @@ export default function AdminPropertiesPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="mt-4 flex justify-end gap-2">
+                      <div className="mt-4 flex flex-wrap justify-end gap-2">
+                        <Link to={`/tasks?propertyId=${p.id}`} className="app-btn-neutral inline-flex min-h-11 items-center rounded-full px-3 py-2 text-xs">{t('nav.propertyInterventions')}</Link>
                         <button
                           onClick={() => startEdit(p)}
                           className="app-btn-warning inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-full"

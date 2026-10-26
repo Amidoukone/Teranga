@@ -8,6 +8,8 @@ test('maps operational statuses to a simple next action', () => {
 
 test('return navigation preserves list filters and rejects unrelated or external destinations', () => {
   expect(getRequestReturnPath('/demandes?vue=a-verifier&type=taxi&page=2')).toBe('/demandes?vue=a-verifier&type=taxi&page=2');
+  expect(getRequestReturnPath('/transactions?q=reçu&page=2')).toBe('/transactions?q=reçu&page=2');
+  expect(getRequestReturnPath('/projects/14/transactions?status=pending')).toBe('/projects/14/transactions?status=pending');
   for (const value of ['https://example.com', '//example.com', '/unknown', '/services/14', '/services\\evil', null]) expect(getRequestReturnPath(value, '/agent/services')).toBe('/agent/services');
 });
 

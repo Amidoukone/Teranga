@@ -25,6 +25,12 @@ test('the agent enables assignment in one action and capacity changes never rene
   await waitFor(() => expect(updateAgentCapacity).toHaveBeenCalledWith({ maxConcurrent: 2 }));
 });
 
+test('the home availability control never fetches or duplicates the assignment list', async () => {
+  render(<AgentCoordinationPanel availabilityOnly />);
+  await screen.findByRole('button', { name: 'fieldWorkspace.goAvailable' });
+  expect(getAgentAssignments).not.toHaveBeenCalled();
+});
+
 test('expired availability requires a new explicit declaration', async () => {
   getAgentCapacity.mockResolvedValue({ capacity: { available: false, availableUntil: '2026-10-23T10:00:00Z', availabilityExpired: true, maxConcurrent: 1 }, activeAssignments: 0 });
   render(<AgentCoordinationPanel />);
@@ -54,6 +60,21 @@ test('the customer can validate a completed project from its detail page', async
   await waitFor(() => expect(advanceAssignment).toHaveBeenCalledWith('project', 7, { status: 'validated' }));
   await waitFor(() => expect(onSaved).toHaveBeenCalled());
   expect(screen.getByText('Travaux remis avec justificatif.')).toBeInTheDocument();
+});
+
+test('a case shows server handover requirements and a readiness refresh preserves the report draft', async () => {
+  const item = { id: 7, entityType: 'project', status: 'in_progress', coordination: {} };
+  getWorkProgress.mockResolvedValue({ item, canAdvance: true, readiness: { openPhases: 1, openTasks: 2, hasProof: false } });
+  const view = render(<WorkProgressPanel embedded entityType="project" entityId={7} status="in_progress" revision={1} />);
+  await screen.findByLabelText('dossier.readiness');
+  expect(screen.getByText('dossier.openPhases')).toBeInTheDocument();
+  expect(screen.getByText('dossier.openTasks')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('completion.summary'), { target: { value: 'Travaux en cours de vérification et de remise.' } });
+  getWorkProgress.mockResolvedValue({ item, canAdvance: true, readiness: { openPhases: 0, openTasks: 0, hasProof: true } });
+  view.rerender(<WorkProgressPanel embedded entityType="project" entityId={7} status="in_progress" revision={2} />);
+  await screen.findByText('dossier.proofReady');
+  expect(screen.getByLabelText('completion.summary')).toHaveValue('Travaux en cours de vérification et de remise.');
+  expect(screen.queryByRole('link', { name: /operations.entities.project/ })).not.toBeInTheDocument();
 });
 
 test('a delayed advancement freezes the report and cannot submit twice', async () => {

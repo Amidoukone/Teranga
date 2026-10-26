@@ -12,6 +12,17 @@ const logger = require('../utils/logger');
 const MODELS = { project: 'Project', order: 'Order' };
 const TERMINAL = { project: ['validated', 'cancelled'], order: ['fulfilled', 'delivered', 'cancelled', 'refunded'] };
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
+async function completionReadiness(type, id, actor, transaction) {
+  const options = transaction ? { transaction, lock: true } : {};
+  const [phases, tasks] = type === 'project' ? await Promise.all([
+    db.ProjectPhase.findAll({ where: { projectId: id, status: { [Op.ne]: 'completed' } }, attributes: ['id'], ...options }),
+    db.Task.findAll({ where: { projectId: id, status: { [Op.notIn]: ['completed', 'validated', 'cancelled'] } }, attributes: ['id'], ...options }),
+  ]) : [[], []];
+  const proof = type === 'project'
+    ? await db.ProjectDocument.findOne({ where: { projectId: id, uploaderId: actor.id, kind: { [Op.in]: ['report', 'photo'] } }, transaction })
+    : await db.Evidence.findOne({ where: { orderId: id, uploaderId: actor.id }, transaction });
+  return { openPhases: phases.length, openTasks: tasks.length, hasProof: Boolean(proof), proofId: proof?.id || null };
+}
 function modelFor(type) {
   if (!MODELS[type]) fail('Type de demande invalide');
   return db[MODELS[type]];
@@ -188,16 +199,10 @@ async function advanceWork(type, id, actor, { status, summary }) {
     let policy = operation.policy;
     if (['completed', 'delivered'].includes(status)) {
       if (!summary || summary.trim().length < 20 || summary.length > 4000) fail('Un compte rendu de 20 à 4 000 caractères est requis');
-      if (type === 'project') {
-        const phases = await db.ProjectPhase.findAll({ where: { projectId: id, status: { [Op.ne]: 'completed' } }, attributes: ['id'], transaction, lock: true });
-        const tasks = await db.Task.findAll({ where: { projectId: id, status: { [Op.notIn]: ['completed', 'validated', 'cancelled'] } }, attributes: ['id'], transaction, lock: true });
-        if (phases.length || tasks.length) fail('Terminez les phases et tâches du projet avant sa remise au client', 409);
-      }
-      const proof = type === 'project'
-        ? await db.ProjectDocument.findOne({ where: { projectId: id, uploaderId: actor.id, kind: { [Op.in]: ['report', 'photo'] } }, transaction })
-        : await db.Evidence.findOne({ where: { orderId: id, uploaderId: actor.id }, transaction });
-      if (!proof) fail('Ajoutez un justificatif de réalisation à cette demande avant de la terminer', 409);
-      policy = { ...policy, completionReport: { summary: summary.trim(), reporterId: actor.id, proofId: proof.id, submittedAt: new Date().toISOString() } };
+      const readiness = await completionReadiness(type, id, actor, transaction);
+      if (readiness.openPhases || readiness.openTasks) fail('Terminez les phases et tâches du projet avant sa remise au client', 409);
+      if (!readiness.hasProof) fail('Ajoutez un justificatif de réalisation à cette demande avant de la terminer', 409);
+      policy = { ...policy, completionReport: { summary: summary.trim(), reporterId: actor.id, proofId: readiness.proofId, submittedAt: new Date().toISOString() } };
     }
     await resource.update({ status }, { transaction });
     const closed = TERMINAL[type].includes(status);
@@ -208,4 +213,4 @@ async function advanceWork(type, id, actor, { status, summary }) {
     return resource;
   });
 }
-module.exports = { coordinateWork, runWorkCoordination, advanceWork, modelFor, TERMINAL };
+module.exports = { coordinateWork, runWorkCoordination, advanceWork, completionReadiness, modelFor, TERMINAL };

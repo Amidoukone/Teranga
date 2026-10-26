@@ -1,4 +1,3 @@
-import AgentCoordinationPanel from '../features/mission-tracking/AgentCoordinationPanel';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -217,7 +216,6 @@ export default function AgentServicesPage() {
     <div className="app-page-wrap">
       <div className="app-page-shell max-w-4xl space-y-6">
         <WorkspaceHeader title={t('fieldWorkspace.title')} hint={t('workspace.fieldHint')} />
-        <AgentCoordinationPanel />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <button type="button" aria-pressed={view === 'history'} disabled={Boolean(acting) || refreshing} onClick={() => { setServices([]); setOffset(0); setView(view === 'active' ? 'history' : 'active'); }} className="btn-secondary min-h-11 rounded-xl px-4 text-sm">{t(view === 'active' ? 'fieldWorkspace.showHistory' : 'fieldWorkspace.showActive')}</button>

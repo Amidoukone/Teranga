@@ -137,7 +137,7 @@ export function StepCard({ task, service, serviceId, viewer, onWrite, initialPro
       {action && <button type="button" onClick={() => onWrite(() => updateTaskStatus(task.id, action[0])).catch(() => {})} className="btn-secondary min-h-11 rounded-xl px-4 text-sm font-semibold">{t(`serviceSteps.${action[1]}`)}</button>}
       {rights.canAssign && <button type="button" aria-expanded={assigning} onClick={() => setAssigning((value) => !value)} className="min-h-11 text-sm underline">{t('serviceSteps.assign')}</button>}
       {rights.canAccessEvidence && <button type="button" aria-expanded={proofs} onClick={() => { setProofs((value) => !value); setProofsVisited(true); }} className="min-h-11 text-sm underline">{t('serviceSteps.proofs')}</button>}
-      {serviceId && <Link to={`/services/${serviceId}/transactions?taskId=${task.id}`} state={{ from: `/services/${serviceId}#steps` }} className="inline-flex min-h-11 items-center text-sm underline">{t('serviceSteps.transactions')}</Link>}
+      <Link to={`/transactions?taskId=${task.id}`} className="inline-flex min-h-11 items-center text-sm underline">{t('serviceSteps.transactions')}</Link>
     </div>
     {assigning && rights.canAssign && <StepAssignmentForm task={task} service={service} onWrite={onWrite} />}
     {proofsVisited && rights.canAccessEvidence && <div hidden={!proofs}><StepEvidencePanel task={task} viewer={viewer} serviceId={serviceId} /></div>}

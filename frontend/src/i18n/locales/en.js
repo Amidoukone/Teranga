@@ -1,13 +1,19 @@
+import financialWorkspace from './financialWorkspace.en';
 import experience from './experience.en';
 import serviceSteps from './serviceSteps.en';
 import workspaceQueue from './workspaceQueue.en';
 import operationsCenter from './operationsCenter.en';
+import dossier from './dossier.en';
+import connectedHome from './connectedHome.en';
 
 const en = {
   ...experience,
   serviceSteps,
   workspaceQueue,
   operationsCenter,
+  dossier,
+  connectedHome,
+  financialWorkspace,
   agentCoordination: {
     availableMinutes: 'Availability duration (minutes)', availableUntil: 'Available until', expired: 'Your availability has expired. Confirm it again to receive requests.',
     startBefore: 'Start in the application before', startHint: 'Declare the start before working in the field. Without a start within the stated window, an automatic assignment may go to another agent.',
@@ -65,6 +71,15 @@ const en = {
     provider: "PROVIDER",
   },
   nav: {
+    management: "Management",
+    assetsAndProjects: "Properties and projects",
+    interventions: "Interventions and history",
+    interventionsHint: "Find an intervention, then open its case to act or view supporting documents. Current work is in the operations centre.",
+    propertyInterventions: "View interventions",
+    propertyContext: "Interventions for property #{{id}}, linked directly or through its services.",
+    standaloneIntervention: "Standalone intervention",
+    openIntervention: "Open intervention",
+    backInterventions: "Back to interventions",
     login: "Sign in",
     register: "Sign up",
     products: "Products",
@@ -580,8 +595,8 @@ const en = {
     },
   },
   dossierHub: {
-    kicker: "My cases",
-    title: "My cases",
+    kicker: "My assets and projects",
+    title: "Properties and projects",
     subtitle: "Find your properties and long-running projects in one place.",
     loading: "Loading your cases...",
     loadError: "Unable to load your case summary.",

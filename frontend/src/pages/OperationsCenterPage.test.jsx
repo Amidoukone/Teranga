@@ -12,6 +12,7 @@ jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: mockTranslate, i
 jest.mock('react-router-dom', () => {
   const React = require('react');
   return {
+    Link: ({ to, children, ...props }) => <a href={to} {...props}>{children}</a>,
     useNavigate: () => mockNavigate,
     useLocation: () => ({ pathname: '/operations', search: mockSearch }),
     useSearchParams: () => {
@@ -37,6 +38,8 @@ jest.mock('./OperationsPage', () => function Coordination({ embedded, initialEnt
 jest.mock('../features/mission-tracking/WorkspaceQueue', () => function WorkQueue({ view }) {
   return <div data-testid="workqueue" data-view={view}>File de dossiers</div>;
 });
+jest.mock('../features/mission-tracking/AgentCoordinationPanel', () => ({ availabilityOnly }) => <div data-testid="agent-availability" data-only={availabilityOnly} />);
+jest.mock('../features/mission-tracking/ProviderAvailabilityPanel', () => () => <div data-testid="provider-availability" />);
 
 const information = (extra = {}) => ({ key: 'notification:3', id: 3, source: 'notification', notificationId: 3, activityId: 9, version: 'a'.repeat(64),
   entityType: 'service', entityId: 12, title: 'Le compte rendu est disponible', message: 'Vérifiez le résultat de la prestation.',
@@ -104,6 +107,22 @@ test.each(['client','agent','provider','admin'])('%s starts in the same three-vi
   expect(screen.getByRole('button',{name:'workspaceQueue.following'})).toBeInTheDocument();
   expect(screen.getByRole('button',{name:'workspaceQueue.information'})).toBeInTheDocument();
   expect(getOperationUpdates).not.toHaveBeenCalled();
+});
+
+test('the agent home shows availability beside the queue without loading a second workspace', () => {
+  mockUser = { id: 8, role: 'agent', firstName: 'Awa' }; mockSearch = '';
+  render(<OperationsCenterPage />);
+  expect(screen.getByTestId('agent-availability')).toHaveAttribute('data-only', 'true');
+  expect(screen.getByTestId('workqueue')).toBeVisible();
+  expect(screen.queryByTestId('provider-availability')).not.toBeInTheDocument();
+});
+
+test('entering personal information does not fetch availability until the user opens the work view', () => {
+  mockUser = { id: 8, role: 'provider' };
+  render(<OperationsCenterPage />);
+  expect(screen.queryByTestId('provider-availability')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'workspaceQueue.action' }));
+  expect(screen.getByTestId('provider-availability')).toBeVisible();
 });
 
 test('opening a case remains possible when reading cannot be saved', async () => {

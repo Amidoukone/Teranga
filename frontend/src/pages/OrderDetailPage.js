@@ -6,12 +6,13 @@ import WorkProgressPanel from '../features/mission-tracking/WorkProgressPanel';
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useGeo } from '../contexts/GeoContext';
+import DossierHeader, { DossierNextAction } from '../components/DossierHeader';
 
 import {
   getOrderById,
   updateOrder,
   addOrderItem,
-  updateOrderItem,
   deleteOrderItem,
 } from '../services/orders';
 
@@ -72,31 +73,18 @@ function toAbsUrl(path = '') {
 /* ============================================================
    Module: detail d une commande.
 ============================================================ */
-const ORDER_STEP_DEFS = [
-  { key: 'created', labelKey: 'orderDetail.timeline.created', icon: 'C' },
-  { key: 'processing', labelKey: 'orderDetail.timeline.processing', icon: 'P' },
-  { key: 'paid', labelKey: 'orderDetail.timeline.paid', icon: '$' },
-  { key: 'delivered', labelKey: 'orderDetail.timeline.delivered', icon: 'D' },
-  { key: 'closed', labelKey: 'orderDetail.timeline.closed', icon: 'OK' },
-];
-
 const DELETE_WINDOW_MS = 60 * 60 * 1000;
-
-function mapStatusToStepKey(status = '') {
-  const s = String(status || '').toLowerCase();
-  if (!s) return 'created';
-  if (['created'].includes(s)) return 'created';
-  if (['processing', 'in_progress', 'pending', 'shipped'].includes(s)) return 'processing';
-  if (['paid', 'settled'].includes(s)) return 'paid';
-  if (['delivered', 'completed'].includes(s)) return 'delivered';
-  if (['cancelled', 'canceled', 'refunded', 'closed'].includes(s)) return 'closed';
-  return 'created';
-}
 
 /* ============================================================
    Sous-composant formulaire.
 ============================================================ */
 export default function OrderDetailPage() {
+  const { id } = useParams();
+  const { user, countryId, regionId } = useGeo();
+  return <OrderDossier key={JSON.stringify([id, user?.id, user?.role, countryId, regionId])} />;
+}
+
+function OrderDossier() {
   const { formatNumber, formatDateTime } = useLocale();
   const { t } = useTranslation();
   const { confirmDelete } = useDeleteConfirm();
@@ -110,6 +98,11 @@ export default function OrderDetailPage() {
   const [products, setProducts] = useState([]);
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [evidenceError, setEvidenceError] = useState('');
+  const [productsError, setProductsError] = useState('');
+  const [revision, setRevision] = useState(0);
+  const alive = useRef(true), request = useRef(0), evidenceRequest = useRef(0);
 
   // Form ajout article
   const [itemForm, setItemForm] = useState({
@@ -125,6 +118,7 @@ export default function OrderDetailPage() {
   const [uploading, setUploading] = useState(false);
 
   const fileInputRef = useRef(null);
+  const uploadInFlight = useRef(false);
   const [fileInputKey, setFileInputKey] = useState(() => Date.now());
 
   // Lightbox preuves (images)
@@ -300,48 +294,62 @@ export default function OrderDetailPage() {
      Initialisation au montage.
   ============================================================ */
   const init = useCallback(async () => {
+    const version = ++request.current;
     try {
       const ud = await me();
       const current = ud?.user;
+      if (!alive.current || version !== request.current) return;
       if (!current) {
         navigate('/login');
         return;
       }
       setUser(current);
 
-      const [o, prodsRes] = await Promise.all([
-        getOrderById(id),
-        getProducts({ limit: 200 }),
-      ]);
+      const o = await getOrderById(id);
+      if (!alive.current || version !== request.current) return;
 
       if (!o) {
-        navigate('/orders');
+        setOrder(null);
         return;
       }
 
       setOrder(o);
-
-      const prods = Array.isArray(prodsRes) ? prodsRes : prodsRes?.products;
-      setProducts(Array.isArray(prods) ? prods : []);
-
-      const evsRes = await getOrderEvidences(id);
-      const evs = Array.isArray(evsRes) ? evsRes : evsRes?.evidences;
-      setEvidences(Array.isArray(evs) ? evs : []);
-    } catch (e) {
-      if (e?.response?.status === 401) {
-        localStorage.removeItem('teranga_token');
-        localStorage.removeItem('token');
-        navigate('/login');
-      } else {
-        console.error("OrderDetailPage init error:", e);
+      setLoadError(''); setRevision((value) => value + 1);
+      const evidenceVersion = ++evidenceRequest.current;
+      const [proofs, catalog] = await Promise.allSettled([
+        getOrderEvidences(id, { countryId: o.countryId ?? null, regionId: o.regionId ?? null }),
+        ['admin', 'master'].includes(current.role) ? getProducts({ limit: 200 }) : Promise.resolve([]),
+      ]);
+      if (!alive.current || version !== request.current) return;
+      if (catalog.status === 'fulfilled') {
+        const products = Array.isArray(catalog.value) ? catalog.value : catalog.value?.products;
+        setProducts(Array.isArray(products) ? products : []); setProductsError('');
+      } else { setProductsError(t('dossier.loadError')); if ([401,403,404].includes(catalog.reason?.response?.status)) setProducts([]); }
+      if (evidenceVersion === evidenceRequest.current) {
+        if (proofs.status === 'fulfilled') {
+          const files = Array.isArray(proofs.value) ? proofs.value : proofs.value?.evidences;
+          setEvidences(Array.isArray(files) ? files : []); setEvidenceError('');
+        } else { setEvidenceError(t('dossier.loadError')); if ([401,403,404].includes(proofs.reason?.response?.status)) setEvidences([]); }
       }
+    } catch (e) {
+      if (!alive.current || version !== request.current) return;
+      if ([401,403,404].includes(e?.response?.status)) { setOrder(null); setEvidences([]); setProducts([]); }
+      setLoadError(t('dossier.loadError'));
     } finally {
-      setLoading(false);
+      if (alive.current && version === request.current) setLoading(false);
     }
-  }, [id, navigate]);
+  }, [id, navigate, t]);
 
   useEffect(() => {
-    init();
+    alive.current = true; init();
+    return () => { alive.current = false; request.current += 1; evidenceRequest.current += 1; };
+  }, [init]);
+
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible' && !uploadInFlight.current) init(); };
+    const timer = setInterval(refresh, 30000);
+    window.addEventListener('focus', refresh); window.addEventListener('online', refresh);
+    return () => { clearInterval(timer); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); };
   }, [init]);
 
   useEffect(() => {
@@ -370,15 +378,17 @@ export default function OrderDetailPage() {
   }, [isGlobalAdmin]);
 
   const refresh = useCallback(async () => {
-    const o = await getOrderById(id);
-    setOrder(o || null);
-  }, [id]);
+    await init();
+  }, [init]);
 
   const refreshEvidences = useCallback(async () => {
-    const evsRes = await getOrderEvidences(id);
+    const version = ++evidenceRequest.current;
+    const evsRes = await getOrderEvidences(id, { countryId: order?.countryId ?? null, regionId: order?.regionId ?? null });
+    if (!alive.current || version !== evidenceRequest.current) return;
     const evs = Array.isArray(evsRes) ? evsRes : evsRes?.evidences;
     setEvidences(Array.isArray(evs) ? evs : []);
-  }, [id]);
+    setEvidenceError(''); setRevision((value) => value + 1);
+  }, [id, order?.countryId, order?.regionId]);
 
   /* ============================================================
      Contexte: detail d une commande.
@@ -434,16 +444,6 @@ export default function OrderDetailPage() {
     }
   }
 
-  async function handleUpdateItem(itemId, patch) {
-    try {
-      await updateOrderItem(id, itemId, patch);
-      await refresh();
-    } catch (e) {
-      console.error("OrderDetailPage update item error:", e);
-      notify(t("orderDetail.alerts.itemUpdateError"));
-    }
-  }
-
   async function handleDeleteItem(itemId) {
     const ok = await confirmDelete("orderItem");
     if (!ok) return;
@@ -468,6 +468,8 @@ export default function OrderDetailPage() {
   async function handleUpload(e) {
     e.preventDefault();
     if (!files.length) return notify(t("orderDetail.alerts.fileRequired"));
+    if (uploadInFlight.current) return;
+    uploadInFlight.current = true;
 
     setUploading(true);
     try {
@@ -485,7 +487,8 @@ export default function OrderDetailPage() {
       console.error("OrderDetailPage upload evidences error:", e2);
       notify(t("orderDetail.alerts.evidenceUploadError"));
     } finally {
-      setUploading(false);
+      uploadInFlight.current = false;
+      if (alive.current) setUploading(false);
     }
   }
 
@@ -506,7 +509,7 @@ export default function OrderDetailPage() {
   /* ============================================================
      Affiche l etat de chargement.
   ============================================================ */
-  if (!user || loading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-surface-main">
         <p className="text-lg text-text-secondary animate-pulse">
@@ -516,10 +519,10 @@ export default function OrderDetailPage() {
     );
   }
 
-  if (!order) {
+  if (!order || !user) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-surface-main">
-        <p className="text-text-secondary text-lg">{t("orderDetail.notFound")}</p>
+        <div><p role="alert" className="text-text-secondary text-lg">{loadError || t("orderDetail.notFound")}</p><button type="button" onClick={init} className="min-h-11 underline">{t('serviceOrders.retry')}</button><Link to="/orders" className="ml-4 underline">{t('orderDetail.actions.back')}</Link></div>
       </div>
     );
   }
@@ -544,158 +547,16 @@ export default function OrderDetailPage() {
   const orderStatusTone = getOrderStatusTone(order.orderStatus);
   const paymentStatusTone = getPaymentStatusTone(order.paymentStatus);
 
-  const statusStepKey = mapStatusToStepKey(order.orderStatus);
-  const activeStepIndex = ORDER_STEP_DEFS.findIndex((s) => s.key === statusStepKey);
-
-  /* ============================================================
-     Rendu principal.
-  ============================================================ */
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 sm:px-4 py-10">
-      <div className="max-w-6xl mx-auto bg-surface-card shadow-xl rounded-2xl p-5 sm:p-8 border border-border/70">
-        <WorkProgressPanel entityType="order" entityId={order.id} status={order.status} onSaved={init} />
-        {/* HEADER */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary break-words">              {order.code || t("orderDetail.title", { id: order.id })}
-            </h1>
-            <p className="text-sm text-text-secondary">
-              {t("orderDetail.subtitle")}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Link
-              to="/orders"
-              className="px-4 py-2 text-sm rounded-lg app-btn-neutral shadow-sm"
-            >
-              {t("orderDetail.actions.back")}
-            </Link>
-
-            {canAdmin && (
-              <button
-                onClick={() => handleOrderUpdate({ orderStatus: 'cancelled' })}
-                className="px-4 py-2 text-sm rounded-lg app-btn-danger shadow-sm"
-              >
-                {t("orderDetail.actions.cancel")}
-              </button>
-            )}
-          </div>
-        </div>
-
- {/* RAaSUMAa */}
-        <div className="grid lg:grid-cols-3 gap-4 mb-10">
-          {/* CLIENT */}
-          <div className="bg-gradient-to-br from-surface-main to-surface-main border border-border p-4 rounded-xl shadow-sm">
-            <h3 className="font-semibold text-text-primary mb-2 flex items-center gap-2">              {t("orderDetail.sections.customer")}
-            </h3>
-            <p className="font-medium text-text-primary break-words">{customerDisplay}</p>
-
-            {order.customer?.email && (
-              <p className="text-xs text-text-muted mt-1 break-all">{order.customer.email}</p>
-            )}
-
-            {isGlobalAdmin && (
-              <p className="text-xs text-text-muted mt-2 break-words">
-                <span className="font-semibold text-text-secondary">
-                  {t("common.locationLabel")}:
-                </span>{' '}
-                {getGeoLabel(order) || t("common.dash")}
-              </p>
-            )}
-
-            {order.customerNote && (
-              <p className="text-sm text-text-secondary mt-3 break-words">
-                <span className="font-semibold">
-                  {t("orderDetail.labels.note")}
-                </span>{' '}
-                {order.customerNote}
-              </p>
-            )}
-          </div>
-
-          {/* STATUTS + TIMELINE */}
-          <div className="bg-gradient-to-br from-surface-main via-surface-card to-surface-main border border-border p-4 rounded-xl shadow-sm">
-            <h3 className="font-semibold text-text-primary mb-2 flex items-center gap-2">              {t("orderDetail.sections.statuses")}
-            </h3>
-
-            <div className="flex flex-wrap gap-2 mb-3">
-              <Badge tone={orderStatusTone} className="font-semibold">
-                {t("orderDetail.labels.orderStatus")} {orderStatusLabel}
-              </Badge>
-              <Badge tone={paymentStatusTone} className="font-semibold">
-                {t("orderDetail.labels.paymentStatus")} {paymentStatusLabel}
-              </Badge>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {ORDER_STEP_DEFS.map((s, i) => (
-                <div
-                  key={s.key}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs border transition ${
-                    i <= activeStepIndex
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-surface-main/80 text-text-muted border-border'
-                  }`}
-                  title={t(s.labelKey)}
-                >
-                  {s.icon}
-                </div>
-              ))}
-            </div>
-
-            {canAdmin && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  className="px-3 py-1 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600/90 dark:hover:bg-emerald-500"
-                  onClick={() =>
-                    handleOrderUpdate({
-                      orderStatus: 'paid',
-                      paymentStatus: 'paid',
-                    })
-                  }
-                >
-                  {t("orderDetail.actions.markPaid")}
-                </button>
-
-                {!order.coordination && (<button
-                  className="px-3 py-1 text-xs rounded-lg app-btn-primary"
-                  onClick={() =>
-                    handleOrderUpdate({
-                      orderStatus: 'delivered',
-                    })
-                  }
-                >
-                  {t("orderDetail.actions.markDelivered")}
-                </button>)}
-              </div>
-            )}
-          </div>
-
-          {/* MONTANT */}
-          <div className="bg-gradient-to-br from-surface-main via-surface-card to-surface-main border border-border p-4 rounded-xl shadow-sm">
-            <h3 className="text-text-primary font-semibold mb-2 flex items-center gap-2">              {t("orderDetail.sections.summary")}
-            </h3>
-
-            <p className="text-xs text-text-muted uppercase">
-              {t("orderDetail.labels.totalAmount")}
-            </p>
-            <p className="text-2xl font-extrabold text-blue-600 dark:text-blue-300">
-              {formatNumber(total)} {currencyLabel}
-            </p>
-
-            {order.items?.length > 0 && (
-              <p className="text-xs text-text-muted mt-3">
-                {t("orderDetail.summary.itemsCount", {
-                  count: order.items.length,
-                })}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* ===================== ARTICLES ===================== */}
-        <section className="mb-10">
+  return <div className="app-page-wrap"><div className="app-page-shell max-w-5xl space-y-6">
+    <DossierHeader kind="order" id={order.id} title={order.code || t('orderDetail.title', { id: order.id })}
+      assignee={order.coordination?.executorUserId ? `#${order.coordination.executorUserId}` : ''}
+      status={<Badge tone={orderStatusTone}>{orderStatusLabel}</Badge>} />
+    {loadError && <p role="alert" className="app-alert app-alert-error">{loadError} <button type="button" onClick={init} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
+    <DossierNextAction kind="order" status={order.status || order.orderStatus} role={user.role} assigned={String(order.coordination?.executorUserId) === String(user.id)} coordinated={Boolean(order.coordination)} />
+    <section id="dossier-realisation" className="scroll-mt-24 space-y-5" aria-label={t('dossier.realisation')}>
+      <h2 className="text-xl font-bold">{t('dossier.realisation')}</h2>
+              {/* ===================== ARTICLES ===================== */}
+        <section id="order-items" className="space-y-4">
           <h2 className="text-lg font-semibold text-text-primary mb-3 flex items-center gap-2">            {t("orderDetail.items.title")}
             {order.items?.length ? (
               <span className="text-xs text-text-muted">
@@ -717,7 +578,7 @@ export default function OrderDetailPage() {
                   >
                     <div className="space-y-1 min-w-0">
                       <p className="font-semibold text-text-primary break-words">
-                        {it.product?.name ||
+                        {it.name || it.product?.name ||
                           t("orderDetail.items.itemFallback", { id: it.id })}
                       </p>
 
@@ -748,13 +609,6 @@ export default function OrderDetailPage() {
                     {canAdmin && (
                       <div className="flex flex-wrap gap-2 justify-end items-start">
                         <button
-                          className="px-3 py-1 text-xs rounded-lg app-btn-warning"
-                          onClick={() => handleUpdateItem(it.id, { itemStatus: 'cancelled' })}
-                        >
-                          {t("orderDetail.items.cancel")}
-                        </button>
-
-                        <button
                           className="px-3 py-1 text-xs rounded-lg app-btn-danger"
                           onClick={() => handleDeleteItem(it.id)}
                         >
@@ -774,6 +628,9 @@ export default function OrderDetailPage() {
 
  {/* Ajout d'article - Admin/Master */}
           {canAdmin && (
+            <details className="rounded-xl border border-border p-3">
+            <summary className="min-h-11 cursor-pointer text-sm font-semibold">{t('orderDetail.items.addTitle')}</summary>
+            {productsError && <p role="alert">{productsError} <button type="button" onClick={init} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
             <form
               onSubmit={handleAddItem}
               className="mt-5 bg-surface-main border border-border p-4 rounded-xl shadow-sm"
@@ -822,12 +679,15 @@ export default function OrderDetailPage() {
                 </button>
               </div>
             </form>
+            </details>
           )}
         </section>
 
-        {/* ===================== PREUVES ===================== */}
+
+      {evidenceError && <p role="alert" className="app-alert app-alert-error">{evidenceError} <button type="button" onClick={init} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
+              {/* ===================== PREUVES ===================== */}
         {canUploadProofs && (
-          <section className="mb-10">
+          <section id="order-evidences" className="scroll-mt-24 space-y-4">
             <h2 className="text-lg font-semibold text-text-primary mb-3 flex items-center gap-2">              {t("orderDetail.sections.evidences")}
               {evidences.length > 0 && (
                 <span className="text-xs text-text-muted">
@@ -843,6 +703,8 @@ export default function OrderDetailPage() {
             )}
 
             {/* Upload */}
+            <details className="rounded-xl border border-border p-3">
+            <summary className="min-h-11 cursor-pointer text-sm font-semibold">{t('dossier.addDocument')}</summary>
             <form
               onSubmit={handleUpload}
               className="bg-surface-main border border-border p-4 rounded-xl shadow-sm mb-5"
@@ -902,6 +764,7 @@ export default function OrderDetailPage() {
                 </button>
               </div>
             </form>
+            </details>
 
             {imageEvidences.length > 0 && (
               <div className="mb-5">
@@ -1007,7 +870,7 @@ export default function OrderDetailPage() {
             )}
 
             {/* Liste des preuves */}
-            {evidences.length === 0 ? (
+            {evidences.length === 0 && !evidenceError ? (
               <p className="text-sm text-text-muted italic">
                 {t("orderDetail.evidences.noEvidence")}
               </p>
@@ -1155,27 +1018,30 @@ export default function OrderDetailPage() {
           </section>
         )}
 
-        {/* BOTTOM LINKS */}
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link
-            to={`/orders/${id}/transactions`}
-            className="px-4 py-2 text-sm app-btn-neutral rounded-lg shadow-sm"
-          >            {t("orderDetail.actions.viewTransactions")}
-          </Link>
 
-          <Link
-            to="/orders"
-            className="px-4 py-2 text-sm app-btn-soft rounded-lg"
-          >
-            {t("orderDetail.actions.backToOrders")}
-          </Link>
-        </div>
-      </div>
-
-      {/* ============================================================
-          Lightbox medias plein ecran.
-      ============================================================ */}
-      {evidenceLightbox.open && imageEvidences.length > 0 && (
+      <WorkProgressPanel embedded entityType="order" entityId={order.id} status={order.status || order.orderStatus} revision={revision} onSaved={init} />
+    </section>
+    <details id="dossier-finance" className="scroll-mt-24 rounded-2xl border border-border bg-surface-card p-4 sm:p-5">
+      <summary className="min-h-11 cursor-pointer text-lg font-bold">{t('dossier.finance')}</summary>
+      <p className="mt-3 text-sm">{t('orderDetail.labels.totalAmount')}</p><p className="text-2xl font-bold">{formatNumber(total)} {currencyLabel}</p>
+      <div className="mt-3"><Badge tone={paymentStatusTone}>{t('orderDetail.labels.paymentStatus')} {paymentStatusLabel}</Badge></div>
+      <p className="mt-3 text-sm text-text-secondary">{t('dossier.paymentHint')}</p>
+      <Link to={`/orders/${id}/transactions`} state={{ from: `/orders/${id}#dossier-finance` }} className="mt-3 inline-flex min-h-11 items-center text-sm underline">{t('orderDetail.actions.viewTransactions')}</Link>
+      {canAdmin && canonicalizePaymentStatus(order.paymentStatus) !== 'paid' && <button type="button" onClick={() => handleOrderUpdate({ orderStatus: 'paid', paymentStatus: 'paid' })} className="app-btn-neutral ml-3 min-h-11">{t('orderDetail.actions.markPaid')}</button>}
+    </details>
+    <details id="dossier-details" className="scroll-mt-24 rounded-2xl border border-border bg-surface-card p-4 sm:p-5">
+      <summary className="min-h-11 cursor-pointer text-lg font-bold">{t('dossier.details')}</summary>
+      <h2 className="mt-3 font-semibold">{t('orderDetail.sections.customer')}</h2><p className="mt-2 text-sm">{customerDisplay}</p>
+      {order.customer?.email && <p className="mt-2 break-all text-sm text-text-secondary">{order.customer.email}</p>}
+      {order.customerNote && <p className="mt-3 whitespace-pre-line text-sm">{order.customerNote}</p>}
+      {order.createdAt && <p className="mt-3 text-sm">{formatDateTime(order.createdAt)}</p>}
+      {isGlobalAdmin && <p className="mt-3 text-sm">{getGeoLabel(order)}</p>}
+      {canAdmin && <details className="mt-4 rounded-xl border border-border p-3"><summary className="min-h-11 cursor-pointer text-sm font-semibold">{t('dossier.tools')}</summary>
+        {!order.coordination && <button type="button" onClick={() => handleOrderUpdate({ orderStatus: 'delivered' })} className="app-btn-neutral min-h-11">{t('orderDetail.actions.markDelivered')}</button>}
+        <button type="button" onClick={() => handleOrderUpdate({ orderStatus: 'cancelled' })} className="app-btn-danger ml-3 min-h-11">{t('orderDetail.actions.cancel')}</button>
+      </details>}
+    </details>
+          {evidenceLightbox.open && imageEvidences.length > 0 && (
         <div
           ref={evidenceLightboxRef}
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4"
@@ -1255,6 +1121,6 @@ export default function OrderDetailPage() {
           </div>
         </div>
       )}
-    </div>
-  );
+
+  </div></div>;
 }

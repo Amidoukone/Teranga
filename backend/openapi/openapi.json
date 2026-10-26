@@ -10,6 +10,34 @@
     }
   ],
   "paths": {
+    "/tasks": {
+      "get": {
+        "summary": "Find authorized interventions, including completed history",
+        "description": "Role and territory permissions, property context and search apply before pagination. A property filter includes direct interventions and those attached to its services, without granting additional access. Existing response fields are retained. Each intervention can be opened through /tasks/{id}/workspace for its permitted actions.",
+        "parameters": [
+          { "name": "propertyId", "in": "query", "schema": { "type": "integer", "minimum": 1 }, "description": "Invalid or empty values return 400 instead of an unfiltered archive." },
+          { "name": "projectId", "in": "query", "schema": { "type": "integer", "minimum": 1 }, "description": "Exact project context, intersected with existing task permissions before pagination. Project ownership alone does not grant new task access. Invalid values return 400." },
+          { "name": "workspace", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Omit service, property and creator objects; expose only assignee id and name. Legacy calls retain their original representation." },
+          { "name": "serviceId", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "assignedTo", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "q", "in": "query", "schema": { "type": "string", "maxLength": 200 }, "description": "Literal substring of the intervention title, description, service title or property title. Percent and underscore are literal characters." },
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "type", "in": "query", "schema": { "type": "string" } },
+          { "name": "priority", "in": "query", "schema": { "type": "string" } },
+          { "name": "countryId", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "regionId", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "minimum": 0 }, "description": "Legacy pagination; page takes precedence." }
+        ],
+        "responses": {
+          "200": { "description": "Authorized tasks and pagination with page, limit, offset, count for this page, total and totalPages." },
+          "400": { "description": "Invalid property filter" },
+          "401": { "description": "Authentication required" },
+          "403": { "description": "Role not allowed" }
+        }
+      }
+    },
     "/operations/workspace": {
       "get": {
         "summary": "Read a role-specific queue of cases to act on or follow",
@@ -1322,7 +1350,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Resource, coordination and allowed actions"
+            "description": "Resource, coordination and allowed actions. At project handover or order delivery, authorized staff also receive advisory readiness with openPhases, openTasks, hasProof and proofId. Proofs belong to the current actor; project proofs must be a report or photo. Other states and customers receive null readiness. Status writes recheck these requirements transactionally. This read does not advance work or record payment."
           },
           "400": {
             "description": "Invalid input or missing completion report"

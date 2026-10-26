@@ -4,6 +4,11 @@
 Mettre en place Teranga comme une franchise panafricaine pilotée par un siège central (Teranga OS) et opérée localement par pays/région, afin d’assurer des standards communs tout en permettant l’adaptation locale et l’inclusion de toutes les diasporas africaines.
 
 ## Documentation de référence
+- [Reprise du 26 octobre : résumé complet, commit local et prochaine session](docs/REPRISE_SESSION_2026-10-26.md)
+- [Paiements et dépenses : journal commun, bilan et droits par dossier](docs/ESPACES_FINANCIERS_2026-10-26.md)
+- [Accueil connecté unique, disponibilité et outils administratifs dans Gestion](docs/ACCUEIL_CONNECTE_2026-10-26.md)
+- [Dossiers projets et commandes : cadre commun, réalisation et justificatifs](docs/DOSSIERS_PROJETS_COMMANDES_2026-10-25.md)
+- [Navigation centrée sur le travail, historique et interventions des biens](docs/NAVIGATION_INTERVENTIONS_2026-10-25.md)
 - [Reprise de session : état global de la simplification et suite proposée](docs/REPRISE_SESSION_2026-10-24.md)
 - [Centre des opérations : file commune À faire / À suivre / Informations](docs/FILE_COMMUNE_OPERATIONS_2026-10-24.md)
 - [Dossier service : premier lot de refonte avec étapes et justificatifs intégrés](docs/DOSSIER_SERVICE_ETAPES_2026-10-24.md)

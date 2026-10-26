@@ -160,7 +160,7 @@ describe("NavBar logout flow", () => {
     });
   });
 
-  test("moves the dedicated Services page into More for admins", async () => {
+  test("groups specialized administration behind Management", async () => {
     const adminUser = { ...mockUser, role: "admin", countryId: 1 };
     getLocalUser.mockReturnValue(adminUser);
     me.mockResolvedValue({ user: adminUser });
@@ -168,12 +168,10 @@ describe("NavBar logout flow", () => {
     render(<NavBar />);
 
     expect(screen.queryByRole("link", { name: "nav.adminServices" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "nav.openMoreMenu" }));
-    const serviceLink = await screen.findByRole("link", { name: "nav.adminServices" });
-    expect(serviceLink).toHaveAttribute("href", "/admin/services");
+    screen.getAllByRole('link', { name: 'nav.management' }).forEach((link) => expect(link).toHaveAttribute('href', '/gestion'));
   });
 
-  test("groups the admin menu into six business spaces", async () => {
+  test("the admin mobile menu contains account controls without a second tool directory", async () => {
     const adminUser = { ...mockUser, role: "admin", countryId: 1 };
     getLocalUser.mockReturnValue(adminUser);
     me.mockResolvedValue({ user: adminUser });
@@ -182,14 +180,35 @@ describe("NavBar logout flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "nav.openMoreMenu" }));
     const panel = await screen.findByRole("dialog", { name: "nav.menu" });
 
-    [
-      "nav.sections.operations",
-      "nav.sections.network",
-      "nav.sections.catalog",
-      "nav.sections.quality",
-      "nav.sections.finance",
-      "nav.sections.configuration",
-    ].forEach((section) => expect(within(panel).getByText(section)).toBeInTheDocument());
+    expect(within(panel).getByRole('link', { name: /nav.settings/ })).toHaveAttribute('href', '/settings');
+    expect(within(panel).queryByRole('link', { name: 'nav.adminServices' })).not.toBeInTheDocument();
+  });
+
+  test.each(['client', 'agent', 'provider', 'admin'])('puts the centre first on desktop and mobile for %s', async (role) => {
+    const account = { ...mockUser, role, countryId: 1 };
+    getLocalUser.mockReturnValue(account); me.mockResolvedValue({ user: account });
+    render(<NavBar />);
+    const navigation = await screen.findAllByRole('navigation', { name: /nav\.(mainNavigation|bottomNavigation)/ });
+    expect(navigation).toHaveLength(2);
+    navigation.forEach((nav) => {
+      const links = within(nav).getAllByRole('link').filter((link) => link.getAttribute('href') !== '/' && !link.getAttribute('href').includes('?'));
+      expect(links[0]).toHaveAttribute('href', '/operations');
+      expect(within(nav).queryByRole('link', { name: 'nav.tasks' })).not.toBeInTheDocument();
+      expect(links.some((link) => link.getAttribute('href') === '/tasks')).toBe(false);
+      expect(links.filter((link) => link.getAttribute('href') === '/gestion')).toHaveLength(role === 'admin' ? 1 : 0);
+      expect(links.some((link) => link.getAttribute('href') === '/dashboard')).toBe(false);
+    });
+  });
+
+  test.each(['client', 'agent'])('preserves interventions and their history in More for %s', async (role) => {
+    const account = { ...mockUser, role, countryId: 1 };
+    getLocalUser.mockReturnValue(account); me.mockResolvedValue({ user: account });
+    render(<NavBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'nav.openMoreMenu' }));
+    const panel = await screen.findByRole('dialog', { name: 'nav.menu' });
+    expect(within(panel).getByRole('link', { name: 'nav.interventions' })).toHaveAttribute('href', '/tasks');
+    const extraLinks = { client: [['nav.assetsAndProjects', '/dossiers']], agent: [['nav.myMissions', '/missions/mine']], admin: [] };
+    extraLinks[role].forEach(([name, path]) => expect(within(panel).getByRole('link', { name })).toHaveAttribute('href', path));
   });
 
   test("keeps service jobs directly accessible for providers on desktop and mobile", async () => {

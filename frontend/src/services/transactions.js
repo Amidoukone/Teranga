@@ -101,7 +101,7 @@ async function postMultipartResilient(url, payloadFields = {}, file, method = 'p
  * - serviceIdINFO: number
  * - taskIdINFO: number
  * - orderIdINFO: number
- * - projectIdINFO: number // 
+ * - projectIdINFO: number
  * - statusINFO: string (optionnel; si fourni, sera canonicalise)
  * - proofFileINFO: File
  */
@@ -211,15 +211,19 @@ export async function updateTransaction(id, updates) {
   if (typeof updates?.status !== 'undefined' && updates.status !== null && updates.status !== '') {
     payload.status = canonicalizeTransactionStatus(updates.status);
   }
+  const fields = {
+    ...cleanObj(payload),
+    ...Object.fromEntries(['description', 'paymentMethod'].filter((field) => updates?.[field] !== undefined).map((field) => [field, updates[field]])),
+  };
 
   // Pas de fichier -> JSON
   if (!isFileLike(updates?.proofFile)) {
-    const { data } = await api.put(`/transactions/${id}`, cleanObj(payload));
+    const { data } = await api.put(`/transactions/${id}`, fields);
     return applyLabels(data.transaction || data);
   }
 
   // Avec fichier -> multipart résilient
-  const res = await postMultipartResilient(`/transactions/${id}`, cleanObj(payload), updates.proofFile, 'put');
+  const res = await postMultipartResilient(`/transactions/${id}`, fields, updates.proofFile, 'put');
   return applyLabels(res.transaction || res);
 }
 

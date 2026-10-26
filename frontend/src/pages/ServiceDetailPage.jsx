@@ -174,6 +174,7 @@ function ServiceDetail({ id }) {
   }, [role, service?.status, service?.completion, t]);
 
   const backTo = getRequestReturnPath(location.state?.from, role === 'agent' ? '/agent/services' : role === 'admin' ? '/admin/services' : '/demandes');
+  const backLabel = t(backTo.split('?')[0].endsWith('/transactions') ? 'financialWorkspace.backJournal' : 'serviceDetailPage.backToServices');
   const counterpart = role === 'agent' ? service?.client : service?.agent;
   const telHref = buildTelHref(counterpart?.phone);
   const whatsappHref = buildWhatsappHref(
@@ -194,7 +195,7 @@ function ServiceDetail({ id }) {
       <div className="mx-auto max-w-xl px-6 py-10">
         <div role="alert" className="app-alert app-alert-error">{error || t('serviceDetailPage.errors.load')} <button type="button" onClick={() => load()} className="underline">{t('serviceOrders.retry')}</button></div>
         <Link to={backTo} className="btn-secondary mt-4 inline-flex rounded-full px-5 py-2.5 text-sm">
-          {t('serviceDetailPage.backToServices')}
+          {backLabel}
         </Link>
       </div>
     );
@@ -210,7 +211,7 @@ function ServiceDetail({ id }) {
     <div className="app-page-wrap pb-24 sm:pb-10">
       <div className="app-page-shell max-w-3xl space-y-5">
         <Link to={backTo} className="inline-flex items-center gap-2 text-sm font-medium text-text-secondary hover:text-text-primary">
-          <ArrowLeft size={16} aria-hidden="true" /> {t('serviceDetailPage.backToServices')}
+          <ArrowLeft size={16} aria-hidden="true" /> {backLabel}
         </Link>
 
         <section>

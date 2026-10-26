@@ -30,7 +30,7 @@ async function logoutUser(page) {
 }
 
 test.describe('E2E Integration Reelle - Auth', () => {
-  test('register via API puis login et acces dashboard', async ({
+  test('register via API puis login et acces centre', async ({
     page,
     request,
   }) => {
@@ -40,7 +40,7 @@ test.describe('E2E Integration Reelle - Auth', () => {
     const { payload } = await registerDisposableClient(request);
     await loginUser(page, payload.email, payload.password);
 
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/operations$/);
 
     const token = await page.evaluate(() => localStorage.getItem('teranga_token'));
     expect(token).toBeTruthy();
@@ -56,7 +56,7 @@ test.describe('E2E Integration Reelle - Auth', () => {
     const { payload } = await registerDisposableClient(request);
     await loginUser(page, payload.email, payload.password);
 
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/operations$/);
     await logoutUser(page);
 
     await expect(page).toHaveURL(/\/login$/);
@@ -73,7 +73,7 @@ test.describe('E2E Integration Reelle - Auth', () => {
     expect(tokenAfterLogout).toBeNull();
 
     await loginUser(page, payload.email, payload.password);
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/operations$/);
   });
 
   test('changement de mot de passe force la reconnexion puis accepte le nouveau mot de passe', async ({
@@ -86,7 +86,7 @@ test.describe('E2E Integration Reelle - Auth', () => {
     const { payload } = await registerDisposableClient(request);
     await loginUser(page, payload.email, payload.password);
 
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/operations$/);
 
     await page.goto('/account/security');
     await expect(page).toHaveURL(/\/account\/security$/);
@@ -110,6 +110,6 @@ test.describe('E2E Integration Reelle - Auth', () => {
     expect(tokenAfterPasswordChange).toBeNull();
 
     await loginUser(page, payload.email, NEW_PASSWORD);
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/operations$/);
   });
 });

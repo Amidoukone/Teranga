@@ -1,13 +1,19 @@
+import financialWorkspace from './financialWorkspace.fr';
 import experience from './experience.fr';
 import serviceSteps from './serviceSteps.fr';
 import workspaceQueue from './workspaceQueue.fr';
 import operationsCenter from './operationsCenter.fr';
+import dossier from './dossier.fr';
+import connectedHome from './connectedHome.fr';
 
 const fr = {
   ...experience,
   serviceSteps,
   workspaceQueue,
   operationsCenter,
+  dossier,
+  connectedHome,
+  financialWorkspace,
   agentCoordination: {
     availableMinutes: 'Durée de disponibilité (minutes)', availableUntil: 'Disponible jusqu’au', expired: 'Votre disponibilité a expiré. Confirmez-la à nouveau pour recevoir des demandes.',
     startBefore: 'Démarrer dans l’application avant', startHint: 'Déclarez le démarrage avant de commencer sur le terrain. Sans démarrage dans le délai indiqué, une affectation automatique peut être confiée à un autre agent.',
@@ -65,6 +71,15 @@ const fr = {
     provider: "PRESTATAIRE",
   },
   nav: {
+    management: "Gestion",
+    assetsAndProjects: "Biens et projets",
+    interventions: "Interventions et historique",
+    interventionsHint: "Retrouvez une intervention, puis ouvrez son dossier pour agir ou consulter ses justificatifs. Le travail courant se trouve au centre des opérations.",
+    propertyInterventions: "Voir les interventions",
+    propertyContext: "Interventions du bien #{{id}}, directes ou rattachées à ses services.",
+    standaloneIntervention: "Intervention autonome",
+    openIntervention: "Ouvrir l’intervention",
+    backInterventions: "Retour aux interventions",
     login: "Connexion",
     register: "Inscription",
     products: "Produits",
@@ -583,8 +598,8 @@ const fr = {
     },
   },
   dossierHub: {
-    kicker: "Mes dossiers",
-    title: "Mes dossiers",
+    kicker: "Mon patrimoine et mes projets",
+    title: "Biens et projets",
     subtitle: "Regroupez ici vos biens et vos projets de suivi au long cours.",
     loading: "Chargement de vos dossiers\u2026",
     loadError: "Impossible de charger le r\u00E9sum\u00E9 de vos dossiers.",

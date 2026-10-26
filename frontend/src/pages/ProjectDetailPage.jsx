@@ -5,8 +5,10 @@ import WorkProgressPanel from '../features/mission-tracking/WorkProgressPanel';
 // ============================================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowRight, CheckSquare, FileText, ReceiptText } from "lucide-react";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import { useGeo } from '../contexts/GeoContext';
+import DossierHeader, { DossierNextAction } from '../components/DossierHeader';
+import ProjectTasksPanel from '../features/service-workspace/ProjectTasksPanel';
 import { me } from "../services/auth";
 import {
   getProjectById,
@@ -20,13 +22,10 @@ import {
 } from "../services/projects";
 import {
   applyLabels,
-  CURRENCY_LABELS,
-  TRANSACTION_TYPES,
-  TRANSACTION_STATUSES,
   PROJECT_STATUSES,
   getProjectStatusTone,
 } from "../utils/labels";
-import { getAllTransactions, createTransaction } from "../services/transactions";
+import { getAllTransactions } from "../services/transactions";
 import { summarizeTransactionsByCurrency } from "../utils/currency";
 import { Badge } from "../components/ui";
 import { normalizeRole, isMasterUser } from "../utils/role";
@@ -40,7 +39,7 @@ import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 ============================================================ */
 const FILE_BASE =
   window.__TERANGA_FILE_BASE_URL || process.env.REACT_APP_FILE_BASE_URL || "";
-const CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
+
 
 function normalizePath(path = "") {
   if (!path) return "";
@@ -173,224 +172,20 @@ function Btn({ variant = "primary", size = "md", children, className = "", ...pr
 /* ============================================================
    Contexte: detail d un projet.
 ============================================================ */
-function getTransactionAuthorLabel(transaction, dashLabel = "-") {
-  if (!transaction) return dashLabel;
-
-  if (transaction.user) {
-    const fn = transaction.user.firstName || transaction.user.firstname || "";
-    const ln = transaction.user.lastName || transaction.user.lastname || "";
-    const full = `${fn} ${ln}`.trim();
-    if (full.length > 0) return full;
-    if (transaction.user.email) return transaction.user.email;
-  }
-
-  if (transaction.createdByUser) {
-    const full = `${transaction.createdByUser.firstName || ""} ${transaction.createdByUser.lastName || ""}`.trim();
-    if (full.length > 0) return full;
-    if (transaction.createdByUser.email) return transaction.createdByUser.email;
-  }
-
-  return dashLabel;
-}
-
-/* ============================================================
-   Sous-composant formulaire.
-============================================================ */
-function ProjectTransactionForm({ projectId, projectCurrency, currentUser, onSuccess }) {
-  const { t } = useTranslation();
-  const canSeeOrder =
-    normalizeRole(currentUser?.role) === "admin" ||
-    normalizeRole(currentUser?.role) === "agent";
-  const [form, setForm] = useState({
-    type: "expense",
-    amount: "",
-    currency: "",
-    paymentMethod: "",
-    description: "",
-    orderId: "",
-    proofFile: null,
-  });
-  const [saving, setSaving] = useState(false);
-  const currencyOptions = useMemo(
-    () =>
-      [...new Set([...CURRENCY_CODES, projectCurrency, form.currency].filter(Boolean))].map((code) => ({
-        value: code,
-        label: t(`currency.${code}`, { defaultValue: code }),
-      })),
-    [t, projectCurrency, form.currency]
-  );
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    try {
-      setSaving(true);
-
-      await createTransaction({
-        type: form.type,
-        amount: form.amount === "" ? undefined : Number(form.amount),
-        currency: form.currency || undefined,
-        paymentMethod: form.paymentMethod || undefined,
-        description: form.description || undefined,
-        orderId: form.orderId ? Number(form.orderId) : undefined,
-        proofFile: form.proofFile || undefined,
-        projectId: Number(projectId),
-        userId: currentUser?.id,
-      });
-
-      notify(t("projects.transaction.alerts.createSuccess"));
-      setForm({
-        type: "expense",
-        amount: "",
-        currency: "",
-        paymentMethod: "",
-        description: "",
-        orderId: "",
-        proofFile: null,
-      });
-      onSuccess?.();
-    } catch (err) {
-      console.error("ProjectDetailPage create transaction error:", err);
-      notify(
-        err?.response?.data?.error ||
-          t("projects.transaction.alerts.createError")
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="mb-6 bg-surface-main border border-border rounded-2xl p-4 shadow-sm w-full max-w-full min-w-0">
-      <h4 className="text-sm font-semibold text-text-secondary mb-3">
-        {t("projects.transaction.title")}
-      </h4>
-      <form
-        onSubmit={handleSubmit}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-      >
-        <div>
-          <label className="text-xs text-text-secondary font-medium mb-1 block">
-            {t("projects.transaction.typeLabel")}
-          </label>
-          <select
-            value={form.type}
-            onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
-          >
-            <option value="expense">{t("transactions.type.expense")}</option>
-            <option value="revenue">{t("transactions.type.revenue")}</option>
-            <option value="commission">{t("transactions.type.commission")}</option>
-            <option value="adjustment">{t("transactions.type.adjustment")}</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="text-xs text-text-secondary font-medium mb-1 block">
-            {t("projects.transaction.amountLabel")}
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            placeholder={t("projects.transaction.amountPlaceholder")}
-            value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            required
-            className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs text-text-secondary font-medium mb-1 block">
-            {t("projects.transaction.currencyLabel")}
-          </label>
-          <select
-            value={form.currency}
-            onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
-          >
-            <option value="">{t('common.currencyFromOperation')}{projectCurrency ? ` (${projectCurrency})` : ''}</option>
-            {currencyOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="text-xs text-text-secondary font-medium mb-1 block">
-            {t("projects.transaction.paymentMethodLabel")}
-          </label>
-          <input
-            placeholder={t("projects.transaction.paymentMethodPlaceholder")}
-            value={form.paymentMethod}
-            onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-            className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
-          />
-        </div>
-
-        {canSeeOrder && (
-          <div className="sm:col-span-2">
-            <label className="text-xs text-text-secondary font-medium mb-1 block">
-              {t("projects.transaction.orderIdLabel")}
-            </label>
-            <input
-              type="number"
-              value={form.orderId}
-              onChange={(e) => setForm({ ...form, orderId: e.target.value })}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm min-w-0"
-            />
-          </div>
-        )}
-
-        <div className="sm:col-span-2">
-          <label className="text-xs text-text-secondary font-medium mb-1 block">
-            {t("projects.transaction.descriptionLabel")}
-          </label>
-          <textarea
-            rows={3}
-            placeholder={t("projects.transaction.descriptionPlaceholder")}
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="border border-border rounded-lg px-3 py-2 text-sm w-full min-w-0"
-          />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label className="text-xs text-text-secondary font-medium mb-1 block">
-            {t("projects.transaction.proofLabel")}
-          </label>
-          <input
-            type="file"
-            accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
-            onChange={(e) =>
-              setForm({ ...form, proofFile: e.target.files?.[0] || null })
-            }
-            className="text-sm border border-border rounded-lg px-3 py-2 bg-surface-card w-full block min-w-0"
-          />
-        </div>
-
-        <div className="sm:col-span-2 flex justify-end gap-2">
-          <Btn type="submit" variant="primary" disabled={saving}>
-            {saving
-            ? t("projects.transaction.saving")
-            : t("projects.transaction.save")}
-          </Btn>
-        </div>
-      </form>
-    </div>
-  );
-}
-/* ============================================================
-   Sous-composant formulaire.
-============================================================ */
 export default function ProjectDetailPage() {
+  const { id } = useParams();
+  const { user, countryId, regionId } = useGeo();
+  return <ProjectDossier key={JSON.stringify([id, user?.id, user?.role, countryId, regionId])} />;
+}
+
+function ProjectDossier() {
   const { formatNumber, formatDate, formatDateTime } = useLocale();
   const { t } = useTranslation();
   const { confirmDelete } = useDeleteConfirm();
   const { id } = useParams();
   const navigate = useNavigate();
   const isMounted = useRef(true);
+  const request = useRef(0);
 
   const [user, setUser] = useState(null);
   const [project, setProject] = useState(null);
@@ -399,6 +194,10 @@ export default function ProjectDetailPage() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [sectionErrors, setSectionErrors] = useState({});
+  const [revision, setRevision] = useState(0);
+  const [editingPhase, setEditingPhase] = useState(false);
+  const [documentsOpen, setDocumentsOpen] = useState(false);
 
   const [phaseForm, setPhaseForm] = useState({
     title: "",
@@ -438,7 +237,7 @@ export default function ProjectDetailPage() {
   const isClient = role === "client";
   const isMaster = isMasterUser(user); // UX uniquement
 
-  const isAssignedAgent = isAgent && project?.agent?.id === user?.id;
+  const isAssignedAgent = isAgent && String(project?.agentId || project?.agent?.id) === String(user?.id);
 
   const clientCanAddDocs = isClient;
   const agentCanAddDocs = isAssignedAgent;
@@ -468,25 +267,33 @@ export default function ProjectDetailPage() {
      Contexte: detail d un projet.
   ============================================================ */
   const loadProject = useCallback(async (pid) => {
-    if (!pid) return;
+    if (!pid || !isMounted.current) return;
+    const version = ++request.current;
     try {
-      const [p, phs, docs] = await Promise.all([
-        getProjectById(pid),
+      const p = await getProjectById(pid);
+      if (!isMounted.current || version !== request.current) return;
+      const results = await Promise.allSettled([
         getProjectPhases(pid),
-        getProjectDocuments(pid),
+        getProjectDocuments(pid, { countryId: p?.countryId ?? null, regionId: p?.regionId ?? null }),
+        getAllTransactions({ projectId: pid, countryId: p?.countryId ?? null, regionId: p?.regionId ?? null }),
       ]);
-      const trxs = await getAllTransactions({ projectId: pid, countryId: p?.countryId ?? null, regionId: p?.regionId ?? null });
-
-      if (!isMounted.current) return;
-
+      if (!isMounted.current || version !== request.current) return;
       setProject(applyLabels(p));
-      setPhases((phs || []).map(applyLabels));
-      setDocuments(docs || []);
-      setTransactions((trxs || []).map((t) => applyLabels(t, "transaction")));
+      const setters = [setPhases, setDocuments, setTransactions];
+      const names = ['phases', 'documents', 'finance'];
+      const errors = {};
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') setters[index](result.value || []);
+        else {
+          errors[names[index]] = true;
+          if ([401, 403, 404].includes(result.reason?.response?.status)) setters[index]([]);
+        }
+      });
+      setSectionErrors(errors); setErrorMsg(''); setRevision((value) => value + 1);
     } catch (e) {
-      console.error("ProjectDetailPage load project error:", e);
+      if (!isMounted.current || version !== request.current) return;
       setErrorMsg(t("projectDetail.alerts.loadError"));
-      setProject(null);
+      if ([401, 403, 404].includes(e?.response?.status)) { setProject(null); setPhases([]); setDocuments([]); setTransactions([]); }
     }
   }, [t]);
 
@@ -513,8 +320,17 @@ export default function ProjectDetailPage() {
 
     return () => {
       isMounted.current = false;
+      request.current += 1;
     };
   }, [id, loadProject, navigate, t]);
+
+  useEffect(() => {
+    if (!project?.id) return undefined;
+    const refresh = () => { if (document.visibilityState === 'visible' && !uploadInFlightRef.current) loadProject(id); };
+    const timer = setInterval(refresh, 30000);
+    window.addEventListener('focus', refresh); window.addEventListener('online', refresh);
+    return () => { clearInterval(timer); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); };
+  }, [project?.id, loadProject, id]);
 
   /* ============================================================
      Mise a jour du statut metier.
@@ -560,6 +376,7 @@ export default function ProjectDetailPage() {
   function resetPhaseForm() {
     setPhaseForm({ title: "", description: "", startDate: "", endDate: "" });
     setEditPhaseId(null);
+    setEditingPhase(false);
   }
 
   /* ============================================================
@@ -692,255 +509,24 @@ export default function ProjectDetailPage() {
     ? PROJECT_STATUSES[project.status] || project.status
     : t("common.dash");
 
-  return (
-    <div className="min-h-screen bg-surface-main px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        {/* BACK */}
-        <Btn
-          onClick={() => navigate("/projects")}
-          variant="ghost"
-          size="sm"
-          className="mb-4 gap-1"
-        >
-          <span className="text-base">{"<"}</span> {t("projectDetail.actions.backToProjects")}
-        </Btn>
-
-        {/* CARD */}
-        <div className="bg-surface-card shadow-lg rounded-3xl border border-border/70 p-6 md:p-8 space-y-10">
-          <WorkProgressPanel entityType="project" entityId={project.id} status={project.status} onSaved={() => loadProject(project.id)} />
-          {/* HEADER */}
-          <div className="flex flex-col md:flex-row md:justify-between gap-6">
-            <div className="space-y-3 flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold text-text-primary break-words">
-                {project.title}
-              </h1>
-
-              <p className="text-sm text-text-secondary max-w-2xl break-words">
-                {project.description || t("projectDetail.descriptionFallback")}
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3">
-                {isAdmin && !project.coordination ? (
-                  <select
-                    value={project.status}
-                    onChange={(e) => handleStatusChange(e.target.value)}
-                    className="border border-border rounded-lg px-3 py-1.5 text-sm"
-                  >
-                    <option value="created">{t("projects.status.created")}</option>
-                    <option value="in_progress">{t("projects.status.in_progress")}</option>
-                    <option value="completed">{t("projects.status.completed")}</option>
-                    <option value="validated">{t("projects.status.validated")}</option>
-                    <option value="cancelled">{t("projects.status.cancelled")}</option>
-                  </select>
-                ) : (
-                  <Badge tone={getProjectStatusTone(project.status)}>
-                    {t("projectDetail.labels.status", { status: statusLabel })}
-                  </Badge>
-                )}
-
-                {isMaster && (
-                  <Badge tone="warning">{t("projectDetail.badges.master")}</Badge>
-                )}
-
-                <Badge tone="success">
-                  {t("projectDetail.labels.budget")}{" "}
-                  {formatNumber(project.budget || 0)}{" "}
-                  {project.currency || 'XOF'}
-                </Badge>
-
-                {isClient && (
-                  <Badge tone={clientCanModifyOrDelete ? "warning" : "neutral"}>
-                    {clientCanModifyOrDelete
-                      ? t("projectDetail.badges.editWindowAllowed", {
-                          time: timeLeftText,
-                        })
-                      : t("projectDetail.badges.editWindowExpired")}
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* FINANCES */}
-            <div className="w-full md:w-80 bg-surface-main border border-border rounded-2xl p-4">
-              <h3 className="text-xs font-semibold text-text-muted uppercase">
-                {t("projectDetail.finance.title")}
-              </h3>
-
-              {totalsByCurrency.map((totals) => <div key={totals.currency} role="group" className="space-y-2 text-sm mt-2" aria-label={totals.currency}>
-                <div className="flex justify-between">
-                  <span>{t("projectDetail.finance.revenues")}</span>
-                  <span className="font-semibold text-emerald-700">
-                    {formatNumber(totals.revenues)}{" "}
-                    {totals.currency}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span>{t("projectDetail.finance.expenses")}</span>
-                  <span className="font-semibold text-rose-700">
-                    {formatNumber(totals.expenses)}{" "}
-                    {totals.currency}
-                  </span>
-                </div>
-
-                <div className="flex justify-between border-t border-border pt-2">
-                  <span className="font-medium">{t("projectDetail.finance.balance")}</span>
-                  <span
-                    className={`font-semibold ${
-                      totals.balance >= 0 ? "text-emerald-700" : "text-rose-700"
-                    }`}
-                  >
-                    {formatNumber(totals.balance)}{" "}
-                    {totals.currency}
-                  </span>
-                </div>
-              </div>)}
-            </div>
-          </div>
-
-          <section className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 sm:p-5" aria-labelledby="project-action-hub-title">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 id="project-action-hub-title" className="text-base font-bold text-text-primary">
-                  {t("projectDetail.actionHubTitle")}
-                </h2>
-                <p className="mt-1 text-sm text-text-secondary">{t("projectDetail.actionHubHint")}</p>
-              </div>
-              <span className="app-toolbar-pill">{t("projectDetail.actionHubCount", { phases: phases.length, documents: documents.length, transactions: transactions.length })}</span>
-            </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <a href="#project-phases" className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-card p-3 transition hover:border-blue-400">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-300"><CheckSquare size={19} aria-hidden="true" /></span>
-                <span className="min-w-0 flex-1"><strong className="block text-sm text-text-primary">{t("projectDetail.actionHubPhases")}</strong><span className="text-xs text-text-muted">{phases.length}</span></span>
-                <ArrowRight size={16} className="shrink-0 text-blue-600 transition group-hover:translate-x-1" aria-hidden="true" />
-              </a>
-              <a href="#project-documents" className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-card p-3 transition hover:border-blue-400">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300"><FileText size={19} aria-hidden="true" /></span>
-                <span className="min-w-0 flex-1"><strong className="block text-sm text-text-primary">{t("projectDetail.actionHubDocuments")}</strong><span className="text-xs text-text-muted">{documents.length}</span></span>
-                <ArrowRight size={16} className="shrink-0 text-amber-600 transition group-hover:translate-x-1" aria-hidden="true" />
-              </a>
-              <a href="#project-transactions" className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-card p-3 transition hover:border-blue-400">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"><ReceiptText size={19} aria-hidden="true" /></span>
-                <span className="min-w-0 flex-1"><strong className="block text-sm text-text-primary">{t("projectDetail.actionHubTransactions")}</strong><span className="text-xs text-text-muted">{transactions.length}</span></span>
-                <ArrowRight size={16} className="shrink-0 text-emerald-600 transition group-hover:translate-x-1" aria-hidden="true" />
-              </a>
-            </div>
-          </section>
-
-          {/* ========================= GRID PRINCIPALE ========================= */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* ----------- LARGE COLUMN : Transactions + Phases ----------- */}
-            <div className="lg:col-span-2 space-y-8">
-              {/* ---------------- TRANSACTIONS LIEES ---------------- */}
-              <section id="project-transactions" className="scroll-mt-6">
-                <h2 className="text-lg font-semibold text-text-primary mb-3">
-                  {t("projectDetail.sections.transactions")}
-                </h2>
-
-                {(isAdmin || isAssignedAgent) && (
-                  <ProjectTransactionForm
-                    projectId={project.id}
-                    projectCurrency={project.currency}
-                    currentUser={user}
-                    onSuccess={() => loadProject(project.id)}
-                  />
-                )}
-
-                {transactions.length === 0 ? (
-                  <p className="text-text-muted italic text-sm">
-                    {t("projectDetail.transactions.empty")}
-                  </p>
-                ) : (
-                  <div className="overflow-x-auto border border-border rounded-2xl shadow-sm">
-                    <table className="min-w-full text-xs md:text-sm table-fixed">
-                      <thead className="bg-surface-main text-text-secondary font-semibold">
-                        <tr>
-                          <th className="px-3 py-2 text-left w-28">
-                            {t("projectDetail.transactions.headers.type")}
-                          </th>
-                          <th className="px-3 py-2 text-left w-28">
-                            {t("projectDetail.transactions.headers.amount")}
-                          </th>
-                          <th className="px-3 py-2 text-left w-28">
-                            {t("projectDetail.transactions.headers.currency")}
-                          </th>
-                          <th className="px-3 py-2 text-left w-52">
-                            {t("projectDetail.transactions.headers.method")}
-                          </th>
-                          <th className="px-3 py-2 text-left w-44">
-                            {t("projectDetail.transactions.headers.createdBy")}
-                          </th>
-                          <th className="px-3 py-2 text-left w-28">
-                            {t("projectDetail.transactions.headers.status")}
-                          </th>
-                          <th className="px-3 py-2 text-left w-28">
-                            {t("projectDetail.transactions.headers.date")}
-                          </th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {transactions.map((trx) => (
-                          <tr key={trx.id} className="border-t border-border/70">
-                            <td className="px-3 py-2">
-                              <div className="truncate">
-                                {trx.type
-                                  ? TRANSACTION_TYPES[trx.type] ||
-                                    trx.type
-                                  : t("common.dash")}
-                              </div>
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              {formatNumber(trx.amount || 0)}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              {trx.currency
-                                ? CURRENCY_LABELS[trx.currency] ||
-                                  trx.currency
-                                : t("common.dash")}
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="max-w-[220px] break-words line-clamp-2">
-                                {trx.paymentMethod || t("common.dash")}
-                              </div>
-                            </td>
-
- {/* Contexte: detail de projet. */}
-                            <td className="px-3 py-2">
-                              <div className="max-w-[180px] break-words line-clamp-2">
-                                {getTransactionAuthorLabel(
-                                  trx,
-                                  t("common.dash")
-                                )}
-                              </div>
-                            </td>
-
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              {trx.status
-                                ? TRANSACTION_STATUSES[trx.status] ||
-                                  trx.status
-                                : t("common.dash")}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              {trx.createdAt
-                                ? formatDate(trx.createdAt)
-                                : t("common.dash")}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </section>
-
-              {/* ---------------- PHASES DU PROJET ---------------- */}
-              <section id="project-phases" className="scroll-mt-6">
+  return <div className="app-page-wrap"><div className="app-page-shell max-w-5xl space-y-6">
+    <DossierHeader kind="project" id={project.id} title={project.title} description={project.description}
+      assignee={[project.agent?.firstName, project.agent?.lastName].filter(Boolean).join(' ') || (project.agentId ? `#${project.agentId}` : '')}
+      status={<Badge tone={getProjectStatusTone(project.status)}>{statusLabel}</Badge>} />
+    {errorMsg && <p role="alert" className="app-alert app-alert-error">{errorMsg} <button type="button" onClick={() => loadProject(id)} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
+    <DossierNextAction kind="project" status={project.status} role={role} assigned={isAssignedAgent} coordinated={Boolean(project.coordination)} />
+    <section id="dossier-realisation" className="scroll-mt-24 space-y-5" aria-label={t('dossier.realisation')}>
+      <h2 className="text-xl font-bold">{t('dossier.realisation')}</h2>
+      <p className="text-sm text-text-secondary">{t('dossier.optionalPhases')}</p>
+      {sectionErrors.phases && <p role="alert" className="app-alert app-alert-error">{t('dossier.loadError')} <button type="button" onClick={() => loadProject(id)} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
+      <section id="project-phases" className="scroll-mt-6">
                 <h2 className="text-lg font-semibold text-text-primary mb-3">
                   {t("projectDetail.sections.phases")}
                 </h2>
 
                 {(isAdmin || (isClient && clientCanModifyOrDelete)) && (
+                  <details open={editingPhase} onToggle={(event) => setEditingPhase(event.currentTarget.open)} className="mb-4 rounded-xl border border-border p-3">
+                  <summary className="min-h-11 cursor-pointer text-sm font-semibold">{t('dossier.addPhase')}</summary>
                   <form
                     onSubmit={handlePhaseSubmit}
                     className="bg-surface-main border border-border p-5 rounded-2xl mb-5 grid gap-4 md:grid-cols-2"
@@ -1003,9 +589,10 @@ export default function ProjectDetailPage() {
                       </Btn>
                     </div>
                   </form>
+                  </details>
                 )}
 
-                {phases.length === 0 ? (
+                {phases.length === 0 && !sectionErrors.phases ? (
                   <p className="text-text-muted italic text-sm">
                     {t("projectDetail.phases.empty")}
                   </p>
@@ -1021,6 +608,17 @@ export default function ProjectDetailPage() {
                             <h3 className="text-sm font-semibold text-text-primary break-words">
                               {ph.title}
                             </h3>
+                            <p className="mt-2 text-sm">{t(`dossier.phaseStates.${ph.status}`, { defaultValue: ph.status })}</p>
+                            {(isAdmin || clientCanModifyOrDelete) && <label className="mt-2 block text-sm">
+                              <span className="sr-only">{t('dossier.phaseStatus', { title: ph.title })}</span>
+                              <select value={ph.status} onChange={async (event) => {
+                                try { await saveProjectPhase({ id: ph.id, status: event.target.value }); await loadProject(project.id); }
+                                catch (error) { notify(error?.response?.data?.error || t('projectDetail.phases.alerts.saveError')); }
+                              }} className="min-h-11 rounded-xl border border-border bg-surface-main p-2">
+                                {['pending', 'active', 'completed'].map((state) => <option key={state} value={state}>{t(`dossier.phaseStates.${state}`)}</option>)}
+                              </select>
+                            </label>}
+                            {isAssignedAgent && <p className="mt-2 text-xs text-text-secondary">{t('dossier.phaseManaged')}</p>}
 
                             {ph.description && (
                               <p className="text-xs text-text-secondary mt-1 break-words">
@@ -1041,13 +639,14 @@ export default function ProjectDetailPage() {
                             </p>
                           </div>
 
-                          {(isAdmin || isAssignedAgent || clientCanModifyOrDelete) && (
+                          {(isAdmin || clientCanModifyOrDelete) && (
                             <div className="flex flex-col gap-1">
                               <Btn
                                 variant="warning"
                                 size="xs"
                                 onClick={() => {
                                   setEditPhaseId(ph.id);
+                                  setEditingPhase(true);
                                   setPhaseForm({
                                     title: ph.title,
                                     description: ph.description || "",
@@ -1079,21 +678,22 @@ export default function ProjectDetailPage() {
                   </div>
                 )}
               </section>
-            </div>
-
- {/* Contexte: detail de projet. */}
-            <div className="space-y-6">
-              <section id="project-documents" className="scroll-mt-6">
+      <ProjectTasksPanel projectId={project.id} onRefresh={() => loadProject(project.id)} />
+      {sectionErrors.documents && <p role="alert" className="app-alert app-alert-error">{t('dossier.loadError')} <button type="button" onClick={() => loadProject(id)} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
+      <section id="project-documents" className="scroll-mt-6">
                 <h2 className="text-lg font-semibold text-text-primary mb-3">
                   {t("projectDetail.sections.documents")}
                 </h2>
 
                 {(isAdmin || clientCanAddDocs || agentCanAddDocs) && (
+                  <details open={documentsOpen} onToggle={(event) => setDocumentsOpen(event.currentTarget.open)} className="mb-4 rounded-xl border border-border p-3">
+                  <summary className="min-h-11 cursor-pointer text-sm font-semibold">{t('dossier.addDocument')}</summary>
+                  <p className="mb-3 text-sm text-text-secondary">{t('dossier.projectProofHint')}</p>
                   <form
                     onSubmit={handleUploadDocuments}
                     className="
-                      bg-surface-main border border-border rounded-2xl 
-                      p-4 mb-4 
+                      bg-surface-main border border-border rounded-2xl
+                      p-4 mb-4
                       grid grid-cols-1 sm:grid-cols-2 gap-4
                     "
                   >
@@ -1104,15 +704,20 @@ export default function ProjectDetailPage() {
                         accept=".pdf,.jpg,.jpeg,.png"
                         onChange={handleFileChange}
                         className="
-                          w-full block 
-                          border border-border rounded-lg 
-                          px-3 py-2 text-xs 
-                          bg-surface-card 
+                          w-full block
+                          border border-border rounded-lg
+                          px-3 py-2 text-xs
+                          bg-surface-card
                           min-w-0
                         "
                       />
                     </div>
 
+                    <label htmlFor="project-document-kind" className="sm:col-span-2 text-sm">{t('dossier.proofKind')}
+                      <select id="project-document-kind" aria-label={t('dossier.proofKind')} value={docKind} onChange={(event) => setDocKind(event.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface-card p-2">
+                        {['other','contract','plan','report','photo'].map((kind) => <option key={kind} value={kind}>{t(`projectDetail.documents.kinds.${kind}`)}</option>)}
+                      </select>
+                    </label>
                     <details className="sm:col-span-2 rounded-xl border border-border bg-surface-card/50 px-3 py-2">
                       <summary className="cursor-pointer text-sm font-semibold text-text-primary">
                         {t("projectDetail.documents.form.advancedDetails")}
@@ -1140,28 +745,6 @@ export default function ProjectDetailPage() {
                       className="border border-border rounded-lg px-3 py-2 text-xs w-full min-w-0"
                     />
 
-                    <select
-                      value={docKind}
-                      onChange={(e) => setDocKind(e.target.value)}
-                      className="border border-border rounded-lg px-3 py-2 text-xs w-full min-w-0"
-                    >
-                      <option value="other">
-                        {t("projectDetail.documents.kinds.other")}
-                      </option>
-                      <option value="contract">
-                        {t("projectDetail.documents.kinds.contract")}
-                      </option>
-                      <option value="plan">
-                        {t("projectDetail.documents.kinds.plan")}
-                      </option>
-                      <option value="report">
-                        {t("projectDetail.documents.kinds.report")}
-                      </option>
-                      <option value="photo">
-                        {t("projectDetail.documents.kinds.photo")}
-                      </option>
-                    </select>
-
                     <input
                       placeholder={t("projectDetail.documents.notesPlaceholder")}
                       value={notes}
@@ -1185,15 +768,17 @@ export default function ProjectDetailPage() {
                       </Btn>
                     </div>
                   </form>
+                  </details>
                 )}
 
-                {documents.length === 0 ? (
+                {documents.length === 0 && !sectionErrors.documents ? (
                   <p className="text-text-muted italic text-sm">
                     {t("projectDetail.documents.empty")}
                   </p>
                 ) : (
-                  <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-                    <div className="bg-surface-main border border-border rounded-2xl p-3">
+                  <div className="space-y-3">
+                    <details className="bg-surface-main border border-border rounded-2xl p-3">
+                      <summary className="min-h-11 cursor-pointer text-sm font-semibold">{t('dossier.filterDocuments')}</summary>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <input
                           placeholder={t("projectDetail.documents.filters.searchPlaceholder")}
@@ -1262,7 +847,7 @@ export default function ProjectDetailPage() {
                           {t("common.resetFilters")}
                         </Btn>
                       </div>
-                    </div>
+                    </details>
 
                     {filteredDocuments.map((doc) => {
                       const displayName = getDocDisplayName(
@@ -1394,14 +979,31 @@ export default function ProjectDetailPage() {
                   </div>
                 )}
               </section>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+      <WorkProgressPanel embedded entityType="project" entityId={project.id} status={project.status} revision={revision} reviewBlocked={Boolean(sectionErrors.documents)} onSaved={() => loadProject(project.id)} />
+    </section>
+    <details id="dossier-finance" className="scroll-mt-24 rounded-2xl border border-border bg-surface-card p-4 sm:p-5">
+      <summary className="min-h-11 cursor-pointer text-lg font-bold">{t('dossier.finance')}</summary>
+      <p className="mb-3 text-sm">{t('projectDetail.labels.budget')} {formatNumber(project.budget || 0)} {project.currency || 'XOF'}</p>
+      {sectionErrors.finance && <p role="alert" className="app-alert app-alert-error">{t('dossier.loadError')} <button type="button" onClick={() => loadProject(id)} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
+      {!sectionErrors.finance && <div className="mb-5 grid gap-3 sm:grid-cols-2">{totalsByCurrency.map((totals) => <div key={totals.currency} role="group" aria-label={totals.currency} className="rounded-xl border border-border p-3 text-sm">
+        <h3 className="font-bold">{totals.currency}</h3>
+        <p>{t('projectDetail.finance.revenues')} <strong>{formatNumber(totals.revenues)} {totals.currency}</strong></p>
+        <p>{t('projectDetail.finance.expenses')} <strong>{formatNumber(totals.expenses)} {totals.currency}</strong></p>
+        <p>{t('projectDetail.finance.balance')} <strong>{formatNumber(totals.balance)} {totals.currency}</strong></p>
+      </div>)}</div>}
+      <p className="mt-3 text-sm text-text-secondary">{t('financialWorkspace.external')}</p>
+      <Link to={`/projects/${project.id}/transactions`} className="mt-3 inline-flex min-h-11 items-center text-sm underline">{t('financialWorkspace.title')}</Link>
+    </details>
+    <details id="dossier-details" className="scroll-mt-24 rounded-2xl border border-border bg-surface-card p-4 sm:p-5">
+      <summary className="min-h-11 cursor-pointer text-lg font-bold">{t('dossier.details')}</summary>
+      {project.description && <p className="mt-3 whitespace-pre-line text-sm">{project.description}</p>}
+      <p className="mt-3 text-sm">{t('dossier.project')} #{project.id}</p>
+      {project.createdAt && <p className="mt-2 text-sm">{formatDateTime(project.createdAt)}</p>}
+      {isMaster && <Badge tone="warning">{t('projectDetail.badges.master')}</Badge>}
+      {isClient && <p className="mt-2 text-sm text-text-secondary">{clientCanModifyOrDelete ? t('projectDetail.badges.editWindowAllowed', { time: timeLeftText }) : t('projectDetail.badges.editWindowExpired')}</p>}
+      {isAdmin && !project.coordination && <label className="mt-3 block text-sm">{t('projectDetail.labels.status', { status: statusLabel })}<select aria-label={t('dossier.tools')} value={project.status} onChange={(event) => handleStatusChange(event.target.value)} className="ml-3 min-h-11 rounded-xl border border-border bg-surface-main p-2">
+        {['created','in_progress','completed','validated','cancelled'].map((state) => <option key={state} value={state}>{t(`projects.status.${state}`)}</option>)}
+      </select></label>}
+    </details>
+  </div></div>;
 }
-
-
-
-

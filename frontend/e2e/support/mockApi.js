@@ -306,6 +306,36 @@ async function installApiMocks(page, options = {}) {
       });
       return;
     }
+    if (/^\/operations\/work\/(project|order)\/\d+(\/status)?$/.test(path)) {
+      const [, , , kind, rawId] = path.split('/');
+      const item = (kind === 'project' ? state.projects || [] : state.orders).find((entry) => Number(entry.id) === Number(rawId));
+      if (!item) return fulfillJson(route, 404, { error: 'Dossier introuvable' });
+      if (method === 'POST') {
+        const body = parseRequestBody(request); item.status = body.status;
+        if (kind === 'order') item.orderStatus = body.status;
+        if (body.summary) item.coordination.policy = { ...item.coordination.policy, completionReport: { summary: body.summary, reporterId: user.id, submittedAt: nowIso() } };
+        return fulfillJson(route, 200, { resource: item });
+      }
+      const staff = user.role === 'admin' || (user.role === 'agent' && Number(item.coordination?.executorUserId || item.agentId) === Number(user.id));
+      const finishing = kind === 'project' ? item.status === 'in_progress' : (item.status || item.orderStatus) === 'shipped';
+      const readiness = staff && finishing ? {
+        openPhases: (state.projectPhases || []).filter((phase) => phase.projectId === item.id && phase.status !== 'completed').length,
+        openTasks: state.tasks.filter((task) => task.projectId === item.id && !['completed','validated','cancelled'].includes(task.status)).length,
+        hasProof: (kind === 'project' ? state.projectDocuments || [] : state.evidences || []).some((proof) => Number(proof[kind === 'project' ? 'projectId' : 'orderId']) === item.id && proof.uploaderId === user.id),
+      } : null;
+      return fulfillJson(route, 200, { item: { ...item, status: item.status || item.orderStatus, entityType: kind }, canAdvance: staff, canValidate: kind === 'project' && user.role === 'client', readiness });
+    }
+    if (method === 'GET' && /^\/projects\/\d+$/.test(path)) {
+      const project = (state.projects || []).find((entry) => entry.id === Number(path.split('/')[2]));
+      return fulfillJson(route, project ? 200 : 404, project ? { project } : { error: 'Projet introuvable' });
+    }
+    if (method === 'GET' && path === '/project-phases') return fulfillJson(route, 200, { phases: (state.projectPhases || []).filter((entry) => entry.projectId === Number(new URL(request.url()).searchParams.get('projectId'))) });
+    if (method === 'PUT' && /^\/project-phases\/\d+$/.test(path)) {
+      const phase = (state.projectPhases || []).find((entry) => entry.id === Number(path.split('/')[2])); Object.assign(phase, parseRequestBody(request));
+      return fulfillJson(route, 200, { phase });
+    }
+    if (method === 'GET' && path === '/project-documents') return fulfillJson(route, 200, { documents: (state.projectDocuments || []).filter((entry) => entry.projectId === Number(new URL(request.url()).searchParams.get('projectId'))) });
+    if (method === 'GET' && /^\/orders\/\d+\/evidences$/.test(path)) return fulfillJson(route, 200, { evidences: (state.evidences || []).filter((entry) => entry.orderId === Number(path.split('/')[2])) });
 
     if (method === 'GET' && path === '/services/me') {
       const query = new URL(request.url()).searchParams;
@@ -326,6 +356,10 @@ async function installApiMocks(page, options = {}) {
       return;
     }
 
+    if (method === 'GET' && /^\/services\/\d+$/.test(path)) {
+      const service = state.services.find((item) => Number(item.id) === Number(path.split('/').pop()));
+      return fulfillJson(route, service ? 200 : 404, service ? { service } : { error: 'Service introuvable' });
+    }
     if (method === 'GET' && path === '/services') {
       const paged = paginate(state.services, request.url());
       await fulfillJson(route, 200, {
@@ -375,7 +409,18 @@ async function installApiMocks(page, options = {}) {
       return fulfillJson(route, 200, { evidences: (state.evidences || []).filter((item) => Number(item.taskId) === Number(path.split('/')[2])) });
     }
     if (method === 'GET' && path === '/tasks') {
-      await fulfillJson(route, 200, { tasks: state.tasks });
+      const params = new URL(request.url()).searchParams;
+      const q = (params.get('q') || '').toLowerCase();
+      const tasks = state.tasks.filter((task) =>
+        (!params.get('projectId') || String(task.projectId) === params.get('projectId')) &&
+        (!params.get('propertyId') || [task.propertyId, task.service?.propertyId].some((id) => String(id) === params.get('propertyId'))) &&
+        (!params.get('serviceId') || String(task.serviceId) === params.get('serviceId')) &&
+        (!params.get('assignedTo') || String(task.assignedTo) === params.get('assignedTo')) &&
+        ['status', 'type', 'priority'].every((key) => !params.get(key) || task[key] === params.get(key)) &&
+        (!q || [task.title, task.description, task.service?.title, task.property?.title].filter(Boolean).join(' ').toLowerCase().includes(q))
+      );
+      const paged = paginate(tasks, request.url());
+      await fulfillJson(route, 200, { tasks: paged.items, pagination: paged.pagination });
       return;
     }
 
@@ -547,7 +592,18 @@ async function installApiMocks(page, options = {}) {
     }
 
     if (method === 'GET' && path === '/transactions') {
-      const paged = paginate(state.transactions, request.url());
+      const query = new URL(request.url()).searchParams;
+      const rows = state.transactions.filter((entry) => {
+        for (const field of ['serviceId', 'taskId', 'orderId', 'projectId', 'type', 'status', 'currency']) {
+          if (query.get(field) && String(entry[field] ?? entry[field.replace(/Id$/, '')]?.id) !== query.get(field)) return false;
+        }
+        const q = query.get('q')?.toLowerCase();
+        if (q && ![entry.description, entry.paymentMethod, entry.type, entry.status].filter(Boolean).join(' ').toLowerCase().includes(q)) return false;
+        return (!query.get('startDate') || new Date(entry.createdAt) >= new Date(query.get('startDate'))) && (!query.get('endDate') || new Date(entry.createdAt) <= new Date(query.get('endDate')));
+      });
+      const sort = query.get('sort') || '-createdAt', field = sort.replace(/^-/, ''), direction = sort.startsWith('-') ? -1 : 1;
+      rows.sort((a,b) => direction * (field === 'amount' ? Number(a.amount) - Number(b.amount) : String(a[field] || '').localeCompare(String(b[field] || ''))));
+      const paged = paginate(rows, request.url());
       await fulfillJson(route, 200, {
         items: paged.items,
         transactions: paged.items,

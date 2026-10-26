@@ -1,0 +1,23 @@
+const financialWorkspace = {
+  title: 'Payments and expenses', clientTitle: 'My payments', journal: 'Journal', statement: 'Statement',
+  hint: 'Find entries, supporting receipts and their related case.',
+  external: 'Payments take place outside Teranga. Recording an entry does not confirm delivery or accept a case result.',
+  statementHint: 'This statement summarizes entries within the selected scope, by currency and status. Its balance is not an amount still due.',
+  add: 'Record an entry', edit: 'Edit or review', attach: 'Add supporting details', save: 'Save', saving: 'Saving…', saved: 'Entry saved.',
+  loading: 'Loading entries…', failed: 'Entries are unavailable. Please retry.', contextFailed: 'The case is inaccessible or unavailable. Retry before recording an entry.',
+  empty: 'No entries match these criteria.', retry: 'Retry', refresh: 'Refresh', cancel: 'Cancel',
+  search: 'Description or payment method', find: 'Search', filters: 'More filters', reset: 'Clear filters',
+  type: 'Entry type', status: 'Entry status', currency: 'Currency', all: 'All', amount: 'Amount', method: 'Payment method', description: 'Description', proof: 'Payment receipt or supporting document', viewProof: 'Open receipt',
+  inheritedCurrency: 'Case currency', localCurrency: 'Country currency', proofRequired: 'A receipt is required to record this entry as completed.',
+  references: 'Additional references (optional)', referenceHint: 'To link a new entry, open Payments and expenses from its case.',
+  service: 'Service', task: 'Step or intervention', order: 'Order', project: 'Project', reference: 'Case reference', openCase: 'Open case', backCase: 'Back to case', allEntries: 'All entries',
+  from: 'From', to: 'To', sort: 'Order', newest: 'Newest', oldest: 'Oldest', amountAsc: 'Amount ascending', amountDesc: 'Amount descending', invalidDates: 'The start date must precede the end date.',
+  invalidAmount: 'Enter a valid amount for this entry.', adjustmentHint: 'An adjustment can be positive or negative.', invalidReference: 'The case reference is invalid.', noAccess: 'This area is available to clients, agents and administrators.',
+  delete: 'Delete entry', deleteFailed: 'Deletion failed.', recordedBy: 'Recorded by',
+  revenues: 'Revenue', expenses: 'Expenses', commissions: 'Commissions', adjustments: 'Adjustments', balance: 'Entry balance', count: '{{count}} entry/entries',
+  allStatuses: 'All statuses', completedOnly: 'Completed', export: 'Export statement CSV', details: 'View entries', noTotals: 'No amounts match these criteria.',
+  orderRule: 'An order has one entry per type. Recording the same type again replaces its amount; it does not add another instalment.',
+  advanced: 'Detailed analysis', linkedOnly: 'Only entries linked to a case', role: 'Author role',
+  backJournal: 'Back to payments and expenses',
+};
+export default financialWorkspace;

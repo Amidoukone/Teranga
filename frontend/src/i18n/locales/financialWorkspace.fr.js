@@ -1,0 +1,23 @@
+const financialWorkspace = {
+  title: 'Paiements et dépenses', clientTitle: 'Mes paiements', journal: 'Journal', statement: 'Bilan',
+  hint: 'Retrouvez les écritures, leurs justificatifs et le dossier concerné.',
+  external: 'Les paiements se font en dehors de Teranga. Enregistrer une écriture ne confirme ni la livraison ni le résultat du dossier.',
+  statementHint: 'Ce bilan résume les écritures du périmètre choisi, par devise et par statut. Le solde ne représente pas une somme restant à payer.',
+  add: 'Enregistrer une opération', edit: 'Modifier ou contrôler', attach: 'Compléter le justificatif', save: 'Enregistrer', saving: 'Enregistrement…', saved: 'Écriture enregistrée.',
+  loading: 'Chargement des écritures…', failed: 'Les écritures sont indisponibles. Réessayez.', contextFailed: 'Le dossier est inaccessible ou indisponible. Réessayez avant de saisir une écriture.',
+  empty: 'Aucune écriture pour ces critères.', retry: 'Réessayer', refresh: 'Actualiser', cancel: 'Annuler',
+  search: 'Description ou moyen de paiement', find: 'Rechercher', filters: 'Autres filtres', reset: 'Effacer les filtres',
+  type: 'Nature', status: 'Statut de l’écriture', currency: 'Devise', all: 'Tous', amount: 'Montant', method: 'Moyen de paiement', description: 'Description', proof: 'Reçu ou justificatif de paiement', viewProof: 'Ouvrir le justificatif',
+  inheritedCurrency: 'Devise du dossier', localCurrency: 'Devise du pays', proofRequired: 'Un justificatif est nécessaire pour enregistrer cette opération comme effectuée.',
+  references: 'Références complémentaires (facultatives)', referenceHint: 'Pour rattacher une nouvelle opération, ouvrez Paiements et dépenses depuis son dossier.',
+  service: 'Service', task: 'Étape ou intervention', order: 'Commande', project: 'Projet', reference: 'Référence du dossier', openCase: 'Ouvrir le dossier', backCase: 'Retour au dossier', allEntries: 'Toutes les écritures',
+  from: 'Du', to: 'Au', sort: 'Ordre', newest: 'Plus récentes', oldest: 'Plus anciennes', amountAsc: 'Montant croissant', amountDesc: 'Montant décroissant', invalidDates: 'La date de début doit précéder la date de fin.',
+  invalidAmount: 'Saisissez un montant valide pour cette opération.', adjustmentHint: 'Un ajustement peut être positif ou négatif.', invalidReference: 'La référence du dossier est invalide.', noAccess: 'Cet espace est réservé aux clients, agents et administrateurs.',
+  delete: 'Supprimer l’écriture', deleteFailed: 'La suppression a échoué.', recordedBy: 'Enregistrée par',
+  revenues: 'Recettes', expenses: 'Dépenses', commissions: 'Commissions', adjustments: 'Ajustements', balance: 'Solde des écritures', count: '{{count}} écriture(s)',
+  allStatuses: 'Tous les statuts', completedOnly: 'Effectuées', export: 'Exporter le bilan CSV', details: 'Consulter les écritures', noTotals: 'Aucun montant à présenter pour ces critères.',
+  orderRule: 'Pour une commande, une écriture existe par nature. Enregistrer à nouveau la même nature remplace son montant ; cela ne crée pas un acompte supplémentaire.',
+  advanced: 'Analyse détaillée', linkedOnly: 'Uniquement les écritures liées à un dossier', role: 'Rôle de l’auteur',
+  backJournal: 'Retour aux paiements et dépenses',
+};
+export default financialWorkspace;

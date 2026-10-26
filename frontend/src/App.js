@@ -24,6 +24,7 @@ import { getToken, getLocalUser, hasSessionHint, me } from './services/auth';
 import { GEO_SELECTION_CHANGED_EVENT } from './services/geo';
 import { normalizeRole } from './utils/role'; // ensure roles are canonical (admin/agent/client)
 import { buildAuthFeedbackState } from './utils/authFeedback';
+import { loginDestination } from './utils/loginDestination';
 
 // Contexte: routage et guardes d'acces.
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -41,6 +42,7 @@ const HelpSupportPage = lazy(() => import('./pages/HelpSupportPage'));
 
 // Contexte: routage et guardes d'acces.
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ManagementHome = lazy(() => import('./pages/ManagementHome'));
 const DossiersPage = lazy(() => import('./pages/DossiersPage'));
 const PropertiesPage = lazy(() => import('./pages/PropertiesPage'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
@@ -57,7 +59,8 @@ const TasksPage = lazy(() => import('./pages/TasksPage'));
 const TaskEvidencesPage = lazy(() => import('./pages/TaskEvidencesPage'));
 const TaskWorkspacePage = lazy(() => import('./pages/TaskWorkspacePage'));
 const TransactionsPage = lazy(() => import('./pages/TransactionsPage'));
-const FinanceDashboardPage = lazy(() => import('./pages/FinanceDashboardPage'));
+const FinanceRouteAlias = lazy(() => import('./pages/FinanceRouteAlias'));
+const ProjectTransactionsPage = lazy(() => import('./pages/ProjectTransactionsPage'));
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
 const OperationsCenterPage = lazy(() => import('./pages/OperationsCenterPage'));
 
@@ -148,10 +151,10 @@ function getLikelyNextPaths(pathname, hasSession, role) {
 
   if (!hasSession) {
     if (currentPath === '/login') {
-      return ['/dashboard', '/register'];
+      return ['/operations', '/register'];
     }
     if (currentPath === '/register') {
-      return ['/login', '/dashboard'];
+      return ['/login', '/operations'];
     }
     if (
       currentPath === '/' ||
@@ -168,7 +171,7 @@ function getLikelyNextPaths(pathname, hasSession, role) {
 
   if (role === 'admin') {
     return [
-      '/dashboard',
+      '/gestion',
       '/services',
       '/operations',
       '/settings',
@@ -190,18 +193,17 @@ function getLikelyNextPaths(pathname, hasSession, role) {
   if (role === 'provider') {
     return [
       '/chauffeur/courses',
-      '/dashboard',
+      '/prestataire/services',
       '/operations',
       '/settings',
     ];
   }
 
   return [
-    '/dashboard',
+    '/operations',
     '/demandes/nouvelle',
     '/demandes',
     '/dossiers',
-    '/operations',
     '/settings',
   ];
 }
@@ -269,10 +271,11 @@ function RequireRole({ allow = [], children }) {
     return children;
   }
 
-  return <Navigate to="/dashboard" replace />;
+  return <Navigate to="/operations" replace />;
 }
 
 function PublicOnly({ children }) {
+  const location = useLocation();
   const { token, user, hasSession } = getSession();
   const userKey = user?.id || user?.email || '';
   const sessionKey = USES_COOKIE_AUTH ? (userKey || 'cookie') : (token || '');
@@ -310,7 +313,7 @@ function PublicOnly({ children }) {
   }, [sessionKey]);
 
   if (!checked) return null;
-  if (!allow) return <Navigate to="/dashboard" replace />;
+  if (!allow) return <Navigate to={loginDestination(location.state?.from)} replace />;
   return children;
 }
 
@@ -550,6 +553,10 @@ export default function App() {
             {/* ============================= */}
  {/* Contexte: routage et guardes d'acces. */}
             {/* ============================= */}
+            <Route
+              path="/gestion"
+              element={<RequireAuth><RequireRole allow={['admin']}><SetSeo title={t('nav.management')} /><ManagementHome /></RequireRole></RequireAuth>}
+            />
             <Route
               path="/dashboard"
               element={
@@ -940,7 +947,7 @@ export default function App() {
                 <RequireAuth>
                   <>
                     <SetSeo title={t('seo.pages.finance.title')} />
-                    <FinanceDashboardPage />
+                    <FinanceRouteAlias />
                   </>
                 </RequireAuth>
               }
@@ -973,6 +980,10 @@ export default function App() {
               }
             />
 
+            <Route
+              path="/projects/:id/transactions"
+              element={<RequireAuth><ProjectTransactionsPage /></RequireAuth>}
+            />
             <Route
               path="/orders/:id/transactions"
               element={

@@ -33,3 +33,23 @@ test('real work centre keeps a property-only task actionable without creating or
   await expect(page.getByRole('link',{name:'Retour au dossier du service',exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'Commencer l’étape',exact:true}).click();await expect(page.getByRole('button',{name:'Terminer l’étape',exact:true})).toBeVisible();
 });
+
+test('a real property opens its intervention archive and returns to the same context', async ({ page, request }) => {
+  const client = await loginAsSeededClient(request);
+  const title = `Bien et intervention ${Date.now()}`;
+  const creation = await request.post(`${API_BASE_URL}/properties`, { headers: headers(client), data: { title, type: 'house', address: 'Adresse de recette', city: 'Bamako', latitude: 12.6392, longitude: -8.0029 } });
+  expect(creation.status()).toBe(201); const property = (await creation.json()).property;
+  const created = await request.post(`${API_BASE_URL}/tasks`, { headers: headers(client), data: { propertyId: property.id, title: `Visite ${title}`, type: 'visit' } });
+  expect(created.status()).toBe(201); const task = (await created.json()).task;
+  await blockExternalTracking(page); await seedAuthenticatedSession(page, client.user, client.token);
+  await page.goto('/properties');
+  await page.locator(`a[href="/tasks?propertyId=${property.id}"]`).click();
+  await expect(page).toHaveURL(new RegExp(`/tasks\\?propertyId=${property.id}$`));
+  await page.getByRole('article', { name: `Visite ${title}`, exact: true }).getByRole('button', { name: 'Ouvrir l’intervention', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/tasks/${task.id}$`));
+  await expect(page.getByRole('heading', { name: `Visite ${title}`, exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Retour au dossier du service', exact: true })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Retour aux interventions', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/tasks\\?propertyId=${property.id}$`));
+  await expect(page.getByRole('article', { name: `Visite ${title}`, exact: true })).toBeVisible();
+});

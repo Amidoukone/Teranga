@@ -59,6 +59,53 @@ test('workspace pagination counts all authorized steps with a stable order; lega
   expect(old.status).toBe(200); expect(old.body.tasks).toHaveLength(23); expect(old.body.tasks[0].capabilities).toBeUndefined();
 });
 
+test('the intervention archive paginates property and service work, including completed history', async () => {
+  const parent = await service({ propertyId: property.id });
+  const prefix = `archive-${crypto.randomUUID()}`;
+  const entries = [];
+  for (let i = 0; i < 23; i += 1) entries.push(await task(i % 2 ? parent.id : null, { propertyId: i % 2 ? null : property.id, title: `${prefix} ${i}`, status: 'validated' }));
+  await task(null, { title: prefix, status: 'validated' });
+  const url = `/api/tasks?propertyId=${property.id}&q=${prefix}&status=validated&limit=20`;
+  const one = await request(app).get(url).set(auth(client));
+  const two = await request(app).get(`${url}&page=2`).set(auth(client));
+  expect(one.status).toBe(200); expect(two.status).toBe(200);
+  expect(one.body.pagination).toMatchObject({ total: 23, totalPages: 2, count: 20 });
+  expect(two.body.pagination.count).toBe(3);
+  expect([...one.body.tasks, ...two.body.tasks].map((entry) => entry.id)).toEqual(entries.map((entry) => entry.id).reverse());
+  const ownService = await request(app).get(`${url}&serviceId=${parent.id}`).set(auth(client));
+  expect(ownService.body.pagination.total).toBe(11);
+});
+
+test('property and search filters cannot widen a client or agent permission', async () => {
+  const parent = await service({ propertyId: property.id, clientId: delegate.id, agentId: delegate.id });
+  const title = `private-${crypto.randomUUID()}`;
+  await task(null, { propertyId: property.id, title, creatorId: delegate.id, assignedTo: delegate.id });
+  await task(parent.id, { title, creatorId: delegate.id, assignedTo: delegate.id });
+  // Ownership grants the direct property intervention, but not an unrelated service's tasks.
+  const clientResult = await request(app).get(`/api/tasks?propertyId=${property.id}&q=${title}`).set(auth(client));
+  expect(clientResult.status).toBe(200); expect(clientResult.body.pagination.total).toBe(1);
+  const agentResult = await request(app).get(`/api/tasks?propertyId=${property.id}&q=${title}`).set(auth(agent));
+  expect(agentResult.status).toBe(200); expect(agentResult.body.pagination.total).toBe(0);
+  const outside = await request(app).get(`/api/tasks?propertyId=${property.id}&q=${title}&countryId=${country.id}`).set(auth(outsider));
+  expect(outside.status).toBe(200); expect(outside.body.pagination.total).toBe(0);
+});
+
+test('search covers the parent title and treats wildcard characters as literal text', async () => {
+  const prefix = `lookup-${crypto.randomUUID()}`;
+  const parent = await service({ title: `${prefix} remise` });
+  const entry = await task(parent.id, { title: `${prefix} 100%_ok` });
+  await task(null, { title: `${prefix} 100xyok` });
+  const parentMatch = await request(app).get(`/api/tasks?q=${prefix}%20remise`).set(auth(client));
+  expect(parentMatch.status).toBe(200); expect(parentMatch.body.tasks.map((row) => row.id)).toEqual([entry.id]);
+  const exact = await request(app).get(`/api/tasks?q=${encodeURIComponent(`${prefix} 100%_ok`)}`).set(auth(client));
+  expect(exact.status).toBe(200); expect(exact.body.tasks.map((row) => row.id)).toEqual([entry.id]);
+});
+
+test.each(['bad', '0', '-1', '1oops', ''])('invalid property filter %s never opens the unfiltered archive', async (value) => {
+  const result = await request(app).get(`/api/tasks?propertyId=${value}`).set(auth(client));
+  expect(result.status).toBe(400);
+});
+
 test('a supervising agent can see evidence but cannot advance a step assigned to another agent', async () => {
   const parent = await service(); const entry = await task(parent.id, { assignedTo: delegate.id });
   const result = await request(app).get(`/api/tasks/service/${parent.id}?workspace=true`).set(auth(agent));

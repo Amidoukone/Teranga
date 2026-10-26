@@ -15,6 +15,9 @@ import { formatStatus } from '../utils/labels';
 import PaginationBar from '../components/PaginationBar';
 import OperationsPage from './OperationsPage';
 import WorkspaceQueue from '../features/mission-tracking/WorkspaceQueue';
+import ConnectedHomeIntro from '../components/ConnectedHomeIntro';
+import AgentCoordinationPanel from '../features/mission-tracking/AgentCoordinationPanel';
+import ProviderAvailabilityPanel from '../features/mission-tracking/ProviderAvailabilityPanel';
 
 const refreshUpdates = () => window.dispatchEvent(new Event('notifications:refresh'));
 const unauthorized = (error) => [401, 403].includes(error?.response?.status);
@@ -212,7 +215,10 @@ function Center({ user }) {
   }
   const target = coordination ? {type,focusedId} : boardTarget;
   return <div className="app-page-wrap"><div className="app-page-shell max-w-6xl space-y-6">
-    <header><p className="page-kicker">{t('operationsCenter.kicker')}</p><h1 className="app-page-headline">{t('operations.title')}</h1><p className="mt-2 max-w-2xl text-text-secondary">{t('workspaceQueue.hint')}</p></header>
+    <ConnectedHomeIntro user={user} role={role} />
+    {workVisited && (role === 'agent' || role === 'provider') && <div hidden={information || coordination}>
+      {role === 'agent' ? <AgentCoordinationPanel availabilityOnly active={!information && !coordination} /> : <ProviderAvailabilityPanel active={!information && !coordination} />}
+    </div>}
     <nav aria-label={t('operationsCenter.views')} className="flex flex-wrap gap-2">{['action','following','information'].map((key)=>{
       const count = key === 'information' ? summary?.unread : summary?.[key];
       return <button key={key} type="button" aria-current={view === key ? 'page' : undefined} onClick={()=>select(key)} className={`min-h-12 rounded-xl border px-4 py-2 text-sm font-semibold ${view === key ? 'border-blue-600 bg-blue-600 text-white' : 'border-border bg-surface-card text-text-primary'}`}>{t(`workspaceQueue.${key}`)}{Number.isFinite(count) ? ` (${count})` : ''}</button>;

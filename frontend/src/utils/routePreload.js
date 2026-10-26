@@ -9,7 +9,7 @@ const pageImporters = {
   terms: () => import("../pages/TermsPage"),
   settings: () => import("../pages/SettingsPage"),
   helpSupport: () => import("../pages/HelpSupportPage"),
-  dashboard: () => import("../pages/DashboardPage"),
+  management: () => import('../pages/ManagementHome'),
   dossiers: () => import("../pages/DossiersPage"),
   properties: () => import("../pages/PropertiesPage"),
   services: () => import("../pages/ServicesPage"),
@@ -20,7 +20,8 @@ const pageImporters = {
   taskEvidences: () => import("../pages/TaskEvidencesPage"),
   taskWorkspace: () => import('../pages/TaskWorkspacePage'),
   transactions: () => import("../pages/TransactionsPage"),
-  finance: () => import("../pages/FinanceDashboardPage"),
+  finance: () => import("../pages/FinanceRouteAlias"),
+  projectTransactions: () => import('../pages/ProjectTransactionsPage'),
   accountSecurity: () => import("../pages/ChangePasswordPage"),
   operations: () => import("../pages/OperationsCenterPage"),
   projects: () => import("../pages/ProjectsPage"),
@@ -42,6 +43,7 @@ const pageImporters = {
 };
 
 const routeMatchers = [
+  [/^\/projects\/[^/]+\/transactions\/?$/i, [pageImporters.projectTransactions]],
   [/^\/orders\/[^/]+\/transactions\/?$/i, [pageImporters.orderTransactions]],
   [/^\/orders\/[^/]+\/?$/i, [pageImporters.orderDetail]],
   [/^\/projects\/[^/]+\/?$/i, [pageImporters.projectDetail]],
@@ -74,7 +76,8 @@ const routeMatchers = [
   [/^\/services\/?$/i, [pageImporters.services]],
   [/^\/projects\/?$/i, [pageImporters.projects]],
   [/^\/properties\/?$/i, [pageImporters.properties]],
-  [/^\/dashboard\/?$/i, [pageImporters.dashboard]],
+  [/^\/dashboard\/?$/i, [pageImporters.operations]],
+  [/^\/gestion\/?$/i, [pageImporters.management]],
   [/^\/help-support\/?$/i, [pageImporters.helpSupport]],
   [/^\/terms\/?$/i, [pageImporters.terms]],
   [/^\/privacy\/?$/i, [pageImporters.privacy]],

@@ -4,7 +4,7 @@ import ServiceTransactionsPage from './ServiceTransactionsPage';
 import ServiceTasksPage from './ServiceTasksPage';
 import { me } from '../services/auth';
 import { getServiceById } from '../services/services';
-import { createTransaction, getTransactions } from '../services/transactions';
+import { createTransaction, getTransactionsWithMeta } from '../services/transactions';
 import api from '../services/api';
 
 const mockTranslate = (key) => key;
@@ -16,13 +16,14 @@ jest.mock('react-router-dom', () => ({
   useParams: () => ({ id: '14' }),
   useNavigate: () => jest.fn(),
   useLocation: () => mockLocation,
+  useSearchParams: () => { const React = require('react'); return React.useState(() => new URLSearchParams()); },
 }), { virtual: true });
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: mockTranslate }) }));
 jest.mock('../i18n', () => ({ t: (key, options) => options?.defaultValue || key }));
 jest.mock('../i18n/useLocale', () => ({ useLocale: () => ({ formatDateTime: (value) => value, formatNumber: String }) }));
 jest.mock('../services/auth', () => ({ me: jest.fn(), getAuthHeader: () => mockHeaders }));
 jest.mock('../services/services', () => ({ getServiceById: jest.fn() }));
-jest.mock('../services/transactions', () => ({ createTransaction: jest.fn(), getTransactions: jest.fn() }));
+jest.mock('../services/transactions', () => ({ createTransaction: jest.fn(), getTransactionsWithMeta: jest.fn() }));
 jest.mock('../services/api', () => ({ get: jest.fn(), post: jest.fn() }));
 jest.mock('../utils/notify', () => ({ notify: jest.fn() }));
 jest.mock('../contexts/GeoContext', () => ({ useGeo: () => ({ user: { id: 4 }, countryId: 1 }) }));
@@ -32,7 +33,7 @@ beforeEach(() => {
   localStorage.clear();
   me.mockResolvedValue({ user: { id: 4, role: 'admin' } });
   getServiceById.mockResolvedValue({ id: 14, title: 'Service Accra', type: 'errand', currency: 'GHS' });
-  getTransactions.mockResolvedValue([]);
+  getTransactionsWithMeta.mockResolvedValue({ items: [], pagination: { total: 0 } });
   createTransaction.mockResolvedValue({ id: 8 });
   api.get.mockResolvedValue({ data: { tasks: [] } });
   api.post.mockResolvedValue({ data: { task: { id: 8 } } });
@@ -40,20 +41,26 @@ beforeEach(() => {
 
 test('service transactions display the local currency and keep it as the default after submission', async () => {
   render(<ServiceTransactionsPage />);
-  const inherited = await screen.findByRole('option', { name: 'common.currencyFromService (GHS)' });
+  await userEvent.click(await screen.findByRole('button', { name: 'financialWorkspace.add' }));
+  const inherited = await screen.findByRole('option', { name: 'financialWorkspace.inheritedCurrency (GHS)' });
   expect(inherited.selected).toBe(true);
-  await userEvent.type(screen.getByPlaceholderText('serviceTransactions.form.amountPlaceholder'), '500');
-  await userEvent.click(screen.getByRole('button', { name: 'serviceTransactions.form.submit' }));
-  await waitFor(() => expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ serviceId: 14, amount: 500, currency: undefined })));
-  expect(screen.getByRole('option', { name: 'common.currencyFromService (GHS)' }).selected).toBe(true);
+  await userEvent.type(screen.getByRole('textbox', { name: 'financialWorkspace.amount' }), '500');
+  userEvent.upload(screen.getByLabelText('financialWorkspace.proof'), new File(['receipt'], 'receipt.pdf', { type: 'application/pdf' }));
+  await userEvent.click(screen.getByRole('button', { name: 'financialWorkspace.save' }));
+  await waitFor(() => expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ serviceId: 14, amount: '500', currency: undefined })));
+  await screen.findByText('financialWorkspace.saved');
+  await userEvent.click(screen.getByRole('button', { name: 'financialWorkspace.add' }));
+  expect(screen.getByRole('option', { name: 'financialWorkspace.inheritedCurrency (GHS)' }).selected).toBe(true);
 });
 
 test('a service transaction can explicitly select a country currency absent from the historical labels', async () => {
   render(<ServiceTransactionsPage />);
-  await screen.findByRole('option', { name: 'common.currencyFromService (GHS)' });
-  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'serviceTransactions.form.currencyLabel' }), 'GHS');
-  await userEvent.type(screen.getByPlaceholderText('serviceTransactions.form.amountPlaceholder'), '500');
-  await userEvent.click(screen.getByRole('button', { name: 'serviceTransactions.form.submit' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'financialWorkspace.add' }));
+  await screen.findByRole('option', { name: 'financialWorkspace.inheritedCurrency (GHS)' });
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'financialWorkspace.currency' }), 'GHS');
+  await userEvent.type(screen.getByRole('textbox', { name: 'financialWorkspace.amount' }), '500');
+  userEvent.upload(screen.getByLabelText('financialWorkspace.proof'), new File(['receipt'], 'receipt.pdf', { type: 'application/pdf' }));
+  await userEvent.click(screen.getByRole('button', { name: 'financialWorkspace.save' }));
   await waitFor(() => expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ currency: 'GHS' })));
 });
 

@@ -1,4 +1,3 @@
-import AgentCoordinationPanel from '../features/mission-tracking/AgentCoordinationPanel';
 import WorkspaceHeader from '../components/WorkspaceHeader';
 // frontend/src/pages/MyMissionsPage.jsx
 // "Mes missions" — portail agent (superviseur ou exécutant) / prestataire exécutant sur les
@@ -9,17 +8,11 @@ import WorkspaceHeader from '../components/WorkspaceHeader';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Bike, CarFront, Check, Loader2, MapPin, PackageCheck, Power, X } from 'lucide-react';
+import { Bike, CarFront, Check, Loader2, MapPin, PackageCheck, X } from 'lucide-react';
 import { me } from '../services/auth';
 import { normalizeRole } from '../utils/role';
 import { isRequestHistory } from '../utils/requestLifecycle';
 import { acceptMission, declineMission, getMyMissions } from '../services/missions';
-import {
-  getMyDispatchPresence,
-  getMyProvider,
-  updateMyAvailability,
-  updateMyLiveLocation,
-} from '../services/providers';
 
 const DRIVER_RIDES_POLL_MS = (() => {
   const raw = Number.parseInt(String(process.env.REACT_APP_DRIVER_RIDES_POLL_MS || ''), 10);
@@ -72,25 +65,16 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     ? 'livraison'
     : null;
 
-  const [isAgent, setIsAgent] = useState(false);
   const [isAllowed, setIsAllowed] = useState(null);
   const [missions, setMissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [provider, setProvider] = useState(null);
-  const [dispatchPresence, setDispatchPresence] = useState(null);
-  const [activeVehicleId, setActiveVehicleId] = useState('');
-  const [savingAvailability, setSavingAvailability] = useState(false);
-  const [availabilityError, setAvailabilityError] = useState(null);
   const [rideAction, setRideAction] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
   const loadVersion = useRef(0);
   const offerMutation = useRef(false);
-  const availabilityMutation = useRef(false);
-  const [providerFailed, setProviderFailed] = useState(false);
-  const [profileAttempt, setProfileAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -107,26 +91,12 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
 
         const role = normalizeRole(user.role);
         if (role !== 'agent' && role !== 'provider') {
-          navigate('/dashboard');
+          navigate('/operations');
           return;
         }
 
-        setIsAllowed(true); setIsAgent(role === 'agent');
+        setIsAllowed(true);
 
-        if (role === 'provider') {
-          setProviderFailed(false);
-          const [myProvider, presence] = await Promise.all([
-            getMyProvider().catch(() => { if (active) setProviderFailed(true); return null; }),
-            getMyDispatchPresence().catch(() => null),
-          ]);
-          if (active) {
-            setProvider(myProvider);
-            setDispatchPresence(presence);
-            setActiveVehicleId(
-              presence?.liveLocation?.vehicleId || presence?.eligibleVehicles?.[0]?.id || ''
-            );
-          }
-        }
       } catch (e) {
         navigate('/login');
       }
@@ -136,7 +106,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     return () => {
       active = false;
     };
-  }, [navigate, verifiedUser, profileAttempt]);
+  }, [navigate, verifiedUser]);
 
   const loadMissions = useCallback(async ({ silent = false } = {}) => {
     const version = ++loadVersion.current;
@@ -212,57 +182,6 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     };
   }, [isAllowed, loadMissions, serviceOnly, transportOnly]);
 
-  async function handleAvailabilityChange(availabilityStatus) {
-    if (availabilityMutation.current) return;
-    availabilityMutation.current = true;
-    setSavingAvailability(true);
-    setAvailabilityError(null);
-    try {
-      if (availabilityStatus === 'available' && dispatchPresence?.eligibleVehicles?.length) {
-        if (!activeVehicleId) throw new Error(t('myMissionsPage.errors.vehicleRequired'));
-        // La position améliore le classement du chauffeur, mais une autorisation refusée ou un
-        // réseau faible ne doit jamais empêcher de recevoir une course.
-        if (navigator.geolocation) {
-          try {
-            const position = await new Promise((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(resolve, reject, {
-                enableHighAccuracy: false,
-                timeout: 8000,
-                maximumAge: 5 * 60 * 1000,
-              });
-            });
-            const locationResult = await updateMyLiveLocation({
-              vehicleId: Number(activeVehicleId),
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracyMeters: position.coords.accuracy ?? null,
-              headingDegrees: position.coords.heading ?? null,
-            });
-            setDispatchPresence((current) => ({
-              ...current,
-              liveLocation: locationResult.location,
-            }));
-          } catch (_locationError) {
-            // Best effort uniquement : la disponibilité est enregistrée juste après.
-          }
-        }
-      }
-      const updated = await updateMyAvailability(
-        availabilityStatus,
-        availabilityStatus === 'available' ? activeVehicleId : null
-      );
-      setProvider(updated);
-    } catch (e) {
-      console.error('MyMissionsPage update availability error:', e);
-      setAvailabilityError(
-        e?.response?.data?.error || e?.message || t('myMissionsPage.errors.availability')
-      );
-    } finally {
-      availabilityMutation.current = false;
-      setSavingAvailability(false);
-    }
-  }
-
   if (isAllowed === null) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-main">
@@ -283,71 +202,12 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
                 : transportOnly
                 ? t(`${transportTranslationRoot}.driverSubtitle`)
                 : t('myMissionsPage.subtitle')} />
-        {isAgent && <AgentCoordinationPanel />}
 
         {error && (
           <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
             {error === true ? t('myMissionsPage.errors.load') : error}
           </div>
         )}
-
-        {providerFailed && <div role="alert" className="app-alert app-alert-error">{t('workspace.providerUnavailable')} <button type="button" onClick={() => setProfileAttempt((value) => value + 1)} className="underline">{t('serviceOrders.retry')}</button></div>}
-
-        {provider ? (
-          <section className="mb-6 rounded-3xl border border-border bg-surface-main/60 p-4 sm:p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-text-primary">
-                  {provider.availabilityStatus === 'available'
-                    ? t('fieldWorkspace.available')
-                    : provider.availabilityStatus === 'busy'
-                    ? t('fieldWorkspace.busy')
-                    : t('fieldWorkspace.offline')}
-                </p>
-                <p className="mt-1 text-xs text-text-secondary">
-                  {t('fieldWorkspace.providerHint')}
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={savingAvailability || provider.availabilityStatus === 'busy'}
-                onClick={() =>
-                  handleAvailabilityChange(
-                    provider.availabilityStatus === 'available' ? 'offline' : 'available'
-                  )
-                }
-                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold disabled:opacity-60 ${
-                  provider.availabilityStatus === 'available' ? 'btn-secondary' : 'btn-primary'
-                }`}
-              >
-                {savingAvailability ? <Loader2 className="animate-spin" size={18} /> : <Power size={18} />}
-                {provider.availabilityStatus === 'available'
-                  ? t('fieldWorkspace.goOffline')
-                  : provider.availabilityStatus === 'busy'
-                  ? t('fieldWorkspace.busy')
-                  : t('fieldWorkspace.goAvailable')}
-              </button>
-            </div>
-            {dispatchPresence?.eligibleVehicles?.length > 1 ? (
-              <select
-                className="app-input mt-4 max-w-sm"
-                value={activeVehicleId}
-                disabled={provider.availabilityStatus === 'busy'}
-                onChange={(event) => setActiveVehicleId(event.target.value)}
-                aria-label={t('myMissionsPage.availability.activeVehicle')}
-              >
-                {dispatchPresence.eligibleVehicles.map((vehicle) => (
-                  <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.brand} {vehicle.model} · {vehicle.plateNumber}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            {availabilityError ? (
-              <p className="mt-3 text-sm text-rose-600 dark:text-rose-300">{availabilityError}</p>
-            ) : null}
-          </section>
-        ) : null}
 
         <div className="flex flex-wrap items-center justify-between gap-3"><button type="button" aria-pressed={showHistory} onClick={() => { setMissions([]); setOffset(0); setShowHistory((value) => !value); }} className="btn-secondary min-h-11 rounded-xl px-4 text-sm">{t(showHistory ? 'fieldWorkspace.showActive' : 'fieldWorkspace.showHistory')}</button><button type="button" onClick={() => loadMissions()} disabled={loading} className="btn-secondary min-h-11 rounded-xl px-4 text-sm">{t('myMissionsPage.buttons.refresh')}</button></div>
         {(total > 100 || offset > 0) && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm"><button type="button" disabled={!offset || loading} onClick={() => setOffset((value) => Math.max(0, value - 100))} className="btn-secondary min-h-11 rounded-xl px-4">{t('operations.previous')}</button><span>{offset + 1}–{offset + missions.length} / {total}</span><button type="button" disabled={offset + 100 >= total || loading} onClick={() => setOffset((value) => value + 100)} className="btn-secondary min-h-11 rounded-xl px-4">{t('operations.next')}</button></div>}

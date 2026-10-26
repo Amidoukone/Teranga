@@ -26,6 +26,31 @@ test('a permitted parent link opens the exact step and proof section',async()=>{
   getTaskWorkspace.mockResolvedValue(data({parentServiceId:14}));render(<TaskWorkspacePage/>);
   expect(await screen.findByRole('link',{name:'serviceSteps.back'})).toHaveAttribute('href','/services/14/tasks?etape=29#steps');
 });
+
+test('a project step returns to the same project without broadening the task workspace', async () => {
+  const previous = mockLocation.state;
+  mockLocation.state = { from: '/projects/14#project-tasks' };
+  render(<TaskWorkspacePage />);
+  expect(await screen.findByRole('link', { name: 'dossier.backProject' })).toHaveAttribute('href', '/projects/14#project-tasks');
+  expect(screen.queryByRole('link', { name: 'serviceSteps.back' })).not.toBeInTheDocument();
+  mockLocation.state = previous;
+});
+
+test.each(['/tasks?propertyId=8&page=2&q=compteur', '/tasks?status=validated'])('returns to the intervention archive with its filters: %s', async (from) => {
+  const previous = mockLocation.state;
+  mockLocation.state = { from };
+  render(<TaskWorkspacePage />);
+  expect(await screen.findByRole('link', { name: 'nav.backInterventions' })).toHaveAttribute('href', from);
+  mockLocation.state = previous;
+});
+
+test.each(['https://example.com/tasks', '//example.com/tasks', '/tasks/29', '/tasks?bad=\\evil'])('rejects an unrelated archive return: %s', async (from) => {
+  const previous = mockLocation.state;
+  mockLocation.state = { from };
+  render(<TaskWorkspacePage />);
+  expect(await screen.findByRole('link', { name: 'workspaceQueue.back' })).toHaveAttribute('href', '/operations');
+  mockLocation.state = previous;
+});
 test('a failed refresh retains the task until consultation is revoked',async()=>{
   render(<TaskWorkspacePage/>);await screen.findByRole('heading',{name:'Relever le compteur'});
   getTaskWorkspace.mockRejectedValueOnce(new Error('offline'));fireEvent.online(window);await screen.findByRole('alert');

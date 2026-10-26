@@ -5,7 +5,8 @@ import { getFinancialSummary } from '../services/transactions';
 import { getDashboardSummary } from '../services/dashboard';
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key) => key }) }));
 jest.mock('react-router-dom', () => ({ Link: ({ children, to, ...props }) => <a href={to} {...props}>{children}</a> }), { virtual: true });
-jest.mock('../contexts/GeoContext', () => ({ useGeo: () => ({ countryId: 1, regionId: null }) }));
+let mockUser = { id: 1, role: 'admin', countryId: 1 };
+jest.mock('../contexts/GeoContext', () => ({ useGeo: () => ({ user: mockUser, countryId: 1, regionId: null }) }));
 jest.mock('../i18n/useLocale', () => ({ useLocale: () => ({ formatNumber: String }) }));
 jest.mock('../services/dashboard', () => ({ getDashboardSummary: jest.fn() }));
 jest.mock('../services/transactions', () => ({ getFinancialSummary: jest.fn() }));
@@ -30,4 +31,21 @@ test('unavailable figures do not block the operations queue and transport tools'
   expect(await screen.findByRole('alert')).toHaveTextContent('workspace.overviewError');
   expect(screen.getByRole('link', { name: 'workspace.openOperations' })).toBeVisible();
   expect(screen.getByRole('link', { name: /nav.taxiOperations/ })).toHaveAttribute('href', '/admin/taxi-dispatch');
+});
+
+test('management owns the six tool groups and respects the scoped administrator restrictions', () => {
+  render(<ManagementHome />);
+  fireEvent.click(screen.getByText('workspace.tools'));
+  ['operations','network','catalog','quality','finance','configuration'].forEach((group) => expect(screen.getByRole('navigation', { name: `nav.sections.${group}` })).toBeInTheDocument());
+  expect(screen.getByRole('link', { name: 'nav.interventions' })).toHaveAttribute('href', '/tasks');
+  expect(screen.queryByRole('link', { name: 'nav.master' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'nav.metrics' })).not.toBeInTheDocument();
+});
+
+test('global administration tools remain available in Management', () => {
+  mockUser = { id: 2, role: 'admin' };
+  render(<ManagementHome />); fireEvent.click(screen.getByText('workspace.tools'));
+  expect(screen.getByRole('link', { name: 'nav.master' })).toHaveAttribute('href', '/admin/onboarding');
+  expect(screen.getByRole('link', { name: 'nav.metrics' })).toHaveAttribute('href', '/admin/metrics');
+  mockUser = { id: 1, role: 'admin', countryId: 1 };
 });

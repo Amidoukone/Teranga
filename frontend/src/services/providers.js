@@ -78,13 +78,14 @@ export async function updateProviderMobilityAvailability(
 
 /**
  * GET /api/v1/providers/me — fiche du prestataire authentifié (docs/DEV_SPEC_TERANGA_v5_PHASE2.md
- * §3). Renvoie null si aucun profil prestataire n'existe pour ce compte (jamais une erreur bloquante).
+ * §3). Renvoie null si aucun profil n'existe ; strict conserve les erreurs réseau et d'accès.
  */
-export async function getMyProvider() {
+export async function getMyProvider({ strict = false } = {}) {
   try {
     const { data } = await api.get('/v1/providers/me');
     return data?.provider || null;
   } catch (_err) {
+    if (strict && _err?.response?.status !== 404) throw _err;
     return null;
   }
 }

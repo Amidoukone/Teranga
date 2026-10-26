@@ -7,7 +7,7 @@ export default function WorkProgressPanel(props) {
   return <Progress key={`${props.entityType}:${props.entityId}`} {...props} />;
 }
 
-function Progress({ entityType, entityId, status, onSaved }) {
+function Progress({ entityType, entityId, status, onSaved, embedded = false, revision = 0, reviewBlocked = false }) {
   const { t } = useTranslation();
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState('');
@@ -28,9 +28,11 @@ function Progress({ entityType, entityId, status, onSaved }) {
   useEffect(() => {
     active.current = true; load();
     return () => { active.current = false; version.current += 1; };
-  }, [load, status]);
+  }, [load, status, revision]);
   return <section id="work-progress" className="scroll-mt-24 space-y-3">
+    {embedded && <h2 className="text-lg font-bold">{t('dossier.progress')}</h2>}
     {error && <p role="alert">{error} <button type="button" onClick={load} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
-    {progress?.item?.coordination && <WorkAssignmentCard item={progress.item} canAdvance={progress.canAdvance} clientValidation={progress.canValidate} onSaved={async () => { await load(); await onSaved?.(); }} />}
+    {progress?.item?.coordination && <WorkAssignmentCard embedded={embedded} readiness={progress.readiness} reviewBlocked={reviewBlocked} item={progress.item} canAdvance={progress.canAdvance} clientValidation={progress.canValidate} onSaved={async () => { await load(); await onSaved?.(); }} />}
+    {embedded && progress && !progress.item?.coordination && <p className="text-sm text-text-secondary">{t('dossier.waiting')}</p>}
   </section>;
 }

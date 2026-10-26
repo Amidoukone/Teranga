@@ -1,15 +1,6 @@
 // ============================================================================
-// NavBar.jsx Enterprise SaaS (Stripe/Revolut/Notion vibe)
-// - Meme structure/logique routes/roles (zero regression)
-// - Desktop: Tabs principaux + menu "Plus" + User menu (avatar dropdown)
-// - Mobile: Bottom nav compact + "Plus" panel (organise par sections)
-// - Admin Onboarding visible uniquement ADMIN GLOBAL (pas Master)
-// ============================================================================
-//
-// Fix UI:
-// - Lisibilite renforcee dans tous les etats (idle / hover / actif / focus)
-// - Suppression des couleurs hex hardcodees -> tokens (surface/text/border/primary)
-// - Aucune fonctionnalite supprimee
+// Le centre ouvre le travail courant ; Gestion regroupe les outils administratifs.
+// Ordre identique sur ordinateur et téléphone, droits de chaque route conservés.
 // ============================================================================
 
 import { useEffect, useRef, useState, useCallback, useMemo, memo } from "react";
@@ -90,12 +81,6 @@ const COMMON_COMMERCE = [
   { path: "/orders", labelKey: "nav.orders" },
 ];
 
-// Admin-only onboarding link (GLOBAL ADMIN ONLY)
-const ADMIN_ONBOARDING_LINK = {
-  path: "/admin/onboarding",
-  labelKey: "nav.master",
-};
-
 const ACCOUNT_SECURITY_LINK = {
   path: "/account/security",
   labelKey: "nav.security",
@@ -131,11 +116,12 @@ const ACCOUNT_LINK_PATHS = new Set([
 
 const ROLE_LINKS = {
   client: [
-    { path: "/dashboard", labelKey: "nav.home" },
     { path: "/operations", labelKey: "operations.title" },
     { path: "/demandes/nouvelle", labelKey: "nav.newRequest" },
     { path: "/demandes", labelKey: "nav.myRequests", exact: true },
-    { path: "/dossiers", labelKey: "nav.myCases" },
+    { path: "/dossiers", labelKey: "nav.assetsAndProjects" },
+    { path: "/tasks", labelKey: "nav.interventions" },
+    { path: "/transactions", labelKey: "clientHome.payments" },
     ...COMMON_COMMERCE,
     SETTINGS_LINK,
     ACCOUNT_SECURITY_LINK,
@@ -145,14 +131,12 @@ const ROLE_LINKS = {
     LEGAL_LINK,
   ],
   agent: [
-    { path: "/dashboard", labelKey: "nav.home" },
     { path: "/operations", labelKey: "operations.title" },
     { path: "/projects", labelKey: "nav.projects" },
     { path: "/agent/services", labelKey: "nav.services" },
     { path: "/missions/mine", labelKey: "nav.myMissions" },
-    { path: "/tasks", labelKey: "nav.tasks" },
-    { path: "/transactions", labelKey: "nav.transactions" },
-    { path: "/finance", labelKey: "nav.finance" },
+    { path: "/tasks", labelKey: "nav.interventions" },
+    { path: "/transactions", labelKey: "financialWorkspace.title" },
     ...COMMON_COMMERCE,
     SETTINGS_LINK,
     ACCOUNT_SECURITY_LINK,
@@ -162,7 +146,6 @@ const ROLE_LINKS = {
     LEGAL_LINK,
   ],
   provider: [
-    { path: "/dashboard", labelKey: "nav.home" },
     { path: "/operations", labelKey: "operations.title" },
     { path: "/chauffeur/courses", labelKey: "nav.myRides" },
     { path: "/livreur/livraisons", labelKey: "nav.myDeliveries" },
@@ -175,37 +158,11 @@ const ROLE_LINKS = {
     LEGAL_LINK,
   ],
   admin: [
-    { path: "/dashboard", labelKey: "nav.home" },
     { path: "/operations", labelKey: "operations.title" },
-    { path: "/projects", labelKey: "nav.projects" },
-    { path: "/admin/projects", labelKey: "nav.adminProjects" },
-
- // Onboarding injecte dynamiquement uniquement admin global
-
-    { path: "/tasks", labelKey: "nav.tasks" },
-    { path: "/admin/services", labelKey: "nav.adminServices" },
+    { path: "/gestion", labelKey: "nav.management" },
     { path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations" },
     { path: "/admin/livraisons", labelKey: "nav.deliveryOperations" },
-    { path: "/admin/metrics", labelKey: "nav.metrics" },
-    { path: "/admin/agents", labelKey: "nav.agents" },
-    { path: "/admin/providers", labelKey: "nav.providers" },
-    { path: "/admin/disputes", labelKey: "nav.disputes" },
-    { path: "/admin/property-listings", labelKey: "nav.propertyListings" },
-    { path: "/admin/trade-categories", labelKey: "nav.tradeCategories" },
-    { path: "/admin/users", labelKey: "nav.users" },
-    { path: "/admin/properties", labelKey: "nav.clientProperties" },
-    { path: "/admin/mission-pricing", labelKey: "nav.missionPricing" },
-    { path: "/transactions", labelKey: "nav.transactions" },
-    { path: "/finance", labelKey: "nav.finance" },
-    ...COMMON_COMMERCE,
-    SETTINGS_LINK,
-    ACCOUNT_SECURITY_LINK,
-    HELP_SUPPORT_LINK,
-    PRIVACY_LINK,
-    TERMS_LINK,
-    LEGAL_LINK,
-    { path: "/admin/catalog/categories", labelKey: "nav.categories" },
-    { path: "/admin/catalog/products", labelKey: "nav.products" },
+    SETTINGS_LINK, ACCOUNT_SECURITY_LINK, HELP_SUPPORT_LINK, PRIVACY_LINK, TERMS_LINK, LEGAL_LINK,
   ],
 };
 
@@ -215,25 +172,23 @@ const ROLE_LINKS = {
 
 const BOTTOM_LINKS = {
   client: [
-    { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
-    { key: "newRequest", path: "/demandes/nouvelle", labelKey: "nav.newRequest", icon: CirclePlus },
+    { key: "operations", path: "/operations", labelKey: "operations.title", icon: ListChecks },
     { key: "requests", path: "/demandes", labelKey: "nav.myRequests", icon: ListChecks, exact: true },
-    { key: "cases", path: "/dossiers", labelKey: "nav.myCases", icon: FolderKanban },
+    { key: "newRequest", path: "/demandes/nouvelle", labelKey: "nav.newRequest", icon: CirclePlus },
   ],
   agent: [
-    { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
+    { key: "operations", path: "/operations", labelKey: "operations.title", icon: ListChecks },
     { key: "agentServices", path: "/agent/services", labelKey: "nav.services", icon: Wrench },
-    { key: "transactions", path: "/transactions", labelKey: "nav.flow", icon: ReceiptEuro },
   ],
   provider: [
-    { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
+    { key: "operations", path: "/operations", labelKey: "operations.title", icon: ListChecks },
     { key: "services", path: "/prestataire/services", labelKey: "nav.services", icon: Wrench },
     { key: "myRides", path: "/chauffeur/courses", labelKey: "nav.myRides", icon: CarFront },
     { key: "myDeliveries", path: "/livreur/livraisons", labelKey: "nav.myDeliveries", icon: Package },
   ],
   admin: [
-    { key: "dashboard", path: "/dashboard", labelKey: "nav.home", icon: Home },
     { key: "operations", path: "/operations", labelKey: "operations.title", icon: ListChecks },
+    { key: "management", path: "/gestion", labelKey: "nav.management", icon: LayoutDashboard },
     { key: "taxiRides", path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations", icon: CarFront },
     { key: "deliveries", path: "/admin/livraisons", labelKey: "nav.deliveryOperations", icon: Package },
   ],
@@ -244,7 +199,7 @@ const BOTTOM_LINKS = {
 /* ============================================================================ */
 
 const ICON_BY_PATH_PREFIX = [
-  { prefix: "/dashboard", icon: LayoutDashboard },
+  { prefix: "/gestion", icon: LayoutDashboard },
   { prefix: "/operations", icon: ListChecks },
   { prefix: "/projects", icon: FolderKanban },
   { prefix: "/properties", icon: Building2 },
@@ -319,7 +274,7 @@ function buildSections(role, links, t) {
 
   if (role === "admin") {
     pushSection(t("nav.sections.operations"), [
-      byPath("/dashboard"),
+      byPath("/gestion"),
       byPath("/operations"),
       byPath("/admin/services"),
       byPath("/admin/taxi-dispatch"),
@@ -356,7 +311,6 @@ function buildSections(role, links, t) {
     ]);
   } else {
     pushSection(t("nav.sections.activity"), [
-      byPath("/dashboard"),
       byPath("/operations"),
     ]);
 
@@ -716,28 +670,11 @@ function NavBar() {
   }, [user, isAdmin, isGlobalAdmin, role, t]);
 
 
- // Links de role (inject onboarding uniquement pour admin global)
+ // Accès de navigation propres au rôle.
   const links = useMemo(() => {
     const base = ROLE_LINKS[role] || [];
-    let out = base;
-
-    if (role === "admin" && isGlobalAdmin) {
-      const already = base.some((x) => x.path === ADMIN_ONBOARDING_LINK.path);
-      if (!already) {
-        out = [...base];
-        const insertAfterPath = "/admin/projects";
-        const idx = out.findIndex((x) => x.path === insertAfterPath);
-        if (idx >= 0) out.splice(idx + 1, 0, ADMIN_ONBOARDING_LINK);
-        else out.unshift(ADMIN_ONBOARDING_LINK);
-      }
-    }
-
-    if (role === "admin" && !isGlobalAdmin) {
-      out = out.filter((item) => item.path !== "/admin/metrics");
-    }
-
-    return out.map((item) => ({ ...item, label: t(item.labelKey) }));
-  }, [isGlobalAdmin, role, t]);
+    return base.map((item) => ({ ...item, label: t(item.labelKey) }));
+  }, [role, t]);
 
   const bottomLinks = useMemo(() => {
     const base = BOTTOM_LINKS[role] || [];
@@ -803,37 +740,7 @@ function NavBar() {
     [bottomLinks, sections]
   );
 
-  const servicePrimaryPath = useMemo(() => {
-    if (role === "agent") return "/agent/services";
-    if (role === "provider") return "/prestataire/services";
-    if (role === "client") return "/demandes";
-    if (role === "admin") return "/admin/services";
-    return "/services";
-  }, [role]);
-
-  // Desktop: tabs primaires (calme). Le reste -> Plus.
-  const desktopPrimaryTabs = useMemo(() => {
-    const candidates =
-      role === "admin"
-        ? ["/dashboard", "/operations", "/admin/taxi-dispatch", "/admin/livraisons"]
-        : role === "client"
-        ? ["/dashboard", "/demandes/nouvelle", "/demandes", "/dossiers"]
-        : role === "provider"
-        ? ["/dashboard", "/prestataire/services", "/chauffeur/courses", "/livreur/livraisons"]
-        : ["/dashboard", servicePrimaryPath, "/tasks"];
-
-    const tabs = [];
-    for (const p of candidates) {
-      const item =
-        links.find((x) => x.path === p) ||
-        links.find((x) => x.path.startsWith(p + "/"));
-
-      if (item && !tabs.some((t) => t.path === item.path)) tabs.push(item);
-    }
-
-    if (!tabs.length) return links.slice(0, 4);
-    return tabs.slice(0, 4);
-  }, [links, role, servicePrimaryPath]);
+  const desktopPrimaryTabs = bottomLinks;
 
   const desktopMoreItems = useMemo(() => {
     const primaryPaths = new Set(desktopPrimaryTabs.map((x) => x.path));
@@ -968,8 +875,8 @@ function NavBar() {
           {/* LEFT: Logo + Context */}
           <div className="flex items-center gap-3 min-w-0">
             <Link
-              to="/"
-              {...withRouteWarmup("/")}
+              to="/operations"
+              {...withRouteWarmup("/operations")}
               className="flex items-center gap-2 text-primary font-semibold tracking-wide text-[1.05rem] shrink-0"
             >
               {Logo} Teranga
@@ -978,7 +885,7 @@ function NavBar() {
             {/* Page context (mobile) */}
             <div className="md:hidden flex items-center min-w-0">
               <span className="px-2.5 py-1 rounded-full text-[0.65rem] font-semibold bg-surface-main/60 text-text-secondary border border-border/60 truncate">
-                {activeLabel || t("nav.dashboard")}
+                {activeLabel || t("operations.title")}
               </span>
             </div>
 
@@ -986,7 +893,7 @@ function NavBar() {
             {!isGlobalAdmin && (
               <div className="hidden md:flex flex-col min-w-0 flex-shrink-0">
                 <div className="text-sm font-semibold text-text-primary whitespace-nowrap">
-                  {activeLabel || t("nav.dashboardTitle")}
+                  {activeLabel || t("operations.title")}
                 </div>
                 <div className="text-[0.72rem] text-text-muted whitespace-nowrap">
                   {roleLabel}
@@ -1013,7 +920,7 @@ function NavBar() {
             })}
 
             {/* Desktop More */}
-            <div className="relative">
+            {desktopMoreItems.length > 0 && <div className="relative">
               <button
                 onClick={() => setOpenDesktopMore((v) => !v)}
                 className={[
@@ -1127,7 +1034,7 @@ function NavBar() {
                   </>
                 )}
               </AnimatePresence>
-            </div>
+            </div>}
           </div>
 
           {/* RIGHT: Geo (desktop) + User menu */}

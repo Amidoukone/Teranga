@@ -2,6 +2,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import MyMissionsPage from "./MyMissionsPage";
+import ProviderAvailabilityPanel from '../features/mission-tracking/ProviderAvailabilityPanel';
 import { me } from "../services/auth";
 import {
   acceptMission,
@@ -16,6 +17,7 @@ import {
 } from "../services/providers";
 
 const mockNavigate = jest.fn();
+const mockTranslate = (key) => key;
 
 jest.mock('../features/mission-tracking/AgentCoordinationPanel', () => () => null);
 jest.mock(
@@ -28,7 +30,7 @@ jest.mock(
 );
 
 jest.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key) => key }),
+  useTranslation: () => ({ t: mockTranslate }),
 }));
 
 jest.mock("../services/auth", () => ({ me: jest.fn() }));
@@ -70,7 +72,7 @@ describe("MyMissionsPage - disponibilité réseau faible", () => {
   });
 
   test("un refus GPS ne bloque pas le passage disponible", async () => {
-    render(<MyMissionsPage />);
+    render(<ProviderAvailabilityPanel />);
 
     await userEvent.click(
       await screen.findByRole("button", {
@@ -87,12 +89,12 @@ describe("MyMissionsPage - disponibilité réseau faible", () => {
     ).not.toBeInTheDocument();
   });
 
-  test('a provider profile failure keeps existing work accessible without redirecting to login', async () => {
-    getMyProvider.mockRejectedValueOnce(Error('Network unavailable'));
+  test('the specialized list reads its work without loading a second availability profile', async () => {
     getMyMissions.mockResolvedValue({ missions: [{ id: 61, title: 'Travail accessible', missionStatus: 'IN_PROGRESS' }] });
     render(<MyMissionsPage workspace user={{ id: 7, role: 'provider' }} />);
     expect(await screen.findByRole('link', { name: 'workspace.continueWork' })).toHaveAttribute('href', '/missions/61/track');
-    expect(await screen.findByRole('alert')).toHaveTextContent('workspace.providerUnavailable');
+    expect(getMyProvider).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'fieldWorkspace.goAvailable' })).not.toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled(); expect(me).not.toHaveBeenCalled();
   });
 

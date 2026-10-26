@@ -6,6 +6,7 @@ import { Eye, EyeOff, Loader2, Lock, Phone } from "lucide-react";
 import { preloadRoute } from "../utils/routePreload";
 import AuthFeedbackBanner from "../components/AuthFeedbackBanner";
 import { readAuthFeedbackState } from "../utils/authFeedback";
+import { loginDestination } from '../utils/loginDestination';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -20,6 +21,7 @@ export default function LoginPage() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const destination = loginDestination(location.state?.from);
 
   /* ==========================================================
      Initialisation au montage.
@@ -39,11 +41,11 @@ export default function LoginPage() {
     async function check() {
       try {
         const u = await me();
-        if (u?.user && !u?.offline) navigate("/dashboard");
+        if (u?.user && !u?.offline) navigate(destination, { replace: true });
       } catch {}
     }
     check();
-  }, [navigate]);
+  }, [navigate, destination]);
 
   /* ==========================================================
      Module: authentification et acces utilisateur.
@@ -52,11 +54,11 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setFeedback(null);
-    preloadRoute("/dashboard");
+    preloadRoute(destination);
 
     try {
       await login({ identifier: String(identifier || "").trim(), password });
-      navigate("/dashboard");
+      navigate(destination, { replace: true });
     } catch (err) {
       const backendMsg = err?.response?.data?.error;
       setFeedback({

@@ -102,6 +102,6 @@ export function getBookingPath(slug) {
 
 export function getRequestReturnPath(from, fallback = '/demandes') {
   return typeof from === 'string' && from.length <= 2048 && !/[\\\r\n]/.test(from) &&
-    /^\/(?:demandes|services|dashboard|agent\/services|missions\/mine|prestataire\/services|chauffeur\/courses|livreur\/livraisons|operations|admin\/services)(?:\?[^#]*)?$/.test(from)
+    /^\/(?:demandes|services|dashboard|agent\/services|missions\/mine|prestataire\/services|chauffeur\/courses|livreur\/livraisons|operations|admin\/services|transactions|(?:services|projects|orders)\/[1-9][0-9]*\/transactions)(?:\?[^#]*)?$/.test(from)
     ? from : fallback;
 }

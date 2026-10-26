@@ -332,6 +332,21 @@ exports.list = async (req, res) => {
 
     let where = {};
 
+    if (req.query.projectId !== undefined) {
+      const projectId = Number(req.query.projectId);
+      if (!Number.isSafeInteger(projectId) || projectId <= 0) return res.status(400).json({ error: 'Projet invalide' });
+      where.projectId = projectId;
+    }
+    if (req.query.propertyId !== undefined) {
+      const propertyId = Number(req.query.propertyId);
+      if (!Number.isSafeInteger(propertyId) || propertyId <= 0) return res.status(400).json({ error: 'Bien invalide' });
+      where[Op.and] = [{ [Op.or]: [{ propertyId }, { '$service.propertyId$': propertyId }] }];
+    }
+    const query = String(req.query.q || '').trim().slice(0, 200);
+    if (query) {
+      const pattern = `%${query.replace(/[\\%_]/g, '\\$&')}%`;
+      where[Op.and] = [...(where[Op.and] || []), { [Op.or]: ['title', 'description', '$service.title$', '$property.title$'].map((field) => ({ [field]: { [Op.like]: pattern } })) }];
+    }
     if (req.query.serviceId) where.serviceId = toSafeInt(req.query.serviceId);
     if (req.query.assignedTo) where.assignedTo = toSafeInt(req.query.assignedTo);
     if (req.query.status) where.status = String(req.query.status).trim();
@@ -359,18 +374,25 @@ exports.list = async (req, res) => {
     // 🌍 GeoScope (admin scoped)
     where = applyTaskGeoScope(where, req.user);
 
-    const tasks = await Task.findAll({
+    const { rows: tasks, count: total } = await Task.findAndCountAll({
       where,
       include: BASE_INCLUDES,
-      order: [["createdAt", "DESC"]],
+      distinct: true,
+      order: [["createdAt", "DESC"], ["id", "DESC"]],
       limit,
       offset,
       subQuery: false,
     });
 
+    if (req.query.workspace === 'true') res.set('Cache-Control', 'no-store');
     return res.json({
-      tasks: tasks.map(addLabels),
-      pagination: { page, limit, offset, count: tasks.length },
+      tasks: tasks.map((task) => {
+        const value = addLabels(task);
+        if (req.query.workspace !== 'true') return value;
+        const { service, property, creator, assignee, ...safe } = value;
+        return { ...safe, assignee: assignee ? { id: assignee.id, firstName: assignee.firstName, lastName: assignee.lastName } : null };
+      }),
+      pagination: { page, limit, offset, count: tasks.length, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
     });
   } catch (e) {
     logger.error("Erreur list tasks:", e);

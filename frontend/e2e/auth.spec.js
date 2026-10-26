@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { installApiMocks } = require('./support/mockApi');
 
 test.describe('E2E Auth', () => {
-  test('register then login and land on dashboard', async ({ page }) => {
+  test('register then login and land on operations', async ({ page }) => {
     await installApiMocks(page);
 
     const uniqueEmail = `e2e_${Date.now()}@teranga.test`;
@@ -25,11 +25,11 @@ test.describe('E2E Auth', () => {
     await expect(page).toHaveURL(/\/login$/);
 
     const loginForm = page.locator('form').first();
-    await loginForm.locator('input[type="text"]').fill(uniqueEmail);
-    await loginForm.locator('input[type="password"]').fill(password);
+    await page.locator('#login-identifier').fill(uniqueEmail);
+    await page.locator('#login-password').fill(password);
     await loginForm.locator('button[type="submit"]').click();
 
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/operations$/);
     const token = await page.evaluate(() => localStorage.getItem('teranga_token'));
     expect(token).toBeTruthy();
   });

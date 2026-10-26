@@ -1,0 +1,72 @@
+const { test, expect } = require('@playwright/test');
+const { API_BASE_URL, blockExternalTracking, loginAsSeededClient, loginAsSeededAdmin, seedAuthenticatedSession } = require('./support/realApi');
+const headers = (session) => ({ Authorization: `Bearer ${session.token}` });
+const pdf = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF');
+const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j8l8AAAAASUVORK5CYII=', 'base64');
+
+test('real project: manage a phase, attach the report, submit and let the customer confirm', async ({ page, request, browser }, testInfo) => {
+  const client = await loginAsSeededClient(request), admin = await loginAsSeededAdmin(request);
+  const title = `Projet à remettre ${Date.now()}`;
+  const created = await request.post(`${API_BASE_URL}/projects`, { headers: headers(client), data: { title, type: 'administratif', description: 'Contrôle de la maison et remise du rapport.' } });
+  expect(created.status()).toBe(201); const project = (await created.json()).project;
+  const phaseResponse = await request.post(`${API_BASE_URL}/project-phases`, { headers: headers(admin), data: { projectId: project.id, title: 'Contrôle de la maison' } });
+  expect(phaseResponse.status()).toBe(201);
+  const progress = `${API_BASE_URL}/v1/operations/work/project/${project.id}`;
+  expect((await request.patch(progress, { headers: headers(admin), data: { ownerUserId: admin.user.id, mode: 'manual' } })).status()).toBe(200);
+  expect((await request.post(`${progress}/status`, { headers: headers(admin), data: { status: 'in_progress' } })).status()).toBe(200);
+  await blockExternalTracking(page); await seedAuthenticatedSession(page, admin.user, admin.token);
+  await page.setViewportSize({ width: 360, height: 900 }); await page.goto(`/projects/${project.id}`);
+  await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Avancement de la phase : Contrôle de la maison', exact: true }).selectOption('completed');
+  await expect(page.getByText('Les phases et étapes sont terminées.', { exact: true })).toBeVisible();
+  await page.locator('#project-documents summary').filter({ hasText: 'Ajouter un justificatif' }).click();
+  await page.getByLabel('Usage du document', { exact: true }).selectOption('report');
+  await page.locator('#project-documents input[type="file"]').setInputFiles({ name: 'rapport-maison.pdf', mimeType: 'application/pdf', buffer: pdf });
+  const upload = page.waitForResponse((response) => response.url().endsWith('/project-documents') && response.request().method() === 'POST');
+  await page.locator('#project-documents button[type="submit"]').click(); expect((await upload).status()).toBe(201);
+  await expect(page.getByText('Un justificatif de réalisation ajouté par vous est disponible.', { exact: true })).toBeVisible();
+  await page.getByLabel('Travaux réalisés, résultat et points à signaler', { exact: true }).fill('La maison a été contrôlée. Le rapport joint décrit les constats et le résultat.');
+  await page.getByRole('button', { name: 'Remettre au client', exact: true }).click();
+  await expect(page.getByText('Validation du client attendue', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
+  await page.screenshot({ path: testInfo.outputPath('real-project-handover.png'), fullPage: true });
+  const context = await browser.newContext();
+  try {
+    const review = await context.newPage(); await blockExternalTracking(review); await seedAuthenticatedSession(review, client.user, client.token);
+    await review.goto(`/projects/${project.id}`);
+    const confirm = review.getByRole('button', { name: 'Confirmer la réalisation du projet', exact: true });
+    await expect(confirm).toBeVisible();
+    await expect(review.getByText('rapport-maison.pdf', { exact: true }).first()).toBeVisible();
+    const fileUrl = await review.locator('#project-documents a').filter({ hasText: 'Ouvrir' }).first().getAttribute('href');
+    expect((await request.get(fileUrl)).status()).toBe(200);
+    await confirm.click();
+    await expect.poll(async () => (await (await request.get(`${API_BASE_URL}/projects/${project.id}`, { headers: headers(client) })).json()).project.status).toBe('validated');
+  } finally { await context.close(); }
+});
+
+test('real order: attach delivery evidence, hand over the order and retain its unpaid status', async ({ page, request }, testInfo) => {
+  const client = await loginAsSeededClient(request), admin = await loginAsSeededAdmin(request);
+  const created = await request.post(`${API_BASE_URL}/orders`, { headers: headers(client), data: { countryId: client.user.countryId, items: [{ name: 'Documents de la famille', quantity: 1, price: 2000 }] } });
+  expect(created.status()).toBe(201); const order = (await created.json()).order;
+  const progress = `${API_BASE_URL}/v1/operations/work/order/${order.id}`;
+  expect((await request.patch(progress, { headers: headers(admin), data: { ownerUserId: admin.user.id, mode: 'manual' } })).status()).toBe(200);
+  for (const status of ['processing', 'shipped']) expect((await request.post(`${progress}/status`, { headers: headers(admin), data: { status } })).status()).toBe(200);
+  await blockExternalTracking(page); await seedAuthenticatedSession(page, admin.user, admin.token);
+  await page.goto(`/orders/${order.id}`);
+  await expect(page.getByText('Documents de la famille', { exact: true })).toBeVisible();
+  await page.locator('#order-evidences summary').filter({ hasText: 'Ajouter un justificatif' }).click();
+  await page.locator('#order-evidences input[type="file"]').setInputFiles({ name: 'remise.png', mimeType: 'image/png', buffer: png });
+  const upload = page.waitForResponse((response) => response.url().endsWith(`/orders/${order.id}/evidences`) && response.request().method() === 'POST');
+  await page.locator('#order-evidences button[type="submit"]').click(); expect((await upload).status()).toBe(201);
+  await expect(page.getByText('Un justificatif de réalisation ajouté par vous est disponible.', { exact: true })).toBeVisible();
+  const proofImage = page.locator('#order-evidences img').first();
+  await expect(proofImage).toBeVisible();
+  expect((await request.get(await proofImage.getAttribute('src'))).status()).toBe(200);
+  await page.getByLabel('Travaux réalisés, résultat et points à signaler', { exact: true }).fill('Les documents ont été remis à la personne désignée avec le justificatif joint.');
+  await page.getByRole('button', { name: 'Confirmer la livraison', exact: true }).click();
+  await expect.poll(async () => (await (await request.get(`${API_BASE_URL}/orders/${order.id}`, { headers: headers(client) })).json()).order.status).toBe('delivered');
+  await page.getByRole('link', { name: 'Montants et paiements', exact: true }).click();
+  const result = await (await request.get(`${API_BASE_URL}/orders/${order.id}`, { headers: headers(client) })).json(); expect(result.order.paymentStatus).toBe('unpaid');
+  await expect(page.getByText('Le paiement et la réalisation sont suivis séparément. Un justificatif ajouté ne constitue pas un paiement enregistré.', { exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('real-order-delivery.png'), fullPage: true });
+});

@@ -40,7 +40,7 @@ test.describe('E2E Auth Feedback', () => {
     await expect(page).toHaveURL(/\/login$/);
 
     await submitLogin(page, ctx.user.email, DEFAULT_PASSWORD);
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/operations$/);
 
     await page.locator('button[aria-controls="user-menu"]').click();
     const logoutAction = page
@@ -67,7 +67,7 @@ test.describe('E2E Auth Feedback', () => {
     });
 
     await submitLogin(page, ctx.user.email, DEFAULT_PASSWORD);
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/operations$/);
   });
 
   test('change password forces a fresh login and accepts the new password', async ({
@@ -101,6 +101,6 @@ test.describe('E2E Auth Feedback', () => {
     });
 
     await submitLogin(page, ctx.user.email, NEW_PASSWORD);
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/operations$/);
   });
 });

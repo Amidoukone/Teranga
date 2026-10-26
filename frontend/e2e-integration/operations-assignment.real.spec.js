@@ -34,7 +34,10 @@ test('real coordination: an administrator assigns an order and the agent starts 
     const worker = await context.newPage();
     await blockExternalTracking(worker); await seedAuthenticatedSession(worker, agent.user, agent.token);
     await worker.goto('/dashboard');
-    const work = worker.getByRole('article').filter({ hasText: order.code });
+    await expect(worker).toHaveURL(/\/operations$/);
+    await worker.getByRole('article').filter({ hasText: order.code }).getByRole('link', { name: 'Continuer la commande', exact: true }).click();
+    await expect(worker).toHaveURL(new RegExp(`/orders/${order.id}$`));
+    const work = worker.getByRole('main');
     const start = worker.waitForResponse((response) => response.url().endsWith(`/operations/work/order/${order.id}/status`) && response.request().method() === 'POST');
     await work.getByRole('button', { name: 'Commencer la préparation', exact: true }).click();
     expect((await start).status()).toBe(200);

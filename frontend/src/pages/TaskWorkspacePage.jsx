@@ -40,9 +40,12 @@ function TaskCase({ id }) {
     finally { sending.current = false; if (alive.current) setBusy(false); }
   }
   const from = location.state?.from;
-  const back = typeof from === 'string' && /^\/operations(?:\?[^#\\\r\n]*)?$/.test(from) ? from : '/operations';
+  const interventionReturn = typeof from === 'string' && /^\/tasks(?:\?[^#\\\r\n]*)?$/.test(from);
+  const projectReturn = typeof from === 'string' && /^\/projects\/[1-9][0-9]*(?:\?[^#\\\r\n]*)?#project-tasks$/.test(from);
+  const financeReturn = typeof from === 'string' && /^\/(?:transactions|(?:services|projects|orders)\/[1-9][0-9]*\/transactions)(?:\?[^#\\\r\n]*)?$/.test(from);
+  const back = typeof from === 'string' && (/^\/operations(?:\?[^#\\\r\n]*)?$/.test(from) || interventionReturn || projectReturn || financeReturn) ? from : '/operations';
   return <div className="app-page-wrap"><div className="app-page-shell max-w-3xl space-y-5">
-    <Link to={back} className="inline-flex min-h-11 items-center text-sm underline">{t('workspaceQueue.back')}</Link>
+    <Link to={back} className="inline-flex min-h-11 items-center text-sm underline">{t(financeReturn ? 'financialWorkspace.backJournal' : projectReturn ? 'dossier.backProject' : interventionReturn ? 'nav.backInterventions' : 'workspaceQueue.back')}</Link>
     <header><h1 className="app-page-headline">{t('workspaceQueue.taskTitle',{id})}</h1><p className="mt-2 text-sm text-text-secondary">{t('workspaceQueue.taskHint')}</p></header>
     {loading && <p role="status">{t('workspaceQueue.loading')}</p>}
     {error && <p role="alert" className="app-alert app-alert-error">{error} <button type="button" onClick={load} disabled={busy || loading} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}

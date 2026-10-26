@@ -1,0 +1,63 @@
+const { test, expect } = require('@playwright/test');
+const { installApiMocks, seedAuthenticatedSession } = require('./support/mockApi');
+
+for (const role of ['client', 'agent', 'provider', 'admin']) {
+  for (const width of [360, 1440]) {
+    test(`${role}: centre first and specialized tools preserved at ${width}px`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 });
+      const ctx = await installApiMocks(page, { user: { role } });
+      await seedAuthenticatedSession(page, ctx.user, ctx.token);
+      await page.goto('/operations');
+      await expect(page.getByRole('heading', { name: 'Centre des opérations', exact: true })).toBeVisible();
+      const primary = page.locator('nav:visible');
+      await expect(primary.locator('a[href="/operations"]:visible').filter({ hasText: 'Centre des opérations' })).toHaveCount(1);
+      await expect(primary.locator('a[href="/tasks"]')).toHaveCount(0);
+      await expect(primary.locator('a[href="/dashboard"]')).toHaveCount(0);
+      if (role === 'admin') await expect(primary.getByRole('link', { name: 'Gestion', exact: true })).toBeVisible();
+      if (role === 'provider') {
+        await expect(primary.locator('a[href="/chauffeur/courses"]:visible')).toBeVisible();
+        await expect(primary.locator('a[href="/livreur/livraisons"]:visible')).toBeVisible();
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
+      const consent = page.getByRole('button', { name: 'Refuser', exact: true });
+      if (await consent.isVisible()) await consent.click();
+      await page.screenshot({ path: testInfo.outputPath('navigation.png'), fullPage: true });
+      if (role === 'admin') {
+        await primary.getByRole('link', { name: 'Gestion', exact: true }).click();
+        await page.getByRole('main').getByText('Outils de gestion', { exact: true }).click();
+        await page.getByRole('main').getByRole('link', { name: 'Interventions et historique', exact: true }).click();
+      } else if (role === 'provider') {
+        if (width < 768) {
+          await page.getByRole('button', { name: 'Ouvrir le menu Plus', exact: true }).click();
+          await expect(page.getByRole('dialog').locator('a[href="/settings"]')).toBeVisible();
+        } else await expect(page.getByRole('button', { name: 'Plus', exact: true })).toHaveCount(0);
+        return;
+      } else {
+        await page.getByRole('button', { name: width < 768 ? 'Ouvrir le menu Plus' : 'Plus', exact: true }).click();
+        await page.getByRole(width < 768 ? 'link' : 'menuitem', { name: 'Interventions et historique', exact: true }).click();
+      }
+      await expect(page).toHaveURL(/\/tasks$/);
+      await expect(page.getByRole('heading', { name: 'Interventions et historique' })).toBeVisible();
+    });
+  }
+}
+
+test('a property retains its complete intervention archive and the return to page two', async ({ page }) => {
+  const ctx = await installApiMocks(page);
+  ctx.state.properties = [{ id: 301, title: 'Maison familiale', type: 'house', city: 'Bamako', createdAt: new Date().toISOString() }];
+  ctx.state.tasks = Array.from({ length: 23 }, (_, index) => ({ id: 900 + index, propertyId: 301, title: `Relevé ancien ${index + 1}`, status: 'validated', type: 'visit', priority: 'normal' }));
+  await seedAuthenticatedSession(page, ctx.user, ctx.token);
+  await page.goto('/properties');
+  await page.getByRole('link', { name: 'Voir les interventions', exact: true }).click();
+  await expect(page).toHaveURL(/\/tasks\?propertyId=301$/);
+  await expect(page.getByRole('article')).toHaveCount(20);
+  await page.getByRole('button', { name: 'Suivant', exact: true }).click();
+  await expect(page.getByRole('article')).toHaveCount(3);
+  await page.getByRole('article', { name: 'Relevé ancien 21', exact: true }).getByRole('button', { name: 'Ouvrir l’intervention', exact: true }).click();
+  await expect(page).toHaveURL(/\/tasks\/920$/);
+  await expect(page.getByRole('heading', { name: 'Relevé ancien 21', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Retour au dossier du service', exact: true })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Retour aux interventions', exact: true }).click();
+  await expect(page).toHaveURL(/\/tasks\?propertyId=301&page=2$/);
+  await expect(page.getByRole('article')).toHaveCount(3);
+});

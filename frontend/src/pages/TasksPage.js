@@ -3,10 +3,12 @@
 // Contexte: gestion des taches.
 // ============================================================================
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { me, getAuthHeader } from '../services/auth';
+import { useGeo } from '../contexts/GeoContext';
+import PaginationBar from '../components/PaginationBar';
 import { getMyServices } from '../services/services';
 import {
   TASK_TYPES,
@@ -36,18 +38,38 @@ const TASK_CURRENCY_CODES = Object.keys(CURRENCY_LABELS);
 // Contexte: gestion des taches.
 // ============================================================================
 export default function TasksPage() {
+  const { user, countryId, regionId } = useGeo();
+  const location = useLocation();
+  return <Interventions key={JSON.stringify([user?.id, user?.role, countryId, regionId, new URLSearchParams(location.search).get('propertyId')])}
+    countryId={user?.role === 'admin' ? countryId : null} regionId={user?.role === 'admin' ? regionId : null} />;
+}
+
+function Interventions({ countryId, regionId }) {
   const { t } = useTranslation();
-  const [tasks, setTasks] = useState([]);
-  const [filtered, setFiltered] = useState([]);
+  const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const propertyId = params.get('propertyId');
+  const page = Math.max(1, Number.parseInt(params.get('page'), 10) || 1);
+  const [data, setData] = useState(null);
   const [services, setServices] = useState([]);
   const [agents, setAgents] = useState([]);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState(null);
+  const [loadError, setLoadError] = useState('');
+  const [creating, setCreating] = useState(false);
+  const sending = useRef(false);
+  const generation = useRef(0);
+  const alive = useRef(true);
+  const queryKey = params.toString();
+  const currentQuery = useRef(queryKey); currentQuery.current = queryKey;
+  const visible = data?.key === queryKey ? data : null;
+  const filtered = visible?.tasks || [];
+  const total = visible?.total ?? 0;
 
   const [showForm, setShowForm] = useState(() => {
     const saved = localStorage.getItem('teranga_tasks_showForm');
-    return saved === null ? true : saved === '1';
+    return saved === '1';
   });
 
   const navigate = useNavigate();
@@ -59,7 +81,7 @@ export default function TasksPage() {
   const isAdmin = role === 'admin';
   const isMaster = isMasterUser(user); // UX uniquement
   const isAdminLike = isAdmin; // MASTER traite comme admin cote UI.
-  const canCreateTask = role === 'client' || isAdminLike;
+  const canCreateTask = !propertyId && (role === 'client' || isAdminLike);
 
   // ========================================================================
   // Formulaire
@@ -79,11 +101,20 @@ export default function TasksPage() {
   // ========================================================================
   // Filtres
   // =========================================================================
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const filters = useMemo(() => Object.fromEntries(Object.keys(DEFAULT_FILTERS).map((key) => [key, params.get(key) || ''])), [params]);
+  const setFilters = (next) => {
+    const value = new URLSearchParams(params);
+    Object.entries(next).forEach(([key, item]) => { if (item) value.set(key, item); else value.delete(key); });
+    value.delete('page'); setParams(value, { replace: true });
+  };
+  const setPage = (next) => {
+    const value = new URLSearchParams(params);
+    value.set('page', String(next)); setParams(value);
+  };
 
-  const resetFilters = useCallback(() => {
+  const resetFilters = () => {
     setFilters({ ...DEFAULT_FILTERS });
-  }, []);
+  };
 
   const hasActiveFilters = useMemo(() => {
     return (
@@ -107,34 +138,56 @@ export default function TasksPage() {
  // Contexte: gestion des taches.
   // =========================================================================
   const loadTasks = useCallback(async () => {
+    const version = ++generation.current;
     setLoading(true);
     try {
+      const values = new URLSearchParams(queryKey);
       const { data } = await api.get('/tasks', {
         headers: authHeader,
+        params: {
+          page, limit: 20,
+          q: values.get('q') || undefined,
+          type: values.get('type') || undefined,
+          status: values.get('status') || undefined,
+          priority: values.get('priority') || undefined,
+          serviceId: values.get('service') || undefined,
+          assignedTo: values.get('agent') || undefined,
+          propertyId: values.get('propertyId') ?? undefined,
+          ...(countryId ? { countryId } : {}),
+          ...(regionId ? { regionId } : {}),
+        },
       });
-
+      if (!alive.current || version !== generation.current || currentQuery.current !== queryKey) return;
       const enriched = (data.tasks || []).map((t) => applyLabels(t, 'task'));
-
-      setTasks(enriched);
+      const total = data.pagination?.total ?? enriched.length;
+      if (page > 1 && (page - 1) * 20 >= total) {
+        const value = new URLSearchParams(queryKey); value.set('page', String(Math.max(1, Math.ceil(total / 20)))); setParams(value, { replace: true }); return;
+      }
+      setData({ key: queryKey, tasks: enriched, total });
+      setLoadError('');
     } catch (err) {
-      console.error('TasksPage load tasks error:', err);
-      setNotice({
-        type: 'error',
-        message: t('tasksPage.alerts.loadError'),
-      });
-      setTasks([]);
+      if (!alive.current || version !== generation.current || currentQuery.current !== queryKey) return;
+      if ([401, 403, 404].includes(err?.response?.status)) setData(null);
+      setLoadError(t('tasksPage.alerts.loadError'));
     } finally {
-      setLoading(false);
+      if (alive.current && version === generation.current) setLoading(false);
     }
-  }, [authHeader, t]);
+  }, [authHeader, t, page, queryKey, setParams, countryId, regionId]);
+
+  useEffect(() => {
+    alive.current = true; loadTasks();
+    return () => { alive.current = false; generation.current += 1; };
+  }, [loadTasks]);
 
   // ========================================================================
   // Initialisation
   // =========================================================================
   useEffect(() => {
+    let active = true;
     async function init() {
       try {
         const { user: u } = await me();
+        if (!active) return;
         if (!u) {
           window.location.href = '/login';
           return;
@@ -144,6 +197,7 @@ export default function TasksPage() {
         // CLIENT
         if (u.role === 'client') {
           const servs = await getMyServices();
+          if (!active) return;
           const enrichedServices = (servs || []).map((s) =>
             applyLabels(s, 'service')
           );
@@ -161,6 +215,7 @@ export default function TasksPage() {
                   headers: authHeader,
                 }),
               ]);
+            if (!active) return;
 
             const enrichedServices = (allServices?.services || []).map((s) =>
               applyLabels(s, 'service')
@@ -173,8 +228,8 @@ export default function TasksPage() {
           }
         }
 
-        await loadTasks();
       } catch (err) {
+        if (!active) return;
         if (err?.response?.status === 401) {
           localStorage.removeItem('teranga_token');
           localStorage.removeItem('token');
@@ -184,7 +239,8 @@ export default function TasksPage() {
     }
 
     init();
-  }, [loadTasks, authHeader]);
+    return () => { active = false; };
+  }, [authHeader]);
 
   useEffect(() => {
     localStorage.setItem('teranga_tasks_showForm', showForm ? '1' : '0');
@@ -195,7 +251,8 @@ export default function TasksPage() {
   // =========================================================================
   async function createTask(e) {
     e.preventDefault();
-
+    if (sending.current) return;
+    sending.current = true; setCreating(true);
     try {
       setNotice(null);
       const payload = {
@@ -212,6 +269,7 @@ export default function TasksPage() {
       };
 
       await api.post('/tasks', payload, { headers: authHeader });
+      if (!alive.current) return;
 
       setNotice({
         type: 'success',
@@ -232,105 +290,18 @@ export default function TasksPage() {
 
       await loadTasks();
     } catch (err) {
+      if (!alive.current) return;
       console.error('TasksPage create task error:', err);
       setNotice({
         type: 'error',
         message:
           err?.response?.data?.error || t('tasksPage.alerts.createError'),
       });
+    } finally {
+      sending.current = false;
+      if (alive.current) setCreating(false);
     }
   }
-
-  // ========================================================================
-  // Changements de statut
-  // =========================================================================
-  async function updateStatus(id, status) {
-    try {
-      setNotice(null);
-      await api.put(`/tasks/${id}/status`, { status }, { headers: authHeader });
-      await loadTasks();
-    } catch (err) {
-      console.error('TasksPage update status error:', err);
-      setNotice({
-        type: 'error',
-        message:
-          err?.response?.data?.error ||
-          t('tasksPage.alerts.updateStatusError'),
-      });
-    }
-  }
-
-  // ========================================================================
-  // Assignation agent (ADMIN + MASTER)
-  // =========================================================================
-  async function updateAssignment(taskId, agentId) {
-    if (!agentId) return;
-    try {
-      setNotice(null);
-      await api.put(
-        `/tasks/${taskId}/assign`,
-        { agentId },
-        { headers: authHeader }
-      );
-      setNotice({
-        type: 'success',
-        message: t('tasksPage.alerts.assignSuccess'),
-      });
-      await loadTasks();
-    } catch (err) {
-      console.error('TasksPage assign task error:', err);
-      setNotice({
-        type: 'error',
-        message: err?.response?.data?.error || t('tasksPage.alerts.assignError'),
-      });
-    }
-  }
-
-  // ========================================================================
-  // Affichage nom utilisateur
-  // =========================================================================
-  function displayUser(u) {
-    if (!u) return t('common.dash');
-    return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email;
-  }
-
-  // ========================================================================
-  // Filtrage local
-  // =========================================================================
-  useEffect(() => {
-    let arr = [...tasks];
-
-    const q = filters.q.trim().toLowerCase();
-    if (q) {
-      arr = arr.filter((t) =>
-        [
-          t.title,
-          t.description,
-          t.typeLabel,
-          t.priorityLabel,
-          t.statusLabel,
-          t.service?.title,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-          .includes(q)
-      );
-    }
-
-    if (filters.type) arr = arr.filter((t) => t.type === filters.type);
-    if (filters.status) arr = arr.filter((t) => t.status === filters.status);
-    if (filters.priority)
-      arr = arr.filter((t) => t.priority === filters.priority);
-
-    if (filters.service)
-      arr = arr.filter((t) => t.service?.id === parseInt(filters.service, 10));
-
-    if (filters.agent)
-      arr = arr.filter((t) => t.assignee?.id === parseInt(filters.agent, 10));
-
-    setFiltered(arr);
-  }, [filters, tasks]);
 
   // ========================================================================
   // UI
@@ -338,15 +309,20 @@ export default function TasksPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-main via-surface-card to-surface-main px-3 py-8 sm:px-4 sm:py-10">
       <div className="max-w-6xl mx-auto bg-surface-card/95 shadow-2xl rounded-3xl p-4 sm:p-8 border border-border/70">
+        <Link to="/operations" className="mb-4 inline-flex min-h-11 items-center text-sm underline">{t('workspaceQueue.back')}</Link>
+        {propertyId && <p className="mb-4 rounded-xl border border-border p-3 text-sm">{t('nav.propertyContext', { id: propertyId })} <Link to={isAdminLike ? '/admin/properties' : '/properties'} className="inline-flex min-h-11 items-center underline">{t('nav.properties')}</Link></p>}
         {/* HEADER */}
         <Header
           showForm={showForm}
           setShowForm={setShowForm}
           loadTasks={loadTasks}
           loading={loading}
-          total={filtered.length}
+          total={total}
           isMaster={isMaster}
+          canCreate={canCreateTask}
         />
+        {loading && <p role="status" className="mb-4">{t('workspaceQueue.loading')}</p>}
+        {loadError && <p role="alert" className="app-alert app-alert-error">{loadError} <button type="button" onClick={loadTasks} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
 
         {notice && (
           <div
@@ -372,13 +348,14 @@ export default function TasksPage() {
           services={services}
           agents={agents}
           user={user}
-          filteredCount={filtered.length}
+          filteredCount={total}
           isAdminLike={isAdminLike}
           onReset={resetFilters}
         />
 
         {/* FORMULAIRE */}
-        {showForm && (role === 'client' || isAdminLike) && (
+        {showForm && canCreateTask && (
+          <fieldset disabled={creating}>
           <TaskForm
             form={form}
             setForm={setForm}
@@ -388,10 +365,11 @@ export default function TasksPage() {
             createTask={createTask}
             isAdminLike={isAdminLike}
           />
+          </fieldset>
         )}
 
         {/* LISTE */}
-        {filtered.length === 0 ? (
+        {!loading && !loadError && visible && filtered.length === 0 ? (
           <div className="py-10 flex flex-col items-center justify-center text-center">
             <div className="app-icon-badge-info">
               <span className="text-xl">i</span>
@@ -425,19 +403,14 @@ export default function TasksPage() {
               )}
             </div>
           </div>
-        ) : (
+        ) : visible ? (
           <TaskList
             tasks={filtered}
-            user={user}
-            role={role}
-            isAdminLike={isAdminLike}
-            updateStatus={updateStatus}
-            updateAssignment={updateAssignment}
             navigate={navigate}
-            displayUser={displayUser}
-            agents={agents}
+            from={location.pathname + location.search}
           />
-        )}
+        ) : null}
+        {visible && <PaginationBar page={page} pageSize={20} totalItems={total} onPageChange={setPage} showPageSize={false} />}
       </div>
     </div>
   );
@@ -447,7 +420,7 @@ export default function TasksPage() {
 // Contexte: gestion des taches.
 // ============================================================================
 
-function Header({ showForm, setShowForm, loadTasks, loading, total, isMaster }) {
+function Header({ showForm, setShowForm, loadTasks, loading, total, isMaster, canCreate }) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7 pb-4 border-b border-border/70">
@@ -456,10 +429,10 @@ function Header({ showForm, setShowForm, loadTasks, loading, total, isMaster }) 
           {t('tasksPage.kicker')}
         </p>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary">
-          {t('tasksPage.title')}
+          {t('nav.interventions')}
         </h1>
         <p className="text-sm sm:text-base text-text-secondary mt-1">
-          {t('tasksPage.subtitle')}
+          {t('nav.interventionsHint')}
         </p>
 
         <div className="mt-2 flex flex-wrap gap-2 items-center">
@@ -477,14 +450,14 @@ function Header({ showForm, setShowForm, loadTasks, loading, total, isMaster }) 
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-        <button
+        {canCreate && <button
           onClick={() => setShowForm((v) => !v)}
           className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm app-btn-neutral transition"
         >
           {showForm
             ? t('tasksPage.buttons.hideForm')
             : t('tasksPage.buttons.newTask')}
-        </button>
+        </button>}
 
         <button
           onClick={loadTasks}
@@ -516,6 +489,8 @@ function TaskFilters({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Recherche */}
         <input
+          aria-label={t('tasksPage.filters.searchPlaceholder')}
+          maxLength={200}
           placeholder={t('tasksPage.filters.searchPlaceholder')}
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
@@ -528,6 +503,7 @@ function TaskFilters({
 
         {/* Type */}
         <select
+          aria-label={t('tasksPage.filters.typeAll')}
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
           className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
@@ -542,6 +518,7 @@ function TaskFilters({
 
         {/* Statut */}
         <select
+          aria-label={t('tasksPage.filters.statusAll')}
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
           className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
@@ -556,6 +533,7 @@ function TaskFilters({
 
  {/* Contexte: gestion des taches. */}
         <select
+          aria-label={t('tasksPage.filters.priorityAll')}
           value={filters.priority}
           onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
           className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
@@ -570,6 +548,7 @@ function TaskFilters({
 
         {/* Service */}
         <select
+          aria-label={t('tasksPage.filters.serviceAll')}
           value={filters.service}
           onChange={(e) => setFilters({ ...filters, service: e.target.value })}
           className="border border-border rounded-lg px-3 py-2 text-sm sm:text-base bg-surface-card text-text-primary focus:ring-2 focus:ring-blue-500"
@@ -843,190 +822,16 @@ function TaskForm({ form, setForm, services, agents, user, createTask, isAdminLi
   );
 }
 
-function TaskList({
-  tasks,
-  user,
-  role,
-  isAdminLike,
-  updateStatus,
-  updateAssignment,
-  navigate,
-  displayUser,
-  agents,
-}) {
+function TaskList({ tasks, navigate, from }) {
   const { t } = useTranslation();
-  if (!tasks || tasks.length === 0) {
-    return (
-      <p className="text-text-muted italic text-center py-8">
-        {t('tasksPage.list.empty')}
-      </p>
-    );
-  }
-
-  return (
-    <div className="grid gap-5">
-      {tasks.map((task) => {
-        const linkedServiceId = task.service?.id || task.serviceId;
-        return (
-        <div
-          key={task.id}
-          className="
-            bg-surface-card border border-border rounded-2xl shadow-sm
-            p-4 sm:p-5 hover:shadow-md transition
-          "
-        >
- {/* Contexte: gestion des taches. */}
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-            <div className="min-w-0 break-words">
-              <h3 className="text-lg sm:text-xl font-semibold text-text-primary break-words">
-                {task.title}
-              </h3>
-              <p className="text-sm sm:text-base text-text-secondary mt-1 break-words">
-                {task.description || t('tasksPage.list.noDescription')}
-              </p>
-            </div>
-
-            <Badge
-              tone={getTaskStatusTone(task.status)}
-              className="mt-1 self-start whitespace-nowrap text-xs sm:mt-0 sm:text-sm"
-            >
-              {TASK_STATUSES[task.status] || task.status || t('common.dash')}
-            </Badge>
-          </div>
-
-          {/* Meta infos */}
-          <div className="mt-4 text-sm sm:text-base text-text-secondary grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <p className="break-words">
-              <strong>{t('tasksPage.list.typeLabel')}:</strong>{' '}
-              {TASK_TYPES[task.type] || task.type || t('common.dash')}
-            </p>
-            <p className="break-words">
-              <strong>{t('tasksPage.list.priorityLabel')}:</strong>{' '}
-              {TASK_PRIORITIES[task.priority] || task.priority || t('common.dash')}
-            </p>
-            <p className="break-words">
-              <strong>{t('tasksPage.list.serviceLabel')}:</strong>{' '}
-              {task.service?.title || task.serviceId}
-            </p>
-            <p className="break-words">
-              <strong>{t('tasksPage.list.assigneeLabel')}:</strong>{' '}
-              {displayUser(task.assignee)}
-            </p>
-          </div>
-
-          {/* Actions */}
-          <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
-            {/* PREUVES */}
-            <button
-              onClick={() =>
-                navigate(`/tasks/${task.id}/evidences`, {
-                  state: linkedServiceId
-                    ? { from: '/tasks', serviceId: linkedServiceId }
-                    : { from: '/tasks' },
-                })
-              }
-              className="
-                app-btn-primary w-full sm:w-auto px-4 py-2 text-sm sm:text-base
-                font-medium
-              "
-            >
-              {t('tasksPage.list.viewEvidences')}
-            </button>
-
-            {linkedServiceId && (
-              <button
-                onClick={() =>
-                  navigate(`/services/${linkedServiceId}/tasks`, {
-                    state: { from: '/tasks' },
-                  })
-                }
-                className="
-                  app-btn-neutral w-full sm:w-auto px-4 py-2 text-sm sm:text-base
-                  font-medium
-                "
-              >
-                {t('services.buttons.viewTasks')}
-              </button>
-            )}
-
-            {linkedServiceId && (
-              <button
-                onClick={() =>
-                  navigate(`/services/${linkedServiceId}/transactions?taskId=${task.id}`, {
-                    state: { from: '/tasks' },
-                  })
-                }
-                className="
-                  app-btn-neutral w-full sm:w-auto px-4 py-2 text-sm sm:text-base
-                  font-medium
-                "
-              >
-                {t('nav.transactions')}
-              </button>
-            )}
-
-            {/* Assignation (admin/master) */}
-            {isAdminLike && !task.assignee && task.status === 'created' && (
-              <select
-                onChange={(e) => updateAssignment(task.id, e.target.value)}
-                defaultValue=""
-                className="
-                  w-full sm:w-auto border border-border rounded-lg px-3 py-2
-                  text-sm sm:text-base bg-surface-card text-text-primary
-                "
-              >
-                <option value="">{t('tasksPage.list.assignPlaceholder')}</option>
-                {agents.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.firstName} {a.lastName}
-                  </option>
-                ))}
-              </select>
-            )}
-
- {/* Contexte: gestion des taches. */}
-            {role === 'agent' && task.status === 'created' && (
-              <button
-                onClick={() => updateStatus(task.id, 'in_progress')}
-                className="
-                  app-btn-warning w-full sm:w-auto px-4 py-2 text-sm sm:text-base
-                  font-medium
-                "
-              >
-                {t('tasksPage.list.start')}
-              </button>
-            )}
-
- {/* Contexte: gestion des taches. */}
-            {role === 'agent' && task.status === 'in_progress' && (
-              <button
-                onClick={() => updateStatus(task.id, 'completed')}
-                className="
-                  app-btn-success w-full sm:w-auto px-4 py-2 text-sm sm:text-base
-                  font-medium
-                "
-              >
-                {t('tasksPage.list.finish')}
-              </button>
-            )}
-
- {/* Contexte: gestion des taches. */}
-            {isAdminLike && role === 'admin' && task.status === 'completed' && (
-              <button
-                onClick={() => updateStatus(task.id, 'validated')}
-                className="
-                  app-btn-success w-full sm:w-auto px-4 py-2 text-sm sm:text-base
-                  font-medium
-                "
-              >
-                {t('tasksPage.list.validate')}
-              </button>
-            )}
-          </div>
-        </div>
-        );
-      })}
+  return <div className="grid gap-4">{tasks.map((task) => <article key={task.id} aria-labelledby={`intervention-${task.id}`} className="rounded-2xl border border-border bg-surface-card p-4 sm:p-5">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <h2 id={`intervention-${task.id}`} className="font-bold text-text-primary">{task.title}</h2>
+      <Badge tone={getTaskStatusTone(task.status)}>{TASK_STATUSES[task.status] || task.status}</Badge>
     </div>
-  );
+    {task.description && <p className="mt-2 line-clamp-2 text-sm text-text-secondary">{task.description}</p>}
+    <p className="mt-3 text-sm text-text-secondary">{task.service?.title || task.property?.title || t('nav.standaloneIntervention')}</p>
+    {task.assignee && <p className="mt-1 text-sm text-text-secondary">{[task.assignee.firstName, task.assignee.lastName].filter(Boolean).join(' ') || task.assignee.email}</p>}
+    <button type="button" onClick={() => navigate(`/tasks/${task.id}`, { state: { from } })} className="app-btn-primary mt-4 min-h-11">{t('nav.openIntervention')}</button>
+  </article>)}</div>;
 }
-

@@ -7,16 +7,18 @@ import { getDashboardSummary } from '../services/dashboard';
 import { getFinancialSummary } from '../services/transactions';
 import { useLocale } from '../i18n/useLocale';
 import WorkspaceHeader from '../components/WorkspaceHeader';
-
-const GROUPS = [
-  ['workspace.team', [['/admin/agents', 'nav.agents'], ['/admin/providers', 'nav.providers']]],
-  ['workspace.cases', [['/admin/services', 'nav.adminServices'], ['/admin/projects', 'nav.adminProjects'], ['/admin/properties', 'nav.clientProperties'], ['/orders', 'nav.orders'], ['/admin/disputes', 'nav.disputes']]],
-];
+import { managementNavigation } from '../utils/managementNavigation';
 
 export default function ManagementHome() {
+  const { user, countryId, regionId } = useGeo();
+  return <Management key={JSON.stringify([user?.id, user?.role, countryId, regionId])} />;
+}
+
+function Management() {
   const { t } = useTranslation();
   const { formatNumber } = useLocale();
-  const { countryId, regionId } = useGeo();
+  const { user, countryId, regionId } = useGeo();
+  const groups = managementNavigation(user);
   const scope = JSON.stringify([countryId, regionId]);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
@@ -47,7 +49,7 @@ export default function ManagementHome() {
       <Link to="/operations" className="btn-primary inline-flex min-h-12 items-center justify-center gap-3 rounded-xl px-5 font-semibold">{t('workspace.openOperations')}<ArrowRight size={18} aria-hidden="true" /></Link>
     </WorkspaceHeader>
     <section aria-labelledby="management-mobility"><h2 id="management-mobility" className="mb-3 text-lg font-bold">{t('workspace.mobility')}</h2><div className="grid gap-3 sm:grid-cols-2">{[['/admin/taxi-dispatch', 'nav.taxiOperations', 'workspace.taxiHint', CarFront], ['/admin/livraisons', 'nav.deliveryOperations', 'workspace.deliveryHint', PackageCheck]].map(([path, label, hint, Icon]) => <Link key={path} to={path} className="flex items-center gap-3 rounded-2xl border border-border p-4 transition hover:border-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"><Icon className="shrink-0 text-blue-600" size={24} aria-hidden="true" /><div className="min-w-0"><span className="font-semibold">{t(label)}</span><p className="mt-1 text-sm text-text-secondary">{t(hint)}</p></div><ArrowRight size={17} className="ml-auto shrink-0" aria-hidden="true" /></Link>)}</div></section>
-    <details className="rounded-2xl border border-border p-4 sm:p-5"><summary className="cursor-pointer font-semibold">{t('workspace.tools')}</summary><div className="mt-4 grid gap-5 sm:grid-cols-2">{GROUPS.map(([title, links]) => <nav key={title} aria-label={t(title)}><h2 className="mb-2 text-sm font-bold text-text-secondary">{t(title)}</h2><div className="flex flex-col">{links.map(([path, key]) => <Link key={path} to={path} className="inline-flex min-h-11 items-center justify-between gap-3 border-b border-border py-2 text-sm font-medium">{t(key)}<ArrowRight size={14} aria-hidden="true" /></Link>)}</div></nav>)}</div></details>
+    <details className="rounded-2xl border border-border p-4 sm:p-5"><summary className="cursor-pointer font-semibold">{t('workspace.tools')}</summary><div className="mt-4 grid gap-5 sm:grid-cols-2">{groups.map(([title, links]) => <nav key={title} aria-label={t(title)}><h2 className="mb-2 text-sm font-bold text-text-secondary">{t(title)}</h2><div className="flex flex-col">{links.map(([path, key]) => <Link key={path} to={path} className="inline-flex min-h-11 items-center justify-between gap-3 border-b border-border py-2 text-sm font-medium">{t(key)}<ArrowRight size={14} aria-hidden="true" /></Link>)}</div></nav>)}</div></details>
     <details onToggle={(event) => setOverviewOpen(event.currentTarget.open)} className="rounded-2xl border border-border p-4 sm:p-5"><summary className="cursor-pointer font-semibold">{t('workspace.insights')}</summary>
       {summary?.loading && <p role="status" className="mt-3 text-sm">{t('dashboard.loading')}</p>}
       {summary?.error && failure('workspace.overviewError')}
@@ -58,7 +60,7 @@ export default function ManagementHome() {
       {finance?.loading && <p role="status" className="mt-3 text-sm">{t('dashboard.loading')}</p>}
       {finance?.error && failure('workspace.financeError')}
       {finance?.value && (finance.value.byCurrency?.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{finance.value.byCurrency.map((totals) => <article key={totals.currency} className="rounded-xl border border-border p-4"><h2 className="font-bold">{totals.currency}</h2><dl className="mt-2 space-y-2 text-sm">{['revenues', 'expenses', 'commissions', 'adjustments', 'balance'].map((key) => <div key={key} className="flex flex-wrap justify-between gap-2"><dt>{t(`workspace.financeFields.${key}`)}</dt><dd>{formatNumber(totals[key] ?? 0)} {totals.currency}</dd></div>)}</dl></article>)}</div> : <p className="mt-3 text-sm">{t('workspace.noTransactions')}</p>)}
-      <Link to="/finance" className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-blue-700 dark:text-blue-300">{t('nav.finance')}</Link>
+      <Link to="/transactions?vue=bilan" className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-blue-700 dark:text-blue-300">{t('financialWorkspace.statement')}</Link>
     </details>
   </div></div>;
 }

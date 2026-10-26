@@ -202,7 +202,7 @@ export async function uploadOrderEvidences(orderId, files = [], notes = '') {
  * @param {number|string} orderId
  * @returns {Promise<Array>}
  */
-export async function getOrderEvidences(orderId) {
+export async function getOrderEvidences(orderId, scope = {}) {
   if (!orderId) throw new Error('orderId requis pour getOrderEvidences');
 
   const { data } = await api.get(`/orders/${orderId}/evidences`, {
@@ -210,7 +210,7 @@ export async function getOrderEvidences(orderId) {
       ...authHeader(),
     },
     withCredentials: true,
-    params: mergeGeoParams(),
+    params: mergeGeoParams(scope),
   });
 
   return asEvidenceArray(data);

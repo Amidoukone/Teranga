@@ -2,6 +2,10 @@
 
 Projet : `C:\Users\konea\Teranga`. Bilan du 24 octobre 2026, préparé pour le commit demandé par l'utilisateur.
 
+**Résumé courant :** consulter la [reprise du 26 octobre](REPRISE_SESSION_2026-10-26.md), incluse dans le nouveau commit de clôture sans push. Les mentions de changements non commités ci-dessous sont historiques, antérieures à cette clôture.
+
+**Suite des 25 et 26 octobre :** navigation et interventions simplifiées, dossiers projets/commandes unifiés, accueil connecté commun dans le centre, puis espaces financiers harmonisés. Consulter d'abord le [bilan financier](ESPACES_FINANCIERS_2026-10-26.md), puis l'[accueil](ACCUEIL_CONNECTE_2026-10-26.md), les [dossiers](DOSSIERS_PROJETS_COMMANDES_2026-10-25.md) et la [navigation](NAVIGATION_INTERVENTIONS_2026-10-25.md). Ces changements supplémentaires sont locaux, non commités ; les chiffres et le dépôt propre décrits ci-dessous concernent le commit du 24 octobre.
+
 ## Direction à conserver
 
 Teranga coordonne et fait exécuter des services par des humains, avec une interface simple, accessible et adaptée au contexte africain. La refonte simplifie les parcours sans remplacer les concepts, données et règles métier existants.
@@ -40,7 +44,7 @@ Lors d'une publication ultérieure, publier le backend compatible avant l'interf
 
 ## Prochaine étape proposée
 
-Simplifier la navigation et les accès redondants en s'appuyant sur le centre commun. Avant de retirer Tâches du menu principal, vérifier que les interventions liées aux biens, aux projets et aux données historiques conservent tous leurs accès. Poursuivre ensuite l'unification des dossiers projets et commandes, en gardant leurs règles propres et les parcours taxi/livraison. Cette suite reste à implémenter.
+La navigation, les dossiers projets/commandes, l'accueil connecté commun et le journal financier commun sont réalisés dans les lots des 25 et 26 octobre. Les parcours taxi/livraison et les règles métier restent distincts. La prochaine étape proposée est une recette utilisateur complète de la version de démonstration, par rôle, de la demande jusqu'à la clôture et l'enregistrement financier. Ne pas considérer cette recette ni la publication comme déjà effectuées.
 
 ## Lectures prioritaires
 

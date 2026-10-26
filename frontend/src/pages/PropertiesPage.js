@@ -5,6 +5,7 @@
 // ============================================================================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   getProperties,
   createProperty,
@@ -1595,6 +1596,7 @@ function PropertyList({
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2 justify-end items-center">
+                  <Link to={`/tasks?propertyId=${p.id}`} className="app-btn-neutral inline-flex min-h-11 items-center rounded-lg px-4 py-2 text-sm">{t('nav.propertyInterventions')}</Link>
                   {canEditOrDelete ? (
                     <>
                       <button

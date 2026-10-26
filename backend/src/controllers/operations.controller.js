@@ -6,7 +6,7 @@ const { applyGeoScopeForModel, canAccessGeoResource } = require('../utils/geoSco
 const { getPagination } = require('../utils/pagination');
 const { coordinateMission, TERMINAL } = require('../services/missionCoordination.service');
 const { loadFieldReadiness } = require('../services/fieldReadiness.service');
-const { coordinateWork, advanceWork, modelFor, TERMINAL: WORK_TERMINAL } = require('../services/workCoordination.service');
+const { coordinateWork, advanceWork, completionReadiness, modelFor, TERMINAL: WORK_TERMINAL } = require('../services/workCoordination.service');
 const { agentLoad } = require('../services/agentCapacity.service');
 const logger = require('../utils/logger');
 
@@ -165,7 +165,10 @@ exports.detailWork = async (req, res) => {
     const assigned = req.user.role === 'agent' && (type === 'project' ? String(resource.agentId) === String(req.user.id) : String(operation?.executorUserId) === String(req.user.id));
     const staff = (req.user.role === 'admin' || assigned) && canAccessGeoResource(resource, req.user);
     if (!own && !staff) return res.status(403).json({ error: 'Accès non autorisé' });
-    return res.json({ item: { ...resource.toJSON(), entityType: type, coordination: operation }, canAdvance: staff, canValidate: type === 'project' && own });
+    const readiness = staff && operation && (type === 'project' ? resource.status === 'in_progress' : resource.status === 'shipped')
+      ? await completionReadiness(type, id, req.user) : null;
+    res.set('Cache-Control', 'no-store');
+    return res.json({ item: { ...resource.toJSON(), entityType: type, coordination: operation }, canAdvance: staff, canValidate: type === 'project' && own, readiness });
   } catch (error) { return handleError(error, res); }
 };
 

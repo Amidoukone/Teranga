@@ -61,6 +61,7 @@ beforeEach(async () => {
     await db.WorkCoordination.destroy({ where: { entityType: 'order', entityId: orderIds } }); await db.Order.destroy({ where: { id: orderIds.splice(0) } });
   }
   if (projectIds.length) {
+    await db.Task.destroy({ where: { projectId: projectIds } });
     await db.ProjectPhase.destroy({ where: { projectId: projectIds } }); await db.ProjectDocument.destroy({ where: { projectId: projectIds } });
     await db.WorkCoordination.destroy({ where: { entityType: 'project', entityId: projectIds } }); await db.Project.destroy({ where: { id: projectIds.splice(0) } });
   }
@@ -76,7 +77,7 @@ afterAll(async () => {
     if (receiptIds.length) await db.CreationRequest.destroy({ where: { id: receiptIds } });
     if (serviceIds.length) { await db.MissionStatusHistory.destroy({ where: { serviceId: serviceIds } }); await db.Evidence.destroy({ where: { serviceId: serviceIds } }); await db.Service.destroy({ where: { id: serviceIds } }); }
     if (orderIds.length) { await db.Transaction.destroy({ where: { orderId: orderIds } }); await db.Evidence.destroy({ where: { orderId: orderIds } }); await db.OrderItem.destroy({ where: { orderId: orderIds } }); await db.WorkCoordination.destroy({ where: { entityType: 'order', entityId: orderIds } }); await db.Order.destroy({ where: { id: orderIds } }); }
-    if (projectIds.length) { await db.ProjectPhase.destroy({ where: { projectId: projectIds } }); await db.ProjectDocument.destroy({ where: { projectId: projectIds } }); await db.WorkCoordination.destroy({ where: { entityType: 'project', entityId: projectIds } }); await db.Project.destroy({ where: { id: projectIds } }); }
+    if (projectIds.length) { await db.Task.destroy({ where: { projectId: projectIds } }); await db.ProjectPhase.destroy({ where: { projectId: projectIds } }); await db.ProjectDocument.destroy({ where: { projectId: projectIds } }); await db.WorkCoordination.destroy({ where: { entityType: 'project', entityId: projectIds } }); await db.Project.destroy({ where: { id: projectIds } }); }
     await db.Notification.destroy({ where: { countryId: country.id } }); await db.Activity.destroy({ where: { countryId: country.id } });
     await product.destroy(); await offering.destroy(); await definition.destroy(); await org.destroy(); await territory.destroy();
     for (const Model of [db.RefreshToken, db.RecoveryCode, db.PasswordResetToken, db.AgentCapacity]) await Model.destroy({ where: { userId: users } });
@@ -227,9 +228,21 @@ test('project completion checks remaining phases, proof and client validation; d
   expect((await request(app).post(path).set(auth(outsider)).send({ status: 'in_progress' })).status).toBe(403);
   expect((await request(app).post(path).set(auth(agent)).send({ status: 'in_progress' })).status).toBe(200);
   const phase = await db.ProjectPhase.create({ projectId: p.id, title: 'Contrôle', status: 'active' });
+  const progressPath = `/api/v1/operations/work/project/${p.id}`;
+  const blocked = await request(app).get(progressPath).set(auth(agent));
+  expect(blocked.status).toBe(200); expect(blocked.body.readiness).toMatchObject({ openPhases: 1, openTasks: 0, hasProof: false });
+  expect((await p.reload()).status).toBe('in_progress');
+  expect((await request(app).get(progressPath).set(auth(outsider))).status).toBe(403);
+  expect((await request(app).get(progressPath).set(auth(client))).body.readiness).toBeNull();
   expect((await request(app).post(path).set(auth(agent)).send({ status: 'completed', summary: 'Travaux réalisés et vérifiés sur place.' })).status).toBe(409);
   await phase.update({ status: 'completed' });
+  await db.ProjectDocument.create({ projectId: p.id, uploaderId: client.id, kind: 'report', filePath: '/uploads/client-report.pdf' });
+  await db.ProjectDocument.create({ projectId: p.id, uploaderId: agent.id, kind: 'contract', filePath: '/uploads/agent-contract.pdf' });
+  const wrongProofs = await request(app).get(progressPath).set(auth(agent));
+  expect(wrongProofs.body.readiness).toMatchObject({ openPhases: 0, hasProof: false });
   await db.ProjectDocument.create({ projectId: p.id, uploaderId: agent.id, kind: 'report', filePath: '/uploads/fixture-report.pdf' });
+  const readyResult = await request(app).get(progressPath).set(auth(agent));
+  expect(readyResult.body.readiness).toMatchObject({ openPhases: 0, openTasks: 0, hasProof: true });
   expect((await request(app).post(path).set(auth(agent)).send({ status: 'completed', summary: 'Travaux réalisés et vérifiés sur place.' })).status).toBe(200);
   expect((await request(app).post(path).set(auth(agent)).send({ status: 'validated' })).status).toBe(403);
   expect((await request(app).post(path).set(auth(client)).send({ status: 'validated' })).status).toBe(200);
@@ -260,6 +273,27 @@ test('orders appear in the scoped queue and completion does not manufacture a pa
   expect((await o.reload()).status).toBe('delivered');
   await runWorkCoordination();
   expect((await db.OperationSchedulerState.findByPk('work_coordination')).lastError).toBeNull();
+});
+
+test('project workspace steps retain task permissions, redact parent metadata and filter before pagination', async () => {
+  if (!ready) throw new Error('The dossier recipe requires MySQL');
+  const p = await project({ agentId: agent.id, status: 'in_progress' }), other = await project();
+  await coordinateWork('project', p.id);
+  const parent = await service({ agentId: agent.id, budget: 99881 });
+  for (let index = 0; index < 21; index += 1) await db.Task.create({ projectId: p.id, serviceId: parent.id, creatorId: client.id, assignedTo: agent.id, countryId: country.id, type: 'visit', title: `Étape ${index}` });
+  await db.Task.create({ projectId: p.id, creatorId: owner.id, countryId: country.id, type: 'visit', title: 'Étape réservée' });
+  await db.Task.create({ projectId: other.id, creatorId: client.id, assignedTo: agent.id, countryId: country.id, type: 'visit', title: 'Autre projet' });
+  const path = `/api/v1/tasks?workspace=true&projectId=${p.id}&limit=20`;
+  const first = await request(app).get(path).set(auth(client));
+  const second = await request(app).get(`${path}&page=2`).set(auth(client));
+  expect(first.status).toBe(200); expect(first.body.pagination.total).toBe(21); expect(second.body.tasks).toHaveLength(1);
+  expect(first.body.tasks[0]).not.toHaveProperty('service'); expect(first.body.tasks[0]).not.toHaveProperty('creator'); expect(first.body.tasks[0]).not.toHaveProperty('property');
+  const lead = await request(app).get(path).set(auth(agent)); expect(lead.body.pagination.total).toBe(21);
+  const adminView = await request(app).get(path).set(auth(owner)); expect(adminView.body.pagination.total).toBe(22);
+  const outside = await request(app).get(path).set(auth(outsider)); expect(outside.body.pagination.total).toBe(0);
+  expect((await request(app).get('/api/v1/tasks?projectId=bad').set(auth(client))).status).toBe(400);
+  const readiness = await request(app).get(`/api/v1/operations/work/project/${p.id}`).set(auth(agent));
+  expect(readiness.status).toBe(200); expect(readiness.body.readiness).toMatchObject({ openTasks: 22, openPhases: 0, hasProof: false });
 });
 
 test.each(['service', 'project', 'order'])('%s intake replays a stable request key and rejects changed content', async (type) => {
