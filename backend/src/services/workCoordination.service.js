@@ -18,9 +18,11 @@ async function completionReadiness(type, id, actor, transaction) {
     db.ProjectPhase.findAll({ where: { projectId: id, status: { [Op.ne]: 'completed' } }, attributes: ['id'], ...options }),
     db.Task.findAll({ where: { projectId: id, status: { [Op.notIn]: ['completed', 'validated', 'cancelled'] } }, attributes: ['id'], ...options }),
   ]) : [[], []];
+  // Comme pour un projet (report/photo), seules les preuves pertinentes pour une remise
+  // comptent : un reçu de paiement ou une pièce "autre" sans rapport ne doit pas suffire.
   const proof = type === 'project'
     ? await db.ProjectDocument.findOne({ where: { projectId: id, uploaderId: actor.id, kind: { [Op.in]: ['report', 'photo'] } }, transaction })
-    : await db.Evidence.findOne({ where: { orderId: id, uploaderId: actor.id }, transaction });
+    : await db.Evidence.findOne({ where: { orderId: id, uploaderId: actor.id, kind: { [Op.in]: ['photo', 'document'] } }, transaction });
   return { openPhases: phases.length, openTasks: tasks.length, hasProof: Boolean(proof), proofId: proof?.id || null };
 }
 function modelFor(type) {

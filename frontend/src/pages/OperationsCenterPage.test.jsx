@@ -61,7 +61,7 @@ beforeEach(() => {
 test('one centre shows unread updates from every stage without marking them read on entry', async () => {
   render(<OperationsCenterPage />);
   expect(await screen.findByText('Le compte rendu est disponible')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'operations.title' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'roleViews.home.client' })).toBeInTheDocument();
   expect(getOperationUpdates).toHaveBeenCalledWith(expect.objectContaining({ status: 'unread' }), expect.anything());
   expect(getOperationUpdates.mock.calls[0][0]).not.toHaveProperty('progress');
   expect(markAllNotificationsRead).not.toHaveBeenCalled(); expect(markNotificationRead).not.toHaveBeenCalled();
@@ -82,7 +82,7 @@ test('admins keep coordination with a single page title and can switch to the sh
   expect(screen.getByTestId('workqueue')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name:'workspaceQueue.coordinationTools' }));
   expect(screen.getByTestId('coordination')).toHaveAttribute('data-embedded', 'true');
-  expect(screen.getAllByRole('heading', { name: 'operations.title' })).toHaveLength(1);
+  expect(screen.getAllByRole('heading', { name: 'roleViews.home.admin' })).toHaveLength(1);
   fireEvent.change(screen.getByLabelText('Assignment draft'), { target: { value: 'Awa' } });
   fireEvent.click(screen.getByRole('button', { name: /workspaceQueue.information/ }));
   await screen.findByText('Le compte rendu est disponible');
@@ -102,6 +102,7 @@ test('a coordination information can focus the exact typed request without chang
 
 test.each(['client','agent','provider','admin'])('%s starts in the same three-view work centre', (role) => {
   mockSearch = ''; mockUser = {id:9,role}; render(<OperationsCenterPage />);
+  expect(screen.getByRole('heading', { name: `roleViews.home.${role}` })).toBeInTheDocument();
   expect(screen.getByTestId('workqueue')).toHaveAttribute('data-view','action');
   expect(screen.getByRole('button',{name:'workspaceQueue.action'})).toHaveAttribute('aria-current','page');
   expect(screen.getByRole('button',{name:'workspaceQueue.following'})).toBeInTheDocument();

@@ -8,7 +8,9 @@ import { me } from '../services/auth';
 const mockTranslate = (key) => key;
 const mockNavigate = jest.fn();
 
+jest.mock('../features/projects/ProjectManagement', () => () => null);
 jest.mock('../features/mission-tracking/WorkProgressPanel', () => () => null);
+jest.mock('../features/finance/FinancialWorkspace', () => ({ kind, reference, embedded }) => <p data-testid="project-payments">{`${kind}:${reference}:${embedded}`}</p>);
 jest.mock('react-router-dom', () => ({ Link: ({ to, children }) => <a href={to}>{children}</a>, useLocation: () => ({}), useNavigate: () => mockNavigate, useParams: () => ({ id: '14' }) }), { virtual: true });
 jest.mock('../contexts/GeoContext', () => ({ useGeo: () => ({ user: { id: 1, role: 'admin' } }) }));
 jest.mock('../features/service-workspace/ProjectTasksPanel', () => () => null);
@@ -35,5 +37,6 @@ test('a project displays separate currency balances and opens the common financi
   expect(getAllTransactions).toHaveBeenCalledWith({ projectId: '14', countryId: 2, regionId: null });
   expect(within(screen.getByRole('group', { name: 'GHS' })).getAllByText('100 GHS')).toHaveLength(2);
   expect(within(screen.getByRole('group', { name: 'GNF' })).getByText('-2000 GNF')).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'financialWorkspace.title' })).toHaveAttribute('href', '/projects/14/transactions');
+  expect(await screen.findByTestId('project-payments')).toHaveTextContent('project:14:true');
+  expect(screen.queryByRole('link', { name: 'financialWorkspace.title' })).not.toBeInTheDocument();
 });

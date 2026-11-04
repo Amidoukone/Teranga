@@ -112,6 +112,16 @@ describe('project.controller geocoding (non bloquant)', () => {
     expect(Project.create).toHaveBeenCalledWith(expect.objectContaining({ currency: 'GHS', countryId: 2 }));
   });
 
+  test('an update with absent coordinates does not move a project to zero latitude and longitude', async () => {
+    geocodeAddress.mockResolvedValue(null);
+    const project = { id: 99, title: 'Projet', type: 'autre', status: 'created', agentId: null, countryId: null, regionId: null, latitude: null, longitude: null, update: jest.fn(async () => {}), toJSON: () => ({ id: 99 }) };
+    Project.findByPk.mockResolvedValue(project);
+    const res = makeRes();
+    await controller.update({ params: { id: '99' }, user: { id: 1, role: 'admin' }, body: { title: 'Projet renommé', address: '', city: '', latitude: null, longitude: null } }, res);
+    expect(project.update).toHaveBeenCalledWith(expect.objectContaining({ latitude: null, longitude: null, status: 'created' }));
+    expect(res.status).not.toHaveBeenCalledWith(500);
+  });
+
   test('create succeeds without any address at all (localisation optionnelle)', async () => {
     const req = {
       user: { id: 10, role: 'client' },

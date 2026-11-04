@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { advanceAssignment } from '../../services/operations';
 
-export default function WorkAssignmentCard({ item, onSaved, canAdvance = true, clientValidation = false, embedded = false, readiness, reviewBlocked = false }) {
+export default function WorkAssignmentCard({ item, onSaved, canAdvance = true, clientValidation = false, embedded = false, readiness, reviewBlocked = false, from }) {
   const { t } = useTranslation();
   const [summary, setSummary] = useState('');
   const [busy, setBusy] = useState(false);
@@ -20,7 +20,7 @@ export default function WorkAssignmentCard({ item, onSaved, canAdvance = true, c
     finally { sending.current = false; setBusy(false); }
   }
   return <article className="space-y-2 rounded-xl border border-border p-3">
-    {!embedded && <Link to={`/${item.entityType === 'project' ? 'projects' : 'orders'}/${item.id}`} className="font-semibold underline">{t(`operations.entities.${item.entityType}`)} #{item.id} · {item.title || item.code}</Link>}
+    {!embedded && <Link to={`/${item.entityType === 'project' ? 'projects' : 'orders'}/${item.id}`} state={{ from }} className="font-semibold underline">{t(`operations.entities.${item.entityType}`)} #{item.id} · {item.title || item.code}</Link>}
     <p className="text-sm">{t(`agentCoordination.statuses.${item.status}`, { defaultValue: item.status })}</p>
     {item.status === 'created' && item.coordination?.attempts?.at(-1)?.startDeadlineAt && <p className="text-sm font-medium">{t('agentCoordination.startBefore')} : {new Date(item.coordination.attempts.at(-1).startDeadlineAt).toLocaleString()}</p>}
     {item.coordination?.policy?.completionReport?.summary && <div className="rounded-xl bg-surface-main p-3"><h3 className="text-sm font-bold">{t('dossier.report')}</h3><p className="mt-2 whitespace-pre-wrap text-sm">{item.coordination.policy.completionReport.summary}</p>

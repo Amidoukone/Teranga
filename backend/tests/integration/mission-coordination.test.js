@@ -108,6 +108,23 @@ test('automatic intake reserves one eligible provider and repeated processing is
   expect(await db.Notification.count({ where: { entityId: service.id, entityType: 'service' } })).toBe(notifications);
 });
 
+test('manual provider work requires the catalogue report before the scheduler initializes coordination', async () => {
+  if (!ready) return;
+  const provider = providers[0];
+  const token = await login(await db.User.findByPk(provider.userId));
+  const service = await mission({ providerId: provider.id, missionStatus: 'IN_PROGRESS', status: 'in_progress' });
+  const track = await request(app).get(`/api/v1/missions/${service.id}/track?skipEta=1`).set('Authorization', `Bearer ${token}`);
+  expect(track.status).toBe(200); expect(track.body.completion.required).toBe(true);
+  expect(await db.MissionCoordination.count({ where: { serviceId: service.id } })).toBe(0);
+  const premature = await request(app).patch(`/api/v1/missions/${service.id}/status`).set('Authorization', `Bearer ${token}`).send({ toStatus: 'COMPLETED' });
+  expect(premature.status).toBe(400); expect((await service.reload()).missionStatus).toBe('IN_PROGRESS');
+  const report = await request(app).post(`/api/v1/missions/${service.id}/completion-report`).set('Authorization', `Bearer ${token}`)
+    .field('summary', 'Le travail est réalisé, contrôlé et remis au client avec son compte rendu.').field('requestKey', `manual-report-${service.id}`);
+  expect(report.status).toBe(200); expect(report.body.completion.report.summary).toContain('remis au client');
+  expect(await db.MissionCoordination.count({ where: { serviceId: service.id } })).toBe(1);
+  expect((await request(app).patch(`/api/v1/missions/${service.id}/status`).set('Authorization', `Bearer ${token}`).send({ toStatus: 'COMPLETED' })).status).toBe(200);
+});
+
 test('refusal tries a different provider, expiration stops at the configured limit and escalates once', async () => {
   if (!ready) return;
   const service = await mission();
@@ -242,6 +259,58 @@ test('the complete service requires its report, retains proof and closes only af
   await coordinateMission(service.id);
   expect((await service.reload()).missionStatus).toBe('CLOSED');
   expect((await db.MissionCoordination.findOne({ where: { serviceId: service.id } })).state).toBe('closed');
+});
+
+test('a provider mission assigned manually (no automatic dispatch) still requires a completion report', async () => {
+  if (!ready) return;
+  // Filière distincte, sans coordination.enabled : reproduit le cas courant d'une
+  // affectation manuelle par un admin via /assign, sans jamais passer par
+  // coordinateMission/initialize (donc sans ligne MissionCoordination).
+  const stamp = `COORD-MANUAL-${Date.now()}`;
+  const manualCategory = await db.TradeCategory.create({ name: 'Intervention manuelle', slug: stamp.toLowerCase(), countryId: country.id });
+  const manualDefinition = await db.ServiceDefinition.create({ code: stamp, name: 'Intervention manuelle', executionProfile: 'provider', legacyTradeCategoryId: manualCategory.id });
+  const manualOffering = await db.ServiceAvailability.create({ serviceDefinitionId: manualDefinition.id, territoryId: territory.id, organizationId: organization.id,
+    currency: 'GHS', slaMinutes: 60, providerRules: { serviceOutcome: 'Compte rendu remis au client' } });
+  const manualAccount = await user('provider', country.id);
+  const manualProvider = await db.Provider.create({ userId: manualAccount.id, type: 'independent', displayFirstName: 'Exécutant manuel', phoneNumber: '+233000000099', countryCode: country.isoCode,
+    status: 'active', availabilityStatus: 'available', completedMissionsCount: 0 });
+  await manualProvider.addTradeCategories([manualCategory]);
+  try {
+    const service = await db.Service.create({ clientId: client.id, countryId: country.id, type: 'other', title: 'Intervention manuelle', executionType: 'provider', tradeCategoryId: manualCategory.id, missionStatus: 'CREATED', currency: 'GHS' });
+    services.push(service.id);
+    const assignResult = await request(app).post(`/api/v1/missions/${service.id}/assign`).set('Authorization', `Bearer ${ownerToken}`).send({ providerId: manualProvider.id });
+    expect(assignResult.status).toBe(200);
+    expect((await service.reload()).missionStatus).toBe('ASSIGNED');
+    expect(await db.MissionCoordination.findOne({ where: { serviceId: service.id } })).toBeNull();
+
+    const providerToken = await login(manualAccount);
+    const transition = (toStatus) => request(app).patch(`/api/v1/missions/${service.id}/status`).set('Authorization', `Bearer ${providerToken}`).send({ toStatus });
+    for (const toStatus of ['EN_ROUTE', 'ON_SITE', 'IN_PROGRESS']) expect((await transition(toStatus)).status).toBe(200);
+
+    // Avant le correctif, completionReportRequired dépendait de l'affectation
+    // automatique (désactivée ici) et cette clôture aurait été acceptée à 200
+    // sans aucun compte rendu ni justificatif.
+    expect((await transition('COMPLETED')).status).toBe(400);
+
+    const enabled = jest.spyOn(media, 'isImageKitEnabled').mockReturnValue(false);
+    const storage = jest.spyOn(media, 'saveFileLocally').mockResolvedValue({ url: '/uploads/mission-completions/manuel.pdf', fileId: null });
+    try {
+      const report = await request(app).post(`/api/v1/missions/${service.id}/completion-report`).set('Authorization', `Bearer ${providerToken}`)
+        .field('summary', 'Intervention réalisée et compte rendu remis au bénéficiaire.').field('requestKey', `manual-report-${Date.now()}`)
+        .attach('files', Buffer.from('%PDF-1.4 test'), { filename: 'rapport.pdf', contentType: 'application/pdf' });
+      expect(report.status).toBe(200);
+    } finally { enabled.mockRestore(); storage.mockRestore(); }
+
+    expect((await transition('COMPLETED')).status).toBe(200);
+  } finally {
+    await db.ProviderTradeCategory.destroy({ where: { providerId: manualProvider.id } });
+    await db.Provider.destroy({ where: { id: manualProvider.id } });
+    await db.RefreshToken.destroy({ where: { userId: manualAccount.id } });
+    await db.User.destroy({ where: { id: manualAccount.id } });
+    await manualOffering.destroy();
+    await manualDefinition.destroy();
+    await manualCategory.destroy();
+  }
 });
 
 test('two simultaneous requests cannot reserve the same available executor', async () => {

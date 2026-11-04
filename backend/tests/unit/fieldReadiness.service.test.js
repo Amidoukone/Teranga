@@ -4,9 +4,9 @@ jest.mock('../../src/services/localCatalog.service', () => ({ activeOfferingWher
 jest.mock('../../src/services/mobilityCompliance.service', () => ({ toComplianceSummary: jest.fn() }));
 jest.mock('../../src/services/providerPresence.service', () => ({ isLocationFresh: jest.fn() }));
 jest.mock('../../src/services/missionStatus.service', () => ({ ACTIVE_STATUSES: ['ASSIGNED', 'IN_PROGRESS'] }));
-jest.mock('../../src/services/agentCapacity.service', () => ({ agentLoad: jest.fn() }));
+jest.mock('../../src/services/agentCapacity.service', () => ({ agentLoadBatch: jest.fn() }));
 const { loadFieldReadiness } = require('../../src/services/fieldReadiness.service');
-const { agentLoad } = require('../../src/services/agentCapacity.service');
+const { agentLoadBatch } = require('../../src/services/agentCapacity.service');
 const { toComplianceSummary } = require('../../src/services/mobilityCompliance.service');
 const { isLocationFresh } = require('../../src/services/providerPresence.service');
 let db, offer, provider, previousRoot;
@@ -25,7 +25,7 @@ beforeEach(() => {
     sequelize: { getQueryInterface: () => ({ describeTable: async () => schema }) },
     ServiceAvailability: { findAll: jest.fn(async () => [offer]) }, Provider: { findAll: jest.fn(async () => [provider]) }, Service: { findAll: jest.fn(async () => []) },
   };
-  agentLoad.mockResolvedValue(0);
+  agentLoadBatch.mockImplementation(async (ids) => new Map(ids.map((id) => [String(id), 0])));
   toComplianceSummary.mockReturnValue({ driverEligible: true, hasEligibleVehicle: true, vehicles: [{ id: 7, eligible: true }] });
   isLocationFresh.mockReturnValue(true);
 });
@@ -48,7 +48,7 @@ test.each(['offline', 'occupied', 'staleLocation', 'vehicleRejected'])('automati
 });
 test('an available agent with no free capacity cannot make automatic intake ready', async () => {
   offer.definition = { executionProfile: 'agent', name: 'Course' };
-  agentLoad.mockResolvedValue(1);
+  agentLoadBatch.mockImplementation(async (ids) => new Map(ids.map((id) => [String(id), 1])));
   const result = await check();
   expect(result.automation.availableAgents).toBe(0);
   expect(result.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'AGENT_AVAILABILITY_MISSING' })]));

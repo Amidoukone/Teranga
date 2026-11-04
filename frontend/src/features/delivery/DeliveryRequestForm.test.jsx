@@ -10,6 +10,7 @@ import {
 } from "../../services/missionRequests";
 import { getMasterCountries } from "../../services/franchises";
 import { getLocalUser, me, persistSession } from "../../services/auth";
+import { createMission } from '../../services/missions';
 
 jest.mock(
   "react-router-dom",
@@ -134,5 +135,22 @@ describe("DeliveryRequestForm", () => {
       "href",
       "/livraisons/85"
     );
+  });
+
+  test('the selected destination country reaches the API when it differs from the signed-in account', async () => {
+    const client = { id: 7, role: 'client', countryId: 1 };
+    getLocalUser.mockReturnValue(client); me.mockResolvedValue({ user: client });
+    getMasterCountries.mockResolvedValue([{ id: 1, name: 'Mali' }, { id: 2, name: 'Côte d’Ivoire' }]);
+    createMission.mockResolvedValue({ mission: { id: 86 } });
+    render(<DeliveryRequestForm preferredCountryId="2" />);
+    await screen.findByPlaceholderText('Adresse de retrait');
+    await waitFor(() => expect(getTradeCategories).toHaveBeenCalledWith({ countryId: 2 }));
+    await userEvent.type(screen.getByPlaceholderText('Adresse de retrait'), 'Sogoniko');
+    await userEvent.type(screen.getByPlaceholderText('Adresse de livraison'), 'Hamdallaye');
+    await userEvent.click(screen.getByRole('button', { name: 'Voir le prix de la livraison' }));
+    await screen.findByText('Prix estimé');
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmer la livraison' }));
+    await waitFor(() => expect(createMission).toHaveBeenCalledWith(expect.objectContaining({ countryId: 2 })));
+    expect(submitMissionRequest).not.toHaveBeenCalled();
   });
 });

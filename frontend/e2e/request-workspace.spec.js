@@ -11,7 +11,7 @@ for (const width of [360, 1440]) {
       { id: 9001, title: 'Compte rendu administratif', status: 'completed', completion },
       { id: 9002, title: 'Demande archivée', status: 'validated' },
     ];
-    const ctx = await installApiMocks(page, { state: { services } });
+    const ctx = await installApiMocks(page, { state: { services, orders: [] } });
     await seedAuthenticatedSession(page, ctx.user, ctx.token);
     await page.addInitScript(() => { localStorage.setItem('teranga_lang', 'fr'); localStorage.setItem('i18nextLng', 'fr'); localStorage.setItem('teranga_analytics_consent', 'denied'); });
     await page.route('**/api/**', async (route) => {

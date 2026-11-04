@@ -32,6 +32,7 @@
     "e2e:auth:headed": "playwright test e2e/auth-feedback.spec.js --project=chromium --headed",
     "e2e:headed": "playwright test --project=chromium --headed",
     "e2e:integration": "playwright test --config=playwright.integration.config.js",
+    "e2e:recette": "playwright test --config=playwright.recette.config.js",
     "e2e:integration:auth": "playwright test e2e-integration/auth.real.spec.js --config=playwright.integration.config.js",
     "e2e:integration:headed": "playwright test --config=playwright.integration.config.js --project=chromium --headed",
     "e2e:ui": "playwright test --ui",

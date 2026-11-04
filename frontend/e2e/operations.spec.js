@@ -77,7 +77,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       return route.fallback();
     });
     await page.goto('/admin/operations');
-    await expect(page.getByRole('heading', { name: /Centre des opérations|Operations centre/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Pilotage|Operations overview/i })).toBeVisible();
     await page.getByLabel(/Type de demande|Request type/i).selectOption('service');
     await page.getByText('Préparation du territoire', { exact: true }).click();
     await expect(page.getByText('Assistance locale à renseigner')).toBeVisible();

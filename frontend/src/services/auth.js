@@ -532,7 +532,11 @@ export async function me(options = {}) {
           return { user: cached, offline: true };
         }
         console.warn('AuthService /auth/me backend connection warning:', error?.message || error);
-        return { user: null };
+        // Panne réseau sans cache disponible : on ne sait pas si la session est
+        // valide ou non. Ne jamais renvoyer la même forme qu'une déconnexion
+        // confirmée, sous peine d'éjecter un utilisateur dont la session est
+        // pourtant toujours valide côté serveur.
+        return { user: null, offline: true };
       }
 
       console.warn('AuthService /auth/me warning:', {
@@ -547,7 +551,8 @@ export async function me(options = {}) {
         return { user: cached, offline: true };
       }
 
-      return { user: null };
+      // Erreur serveur (4xx hors 401 / 5xx) sans cache : pas une déconnexion confirmée.
+      return { user: null, offline: true };
     }
   }
 
@@ -613,7 +618,11 @@ export async function me(options = {}) {
           return { user: cached, offline: true };
         }
         console.warn('AuthService /auth/me backend connection warning:', error?.message || error);
-        return { user: null };
+        // Panne réseau sans cache disponible : on ne sait pas si la session est
+        // valide ou non. Ne jamais renvoyer la même forme qu'une déconnexion
+        // confirmée, sous peine d'éjecter un utilisateur dont la session est
+        // pourtant toujours valide côté serveur.
+        return { user: null, offline: true };
       }
 
       console.warn('AuthService /auth/me without token warning:', {
@@ -630,7 +639,9 @@ export async function me(options = {}) {
     } else {
       console.warn('AuthService missing token warning:', 'localStorage token not found');
     }
-    return { user: null };
+    // Erreur serveur (4xx hors 401 / 5xx) : pas une déconnexion confirmée,
+    // même quand aucun cache n'était disponible pour amortir l'incertitude.
+    return { user: null, offline: true };
   }
 
 
@@ -690,7 +701,8 @@ export async function me(options = {}) {
         return { user: cached, offline: true };
       }
       console.warn('AuthService /auth/me backend connection warning:', error?.message || error);
-      return { user: null };
+      // Panne réseau sans cache disponible : ambigu, jamais une déconnexion confirmée.
+      return { user: null, offline: true };
     }
 
     // Autres erreurs (4xx, 5xx) — on journalise, on ne casse pas
@@ -707,7 +719,8 @@ export async function me(options = {}) {
         return { user: cached, offline: true };
       }
 
-    return { user: null };
+    // Erreur serveur (4xx hors 401 / 5xx) sans cache : pas une déconnexion confirmée.
+    return { user: null, offline: true };
   }
   })();
 

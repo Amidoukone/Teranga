@@ -64,7 +64,19 @@ async function upsertProviderLiveLocation({
     await existing.update(values, { transaction });
     return existing;
   }
-  return ProviderLiveLocation.create(values, { transaction });
+  try {
+    return await ProviderLiveLocation.create(values, { transaction });
+  } catch (error) {
+    // Deux pings GPS quasi simultanés pour le même prestataire peuvent tous les deux
+    // passer le findOne ci-dessus avant qu'aucune ligne n'existe : la contrainte unique
+    // sur provider_id rejette alors le second INSERT. On bascule sur la ligne déjà créée
+    // par le concurrent plutôt que de laisser l'erreur remonter en 500.
+    if (error.name !== 'SequelizeUniqueConstraintError') throw error;
+    const recovered = await ProviderLiveLocation.findOne({ where: { providerId }, transaction });
+    if (!recovered) throw error;
+    await recovered.update(values, { transaction });
+    return recovered;
+  }
 }
 
 module.exports = {

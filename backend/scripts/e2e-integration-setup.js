@@ -378,11 +378,13 @@ async function main() {
   const region = await ensureRegion(country.id);
   await ensureMasterFranchise(country.id);
   const mobilityCategory = await ensureMobilityPricing(country.id);
+  const [deliveryCategory] = await TradeCategory.findOrCreate({ where: { slug: 'livraison' }, defaults: { name: 'Livraison', isActive: true } });
   const [territory] = await db.Territory.findOrCreate({ where: { code: 'ML-E2E' }, defaults: { code: 'ML-E2E', name: 'Mali E2E', type: 'COUNTRY', countryId: country.id, isActive: true } });
   const [organization] = await db.Organization.findOrCreate({ where: { code: 'ML-E2E' }, defaults: { code: 'ML-E2E', type: 'MASTER', legalName: 'Opérateur E2E', countryId: country.id, status: 'active' } });
   for (const [code, executionProfile, mapping] of [
     ['OTHER-E2E', 'agent', { legacyServiceType: 'other' }],
     ['MOBILITY-E2E', 'mobility', { legacyTradeCategoryId: mobilityCategory.id }],
+    ['DELIVERY-E2E', 'provider', { legacyTradeCategoryId: deliveryCategory.id }],
   ]) {
     const [definition] = await db.ServiceDefinition.findOrCreate({ where: { code }, defaults: { code, name: code, executionProfile, ...mapping } });
     await db.ServiceAvailability.findOrCreate({ where: { serviceDefinitionId: definition.id, territoryId: territory.id, organizationId: organization.id }, defaults: { currency: 'XOF', slaMinutes: 60, providerRules: { serviceOutcome: 'Prestation vérifiable remise au client.', requiredEvidenceTypes: executionProfile === 'agent' ? ['photo'] : [], coordination: { enabled: true } } } });
@@ -408,6 +410,19 @@ async function main() {
     countryIso: FIXTURE.countryIso,
   });
   const agent = await ensureUser({ email: 'e2e.real.agent@example.com', firstName: 'Ete', lastName: 'Agent', role: 'agent', countryId: country.id, regionId: region.id, countryIso: country.isoCode });
+  const providerUser = await ensureUser({ email: 'e2e.real.provider@example.com', firstName: 'Awa', lastName: 'Prestataire', role: 'provider', countryId: country.id, regionId: region.id, countryIso: country.isoCode });
+  const [providerCategory] = await TradeCategory.findOrCreate({ where: { slug: 'plomberie-e2e' }, defaults: { name: 'Plomberie E2E', isActive: true } });
+  const [provider] = await db.Provider.findOrCreate({ where: { userId: providerUser.id }, defaults: { type: 'independent', displayFirstName: 'Awa E2E', phoneNumber: '+22370000002', countryCode: country.isoCode, status: 'active', availabilityStatus: 'offline' } });
+  await db.ProviderTradeCategory.findOrCreate({ where: { providerId: provider.id, tradeCategoryId: providerCategory.id } });
+  const [providerDefinition] = await db.ServiceDefinition.findOrCreate({ where: { code: 'PLUMBING-E2E' }, defaults: { code: 'PLUMBING-E2E', name: 'Plomberie E2E', executionProfile: 'provider', legacyTradeCategoryId: providerCategory.id } });
+  await db.ServiceAvailability.findOrCreate({ where: { serviceDefinitionId: providerDefinition.id, territoryId: territory.id, organizationId: organization.id }, defaults: { currency: 'XOF', slaMinutes: 60, providerRules: { serviceOutcome: 'Réparation réalisée et vérifiée avec photographie.', requiredEvidenceTypes: ['photo'], coordination: { enabled: true } } } });
+
+  // A dedicated transport account exercises the real assignment, PIN and delivery flows.
+  const driverUser = await ensureUser({ email: 'e2e.real.transport@example.com', firstName: 'Moussa', lastName: 'Transport', role: 'provider', countryId: country.id, regionId: region.id, countryIso: country.isoCode });
+  const [driver] = await db.Provider.findOrCreate({ where: { userId: driverUser.id }, defaults: { type: 'independent', displayFirstName: 'Moussa Transport E2E', phoneNumber: '+22370000003', countryCode: country.isoCode, status: 'active', availabilityStatus: 'offline' } });
+  await driver.update({ status: 'active', availabilityStatus: 'offline', profilePhotoUrl: '/logo192.png', driverLicenseNumber: 'E2E-LICENSE', driverLicenseDocumentUrl: 'https://example.test/e2e-license.pdf', driverLicenseVerified: true, driverLicenseExpiresAt: '2035-12-31', identityDocumentUrl: 'https://example.test/e2e-identity.pdf', identityDocumentVerified: true });
+  for (const category of [mobilityCategory, deliveryCategory]) await db.ProviderTradeCategory.findOrCreate({ where: { providerId: driver.id, tradeCategoryId: category.id } });
+  await db.Vehicle.findOrCreate({ where: { providerId: driver.id, plateNumber: 'E2E-TRANSPORT' }, defaults: { vehicleType: 'car', brand: 'Toyota', model: 'E2E', color: 'Blanc', capacity: 4, status: 'active' } });
 
   const service = await ensureService(client, country.id, region.id);
   await service.update({ agentId: agent.id });

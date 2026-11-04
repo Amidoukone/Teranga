@@ -397,6 +397,23 @@ async function deleteImageKitFiles(photoObjects = []) {
 /* ============================================================
    LIST all (client/admin/agent) + scope
 ============================================================ */
+exports.detail = async (req, res) => {
+  try {
+    if (!/^[1-9][0-9]*$/.test(String(req.params.id || ''))) return res.status(400).json({ error: 'Identifiant de bien invalide' });
+    const property = await Property.findByPk(req.params.id, { include: [{ model: User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email', 'country'] }] });
+    if (!property) return res.status(404).json({ error: 'Bien introuvable' });
+    const isOwningClient = req.user.role === 'client' && String(property.ownerId) === String(req.user.id);
+    if (req.user.role === 'client' && !isOwningClient) return res.status(403).json({ error: 'Non autorisé' });
+    // Le propriétaire reste maître de son bien même si son compte n'a pas de
+    // pays/région renseigné (ex: diaspora) : la propriété prime sur le scope géo.
+    if (!isOwningClient && !isGlobalAdmin(req.user) && !canAccessByGeoScope(req.user, property)) return res.status(403).json({ error: 'Bien hors scope géographique' });
+    return res.json({ property: addLabels(property) });
+  } catch (error) {
+    logger.error({ err: error }, 'property.detail.failed');
+    return res.status(500).json({ error: 'Impossible de consulter le bien' });
+  }
+};
+
 exports.list = async (req, res) => {
   try {
     const { limit, offset, page } = getPagination(req);
@@ -406,6 +423,9 @@ exports.list = async (req, res) => {
 
     const where = {};
     const whereAnd = [];
+    for (const field of ['type', 'status', 'city']) {
+      if (req.query[field]) where[field] = String(req.query[field]).trim();
+    }
 
     // 🔎 Recherche texte
     if (q) {
@@ -644,9 +664,11 @@ exports.create = async (req, res) => {
         finalCountryId = scope.countryId ?? fallbackCountryId ?? null;
 
         if (fallbackRegionId && String(fallbackRegionId) !== String(scope.regionId)) {
+          await deleteImageKitFiles(photos);
           return res.status(403).json({ error: 'regionId hors scope' });
         }
         if (scope.countryId && fallbackCountryId && String(fallbackCountryId) !== String(scope.countryId)) {
+          await deleteImageKitFiles(photos);
           return res.status(403).json({ error: 'countryId hors scope' });
         }
       } else if (scope.countryId) {
@@ -654,6 +676,7 @@ exports.create = async (req, res) => {
         finalRegionId = fallbackRegionId ?? null;
 
         if (fallbackCountryId && String(fallbackCountryId) !== String(scope.countryId)) {
+          await deleteImageKitFiles(photos);
           return res.status(403).json({ error: 'countryId hors scope' });
         }
       } else {
@@ -669,6 +692,7 @@ exports.create = async (req, res) => {
     if (!isGlobalAdmin(req.user)) {
       const targetScope = { countryId: finalCountryId, regionId: finalRegionId };
       if (!canAccessByGeoScope(req.user, targetScope)) {
+        await deleteImageKitFiles(photos);
         return res.status(403).json({ error: 'countryId/regionId hors scope' });
       }
     }
@@ -746,8 +770,9 @@ exports.update = async (req, res) => {
       return res.status(403).json({ error: 'Non autorisé' });
     }
 
-    // GeoScope ACL (strict)
-    if (!isGlobalAdmin(req.user)) {
+    // GeoScope ACL (strict) — le propriétaire reste maître de son bien même
+    // sans pays/région renseigné sur son compte (ex: diaspora).
+    if (!isOwner && !isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, p)) {
         return res.status(403).json({ error: 'Bien hors scope géographique' });
       }
@@ -961,8 +986,9 @@ exports.remove = async (req, res) => {
       return res.status(403).json({ error: 'Non autorisé' });
     }
 
-    // Strict GeoScope
-    if (!isGlobalAdmin(req.user)) {
+    // Strict GeoScope — le propriétaire reste maître de son bien même sans
+    // pays/région renseigné sur son compte (ex: diaspora).
+    if (!isOwner && !isGlobalAdmin(req.user)) {
       if (!canAccessByGeoScope(req.user, p)) {
         return res.status(403).json({ error: 'Bien hors scope géographique' });
       }

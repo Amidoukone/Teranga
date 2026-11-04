@@ -1147,7 +1147,7 @@ export default function AdminPropertiesPage() {
 
                       {/* Actions */}
                       <div className="mt-4 flex flex-wrap justify-end gap-2">
-                        <Link to={`/tasks?propertyId=${p.id}`} className="app-btn-neutral inline-flex min-h-11 items-center rounded-full px-3 py-2 text-xs">{t('nav.propertyInterventions')}</Link>
+                        <Link to={`/properties/${p.id}`} state={{ from: '/admin/properties' }} className="app-btn-primary inline-flex min-h-11 items-center rounded-full px-3 py-2 text-xs">{t('propertySimple.open')}</Link>
                         <button
                           onClick={() => startEdit(p)}
                           className="app-btn-warning inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-full"

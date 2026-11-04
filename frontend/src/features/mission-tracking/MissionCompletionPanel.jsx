@@ -39,7 +39,10 @@ export default function MissionCompletionPanel({ missionId, completion, canSubmi
     finally { inFlight.current = false; setSaving(false); }
   }
   if (!completion) return null;
-  return <section id="completion-report" tabIndex={-1} className="my-5 scroll-mt-24 space-y-3 rounded-2xl border border-border bg-surface-card p-4" aria-label={t('completion.title')}>
+  if (!completion.required && !completion.report && !canSubmit) return null;
+  const Container = !completion.required && canSubmit ? 'details' : 'section';
+  return <Container id="completion-report" tabIndex={-1} className="my-5 scroll-mt-24 space-y-3 rounded-2xl border border-border bg-surface-card p-4" aria-label={t('completion.title')}>
+    {Container === 'details' && <summary className="cursor-pointer text-sm font-semibold">{t('transportWorkspace.optionalReport')}</summary>}
     <h2 className="font-semibold">{t('completion.title')}</h2>
     {completion.expectedOutcome && <p className="text-sm">{completion.expectedOutcome}</p>}
     {completion.requiredEvidenceTypes?.length > 0 && <p className="text-sm">{t('completion.requiredFiles')}: {completion.requiredEvidenceTypes.map((value) => t(`operations.evidence.${value}`)).join(', ')}</p>}
@@ -60,5 +63,5 @@ export default function MissionCompletionPanel({ missionId, completion, canSubmi
       </fieldset>
       {error && <p role="alert">{error}</p>}{saved && <p role="status">{t('completion.saved')}</p>}
     </form>}
-  </section>;
+  </Container>;
 }

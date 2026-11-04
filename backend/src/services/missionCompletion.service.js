@@ -1,6 +1,7 @@
 'use strict';
 const { Op } = require('sequelize');
 const db = require('../../models');
+const { initialMissionPolicy } = require('./missionCoordination.service');
 async function getCompletionState(service, { transaction } = {}) {
   if (!db.MissionCoordination) return null;
   let operation;
@@ -9,7 +10,12 @@ async function getCompletionState(service, { transaction } = {}) {
     if (error.original?.code === 'ER_NO_SUCH_TABLE' || error.parent?.code === 'ER_NO_SUCH_TABLE') return null;
     throw error;
   }
-  if (!operation) return null;
+  if (!operation) {
+    if (service.executionType !== 'provider' || !service.tradeCategoryId || !service.countryId || service.parentServiceId) return null;
+    // Manual transport assignment can precede the scheduler. Read the same catalogue
+    // policy without creating coordination state or allowing completion to bypass it.
+    operation = { policy: await initialMissionPolicy(service, transaction), completionReport: null };
+  }
   const stored = operation.completionReport;
   const provider = stored && service.executionType === 'provider' && service.providerId ? await db.Provider.findByPk(service.providerId, { attributes: ['userId'], transaction }) : null;
   const reporterId = service.executionType === 'provider' ? provider?.userId : service.agentId;

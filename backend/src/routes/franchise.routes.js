@@ -24,6 +24,12 @@ const NON_REGRESSIVE_VALIDATION_OPTIONS = {
  * - GET  /franchises : liste (admin)
  * - POST /franchises : création (admin)
  * - PUT  /franchises/:id : update (admin)
+ *
+ * Volontairement pas de DELETE : une franchise porte une relation
+ * contractuelle/légale réelle. Elle se désactive via
+ * PUT /franchises/:id { status: 'inactive' } (modèle Franchise.status,
+ * voir franchise.controller.js update), jamais par suppression définitive —
+ * contrairement à country/region qui restent des ressources administratives.
  * ============================================================
  */
 

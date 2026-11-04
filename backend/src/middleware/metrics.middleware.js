@@ -1,6 +1,19 @@
 'use strict';
 
+const crypto = require('crypto');
 const logger = require('../utils/logger');
+
+function timingSafeEqualStrings(a, b) {
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  if (bufA.length !== bufB.length) {
+    // Comparaison factice de même durée que la vraie comparaison, pour ne pas distinguer
+    // "longueur différente" de "longueur identique mais contenu différent" par le timing.
+    crypto.timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 const MAX_RECENT_ERRORS = 20;
 const MAX_SLOW_REQUESTS = 20;
@@ -449,7 +462,7 @@ function metricsHandler(req, res) {
   }
   if (!isAdminRequest && token) {
     const headerToken = req.headers['x-metrics-token'];
-    if (!headerToken || headerToken !== token) {
+    if (!headerToken || !timingSafeEqualStrings(headerToken, token)) {
       return res.status(403).json({ error: 'Accès interdit' });
     }
   }

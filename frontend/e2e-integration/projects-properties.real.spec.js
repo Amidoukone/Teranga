@@ -1,0 +1,95 @@
+const { test, expect } = require('@playwright/test');
+const { API_BASE_URL, blockExternalTracking, loginAsSeededClient, loginAsSeededAdmin, loginAsSeededAgent, seedAuthenticatedSession } = require('./support/realApi');
+const headers = session => ({ Authorization: `Bearer ${session.token}` });
+async function open(page, session, path) { await blockExternalTracking(page); await seedAuthenticatedSession(page, session.user, session.token); await page.goto(path); }
+
+test('real project creation and editing keep the budget, currency and progress in one dossier', async ({ page, request }) => {
+  const client = await loginAsSeededClient(request);
+  await page.setViewportSize({ width: 360, height: 900 }); await open(page, client, '/projects');
+  await page.getByRole('button', { name: 'Nouveau projet', exact: true }).click();
+  const form = page.getByRole('form', { name: 'Nouveau projet', exact: true });
+  const title = `Projet simplifié ${Date.now()}`;
+  await form.getByLabel('Titre', { exact: true }).fill(title);
+  await form.getByText('Budget et informations complémentaires', { exact: true }).click();
+  await form.getByLabel('Budget prévu (facultatif)', { exact: true }).fill('1250,50');
+  await form.getByRole('combobox', { name: 'Devise', exact: true }).selectOption('GHS');
+  const creating = page.waitForResponse(response => response.url().endsWith('/projects') && response.request().method() === 'POST');
+  await form.getByRole('button', { name: 'Créer le projet', exact: true }).click();
+  const created = await creating; expect(created.status(), await created.text()).toBe(201); const project = (await created.json()).project;
+  expect(project.currency).toBe('GHS'); expect(Number(project.budget)).toBe(1250.5);
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}$`));
+  await page.locator('#dossier-details > summary').click(); await page.getByRole('button', { name: 'Modifier le projet', exact: true }).click();
+  const edit = page.getByRole('form', { name: 'Modifier le projet', exact: true });
+  await edit.getByLabel('Titre', { exact: true }).fill(`${title} confirmé`);
+  const editing = page.waitForResponse(response => response.url().endsWith(`/projects/${project.id}`) && response.request().method() === 'PUT');
+  await edit.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+  const changed = await editing; expect(changed.status(), await changed.text()).toBe(200);
+  expect(changed.request().postDataJSON()).not.toHaveProperty('status');
+  await expect(page.getByRole('heading', { name: `${title} confirmé`, exact: true })).toBeVisible();
+  const current = (await (await request.get(`${API_BASE_URL}/projects/${project.id}`, { headers: headers(client) })).json()).project;
+  expect(current.status).toBe(project.status); expect(current.currency).toBe('GHS'); expect(Number(current.budget)).toBe(1250.5);
+  expect(current.latitude).toBe(null); expect(current.longitude).toBe(null);
+  await page.getByRole('link', { name: 'Montants et paiements', exact: true }).click();
+  await expect(page.locator('#dossier-finance').getByRole('button', { name: 'Actualiser', exact: true })).toBeVisible();
+  await expect(page.locator('#dossier-finance').getByRole('button', { name: 'Ajouter un paiement ou une dépense', exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
+});
+
+test('real manager assigns a coordinated project from the dossier through the coordination contract', async ({ page, request }) => {
+  const client = await loginAsSeededClient(request), admin = await loginAsSeededAdmin(request), agent = await loginAsSeededAgent(request);
+  const capacity = await request.patch(`${API_BASE_URL}/v1/operations/agent/capacity`, { headers: headers(agent), data: { available: true, maxConcurrent: 10 } });
+  expect(capacity.status(), await capacity.text()).toBe(200);
+  const created = await request.post(`${API_BASE_URL}/projects`, { headers: headers(client), data: { title: `Projet à affecter ${Date.now()}`, type: 'autre' } });
+  expect(created.status()).toBe(201); const project = (await created.json()).project;
+  const progress = `${API_BASE_URL}/v1/operations/work/project/${project.id}`;
+  const owned = await request.patch(progress, { headers: headers(admin), data: { ownerUserId: admin.user.id, mode: 'manual' } }); expect(owned.status(), await owned.text()).toBe(200);
+  await open(page, admin, `/projects/${project.id}`);
+  await page.locator('#dossier-details > summary').click(); await page.getByRole('button', { name: 'Modifier le projet', exact: true }).click();
+  const form = page.getByRole('form', { name: 'Modifier le projet', exact: true });
+  await form.getByText('Budget et informations complémentaires', { exact: true }).click();
+  await form.getByRole('combobox', { name: 'Agent (optionnel)', exact: true }).selectOption(String(agent.user.id));
+  const assigning = page.waitForResponse(response => response.url() === progress && response.request().method() === 'PATCH');
+  await form.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+  const assigned = await assigning; expect(assigned.status(), await assigned.text()).toBe(200);
+  await expect(form).toHaveCount(0);
+  const current = (await (await request.get(`${API_BASE_URL}/projects/${project.id}`, { headers: headers(admin) })).json()).project;
+  expect(current.status).toBe(project.status); expect(current.agentId).toBe(agent.user.id); expect(current.coordination.executorUserId).toBe(agent.user.id);
+});
+
+test('real property opens a linked document intervention and retains its authorized history', async ({ page, request }, testInfo) => {
+  const client = await loginAsSeededClient(request);
+  const title = `Maison du parcours ${Date.now()}`;
+  await page.setViewportSize({ width: 360, height: 900 }); await open(page, client, '/properties');
+  await page.getByRole('button', { name: 'Ajouter un bien', exact: true }).click();
+  const propertyForm = page.getByRole('form', { name: 'Ajouter un bien', exact: true });
+  await propertyForm.getByLabel('Titre du bien', { exact: true }).fill(title);
+  await propertyForm.getByLabel('Adresse', { exact: true }).fill('Adresse de recette');
+  await propertyForm.getByLabel('Ville', { exact: true }).fill('Bamako');
+  await propertyForm.getByLabel('Photos et documents', { exact: true }).setInputFiles({ name: 'document-bien.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF') });
+  const creatingProperty = page.waitForResponse(response => response.url().endsWith('/properties') && response.request().method() === 'POST');
+  await propertyForm.getByRole('button', { name: 'Enregistrer le bien', exact: true }).click();
+  const created = await creatingProperty;
+  expect(created.status()).toBe(201); const property = (await created.json()).property;
+  expect(property.photos).toHaveLength(1);
+  await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Document 1', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Demander une intervention', exact: true }).click();
+  await page.getByRole('button', { name: 'Autre service', exact: true }).click(); await page.getByRole('button', { name: 'Suivant', exact: true }).click();
+  await expect(page.locator('#mission-address')).toHaveValue('Adresse de recette, Bamako');
+  // This document review needs no physical destination. Geocoding is tested separately.
+  await page.locator('#mission-address').fill('');
+  const need = `Vérifier les documents ${property.id}`;
+  await page.getByLabel('Votre besoin en une phrase').fill(need);
+  await page.getByRole('button', { name: 'Suivant', exact: true }).click();
+  const creating = page.waitForResponse(response => response.url().endsWith('/v1/missions') && response.request().method() === 'POST');
+  await page.getByRole('button', { name: 'Envoyer ma demande', exact: true }).click();
+  const accepted = await creating; expect(accepted.status(), await accepted.text()).toBe(201);
+  const service = (await accepted.json()).mission; expect(service.propertyId).toBe(property.id);
+  await page.getByRole('link', { name: 'Suivre ma demande', exact: true }).click();
+    await expect(page.getByRole('heading', { name: need, exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Retour au bien', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/properties/${property.id}#property-requests$`));
+  await expect(page.locator('#property-requests').getByRole('article', { name: need, exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
+  await page.screenshot({ path: testInfo.outputPath('property-linked-request-real.png'), fullPage: true });
+});

@@ -7,6 +7,7 @@ import { getLocalUser } from '../../services/auth';
 import { getRequestDetailPath } from '../../utils/requestLifecycle';
 import { useLocale } from '../../i18n/useLocale';
 import PaginationBar from '../../components/PaginationBar';
+import CollectionFilters from '../../components/CollectionFilters';
 
 export function workspaceTarget(item, role, action = item.action) {
   if (action?.kind === 'task') return item.kind === 'service' ? `/services/${item.id}/tasks?etape=${action.id}#steps` : `/tasks/${action.id}`;
@@ -71,10 +72,7 @@ export default function WorkspaceQueue({ view, active = true, onSummary }) {
   },[load,active]);
   const from = location.pathname + location.search;
   return <section aria-label={t(`workspaceQueue.${view}`)} className="space-y-4">
-    <form onSubmit={(event)=>{event.preventDefault();update({q:query.trim(),page:1});}} className="grid gap-3 rounded-2xl border border-border bg-surface-card p-4 sm:grid-cols-[1fr_auto]">
-      <div><label htmlFor="workspace-query" className="text-sm">{t('workspaceQueue.search')}</label><div className="mt-1 flex gap-2"><input id="workspace-query" value={query} maxLength={100} onChange={(event)=>setQuery(event.target.value)} className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-surface-main px-3" /><button type="submit" className="btn-secondary min-h-11 rounded-xl px-3 text-sm">{t('workspaceQueue.find')}</button></div></div>
-      <label htmlFor="workspace-kind" className="text-sm">{t('workspaceQueue.kind')}<select id="workspace-kind" value={kind} onChange={(event)=>update({famille:event.target.value,page:1})} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface-main px-3"><option value="all">{t('workspaceQueue.all')}</option>{['service','project','order','task'].map((value)=><option key={value} value={value}>{t(`workspaceQueue.kinds.${value}`)}</option>)}</select></label>
-    </form>
+    <CollectionFilters id="workspace" query={query} onQueryChange={setQuery} onSubmit={() => update({q:query.trim(),page:1})} kind={kind} onKindChange={value => update({famille:value,page:1})} maxLength={100} searchLabel={t('workspaceQueue.search')} findLabel={t('workspaceQueue.find')} placeholder={t('roleViews.search')} kindLabel={t('workspaceQueue.kind')} options={['all','service','project','order','task'].map(value => ({value,label:t(value === 'all' ? 'roleViews.all' : `workspaceQueue.kinds.${value}`)}))} />
     <button type="button" onClick={load} disabled={loading} className="min-h-11 text-sm underline">{t('operations.refresh')}</button>
     {loading && <p role="status" className="text-sm">{t('workspaceQueue.loading')}</p>}
     {error && <p role="alert" className="app-alert app-alert-error">{error} <button type="button" disabled={loading} onClick={load} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
@@ -84,7 +82,7 @@ export default function WorkspaceQueue({ view, active = true, onSummary }) {
       const waiting = String(item.missionStatus || item.status).toUpperCase() === 'COMPLETED' ? (item.kind === 'task' ? 'waitingReview' : 'waitingClient') : item.openStepCount ? 'waitingSteps' : 'waitingTeam';
       return <article key={item.key} aria-labelledby={`workspace-${item.key}`} className={`space-y-3 rounded-2xl border bg-surface-card p-4 ${item.escalated ? 'border-amber-500/50' : 'border-border'}`}>
         <p className="text-xs text-text-secondary">{t(`workspaceQueue.kinds.${item.kind}`)} · #{item.id}</p>
-        <h2 id={`workspace-${item.key}`} className="break-words font-semibold"><Link to={workspaceTarget(item,user?.role,null)} state={{from}} className="underline">{item.title}</Link></h2>
+        <h2 id={`workspace-${item.key}`} className="break-words font-semibold">{workspaceTarget(item,user?.role,null) !== path ? <Link to={workspaceTarget(item,user?.role,null)} state={{from}} className="underline">{item.title}</Link> : item.title}</h2>
         {(item.executor || item.countryName || item.regionName) && <p className="text-sm text-text-secondary">{[item.countryName,item.regionName,item.executor].filter(Boolean).join(' · ')}</p>}
         <p className="text-sm">{t(item.action ? `workspaceQueue.reasons.${item.action.code}` : `workspaceQueue.${waiting}`)}</p>
         {item.openStepCount > 0 && <p className="text-xs text-text-secondary">{t(item.actionStepCount ? 'workspaceQueue.actionSteps' : 'workspaceQueue.steps',{count:item.actionStepCount || item.openStepCount})}</p>}

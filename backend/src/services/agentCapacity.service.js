@@ -16,6 +16,27 @@ async function agentLoad(userId, transaction) {
   return services.length + projects.length + orders.length;
 }
 
+// Version groupée de agentLoad pour éviter une requête (x3) par agent quand la charge de
+// plusieurs agents doit être évaluée en même temps (ex: audit de préparation territoriale).
+async function agentLoadBatch(userIds, transaction) {
+  const ids = [...new Set((userIds || []).map(String))].filter(Boolean);
+  const counts = new Map(ids.map((id) => [id, 0]));
+  if (!ids.length) return counts;
+  const options = { transaction, ...(transaction ? { lock: true } : {}) };
+  const [services, projects, orders] = await Promise.all([
+    db.Service.findAll({ ...options, attributes: ['agentId'], where: { agentId: { [Op.in]: ids }, executionType: 'agent', [Op.or]: [
+      { missionStatus: { [Op.in]: ['CREATED', 'SEARCHING_EXECUTOR', 'ASSIGNED', 'EN_ROUTE', 'ON_SITE', 'IN_PROGRESS', 'DISPUTED', 'RESOLVED_REDO'] } },
+      { missionStatus: null, status: { [Op.in]: ['created', 'in_progress'] } },
+    ] } }),
+    db.Project.findAll({ ...options, attributes: ['agentId'], where: { agentId: { [Op.in]: ids }, status: { [Op.in]: ['created', 'in_progress'] } } }),
+    db.WorkCoordination.findAll({ ...options, attributes: ['executorUserId'], where: { entityType: 'order', executorUserId: { [Op.in]: ids }, state: { [Op.ne]: 'closed' } } }),
+  ]);
+  for (const row of services) counts.set(String(row.agentId), (counts.get(String(row.agentId)) || 0) + 1);
+  for (const row of projects) counts.set(String(row.agentId), (counts.get(String(row.agentId)) || 0) + 1);
+  for (const row of orders) counts.set(String(row.executorUserId), (counts.get(String(row.executorUserId)) || 0) + 1);
+  return counts;
+}
+
 async function reserveAgent(resource, transaction, now = new Date(), { excludedAgentIds = [] } = {}) {
   const candidates = await db.AgentCapacity.findAll({ where: { available: true, availableUntil: { [Op.gt]: now }, ...(excludedAgentIds.length ? { userId: { [Op.notIn]: excludedAgentIds } } : {}) },
     include: [{ model: db.User, as: 'user', required: true, where: { role: 'agent', countryId: resource.countryId } }],
@@ -32,4 +53,4 @@ async function reserveAgent(resource, transaction, now = new Date(), { excludedA
   return null;
 }
 
-module.exports = { agentLoad, reserveAgent };
+module.exports = { agentLoad, agentLoadBatch, reserveAgent };

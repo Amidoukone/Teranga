@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Bike, CarFront, Check, Loader2, MapPin, PackageCheck, X } from 'lucide-react';
 import { me } from '../services/auth';
 import { normalizeRole } from '../utils/role';
-import { isRequestHistory } from '../utils/requestLifecycle';
+import { getRequestDetailPath, isRequestHistory } from '../utils/requestLifecycle';
 import { acceptMission, declineMission, getMyMissions } from '../services/missions';
 
 const DRIVER_RIDES_POLL_MS = (() => {
@@ -48,12 +48,6 @@ function statusBadgeClass(missionStatus) {
   }
 }
 
-function missionDetailPath(mission) {
-  if (mission?.tradeCategory?.slug === 'mobilite') return `/courses/${mission.id}`;
-  if (mission?.tradeCategory?.slug === 'livraison') return `/livraisons/${mission.id}`;
-  return `/missions/${mission.id}/track`;
-}
-
 export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = false, serviceOnly = false, workspace = false, user: verifiedUser }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -66,6 +60,9 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     : null;
 
   const [isAllowed, setIsAllowed] = useState(null);
+  const [accessError, setAccessError] = useState(false);
+  const [accessAttempt, setAccessAttempt] = useState(0);
+  const [actorRole, setActorRole] = useState(null);
   const [missions, setMissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -81,10 +78,19 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
 
     async function checkAccess() {
       try {
-        const user = verifiedUser || (await me()).user;
+        let user = verifiedUser;
+        let offline = false;
+        if (!user) {
+          const result = await me();
+          user = result.user;
+          offline = Boolean(result.offline);
+        }
         if (!active) return;
 
         if (!user) {
+          // Une panne réseau n'est pas une session absente : ne jamais éjecter
+          // vers /login un utilisateur dont la session reste valide côté serveur.
+          if (offline) { setAccessError(true); return; }
           navigate('/login');
           return;
         }
@@ -95,7 +101,8 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
           return;
         }
 
-        setIsAllowed(true);
+        setAccessError(false);
+        setActorRole(role); setIsAllowed(true);
 
       } catch (e) {
         navigate('/login');
@@ -106,7 +113,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     return () => {
       active = false;
     };
-  }, [navigate, verifiedUser]);
+  }, [navigate, verifiedUser, accessAttempt]);
 
   const loadMissions = useCallback(async ({ silent = false } = {}) => {
     const version = ++loadVersion.current;
@@ -150,7 +157,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     try {
       if (action === 'accept') {
         await acceptMission(missionId);
-        navigate(missionDetailPath(mission));
+        navigate(getRequestDetailPath(mission, undefined, actorRole));
         return;
       }
       await declineMission(missionId);
@@ -182,6 +189,19 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
     };
   }, [isAllowed, loadMissions, serviceOnly, transportOnly]);
 
+  if (accessError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-surface-main">
+        <div role="alert" className="text-center">
+          <p className="text-text-muted text-lg">{t('myMissionsPage.errors.load')}</p>
+          <button type="button" onClick={() => setAccessAttempt((value) => value + 1)} className="btn-secondary mt-3 min-h-11 rounded-xl px-4 text-sm">
+            {t('myMissionsPage.buttons.refresh')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (isAllowed === null) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-main">
@@ -191,13 +211,13 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
   }
 
   return (
-    <div className="app-page-wrap">
+    <div className="app-page-wrap role-workspace">
       <div className="app-page-shell max-w-4xl space-y-6">
-        <WorkspaceHeader title={workspace ? t('fieldWorkspace.title') : serviceOnly
+        <WorkspaceHeader title={actorRole === 'agent' ? t('roleViews.supervised') : workspace ? t('fieldWorkspace.title') : serviceOnly
                 ? t('serviceProvider.title')
                 : transportOnly
                 ? t(`${transportTranslationRoot}.driverTitle`)
-                : t('myMissionsPage.title')} hint={workspace ? t('workspace.fieldHint') : serviceOnly
+                : t('myMissionsPage.title')} hint={actorRole === 'agent' ? t('roleViews.supervisedHint') : workspace ? t('workspace.fieldHint') : serviceOnly
                 ? t('serviceProvider.subtitle')
                 : transportOnly
                 ? t(`${transportTranslationRoot}.driverSubtitle`)
@@ -223,7 +243,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
         ) : (
           <ul className="space-y-3">
             {missions.filter((mission) => showHistory ? isRequestHistory(mission) : !isRequestHistory(mission)).sort((a, b) => Number(Boolean(b.acceptanceDeadlineAt)) - Number(Boolean(a.acceptanceDeadlineAt)) || Number(a.missionStatus === 'COMPLETED') - Number(b.missionStatus === 'COMPLETED')).map((m, index, list) => {
-              const isOffer = Boolean(m.acceptanceDeadlineAt);
+              const isOffer = actorRole === 'provider' && Boolean(m.acceptanceDeadlineAt);
               const VehicleIcon = m.requestedVehicleType === 'car' ? CarFront : Bike;
               const missionTranslationRoot =
                 m.tradeCategory?.slug === 'mobilite'
@@ -235,7 +255,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
                 missionTranslationRoot || (serviceOnly ? 'serviceProvider' : 'myMissionsPage');
               return (
                 <li key={m.id} className="space-y-3">
-                  {!showHistory && (index === 0 || Boolean(list[index - 1].acceptanceDeadlineAt) !== isOffer) && <h2 className="pt-2 text-lg font-bold">{t(isOffer ? 'workspace.offers' : 'workspace.jobs')}</h2>}
+                  {!showHistory && (index === 0 || (actorRole === 'provider' && Boolean(list[index - 1].acceptanceDeadlineAt)) !== isOffer) && <h2 className="pt-2 text-lg font-bold">{t(isOffer ? 'workspace.offers' : 'workspace.jobs')}</h2>}
                   <article aria-labelledby={`mission-card-${m.id}`}
                   className={`rounded-3xl border p-4 transition-colors ${
                     isOffer
@@ -321,7 +341,7 @@ export default function MyMissionsPage({ mobilityOnly = false, deliveryOnly = fa
                       </button>
                     </div>
                   ) : null}
-                  <Link to={missionDetailPath(m)} className={`${isOffer ? 'text-blue-700 underline dark:text-blue-300' : 'btn-primary rounded-xl px-4'} mt-3 inline-flex min-h-12 items-center justify-center text-sm font-semibold`}>{t(isOffer ? 'serviceAgent.details' : ['COMPLETED', 'VALIDATED', 'CLOSED'].includes(m.missionStatus) ? 'workspace.viewReport' : ['EN_ROUTE', 'ON_SITE', 'IN_PROGRESS'].includes(m.missionStatus) ? 'workspace.continueWork' : 'workspace.openWork')}</Link>
+                  <Link to={getRequestDetailPath(m, undefined, actorRole)} className={`${isOffer ? 'text-blue-700 underline dark:text-blue-300' : 'btn-primary rounded-xl px-4'} mt-3 inline-flex min-h-12 items-center justify-center text-sm font-semibold`}>{t(actorRole === 'agent' ? 'roleViews.supervise' : isOffer ? 'serviceAgent.details' : ['COMPLETED', 'VALIDATED', 'CLOSED'].includes(m.missionStatus) ? 'workspace.viewReport' : ['EN_ROUTE', 'ON_SITE', 'IN_PROGRESS'].includes(m.missionStatus) ? 'workspace.continueWork' : 'workspace.openWork')}</Link>
                   </article>
                 </li>
               );

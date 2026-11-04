@@ -16,6 +16,9 @@ jest.mock('react-i18next', () => {
 jest.mock('../services/projects', () => ({ getProjects: jest.fn() }));
 jest.mock('../services/properties', () => ({ getProperties: jest.fn() }));
 
+const mockGeo = { user: { id: 7 }, countryId: null, regionId: null };
+jest.mock('../contexts/GeoContext', () => ({ useGeo: () => mockGeo }));
+
 describe('DossiersPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -49,5 +52,18 @@ describe('DossiersPage', () => {
 
     await waitFor(() => expect(getProjects).toHaveBeenCalledTimes(2));
     expect(await screen.findByRole('link', { name: 'dossierHub.projects.action' })).toBeInTheDocument();
+  });
+
+  test('reloads the counters when the selected territory changes', async () => {
+    const { rerender } = render(<DossiersPage />);
+    await screen.findByRole('link', { name: 'dossierHub.properties.action' });
+    expect(getProjects).toHaveBeenCalledTimes(1);
+
+    getProjects.mockResolvedValue([{ id: 1 }]);
+    mockGeo.countryId = 2;
+    rerender(<DossiersPage />);
+
+    await waitFor(() => expect(getProjects).toHaveBeenCalledTimes(2));
+    expect(await screen.findByLabelText('dossierHub.projects.title: 1')).toBeInTheDocument();
   });
 });

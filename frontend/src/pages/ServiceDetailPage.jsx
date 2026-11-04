@@ -11,7 +11,6 @@ import {
   MapPin,
   MessageCircle,
   Phone,
-  ReceiptText,
   UserRound,
 } from 'lucide-react';
 
@@ -20,6 +19,7 @@ import ServiceStepsPanel from '../features/service-workspace/ServiceStepsPanel';
 import RequestProgress from '../components/RequestProgress';
 import RequestHelp from '../components/RequestHelp';
 import RequestAmounts from '../components/RequestAmounts';
+import DossierFinanceSection from '../features/finance/DossierFinanceSection';
 import { me } from '../services/auth';
 import {
   completeService,
@@ -174,7 +174,7 @@ function ServiceDetail({ id }) {
   }, [role, service?.status, service?.completion, t]);
 
   const backTo = getRequestReturnPath(location.state?.from, role === 'agent' ? '/agent/services' : role === 'admin' ? '/admin/services' : '/demandes');
-  const backLabel = t(backTo.split('?')[0].endsWith('/transactions') ? 'financialWorkspace.backJournal' : 'serviceDetailPage.backToServices');
+  const backLabel = t(backTo.startsWith('/operations') ? 'roleViews.backHome' : backTo.startsWith('/agent/services') ? 'roleViews.backAssigned' : backTo.startsWith('/properties/') ? 'propertySimple.backProperty' : backTo.split('?')[0].endsWith('/transactions') ? 'financialWorkspace.backJournal' : 'serviceDetailPage.backToServices');
   const counterpart = role === 'agent' ? service?.client : service?.agent;
   const telHref = buildTelHref(counterpart?.phone);
   const whatsappHref = buildWhatsappHref(
@@ -208,7 +208,7 @@ function ServiceDetail({ id }) {
   const liveStatusKey = service.status === 'created' && service.agent ? 'createdAssigned' : service.status;
 
   return (
-    <div className="app-page-wrap pb-24 sm:pb-10">
+    <div className="app-page-wrap role-workspace pb-24 sm:pb-10">
       <div className="app-page-shell max-w-3xl space-y-5">
         <Link to={backTo} className="inline-flex items-center gap-2 text-sm font-medium text-text-secondary hover:text-text-primary">
           <ArrowLeft size={16} aria-hidden="true" /> {backLabel}
@@ -253,7 +253,7 @@ function ServiceDetail({ id }) {
         <MissionCompletionPanel key={service.id} missionId={service.id} completion={service.completion} canSubmit={role === 'agent' && service.status === 'in_progress'} onSaved={() => load({ silent: true })} />
         {primaryAction && ['complete', 'validate'].includes(primaryAction.name) && <section aria-label={t('requestWorkspace.next')} className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-4"><h2 className="font-semibold">{t('requestWorkspace.next')}</h2><p className="mt-2 text-sm text-text-secondary">{t(primaryAction.name === 'validate' ? 'requestWorkspace.confirmHint' : service.completion?.report?.summary ? 'requestWorkspace.readyHint' : 'serviceSteps.handoverHint')}</p><button type="button" onClick={() => runAction(primaryAction.name)} disabled={Boolean(action)} className="btn-primary mt-3 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold">{action ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <CheckCircle2 size={17} aria-hidden="true" />}{primaryAction.label}</button></section>}
         <ServiceStepsPanel serviceId={service.id} />
-        {role === 'client' && <RequestAmounts request={service} />}
+        {role === 'client' && <RequestAmounts request={service} transactionsTo={`/services/${service.id}/transactions`} />}
 
         <details className="rounded-2xl border border-border bg-surface-card p-4">
           <summary className="cursor-pointer font-semibold">{t('serviceTracking.detailsTitle')}</summary>
@@ -302,20 +302,7 @@ function ServiceDetail({ id }) {
           ) : null}
         </details>
 
-        <details className="rounded-2xl border border-border bg-surface-card p-4">
-          <summary className="cursor-pointer font-semibold">{t('requestWorkspace.otherOptions')}</summary>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Link to={`/services/${service.id}/transactions`} className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-main/60 p-4 transition hover:border-blue-400 hover:bg-blue-500/5">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
-                <ReceiptText size={19} aria-hidden="true" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <strong className="block text-sm text-text-primary">{t('serviceDetailPage.buttons.viewTransactions')}</strong>
-                <span className="mt-1 block text-xs text-text-muted">{t('serviceDetailPage.transactionsHint')}</span>
-              </span>
-            </Link>
-          </div>
-        </details>
+        {role !== 'client' && <DossierFinanceSection kind="service" reference={service.id} />}
         <details className="rounded-2xl border border-border p-4"><summary className="cursor-pointer font-semibold">{t('requestHelp.title')}</summary><div className="mt-3"><RequestHelp id={service.id} title={service.title} phone={service.assistancePhone} /></div></details>
       </div>
     </div>

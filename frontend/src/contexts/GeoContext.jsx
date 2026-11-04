@@ -18,6 +18,8 @@ export function GeoProvider({ children }) {
   const [regionId, setRegionId] = useState(initial.regionId);
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
+  const [geoError, setGeoError] = useState(false);
+  const [geoAttempt, setGeoAttempt] = useState(0);
   const regionRequest = useRef(0);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(getLocalUser());
@@ -53,10 +55,18 @@ export function GeoProvider({ children }) {
     }
     try {
       const list = await getRegions({ countryId: nextCountryId });
-      if (request === regionRequest.current) setRegions((list || []).filter((region) => String(region.countryId ?? region.country_id) === String(nextCountryId)));
+      if (request === regionRequest.current) {
+        setRegions((list || []).filter((region) => String(region.countryId ?? region.country_id) === String(nextCountryId)));
+        setGeoError(false);
+      }
     } catch (e) {
       console.error('GeoContext load regions error:', e);
-      if (request === regionRequest.current) setRegions([]);
+      if (request === regionRequest.current) {
+        // Une panne réseau ne doit jamais ressembler silencieusement à "aucune
+        // région dans ce pays" : l'utilisateur doit pouvoir distinguer les deux.
+        setRegions([]);
+        setGeoError(true);
+      }
     }
   }, [isAuthenticated]);
 
@@ -92,9 +102,12 @@ export function GeoProvider({ children }) {
       if (active) setLoading(true);
       try {
         const list = await getCountries(canSelect ? { includeInactive: true } : {});
-        if (active) setCountries(list || []);
+        if (active) { setCountries(list || []); setGeoError(false); }
       } catch (e) {
-        if (active) setCountries([]);
+        // Une panne réseau ne doit jamais ressembler silencieusement à "aucun
+        // pays configuré" : l'utilisateur doit pouvoir distinguer les deux et
+        // réessayer plutôt que de voir le sélecteur de territoire se vider.
+        if (active) { setCountries([]); setGeoError(true); }
       } finally {
         if (active) setLoading(false);
       }
@@ -103,7 +116,7 @@ export function GeoProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [clearSelection, isAuthenticated, canSelect, scopedCountryId, scopedRegionId]);
+  }, [clearSelection, isAuthenticated, canSelect, scopedCountryId, scopedRegionId, geoAttempt]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -130,7 +143,9 @@ export function GeoProvider({ children }) {
   useEffect(() => {
     refreshRegions(regionSourceCountryId);
     return () => { regionRequest.current += 1; };
-  }, [regionSourceCountryId, refreshRegions]);
+  }, [regionSourceCountryId, refreshRegions, geoAttempt]);
+
+  const retryGeo = useCallback(() => setGeoAttempt((value) => value + 1), []);
 
   useEffect(() => {
     setGeoSelection({ countryId, regionId });
@@ -156,6 +171,7 @@ export function GeoProvider({ children }) {
   const value = useMemo(
     () => ({
       user,
+      isAuthenticated,
       countryId,
       regionId,
       countries,
@@ -167,9 +183,12 @@ export function GeoProvider({ children }) {
       loading,
       canSelect,
       isScopedAdmin,
+      geoError,
+      retryGeo,
     }),
     [
       user,
+      isAuthenticated,
       countryId,
       regionId,
       countries,
@@ -180,6 +199,8 @@ export function GeoProvider({ children }) {
       setRegion,
       loading,
       canSelect,
+      geoError,
+      retryGeo,
       isScopedAdmin,
     ]
   );

@@ -28,6 +28,25 @@ describe('metrics middleware profiler data', () => {
 
   afterEach(() => {
     delete process.env.SLOW_REQUEST_THRESHOLD_MS;
+    delete process.env.METRICS_TOKEN;
+  });
+
+  test('metricsHandler accepts the exact token and rejects a wrong or missing one', async () => {
+    process.env.METRICS_TOKEN = 'a-very-secret-metrics-token';
+    const app = express();
+    app.get('/api/metrics', (req, res, next) => { req.user = { role: 'client' }; next(); }, metricsHandler);
+
+    const ok = await request(app).get('/api/metrics').set('x-metrics-token', 'a-very-secret-metrics-token');
+    expect(ok.status).toBe(200);
+
+    const wrong = await request(app).get('/api/metrics').set('x-metrics-token', 'a-very-secret-metrics-tokeN');
+    expect(wrong.status).toBe(403);
+
+    const differentLength = await request(app).get('/api/metrics').set('x-metrics-token', 'short');
+    expect(differentLength.status).toBe(403);
+
+    const missing = await request(app).get('/api/metrics');
+    expect(missing.status).toBe(403);
   });
 
   test('captures db timings and exposes profiler summaries', async () => {

@@ -26,7 +26,7 @@ for(const width of [360,1440]) {
     await main.getByLabel('Rechercher un dossier, une étape ou une référence',{exact:true}).fill('Ancien');
     await main.getByRole('button',{name:'Rechercher',exact:true}).click();await expect(main.getByRole('article')).toHaveCount(1);
     await main.getByRole('link',{name:'Vérifier le résultat',exact:true}).click();await expect(page).toHaveURL(/\/services\/9000$/);
-    await main.getByRole('link',{name:/Retour aux services/}).click();
+    await main.getByRole('link',{name:/Retour à l’accueil/}).click();
     await expect(main.getByLabel('Rechercher un dossier, une étape ou une référence',{exact:true})).toHaveValue('Ancien');
     await main.getByLabel('Rechercher un dossier, une étape ou une référence',{exact:true}).fill('');await main.getByRole('button',{name:'Rechercher',exact:true}).click();
     await main.getByRole('button',{name:'À suivre (1)',exact:true}).click();await expect(main.getByRole('article',{name:'CMD-SUIVI'})).toBeVisible();

@@ -6,6 +6,7 @@ const media = require('../services/mediaUpload.service');
 const imageKit = require('../helpers/teranga-imagekit');
 const { resolveUploadsRoot } = require('../utils/uploadsRoot');
 const { getCompletionState } = require('../services/missionCompletion.service');
+const { initializeMissionCoordination } = require('../services/missionCoordination.service');
 const logger = require('../utils/logger');
 
 async function discardUpload(upload) {
@@ -35,8 +36,8 @@ exports.submit = async (req, res) => {
       const provider = req.user.role === 'provider' ? await db.Provider.findOne({ where: { userId: req.user.id, status: 'active' }, transaction }) : null;
       const isExecutor = mission.executionType === 'provider' ? provider && String(provider.id) === String(mission.providerId) : req.user.role === 'agent' && String(mission.agentId) === String(req.user.id);
       if (!isExecutor) throw Object.assign(new Error('Seul l’exécutant affecté peut déposer ce compte rendu'), { status: 403 });
-      const operation = await db.MissionCoordination.findOne({ where: { serviceId: mission.id }, transaction, lock: true });
-      if (!operation) throw Object.assign(new Error('La coordination de cette mission doit être initialisée'), { status: 409 });
+      const operation = await db.MissionCoordination.findOne({ where: { serviceId: mission.id }, transaction, lock: true }) ||
+        await initializeMissionCoordination(mission, transaction, new Date());
       if (operation.completionReport?.requestKey === requestKey) return mission;
       if (mission.missionStatus !== 'IN_PROGRESS' && !(!mission.missionStatus && mission.status === 'in_progress')) throw Object.assign(new Error('Le compte rendu doit être déposé pendant l’exécution de la mission'), { status: 409 });
       const evidenceIds = operation.completionReport?.reporterId === req.user.id ? [...operation.completionReport.evidenceIds] : [];

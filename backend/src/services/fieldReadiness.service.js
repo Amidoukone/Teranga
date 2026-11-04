@@ -9,7 +9,7 @@ const { isImageKitConfigured, hasCustomUploadsRoot } = require('../utils/mediaSt
 const { toComplianceSummary } = require('./mobilityCompliance.service');
 const { isLocationFresh } = require('./providerPresence.service');
 const { ACTIVE_STATUSES } = require('./missionStatus.service');
-const { agentLoad } = require('./agentCapacity.service');
+const { agentLoadBatch } = require('./agentCapacity.service');
 function hasRecentSuccess(state) {
   const age = Date.now() - new Date(state?.lastSuccessAt || '').getTime();
   return Number.isFinite(age) && age >= -60000 && age <= 5 * 60000;
@@ -66,9 +66,11 @@ async function loadFieldReadiness(db, { countryId, regionId = null } = {}) {
     const agents = await db.User.findAll({ where: { role: 'agent' } });
     const capacities = await db.AgentCapacity.findAll({ where: { available: true, availableUntil: { [Op.gt]: new Date() } } });
     const availableAgents = [];
+    // Une requête groupée au lieu d'une requête (x3) par agent évalué.
+    const loadByAgent = await agentLoadBatch(agents.map((agent) => agent.id));
     for (const agent of agents) {
       const capacity = capacities.find((entry) => String(entry.userId) === String(agent.id));
-      if (String(agent.countryId) === String(countryId) && covers({ countryId, regionId }, agent) && capacity && await agentLoad(agent.id) < capacity.maxConcurrent) availableAgents.push(agent);
+      if (String(agent.countryId) === String(countryId) && covers({ countryId, regionId }, agent) && capacity && (loadByAgent.get(String(agent.id)) || 0) < capacity.maxConcurrent) availableAgents.push(agent);
     }
     const enabledOffers = offerings.filter((offer) => offer.providerRules?.coordination?.enabled === true).length;
     automation = { enabledOffers, manualOffers: offerings.length - enabledOffers,

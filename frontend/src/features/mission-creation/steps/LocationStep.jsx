@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MapPin, Star, LocateFixed, Loader2 } from "lucide-react";
 
@@ -41,6 +41,13 @@ export default function LocationStep({
   const [locating, setLocating] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showPickupMap, setShowPickupMap] = useState(false);
+  // Une position GPS qui revient après que l'utilisateur a quitté cette étape ne doit jamais
+  // s'appliquer sur un composant démonté (changement d'étape de l'assistant).
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
 
   function handleUseCurrentLocation() {
     if (!navigator.geolocation) {
@@ -51,16 +58,19 @@ export default function LocationStep({
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        if (!alive.current) return;
         const latitude = position.coords.latitude;
         const longitude = position.coords.longitude;
         // Conserver le repère GPS même si le réseau ne permet pas de nommer le lieu.
         let resolvedAddress = null;
         try { resolvedAddress = await reverseGeocodeLocation({ latitude, longitude }); }
         catch (_error) { /* Les coordonnées restent utilisables. */ }
-        finally { setLocating(false); }
+        finally { if (alive.current) setLocating(false); }
+        if (!alive.current) return;
         onCurrentLocationResolved({ latitude, longitude, address: resolvedAddress });
       },
       () => {
+        if (!alive.current) return;
         setLocating(false);
         notify(t("missionCreation.location.geolocationError"));
       },

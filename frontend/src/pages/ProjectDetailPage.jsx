@@ -5,10 +5,12 @@ import WorkProgressPanel from '../features/mission-tracking/WorkProgressPanel';
 // ============================================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useGeo } from '../contexts/GeoContext';
 import DossierHeader, { DossierNextAction } from '../components/DossierHeader';
+import DossierFinanceSection from '../features/finance/DossierFinanceSection';
 import ProjectTasksPanel from '../features/service-workspace/ProjectTasksPanel';
+import ProjectManagement from '../features/projects/ProjectManagement';
 import { me } from "../services/auth";
 import {
   getProjectById,
@@ -509,7 +511,7 @@ function ProjectDossier() {
     ? PROJECT_STATUSES[project.status] || project.status
     : t("common.dash");
 
-  return <div className="app-page-wrap"><div className="app-page-shell max-w-5xl space-y-6">
+  return <div className="app-page-wrap role-workspace"><div className="app-page-shell max-w-5xl space-y-6">
     <DossierHeader kind="project" id={project.id} title={project.title} description={project.description}
       assignee={[project.agent?.firstName, project.agent?.lastName].filter(Boolean).join(' ') || (project.agentId ? `#${project.agentId}` : '')}
       status={<Badge tone={getProjectStatusTone(project.status)}>{statusLabel}</Badge>} />
@@ -981,9 +983,8 @@ function ProjectDossier() {
               </section>
       <WorkProgressPanel embedded entityType="project" entityId={project.id} status={project.status} revision={revision} reviewBlocked={Boolean(sectionErrors.documents)} onSaved={() => loadProject(project.id)} />
     </section>
-    <details id="dossier-finance" className="scroll-mt-24 rounded-2xl border border-border bg-surface-card p-4 sm:p-5">
-      <summary className="min-h-11 cursor-pointer text-lg font-bold">{t('dossier.finance')}</summary>
-      <p className="mb-3 text-sm">{t('projectDetail.labels.budget')} {formatNumber(project.budget || 0)} {project.currency || 'XOF'}</p>
+    <DossierFinanceSection kind="project" reference={project.id} onSaved={() => loadProject(id)} revision={revision}>
+      {project.budget != null && <p className="mb-3 text-sm">{t('projectDetail.labels.budget')} {formatNumber(project.budget)} {project.currency || 'XOF'}</p>}
       {sectionErrors.finance && <p role="alert" className="app-alert app-alert-error">{t('dossier.loadError')} <button type="button" onClick={() => loadProject(id)} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
       {!sectionErrors.finance && <div className="mb-5 grid gap-3 sm:grid-cols-2">{totalsByCurrency.map((totals) => <div key={totals.currency} role="group" aria-label={totals.currency} className="rounded-xl border border-border p-3 text-sm">
         <h3 className="font-bold">{totals.currency}</h3>
@@ -991,19 +992,19 @@ function ProjectDossier() {
         <p>{t('projectDetail.finance.expenses')} <strong>{formatNumber(totals.expenses)} {totals.currency}</strong></p>
         <p>{t('projectDetail.finance.balance')} <strong>{formatNumber(totals.balance)} {totals.currency}</strong></p>
       </div>)}</div>}
-      <p className="mt-3 text-sm text-text-secondary">{t('financialWorkspace.external')}</p>
-      <Link to={`/projects/${project.id}/transactions`} className="mt-3 inline-flex min-h-11 items-center text-sm underline">{t('financialWorkspace.title')}</Link>
-    </details>
+    </DossierFinanceSection>
     <details id="dossier-details" className="scroll-mt-24 rounded-2xl border border-border bg-surface-card p-4 sm:p-5">
       <summary className="min-h-11 cursor-pointer text-lg font-bold">{t('dossier.details')}</summary>
       {project.description && <p className="mt-3 whitespace-pre-line text-sm">{project.description}</p>}
       <p className="mt-3 text-sm">{t('dossier.project')} #{project.id}</p>
+      {isAdmin && project.client && <p className="mt-3 break-words text-sm">{t('projects.card.client')} {[project.client.firstName, project.client.lastName, project.client.email].filter(Boolean).join(' · ')}</p>}
       {project.createdAt && <p className="mt-2 text-sm">{formatDateTime(project.createdAt)}</p>}
       {isMaster && <Badge tone="warning">{t('projectDetail.badges.master')}</Badge>}
       {isClient && <p className="mt-2 text-sm text-text-secondary">{clientCanModifyOrDelete ? t('projectDetail.badges.editWindowAllowed', { time: timeLeftText }) : t('projectDetail.badges.editWindowExpired')}</p>}
       {isAdmin && !project.coordination && <label className="mt-3 block text-sm">{t('projectDetail.labels.status', { status: statusLabel })}<select aria-label={t('dossier.tools')} value={project.status} onChange={(event) => handleStatusChange(event.target.value)} className="ml-3 min-h-11 rounded-xl border border-border bg-surface-main p-2">
         {['created','in_progress','completed','validated','cancelled'].map((state) => <option key={state} value={state}>{t(`projects.status.${state}`)}</option>)}
       </select></label>}
+      <ProjectManagement project={project} user={user} onSaved={() => loadProject(project.id)} />
     </details>
   </div></div>;
 }

@@ -35,7 +35,7 @@ test('unavailable figures do not block the operations queue and transport tools'
 
 test('management owns the six tool groups and respects the scoped administrator restrictions', () => {
   render(<ManagementHome />);
-  fireEvent.click(screen.getByText('workspace.tools'));
+  ['operations','network','catalog','quality','finance','configuration'].forEach(group => fireEvent.click(screen.getByText(`nav.sections.${group}`)));
   ['operations','network','catalog','quality','finance','configuration'].forEach((group) => expect(screen.getByRole('navigation', { name: `nav.sections.${group}` })).toBeInTheDocument());
   expect(screen.getByRole('link', { name: 'nav.interventions' })).toHaveAttribute('href', '/tasks');
   expect(screen.queryByRole('link', { name: 'nav.master' })).not.toBeInTheDocument();
@@ -44,7 +44,7 @@ test('management owns the six tool groups and respects the scoped administrator 
 
 test('global administration tools remain available in Management', () => {
   mockUser = { id: 2, role: 'admin' };
-  render(<ManagementHome />); fireEvent.click(screen.getByText('workspace.tools'));
+  render(<ManagementHome />); fireEvent.click(screen.getByText('nav.sections.quality')); fireEvent.click(screen.getByText('nav.sections.configuration'));
   expect(screen.getByRole('link', { name: 'nav.master' })).toHaveAttribute('href', '/admin/onboarding');
   expect(screen.getByRole('link', { name: 'nav.metrics' })).toHaveAttribute('href', '/admin/metrics');
   mockUser = { id: 1, role: 'admin', countryId: 1 };

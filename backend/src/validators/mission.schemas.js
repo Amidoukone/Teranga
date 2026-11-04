@@ -49,6 +49,7 @@ const estimateMissionSchema = Joi.object({
  */
 const createMissionSchema = Joi.object({
   requestKey: Joi.string().pattern(/^[a-zA-Z0-9-]{8,80}$/),
+  propertyId: idSchema,
   ...categorySelectionFields,
   countryId: idSchema,
   regionId: idSchema,
@@ -104,7 +105,7 @@ const updateMissionStatusSchema = Joi.object({
     .required(),
   // Réconciliation cash à la remise (docs/DEV_SPEC_TERANGA_v6_PHASE3.md §5) — optionnel, ignoré
   // hors transition COMPLETED filière livraison (règle métier vérifiée dans le contrôleur).
-  collectedAmount: Joi.number().min(0).allow(null),
+  collectedAmount: Joi.number().min(0).max(9999999999.99).allow(null),
 });
 
 /**

@@ -1,10 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import OrderDetailPage from './OrderDetailPage';
-import { getOrderById, updateOrder } from '../services/orders';
+import { getOrderById, updateOrder, addOrderItem } from '../services/orders';
 import { getOrderEvidences } from '../services/evidences';
 import { getProducts } from '../services/products';
 import { getWorkProgress } from '../services/operations';
 import { me } from '../services/auth';
+jest.mock('../features/finance/FinancialWorkspace', () => () => <p>Embedded payments</p>);
 
 let mockId = '14';
 const mockGeo = { user: { id: 7, role: 'client' }, countryId: 1 };
@@ -16,7 +17,7 @@ jest.mock('../i18n', () => ({ t: (key, options) => options?.defaultValue || key 
 jest.mock('../i18n/useLocale', () => ({ useLocale: () => ({ formatNumber: String, formatDateTime: String }) }));
 jest.mock('../contexts/GeoContext', () => ({ useGeo: () => mockGeo }));
 jest.mock('../hooks/useDeleteConfirm', () => ({ useDeleteConfirm: () => ({ confirmDelete: jest.fn() }) }));
-jest.mock('../services/orders', () => ({ getOrderById: jest.fn(), updateOrder: jest.fn() }));
+jest.mock('../services/orders', () => ({ getOrderById: jest.fn(), updateOrder: jest.fn(), addOrderItem: jest.fn(), deleteOrderItem: jest.fn() }));
 jest.mock('../services/evidences', () => ({ getOrderEvidences: jest.fn(), uploadOrderEvidences: jest.fn(), deleteOrderEvidence: jest.fn() }));
 jest.mock('../services/auth', () => ({ me: jest.fn() }));
 jest.mock('../services/products', () => ({ getProducts: jest.fn() }));
@@ -41,6 +42,54 @@ test('the order keeps its work and payment separate and exposes no client delive
   expect(screen.getByText('dossier.paymentHint')).toBeVisible();
   expect(screen.getByText('45000 GNF', { selector: 'p' })).toBeVisible();
   expect(getProducts).not.toHaveBeenCalled();
+});
+
+test('confirming an order payment changes only its payment status and ignores double submissions', async () => {
+  mockGeo.user = { id: 3, role: 'admin', countryId: 1 };
+  let finish;
+  updateOrder.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+  render(<OrderDetailPage />); await screen.findByRole('heading', { name: 'CMD-14' });
+  fireEvent.click(screen.getByRole('link', { name: 'dossier.finance' }));
+  fireEvent.click(screen.getByText('financialWorkspace.paymentReview', { selector: 'summary' }));
+  const button = screen.getByRole('button', { name: 'orderDetail.actions.markPaid' });
+  fireEvent.click(button); fireEvent.click(button);
+  expect(updateOrder).toHaveBeenCalledTimes(1);
+  expect(updateOrder).toHaveBeenCalledWith('14', { paymentStatus: 'paid' });
+  await act(async () => finish({}));
+});
+
+test('the evidence lightbox closes rather than crashing when the list shrinks under it', async () => {
+  getOrderEvidences.mockResolvedValue([
+    { id: 1, originalName: 'photo-1.jpg', filePath: '/uploads/photo-1.jpg', mimeType: 'image/jpeg' },
+    { id: 2, originalName: 'photo-2.jpg', filePath: '/uploads/photo-2.jpg', mimeType: 'image/jpeg' },
+  ]);
+  render(<OrderDetailPage />); await screen.findByRole('heading', { name: 'CMD-14' });
+  const previews = await screen.findAllByTitle('orderDetail.labels.preview');
+  fireEvent.click(previews[1]);
+  expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  expect(screen.getByText('2 / 2')).toBeInTheDocument();
+
+  // Suppression concurrente d'une preuve pendant que la visionneuse affiche la seconde image.
+  getOrderEvidences.mockResolvedValue([
+    { id: 1, originalName: 'photo-1.jpg', filePath: '/uploads/photo-1.jpg', mimeType: 'image/jpeg' },
+  ]);
+  await act(async () => { fireEvent.online(window); });
+
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+});
+
+test('adding an order item ignores a double submission', async () => {
+  mockGeo.user = { id: 3, role: 'admin', countryId: 1 };
+  getProducts.mockResolvedValue([{ id: 5, name: 'Casque', price: 1000, currency: 'GNF' }]);
+  let finish;
+  addOrderItem.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+  render(<OrderDetailPage />); await screen.findByRole('heading', { name: 'CMD-14' });
+  fireEvent.click(screen.getByText('orderDetail.items.addTitle', { selector: 'summary' }));
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: '5' } });
+  const button = screen.getByRole('button', { name: 'orderDetail.items.addButton' });
+  fireEvent.click(button); fireEvent.click(button);
+  expect(addOrderItem).toHaveBeenCalledTimes(1);
+  await act(async () => finish({}));
 });
 
 test('a catalogue failure does not prevent a manager from reading the order or preparing its handover', async () => {

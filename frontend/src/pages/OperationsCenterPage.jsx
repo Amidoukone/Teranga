@@ -214,22 +214,23 @@ function Center({ user }) {
     navigate(target);
   }
   const target = coordination ? {type,focusedId} : boardTarget;
-  return <div className="app-page-wrap"><div className="app-page-shell max-w-6xl space-y-6">
-    <ConnectedHomeIntro user={user} role={role} />
-    {workVisited && (role === 'agent' || role === 'provider') && <div hidden={information || coordination}>
+  return <div className="app-page-wrap role-workspace"><div className="app-page-shell max-w-6xl space-y-5">
+    <ConnectedHomeIntro user={user} role={role}>{admin && !coordination && <button type="button" onClick={openTools} className="btn-secondary inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold">{t('workspaceQueue.coordinationTools')}</button>}</ConnectedHomeIntro>
+    <div className={(role === 'agent' || role === 'provider') && !information && !coordination ? 'role-home-layout' : ''}>
+    {workVisited && (role === 'agent' || role === 'provider') && <aside className="role-availability" hidden={information || coordination}>
       {role === 'agent' ? <AgentCoordinationPanel availabilityOnly active={!information && !coordination} /> : <ProviderAvailabilityPanel active={!information && !coordination} />}
-    </div>}
-    <nav aria-label={t('operationsCenter.views')} className="flex flex-wrap gap-2">{['action','following','information'].map((key)=>{
+    </aside>}
+    <div className="min-w-0 space-y-4">
+    <nav aria-label={t('operationsCenter.views')} className="role-view-tabs grid grid-cols-3 gap-2">{['action','following','information'].map((key)=>{
       const count = key === 'information' ? summary?.unread : summary?.[key];
       return <button key={key} type="button" aria-current={view === key ? 'page' : undefined} onClick={()=>select(key)} className={`min-h-12 rounded-xl border px-4 py-2 text-sm font-semibold ${view === key ? 'border-blue-600 bg-blue-600 text-white' : 'border-border bg-surface-card text-text-primary'}`}>{t(`workspaceQueue.${key}`)}{Number.isFinite(count) ? ` (${count})` : ''}</button>;
     })}</nav>
     {(workVisited || (!information && !coordination)) && <div hidden={information || coordination}><WorkspaceQueue view={!information && !coordination ? view : lastWorkView} active={!information && !coordination} onSummary={onSummary} /></div>}
     {information && <section className="space-y-4"><nav aria-label={t('workspaceQueue.reading')} className="flex flex-wrap gap-3">{['unread','history'].map((key)=><button key={key} type="button" aria-pressed={reading === key} onClick={()=>{const value=new URLSearchParams(params);value.set('vue','informations');if(key==='history')value.set('lecture','tout');else value.delete('lecture');setParams(value);}} className="btn-secondary min-h-11 rounded-xl px-4 text-sm">{t(`operationsCenter.${key}`)}</button>)}</nav><Updates key={user?.id} userId={user?.id} role={role} view={reading} onUnread={onUnread} /></section>}
-    {admin && !coordination && <button type="button" onClick={openTools} className="min-h-11 text-sm underline">{t('workspaceQueue.coordinationTools')}</button>}
     {admin && (coordination || coordinationVisited) && <section id="workspace-coordination" tabIndex={-1} hidden={!coordination} aria-label={t('operationsCenter.coordination')} className="scroll-mt-24 space-y-4">
       <button type="button" onClick={back} className="min-h-11 text-sm underline">{t('workspaceQueue.back')}</button>
       {target.focusedId && <p className="rounded-xl border border-blue-500/30 p-3 text-sm">{t('operationsCenter.focused',{id:target.focusedId})}</p>}
       <OperationsPage key={`${user?.id}:${target.type}:${target.focusedId}`} embedded active={coordination} initialEntityType={target.type} focusedId={target.focusedId} />
     </section>}
-  </div></div>;
+  </div></div></div></div>;
 }

@@ -57,13 +57,10 @@ describe('dashboard controller summary aggregation', () => {
   test('returns the same dashboard shape while querying each section once', async () => {
     Service.findAll.mockResolvedValue([{ total: '10', active: '6' }]);
     Transaction.findAll.mockResolvedValue([
-      {
-        count: '4',
-        revenues: '100',
-        expenses: '40',
-        commissions: '10',
-        adjustments: '5',
-      },
+      { currency: 'XOF', type: 'revenue', amount: '100', count: '1' },
+      { currency: 'XOF', type: 'expense', amount: '40', count: '1' },
+      { currency: 'XOF', type: 'commission', amount: '10', count: '1' },
+      { currency: 'XOF', type: 'adjustment', amount: '5', count: '1' },
     ]);
     Property.findAll.mockResolvedValue([{ total: '3', active: '2' }]);
     Task.findAll.mockResolvedValue([
@@ -138,6 +135,17 @@ describe('dashboard controller summary aggregation', () => {
         commissions: 10,
         adjustments: 5,
         balance: 55,
+        multiCurrency: false,
+        byCurrency: [
+          {
+            currency: 'XOF',
+            revenues: 100,
+            expenses: 40,
+            commissions: 10,
+            adjustments: 5,
+            balance: 55,
+          },
+        ],
       },
       financeWidgetSummary: {
         revenue: 100,
@@ -151,5 +159,36 @@ describe('dashboard controller summary aggregation', () => {
         failedSections: [],
       }),
     });
+  });
+
+  test('never sums amounts across different currencies into a single total', async () => {
+    Service.findAll.mockResolvedValue([{ total: '0', active: '0' }]);
+    Transaction.findAll.mockResolvedValue([
+      { currency: 'XOF', type: 'revenue', amount: '100', count: '1' },
+      { currency: 'GHS', type: 'revenue', amount: '50', count: '1' },
+    ]);
+    Property.findAll.mockResolvedValue([{ total: '0', active: '0' }]);
+    Task.findAll.mockResolvedValue([{ total: '0', created: '0', inProgress: '0', completed: '0', validated: '0' }]);
+    Project.findAll.mockResolvedValue([{ total: '0', created: '0', inProgress: '0', completed: '0', validated: '0' }]);
+    Order.findAll.mockResolvedValue([{ total: '0', paid: '0', open: '0' }]);
+
+    const req = { user: { id: 7, role: 'admin' }, query: {} };
+    const res = { set: jest.fn(), json: jest.fn(), status: jest.fn().mockReturnThis() };
+
+    await summary(req, res);
+
+    const payload = res.json.mock.calls[0][0];
+    expect(payload.financeSummary.multiCurrency).toBe(true);
+    expect(payload.financeSummary.revenues).toBeNull();
+    expect(payload.financeSummary.balance).toBeNull();
+    expect(payload.stats.totalRevenue).toBeNull();
+    expect(payload.stats.totalExpense).toBeNull();
+    expect(payload.stats.balance).toBeNull();
+    expect(payload.financeSummary.byCurrency).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ currency: 'XOF', revenues: 100 }),
+        expect.objectContaining({ currency: 'GHS', revenues: 50 }),
+      ])
+    );
   });
 });

@@ -7,6 +7,7 @@ test('maps operational statuses to a simple next action', () => {
 });
 
 test('return navigation preserves list filters and rejects unrelated or external destinations', () => {
+  expect(getRequestReturnPath('/prestataire/interventions?vue=offres&type=taxi&page=2')).toBe('/prestataire/interventions?vue=offres&type=taxi&page=2');
   expect(getRequestReturnPath('/demandes?vue=a-verifier&type=taxi&page=2')).toBe('/demandes?vue=a-verifier&type=taxi&page=2');
   expect(getRequestReturnPath('/transactions?q=reçu&page=2')).toBe('/transactions?q=reçu&page=2');
   expect(getRequestReturnPath('/projects/14/transactions?status=pending')).toBe('/projects/14/transactions?status=pending');
@@ -42,4 +43,8 @@ test('operations use management pages instead of tracking pages restricted to cl
   expect(getRequestDetailPath({ id: 1, missionStatus: 'CREATED' }, undefined, 'admin')).toBe('/admin/services?demande=1');
   expect(getRequestDetailPath({ id: 2, missionStatus: 'CREATED', tradeCategory: { slug: 'mobilite' } }, undefined, 'admin')).toBe('/admin/taxi-dispatch?missionId=2');
   expect(getRequestDetailPath({ id: 3, missionStatus: 'CREATED', tradeCategory: { slug: 'livraison' } }, undefined, 'admin')).toBe('/admin/livraisons?demande=3');
+});
+
+test.each(['mobilite', 'livraison', 'plomberie'])('agent supervision opens the authorized tracking route for %s', slug => {
+  expect(getRequestDetailPath({ id: 5, missionStatus: 'ASSIGNED', tradeCategory: { slug } }, undefined, 'agent')).toBe('/missions/5/track');
 });

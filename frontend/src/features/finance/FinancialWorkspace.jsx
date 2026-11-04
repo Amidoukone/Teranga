@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGeo } from '../../contexts/GeoContext';
 import { me } from '../../services/auth';
@@ -13,25 +13,26 @@ import PaginationBar from '../../components/PaginationBar';
 import TransactionCard from './TransactionCard';
 import TransactionForm from './TransactionForm';
 import { casePath, REFERENCE_KINDS, TRANSACTION_STATUSES, TRANSACTION_TYPES, validReference } from './transactionPresentation';
+import useFinancialParams from './useFinancialParams';
 
 const Statement = lazy(() => import('../../pages/FinanceDashboardPage'));
 const inputClass = 'mt-1 min-h-11 w-full rounded-xl border border-border bg-surface-main p-2 text-sm';
 const allowed = (user) => ['admin', 'agent', 'client'].includes(user?.role);
 
-export default function FinancialWorkspace({ kind: routeKind }) {
+export default function FinancialWorkspace({ kind: routeKind, reference: suppliedReference, embedded = false, onSaved, revision = 0 }) {
   const geo = useGeo();
   const { id } = useParams();
-  const [params] = useSearchParams();
+  const [params] = useFinancialParams(embedded);
   const queryKind = REFERENCE_KINDS.find((kind) => params.has(`${kind}Id`));
   const kind = routeKind || queryKind;
-  const reference = routeKind ? id : kind ? params.get(`${kind}Id`) : null;
-  return <Workspace key={JSON.stringify([geo.user?.id, geo.user?.role, geo.countryId, geo.regionId, kind, reference, ...REFERENCE_KINDS.map((item) => params.get(`${item}Id`))])} kind={kind} reference={reference} />;
+  const reference = suppliedReference ?? (routeKind ? id : kind ? params.get(`${kind}Id`) : null);
+  return <Workspace key={JSON.stringify([geo.user?.id, geo.user?.role, geo.countryId, geo.regionId, kind, reference, embedded, ...REFERENCE_KINDS.map((item) => params.get(`${item}Id`))])} kind={kind} reference={reference} embedded={embedded} onSaved={onSaved} revision={revision} />;
 }
 
-function Workspace({ kind, reference }) {
+function Workspace({ kind, reference, embedded, onSaved, revision }) {
   const { t } = useTranslation();
   const location = useLocation();
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = useFinancialParams(embedded);
   const [user, setUser] = useState(null), [context, setContext] = useState(null), [bootError, setBootError] = useState('');
   const [attempt, setAttempt] = useState(0), [ready, setReady] = useState(false), [showForm, setShowForm] = useState(false), [notice, setNotice] = useState('');
   const [data, setData] = useState(null), [loading, setLoading] = useState(false), [error, setError] = useState('');
@@ -48,6 +49,8 @@ function Workspace({ kind, reference }) {
   const from = params.get('startDate') || '', to = params.get('endDate') || '';
   const invalidDates = Boolean(from && to && from > to) || [from, to].some((value) => value && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(new Date(value).getTime())));
   const rawPage = Number(params.get('page')), page = Number.isSafeInteger(rawPage) && rawPage > 0 && rawPage <= 100000 ? rawPage : 1;
+  const [filtersOpen, setFiltersOpen] = useState(Boolean(q || type || status || currency || from || to || page > 1));
+  const FilterContainer = embedded ? 'details' : 'div';
   const scope = JSON.stringify([kind, reference, q, type, status, currency, sort, from, to, page]);
   const currentScope = useRef(scope); currentScope.current = scope;
   const visible = data?.scope === scope ? data.value : null;
@@ -62,10 +65,16 @@ function Workspace({ kind, reference }) {
     alive.current = true; setReady(false); setBootError('');
     async function init() {
       try {
-        const { user: current } = await me();
+        const { user: current, offline } = await me();
         if (!active) return;
         setUser(current);
-        if (!allowed(current)) { setBootError(t('financialWorkspace.noAccess')); return; }
+        if (!allowed(current)) {
+          // Une panne réseau n'est pas un refus d'accès : ne jamais afficher
+          // "réservé aux clients/agents/admins" à un utilisateur autorisé dont
+          // la session n'a simplement pas pu être vérifiée.
+          setBootError(offline ? t('financialWorkspace.failed') : t('financialWorkspace.noAccess'));
+          return;
+        }
         if (kind) {
           if (!validReference(reference)) { setBootError(t('financialWorkspace.invalidReference')); return; }
           let resource;
@@ -107,19 +116,19 @@ function Workspace({ kind, reference }) {
       }
     } finally { if (alive.current && request === version.current) setLoading(false); }
   }, [ready, invalidDates, statement, page, q, type, status, currency, sort, from, to, kind, reference, params, scope, update, t]);
-  useEffect(() => { load(); return () => { version.current += 1; }; }, [load]);
+  useEffect(() => { load(); return () => { version.current += 1; }; }, [load, revision]);
   const canCreate = allowed(user) && (kind === 'service' || kind === 'task' ? user.role !== 'client' : kind === 'project' ? user.role === 'admin' || (user.role === 'agent' && Number(context?.agentId || context?.agent?.id) === Number(user.id)) : true);
-  const saved = () => { setNotice(t('financialWorkspace.saved')); setShowForm(false); load(); };
+  const saved = () => { setNotice(t('financialWorkspace.saved')); setShowForm(false); load(); onSaved?.(); };
   if (taskRedirect) return <Navigate to={taskRedirect} replace />;
-  return <div className="app-page-wrap"><div className="app-page-shell max-w-5xl space-y-5">
-    <header className="space-y-3"><h1 className="app-page-headline">{t(user?.role === 'client' && !kind ? 'financialWorkspace.clientTitle' : 'financialWorkspace.title')}</h1>
+  return <div className={embedded ? '' : 'app-page-wrap'}><div className={embedded ? 'space-y-4' : 'app-page-shell max-w-5xl space-y-5'}>
+    {!embedded && <header className="space-y-3"><h1 className="app-page-headline">{t(user?.role === 'client' && !kind ? 'financialWorkspace.clientTitle' : 'financialWorkspace.title')}</h1>
       <p className="text-sm text-text-secondary">{t('financialWorkspace.hint')}</p>
       {context && <p className="rounded-xl border border-border p-3 text-sm font-semibold">{t(`financialWorkspace.${kind}`)} #{reference} · {context.title || context.code}</p>}
       <div className="flex flex-wrap gap-4 text-sm">{context && <Link to={(kind === 'service' ? getRequestDetailPath(context, undefined, user?.role) : casePath(kind, reference)) + (kind === 'project' || kind === 'order' ? '#dossier-finance' : '')} state={{ from: location.pathname + location.search }} className="inline-flex min-h-11 items-center underline">{t('financialWorkspace.backCase')}</Link>}
         {kind && <Link to="/transactions" className="inline-flex min-h-11 items-center underline">{t('financialWorkspace.allEntries')}</Link>}
         <Link to="/operations" className="inline-flex min-h-11 items-center underline">{t('operations.title')}</Link>
       </div>
-    </header>
+    </header>}
     <p className="rounded-xl bg-surface-main p-3 text-sm text-text-secondary">{t('financialWorkspace.external')}</p>
     {bootError && <p role="alert" className="app-alert app-alert-error">{bootError} <button type="button" onClick={() => setAttempt((value) => value + 1)} className="min-h-11 underline">{t('financialWorkspace.retry')}</button></p>}
     {!ready && !bootError && <p role="status">{t('financialWorkspace.loading')}</p>}
@@ -129,10 +138,12 @@ function Workspace({ kind, reference }) {
         filters={{ q, type, status, currency, startDate: from, endDate: to, role: params.get('role') || '', linked: params.get('liees') === '1' }}
         onFiltersChange={(values) => { const next = { ...values, page: null }; if ('linked' in next) { next.liees = next.linked ? '1' : null; delete next.linked; } update(next); }}
       /></Suspense> : <>
-        {canCreate && <button type="button" onClick={() => { setShowForm((value) => !value); setNotice(''); }} className="btn-primary min-h-11 rounded-xl px-4 text-sm">{t('financialWorkspace.add')}</button>}
+        {canCreate && <button type="button" aria-expanded={showForm} onClick={() => { setShowForm((value) => !value); setNotice(''); }} className="btn-primary min-h-11 rounded-xl px-4 text-sm">{t(embedded ? 'financialWorkspace.recordPayment' : 'financialWorkspace.add')}</button>}
         {!kind && <p className="text-sm text-text-secondary">{t('financialWorkspace.referenceHint')}</p>}
-        {showForm && <TransactionForm user={user} context={context} initialTaskId={validReference(params.get('taskId')) ? params.get('taskId') : ''} onSaved={saved} onCancel={() => setShowForm(false)} />}
+        {showForm && <TransactionForm user={user} context={context} compact={embedded} initialTaskId={validReference(params.get('taskId')) ? params.get('taskId') : ''} onSaved={saved} onCancel={() => setShowForm(false)} />}
         {notice && <p role="status" className="text-sm">{notice}</p>}
+        <FilterContainer {...(embedded ? { open: filtersOpen, onToggle: (event) => setFiltersOpen(event.currentTarget.open) } : {})} className={embedded ? 'rounded-xl border border-border p-3' : 'contents'}>
+        {embedded && <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">{t('financialWorkspace.searchAndFilter')}</summary>}
         <form onSubmit={(event) => { event.preventDefault(); update({ q: query.trim(), page: null }); }} className="rounded-2xl border border-border p-4"><label className="text-sm">{t('financialWorkspace.search')}<div className="mt-1 flex gap-2"><input aria-label={t('financialWorkspace.search')} value={query} onChange={(event) => setQuery(event.target.value)} maxLength={100} className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-surface-main p-2" /><button type="submit" className="btn-secondary min-h-11 rounded-xl px-3 text-sm">{t('financialWorkspace.find')}</button></div></label></form>
         <details className="rounded-2xl border border-border p-4"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">{t('financialWorkspace.filters')}</summary><div className="grid gap-3 sm:grid-cols-3">
           {['type', 'status'].map((field) => <label key={field} className="text-sm">{t(`financialWorkspace.${field}`)}<select aria-label={t(`financialWorkspace.${field}`)} value={field === 'type' ? type : status} onChange={(event) => update({ [field]: event.target.value, page: null })} className={inputClass}><option value="">{t('financialWorkspace.all')}</option>{(field === 'type' ? TRANSACTION_TYPES : TRANSACTION_STATUSES).map((value) => <option key={value} value={value}>{t(`transactions.${field}.${value}`)}</option>)}</select></label>)}
@@ -140,12 +151,13 @@ function Workspace({ kind, reference }) {
           {[['startDate', from, 'from'], ['endDate', to, 'to']].map(([field, value, label]) => <label key={field} className="text-sm">{t(`financialWorkspace.${label}`)}<input aria-label={t(`financialWorkspace.${label}`)} type="date" value={value} onChange={(event) => update({ [field]: event.target.value, page: null })} className={inputClass} /></label>)}
           <label className="text-sm">{t('financialWorkspace.sort')}<select aria-label={t('financialWorkspace.sort')} value={sort} onChange={(event) => update({ sort: event.target.value, page: null })} className={inputClass}>{[['-createdAt','newest'],['createdAt','oldest'],['amount','amountAsc'],['-amount','amountDesc']].map(([value, key]) => <option key={value} value={value}>{t(`financialWorkspace.${key}`)}</option>)}</select></label>
         </div><button type="button" onClick={() => update({ q: null, type: null, status: null, currency: null, startDate: null, endDate: null, sort: null, page: null })} className="mt-3 min-h-11 text-sm underline">{t('financialWorkspace.reset')}</button></details>
+        </FilterContainer>
         <button type="button" disabled={loading} onClick={load} className="min-h-11 text-sm underline">{t('financialWorkspace.refresh')}</button>
         {invalidDates && <p role="alert">{t('financialWorkspace.invalidDates')}</p>}
         {error && <p role="alert" className="app-alert app-alert-error">{error}</p>}
         {loading && <p role="status">{t('financialWorkspace.loading')}</p>}
         {!loading && !error && !invalidDates && visible?.items.length === 0 && <p>{t('financialWorkspace.empty')}</p>}
-        {!invalidDates && <div className="space-y-4">{visible?.items.map((entry) => <TransactionCard key={entry.id} entry={entry} user={user} context={context} from={location.pathname + location.search} onSaved={saved} />)}</div>}
+        {!invalidDates && <div className="space-y-4">{visible?.items.map((entry) => <TransactionCard key={entry.id} entry={entry} user={user} context={context} compact={embedded} from={location.pathname + location.search} onSaved={saved} />)}</div>}
         {visible?.pagination?.total > 20 && <PaginationBar page={page} pageSize={20} totalItems={visible.pagination.total} showPageSize={false} onPageChange={(value) => update({ page: value })} />}
       </>}
     </>}

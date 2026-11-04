@@ -9,6 +9,11 @@ const { PERMISSIONS } = require('../constants/permissions');
 const { canAccessGeoResource, isGlobalAdmin } = require('../utils/geoScope');
 const { guardCreation } = require('../middleware/creationRequest.middleware');
 const { validateBody } = require('../middleware/validate.middleware');
+// project.controller.js (ci-dessus) importe déjà '../../models' sans aucun souci : le
+// commentaire historique sur un import circulaire ne tenait plus — vérifié en requérant
+// ce module directement et via la suite de tests avant ce changement.
+const { Project, User } = require('../../models');
+const logger = require('../utils/logger');
 const {
   createProjectSchema,
   updateProjectSchema,
@@ -67,10 +72,6 @@ router.post(
       if (!pid || Number.isNaN(pid)) {
         return res.status(400).json({ error: 'projectId invalide ou manquant.' });
       }
-
-      // Chargement dynamique pour éviter les imports circulaires
-      const { Project, User } = require('../../models');
-const logger = require('../utils/logger');
 
       // ✅ Vérifier l’existence du projet
       const project = await Project.findByPk(pid);

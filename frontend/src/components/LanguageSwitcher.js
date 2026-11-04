@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { normalizeLanguage, setLanguage } from "../i18n";
 import { getLocalUser, updateMyLanguage } from "../services/auth";
+import { notify } from "../utils/notify";
 
 export default function LanguageSwitcher({ className = "", compact = false }) {
   const { t, i18n } = useTranslation();
@@ -45,6 +46,7 @@ export default function LanguageSwitcher({ className = "", compact = false }) {
         await updateMyLanguage(next);
       } catch (err) {
         console.warn("LanguageSwitcher update language warning:", err?.message || err);
+        notify.warning(t("language.saveError"));
       } finally {
         setSaving(false);
       }
@@ -63,7 +65,7 @@ export default function LanguageSwitcher({ className = "", compact = false }) {
         onChange={handleChange}
         disabled={saving}
         className={[
-          "rounded-lg border border-border bg-surface-main/50 text-text-primary",
+          "min-h-11 rounded-lg border border-border bg-surface-main/50 text-text-primary",
           "focus:outline-none focus:ring-2 focus:ring-primary/20",
           compact ? "max-w-full" : "w-full max-w-full",
           compact

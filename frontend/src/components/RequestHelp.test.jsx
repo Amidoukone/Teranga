@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import RequestHelp from './RequestHelp';
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key, values) => key === 'requestHelp.message' ? `Aide pour #${values.id}: ${values.title}` : key }) }));
-jest.mock('react-router-dom', () => ({ Link: ({ children, to, ...props }) => <a href={to} {...props}>{children}</a> }), { virtual: true });
+jest.mock('react-router-dom', () => ({ Link: ({ children, to, state, ...props }) => <a href={to} {...props}>{children}</a>, useLocation: () => ({ pathname: '/services/12', search: '', hash: '', state: { from: '/demandes?q=fuite' } }) }), { virtual: true });
 
 test('assistance keeps the request reference and its own country phone', () => {
   const { rerender } = render(<RequestHelp id={12} title="Réparer une fuite" phone="+2250700000000" />);

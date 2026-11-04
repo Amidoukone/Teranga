@@ -27,7 +27,12 @@ function evaluatePilotReadiness({ countryCode, territories = [], organizations =
   const timestamp = new Date(now).getTime();
   const requestedCode = String(countryCode || '').trim().toUpperCase();
   const country = territories.find((item) => item.type === 'COUNTRY' && (String(item.code).toUpperCase() === requestedCode || (Array.isArray(item.aliases) && item.aliases.some((alias) => String(alias).toUpperCase() === requestedCode))));
-  if (!country) issues.push({ code: 'PILOT_COUNTRY_NOT_FOUND', severity: 'blocking', message: `Aucun territoire pays pour ${countryCode}.` });
+  // Un pays existe dans Country/Region dès sa création (toujours isActive:false), mais son
+  // territoire projeté (Territory/Organization/Membership, lu par le catalogue) n'est créé que
+  // par un script séparé — jamais automatiquement. Un pays "introuvable" ici est donc le plus
+  // souvent un pays jamais projeté, pas un pays inexistant : le message doit orienter vers la
+  // commande à lancer plutôt que de laisser croire à une erreur de code pays.
+  if (!country) issues.push({ code: 'PILOT_COUNTRY_NOT_FOUND', severity: 'blocking', message: `Aucun territoire projeté pour ${countryCode} : vérifiez le code pays, ou lancez "npm run data:project-territories:apply" si le pays existe déjà mais n'a jamais été projeté.` });
   const activeOrganizations = new Map(organizations.filter((org) => org.status === 'active').map((org) => [id(org.id), org]));
   const operatorsFor = (territoryId) => new Set(assignments.filter((assignment) =>
     id(assignment.territoryId) === id(territoryId) && assignment.status === 'active' && assignment.isPrimary &&
@@ -86,7 +91,9 @@ async function loadPilotReadiness(db, countryCode) {
     db.Provider.findAll({ where: { status: 'active', countryCode: requestedCode }, raw: true }),
   ]);
   const organizationIds = [...new Set([...assignments, ...memberships].map((record) => record.organizationId).filter((value) => value != null))];
-  const organizations = await db.Organization.findAll({ where: { id: organizationIds }, raw: true });
+  const organizations = organizationIds.length
+    ? await db.Organization.findAll({ where: { id: organizationIds }, raw: true })
+    : [];
   return evaluatePilotReadiness({ countryCode: requestedCode, territories, organizations, assignments, definitions, availabilities, memberships, users, providers });
 }
 

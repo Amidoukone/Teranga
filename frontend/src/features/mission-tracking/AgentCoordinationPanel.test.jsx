@@ -5,7 +5,7 @@ import WorkProgressPanel from './WorkProgressPanel';
 import { advanceAssignment, getAgentAssignments, getAgentCapacity, getWorkProgress, updateAgentCapacity } from '../../services/operations';
 const mockTranslate = (key) => key;
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: mockTranslate }) }));
-jest.mock('react-router-dom', () => ({ Link: ({ children, to, ...props }) => <a href={to} {...props}>{children}</a> }), { virtual: true });
+jest.mock('react-router-dom', () => ({ Link: ({ children, to, ...props }) => <a href={to} {...props}>{children}</a>, useLocation: () => ({ pathname: '/operations', search: '' }) }), { virtual: true });
 jest.mock('../../services/operations', () => ({ advanceAssignment: jest.fn(), getAgentAssignments: jest.fn(), getAgentCapacity: jest.fn(), getWorkProgress: jest.fn(), updateAgentCapacity: jest.fn() }));
 
 beforeEach(() => {

@@ -1,16 +1,20 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import MissionTrackingPage from "./MissionTrackingPage";
-import { getMissionTrack, pingMissionLocation, updateMissionStatus } from "../services/missions";
+import { acceptMission, declineMission, getMissionTrack, pingMissionLocation, updateMissionStatus, verifyMissionStartCode } from "../services/missions";
+const mockNavigate = jest.fn();
+let mockFrom;
+jest.mock('../utils/notify', () => ({ notify: jest.fn() }));
 jest.mock('../features/service-workspace/ServiceStepsPanel', () => () => null);
-jest.mock('../i18n/useLocale', () => ({ useLocale: () => ({ formatNumber: String }) }));
+jest.mock('../i18n/useLocale', () => ({ useLocale: () => ({ formatNumber: String, formatDateTime: String }) }));
 
 jest.mock(
   "react-router-dom",
   () => ({
     Link: ({ children, to, ...props }) => <a href={to} {...props}>{children}</a>,
-    useLocation: () => ({ pathname: "/courses/81" }),
+    useLocation: () => ({ pathname: "/courses/81", state: { from: mockFrom } }),
+    useNavigate: () => mockNavigate,
     useParams: () => ({ id: "81" }),
   }),
   { virtual: true }
@@ -55,17 +59,78 @@ jest.mock("../features/mission-tracking/MissionTrackingMap", () => () => (
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockFrom = undefined;
   Object.defineProperty(navigator, "geolocation", {
     configurable: true,
     value: undefined,
   });
 });
 
+test('refusing an offer returns to its filtered list without reloading the revoked dossier', async () => {
+  mockFrom = '/prestataire/interventions?vue=offres&type=taxi&q=gare';
+  getMissionTrack.mockResolvedValue({ title: 'Course proposée', missionStatus: 'ASSIGNED', viewerRole: 'provider', isExecutor: true, tradeCategorySlug: 'mobilite', acceptanceDeadlineAt: '2099-01-01T12:00:00Z' });
+  let finish;
+  declineMission.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  render(<MissionTrackingPage />);
+  const button = await screen.findByRole('button', { name: 'taxiRides.decline' });
+  fireEvent.click(button); fireEvent.click(button);
+  expect(declineMission).toHaveBeenCalledTimes(1);
+  await act(async () => finish({}));
+  expect(mockNavigate).toHaveBeenCalledWith(mockFrom, { replace: true });
+  expect(getMissionTrack).toHaveBeenCalledTimes(1);
+});
+
+test('an expired offer cannot be answered from a bookmarked tracking page', async () => {
+  getMissionTrack.mockResolvedValue({ title: 'Course expirée', missionStatus: 'ASSIGNED', viewerRole: 'provider', isExecutor: true, tradeCategorySlug: 'mobilite', acceptanceDeadlineAt: '2020-01-01T12:00:00Z' });
+  render(<MissionTrackingPage />);
+  expect(await screen.findByRole('button', { name: 'taxiRides.accept' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'taxiRides.decline' })).toBeDisabled();
+  expect(screen.getByText('transportWorkspace.offerExpired')).toBeInTheDocument();
+});
+
+test('a reassigned offer reports the server reason and refreshes instead of pretending success', async () => {
+  const offer = { title: 'Course proposée', missionStatus: 'ASSIGNED', viewerRole: 'provider', isExecutor: true, tradeCategorySlug: 'mobilite', acceptanceDeadlineAt: '2099-01-01T12:00:00Z' };
+  getMissionTrack.mockResolvedValueOnce(offer).mockResolvedValue({ ...offer, acceptanceDeadlineAt: null });
+  acceptMission.mockRejectedValueOnce({ response: { status: 409, data: { error: 'Cette offre a déjà reçu une réponse.' } } });
+  render(<MissionTrackingPage />);
+  fireEvent.click(await screen.findByRole('button', { name: 'taxiRides.accept' }));
+  expect(await screen.findByText('Cette offre a déjà reçu une réponse.')).toBeInTheDocument();
+  await waitFor(() => expect(getMissionTrack).toHaveBeenCalledTimes(2));
+  expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+test('delivery records the optional declared cash once without creating a payment', async () => {
+  const delivery = { title: 'Livraison', missionStatus: 'IN_PROGRESS', viewerRole: 'provider', isExecutor: true, tradeCategorySlug: 'livraison', currency: 'XOF' };
+  getMissionTrack.mockResolvedValueOnce(delivery).mockResolvedValue({ ...delivery, missionStatus: 'COMPLETED', collectedAmount: 0 });
+  updateMissionStatus.mockResolvedValueOnce({});
+  render(<MissionTrackingPage />);
+  const amount = await screen.findByLabelText('transportWorkspace.collectedLabel');
+  expect(screen.getAllByRole('spinbutton')).toHaveLength(1);
+  fireEvent.change(amount, { target: { value: '0' } });
+  fireEvent.click(screen.getAllByRole('button', { name: 'deliveryOrders.executorCta.COMPLETED' })[0]);
+  await waitFor(() => expect(updateMissionStatus).toHaveBeenCalledWith('81', 'COMPLETED', { collectedAmount: 0 }));
+  await screen.findByText('transportWorkspace.collectedSaved');
+  expect(screen.queryByRole('button', { name: 'missionTracking.showMap' })).not.toBeInTheDocument();
+  expect(screen.queryByText('missionTracking.noPositionYet')).not.toBeInTheDocument();
+});
+
+test('one departure-code submission starts the ride even with repeated clicks', async () => {
+  getMissionTrack.mockResolvedValue({ title: 'Course', missionStatus: 'ON_SITE', viewerRole: 'provider', isExecutor: true, tradeCategorySlug: 'mobilite' });
+  let finish;
+  verifyMissionStartCode.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  render(<MissionTrackingPage />);
+  fireEvent.change(await screen.findByLabelText('missionTracking.startCode.driverTitle', { selector: '#mission-start-code' }), { target: { value: '1234' } });
+  const buttons = screen.getAllByRole('button', { name: 'missionTracking.startCode.verifyCta' });
+  fireEvent.click(buttons[0]); fireEvent.click(buttons[1]);
+  expect(verifyMissionStartCode).toHaveBeenCalledTimes(1);
+  await act(async () => finish({}));
+});
+
 test('the submitted report is displayed before the single client confirmation action', async () => {
   getMissionTrack.mockResolvedValue({ id: 81, title: 'Résultat livré', missionStatus: 'COMPLETED', viewerRole: 'client', isExecutor: false, tradeCategorySlug: 'plomberie', completion: { report: { summary: 'Travaux remis avec leurs justificatifs', attachments: [{ id: 1, originalName: 'resultat.pdf', filePath: '/uploads/resultat.pdf' }] } } });
   render(<MissionTrackingPage />);
   const proof = await screen.findByRole('link', { name: 'resultat.pdf' });
-  const button = screen.getByRole('button', { name: 'missionTracking.validateCta' });
+  const button = screen.getByRole('button', { name: 'serviceTracking.actions.validate' });
   expect(proof.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByRole('button', { name: 'missionTracking.reportProblemCta' })).toBeInTheDocument();
   updateMissionStatus.mockRejectedValueOnce({ response: { data: { error: 'La demande a changé, actualisez son état.' } } });
@@ -79,6 +144,7 @@ test('a finished nontransport mission opens a new service request', async () => 
   getMissionTrack.mockResolvedValue({ id: 81, title: 'Travail confirmé', missionStatus: 'CLOSED', viewerRole: 'client', isExecutor: false, tradeCategorySlug: 'plomberie' });
   render(<MissionTrackingPage />);
   expect(await screen.findByRole('link', { name: 'serviceMission.terminal.newRequest' })).toHaveAttribute('href', '/demandes/nouvelle');
+  expect(screen.getAllByText('serviceMission.terminal.CLOSED.title')).toHaveLength(1);
 });
 
 test('an offline refresh preserves the executor report draft and a successful refresh resumes tracking', async () => {
@@ -284,8 +350,8 @@ test("donne au prestataire une action principale pour un service", async () => {
   expect(
     (await screen.findAllByRole("button", { name: "serviceMission.executorCta.EN_ROUTE" })).length
   ).toBeGreaterThanOrEqual(1);
-  expect(screen.getByRole("link", { name: /requestWorkspace.back/ })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: /providerWorkspace.back/ })).toHaveAttribute(
     "href",
-    "/prestataire/services"
+    "/prestataire/interventions"
   );
 });

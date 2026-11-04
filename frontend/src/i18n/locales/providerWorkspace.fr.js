@@ -1,0 +1,25 @@
+const providerWorkspace = {
+  title: 'Mes interventions',
+  hint: 'Services, courses et livraisons au même endroit. Ouvrez un dossier pour intervenir, rendre compte et retrouver les justificatifs.',
+  availability: 'Gérer ma disponibilité au centre', views: 'Vue des interventions', back: 'Retour aux interventions',
+  view: { 'en-cours': 'En cours', offres: 'Offres à accepter', historique: 'Historique' },
+  search: 'Rechercher par titre, adresse ou numéro',
+  results_one: '{{count}} intervention', results_other: '{{count}} interventions',
+  loadFailed: 'Impossible de charger vos interventions. Réessayez.',
+  actionFailed: 'Votre réponse n’a pas pu être enregistrée. Actualisez l’offre avant de réessayer.',
+  accept: 'Accepter l’offre', decline: 'Refuser l’offre', report: 'Compte rendu et justificatifs',
+  deadline: 'Répondre avant le {{date}}',
+  status: { CREATED: 'Demande reçue', SEARCHING_EXECUTOR: 'Prise en charge en préparation', ASSIGNED: 'Intervention affectée', EN_ROUTE: 'En route', ON_SITE: 'Sur place', IN_PROGRESS: 'En cours', COMPLETED: 'Résultat remis — confirmation du client attendue', VALIDATED: 'Confirmée par le client', CLOSED: 'Clôturée', CANCELLED_BY_CLIENT: 'Annulée par le client', NO_EXECUTOR_FOUND: 'Prise en charge interrompue', DISPUTED: 'Problème signalé', RESOLVED_REFUND: 'Clôturée avec remboursement', RESOLVED_REDO: 'Reprise organisée', RESOLVED_CLOSED: 'Problème résolu' },
+  empty: { 'en-cours': 'Aucune intervention en cours', offres: 'Aucune offre à accepter', historique: 'Aucune intervention dans l’historique' },
+  emptyHint: 'Les interventions qui vous sont affectées apparaissent ici. Votre disponibilité se gère dans le centre.',
+  next: {
+    offer: 'Consultez les détails, puis acceptez ou refusez cette proposition.',
+    expired: 'Le délai de réponse est dépassé. Actualisez pour connaître la nouvelle prise en charge.',
+    work: 'Ouvrez le dossier pour poursuivre votre intervention.',
+    report: 'Réalisez le travail, puis ajoutez votre compte rendu et les justificatifs dans le dossier.',
+    waitingClient: 'Le travail est remis et attend la confirmation du client. Le compte rendu et les justificatifs restent consultables.',
+    history: 'Retrouvez le suivi, le compte rendu et les justificatifs dans le dossier.',
+    disputed: 'Un problème a été signalé. Consultez le dossier pour suivre sa résolution.',
+  },
+};
+export default providerWorkspace;

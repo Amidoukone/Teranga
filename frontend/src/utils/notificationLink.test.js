@@ -47,4 +47,16 @@ describe("resolveNotificationLink", () => {
       )
     ).toBe("/admin/services?demande=90");
   });
+
+  test('agent supervision opens the same authorized route from an information and a work list', () => {
+    expect(resolveNotificationLink(mobilityNotification, 'agent')).toBe('/missions/81/track');
+  });
+
+  test.each([['client', '/livraisons/90'], ['provider', '/livraisons/90'], ['admin', '/admin/livraisons?demande=90']])('delivery information opens the correct %s workspace', (role, path) => {
+    expect(resolveNotificationLink({ entityType: 'service', entityId: 90, metadata: { missionStatus: 'ASSIGNED', packageType: 'bulky' } }, role)).toBe(path);
+  });
+
+  test('a property-only task information opens its exact intervention', () => {
+    expect(resolveNotificationLink({ entityType: 'task', entityId: 29 }, 'agent')).toBe('/tasks/29');
+  });
 });

@@ -90,6 +90,7 @@ module.exports = (sequelize, DataTypes) => {
       phone: {
         type: DataTypes.STRING,
         allowNull: true,
+        unique: true,
       },
 
       // Langue UI preferree (fr/en)

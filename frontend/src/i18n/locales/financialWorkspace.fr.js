@@ -1,4 +1,7 @@
 const financialWorkspace = {
+  payment: 'Paiement',
+  recordPayment: 'Ajouter un paiement ou une dépense', searchAndFilter: 'Rechercher ou filtrer les paiements', options: 'Devise et options complémentaires',
+  paymentReview: 'Contrôle du règlement de la commande', paymentReviewHint: 'Vérifiez le règlement avant de confirmer que la commande est payée. La livraison reste suivie séparément.',
   title: 'Paiements et dépenses', clientTitle: 'Mes paiements', journal: 'Journal', statement: 'Bilan',
   hint: 'Retrouvez les écritures, leurs justificatifs et le dossier concerné.',
   external: 'Les paiements se font en dehors de Teranga. Enregistrer une écriture ne confirme ni la livraison ni le résultat du dossier.',

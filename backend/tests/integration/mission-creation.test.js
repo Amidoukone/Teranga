@@ -16,6 +16,7 @@ const created = {
   serviceIds: [],
   savedLocationIds: [],
   ruleIds: [],
+  propertyIds: [],
 };
 
 async function checkDatabase() {
@@ -72,6 +73,7 @@ describe('Mission creation guidée (POST /api/v1/missions*, docs section 4.1)', 
   let country;
   let tradeCategory;
   let token;
+  let client;
 
   beforeAll(async () => {
     dbReady = await checkDatabase();
@@ -91,6 +93,7 @@ describe('Mission creation guidée (POST /api/v1/missions*, docs section 4.1)', 
     created.ruleIds.push(rule.id);
 
     const { user, password } = await makeClient(country.id);
+    client = user;
     token = await loginAndGetToken(user.email, password);
   });
 
@@ -102,6 +105,7 @@ describe('Mission creation guidée (POST /api/v1/missions*, docs section 4.1)', 
     if (created.serviceIds.length) {
       await db.Service.destroy({ where: { id: created.serviceIds } });
     }
+    if (created.propertyIds.length) await db.Property.destroy({ where: { id: created.propertyIds } });
     if (created.ruleIds.length) {
       await db.MissionPricingRule.destroy({ where: { id: created.ruleIds } });
     }
@@ -118,6 +122,27 @@ describe('Mission creation guidée (POST /api/v1/missions*, docs section 4.1)', 
       await db.Country.destroy({ where: { id: created.countryIds } });
     }
     await db.sequelize.close();
+  });
+
+  test('an owned property is retained on a guided intervention and another owner is rejected', async () => {
+    if (!dbReady) throw new Error('The property linkage test requires the isolated test database');
+    const property = await db.Property.create({ ownerId: client.id, countryId: country.id, title: 'Bien de recette', type: 'house', address: 'Rue de recette', city: 'Ville de recette' });
+    created.propertyIds.push(property.id);
+    const payload = { executionType: 'provider', tradeCategoryId: tradeCategory.id, title: 'Contrôler le bien', propertyId: property.id };
+    let response = await request(app).post('/api/v1/missions').set('Authorization', `Bearer ${token}`).send(payload);
+    expect(response.status).toBe(201); created.serviceIds.push(response.body.mission.id);
+    expect(response.body.mission.propertyId).toBe(property.id);
+    const { user: stranger } = await makeClient(country.id);
+    await property.update({ ownerId: stranger.id });
+    response = await request(app).post('/api/v1/missions').set('Authorization', `Bearer ${token}`).send(payload);
+    expect(response.status).toBe(403);
+    response = await request(app).get(`/api/properties/${property.id}`).set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(403);
+    await property.update({ ownerId: client.id });
+    response = await request(app).get(`/api/properties/${property.id}`).set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(200); expect(response.body.property.id).toBe(property.id);
+    response = await request(app).post('/api/v1/missions').set('Authorization', `Bearer ${token}`).send({ ...payload, propertyId: 999999999 });
+    expect(response.status).toBe(404);
   });
 
   test('POST /missions/estimate returns the fixed_estimate rule for the trade category', async () => {

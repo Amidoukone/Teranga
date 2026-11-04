@@ -45,11 +45,14 @@ import {
   CarFront,
   CirclePlus,
   ListChecks,
+  Bell,
+  MapPin,
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "framer-motion";
 import GeoSelector from "./GeoSelector";
 import LanguageSwitcher from "./LanguageSwitcher";
+import TopbarAccountMenu from "./TopbarAccountMenu";
 import { preloadRoute } from "../utils/routePreload";
 import { buildAuthFeedbackState } from "../utils/authFeedback";
 import useFocusTrap from "../hooks/useFocusTrap";
@@ -116,13 +119,13 @@ const ACCOUNT_LINK_PATHS = new Set([
 
 const ROLE_LINKS = {
   client: [
-    { path: "/operations", labelKey: "operations.title" },
+    { path: "/operations", labelKey: "nav.home" },
     { path: "/demandes/nouvelle", labelKey: "nav.newRequest" },
     { path: "/demandes", labelKey: "nav.myRequests", exact: true },
-    { path: "/dossiers", labelKey: "nav.assetsAndProjects" },
+    { path: "/properties", labelKey: "propertySimple.mine" },
     { path: "/tasks", labelKey: "nav.interventions" },
     { path: "/transactions", labelKey: "clientHome.payments" },
-    ...COMMON_COMMERCE,
+    { path: "/shop", labelKey: "nav.products" },
     SETTINGS_LINK,
     ACCOUNT_SECURITY_LINK,
     HELP_SUPPORT_LINK,
@@ -131,10 +134,10 @@ const ROLE_LINKS = {
     LEGAL_LINK,
   ],
   agent: [
-    { path: "/operations", labelKey: "operations.title" },
+    { path: "/operations", labelKey: "nav.home" },
     { path: "/projects", labelKey: "nav.projects" },
-    { path: "/agent/services", labelKey: "nav.services" },
-    { path: "/missions/mine", labelKey: "nav.myMissions" },
+    { path: "/agent/services", labelKey: "roleViews.agentServices" },
+    { path: "/missions/mine", labelKey: "roleViews.supervised" },
     { path: "/tasks", labelKey: "nav.interventions" },
     { path: "/transactions", labelKey: "financialWorkspace.title" },
     ...COMMON_COMMERCE,
@@ -146,10 +149,8 @@ const ROLE_LINKS = {
     LEGAL_LINK,
   ],
   provider: [
-    { path: "/operations", labelKey: "operations.title" },
-    { path: "/chauffeur/courses", labelKey: "nav.myRides" },
-    { path: "/livreur/livraisons", labelKey: "nav.myDeliveries" },
-    { path: "/prestataire/services", labelKey: "nav.services" },
+    { path: "/operations", labelKey: "nav.home" },
+    { path: "/prestataire/interventions", labelKey: "providerWorkspace.title" },
     SETTINGS_LINK,
     ACCOUNT_SECURITY_LINK,
     HELP_SUPPORT_LINK,
@@ -158,10 +159,8 @@ const ROLE_LINKS = {
     LEGAL_LINK,
   ],
   admin: [
-    { path: "/operations", labelKey: "operations.title" },
+    { path: "/operations", labelKey: "nav.home" },
     { path: "/gestion", labelKey: "nav.management" },
-    { path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations" },
-    { path: "/admin/livraisons", labelKey: "nav.deliveryOperations" },
     SETTINGS_LINK, ACCOUNT_SECURITY_LINK, HELP_SUPPORT_LINK, PRIVACY_LINK, TERMS_LINK, LEGAL_LINK,
   ],
 };
@@ -172,25 +171,21 @@ const ROLE_LINKS = {
 
 const BOTTOM_LINKS = {
   client: [
-    { key: "operations", path: "/operations", labelKey: "operations.title", icon: ListChecks },
+    { key: "operations", path: "/operations", labelKey: "nav.home", icon: ListChecks },
     { key: "requests", path: "/demandes", labelKey: "nav.myRequests", icon: ListChecks, exact: true },
     { key: "newRequest", path: "/demandes/nouvelle", labelKey: "nav.newRequest", icon: CirclePlus },
   ],
   agent: [
-    { key: "operations", path: "/operations", labelKey: "operations.title", icon: ListChecks },
-    { key: "agentServices", path: "/agent/services", labelKey: "nav.services", icon: Wrench },
+    { key: "operations", path: "/operations", labelKey: "nav.home", icon: ListChecks },
+    { key: "agentServices", path: "/agent/services", labelKey: "roleViews.agentServices", icon: Wrench },
   ],
   provider: [
-    { key: "operations", path: "/operations", labelKey: "operations.title", icon: ListChecks },
-    { key: "services", path: "/prestataire/services", labelKey: "nav.services", icon: Wrench },
-    { key: "myRides", path: "/chauffeur/courses", labelKey: "nav.myRides", icon: CarFront },
-    { key: "myDeliveries", path: "/livreur/livraisons", labelKey: "nav.myDeliveries", icon: Package },
+    { key: "operations", path: "/operations", labelKey: "nav.home", icon: ListChecks },
+    { key: "interventions", path: "/prestataire/interventions", labelKey: "providerWorkspace.title", icon: Wrench },
   ],
   admin: [
-    { key: "operations", path: "/operations", labelKey: "operations.title", icon: ListChecks },
+    { key: "operations", path: "/operations", labelKey: "nav.home", icon: ListChecks },
     { key: "management", path: "/gestion", labelKey: "nav.management", icon: LayoutDashboard },
-    { key: "taxiRides", path: "/admin/taxi-dispatch", labelKey: "nav.taxiOperations", icon: CarFront },
-    { key: "deliveries", path: "/admin/livraisons", labelKey: "nav.deliveryOperations", icon: Package },
   ],
 };
 
@@ -199,11 +194,11 @@ const BOTTOM_LINKS = {
 /* ============================================================================ */
 
 const ICON_BY_PATH_PREFIX = [
+  { prefix: "/prestataire/interventions", icon: Wrench },
   { prefix: "/gestion", icon: LayoutDashboard },
   { prefix: "/operations", icon: ListChecks },
   { prefix: "/projects", icon: FolderKanban },
   { prefix: "/properties", icon: Building2 },
-  { prefix: "/dossiers", icon: FolderKanban },
   { prefix: "/demandes/nouvelle", icon: CirclePlus },
   { prefix: "/demandes", icon: ListChecks },
   { prefix: "/courses", icon: CarFront },
@@ -326,7 +321,7 @@ function buildSections(role, links, t) {
     ]);
 
     pushSection(t("nav.sections.work"), [
-      ...byPrefix("/dossiers"),
+      ...byPrefix("/prestataire/interventions"),
       ...byPrefix("/projects"),
       ...byPrefix("/properties"),
       ...byPrefix("/tasks"),
@@ -359,14 +354,14 @@ function buildSections(role, links, t) {
 /* ============================================================================ */
 
 const clsTabBase =
-  "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition " +
-  "border border-transparent focus:outline-none focus:ring-4 focus:ring-primary/10";
+  "inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-colors " +
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary";
 
 const clsTabInactive =
-  "text-text-secondary hover:text-text-primary hover:bg-surface-main/70 hover:border-border/60 hover:shadow-[0_6px_20px_-16px_rgba(15,23,42,0.35)]";
+  "text-text-secondary hover:text-text-primary hover:bg-surface-main";
 
 const clsTabActive =
-  "bg-primary/10 text-primary border border-border shadow-sm";
+  "bg-primary/10 text-primary";
 
 const clsMenuSurface =
   "overflow-hidden rounded-2xl border border-border/70 bg-surface-card/95 backdrop-blur-2xl shadow-2xl";
@@ -424,12 +419,15 @@ function NavBar() {
   // Desktop dropdowns
   const [openDesktopMore, setOpenDesktopMore] = useState(false);
   const [openUserMenu, setOpenUserMenu] = useState(false);
+  const [openTerritory, setOpenTerritory] = useState(false);
 
   // Piège de focus clavier (Tab reste dans le menu ouvert, focus initial sur le
   // premier item, focus restauré au déclencheur à la fermeture) — un par menu.
   const desktopMoreMenuRef = useRef(null);
   const userMenuRef = useRef(null);
   const mobileMorePanelRef = useRef(null);
+  const territoryPanelRef = useRef(null);
+  useFocusTrap({ active: openTerritory, containerRef: territoryPanelRef, onEscape: () => setOpenTerritory(false) });
   useFocusTrap({
     active: openDesktopMore,
     containerRef: desktopMoreMenuRef,
@@ -579,7 +577,15 @@ function NavBar() {
     setOpenMore(false);
     setOpenDesktopMore(false);
     setOpenUserMenu(false);
-  }, [location.pathname]);
+    setOpenTerritory(false);
+  }, [location.pathname, location.search, user?.id]);
+
+  useEffect(() => {
+    if (!openMore && !openDesktopMore && !openUserMenu && !openTerritory) return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [openMore, openDesktopMore, openUserMenu, openTerritory]);
 
   useEffect(() => {
     if (typeof document === "undefined" || typeof window === "undefined") {
@@ -604,6 +610,11 @@ function NavBar() {
     };
 
     const handleFocusIn = () => syncMobileSelectState();
+    const handleViewportChange = () => {
+      if (media.matches) setOpenDesktopMore(false);
+      else setOpenMore(false);
+      syncMobileSelectState();
+    };
     const handleFocusOut = () => {
       window.setTimeout(syncMobileSelectState, 0);
     };
@@ -612,18 +623,18 @@ function NavBar() {
     document.addEventListener("focusout", handleFocusOut);
 
     if (typeof media.addEventListener === "function") {
-      media.addEventListener("change", syncMobileSelectState);
+      media.addEventListener("change", handleViewportChange);
     } else {
-      media.addListener(syncMobileSelectState);
+      media.addListener(handleViewportChange);
     }
 
     return () => {
       document.removeEventListener("focusin", handleFocusIn);
       document.removeEventListener("focusout", handleFocusOut);
       if (typeof media.removeEventListener === "function") {
-        media.removeEventListener("change", syncMobileSelectState);
+        media.removeEventListener("change", handleViewportChange);
       } else {
-        media.removeListener(syncMobileSelectState);
+        media.removeListener(handleViewportChange);
       }
     };
   }, []);
@@ -632,6 +643,7 @@ function NavBar() {
     setOpenMore(false);
     setOpenDesktopMore(false);
     setOpenUserMenu(false);
+    setOpenTerritory(false);
     await delay(100);
     await logout();
     navigate("/login", {
@@ -693,10 +705,6 @@ function NavBar() {
     [location.pathname]
   );
 
-  const activeLabel = useMemo(() => {
-    const current = links.find((l) => isActive(l.path, l.exact));
-    return current?.label || "";
-  }, [links, isActive]);
   const isLoginRoute = isActive("/login");
   const isRegisterRoute = isActive("/register");
   const warmRoute = useCallback((path) => {
@@ -795,16 +803,18 @@ function NavBar() {
     <Link
       to="/operations?vue=a-lire"
       {...withRouteWarmup("/operations")}
-      className="relative inline-flex items-center justify-center w-10 h-10 rounded-2xl border border-border/60 bg-surface-main/40 hover:bg-surface-main/70 transition focus:outline-none focus:ring-4 focus:ring-primary/10"
-      aria-label={t("operations.title")}
-      title={t("operations.title")}
+      className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-text-secondary transition-colors hover:bg-surface-main focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+      aria-label={t("workspaceQueue.information")}
+      aria-describedby={unreadCount ? 'topbar-unread' : undefined}
+      title={t("workspaceQueue.information")}
     >
-      <ListChecks size={18} className="text-text-secondary" />
+      <Bell size={20} aria-hidden="true" />
       {unreadCount > 0 && (
-        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[0.65rem] font-semibold flex items-center justify-center">
+        <span aria-hidden="true" className="absolute right-0 top-0 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[0.65rem] font-semibold flex items-center justify-center">
           {unreadCount > 99 ? "99+" : unreadCount}
         </span>
       )}
+      {unreadCount > 0 && <span id="topbar-unread" className="sr-only">{t('topBar.unread', { count: unreadCount })}</span>}
     </Link>
   );
 
@@ -815,8 +825,8 @@ function NavBar() {
   /* ============================================================================ */
   if (!user && isPublic) {
     return (
-      <nav aria-label={t("nav.mainNavigation")} className="sticky top-0 z-50 border-b border-border/70 bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl shadow-[0_10px_30px_-20px_rgba(15,23,42,0.45)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-3">
+      <nav aria-label={t("nav.mainNavigation")} className="sticky top-0 z-[60] border-b border-border bg-surface-card">
+        <div className="max-w-7xl mx-auto h-16 px-3 sm:px-5 flex items-center justify-between gap-2 sm:gap-3">
           <Link
             to="/"
             {...withRouteWarmup("/")}
@@ -833,7 +843,7 @@ function NavBar() {
                 to="/login"
                 {...withRouteWarmup("/login")}
                 className={[
-                  "inline-flex items-center justify-center whitespace-nowrap rounded-lg sm:rounded-xl border px-2.5 py-1.5 text-[0.78rem] font-semibold transition-all duration-200 sm:px-4 sm:py-2 sm:text-sm",
+                  "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-xl border px-2.5 text-xs font-semibold transition-colors sm:px-4 sm:text-sm",
                   isLoginRoute
                     ? "border-primary bg-primary text-white shadow-sm shadow-primary/20"
                     : "border-border/80 bg-surface-main/70 text-text-primary hover:border-primary/30 hover:bg-surface-main/95",
@@ -846,7 +856,7 @@ function NavBar() {
                 to="/register"
                 {...withRouteWarmup("/register")}
                 className={[
-                  "inline-flex items-center justify-center whitespace-nowrap rounded-lg sm:rounded-xl border px-2.5 py-1.5 text-[0.78rem] font-semibold transition-all duration-200 sm:px-4 sm:py-2 sm:text-sm",
+                  "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-xl border px-2.5 text-xs font-semibold transition-colors sm:px-4 sm:text-sm",
                   isRegisterRoute
                     ? "border-primary bg-primary text-white shadow-sm shadow-primary/20"
                     : isLoginRoute
@@ -870,63 +880,24 @@ function NavBar() {
   return (
     <>
       {/* TOP BAR */}
-      <nav aria-label={t("nav.mainNavigation")} className="sticky top-0 z-50 border-b border-border/70 bg-gradient-to-r from-surface-card/95 via-surface-card/90 to-surface-main/90 backdrop-blur-2xl shadow-[0_10px_30px_-20px_rgba(15,23,42,0.45)]">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          {/* LEFT: Logo + Context */}
-          <div className="flex items-center gap-3 min-w-0">
-            <Link
-              to="/operations"
-              {...withRouteWarmup("/operations")}
-              className="flex items-center gap-2 text-primary font-semibold tracking-wide text-[1.05rem] shrink-0"
-            >
-              {Logo} Teranga
-            </Link>
-
-            {/* Page context (mobile) */}
-            <div className="md:hidden flex items-center min-w-0">
-              <span className="px-2.5 py-1 rounded-full text-[0.65rem] font-semibold bg-surface-main/60 text-text-secondary border border-border/60 truncate">
-                {activeLabel || t("operations.title")}
-              </span>
-            </div>
-
-            {/* Page context (desktop) */}
-            {!isGlobalAdmin && (
-              <div className="hidden md:flex flex-col min-w-0 flex-shrink-0">
-                <div className="text-sm font-semibold text-text-primary whitespace-nowrap">
-                  {activeLabel || t("operations.title")}
-                </div>
-                <div className="text-[0.72rem] text-text-muted whitespace-nowrap">
-                  {roleLabel}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* CENTER: Desktop nav tabs */}
-          <div className="hidden md:flex flex-1 items-center justify-center gap-1">
-            {desktopPrimaryTabs.map((l) => {
-              const active = isActive(l.path, l.exact);
-              return (
-                <Link
-                  key={l.path}
-                  to={l.path}
-                  {...withRouteWarmup(l.path)}
-                  className={[clsTabBase, active ? clsTabActive : clsTabInactive].join(" ")}
-                  aria-current={active ? "page" : undefined}
-                >
-                  {l.label}
-                </Link>
-              );
-            })}
-
+      <nav aria-label={t("nav.mainNavigation")} className="sticky top-0 z-[60] border-b border-border bg-surface-card">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:gap-4 sm:px-5">
+          <Link to="/operations" aria-label={t("topBar.home")} {...withRouteWarmup("/operations")}
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg text-lg font-semibold tracking-tight text-primary">
+            {Logo}<span className="md:hidden lg:inline">Teranga</span>
+          </Link>
+          <div className="hidden min-w-0 flex-1 items-center gap-1 md:flex">
+            {desktopPrimaryTabs.map((link) => <Link key={link.path} to={link.path} {...withRouteWarmup(link.path)}
+              className={[clsTabBase, isActive(link.path, link.exact) ? clsTabActive : clsTabInactive].join(" ")}
+              aria-current={isActive(link.path, link.exact) ? "page" : undefined}>{link.label}</Link>)}
             {/* Desktop More */}
             {desktopMoreItems.length > 0 && <div className="relative">
               <button
-                onClick={() => setOpenDesktopMore((v) => !v)}
+                onClick={() => { setOpenUserMenu(false); setOpenTerritory(false); setOpenMore(false); setOpenDesktopMore((v) => !v); }}
                 className={[
                   clsTabBase,
                   openDesktopMore || desktopMoreIsActive ? clsTabActive : clsTabInactive,
-                  "inline-flex items-center gap-1.5",
+                  "relative z-50 inline-flex items-center gap-1.5",
                 ].join(" ")}
                 aria-expanded={openDesktopMore}
                 aria-controls="desktop-more-menu"
@@ -942,7 +913,7 @@ function NavBar() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-40 bg-black/30"
+                      className="fixed inset-0 z-40 bg-black/10"
                       onClick={() => setOpenDesktopMore(false)}
                       aria-hidden="true"
                     />
@@ -960,23 +931,6 @@ function NavBar() {
                       role="menu"
                       aria-label={t("nav.menuPlus")}
                     >
-                      {/* Quick Scope */}
-                      <div className="px-4 py-3 border-b border-border bg-gradient-to-r from-surface-main/60 to-surface-card/30">
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <div className="text-[0.68rem] uppercase tracking-[0.18em] text-text-muted">
-                            {t("nav.perimeter")}
-                          </div>
-                          <span className="text-[0.68rem] text-text-muted">
-                            {t("nav.menuPlus")}
-                          </span>
-                        </div>
-
- {/* Encapsulation AaAEnterprise controlAaA */}
-                        <div className="rounded-xl border border-border/70 bg-surface-card/85 px-3 py-2 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.4)]">
-                          <GeoSelector />
-                        </div>
-                      </div>
-
                       <div className="max-h-[420px] overflow-y-auto py-2">
                         {desktopMoreSections.map((sec) => (
                           <div key={sec.title} className={clsPanelSectionCard}>
@@ -1035,169 +989,32 @@ function NavBar() {
                 )}
               </AnimatePresence>
             </div>}
+
           </div>
-
-          {/* RIGHT: Geo (desktop) + User menu */}
-          <div className="hidden md:flex items-center gap-3 shrink-0">
-            <LanguageSwitcher compact />
-            {NotificationBell}
-            <div className="hidden lg:flex items-center">
-                <div className="rounded-xl border border-border bg-surface-main/50 px-3 py-2">
-                  <GeoSelector />
-                </div>
-              </div>
-
-            {/* Role badge */}
-            <span className="hidden lg:inline rounded-full border border-border bg-surface-main/50 px-3 py-1 text-[0.75rem] uppercase tracking-wide text-text-secondary">
-              {roleLabel}
-            </span>
-
-            {/* User menu */}
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             <div className="relative">
-              <button
-                onClick={() => setOpenUserMenu((v) => !v)}
-                className="flex items-center gap-2 rounded-2xl px-2 py-1.5 border border-border/60 bg-surface-main/40 hover:bg-surface-main/70 transition focus:outline-none focus:ring-4 focus:ring-primary/10"
-                aria-expanded={openUserMenu}
-                aria-controls="user-menu"
-                aria-label={t("nav.userMenu")}
-              >
-                <div className="relative">
-                  <div className="w-9 h-9 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
-                    {userInitial}
-                  </div>
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-surface-card" />
-                </div>
-
-                <div className="hidden lg:flex items-center">
-                  <div className="text-sm font-semibold text-text-primary max-w-[180px] truncate">
-                    {userDisplay}
-                  </div>
-                </div>
-
-                <ChevronDown size={16} className={openUserMenu ? "text-primary" : "text-text-secondary"} />
+              <button type="button" aria-label={t('topBar.territory')} title={t('topBar.territory')} aria-haspopup="dialog" aria-expanded={openTerritory} aria-controls="topbar-territory"
+                onClick={() => { setOpenUserMenu(false); setOpenDesktopMore(false); setOpenMore(false); setOpenTerritory(value => !value); }}
+                className="relative z-50 inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-xl px-2 text-sm text-text-secondary transition-colors hover:bg-surface-main focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+                <MapPin size={19} aria-hidden="true" /><span className="hidden max-w-[9rem] text-left xl:block"><GeoSelector summaryOnly /></span><ChevronDown size={13} className="hidden xl:block" aria-hidden="true" />
               </button>
-
-              <AnimatePresence>
-                {openUserMenu && (
-                  <>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-40 bg-black/30"
-                      onClick={() => setOpenUserMenu(false)}
-                      aria-hidden="true"
-                    />
-                    <motion.div
-                      ref={userMenuRef}
-                      id="user-menu"
-                      initial={{ opacity: 0, y: 8, scale: 0.985 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.985 }}
-                      transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
-                      className={["absolute right-0 mt-2 z-50 w-[312px]", clsMenuSurface].join(" ")}
-                      role="menu"
-                      aria-label={t("nav.userMenu")}
-                    >
-                      <div className="px-4 py-3 border-b border-border bg-gradient-to-r from-surface-main/60 to-surface-card/30">
-                        <div className="flex items-start gap-3">
-                          <div className="relative shrink-0">
-                            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-semibold shadow-sm">
-                              {userInitial}
-                            </div>
-                            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-surface-card" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-text-primary text-sm font-semibold tracking-wide truncate">
-                              {userDisplay}
-                            </div>
-                            {(user?.email || user?.phone) &&
-                            (user?.email || user?.phone) !== userDisplay ? (
-                              <div className="text-text-muted text-[0.72rem] truncate mt-0.5">
-                                {user.email || user.phone}
-                              </div>
-                            ) : null}
-                            <div className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-surface-card/70 px-2 py-0.5 text-[0.68rem] uppercase tracking-wide text-text-muted">
-                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                              {roleLabel}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="px-3 py-3 space-y-3">
-                        <div>
-                          <div className={clsSubSectionLabel}>{t("nav.sections.account")}</div>
-                          <Link
-                            to="/settings"
-                            {...withRouteWarmup("/settings", {
-                              onClick: () => setOpenUserMenu(false),
-                            })}
-                            className={clsAccountCard}
-                            role="menuitem"
-                          >
-                            <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors duration-150 group-hover:bg-primary/15">
-                              <Settings size={16} />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-sm font-semibold text-text-primary">
-                                {t("nav.settings")}
-                              </span>
-                              <span className="mt-0.5 block text-xs text-text-muted leading-relaxed">
-                                {t("nav.settingsMenuHint")}
-                              </span>
-                            </span>
-                            <span className="mt-1 text-text-muted transition-transform duration-150 group-hover:translate-x-0.5">
-                              <ChevronRight size={15} aria-hidden="true" />
-                            </span>
-                          </Link>
-                        </div>
-
-                        <div>
-                          <div className={clsSubSectionLabel}>{t("nav.sections.session")}</div>
-                          <button
-                            onClick={handleLogout}
-                            className={clsSessionRow}
-                            aria-label={t("nav.logout")}
-                            role="menuitem"
-                          >
-                            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-300 transition-colors duration-150 group-hover:bg-red-500/15">
-                              <LogOut size={16} aria-hidden="true" />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-sm font-semibold text-text-primary">
-                                {t("nav.logout")}
-                              </span>
-                              <span className="block text-xs text-text-muted">
-                                {t("nav.userMenu")}
-                              </span>
-                            </span>
-                            <span className="text-red-500/80 transition-transform duration-150 group-hover:translate-x-0.5">
-                              <ChevronRight size={15} aria-hidden="true" />
-                            </span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
-                      <motion.div
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.14, delay: 0.02 }}
-                        className="px-4 py-2.5 text-[0.7rem] text-text-muted bg-surface-main/20"
-                      >
-                        {t("nav.settingsMenuHintShort")}
-                      </motion.div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
+              <AnimatePresence>{openTerritory && <>
+                <div className="fixed inset-0 z-40 bg-black/10" onClick={() => setOpenTerritory(false)} aria-hidden="true" />
+                <motion.div ref={territoryPanelRef} id="topbar-territory" role="dialog" aria-modal="true" aria-label={t('topBar.territory')}
+                  initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
+                  className="fixed inset-x-3 top-[4.5rem] z-50 max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-2xl border border-border bg-surface-card p-4 shadow-xl md:absolute md:inset-x-auto md:right-0 md:top-full md:mt-3 md:w-80">
+                  <h2 className="mb-3 text-sm font-semibold text-text-primary">{t('topBar.territory')}</h2>
+                  <GeoSelector stacked idPrefix="topbar-geo" />
+                  <p className="mt-3 text-xs leading-relaxed text-text-secondary">{t('topBar.territoryHint')}</p>
+                  <button type="button" onClick={() => setOpenTerritory(false)} className="mt-3 min-h-11 w-full rounded-xl border border-border text-sm font-medium">{t('nav.closeMenu')}</button>
+                </motion.div>
+              </>}</AnimatePresence>
             </div>
+            {NotificationBell}
+            <TopbarAccountMenu user={user} display={userDisplay} initial={userInitial} roleLabel={roleLabel} open={openUserMenu}
+              onToggle={() => { setOpenTerritory(false); setOpenDesktopMore(false); setOpenMore(false); setOpenUserMenu(value => !value); }}
+              onClose={() => setOpenUserMenu(false)} onLogout={handleLogout} panelRef={userMenuRef} warmup={withRouteWarmup} />
           </div>
-
-          {/* MOBILE: notifications shortcut */}
-          <div className="md:hidden">{NotificationBell}</div>
         </div>
       </nav>
 
@@ -1242,7 +1059,7 @@ function NavBar() {
 
               {/* BUTTON PLUS */}
               <button
-                onClick={() => setOpenMore((v) => !v)}
+                onClick={() => { setOpenUserMenu(false); setOpenDesktopMore(false); setOpenTerritory(false); setOpenMore((v) => !v); }}
                 className={[
                   "flex-1 flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-[0.7rem] font-medium leading-tight transition touch-manipulation",
                   "focus:outline-none focus:ring-4 focus:ring-primary/10",

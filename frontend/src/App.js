@@ -32,6 +32,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const ProductCatalogPage = lazy(() => import('./pages/ProductCatalogPage'));
 const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
+const PropertyDetailPage = lazy(() => import('./pages/PropertyDetailPage'));
 
 // Contexte: routage et guardes d'acces.
 const LegalPage = lazy(() => import('./pages/LegalPage'));
@@ -50,6 +51,8 @@ const MissionCreatePage = lazy(() => import('./pages/MissionCreatePage'));
 const MissionPricingAdminPage = lazy(() => import('./pages/MissionPricingAdminPage'));
 const MissionTrackingPage = lazy(() => import('./pages/MissionTrackingPage'));
 const MyMissionsPage = lazy(() => import('./pages/MyMissionsPage'));
+const ProviderWorkspacePage = lazy(() => import('./pages/ProviderWorkspacePage'));
+const ProviderWorkspaceAlias = lazy(() => import('./pages/ProviderWorkspacePage').then(module => ({ default: module.ProviderWorkspaceAlias })));
 const TaxiRidesPage = lazy(() => import('./pages/TaxiRidesPage'));
 const DeliveryOrdersPage = lazy(() => import('./pages/DeliveryOrdersPage'));
 const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'));
@@ -595,6 +598,7 @@ export default function App() {
               }
             />
 
+            <Route path="/properties/:id" element={<RequireAuth><RequireRole allow={['client', 'admin']}><PropertyDetailPage /></RequireRole></RequireAuth>} />
             <Route
               path="/projects"
               element={
@@ -775,7 +779,7 @@ export default function App() {
                   <RequireRole allow={['agent', 'provider']}>
                     <>
                       <SetSeo title={t('seo.pages.myMissions.title')} />
-                      <MyMissionsPage />
+                      {normalizeRole(getLocalUser()?.role) === 'provider' ? <ProviderWorkspaceAlias /> : <MyMissionsPage />}
                     </>
                   </RequireRole>
                 </RequireAuth>
@@ -789,7 +793,7 @@ export default function App() {
                   <RequireRole allow={['provider']}>
                     <>
                       <SetSeo title={t('taxiRides.driverTitle')} />
-                      <MyMissionsPage mobilityOnly />
+                      <ProviderWorkspaceAlias kind="taxi" />
                     </>
                   </RequireRole>
                 </RequireAuth>
@@ -803,7 +807,7 @@ export default function App() {
                   <RequireRole allow={['provider']}>
                     <>
                       <SetSeo title={t('deliveryOrders.driverTitle')} />
-                      <MyMissionsPage deliveryOnly />
+                      <ProviderWorkspaceAlias kind="delivery" />
                     </>
                   </RequireRole>
                 </RequireAuth>
@@ -817,12 +821,14 @@ export default function App() {
                   <RequireRole allow={['provider']}>
                     <>
                       <SetSeo title={t('serviceProvider.title')} />
-                      <MyMissionsPage serviceOnly />
+                      <ProviderWorkspaceAlias kind="service" />
                     </>
                   </RequireRole>
                 </RequireAuth>
               }
             />
+
+            <Route path="/prestataire/interventions" element={<RequireAuth><RequireRole allow={['provider']}><SetSeo title={t('providerWorkspace.title')} /><ProviderWorkspacePage /></RequireRole></RequireAuth>} />
 
             <Route
               path="/services/:id"

@@ -2,101 +2,39 @@
 // ProductDetailPage.jsx Teranga PRODUCTION READY (Style A 2025)
 // Contexte: detail de produit.
 // - Images robustes (allImageUrls + gallery + coverImage + imageUrl)
-// - FILE_BASE + toAbsUrl (Render/Netlify/Prod)
+// - URLs et formulaire de commande communs avec le catalogue
 // - Lightbox + navigation + miniatures
 // ============================================================
 
 /* eslint-disable jsx-a11y/img-redundant-alt */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { getProductById } from '../services/products';
-import { formatCurrency, getStockTone } from '../utils/labels';
+import { getStockTone } from '../utils/labels';
 import { useLocale } from '../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '../components/ui';
 import useFocusTrap from '../hooks/useFocusTrap';
+import { useGeo } from '../contexts/GeoContext';
+import ProductPurchase from '../features/shop/ProductPurchase';
+import useShopAccess from '../features/shop/useShopAccess';
+import { catalogueReturn, getProductImages } from '../features/shop/productDisplay';
+import ShopSignIn from '../features/shop/ShopSignIn';
 
-/* ============================================================
-   URLs API/fichiers (dev/prod).
-============================================================ */
-const FILE_BASE =
-  (typeof window !== 'undefined' &&
-    (window.__TERANGA_FILE_BASE_URL ||
-      (window.__TERANGA_API_BASE_URL
-        ? window.__TERANGA_API_BASE_URL.replace(/\/api\/?$/, '')
-        : '') ||
-      '')) ||
-  '';
-
-function normalizePath(path = '') {
-  if (!path) return '';
-  const p = String(path).trim().replace(/\\/g, '/');
-
-  if (/^https?:\/\//i.test(p)) return p;
-
-  const start = p.startsWith('/') ? p : '/' + p;
-  return start.replace(/\/{2,}/g, '/');
-}
-
-function toAbsUrl(path = '') {
-  const norm = normalizePath(path);
-  if (!norm) return '';
-  if (/^https?:\/\//i.test(norm)) return norm;
-
-  return FILE_BASE.replace(/\/$/, '') + '/' + norm.replace(/^\//, '');
-}
-
-/* ============================================================
-   Module: detail d un produit.
-   Sources possibles:
-   Module: detail d un produit.
-   - gallery: [{url}, "string", ...]
-   - coverImage: "string" ou {url}
-   - imageUrl: "string"
-============================================================ */
-function getImagesForProduct(p) {
-  if (!p) return [];
-
-  const urls = [];
-
-  // 1) allImageUrls (prioritaire)
-  if (Array.isArray(p.allImageUrls)) {
-    urls.push(...p.allImageUrls);
-  }
-
-  // 2) gallery
-  if (Array.isArray(p.gallery)) {
-    p.gallery.forEach((g) => {
-      if (g && typeof g === 'object' && g.url) urls.push(g.url);
-      else if (typeof g === 'string') urls.push(g);
-    });
-  }
-
-  // 3) coverImage (en premier)
-  if (p.coverImage) {
-    if (typeof p.coverImage === 'string') urls.unshift(p.coverImage);
-    else if (p.coverImage.url) urls.unshift(p.coverImage.url);
-  }
-
-  // 4) imageUrl (compat historique)
-  if (p.imageUrl) {
-    urls.unshift(p.imageUrl);
-  }
-
- // Contexte: detail de produit.
-  const seen = new Set();
-  return urls
-    .map((u) => toAbsUrl(u))
-    .filter((u) => u && !seen.has(u) && (seen.add(u), true));
-}
-
-/* ============================================================
-   Sous-composant formulaire.
-============================================================ */
 export default function ProductDetailPage() {
+  const { id } = useParams();
+  const { user, countryId, regionId, isAuthenticated } = useGeo();
+  if (!isAuthenticated) return <ShopSignIn />;
+  return <ProductDetail key={JSON.stringify([id, user?.id, user?.role, countryId, regionId, isAuthenticated])} isAuthenticated={isAuthenticated} />;
+}
+
+function ProductDetail({ isAuthenticated }) {
   const { formatNumber, formatDate } = useLocale();
   const { t } = useTranslation();
   const { id } = useParams();
+  const location = useLocation();
+  const back = catalogueReturn(location.state?.from);
+  const access = useShopAccess(isAuthenticated);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -157,7 +95,7 @@ export default function ProductDetailPage() {
   ============================================================ */
   const images = useMemo(() => {
     if (!product) return [];
-    return getImagesForProduct(product);
+    return getProductImages(product);
   }, [product]);
 
   const hasImages = images.length > 0;
@@ -186,7 +124,7 @@ export default function ProductDetailPage() {
           </p>
 
           <Link
-            to="/shop"
+            to={back}
             className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold app-btn-neutral rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/20"
           >
             {t('productDetailPage.actions.backToCatalog')}
@@ -204,7 +142,7 @@ export default function ProductDetailPage() {
             {t('productDetailPage.notFound')}
           </p>
           <Link
-            to="/shop"
+            to={back}
             className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold app-btn-neutral rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/20"
           >
             {t('productDetailPage.actions.backToCatalog')}
@@ -262,7 +200,7 @@ export default function ProductDetailPage() {
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2 text-xs text-text-muted min-w-0">
               <Link
-                to="/shop"
+                to={back}
                 className="inline-flex items-center gap-1 hover:text-text-secondary flex-shrink-0"
               >
                 <span>{t('productDetailPage.header.catalog')}</span>
@@ -273,15 +211,10 @@ export default function ProductDetailPage() {
               </span>
             </div>
             <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-text-primary">
-              {t('productDetailPage.header.title')}
+              {name}
             </h1>
           </div>
 
-          {product.id && (
-            <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full bg-surface-card/80 border border-border text-[11px] text-text-muted font-mono">
-              ID&nbsp;#{product.id}
-            </span>
-          )}
         </div>
 
         {/* CARD PRINCIPALE */}
@@ -291,7 +224,7 @@ export default function ProductDetailPage() {
             {/* ===========================
                 Contexte: detail d un produit.
                =========================== */}
-            <div className="w-full md:w-1/2">
+            <div className={hasImages ? "w-full md:w-1/2" : "hidden"}>
               {hasImages ? (
                 <>
                   {/* Image principale */}
@@ -305,7 +238,7 @@ export default function ProductDetailPage() {
                       total: images.length,
                     })}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') openLightbox();
+                      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(); }
                     }}
                   >
                     <img
@@ -387,9 +320,7 @@ export default function ProductDetailPage() {
                   </p>
                 )}
 
-                <h2 className="text-2xl sm:text-3xl font-bold text-text-primary break-words">
-                  {name}
-                </h2>
+
               </div>
 
               {/* Prix + stock */}
@@ -399,8 +330,7 @@ export default function ProductDetailPage() {
                     {t('productDetailPage.info.priceLabel')}
                   </p>
                   <p className="text-2xl sm:text-3xl font-semibold text-blue-600 dark:text-blue-400">
-                    {formatCurrency(currency || 'XOF')}{' '}
-                    {formatNumber(price || 0)}
+                    {formatNumber(price || 0)} {currency || 'XOF'}
                   </p>
                 </div>
 
@@ -426,7 +356,7 @@ export default function ProductDetailPage() {
               </div>
 
  {/* Contexte: detail de produit. */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-text-muted mb-6">
+              <details className="mb-6 text-xs text-text-muted"><summary className="min-h-11 cursor-pointer py-3">{t('shopFlow.articleInfo')}</summary><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {createdAt && (
                   <div>
                     <span className="font-semibold">
@@ -443,17 +373,10 @@ export default function ProductDetailPage() {
                     {formatDate(updatedAt)}
                   </div>
                 )}
-              </div>
+              </div></details>
 
-              {/* Actions */}
-              <div className="mt-auto flex flex-wrap gap-3">
-                <Link
-                  to="/shop"
-                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold app-btn-neutral rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/20"
-                >
-                  {t('productDetailPage.actions.backToCatalog')}
-                </Link>
-              </div>
+              {(access.loading || access.error || access.user?.role === 'client') && <section id="product-order" className="scroll-mt-24 rounded-xl border border-border p-4"><ProductPurchase product={product} access={access} expanded /></section>}
+
             </div>
           </div>
         </div>

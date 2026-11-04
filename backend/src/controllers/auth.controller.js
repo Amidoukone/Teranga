@@ -5,12 +5,6 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
-let nodemailer = null;
-try {
-  nodemailer = require('nodemailer');
-} catch (_err) {
-  nodemailer = null;
-}
 const {
   User,
   Country,
@@ -19,7 +13,6 @@ const {
   RecoveryCode,
   RefreshToken,
   TokenBlacklist,
-  PasswordResetToken,
   Sequelize,
 } = require('../../models');
 const { cacheRevokedToken } = require('../services/authCache.service');
@@ -33,10 +26,6 @@ const {
 // Durée de vie du token d'accès (configurable via env)
 const ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '1h';
 const REFRESH_EXPIRES = process.env.JWT_REFRESH_EXPIRES || '30d';
-const PASSWORD_RESET_EXPIRES =
-  process.env.PASSWORD_RESET_EXPIRES || '30m';
-const PASSWORD_RESET_DEBUG =
-  String(process.env.PASSWORD_RESET_DEBUG || '').toLowerCase() === 'true';
 const RECOVERY_CODES_COUNT = Number.parseInt(
   process.env.RECOVERY_CODES_COUNT || '8',
   10
@@ -310,50 +299,6 @@ function clearAuthCookies(res) {
   res.clearCookie(COOKIE_CSRF);
 }
 
-function resolveFrontendBaseUrl(req) {
-  const envBase =
-    process.env.FRONTEND_URL ||
-    process.env.CLIENT_URL ||
-    process.env.CLIENT_ORIGIN ||
-    '';
-  const fromEnv = String(envBase || '').trim().replace(/\/+$/, '');
-  if (fromEnv) return fromEnv;
-
-  const originHeader = String(req?.headers?.origin || '').trim().replace(/\/+$/, '');
-  if (originHeader) return originHeader;
-
-  return '';
-}
-
-function buildResetUrl(req, token) {
-  const base = resolveFrontendBaseUrl(req);
-  if (!base || !token) return '';
-  return `${base}/reset-password?token=${encodeURIComponent(token)}`;
-}
-
-async function issuePasswordResetToken(user, req) {
-  const rawToken = crypto.randomBytes(48).toString('hex');
-  const tokenHash = hashToken(rawToken);
-  const maxAge =
-    parseDurationToMs(PASSWORD_RESET_EXPIRES) || 30 * 60 * 1000;
-  const expiresAt = new Date(Date.now() + maxAge);
-
-  await PasswordResetToken.update(
-    { usedAt: new Date(), usedByIp: req.ip },
-    { where: { userId: user.id, usedAt: null } }
-  );
-
-  const record = await PasswordResetToken.create({
-    userId: user.id,
-    tokenHash,
-    expiresAt,
-    createdByIp: req.ip,
-    userAgent: req.get('user-agent') || null,
-  });
-
-  return { rawToken, record, expiresAt };
-}
-
 async function revokeUserRefreshTokens(userId, req) {
   if (!userId) return;
   await RefreshToken.update(
@@ -371,52 +316,6 @@ async function blacklistAccessPayload(payload) {
     defaults: { expiresAt },
   });
   cacheRevokedToken(payload.jti, expiresAt);
-}
-
-function shouldExposeResetDebug(req) {
-  if (PASSWORD_RESET_DEBUG) return true;
-  const isProd = (process.env.NODE_ENV || 'development') === 'production';
-  return !isProd && String(req?.query?.debug || '') === 'true';
-}
-
-function isSmtpConfigured() {
-  return Boolean(
-    process.env.SMTP_HOST &&
-      process.env.SMTP_USER &&
-      process.env.SMTP_PASS
-  );
-}
-
-async function sendPasswordResetEmail({ to, resetUrl }) {
-  if (!isSmtpConfigured() || !nodemailer) return false;
-
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT, 10) || 587;
-  const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true';
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-
-  const from =
-    process.env.SMTP_FROM ||
-    process.env.SMTP_USER ||
-    'no-reply@teranga.local';
-
-  await transporter.sendMail({
-    from,
-    to,
-    subject: 'Reinitialisation du mot de passe Teranga',
-    text: `Bonjour,\n\nUtilisez ce lien pour reinitialiser votre mot de passe:\n${resetUrl}\n\nSi vous n'etes pas a l'origine de cette demande, ignorez cet email.\n`,
-  });
-
-  return true;
 }
 
 async function resolveGeoScope({ country, countryId, regionId }) {
@@ -687,24 +586,13 @@ exports.register = async (req, res) => {
       language,
     });
 
-    let recoveryCodes = [];
-    let recoveryCodesWarning = '';
-    try {
-      recoveryCodes = await rotateRecoveryCodes({ userId: user.id, req });
-    } catch (recoveryErr) {
-      recoveryCodesWarning =
-        "Codes de récupération indisponibles pour le moment. Contactez l'administrateur.";
-      logger.warn(
-        'Generation recovery codes impossible:',
-        recoveryErr?.message || recoveryErr
-      );
-    }
-
+    // Les codes de récupération en libre-service sont désactivés (voir MANUAL_RESET_MESSAGE :
+    // la réinitialisation passe par l'admin/master du pays/région) et le frontend ne les affiche
+    // jamais pour cette inscription. En générer et les stocker ici ne ferait qu'accumuler des
+    // lignes `recovery_codes` jamais consultées ni utilisables.
     return res.status(201).json({
       message: 'Utilisateur créé',
       user: toAuthUser(user),
-      recoveryCodes,
-      recoveryCodesWarning,
     });
   } catch (e) {
     // Gestion spécifique des doublons DB (au cas où la contrainte unique remonte ici)
@@ -713,7 +601,12 @@ exports.register = async (req, res) => {
     }
 
     if (e.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({ error: 'Email déjà utilisé' });
+      // La contrainte unique sur phone/email ferme la fenêtre de la course entre
+      // la vérification applicative et l'écriture : deux inscriptions concurrentes
+      // avec le même contact peuvent encore arriver jusqu'ici.
+      const field = e.errors?.[0]?.path;
+      const message = field === 'phone' ? 'Téléphone déjà utilisé' : 'Email déjà utilisé';
+      return res.status(400).json({ error: message });
     }
 
     logger.error('Erreur register:', e);
@@ -920,6 +813,13 @@ exports.updateMe = async (req, res) => {
 
     return res.json(responseBody);
   } catch (e) {
+    if (e.name === 'SequelizeUniqueConstraintError') {
+      // Deux mises à jour de profil concurrentes vers le même nouveau contact :
+      // la vérification applicative ci-dessus ne suffit pas seule à l'empêcher.
+      const field = e.errors?.[0]?.path;
+      const message = field === 'phone' ? 'Téléphone déjà utilisé' : 'Email déjà utilisé';
+      return res.status(409).json({ error: message });
+    }
     logger.error('Erreur /auth/me PATCH:', e);
     return res.status(500).json({ error: 'Erreur lors de la mise à jour du profil' });
   }

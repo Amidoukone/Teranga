@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 function revealSection(hash) {
@@ -11,8 +11,11 @@ function revealSection(hash) {
 export default function DossierHeader({ kind, id, title, description, status, assignee, children }) {
   const { t } = useTranslation();
   const location = useLocation();
-  const from = location.state?.from;
-  const back = typeof from === 'string' && /^\/(?:operations|projects|orders|transactions|(?:services|projects|orders)\/[1-9][0-9]*\/transactions)(?:\?[^#\\\r\n]*)?$/.test(from) ? from : `/${kind === 'project' ? 'projects' : 'orders'}`;
+  // Native section anchors can replace router state; keep the entry point for this dossier.
+  const returnContext = useRef(location.state);
+  const from = returnContext.current?.from;
+  const back = typeof from === 'string' && /^\/(?:demandes|services|operations|projects|admin\/projects|orders|transactions|shop|products\/[1-9][0-9]*|(?:services|projects|orders)\/[1-9][0-9]*\/transactions)(?:\?[^#\\\r\n]*)?$/.test(from) ? from : `/${kind === 'project' ? 'projects' : 'orders'}`;
+  const backLabel = back.startsWith('/operations') ? 'roleViews.backHome' : /^\/(?:demandes|services)(?:\?|$)/.test(back) ? 'requestWorkspace.back' : back.startsWith('/shop') ? 'productDetailPage.actions.backToCatalog' : back.startsWith('/products/') ? 'shopFlow.backArticle' : back.split('?')[0].endsWith('/transactions') ? 'financialWorkspace.backJournal' : 'dossier.back';
   useEffect(() => {
     const revealHash = () => revealSection(window.location.hash);
     const frame = window.requestAnimationFrame(revealHash);
@@ -20,7 +23,7 @@ export default function DossierHeader({ kind, id, title, description, status, as
     return () => { window.cancelAnimationFrame(frame); window.removeEventListener('hashchange', revealHash); };
   }, []);
   return <header className="space-y-4 border-b border-border pb-5">
-    <Link to={back} className="inline-flex min-h-11 items-center text-sm underline">{t(back.split('?')[0].endsWith('/transactions') ? 'financialWorkspace.backJournal' : 'dossier.back')}</Link>
+    <Link to={back} state={back.startsWith('/products/') ? { from: returnContext.current?.catalogueFrom } : undefined} className="inline-flex min-h-11 items-center text-sm underline">{t(backLabel)}</Link>
     <div>
       <p className="page-kicker">{t(`dossier.${kind}`)} #{id}</p>
       <h1 className="app-page-headline break-words">{title}</h1>

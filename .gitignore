@@ -5,9 +5,11 @@ node_modules/
 .cache/
 dist/
 build/
+frontend/build-recette/
 tmp/
 playwright-report/
 test-results/
+artifacts/
 
 # --- Fichiers de logs ---
 *.log

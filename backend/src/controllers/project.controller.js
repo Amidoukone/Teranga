@@ -41,6 +41,13 @@ function toSafeInt(v) {
   return Number.isNaN(n) ? null : n;
 }
 
+function toNullableNumber(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const normalized = String(v).trim().replace(',', '.');
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : null;
+}
+
 function isWithinOneHour(date) {
   try {
     const created = new Date(date).getTime();
@@ -191,7 +198,7 @@ exports.create = async (req, res) => {
       title: String(title).trim(),
       type: String(type).trim(),
       description: description ?? null,
-      budget: budget ?? null,
+      budget: toNullableNumber(budget),
       currency: normalizeCurrency(currency, executionCountry?.currency || "XOF"),
       clientId: targetClientId,
       agentId: assignedAgentId,
@@ -481,11 +488,11 @@ exports.update = async (req, res) => {
     // Localisation (non bloquante) : re-géocode seulement si adresse/ville change
     // sans lat/lng explicites fournies dans la même requête.
     const addressChanged = body.address !== undefined || body.city !== undefined;
-    const coordsProvided = body.latitude !== undefined || body.longitude !== undefined;
+    const coordsProvided = (body.latitude != null && body.latitude !== '') || (body.longitude != null && body.longitude !== '');
     let nextAddress = body.address !== undefined ? String(body.address).trim() || null : project.address;
     let nextCity = body.city !== undefined ? String(body.city).trim() || null : project.city;
-    let nextLatitude = body.latitude !== undefined ? Number(body.latitude) : project.latitude;
-    let nextLongitude = body.longitude !== undefined ? Number(body.longitude) : project.longitude;
+    let nextLatitude = body.latitude !== undefined ? body.latitude == null || body.latitude === '' ? null : Number(body.latitude) : project.latitude;
+    let nextLongitude = body.longitude !== undefined ? body.longitude == null || body.longitude === '' ? null : Number(body.longitude) : project.longitude;
     if (addressChanged && !coordsProvided && (nextAddress || nextCity)) {
       const geocoded = await geocodeAddress(
         [nextAddress, nextCity].filter(Boolean).join(', ')
@@ -495,7 +502,7 @@ exports.update = async (req, res) => {
         nextLongitude = geocoded.longitude;
       }
     }
-    if (!Number.isFinite(Number(nextLatitude)) || !Number.isFinite(Number(nextLongitude))) {
+    if (nextLatitude == null || nextLongitude == null || !Number.isFinite(Number(nextLatitude)) || !Number.isFinite(Number(nextLongitude))) {
       nextLatitude = null;
       nextLongitude = null;
     }
@@ -508,7 +515,7 @@ exports.update = async (req, res) => {
           ? body.description
           : project.description,
       budget:
-        body.budget !== undefined ? body.budget : project.budget,
+        body.budget !== undefined ? toNullableNumber(body.budget) : project.budget,
       currency: normalizeCurrency(body.currency, project.currency),
 
       // 🔐 Admin only

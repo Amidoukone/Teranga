@@ -28,7 +28,10 @@ const MISSION_STATUS_VALUES = [
 const MISSION_ACTOR_TYPE_VALUES = ['client', 'agent', 'provider', 'admin', 'system'];
 
 module.exports = {
-  MISSION_HISTORY_STATUSES: ['VALIDATED', 'CLOSED', 'CANCELLED_BY_CLIENT', 'NO_EXECUTOR_FOUND', 'RESOLVED_REFUND', 'RESOLVED_REDO', 'RESOLVED_CLOSED'],
+  // RESOLVED_REDO est volontairement absent : un litige résolu "à refaire" exige encore du
+  // travail (ré-exécution), ce n'est pas un dossier clos. Le classer en historique le ferait
+  // disparaître des vues actives du client et de l'exécutant comme si le travail était terminé.
+  MISSION_HISTORY_STATUSES: ['VALIDATED', 'CLOSED', 'CANCELLED_BY_CLIENT', 'NO_EXECUTOR_FOUND', 'RESOLVED_REFUND', 'RESOLVED_CLOSED'],
   MISSION_STATUS_VALUES,
   MISSION_ACTOR_TYPE_VALUES,
 };

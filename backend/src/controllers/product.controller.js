@@ -522,15 +522,14 @@ exports.update = async (req, res) => {
       await extractImagesFromRequestImageKit(req);
 
     if (hasNewImages) {
-      // delete previous files (best effort)
+      // delete previous files (best effort, en parallèle plutôt qu'un aller-retour
+      // séquentiel par fichier ; les échecs sont journalisés, pas avalés silencieusement)
       if (Array.isArray(prod.gallery)) {
-        for (const img of prod.gallery) {
-          if (img?.fileId) {
-            try {
-              await imageKit.deleteFile(img.fileId);
-            } catch (_) {}
-          }
-        }
+        await Promise.all(prod.gallery.filter((img) => img?.fileId).map((img) =>
+          imageKit.deleteFile(img.fileId).catch((err) => {
+            logger.warn({ err, fileId: img.fileId, productId: prod.id }, 'product.gallery.imagekit_delete.failed');
+          })
+        ));
       }
 
       if (coverImage?.url) prod.coverImage = coverImage.url;
@@ -594,13 +593,11 @@ exports.remove = async (req, res) => {
     }
 
     if (Array.isArray(prod.gallery)) {
-      for (const img of prod.gallery) {
-        if (img?.fileId) {
-          try {
-            await imageKit.deleteFile(img.fileId);
-          } catch (_) {}
-        }
-      }
+      await Promise.all(prod.gallery.filter((img) => img?.fileId).map((img) =>
+        imageKit.deleteFile(img.fileId).catch((err) => {
+          logger.warn({ err, fileId: img.fileId, productId: prod.id }, 'product.gallery.imagekit_delete.failed');
+        })
+      ));
     }
 
     await prod.destroy();

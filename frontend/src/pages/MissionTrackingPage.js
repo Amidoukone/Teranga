@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams, Link, useLocation } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Loader2, Clock, MapPin, Wallet, BadgeCheck, AlertTriangle, Car, Bike, KeyRound, PhoneCall, RefreshCw, Share2, Star, PackageCheck, Truck, Wrench, Map } from "lucide-react";
 
@@ -26,6 +26,8 @@ import { Modal, FormField, Button } from "../components/ui";
 import { buildTelHref } from "../utils/phone";
 import { focusCompletionReport, needsCompletionReport } from "../utils/completion";
 import { getBookingPath, getRequestReturnPath } from '../utils/requestLifecycle';
+import { notify } from '../utils/notify';
+import { useLocale } from '../i18n/useLocale';
 
 // Même idiome que NavBar.js (poll notifications) : intervalle configurable, pause si l'onglet
 // n'est pas visible — docs/DEV_SPEC_TERANGA_v3.md section 4.2 recommande 5-10s.
@@ -101,6 +103,7 @@ const CLIENT_DELIVERY_STATUS_ICONS = {
 function ClientRideStatus({ status, t, translationRoot = "taxiRides" }) {
   const config = CLIENT_RIDE_STATUS[status];
   if (!config) return null;
+  const messageRoot = `${translationRoot}.${TERMINAL_STATUSES.includes(status) ? 'terminal' : 'liveStatus'}.${status}`;
   const Icon =
     translationRoot === "deliveryOrders"
       ? CLIENT_DELIVERY_STATUS_ICONS[status] || PackageCheck
@@ -121,10 +124,10 @@ function ClientRideStatus({ status, t, translationRoot = "taxiRides" }) {
       </span>
       <div>
         <p className="text-base font-bold">
-          {t(`${translationRoot}.liveStatus.${status}.title`)}
+          {t(`${messageRoot}.title`)}
         </p>
         <p className="mt-1 text-sm opacity-80">
-          {t(`${translationRoot}.liveStatus.${status}.hint`)}
+          {t(`${messageRoot}.hint`)}
         </p>
       </div>
     </div>
@@ -143,6 +146,8 @@ export default function MissionTrackingPage() {
 
 function MissionTracking({ id, location }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { formatDateTime } = useLocale();
   const isRideRoute = location.pathname.startsWith("/courses/");
   const isDeliveryRoute = location.pathname.startsWith("/livraisons/");
 
@@ -162,6 +167,7 @@ function MissionTracking({ id, location }) {
   const [logisticsRequested, setLogisticsRequested] = useState(false);
 
   const [collectedAmountInput, setCollectedAmountInput] = useState("");
+  const [offerNow, setOfferNow] = useState(Date.now);
   const [startCodeInput, setStartCodeInput] = useState("");
   const [shareUrl, setShareUrl] = useState("");
   const [ratingScore, setRatingScore] = useState(0);
@@ -175,7 +181,22 @@ function MissionTracking({ id, location }) {
   const loadVersion = useRef(0);
   const transitionPending = useRef(false);
   const locationPermissionDeniedRef = useRef(false);
+  // Une position GPS qui revient après que l'utilisateur a quitté cet écran ne doit jamais
+  // déclencher d'action tardive (ex: handleRequestLogistics).
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
   trackRef.current = track;
+
+  useEffect(() => {
+    const deadline = new Date(track?.acceptanceDeadlineAt).getTime();
+    setOfferNow(Date.now());
+    if (!Number.isFinite(deadline) || deadline <= Date.now()) return undefined;
+    const timer = setTimeout(() => setOfferNow(Date.now()), Math.min(2147483647, deadline - Date.now() + 50));
+    return () => clearTimeout(timer);
+  }, [track?.acceptanceDeadlineAt]);
 
   useEffect(() => {
     if (track?.missionStatus) headingRef.current?.focus();
@@ -328,10 +349,12 @@ function MissionTracking({ id, location }) {
   };
 
   const handleVerifyStartCode = async () => {
+    if (transitionPending.current) return;
     if (!/^\d{4}$/.test(startCodeInput)) {
       setActionState({ type: "error", message: t("missionTracking.startCode.invalid") });
       return;
     }
+    transitionPending.current = true;
     setActionState({ type: "loading" });
     try {
       await verifyMissionStartCode(id, startCodeInput);
@@ -344,7 +367,7 @@ function MissionTracking({ id, location }) {
         message:
           requestError?.response?.data?.error || t("missionTracking.startCode.error"),
       });
-    }
+    } finally { transitionPending.current = false; }
   };
 
   const handleShare = async () => {
@@ -391,25 +414,32 @@ function MissionTracking({ id, location }) {
   };
 
   const handleAcceptCourse = async () => {
+    if (transitionPending.current) return;
+    transitionPending.current = true;
     setActionState({ type: "loading" });
     try {
       await acceptMission(id);
       await load();
       setActionState(null);
-    } catch (_err) {
-      setActionState({ type: "error", message: t("missionTracking.errors.action") });
-    }
+    } catch (failure) {
+      setActionState({ type: "error", message: failure?.response?.data?.error || t("missionTracking.errors.action") });
+      if ([403, 409].includes(failure?.response?.status)) await load({ skipEta: true });
+    } finally { transitionPending.current = false; }
   };
 
   const handleDeclineCourse = async () => {
+    if (transitionPending.current) return;
+    transitionPending.current = true;
     setActionState({ type: "loading" });
     try {
       await declineMission(id);
-      await load();
-      setActionState(null);
-    } catch (_err) {
-      setActionState({ type: "error", message: t("missionTracking.errors.action") });
-    }
+      window.dispatchEvent(new Event('notifications:refresh'));
+      notify(t('transportWorkspace.declined'), { type: 'success' });
+      navigate(getRequestReturnPath(location.state?.from, '/prestataire/interventions'), { replace: true });
+    } catch (failure) {
+      setActionState({ type: "error", message: failure?.response?.data?.error || t("missionTracking.errors.action") });
+      if ([403, 409].includes(failure?.response?.status)) await load({ skipEta: true });
+    } finally { transitionPending.current = false; }
   };
 
   function openDisputeModal() {
@@ -446,19 +476,23 @@ function MissionTracking({ id, location }) {
     setRequestingLogistics(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        if (!alive.current) return;
         try {
           await requestMissionLogistics(id, {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
           });
+          if (!alive.current) return;
           setLogisticsRequested(true);
         } catch (_err) {
+          if (!alive.current) return;
           setActionState({ type: "error", message: t("missionTracking.logistics.error") });
         } finally {
-          setRequestingLogistics(false);
+          if (alive.current) setRequestingLogistics(false);
         }
       },
       () => {
+        if (!alive.current) return;
         setRequestingLogistics(false);
         setActionState({ type: "error", message: t("missionTracking.logistics.geolocationError") });
       },
@@ -506,7 +540,7 @@ function MissionTracking({ id, location }) {
     : clientServiceView
     ? "serviceMission"
     : null;
-  const statusLabel = t(`${clientSimpleTranslationRoot ? `${clientSimpleTranslationRoot}.status` : "missionTracking.status"}.${track.missionStatus}`, {
+  const statusLabel = t(`${clientSimpleTranslationRoot ? `${clientSimpleTranslationRoot}.status` : track.viewerRole === 'provider' ? 'providerWorkspace.status' : "missionTracking.status"}.${track.missionStatus}`, {
     defaultValue: track.missionStatus,
   });
   const requiresStartCode =
@@ -535,18 +569,20 @@ function MissionTracking({ id, location }) {
       : undefined;
   const reportNeeded = executorNextStatus === 'COMPLETED' && needsCompletionReport(track.completion);
   const reviewing = track.viewerRole === 'client' && track.missionStatus === 'COMPLETED';
-  const backTo = getRequestReturnPath(location.state?.from, track.viewerRole === 'client' ? '/demandes' : isTaxiMission ? '/chauffeur/courses' : isDeliveryMission ? '/livreur/livraisons' : track.viewerRole === 'provider' ? '/prestataire/services' : '/missions/mine');
+  const serviceFinished = track.missionStatus === 'COMPLETED' || TERMINAL_STATUSES.includes(track.missionStatus);
+  const offerExpired = track.acceptanceDeadlineAt && (!Number.isFinite(new Date(track.acceptanceDeadlineAt).getTime()) || new Date(track.acceptanceDeadlineAt).getTime() <= offerNow);
+  const backTo = getRequestReturnPath(location.state?.from, track.viewerRole === 'client' ? '/demandes' : track.viewerRole === 'provider' ? '/prestataire/interventions' : '/missions/mine');
   const completionPanel = <MissionCompletionPanel key={id} missionId={id} completion={track.completion} canSubmit={track.isExecutor && track.missionStatus === 'IN_PROGRESS'} onSaved={() => load({ skipEta: true })} />;
 
   return (
-    <div className="app-page-wrap"><div className="app-page-shell max-w-3xl">
-      <Link to={backTo} className="mb-4 inline-flex min-h-11 items-center text-sm font-medium text-text-secondary">← {t('requestWorkspace.back')}</Link>
+    <div className="app-page-wrap role-workspace"><div className="app-page-shell max-w-3xl">
+      <Link to={backTo} className="mb-4 inline-flex min-h-11 items-center text-sm font-medium text-text-secondary">← {t(backTo.startsWith('/operations') ? 'roleViews.backHome' : backTo.startsWith('/missions/mine') ? 'roleViews.backSupervised' : backTo.startsWith('/agent/services') ? 'roleViews.backAssigned' : backTo.startsWith('/properties/') ? 'propertySimple.backProperty' : backTo.startsWith('/prestataire/') ? 'providerWorkspace.back' : 'requestWorkspace.back')}</Link>
       <p className="page-kicker">
         {isTaxiMission
           ? "Teranga Taxi"
           : isDeliveryMission
           ? t("deliveryOrders.kicker")
-          : t("missionTracking.kicker")}
+          : t("serviceTracking.kicker")}
       </p>
       <div className="flex items-start justify-between gap-3">
         <h1 ref={headingRef} tabIndex={-1} className="app-page-headline focus:outline-none">
@@ -574,13 +610,14 @@ function MissionTracking({ id, location }) {
             translationRoot={clientSimpleTranslationRoot}
           />
           <RequestProgress request={track} />
+          {TERMINAL_STATUSES.includes(track.missionStatus) && <Link to={getBookingPath(track.tradeCategorySlug)} className="btn-primary mt-3 inline-flex min-h-11 items-center rounded-xl px-5 py-2.5 text-sm">{t(`${clientSimpleTranslationRoot}.terminal.newRequest`)}</Link>}
         </>
       ) : null}
 
       {reviewing && <section aria-label={t('requestWorkspace.next')} className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
         <h2 className="font-semibold">{t('requestWorkspace.next')}</h2><p className="mt-2 text-sm text-text-secondary">{t('requestWorkspace.reviewFirst')}</p>
         {completionPanel}
-        <div className="mt-4 flex flex-wrap gap-3"><button type="button" onClick={() => handleTransition('VALIDATED')} disabled={actionState?.type === 'loading'} className="btn-primary min-h-12 rounded-xl px-5 text-sm font-semibold">{t(isDeliveryMission ? 'deliveryOrders.validateCta' : 'missionTracking.validateCta')}</button><button type="button" onClick={openDisputeModal} className="btn-secondary min-h-12 rounded-xl px-4 text-sm">{t('missionTracking.reportProblemCta')}</button></div>
+        <div className="mt-4 flex flex-wrap gap-3"><button type="button" onClick={() => handleTransition('VALIDATED')} disabled={actionState?.type === 'loading'} className="btn-primary min-h-12 rounded-xl px-5 text-sm font-semibold">{t(isDeliveryMission ? 'deliveryOrders.validateCta' : isTaxiMission ? 'missionTracking.validateCta' : 'serviceTracking.actions.validate')}</button><button type="button" onClick={openDisputeModal} className="btn-secondary min-h-12 rounded-xl px-4 text-sm">{t('missionTracking.reportProblemCta')}</button></div>
         {actionState?.type === 'error' && <div className="mt-3"><AuthFeedbackBanner type="error" message={actionState.message} /></div>}
       </section>}
 
@@ -589,7 +626,7 @@ function MissionTracking({ id, location }) {
           <span className="inline-flex items-center rounded-full border border-blue-500/25 bg-blue-500/10 px-3 py-1.5 text-sm font-semibold text-blue-700 dark:text-blue-300">
             {statusLabel}
           </span>
-          {track.etaMinutes != null ? (
+          {!serviceFinished && track.etaMinutes != null ? (
             <span className="flex items-center gap-1.5 text-sm text-text-secondary">
               <Clock size={15} />
               {t("missionTracking.eta", { minutes: track.etaMinutes })}
@@ -690,10 +727,10 @@ function MissionTracking({ id, location }) {
           </div>
         ) : null}
 
-        <button type="button" onClick={() => setShowMap((current) => !current)} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-text-secondary hover:border-blue-400">
+        {!serviceFinished && <button type="button" onClick={() => setShowMap((current) => !current)} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-text-secondary hover:border-blue-400">
           <Map size={17} /> {t(showMap ? "missionTracking.hideMap" : "missionTracking.showMap")}
-        </button>
-        {showMap ? (
+        </button>}
+        {showMap && !serviceFinished ? (
           <div className="mt-3">
             <MissionTrackingMap
               latitude={track.position?.latitude}
@@ -705,9 +742,9 @@ function MissionTracking({ id, location }) {
         ) : null}
 
         {track.pickupAddress ? (
-          <p className="mt-3 flex items-center gap-1.5 text-sm text-text-secondary">
-            <MapPin size={14} />
-            <span className="font-medium text-text-primary">
+          <p className="mt-3 flex items-start gap-1.5 text-sm text-text-secondary">
+            <MapPin size={14} className="mt-0.5 shrink-0" />
+            <span className="min-w-0 break-words"><span className="font-medium text-text-primary">
               {t(
                 track.tradeCategorySlug === "mobilite"
                   ? "missionTracking.departureLabel"
@@ -715,13 +752,14 @@ function MissionTracking({ id, location }) {
               )}{" "}
               :
             </span>
-            {track.pickupAddress}
+            {track.pickupAddress}</span>
           </p>
         ) : null}
 
         {track.destination?.address ? (
-          <p className="mt-2 flex items-center gap-1.5 text-sm text-text-secondary">
-            <MapPin size={14} />
+          <p className="mt-2 flex items-start gap-1.5 text-sm text-text-secondary">
+            <MapPin size={14} className="mt-0.5 shrink-0" />
+            <span className="min-w-0 break-words">
             {track.pickupAddress ? (
               <span className="font-medium text-text-primary">
                 {t(
@@ -732,7 +770,7 @@ function MissionTracking({ id, location }) {
                 :
               </span>
             ) : null}
-            {track.destination.address}
+            {track.destination.address}</span>
           </p>
         ) : null}
 
@@ -758,37 +796,23 @@ function MissionTracking({ id, location }) {
           </p>
         ) : null}
 
-        {track.position?.isStale && !clientTransportView ? (
+        {track.position?.isStale && !clientTransportView && !serviceFinished ? (
           <p className="mt-3 text-sm text-amber-700 dark:text-amber-300">
             {t("missionTracking.positionOld", { seconds: track.position.ageSeconds })}
           </p>
         ) : null}
 
-        {!track.position && !clientTransportView ? (
-          <p className="mt-3 text-sm text-text-muted">{t("missionTracking.noPositionYet")}</p>
+        {!track.position && !clientTransportView && !serviceFinished ? (
+          <p className="mt-3 text-sm text-text-muted">{t(transportTranslationRoot ? 'transportWorkspace.positionUnavailable' : "missionTracking.noPositionYet")}</p>
         ) : null}
 
-        {TERMINAL_STATUSES.includes(track.missionStatus) && track.viewerRole === "client" ? (
-          <div className="mt-4 rounded-2xl border border-border bg-surface-main/60 p-4">
-            <p className="text-sm font-semibold text-text-primary">
-              {t(`${clientSimpleTranslationRoot}.terminal.${track.missionStatus}.title`)}
-            </p>
-            <p className="mt-1 text-sm text-text-secondary">
-              {t(`${clientSimpleTranslationRoot}.terminal.${track.missionStatus}.hint`)}
-            </p>
-            <Link to={getBookingPath(track.tradeCategorySlug)} className="btn-primary mt-3 inline-flex min-h-11 items-center rounded-full px-5 py-2.5 text-sm">
-              {t(`${clientSimpleTranslationRoot}.terminal.newRequest`)}
-            </Link>
-          </div>
-        ) : null}
-
-        <p className="mt-2 text-xs text-text-muted">
+        {!serviceFinished && <p className="mt-2 text-xs text-text-muted">
           {t(
             clientTransportView
               ? "missionTracking.transportNetworkNote"
               : "missionTracking.lowNetworkNote"
           )}
-        </p>
+        </p>}
 
         <div className="mt-4 flex flex-wrap gap-2">
           {buildTelHref(track.assistancePhone) ? (
@@ -809,7 +833,7 @@ function MissionTracking({ id, location }) {
               <Share2 size={15} />{
                 isDeliveryMission
                   ? t("deliveryOrders.share.cta")
-                  : t("missionTracking.share.cta")
+                  : t(isTaxiMission ? "missionTracking.share.cta" : "serviceMission.shareCta")
               }
             </button>
           ) : null}
@@ -823,7 +847,7 @@ function MissionTracking({ id, location }) {
             aria-label={
               isDeliveryMission
                 ? t("deliveryOrders.share.linkLabel")
-                : t("missionTracking.share.linkLabel")
+                : t(isTaxiMission ? "missionTracking.share.linkLabel" : "serviceMission.shareLinkLabel")
             }
           />
         ) : null}
@@ -835,6 +859,13 @@ function MissionTracking({ id, location }) {
         ) : null}
 
         {!reviewing && completionPanel}
+        {track.isExecutor && isDeliveryMission && track.missionStatus === 'IN_PROGRESS' && <div className="mt-4 rounded-xl border border-border p-3">
+          <label htmlFor="delivery-collected-amount" className="block text-sm font-semibold">{t('transportWorkspace.collectedLabel', { currency: track.currency || '' })}</label>
+          <input id="delivery-collected-amount" type="number" min="0" step="0.01" inputMode="decimal" value={collectedAmountInput} onChange={event => setCollectedAmountInput(event.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface-main px-3" />
+          <p className="mt-2 text-xs text-text-secondary">{t('transportWorkspace.collectedHint')}</p>
+        </div>}
+        {track.isExecutor && isDeliveryMission && serviceFinished && track.collectedAmount != null && <p className="mt-4 text-sm">{t('transportWorkspace.collectedSaved', { amount: track.collectedAmount, currency: track.currency || '' })}</p>}
+        {track.isExecutor && track.acceptanceDeadlineAt && <p role="status" className="mt-4 text-sm">{t(offerExpired ? 'transportWorkspace.offerExpired' : 'transportWorkspace.offerDeadline', { date: formatDateTime(track.acceptanceDeadlineAt) })}</p>}
         <div className="mt-5 flex flex-wrap gap-3">
 
           {track.viewerRole === "client" && ["ASSIGNED", "EN_ROUTE"].includes(track.missionStatus) ? (
@@ -855,7 +886,7 @@ function MissionTracking({ id, location }) {
               <button
                 type="button"
                 onClick={handleAcceptCourse}
-                disabled={actionState?.type === "loading"}
+                disabled={actionState?.type === "loading" || Boolean(offerExpired)}
                 className="btn-primary rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
               >
                 {transportTranslationRoot
@@ -865,7 +896,7 @@ function MissionTracking({ id, location }) {
               <button
                 type="button"
                 onClick={handleDeclineCourse}
-                disabled={actionState?.type === "loading"}
+                disabled={actionState?.type === "loading" || Boolean(offerExpired)}
                 className="btn-secondary rounded-full px-6 py-2.5 text-sm disabled:opacity-60"
               >
                 {transportTranslationRoot
@@ -896,18 +927,6 @@ function MissionTracking({ id, location }) {
                   />
                   <p className="mt-2 text-[11px] text-text-muted">{t("missionTracking.startCode.driverHint")}</p>
                 </div>
-              ) : null}
-              {EXECUTOR_NEXT_STATUS[track.missionStatus] === "COMPLETED" &&
-              track.tradeCategorySlug === "livraison" ? (
-                <input
-                  type="number"
-                  min="0"
-                  inputMode="decimal"
-                  value={collectedAmountInput}
-                  onChange={(event) => setCollectedAmountInput(event.target.value)}
-                  placeholder={t("deliveryOrders.collectedAmountPlaceholder")}
-                  className="w-full rounded-full border border-border bg-surface-card px-4 py-2 text-sm text-text-primary"
-                />
               ) : null}
               <button
                 type="button"
@@ -955,8 +974,8 @@ function MissionTracking({ id, location }) {
 
         </div>
 
-        {track.viewerRole === 'client' && <div className="mt-5"><RequestAmounts request={track} /></div>}
-        <details className="mt-5 rounded-2xl border border-border p-4"><summary className="cursor-pointer font-semibold">{t('requestHelp.title')}</summary><div className="mt-3"><RequestHelp id={id} title={track.title} phone={track.assistancePhone} /></div></details>
+        {track.viewerRole === 'client' && <div className="mt-5"><RequestAmounts request={track} transactionsTo={!transportTranslationRoot ? `/services/${id}/transactions` : undefined} /></div>}
+        <details className="mt-5 rounded-2xl border border-border p-4"><summary className="cursor-pointer font-semibold">{t('requestHelp.title')}</summary><div className="mt-3"><RequestHelp id={id} title={track.title} phone={track.assistancePhone} mission /></div></details>
 
         {!transportTranslationRoot && ['client', 'agent', 'admin'].includes(track.viewerRole) && <ServiceStepsPanel serviceId={id} />}
         {track.viewerRole === "client" && track.rating ? (
@@ -980,7 +999,7 @@ function MissionTracking({ id, location }) {
               {t(
                 isDeliveryMission
                   ? "deliveryOrders.rating.title"
-                  : "missionTracking.rating.title"
+                  : isTaxiMission ? "missionTracking.rating.title" : "serviceMission.ratingTitle"
               )}
             </p>
             <div
@@ -989,7 +1008,7 @@ function MissionTracking({ id, location }) {
               aria-label={t(
                 isDeliveryMission
                   ? "deliveryOrders.rating.title"
-                  : "missionTracking.rating.title"
+                  : isTaxiMission ? "missionTracking.rating.title" : "serviceMission.ratingTitle"
               )}
             >
               {[1, 2, 3, 4, 5].map((score) => (
@@ -1043,17 +1062,6 @@ function MissionTracking({ id, location }) {
                   className="w-full rounded-2xl border border-border bg-surface-card px-4 py-2 text-center font-mono text-lg tracking-[0.3em] text-text-primary"
                 />
               </div>
-            ) : null}
-            {stickyExecutorNextStatus === "COMPLETED" && isDeliveryMission ? (
-              <input
-                type="number"
-                min="0"
-                inputMode="decimal"
-                value={collectedAmountInput}
-                onChange={(event) => setCollectedAmountInput(event.target.value)}
-                placeholder={t("deliveryOrders.collectedAmountPlaceholder")}
-                className="mb-2 w-full rounded-2xl border border-border bg-surface-card px-4 py-2.5 text-sm text-text-primary"
-              />
             ) : null}
             <button
               type="button"

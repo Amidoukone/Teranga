@@ -15,6 +15,26 @@ const { raiseEscalation, remindEscalation } = require('./coordinationSupervision
 const logger = require('../utils/logger');
 
 const TERMINAL = ['CLOSED', 'CANCELLED_BY_CLIENT', 'NO_EXECUTOR_FOUND', 'RESOLVED_REFUND', 'RESOLVED_CLOSED'];
+// Taxi et livraison ont leur propre modèle de preuve (déclaration à la remise, montant
+// collecté) : un compte rendu écrit n'y est jamais exigé, contrairement aux autres filières.
+// Vérifié sur le profil catalogue ET sur le slug de la filière legacy : une mission peut
+// être rattachée à une filière mobilité/livraison sans qu'aucune offre catalogue projetée
+// n'existe encore pour son territoire (service.tradeCategoryId reste la source fiable).
+const EXECUTION_PROFILES_WITHOUT_COMPLETION_REPORT = ['mobility', 'delivery'];
+const TRADE_SLUGS_WITHOUT_COMPLETION_REPORT = ['mobilite', 'livraison'];
+async function requiresCompletionReport(service, offering, transaction) {
+  if (EXECUTION_PROFILES_WITHOUT_COMPLETION_REPORT.includes(offering?.definition?.executionProfile)) {
+    return false;
+  }
+  if (service.tradeCategoryId) {
+    const category = await db.TradeCategory.findByPk(service.tradeCategoryId, {
+      attributes: ['slug'],
+      transaction,
+    });
+    if (TRADE_SLUGS_WITHOUT_COMPLETION_REPORT.includes(category?.slug)) return false;
+  }
+  return true;
+}
 const DEFAULT_POLICY = Object.freeze({ enabled: false, maxAttempts: 3, radiusKm: 8, acceptanceSeconds: 120, retrySeconds: 60, searchMinutes: 30, stageMinutes: 60, startMinutes: 15, escalationMinutes: 15, reminderMinutes: 60, validationMinutes: 1440 });
 const SEARCHING = ['CREATED', 'SEARCHING_EXECUTOR'];
 const same = (a, b) => String(a ?? '') === String(b ?? '');
@@ -68,18 +88,28 @@ async function notify(operation, service, title, message, recipients, transactio
   transaction.afterCommit(() => invalidateNotificationSummary(ids));
 }
 
-async function initialize(service, transaction, now) {
-  let operation = await db.MissionCoordination.findOne({ where: { serviceId: service.id }, transaction });
-  if (operation) return operation;
+async function initialMissionPolicy(service, transaction) {
   const offering = await activeOffering(service, transaction);
-  const owner = await findOwner(service, transaction);
   const policy = normalizePolicy({
     ...(offering?.slaMinutes ? { stageMinutes: offering.slaMinutes } : {}),
     ...offering?.providerRules?.coordination,
   });
   policy.requiredEvidenceTypes = offering?.providerRules?.requiredEvidenceTypes || offering?.definition?.requiredEvidenceTypes || [];
   policy.serviceOutcome = offering?.providerRules?.serviceOutcome || offering?.definition?.description || null;
-  policy.completionReportRequired = policy.enabled && offering?.definition?.executionProfile !== 'mobility';
+  // Le compte rendu de réalisation est exigé par la nature de la prestation
+  // (tout sauf mobilité, qui a son propre modèle de preuve), pas par le fait
+  // que l'affectation automatique soit activée : une mission filière affectée
+  // manuellement (le cas courant) ne doit pas pouvoir se clôturer sans preuve.
+  policy.completionReportRequired = await requiresCompletionReport(service, offering, transaction);
+  return policy;
+}
+
+// Caller holds the service row lock. Initializes metadata without advancing work.
+async function initialize(service, transaction, now) {
+  let operation = await db.MissionCoordination.findOne({ where: { serviceId: service.id }, transaction });
+  if (operation) return operation;
+  const owner = await findOwner(service, transaction);
+  const policy = await initialMissionPolicy(service, transaction);
   const automatic = policy.enabled && isSearching(service);
   if (automatic) policy.searchStartedAt = now.toISOString();
   operation = await db.MissionCoordination.create({
@@ -181,11 +211,12 @@ async function coordinateMission(serviceId, { now = new Date(), configure = null
           let nextPolicy = { ...operation.policy };
           if (mode === 'automatic' && operation.mode !== 'automatic') {
             const offering = await activeOffering(service, transaction);
+            const completionReportRequired = await requiresCompletionReport(service, offering, transaction);
             nextPolicy = { ...nextPolicy, ...(offering?.slaMinutes ? { stageMinutes: offering.slaMinutes } : {}),
               ...offering?.providerRules?.coordination, enabled: true, searchStartedAt: now.toISOString(),
               requiredEvidenceTypes: offering?.providerRules?.requiredEvidenceTypes || offering?.definition?.requiredEvidenceTypes || [],
               serviceOutcome: offering?.providerRules?.serviceOutcome || offering?.definition?.description || null,
-              completionReportRequired: offering?.definition?.executionProfile !== 'mobility' };
+              completionReportRequired };
           }
           await operation.update({ ownerUserId: owner.id, mode, policy: normalizePolicy({ ...nextPolicy, ...configure.policy, supervision: null }),
             state: 'waiting', reason: null, nextActionAt: now }, { transaction });
@@ -361,4 +392,4 @@ async function runMissionCoordination({ now = new Date(), limit = 100 } = {}) {
   return stats;
 }
 
-module.exports = { DEFAULT_POLICY, TERMINAL, normalizePolicy, isOfferingOpen, coordinateMission, runMissionCoordination };
+module.exports = { DEFAULT_POLICY, TERMINAL, normalizePolicy, isOfferingOpen, coordinateMission, runMissionCoordination, initialMissionPolicy, initializeMissionCoordination: initialize };

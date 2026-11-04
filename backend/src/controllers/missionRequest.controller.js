@@ -519,6 +519,14 @@ exports.create = async (req, res) => {
     });
   } catch (e) {
     if (e.status === 400) return res.status(400).json({ error: e.message });
+    if (e.name === 'SequelizeUniqueConstraintError') {
+      // Deux demandes invitées concurrentes avec le même nouveau numéro : la
+      // première a déjà créé le compte entre la vérification et cette écriture.
+      return res.status(409).json({
+        error: 'Ce numéro vient d\'être enregistré. Réessayez votre demande avec le code reçu.',
+        code: 'PHONE_JUST_REGISTERED',
+      });
+    }
     logger.error({ err: e }, 'missionRequest.create.failed');
     return res.status(500).json({ error: 'Erreur lors de la création de la demande' });
   }

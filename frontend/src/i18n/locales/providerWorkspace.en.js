@@ -1,0 +1,25 @@
+const providerWorkspace = {
+  title: 'My interventions',
+  hint: 'Services, rides and deliveries in one place. Open a case to carry out the work, report the result and find supporting files.',
+  availability: 'Manage my availability in the centre', views: 'Intervention view', back: 'Back to interventions',
+  view: { 'en-cours': 'In progress', offres: 'Offers to accept', historique: 'History' },
+  search: 'Search by title, address or number',
+  results_one: '{{count}} intervention', results_other: '{{count}} interventions',
+  loadFailed: 'Unable to load your interventions. Please try again.',
+  actionFailed: 'Your response could not be saved. Refresh the offer before trying again.',
+  accept: 'Accept offer', decline: 'Decline offer', report: 'Report and supporting files',
+  deadline: 'Respond before {{date}}',
+  status: { CREATED: 'Request received', SEARCHING_EXECUTOR: 'Assignment being prepared', ASSIGNED: 'Intervention assigned', EN_ROUTE: 'On the way', ON_SITE: 'On site', IN_PROGRESS: 'In progress', COMPLETED: 'Result submitted — awaiting client confirmation', VALIDATED: 'Confirmed by the client', CLOSED: 'Closed', CANCELLED_BY_CLIENT: 'Cancelled by the client', NO_EXECUTOR_FOUND: 'Assignment interrupted', DISPUTED: 'Problem reported', RESOLVED_REFUND: 'Closed with refund', RESOLVED_REDO: 'Follow-up arranged', RESOLVED_CLOSED: 'Problem resolved' },
+  empty: { 'en-cours': 'No interventions in progress', offres: 'No offers to accept', historique: 'No interventions in the history' },
+  emptyHint: 'Interventions assigned to you appear here. Manage your availability in the centre.',
+  next: {
+    offer: 'Review the details, then accept or decline this offer.',
+    expired: 'The response deadline has passed. Refresh to check the latest assignment.',
+    work: 'Open the case to continue your intervention.',
+    report: 'Carry out the work, then add your report and supporting files in the case.',
+    waitingClient: 'The work has been submitted and is awaiting client confirmation. The report and supporting files remain available.',
+    history: 'Find the progress, report and supporting files in the case.',
+    disputed: 'A problem has been reported. Open the case to follow its resolution.',
+  },
+};
+export default providerWorkspace;

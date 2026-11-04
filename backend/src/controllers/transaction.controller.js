@@ -369,6 +369,11 @@ exports.create = async (req, res) => {
     const context = await resolveTransactionContext(req);
     const { service, task, order, project } = context;
     const ownerUserId = order?.userId ?? req.user.id;
+    // Unicité "une transaction par nature, montant remplacé en cas de ressaisie" : propre aux
+    // commandes (un seul paiement logique par commande). Un service/projet/tâche peut légitimement
+    // porter plusieurs écritures distinctes du même type (plusieurs dépenses, étapes payées
+    // séparément...) — leur étendre cette règle fusionnerait des écritures qui doivent rester
+    // distinctes (confirmé par le comportement attendu des API service/tâche/projet).
     const existing = order ? await Transaction.findOne({ where: { orderId: order.id, userId: ownerUserId, type: txType } }) : null;
     if (existing && normalizeCurrency(existing.currency) !== normalizeCurrency(currency, context.currency)) {
       return res.status(409).json({ error: 'Une transaction existe dans une autre devise pour cette commande. Modifiez explicitement cette transaction.' });
@@ -681,7 +686,13 @@ exports.update = async (req, res) => {
       for (const field of linkFields) {
         if (body[field] !== undefined) updates[field] = context[field.replace(/Id$/, '')]?.id ?? null;
       }
+      // Resynchronise le propriétaire de la transaction avec sa nouvelle opération liée,
+      // quel que soit son type — pas seulement pour une commande, sinon une transaction
+      // repointée vers le projet d'un autre client garde l'ancien propriétaire.
       if (body.orderId !== undefined && context.order) updates.userId = context.order.userId;
+      else if (body.projectId !== undefined && context.project) updates.userId = context.project.clientId;
+      else if (body.serviceId !== undefined && context.service) updates.userId = context.service.clientId;
+      else if (body.taskId !== undefined && context.task) updates.userId = context.task.creatorId;
       updates.countryId = context.countryId;
       updates.regionId = context.regionId;
     }

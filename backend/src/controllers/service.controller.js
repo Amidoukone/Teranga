@@ -38,6 +38,7 @@ const { getPagination } = require("../utils/pagination");
 const { getCompletionState, assertCompletionReady } = require('../services/missionCompletion.service');
 const { resolveAssistancePhone } = require('../services/missionSafety.service');
 const { getServicePaymentState } = require('../services/servicePaymentState.service');
+const { MISSION_HISTORY_STATUSES } = require('../constants/missionStatus');
 const { createTrackedResource } = require('../services/trackedCreation.service');
 const logger = require('../utils/logger');
 const { normalizeCurrency } = require('../utils/currency');
@@ -379,12 +380,14 @@ exports.listClient = async (req, res) => {
     const andWhere = [];
 
     // Sélectionner les priorités avant pagination, même pour un ancien dossier.
-    const terminal = ['VALIDATED', 'CLOSED', 'CANCELLED_BY_CLIENT', 'NO_EXECUTOR_FOUND', 'RESOLVED_REFUND', 'RESOLVED_REDO', 'RESOLVED_CLOSED'];
+    // Statut partagé (constants/missionStatus.js) : évite une divergence silencieuse avec les
+    // autres vues (mission.controller.js, workspaceQueue.service.js, clientRequests.service.js).
+    const terminal = MISSION_HISTORY_STATUSES;
     if (view === 'history') andWhere.push({ [Op.or]: [{ missionStatus: { [Op.in]: terminal } }, { missionStatus: null, status: 'validated' }] });
     if (view === 'active') andWhere.push({ [Op.or]: [{ missionStatus: { [Op.notIn]: terminal } }, { missionStatus: null, status: { [Op.ne]: 'validated' } }] });
     if (view === 'review') andWhere.push({ [Op.or]: [{ missionStatus: 'COMPLETED' }, { missionStatus: null, status: 'completed' }] });
     if (view === 'ongoing') andWhere.push({ [Op.or]: [
-      { missionStatus: { [Op.notIn]: ['COMPLETED', 'VALIDATED', 'CLOSED', 'CANCELLED_BY_CLIENT', 'NO_EXECUTOR_FOUND', 'RESOLVED_REFUND', 'RESOLVED_REDO', 'RESOLVED_CLOSED'] } },
+      { missionStatus: { [Op.notIn]: ['COMPLETED', ...terminal] } },
       { missionStatus: null, status: { [Op.notIn]: ['completed', 'validated'] } },
     ] });
 

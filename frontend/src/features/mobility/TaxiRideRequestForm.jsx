@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -112,6 +112,13 @@ export default function TaxiRideRequestForm({ preferredCountryId = null, onCount
   const [activePoint, setActivePoint] = useState("pickup");
   const [locating, setLocating] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  // Une position GPS qui revient après que l'utilisateur a quitté cet écran ne doit jamais
+  // s'appliquer sur un composant démonté.
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
   // Le parcours rapide commence directement par le trajet.
   const [step, setStep] = useState(2);
 
@@ -326,6 +333,7 @@ export default function TaxiRideRequestForm({ preferredCountryId = null, onCount
     setFeedback(null);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        if (!alive.current) return;
         const coordinates = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -334,14 +342,17 @@ export default function TaxiRideRequestForm({ preferredCountryId = null, onCount
         setEstimate(null);
         try {
           const address = await reverseGeocodeMissionRequestLocation(coordinates);
+          if (!alive.current) return;
           setPickupAddress(address || t("mobilityBooking.currentPosition"));
         } catch (_error) {
+          if (!alive.current) return;
           setPickupAddress(t("mobilityBooking.currentPosition"));
         } finally {
-          setLocating(false);
+          if (alive.current) setLocating(false);
         }
       },
       () => {
+        if (!alive.current) return;
         setLocating(false);
         setFeedback({ type: "error", message: t("mobilityBooking.errors.geolocation") });
       },
@@ -454,7 +465,9 @@ export default function TaxiRideRequestForm({ preferredCountryId = null, onCount
     try {
       let data;
       if (sessionUser) {
-        data = await createMission({ executionType: "provider", ...commonPayload });
+        data = await createMission({ executionType: "provider", ...commonPayload,
+          ...(String(sessionUser.countryId) !== String(countryId) ? { countryId: Number(countryId) } : {}),
+        });
       } else {
         data = await submitMissionRequest({
           ...commonPayload,

@@ -26,7 +26,7 @@ for (const width of [360, 1440]) {
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/\/operations$/);
     const main = page.getByRole('main');
-    await expect(main.getByRole('heading', { name: 'Centre des opérations', exact: true })).toBeVisible();
+    await expect(main.getByRole('heading', { name: 'Mon suivi', exact: true })).toBeVisible();
     await expect(main.getByRole('link', { name: 'Vérifier le résultat', exact: true })).toHaveAttribute('href', '/services/1');
     await expect(main.getByRole('article')).toHaveCount(1);
     await expect(main.getByRole('link', { name: 'Nouvelle demande', exact: true })).toHaveAttribute('href', '/demandes/nouvelle');
@@ -87,14 +87,14 @@ test('provider has one work queue and availability while the mission archive rem
     return route.fallback();
   });
   await page.goto('/dashboard');
-  await expect(page.getByRole('heading', { name: 'Centre des opérations', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Mon activité', exact: true })).toBeVisible();
   await expect(page.getByRole('article', { name: 'Réparation en cours', exact: true })).toBeVisible();
   expect(missionReads).toEqual([]);
   await page.getByRole('button', { name: 'Me rendre disponible', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Me rendre indisponible', exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('provider-home.png'), fullPage: true });
   await page.goto('/prestataire/services');
-  await page.getByRole('button', { name: 'Voir les demandes terminées' }).click();
+  await page.getByRole('button', { name: 'Historique', exact: true }).click();
   await expect(page.getByText('Ancien travail')).toBeVisible();
   await expect(page.getByText('Réparation en cours')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Me rendre disponible', exact: true })).toHaveCount(0);
@@ -116,7 +116,7 @@ for (const width of [360, 1440]) {
     await expect(main.getByRole('link', { name: 'Traiter les demandes', exact: true })).toHaveAttribute('href', '/operations');
     expect(reads).toEqual([]);
     await expect(main.getByRole('link', { name: 'Agents', exact: true })).toBeHidden();
-    await main.getByText('Outils de gestion', { exact: true }).click();
+    await main.getByText('Réseau', { exact: true }).click();
     await expect(main.getByRole('link', { name: 'Agents', exact: true })).toBeVisible();
     await expect(main.locator('a[href="/admin/metrics"]')).toHaveCount(0);
     await expect(main.locator('a[href="/admin/onboarding"]')).toHaveCount(0);
@@ -181,7 +181,7 @@ test('reloading after a lost creation response resumes the same request key', as
   await page.getByRole('button', { name: 'Suivant', exact: true }).click();
   await page.getByLabel('Votre besoin en une phrase').fill('Réparer une fuite');
   await page.getByRole('button', { name: 'Suivant', exact: true }).click();
-  await page.getByRole('button', { name: 'Confirmer la mission' }).click();
+  await page.getByRole('button', { name: 'Envoyer ma demande' }).click();
   await expect.poll(() => keys.length).toBe(1);
   await page.reload();
   await expect(page.getByText(/Votre saisie précédente a été retrouvée/)).toBeVisible();
@@ -189,8 +189,8 @@ test('reloading after a lost creation response resumes the same request key', as
   await page.getByRole('button', { name: 'Suivant', exact: true }).click();
   await expect(page.getByLabel('Votre besoin en une phrase')).toHaveValue('Réparer une fuite');
   await page.getByRole('button', { name: 'Suivant', exact: true }).click();
-  await page.getByRole('button', { name: 'Confirmer la mission' }).click();
-  await expect(page.getByRole('link', { name: 'Suivre ma mission' })).toHaveAttribute('href', '/missions/805/track');
+  await page.getByRole('button', { name: 'Envoyer ma demande' }).click();
+  await expect(page.getByRole('link', { name: 'Suivre ma demande' })).toHaveAttribute('href', '/missions/805/track');
   expect(keys).toHaveLength(2);
   expect(keys[1]).toBe(keys[0]);
 });

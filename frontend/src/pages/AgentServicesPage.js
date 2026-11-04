@@ -213,9 +213,9 @@ export default function AgentServicesPage() {
   }, [load, t]);
 
   return (
-    <div className="app-page-wrap">
+    <div className="app-page-wrap role-workspace">
       <div className="app-page-shell max-w-4xl space-y-6">
-        <WorkspaceHeader title={t('fieldWorkspace.title')} hint={t('workspace.fieldHint')} />
+        <WorkspaceHeader title={t('roleViews.agentServices')} hint={t('roleViews.agentHint')} />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <button type="button" aria-pressed={view === 'history'} disabled={Boolean(acting) || refreshing} onClick={() => { setServices([]); setOffset(0); setView(view === 'active' ? 'history' : 'active'); }} className="btn-secondary min-h-11 rounded-xl px-4 text-sm">{t(view === 'active' ? 'fieldWorkspace.showHistory' : 'fieldWorkspace.showActive')}</button>
@@ -250,7 +250,7 @@ export default function AgentServicesPage() {
           <p className="text-sm">{offset + 1}–{offset + services.length} / {total}</p>
           <button type="button" disabled={offset + 25 >= total || refreshing} onClick={() => setOffset(offset + 25)} className="btn-secondary min-h-11 rounded-xl px-4 disabled:opacity-50">{t('operations.next')}</button>
         </nav>}
-        <Link to="/missions/mine" className="inline-flex min-h-11 items-center text-sm font-semibold text-blue-700 dark:text-blue-300">{t('fieldWorkspace.supervised')}</Link>
+        <Link to="/missions/mine" className="inline-flex min-h-11 items-center text-sm font-semibold text-blue-700 dark:text-blue-300">{t('roleViews.supervised')}</Link>
       </div>
     </div>
   );

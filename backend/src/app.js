@@ -21,6 +21,7 @@ const {
   isImageKitConfigured,
 } = require('./utils/mediaStorageDiagnostics');
 const { normalizeApiResponsePayload } = require('./utils/apiMessageNormalizer');
+const { resolveNodeEnvPosture } = require('./utils/runtimeEnv');
 
 const app = express();
 app.locals.runtimeStatus = app.locals.runtimeStatus || {
@@ -58,7 +59,17 @@ const fallbackOrigins = [
 ]
   .map((origin) => normalizeOrigin(origin))
   .filter(Boolean);
-const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+const nodeEnvPosture = resolveNodeEnvPosture(process.env);
+if (!nodeEnvPosture.recognized) {
+  // Ne jamais démarrer avec une posture permissive à cause d'une variable mal
+  // recopiée : on le signale bruyamment même si validateProdConfig n'est pas
+  // appelé par ce point d'entrée.
+  logger.error(
+    { nodeEnv: nodeEnvPosture.raw },
+    'app.node_env.unrecognized_defaulting_to_production_posture'
+  );
+}
+const isDev = !nodeEnvPosture.isProd;
 const defaultProdOrigins = [
   'https://teranga-diaspora.com',
   'https://www.teranga-diaspora.com',
@@ -271,6 +282,7 @@ loadRouter('./routes/provider.routes', '/providers', v1OnlyRouter);
 loadRouter('./routes/tradeCategory.routes', '/trade-categories', v1OnlyRouter);
 loadRouter('./routes/serviceCatalog.routes', '/service-catalog', v1OnlyRouter);
 loadRouter('./routes/operations.routes', '/operations', v1OnlyRouter);
+loadRouter('./routes/clientRequests.routes', '/requests', v1OnlyRouter);
 loadRouter('./routes/missionRequest.routes', '/mission-requests', v1OnlyRouter);
 // Lot 2, section 4.1 — création de mission guidée (app authentifiée).
 loadRouter('./routes/mission.routes', '/missions', v1OnlyRouter);
@@ -325,7 +337,8 @@ apiRouter.get('/openapi.json', (_req, res) => {
   return res.sendFile(openapiContractPath);
 });
 
-app.get('/', (_req, res) => {
+const frontendMounted = require('./utils/serveFrontend').mountFrontend(app);
+if (!frontendMounted) app.get('/', (_req, res) => {
   res.json({
     ok: true,
     name: 'Teranga API',

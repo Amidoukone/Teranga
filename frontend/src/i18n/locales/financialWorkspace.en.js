@@ -1,4 +1,7 @@
 const financialWorkspace = {
+  payment: 'Payment',
+  recordPayment: 'Add a payment or expense', searchAndFilter: 'Search or filter payments', options: 'Currency and additional options',
+  paymentReview: 'Review the order payment', paymentReviewHint: 'Check the payment before confirming that the order is paid in full. Delivery is tracked separately.',
   title: 'Payments and expenses', clientTitle: 'My payments', journal: 'Journal', statement: 'Statement',
   hint: 'Find entries, supporting receipts and their related case.',
   external: 'Payments take place outside Teranga. Recording an entry does not confirm delivery or accept a case result.',

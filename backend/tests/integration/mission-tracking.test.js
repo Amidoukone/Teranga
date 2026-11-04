@@ -267,6 +267,22 @@ describe('Suivi en direct — assignation, statut, position, track (docs section
       .set('Authorization', `Bearer ${providerToken}`)
       .send({ toStatus: 'IN_PROGRESS' })
       .expect(200);
+
+    // Un compte rendu de réalisation est exigé avant la clôture pour toute filière hors
+    // mobilité/livraison, même affectée manuellement (sans affectation automatique active).
+    const prematureCompleted = await request(app)
+      .patch(`/api/v1/missions/${mission.id}/status`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .send({ toStatus: 'COMPLETED' });
+    expect(prematureCompleted.status).toBe(400);
+
+    const reportRes = await request(app)
+      .post(`/api/v1/missions/${mission.id}/completion-report`)
+      .set('Authorization', `Bearer ${providerToken}`)
+      .field('summary', 'Intervention réalisée et vérifiée, compte rendu remis au client.')
+      .field('requestKey', `tracking-report-${mission.id}`);
+    expect(reportRes.status).toBe(200);
+
     const completedRes = await request(app)
       .patch(`/api/v1/missions/${mission.id}/status`)
       .set('Authorization', `Bearer ${providerToken}`)

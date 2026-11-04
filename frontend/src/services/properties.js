@@ -205,7 +205,12 @@ async function createPropertyWithMediaFallback(
  * Liste des biens du client connecte
  * Essaie plusieurs chemins possibles cote backend.
  */
-export async function getProperties() {
+export async function getProperties(params = {}, options = {}) {
+  if (options.strict || options.withPagination) {
+    const { data } = await api.get('/properties', { params: mergeGeoParams(params) });
+    const items = (data.properties || []).map((item) => normalizeProperty(applyLabels(item)));
+    return options.withPagination ? { items, pagination: data.pagination } : items;
+  }
   try {
     const data = await tryEndpoints('get', [
       { url: '/properties', params: mergeGeoParams() },
@@ -453,7 +458,11 @@ export async function searchProperties(params = {}) {
 /**
  * Detail dun bien par ID
  */
-export async function getPropertyById(id) {
+export async function getPropertyById(id, options = {}) {
+  if (options.strict) {
+    const { data } = await api.get(`/properties/${id}`);
+    return data.property ? normalizeProperty(applyLabels(data.property)) : null;
+  }
   try {
     const data = await tryEndpoints('get', [
       { url: `/properties/${id}` },

@@ -121,7 +121,7 @@ describe("NavBar logout flow", () => {
     );
   });
 
-  test("keeps Taxi rides directly visible for admins on desktop and mobile", async () => {
+  test("groups transport tools in Management for administrators", async () => {
     const adminUser = {
       ...mockUser,
       role: "admin",
@@ -132,13 +132,9 @@ describe("NavBar logout flow", () => {
 
     render(<NavBar />);
 
-    const taxiLinks = await screen.findAllByRole("link", {
-      name: "nav.taxiOperations",
-    });
-    expect(taxiLinks.length).toBeGreaterThanOrEqual(2);
-    taxiLinks.forEach((link) => {
-      expect(link).toHaveAttribute("href", "/admin/taxi-dispatch");
-    });
+    expect((await screen.findAllByRole('link', { name: 'nav.management' })).length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByRole('link', { name: 'nav.taxiOperations' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav.deliveryOperations' })).not.toBeInTheDocument();
   });
 
   test("shows the unified request entry points directly for clients", async () => {
@@ -207,20 +203,22 @@ describe("NavBar logout flow", () => {
     fireEvent.click(screen.getByRole('button', { name: 'nav.openMoreMenu' }));
     const panel = await screen.findByRole('dialog', { name: 'nav.menu' });
     expect(within(panel).getByRole('link', { name: 'nav.interventions' })).toHaveAttribute('href', '/tasks');
-    const extraLinks = { client: [['nav.assetsAndProjects', '/dossiers']], agent: [['nav.myMissions', '/missions/mine']], admin: [] };
+    const extraLinks = { client: [['propertySimple.mine', '/properties']], agent: [['roleViews.supervised', '/missions/mine']], admin: [] };
     extraLinks[role].forEach(([name, path]) => expect(within(panel).getByRole('link', { name })).toHaveAttribute('href', path));
   });
 
-  test("keeps service jobs directly accessible for providers on desktop and mobile", async () => {
+  test("unifies provider work in one link on desktop and mobile", async () => {
     const providerUser = { ...mockUser, role: "provider" };
     getLocalUser.mockReturnValue(providerUser);
     me.mockResolvedValue({ user: providerUser });
 
     render(<NavBar />);
 
-    const links = await screen.findAllByRole("link", { name: "nav.services" });
+    const links = await screen.findAllByRole("link", { name: "providerWorkspace.title" });
     expect(links.length).toBeGreaterThanOrEqual(2);
-    links.forEach((link) => expect(link).toHaveAttribute("href", "/prestataire/services"));
+    links.forEach((link) => expect(link).toHaveAttribute("href", "/prestataire/interventions"));
+    expect(screen.queryByRole('link', { name: 'nav.myRides' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav.myDeliveries' })).not.toBeInTheDocument();
   });
 
   test("keeps the coordination centre directly accessible for admins on desktop and mobile", async () => {
@@ -228,7 +226,7 @@ describe("NavBar logout flow", () => {
     getLocalUser.mockReturnValue(adminUser);
     me.mockResolvedValue({ user: adminUser });
     render(<NavBar />);
-    const links = await screen.findAllByRole("link", { name: "operations.title" });
+    const links = await screen.findAllByRole("link", { name: "nav.home" });
     expect(links.length).toBeGreaterThanOrEqual(2);
     links.forEach((link) => expect(link).toHaveAttribute("href", expect.stringMatching(/^\/operations(?:\?|$)/)));
   });
@@ -238,7 +236,7 @@ describe("NavBar logout flow", () => {
     getLocalUser.mockReturnValue(account); me.mockResolvedValue({ user: account });
     getNotificationSummary.mockResolvedValue({ unread: 3, byProgress: {} });
     render(<NavBar />);
-    const links = await screen.findAllByRole('link', { name: 'operations.title' });
+    const links = await screen.findAllByRole('link', { name: 'workspaceQueue.information' });
     const shortcut = links.find((link) => link.getAttribute('href') === '/operations?vue=a-lire');
     expect(shortcut).toBeDefined();
     shortcut.addEventListener('click', (event) => event.preventDefault());

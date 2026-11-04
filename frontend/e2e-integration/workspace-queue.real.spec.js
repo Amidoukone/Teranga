@@ -19,7 +19,7 @@ test('real work centre groups three steps and opens the exact intervention while
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1)).toBe(false);await page.screenshot({path:testInfo.outputPath('grouped-work-mobile.png'),fullPage:true});
   await card.getByRole('link',{name:'Commencer une étape',exact:true}).click();await expect(page).toHaveURL(new RegExp(`/services/${service.id}\\?etape=\\d+#steps$`));
   const step=page.getByRole('article');await step.getByRole('button',{name:'Commencer l’étape',exact:true}).click();await expect(step.getByRole('button',{name:'Terminer l’étape',exact:true})).toBeVisible();
-  await page.getByRole('link',{name:/Retour aux services/}).click();await expect(page.getByLabel('Rechercher un dossier, une étape ou une référence',{exact:true})).toHaveValue(title);
+  await page.getByRole('link',{name:/Retour à l’accueil/}).click();await expect(page.getByLabel('Rechercher un dossier, une étape ou une référence',{exact:true})).toHaveValue(title);
   await page.getByRole('button',{name:'À suivre (0)',exact:true}).click();await expect(page.getByRole('article')).toHaveCount(0);
 });
 test('real work centre keeps a property-only task actionable without creating or revealing a service',async({page,request})=>{
@@ -43,13 +43,13 @@ test('a real property opens its intervention archive and returns to the same con
   expect(created.status()).toBe(201); const task = (await created.json()).task;
   await blockExternalTracking(page); await seedAuthenticatedSession(page, client.user, client.token);
   await page.goto('/properties');
-  await page.locator(`a[href="/tasks?propertyId=${property.id}"]`).click();
-  await expect(page).toHaveURL(new RegExp(`/tasks\\?propertyId=${property.id}$`));
-  await page.getByRole('article', { name: `Visite ${title}`, exact: true }).getByRole('button', { name: 'Ouvrir l’intervention', exact: true }).click();
+  await page.locator(`a[href="/properties/${property.id}"]`).click();
+  await page.getByText('Interventions et historique', { exact: true }).click();
+  await page.getByRole('article', { name: `Visite ${title}`, exact: true }).getByRole('link', { name: 'Ouvrir l’intervention', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/tasks/${task.id}$`));
   await expect(page.getByRole('heading', { name: `Visite ${title}`, exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Retour au dossier du service', exact: true })).toHaveCount(0);
-  await page.getByRole('link', { name: 'Retour aux interventions', exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/tasks\\?propertyId=${property.id}$`));
+  await page.getByRole('link', { name: 'Retour au bien', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/properties/${property.id}#property-interventions$`));
   await expect(page.getByRole('article', { name: `Visite ${title}`, exact: true })).toBeVisible();
 });

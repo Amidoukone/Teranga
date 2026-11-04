@@ -524,8 +524,8 @@ exports.updateStatus = async (req, res) => {
     }
 
     const allowedTransitions = {
-      created: ["in_progress"],
-      in_progress: ["completed"],
+      created: ["in_progress", "cancelled"],
+      in_progress: ["completed", "cancelled"],
       completed: ["validated"],
       validated: [],
       cancelled: [],

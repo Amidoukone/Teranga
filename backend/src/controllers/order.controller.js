@@ -598,33 +598,20 @@ exports.update = async (req, res) => {
     if (norm.shipping !== null) order.shipping = toNullableNumber(norm.shipping) ?? 0;
     if (req.body.note !== undefined || req.body.customerNote !== undefined) order.notes = toTrimOrNull(norm.note);
 
-    // ✅ multi-pays : admin global uniquement (model-aware safe)
-    if (isGlobalAdmin(req.user)) {
-      const geoAssignments = filterGeoAssignmentsForModel(Order, {
-        countryId:
-          norm.countryId !== null && norm.countryId !== undefined
-            ? toSafeInt(norm.countryId)
-            : undefined,
-        regionId:
-          norm.regionId !== null && norm.regionId !== undefined
-            ? toSafeInt(norm.regionId)
-            : undefined,
-      });
+    // Le bloc ci-dessus (moving/currencyChanging) couvre déjà tout changement de pays ou de
+    // région, y compris pour l'admin global (resolveExecutionTerritory + garde d'historique) :
+    // un second bloc ré-appliquait ensuite les mêmes valeurs brutes sans cette validation,
+    // pouvant silencieusement annuler la résolution de territoire qui venait d'être validée.
 
-      if (geoAssignments.countryId !== undefined) order.countryId = geoAssignments.countryId;
-      if (geoAssignments.regionId !== undefined) order.regionId = geoAssignments.regionId;
-    }
-
-    const { subtotal } = await recomputeTotals(order.id);
-    const total =
-      subtotal + parseFloat(order.tax || 0) + parseFloat(order.shipping || 0);
-
-    order.subtotal = subtotal;
-    order.total = total;
-
-    syncPaymentStatus(order);
+    // Recalcul des lignes et sauvegarde de la commande dans la même transaction verrouillée :
+    // un recalcul isolé laissait les OrderItem.total à jour sans garantie que order.total/la
+    // synchronisation du paiement suivent dans le même mouvement atomique.
     await sequelize.transaction(async (transaction) => {
       await Order.findByPk(order.id, { attributes: ['id'], transaction, lock: true });
+      const { subtotal } = await recomputeTotals(order.id, transaction);
+      order.subtotal = subtotal;
+      order.total = subtotal + parseFloat(order.tax || 0) + parseFloat(order.shipping || 0);
+      syncPaymentStatus(order);
       await order.save({ transaction });
       await syncOrderPaymentTransaction({ order, transaction });
     });

@@ -47,6 +47,7 @@ jest.mock('../../src/utils/logger', () => ({
 
 const { Property } = require('../../models');
 const imageKit = require('../../src/helpers/teranga-imagekit');
+const { getUserGeoScope } = require('../../src/utils/geoScope');
 const controller = require('../../src/controllers/property.controller');
 
 function makeRes() {
@@ -158,6 +159,37 @@ describe('property.controller media handling', () => {
         }),
       })
     );
+  });
+
+  test('a geo-scope rejection after upload cleans up the already-saved file instead of leaving it orphaned', async () => {
+    getUserGeoScope.mockReturnValue({ countryId: null, regionId: 5 });
+
+    const req = {
+      user: { id: 10, role: 'admin', country: null, countryId: null, regionId: 5 },
+      body: {
+        title: 'Villa test',
+        type: 'house',
+        address: 'Rue 1',
+        city: 'Bamako',
+        regionId: 99,
+      },
+      files: [
+        {
+          originalname: 'doc.pdf',
+          mimetype: 'application/pdf',
+          size: 12,
+          buffer: Buffer.from('demo'),
+        },
+      ],
+    };
+    const res = makeRes();
+
+    await controller.create(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(Property.create).not.toHaveBeenCalled();
+    expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
+    expect(fs.promises.unlink).toHaveBeenCalledTimes(1);
   });
 
   test('create rejects in production when ImageKit is unavailable and no persistent uploads root is set', async () => {

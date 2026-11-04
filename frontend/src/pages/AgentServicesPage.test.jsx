@@ -55,6 +55,6 @@ describe('AgentServicesPage simplifiée', () => {
     expect(await screen.findByRole('link', { name: 'serviceOrders.view' })).toHaveAttribute('href', '/services/9');
     expect(screen.queryByRole('link', { name: 'serviceAgent.details' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'serviceTracking.actions.call', hidden: true })).not.toBeVisible();
-    expect(screen.getByRole('link', { name: 'operations.title' })).toHaveAttribute('href', '/operations');
+    expect(screen.getByRole('link', { name: 'nav.home' })).toHaveAttribute('href', '/operations');
   });
 });

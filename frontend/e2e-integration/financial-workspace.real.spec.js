@@ -41,9 +41,10 @@ test('real project uses its currency and an administrator controls an entry sepa
   expect(created.status()).toBe(201); const project = (await created.json()).project;
   await blockExternalTracking(page); await seedAuthenticatedSession(page, admin.user, admin.token);
   await page.setViewportSize({ width: 360, height: 900 });
-  await page.goto(`/projects/${project.id}/transactions`);
-  const main = page.getByRole('main');
-  await main.getByRole('button', { name: 'Enregistrer une opération', exact: true }).click();
+  await page.goto(`/projects/${project.id}#dossier-finance`);
+  const main = page.locator('#dossier-finance');
+  await main.getByRole('button', { name: 'Ajouter un paiement ou une dépense', exact: true }).click();
+  await main.getByText('Devise et options complémentaires', { exact: true }).click();
   await expect(main.getByRole('option', { name: `Devise du dossier (${project.currency})`, exact: true })).toBeAttached();
   await main.getByLabel('Montant', { exact: true }).fill('40');
   const writing = page.waitForResponse((response) => response.url().endsWith('/transactions') && response.request().method() === 'POST');
@@ -52,6 +53,7 @@ test('real project uses its currency and an administrator controls an entry sepa
   expect(transaction.currency).toBe(project.currency);
   const card = main.getByRole('article', { name: `Dépense #${transaction.id}`, exact: true });
   await card.getByRole('button', { name: 'Modifier ou contrôler', exact: true }).click();
+  await card.getByText('Devise et options complémentaires', { exact: true }).click();
   await card.getByLabel('Statut de l’écriture', { exact: true }).selectOption('pending');
   const changing = page.waitForResponse((response) => response.url().endsWith(`/transactions/${transaction.id}`) && response.request().method() === 'PUT');
   await card.getByRole('button', { name: 'Enregistrer', exact: true }).click();
@@ -67,11 +69,11 @@ test('real order keeps one entry per type and never marks the order paid from a 
   const created = await request.post(`${API_BASE_URL}/orders`, { headers: headers(client), data: { countryId: client.user.countryId, items: [{ name: 'Documents', quantity: 1, price: 5000 }] } });
   expect(created.status()).toBe(201); const order = (await created.json()).order;
   await blockExternalTracking(page); await seedAuthenticatedSession(page, client.user, client.token);
-  await page.goto(`/orders/${order.id}/transactions`);
-  const main = page.getByRole('main');
+  await page.goto(`/orders/${order.id}#dossier-finance`);
+  const main = page.locator('#dossier-finance');
   const ids = [];
   for (const amount of ['1500', '2000']) {
-    await main.getByRole('button', { name: 'Enregistrer une opération', exact: true }).click();
+    await main.getByRole('button', { name: 'Ajouter un paiement ou une dépense', exact: true }).click();
     await main.getByLabel('Montant', { exact: true }).fill(amount);
     const writing = page.waitForResponse((response) => response.url().endsWith('/transactions') && response.request().method() === 'POST');
     await main.getByRole('button', { name: 'Enregistrer', exact: true }).click();
@@ -83,6 +85,26 @@ test('real order keeps one entry per type and never marks the order paid from a 
   const state = await request.get(`${API_BASE_URL}/orders/${order.id}`, { headers: headers(client) });
   const current = (await state.json()).order;
   expect(current.paymentStatus).toBe('unpaid'); expect(current.status).toBe(order.status);
+  await expect(page).toHaveURL(new RegExp(`/orders/${order.id}#dossier-finance$`));
+});
+
+test('real order payment review preserves its preparation status and refreshes the embedded journal', async ({ page, request }) => {
+  const client = await loginAsSeededClient(request), admin = await loginAsSeededAdmin(request);
+  const created = await request.post(`${API_BASE_URL}/orders`, { headers: headers(client), data: { countryId: client.user.countryId, items: [{ name: 'Fournitures du dossier', quantity: 1, price: 5000 }] } });
+  expect(created.status()).toBe(201); const order = (await created.json()).order;
+  await blockExternalTracking(page); await seedAuthenticatedSession(page, admin.user, admin.token);
+  await page.goto(`/orders/${order.id}#dossier-finance`);
+  const finance = page.locator('#dossier-finance');
+  await finance.getByText('Contrôle du règlement de la commande', { exact: true }).click();
+  const updating = page.waitForResponse(response => response.url().endsWith(`/orders/${order.id}`) && response.request().method() === 'PUT');
+  await finance.getByRole('button', { name: /Marquer.*pay/i }).click();
+  const response = await updating;
+  expect(response.ok()).toBeTruthy();
+  expect(response.request().postDataJSON()).toEqual({ paymentStatus: 'paid' });
+  const state = (await (await request.get(`${API_BASE_URL}/orders/${order.id}`, { headers: headers(client) })).json()).order;
+  expect(state.paymentStatus).toBe('paid'); expect(state.status).toBe(order.status);
+  await expect(finance.getByRole('article')).toHaveCount(1);
+  await expect(page).toHaveURL(new RegExp(`/orders/${order.id}#dossier-finance$`));
 });
 
 test('real step-only finance retains the agent access without exposing the parent service', async ({ page, request }) => {

@@ -607,6 +607,48 @@ html[data-theme="dark"] .disabled\:bg-blue-400:disabled {
     @apply text-2xl font-extrabold text-text-primary sm:text-3xl;
   }
 
+  /* Connected workspaces: let the work cards carry the hierarchy. */
+  .app-page-wrap.role-workspace {
+    @apply px-3 pt-4 sm:px-5 sm:pt-6;
+    background: rgb(var(--color-bg-main));
+  }
+
+  .role-workspace .app-page-shell {
+    @apply border-0 bg-transparent p-0 shadow-none sm:p-2;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .role-workspace label {
+    @apply font-medium normal-case tracking-normal;
+  }
+
+  .role-workspace .page-kicker {
+    @apply tracking-wide;
+  }
+
+  .role-workspace h2 { @apply text-lg; }
+  .role-workspace article h2,
+  .role-workspace h3 { @apply text-base leading-snug; }
+
+  .role-workspace .role-view-tabs > button {
+    @apply min-h-11 px-2 py-2 text-xs sm:text-sm;
+    overflow-wrap: anywhere;
+  }
+
+  .role-home-layout {
+    @apply grid items-start gap-4;
+  }
+
+  @media (min-width: 1024px) {
+    .role-home-layout {
+      grid-template-columns: minmax(0, 1fr) 17rem;
+      column-gap: 1.5rem;
+    }
+    .role-home-layout > .role-availability { grid-column: 2; grid-row: 1; }
+    .role-home-layout > div { grid-column: 1; grid-row: 1; }
+  }
+
   .app-page-subtitle {
     @apply text-sm text-text-secondary;
   }

@@ -14,7 +14,7 @@ for (const role of ['client', 'provider']) {
       await page.goto('/notifications');
       await expect(page).toHaveURL(/\/operations\?vue=a-lire$/);
       const main = page.getByRole('main');
-      await expect(main.getByRole('heading', { name: 'Centre des opérations', exact: true })).toBeVisible();
+      await expect(main.getByRole('heading', { name: role === 'client' ? 'Mon suivi' : 'Mon activité', exact: true })).toBeVisible();
       const card = main.getByRole('article', { name: 'Compte rendu disponible' });
       await expect(card).toBeVisible();
       expect(writes).toHaveLength(0);

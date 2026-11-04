@@ -164,6 +164,38 @@ test('internal transport child missions stay outside the client case view, inclu
   const limited = await request(app).get(`/api/tasks/${entry.id}/workspace`).set(auth(client)); expect(limited.status).toBe(200); expect(limited.body.parentServiceId).toBeNull();
 });
 
+test('an agent can read properties within their territory scope, read-only', async () => {
+  const list = await request(app).get('/api/v1/properties').set(auth(agent));
+  expect(list.status).toBe(200);
+  expect(list.body.properties.map((p) => p.id)).toContain(property.id);
+  const detail = await request(app).get(`/api/v1/properties/${property.id}`).set(auth(agent));
+  expect(detail.status).toBe(200);
+  expect(detail.body.property.id).toBe(property.id);
+  // Toujours en lecture seule : aucune permission d'écriture accordée par ce correctif.
+  const write = await request(app).put(`/api/v1/properties/${property.id}`).set(auth(agent)).send({ title: 'Changé' });
+  expect(write.status).toBe(403);
+});
+
+test('a dispute resolved "redo" reopens the mission for reassignment instead of a dead end', async () => {
+  const mission = await service({ missionStatus: 'DISPUTED', status: 'completed', acceptanceDeadlineAt: new Date() });
+  const dispute = await db.MissionDispute.create({ serviceId: mission.id, openedBy: client.id, status: 'open', reason: 'non_conforme', description: 'Résultat jugé insuffisant par le client.' });
+
+  const resolved = await request(app).patch(`/api/v1/missions/${mission.id}/disputes/${dispute.id}`).set(auth(admin))
+    .send({ resolution: 'redo', resolutionNotes: 'Le travail doit être repris avec un autre exécutant.' });
+  expect(resolved.status).toBe(200);
+  expect((await mission.reload()).missionStatus).toBe('RESOLVED_REDO');
+
+  // Avant le correctif, RESOLVED_REDO n'avait aucune arête sortante : cette transition
+  // échouait systématiquement en 400 ("Transition invalide"), bloquant l'agent à vie.
+  const reopened = await request(app).patch(`/api/v1/missions/${mission.id}/status`).set(auth(admin)).send({ toStatus: 'SEARCHING_EXECUTOR' });
+  expect(reopened.status).toBe(200);
+
+  await mission.reload();
+  expect(mission.missionStatus).toBe('SEARCHING_EXECUTOR');
+  expect(mission.agentId).toBeNull();
+  expect(mission.acceptanceDeadlineAt).toBeNull();
+});
+
 test('an escalated dispute opens a case-specific problem list without extending geographic access', async () => {
   const first = await service({missionStatus:'DISPUTED'}), second = await service({missionStatus:'DISPUTED'});
   for(const parent of [first,second]) await db.MissionDispute.create({serviceId:parent.id,openedBy:client.id,reason:'autre',description:'Résultat à examiner'});

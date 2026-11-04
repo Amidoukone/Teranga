@@ -9,8 +9,10 @@ const {
   Vehicle,
   Country,
   Region,
+  Service,
 } = require('../../models');
 const { Op } = require('sequelize');
+const { ACTIVE_STATUSES } = require('../services/missionStatus.service');
 const { selectedGeo } = require('../utils/selectedGeo');
 const { getUserGeoScope } = require('../utils/geoScope');
 const { getPagination } = require('../utils/pagination');
@@ -230,6 +232,12 @@ exports.updateMyAvailability = async (req, res) => {
     const coversMobility = (provider.tradeCategories || []).some(
       (tradeCategory) => tradeCategory.slug === 'mobilite'
     );
+    if (coversMobility && await Service.count({
+      where: { providerId: provider.id, missionStatus: { [Op.in]: ACTIVE_STATUSES } },
+      include: [{ model: TradeCategory, as: 'tradeCategory', where: { slug: 'mobilite' }, attributes: [] }],
+    })) {
+      return res.status(409).json({ error: 'Une course vous est réservée ou est en cours. Terminez sa prise en charge avant de modifier votre disponibilité.' });
+    }
     if (req.body.availabilityStatus === 'available' && coversMobility) {
       if (provider.status !== 'active') {
         return res.status(400).json({ error: "Le profil chauffeur n'est pas actif" });
@@ -248,8 +256,17 @@ exports.updateMyAvailability = async (req, res) => {
       }
     }
 
-    provider.availabilityStatus = req.body.availabilityStatus;
-    await provider.save();
+    // Dispatch reserves an available driver with a conditional update. Never overwrite
+    // a reservation made while compliance or availability was being checked.
+    const previousStatus = provider.status;
+    const [changed] = await Provider.update({ availabilityStatus: req.body.availabilityStatus }, {
+      where: { id: provider.id, status: provider.status, availabilityStatus: provider.availabilityStatus },
+    });
+    await provider.reload();
+    // MySQL may report zero changed rows for an idempotent declaration.
+    if (changed !== 1 && (provider.availabilityStatus !== req.body.availabilityStatus || provider.status !== previousStatus)) {
+      return res.status(409).json({ error: 'Votre disponibilité a changé. Actualisez avant de réessayer.' });
+    }
 
     return res.json({ provider });
   } catch (e) {

@@ -4,6 +4,8 @@ import { getProjectById, getProjectPhases, getProjectDocuments, saveProjectPhase
 import { getAllTransactions } from '../services/transactions';
 import { me } from '../services/auth';
 import { getWorkProgress, advanceAssignment } from '../services/operations';
+jest.mock('../features/projects/ProjectManagement', () => () => null);
+jest.mock('../features/finance/FinancialWorkspace', () => () => <p>Embedded payments</p>);
 
 const mockGeo = { user: { id: 7, role: 'client' }, countryId: 1 };
 const mockNavigate = jest.fn();
@@ -38,7 +40,7 @@ test('places the result before client confirmation and returns to the searched q
   const confirm = await screen.findByRole('button', { name: 'agentCoordination.actions.validated' });
   const report = screen.getByText('Rapport de chantier', { exact: true });
   expect(report.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(screen.getByRole('link', { name: 'dossier.back' })).toHaveAttribute('href', mockLocation.state.from);
+  expect(screen.getByRole('link', { name: 'roleViews.backHome' })).toHaveAttribute('href', mockLocation.state.from);
   fireEvent.click(confirm);
   await waitFor(() => expect(advanceAssignment).toHaveBeenCalledWith('project', 14, { status: 'validated' }));
 });

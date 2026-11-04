@@ -325,6 +325,18 @@ async function installApiMocks(page, options = {}) {
       } : null;
       return fulfillJson(route, 200, { item: { ...item, status: item.status || item.orderStatus, entityType: kind }, canAdvance: staff, canValidate: kind === 'project' && user.role === 'client', readiness });
     }
+    if (method === 'GET' && path === '/projects') return fulfillJson(route, 200, { projects: state.projects || [] });
+    if (method === 'POST' && path === '/projects') {
+      const body = parseRequestBody(request);
+      const project = { ...body, id: 1000 + (state.projects || []).length, status: 'created', currency: body.currency || 'XOF', clientId: user.id, createdAt: nowIso() };
+      state.projects = [project, ...(state.projects || [])];
+      return fulfillJson(route, 201, { project });
+    }
+    if (method === 'PUT' && /^\/projects\/\d+$/.test(path)) {
+      const project = (state.projects || []).find((entry) => entry.id === Number(path.split('/')[2]));
+      if (!project) return fulfillJson(route, 404, { error: 'Projet introuvable' });
+      Object.assign(project, parseRequestBody(request)); return fulfillJson(route, 200, { project });
+    }
     if (method === 'GET' && /^\/projects\/\d+$/.test(path)) {
       const project = (state.projects || []).find((entry) => entry.id === Number(path.split('/')[2]));
       return fulfillJson(route, project ? 200 : 404, project ? { project } : { error: 'Projet introuvable' });
@@ -337,6 +349,24 @@ async function installApiMocks(page, options = {}) {
     if (method === 'GET' && path === '/project-documents') return fulfillJson(route, 200, { documents: (state.projectDocuments || []).filter((entry) => entry.projectId === Number(new URL(request.url()).searchParams.get('projectId'))) });
     if (method === 'GET' && /^\/orders\/\d+\/evidences$/.test(path)) return fulfillJson(route, 200, { evidences: (state.evidences || []).filter((entry) => entry.orderId === Number(path.split('/')[2])) });
 
+    if (method === 'GET' && path === '/requests') {
+      const query = new URL(request.url()).searchParams;
+      const terminal = ['VALIDATED', 'CLOSED', 'CANCELLED_BY_CLIENT', 'NO_EXECUTOR_FOUND', 'RESOLVED_REFUND', 'RESOLVED_REDO', 'RESOLVED_CLOSED'];
+      const all = [
+        ...state.services.filter(item => !item.parentServiceId).map(item => ({ ...item, kind: 'service', history: terminal.includes(String(item.missionStatus || item.status).toUpperCase()), review: String(item.missionStatus || item.status).toUpperCase() === 'COMPLETED' })),
+        ...(state.projects || []).map(item => ({ ...item, kind: 'project', history: ['validated', 'cancelled'].includes(item.status), review: item.status === 'completed' && Boolean(item.coordination) })),
+        ...state.orders.map(item => ({ ...item, kind: 'order', title: item.code, summary: (item.customerNote || '').slice(0, 240), status: item.orderStatus || item.status, history: ['delivered', 'fulfilled', 'cancelled', 'refunded'].includes(item.orderStatus || item.status), review: false })),
+      ];
+      const items = all.filter(item => {
+        const type = item.kind !== 'service' ? item.kind : item.tradeCategory?.slug === 'mobilite' ? 'taxi' : item.tradeCategory?.slug === 'livraison' ? 'delivery' : 'service';
+        const q = (query.get('q') || '').toLowerCase();
+        return (!query.get('kind') || query.get('kind') === 'all' || query.get('kind') === type)
+          && (!q || `${item.title || ''} ${item.description || ''} ${item.customerNote || ''} ${item.code || ''}`.toLowerCase().includes(q) || q === `#${item.id}`)
+          && (query.get('view') === 'all' || (query.get('view') === 'history' ? item.history : query.get('view') === 'review' ? item.review && !item.history : !item.history));
+      }).sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0) || a.kind.localeCompare(b.kind) || b.id - a.id);
+      return fulfillJson(route, 200, paginate(items.map(item => ({ ...item, key: `${item.kind}:${item.id}` })), request.url()));
+    }
+
     if (method === 'GET' && path === '/services/me') {
       const query = new URL(request.url()).searchParams;
       const view = query.get('view');
@@ -346,7 +376,7 @@ async function installApiMocks(page, options = {}) {
         return view === 'review' ? status === 'COMPLETED' : view === 'history' ? terminal.includes(status) : view === 'active' ? !terminal.includes(status) : view === 'ongoing' ? status !== 'COMPLETED' && !terminal.includes(status) : true;
       }).filter((item) => {
         const kind = item.tradeCategory?.slug === 'mobilite' ? 'taxi' : item.tradeCategory?.slug === 'livraison' ? 'delivery' : 'service';
-        return (!query.get('kind') || query.get('kind') === 'all' || query.get('kind') === kind) && (!query.get('q') || String(item.title).toLowerCase().includes(query.get('q').toLowerCase()));
+        return (!query.get('propertyId') || String(item.propertyId) === query.get('propertyId')) && (!query.get('kind') || query.get('kind') === 'all' || query.get('kind') === kind) && (!query.get('q') || String(item.title).toLowerCase().includes(query.get('q').toLowerCase()));
       });
       const paged = paginate(items, request.url());
       await fulfillJson(route, 200, {
@@ -388,8 +418,15 @@ async function installApiMocks(page, options = {}) {
     }
 
     if (method === 'GET' && path === '/properties') {
-      await fulfillJson(route, 200, { properties: state.properties });
+      const query = new URL(request.url()).searchParams;
+      const items = state.properties.filter((item) => (!query.get('type') || item.type === query.get('type')) && (!query.get('q') || [item.title, item.address, item.city].join(' ').toLowerCase().includes(query.get('q').toLowerCase())));
+      const paged = paginate(items, request.url());
+      await fulfillJson(route, 200, { properties: paged.items, pagination: paged.pagination });
       return;
+    }
+    if (method === 'GET' && /^\/properties\/\d+$/.test(path)) {
+      const property = state.properties.find((item) => item.id === Number(path.split('/')[2]));
+      return fulfillJson(route, property ? 200 : 404, property ? { property } : { error: 'Bien introuvable' });
     }
 
     if (method === 'GET' && /^\/tasks\/service\/\d+$/.test(path)) {
@@ -619,6 +656,15 @@ async function installApiMocks(page, options = {}) {
 
     if (method === 'GET' && path === '/regions') {
       await fulfillJson(route, 200, { items: [], regions: [] });
+      return;
+    }
+
+    // Filet de sécurité générique : sans lui, une spec qui n'intercepte pas elle-même cette
+    // route recevait {ok:true} (dépourvu de missions/pagination), ce qui plante le composant
+    // au lieu d'échouer clairement. Les specs qui ont besoin de données précises continuent de
+    // poser leur propre route (enregistrée après celle-ci, donc prioritaire).
+    if (method === 'GET' && path === '/missions/mine') {
+      await fulfillJson(route, 200, { missions: [], pagination: { total: 0, page: 1, limit: 20 } });
       return;
     }
 

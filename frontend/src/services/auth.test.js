@@ -55,6 +55,17 @@ test('login persists token when default storage mode is localstorage', async () 
   expect(localStorage.getItem('teranga_user')).toContain('"id":7');
 });
 
+test('me() flags a network error as offline instead of a confirmed logout', async () => {
+  const { auth, apiMock } = setupModule('localstorage');
+  localStorage.setItem('teranga_token', 'jwt-token');
+  apiMock.get.mockRejectedValue(new Error('Network Error'));
+
+  const result = await auth.me();
+
+  expect(result.user).toBeNull();
+  expect(result.offline).toBe(true);
+});
+
 test('login persists token in localstorage mode for backward compatibility', async () => {
   const { auth, apiMock } = setupModule('localstorage');
   apiMock.post.mockResolvedValue({

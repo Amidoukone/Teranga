@@ -153,3 +153,18 @@ test('the project form preserves its existing ability to record a signed amount'
   userEvent.click(screen.getByRole('button', { name: 'financialWorkspace.save' }));
   await waitFor(() => expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ type: 'expense', projectId: 14, amount: '-10' })));
 });
+
+test('embedded payments use their own reference and filters without consuming dossier parameters', async () => {
+  mockId = '99'; mockParams = 'q=phase&page=4&paiements_q=reçu&paiements_page=2';
+  getTransactionsWithMeta.mockResolvedValue(page([row(21, 'Reçu du dossier')], 45));
+  render(<FinancialWorkspace kind="order" reference="14" embedded />);
+  await screen.findByText('Reçu du dossier');
+  expect(getOrderById).toHaveBeenCalledWith('14');
+  expect(getTransactionsWithMeta).toHaveBeenLastCalledWith(expect.objectContaining({ orderId: 14, q: 'reçu', page: 2 }));
+  expect(screen.queryByRole('link', { name: 'financialWorkspace.backCase' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+  userEvent.click(screen.getByRole('button', { name: 'financialWorkspace.recordPayment' }));
+  userEvent.type(screen.getByRole('textbox', { name: 'financialWorkspace.amount' }), '7500');
+  userEvent.click(screen.getByRole('button', { name: 'financialWorkspace.save' }));
+  await waitFor(() => expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ orderId: 14, amount: '7500' })));
+});

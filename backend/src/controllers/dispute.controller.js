@@ -6,7 +6,7 @@
 // (voir dispute.schemas.js updateDisputeSchema).
 
 const { Op } = require('sequelize');
-const { Service, MissionDispute, Provider } = require('../../models');
+const { Service, MissionDispute, Provider, sequelize } = require('../../models');
 const { transitionMissionStatus } = require('../services/missionStatus.service');
 const { canAccessGeoResource } = require('../utils/geoScope');
 const { getAdminRecipientIds } = require('../services/notification.service');
@@ -81,19 +81,27 @@ exports.create = async (req, res) => {
 
     const { reason, description, clientEvidence } = req.body;
 
-    const updatedMission = await transitionMissionStatus({
-      service,
-      toStatus: 'DISPUTED',
-      actorType: 'client',
-      actorId: req.user.id,
-    });
+    // Transition de statut + création du litige dans la même transaction : un échec de l'une
+    // des deux écritures ne doit jamais laisser la mission DISPUTED sans trace de litige, ni
+    // l'inverse.
+    const { updatedMission, dispute } = await sequelize.transaction(async (transaction) => {
+      const updatedMission = await transitionMissionStatus({
+        service,
+        toStatus: 'DISPUTED',
+        actorType: 'client',
+        actorId: req.user.id,
+        transaction,
+      });
 
-    const dispute = await MissionDispute.create({
-      serviceId: service.id,
-      openedBy: req.user.id,
-      reason,
-      description,
-      clientEvidence: clientEvidence || null,
+      const dispute = await MissionDispute.create({
+        serviceId: service.id,
+        openedBy: req.user.id,
+        reason,
+        description,
+        clientEvidence: clientEvidence || null,
+      }, { transaction });
+
+      return { updatedMission, dispute };
     });
 
     // Accusé de réception + alerte master, synchrones — jamais dépendants du job périodique
@@ -180,19 +188,27 @@ exports.update = async (req, res) => {
     }
 
     const toStatus = RESOLUTION_TO_STATUS[resolution];
-    const updatedMission = await transitionMissionStatus({
-      service,
-      toStatus,
-      actorType: 'admin',
-      actorId: req.user.id,
-    });
+    // Transition de statut + résolution du litige dans la même transaction : un échec de
+    // l'une des deux écritures ne doit jamais laisser la mission transitionnée sans que le
+    // litige soit marqué résolu (ou l'inverse).
+    const updatedMission = await sequelize.transaction(async (transaction) => {
+      const updatedMission = await transitionMissionStatus({
+        service,
+        toStatus,
+        actorType: 'admin',
+        actorId: req.user.id,
+        transaction,
+      });
 
-    await dispute.update({
-      status: 'resolved',
-      resolution,
-      resolutionNotes,
-      handledBy: req.user.id,
-      decidedAt: new Date(),
+      await dispute.update({
+        status: 'resolved',
+        resolution,
+        resolutionNotes,
+        handledBy: req.user.id,
+        decidedAt: new Date(),
+      }, { transaction });
+
+      return updatedMission;
     });
 
     // Compteur interne (docs/DEV_SPEC_TERANGA_v4_PHASE0.md §2.3) — jamais pour 'closed' (litige

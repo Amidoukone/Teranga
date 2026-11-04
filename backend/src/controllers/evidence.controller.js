@@ -5,6 +5,7 @@ const fs = require("fs");
 const { Evidence, Task, Service, Property, User, Order } = require("../../models");
 const { Op } = require("sequelize");
 const mediaUpload = require("../services/mediaUpload.service");
+const imageKit = require("../helpers/teranga-imagekit");
 
 // 🌍 Labels
 const { EVIDENCE_KINDS, getLabel } = require("../utils/labels");
@@ -854,7 +855,7 @@ exports.remove = async (req, res) => {
     // 🗑️ Suppression ImageKit
     if (ev.fileId) {
       try {
-        await imagekit.deleteFile(ev.fileId);
+        await imageKit.deleteFile(ev.fileId);
       } catch (e) {
         logger.warn(
           "⚠️ Impossible de supprimer le fichier ImageKit:",

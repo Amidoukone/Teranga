@@ -27,6 +27,7 @@ const pageImporters = {
   projects: () => import("../pages/ProjectsPage"),
   projectDetail: () => import("../pages/ProjectDetailPage"),
   agentServices: () => import("../pages/AgentServicesPage"),
+  providerWorkspace: () => import('../pages/ProviderWorkspacePage'),
   adminAgents: () => import("../pages/AdminAgentsPage"),
   adminServices: () => import("../pages/AdminServicesPage"),
   adminPhoneOrders: () => import("../pages/AdminPhoneOrderPage"),
@@ -43,6 +44,7 @@ const pageImporters = {
 };
 
 const routeMatchers = [
+  [/^\/(?:prestataire\/(?:interventions|services)|chauffeur\/courses|livreur\/livraisons)\/?$/i, [pageImporters.providerWorkspace]],
   [/^\/projects\/[^/]+\/transactions\/?$/i, [pageImporters.projectTransactions]],
   [/^\/orders\/[^/]+\/transactions\/?$/i, [pageImporters.orderTransactions]],
   [/^\/orders\/[^/]+\/?$/i, [pageImporters.orderDetail]],

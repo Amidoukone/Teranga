@@ -56,6 +56,7 @@ export function getRequestKind(request = {}) {
 export function getRequestDetailPath(request = {}, categorySlug, actor = 'client') {
   const slug = request.tradeCategory?.slug || categorySlug;
   if (request.missionStatus) {
+    if (actor === 'agent') return `/missions/${request.id}/track`;
     if (actor === 'admin') {
       if (slug === 'mobilite' || (request.requestedVehicleType && slug !== 'livraison')) return `/admin/taxi-dispatch?missionId=${request.id}`;
       if (slug === 'livraison') return `/admin/livraisons?demande=${request.id}`;
@@ -101,7 +102,8 @@ export function getBookingPath(slug) {
 }
 
 export function getRequestReturnPath(from, fallback = '/demandes') {
+  if (typeof from === 'string' && from.length <= 2048 && /^\/properties\/[1-9][0-9]*(?:\?[^#\\\r\n]*)?#property-requests$/.test(from)) return from;
   return typeof from === 'string' && from.length <= 2048 && !/[\\\r\n]/.test(from) &&
-    /^\/(?:demandes|services|dashboard|agent\/services|missions\/mine|prestataire\/services|chauffeur\/courses|livreur\/livraisons|operations|admin\/services|transactions|(?:services|projects|orders)\/[1-9][0-9]*\/transactions)(?:\?[^#]*)?$/.test(from)
+    /^\/(?:demandes|services|dashboard|agent\/services|missions\/mine|prestataire\/(?:services|interventions)|chauffeur\/courses|livreur\/livraisons|operations|admin\/services|transactions|(?:services|projects|orders)\/[1-9][0-9]*\/transactions)(?:\?[^#]*)?$/.test(from)
     ? from : fallback;
 }

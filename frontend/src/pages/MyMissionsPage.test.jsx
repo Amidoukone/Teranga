@@ -98,6 +98,15 @@ describe("MyMissionsPage - disponibilité réseau faible", () => {
     expect(mockNavigate).not.toHaveBeenCalled(); expect(me).not.toHaveBeenCalled();
   });
 
+  test('an agent supervises a pending provider offer without seeing acceptance actions', async () => {
+    getMyMissions.mockResolvedValue({ missions: [{ id: 31, title: 'Course à superviser', missionStatus: 'ASSIGNED', acceptanceDeadlineAt: '2099-01-01T12:00:00Z', tradeCategory: { slug: 'mobilite' } }] });
+    render(<MyMissionsPage user={{ id: 7, role: 'agent' }} />);
+    expect(await screen.findByRole('heading', { name: 'roleViews.supervised' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'taxiRides.accept' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'taxiRides.decline' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'roleViews.supervise' })).toHaveAttribute('href', '/missions/31/track');
+  });
+
   test("le chauffeur accepte une course en une action depuis sa liste", async () => {
     acceptMission.mockResolvedValue({ id: 31 });
     declineMission.mockResolvedValue({ id: 31 });

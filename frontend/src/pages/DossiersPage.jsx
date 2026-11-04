@@ -5,6 +5,7 @@ import { Building2, FolderKanban, RefreshCw } from 'lucide-react';
 
 import { getProjects } from '../services/projects';
 import { getProperties } from '../services/properties';
+import { useGeo } from '../contexts/GeoContext';
 
 function DossierFamily({ icon: Icon, title, description, count, href, action }) {
   return (
@@ -28,6 +29,14 @@ function DossierFamily({ icon: Icon, title, description, count, href, action }) 
 }
 
 export default function DossiersPage() {
+  // Un changement de territoire (admin global) doit remonter la page pour recharger les
+  // compteurs : sans ce remount, elle restait figée sur l'ancien territoire jusqu'au
+  // rechargement complet, contrairement à ManagementHome/OperationsCenterPage.
+  const { user, countryId, regionId } = useGeo();
+  return <Dossiers key={JSON.stringify([user?.id, countryId, regionId])} />;
+}
+
+function Dossiers() {
   const { t } = useTranslation();
   const [counts, setCounts] = useState({ projects: 0, properties: 0 });
   const [loading, setLoading] = useState(true);
@@ -37,10 +46,10 @@ export default function DossiersPage() {
     setLoading(true);
     setError(false);
     try {
-      const [projects, properties] = await Promise.all([getProjects({}), getProperties()]);
+      const [projects, properties] = await Promise.all([getProjects({}), getProperties({ page: 1, limit: 1 }, { strict: true, withPagination: true })]);
       setCounts({
         projects: Array.isArray(projects) ? projects.length : 0,
-        properties: Array.isArray(properties) ? properties.length : 0,
+        properties: Array.isArray(properties) ? properties.length : properties?.pagination?.total ?? properties?.items?.length ?? 0,
       });
     } catch (_error) {
       setError(true);

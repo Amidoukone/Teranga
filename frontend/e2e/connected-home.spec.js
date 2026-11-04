@@ -9,7 +9,7 @@ for (const role of ['client', 'agent', 'provider', 'admin']) {
     await page.locator('form input[type="password"]').fill('Password123!');
     await page.locator('form button[type="submit"]').click();
     await expect(page).toHaveURL(/\/operations$/);
-    await expect(page.getByRole('heading', { name: 'Centre des opérations', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: { client: 'Mon suivi', agent: 'Mon travail', provider: 'Mon activité', admin: 'Pilotage' }[role], exact: true })).toBeVisible();
     await expect(page.getByRole('main').getByText('Bonjour E2E', { exact: true })).toBeVisible();
   });
 }
@@ -43,7 +43,7 @@ test('a client cannot open management or trigger its financial reads', async ({ 
   });
   await page.goto('/gestion');
   await expect(page).toHaveURL(/\/operations$/);
-  await expect(page.getByRole('heading', { name: 'Centre des opérations', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Mon suivi', exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Votre disponibilité', exact: true })).toHaveCount(0);
   expect(financialReads).toEqual([]);
   expect(notificationWrites).toEqual([]);

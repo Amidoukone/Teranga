@@ -1,0 +1,63 @@
+# Proposed dedicated service. Nothing in this file changes the existing production service.
+# Select the reviewed "recette" branch and fill the dedicated database/origin values before creation.
+services:
+  - type: web
+    name: teranga-recette
+    runtime: node
+    branch: recette
+    autoDeployTrigger: off
+    buildCommand: npm --prefix backend ci --omit=dev && npm --prefix frontend ci --include=dev && node backend/scripts/build-recette.js
+    preDeployCommand: npm --prefix backend run recette:check && npm --prefix backend run db:migrate && npm --prefix backend run migrations:check
+    startCommand: node backend/index.js
+    healthCheckPath: /api/ready
+    disk:
+      name: recette-uploads
+      mountPath: /var/data/teranga-recette
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: '22'
+      - key: APP_ENVIRONMENT
+        value: recette
+      - key: SERVE_FRONTEND
+        value: 'true'
+      - key: FRONTEND_BUILD_DIR
+        value: ./frontend/build-recette
+      - key: FRONTEND_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: METRICS_TOKEN
+        generateValue: true
+      - key: FRONTEND_ERROR_TOKEN
+        generateValue: true
+      - key: COOKIE_SAME_SITE
+        value: lax
+      - key: DB_SSL
+        value: 'true'
+      - key: DB_SSL_REJECT_UNAUTHORIZED
+        value: 'true'
+      - key: BOOTSTRAP_ADMIN_ENABLED
+        value: 'false'
+      - key: BOOTSTRAP_ADMIN_ALLOW_DEFAULTS
+        value: 'false'
+      - key: UPLOADS_ROOT
+        value: /var/data/teranga-recette/uploads
+      - key: MEDIA_ENFORCE_DURABLE_UPLOADS
+        value: 'true'
+      - key: MEDIA_ALLOW_LOCAL_FALLBACK
+        value: 'true'
+      - key: MOBILITY_MEDIA_ALLOW_LOCAL_FALLBACK
+        value: 'true'
+      - key: MISSION_COORDINATION_ENABLED
+        value: 'true'
+      - key: RECETTE_GOOGLE_MAPS_BROWSER_KEY
+        sync: false
+      - key: GOOGLE_MAPS_SERVER_KEY
+        sync: false

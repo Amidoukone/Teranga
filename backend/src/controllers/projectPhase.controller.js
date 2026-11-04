@@ -215,8 +215,22 @@ exports.update = async (req, res) => {
       });
     }
 
+    // Le droit d'accès ci-dessus n'a été vérifié que sur le projet ACTUEL de la
+    // phase. projectId ne doit donc jamais permettre de rattacher la phase à un
+    // AUTRE projet (potentiellement d'un autre client) via ce même appel ; on
+    // n'accepte ce champ que s'il reconfirme le projet déjà propriétaire.
+    if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'projectId')) {
+      const requestedProjectId = toSafeInt(req.body.projectId);
+      if (requestedProjectId !== project.id) {
+        return res.status(400).json({
+          error: 'Une phase ne peut pas être déplacée vers un autre projet.',
+        });
+      }
+    }
+    const { projectId: _ignoredProjectId, ...updatableFields } = req.body || {};
+
     // On garde le comportement existant (update libre des champs envoyés)
-    await phase.update(req.body);
+    await phase.update(updatableFields);
 
     return res.json({
       message: 'Phase mise à jour avec succès',

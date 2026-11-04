@@ -57,3 +57,14 @@ test('a revoked profile clears previously visible availability controls', async 
   await screen.findByRole('alert');
   expect(screen.queryByRole('button', { name: 'fieldWorkspace.goAvailable' })).not.toBeInTheDocument();
 });
+
+test('a GPS response arriving after switching to information cannot declare availability', async () => {
+  let finishGps;
+  navigator.geolocation.getCurrentPosition = resolve => { finishGps = resolve; };
+  const view = render(<ProviderAvailabilityPanel />);
+  fireEvent.click(await screen.findByRole('button', { name: 'fieldWorkspace.goAvailable' }));
+  await waitFor(() => expect(finishGps).toBeDefined());
+  view.rerender(<ProviderAvailabilityPanel active={false} />);
+  await act(async () => finishGps({ coords: { latitude: 12, longitude: -8 } }));
+  expect(updateMyAvailability).not.toHaveBeenCalled(); expect(updateMyLiveLocation).not.toHaveBeenCalled();
+});

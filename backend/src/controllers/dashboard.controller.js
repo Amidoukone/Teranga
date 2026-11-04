@@ -1,6 +1,6 @@
 'use strict';
 
-const { Op, literal } = require('sequelize');
+const { Op, literal, fn, col } = require('sequelize');
 const {
   Service,
   Task,
@@ -13,6 +13,7 @@ const {
 } = require('../../models');
 const { applyGeoScopeForModel, getUserGeoScope, isGlobalAdmin, toSafeInt } = require('../utils/geoScope');
 const { buildWhereWithACL, COMMON_INCLUDE } = require('../services/transaction.service');
+const { normalizeCurrency } = require('../utils/currency');
 const logger = require('../utils/logger');
 
 function toNumber(value) {
@@ -30,6 +31,8 @@ const DASHBOARD_DEFAULTS = Object.freeze({
       commissions: 0,
       adjustments: 0,
       balance: 0,
+      multiCurrency: false,
+      byCurrency: [],
     },
     financeWidgetSummary: {
       revenue: 0,
@@ -343,6 +346,13 @@ async function countServices(req) {
   };
 }
 
+const TRANSACTION_TYPE_KEYS = {
+  revenue: 'revenues',
+  expense: 'expenses',
+  commission: 'commissions',
+  adjustment: 'adjustments',
+};
+
 async function countTransactionsAndFinance(req) {
   const txWhere = buildWhereWithACL(req);
   const aggregateInclude = COMMON_INCLUDE.map((inc) => ({
@@ -350,51 +360,64 @@ async function countTransactionsAndFinance(req) {
     attributes: [],
   }));
 
-  const typeColumn = columnRef('Transaction', 'type');
-  const amountColumn = columnRef('Transaction', 'amount');
-  const row = await fetchAggregateRow(Transaction, {
+  // Regroupé par devise : sommer des montants de devises différentes dans un
+  // même total n'a pas de sens (ex: XOF + GHS). Voir financialSummary.service.js
+  // qui applique déjà cette règle pour /transactions/summary.
+  const rows = await Transaction.findAll({
     where: txWhere,
     include: aggregateInclude,
     subQuery: false,
     attributes: [
+      [col('Transaction.currency'), 'currency'],
+      [col('Transaction.type'), 'type'],
+      [fn('SUM', col('Transaction.amount')), 'amount'],
       [literal(countDistinctSql('Transaction')), 'count'],
-      [
-        literal(sumCaseSql(`${typeColumn} = 'revenue'`, amountColumn)),
-        'revenues',
-      ],
-      [
-        literal(sumCaseSql(`${typeColumn} = 'expense'`, amountColumn)),
-        'expenses',
-      ],
-      [
-        literal(sumCaseSql(`${typeColumn} = 'commission'`, amountColumn)),
-        'commissions',
-      ],
-      [
-        literal(sumCaseSql(`${typeColumn} = 'adjustment'`, amountColumn)),
-        'adjustments',
-      ],
     ],
+    group: ['Transaction.currency', 'Transaction.type'],
+    raw: true,
   });
 
-  const normalized = {
-    revenues: toNumber(row.revenues),
-    expenses: toNumber(row.expenses),
-    commissions: toNumber(row.commissions),
-    adjustments: toNumber(row.adjustments),
-  };
+  const grouped = new Map();
+  let totalCount = 0;
+  for (const row of rows) {
+    const currency = normalizeCurrency(row.currency);
+    const totals = grouped.get(currency) || {
+      currency,
+      revenues: 0,
+      expenses: 0,
+      commissions: 0,
+      adjustments: 0,
+    };
+    const key = TRANSACTION_TYPE_KEYS[row.type];
+    if (key) totals[key] += toNumber(row.amount);
+    grouped.set(currency, totals);
+    totalCount += toNumber(row.count);
+  }
+
+  const byCurrency = [...grouped.values()]
+    .map((totals) => ({
+      ...totals,
+      balance: totals.revenues - totals.expenses - totals.commissions + totals.adjustments,
+    }))
+    .sort((a, b) => a.currency.localeCompare(b.currency));
+
+  const multiCurrency = byCurrency.length > 1;
+  // Si plusieurs devises coexistent, un total agrégé serait trompeur : on
+  // renvoie null plutôt qu'une somme erronée. byCurrency reste la source fiable.
+  const single = byCurrency[0] || { revenues: 0, expenses: 0, commissions: 0, adjustments: 0, balance: 0 };
+  const normalized = multiCurrency
+    ? { revenues: null, expenses: null, commissions: null, adjustments: null }
+    : { revenues: single.revenues, expenses: single.expenses, commissions: single.commissions, adjustments: single.adjustments };
 
   const financeSummary = {
     ...normalized,
-    balance:
-      normalized.revenues -
-      normalized.expenses -
-      normalized.commissions +
-      normalized.adjustments,
+    balance: multiCurrency ? null : single.balance,
+    multiCurrency,
+    byCurrency,
   };
 
   return {
-    count: toNumber(row.count),
+    count: totalCount,
     financeSummary,
     financeWidgetSummary: {
       revenue: normalized.revenues,
@@ -591,14 +614,18 @@ exports.summary = async (req, res) => {
     const orderCounts = sections.orderCounts || DASHBOARD_DEFAULTS.orderCounts;
 
     const { financeSummary, financeWidgetSummary } = transactionAgg;
-    const dashboardTotalExpense =
-      role === 'admin'
+    // financeSummary.* est null quand plusieurs devises coexistent : un total
+    // agrégé serait trompeur, donc on propage null plutôt qu'un faux zéro.
+    const dashboardTotalExpense = financeSummary.multiCurrency
+      ? null
+      : role === 'admin'
         ? financeSummary.expenses
         : financeSummary.expenses +
           financeSummary.commissions +
           financeSummary.adjustments;
-    const dashboardBalance =
-      role === 'admin'
+    const dashboardBalance = financeSummary.multiCurrency
+      ? null
+      : role === 'admin'
         ? financeSummary.balance
         : financeSummary.revenues - dashboardTotalExpense;
 
@@ -607,7 +634,7 @@ exports.summary = async (req, res) => {
         servicesCount: serviceCounts.total,
         activeServices: serviceCounts.active,
         transactionsCount: transactionAgg.count,
-        totalRevenue: financeSummary.revenues,
+        totalRevenue: financeSummary.multiCurrency ? null : financeSummary.revenues,
         totalExpense: dashboardTotalExpense,
         balance: dashboardBalance,
       },

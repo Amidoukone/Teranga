@@ -30,17 +30,17 @@ test.describe('E2E Integration Reelle - Parcours critiques', () => {
     await expect(page).toHaveURL(/\/services$/);
     await expect(page.getByText(SEEDED_SERVICE_TITLE).first()).toBeVisible();
 
-    await page.getByRole('main').getByRole('link', { name: 'Nouvelle demande', exact: true }).click();
+    await page.getByRole('main').getByRole('link', { name: 'Demander un service', exact: true }).click();
     await page.getByRole('button', { name: 'Autre service', exact: true }).click();
     await page.getByRole('button', { name: 'Suivant', exact: true }).click();
     await page.getByLabel('Votre besoin en une phrase').fill(uniqueTitle);
     await page.getByRole('button', { name: 'Suivant', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Confirmez votre demande' })).toBeVisible();
     const creation = page.waitForResponse((response) => response.url().endsWith('/api/v1/missions') && response.request().method() === 'POST' && response.status() === 201);
-    await page.getByRole('button', { name: 'Confirmer la mission', exact: true }).click();
+    await page.getByRole('button', { name: 'Envoyer ma demande', exact: true }).click();
     const body = await (await creation).json();
     expect(body.mission.title).toBe(uniqueTitle);
-    await page.getByRole('link', { name: 'Suivre ma mission', exact: true }).click();
+    await page.getByRole('link', { name: 'Suivre ma demande', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/services/${body.mission.id}$`));
     await page.goto('/services');
     await expect(page.getByText(uniqueTitle).first()).toBeVisible();
@@ -95,6 +95,7 @@ test.describe('E2E Integration Reelle - Parcours critiques', () => {
     await expect(page).toHaveURL(/\/orders$/);
     await expect(page.getByText(SEEDED_ORDER_CODE).first()).toBeVisible();
 
+    await page.getByRole('button', { name: 'Nouvelle commande', exact: true }).click();
     const form = page.locator('form').first();
     await form
       .locator('textarea')

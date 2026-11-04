@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "nodemon index.js",
     "lint": "node scripts/lint.js",
+    "recette:build": "node scripts/build-recette.js",
+    "recette:check": "node scripts/check-recette-config.js",
     "field:check": "node scripts/check-field-readiness.js",
     "field:recipe": "node scripts/run-field-recipe.js",
     "validate:prod-config": "node scripts/validate-prod-config.js",
@@ -78,6 +80,7 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "nodemon": "^3.1.10",
+    "selfsigned": "^2.4.1",
     "supertest": "^7.1.1"
   }
 }

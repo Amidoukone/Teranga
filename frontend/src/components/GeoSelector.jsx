@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGeo } from '../contexts/GeoContext';
 
-export default function GeoSelector() {
+export default function GeoSelector({ summaryOnly = false, stacked = false, idPrefix = 'geo' }) {
   const { t } = useTranslation();
   const {
     countryId,
@@ -15,6 +15,8 @@ export default function GeoSelector() {
     canSelect,
     scopedCountryId,
     scopedRegionId,
+    geoError,
+    retryGeo,
   } = useGeo();
 
   const countryOptions = useMemo(() => countries || [], [countries]);
@@ -23,6 +25,19 @@ export default function GeoSelector() {
   if (loading) {
     return (
       <div className="text-xs text-text-muted">{t('geo.loading')}</div>
+    );
+  }
+
+  // Une panne réseau ne doit jamais se présenter comme "aucun territoire" :
+  // on le signale explicitement avec un moyen de réessayer.
+  if (geoError && countryOptions.length === 0) {
+    return (
+      <div role="alert" className="flex flex-wrap items-center gap-2 text-xs text-rose-700 dark:text-rose-300">
+        <span>{t('geo.loadError')}</span>
+        <button type="button" onClick={retryGeo} className="min-h-8 underline">
+          {t('geo.retry')}
+        </button>
+      </div>
     );
   }
 
@@ -40,6 +55,12 @@ export default function GeoSelector() {
     (r) => String(r.id) === String(displayRegionId)
   );
 
+  if (summaryOnly) {
+    const country = selectedCountry?.name || (displayCountryId ? t('geo.countryId', { id: displayCountryId }) : t('geo.allCountries'));
+    const region = displayRegionId ? selectedRegion?.name || t('geo.regionId', { id: displayRegionId }) : '';
+    return <span className="block truncate" title={[country, region].filter(Boolean).join(' · ')}>{[country, region].filter(Boolean).join(' · ')}</span>;
+  }
+
   if (!canSelect) {
     const countryLabel = selectedCountry?.name
       ? selectedCountry.name
@@ -51,7 +72,7 @@ export default function GeoSelector() {
       : t('geo.regionId', { id: displayRegionId });
 
     return (
-      <div className="flex items-center gap-2 text-xs text-text-muted">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
         <span className="rounded-full border border-border/70 bg-surface-main/70 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-secondary">
           {t('geo.scope')}
         </span>
@@ -75,13 +96,13 @@ export default function GeoSelector() {
     "bg-surface-main/40 text-text-muted border-border/40 cursor-not-allowed";
 
   return (
-    <div className="flex items-center gap-2 text-xs">
-      <label className="sr-only" htmlFor="geo-country">
+    <div className={`${stacked ? 'grid grid-cols-1' : 'flex flex-wrap items-center'} gap-2 text-xs`}>
+      <label className={stacked ? 'text-sm font-medium text-text-secondary' : 'sr-only'} htmlFor={`${idPrefix}-country`}>
         {t('geo.countryLabel')}
       </label>
       <select
-        id="geo-country"
-        className={selectBase}
+        id={`${idPrefix}-country`}
+        className={`${selectBase} min-h-11 min-w-0 ${stacked ? 'w-full' : ''}`}
         value={countryId || ''}
         onChange={(e) => setCountry(e.target.value ? Number(e.target.value) : null)}
       >
@@ -93,12 +114,12 @@ export default function GeoSelector() {
         ))}
       </select>
 
-      <label className="sr-only" htmlFor="geo-region">
+      <label className={stacked ? 'text-sm font-medium text-text-secondary' : 'sr-only'} htmlFor={`${idPrefix}-region`}>
         {t('geo.regionLabel')}
       </label>
       <select
-        id="geo-region"
-        className={[selectBase, !countryId ? selectDisabled : ""].join(" ").trim()}
+        id={`${idPrefix}-region`}
+        className={[selectBase, 'min-h-11 min-w-0', stacked ? 'w-full' : '', !countryId ? selectDisabled : ""].join(" ").trim()}
         value={regionId || ''}
         onChange={(e) => setRegion(e.target.value ? Number(e.target.value) : null)}
         disabled={!countryId}

@@ -57,6 +57,18 @@ describe('missionStatus.service', () => {
     expect(isValidTransition('IN_PROGRESS', 'SEARCHING_EXECUTOR')).toBe(false);
   });
 
+  test('a client can cancel before an executor is even assigned', () => {
+    expect(isValidTransition('CREATED', 'CANCELLED_BY_CLIENT')).toBe(true);
+    expect(isValidTransition('SEARCHING_EXECUTOR', 'CANCELLED_BY_CLIENT')).toBe(true);
+  });
+
+  test('RESOLVED_REDO is not a dead end: a dispute resolved "redo" can reopen for reassignment', () => {
+    expect(isValidTransition('RESOLVED_REDO', 'SEARCHING_EXECUTOR')).toBe(true);
+    // Toujours pas une issue directe vers l'exécution ou la clôture : seule la réaffectation.
+    expect(isValidTransition('RESOLVED_REDO', 'ASSIGNED')).toBe(false);
+    expect(isValidTransition('RESOLVED_REDO', 'CLOSED')).toBe(false);
+  });
+
   test('every transition target is a real key in LEGACY_STATUS_MAP or an untouched branch', () => {
     const untouched = [
       'CANCELLED_BY_CLIENT',

@@ -4,7 +4,8 @@
 // section 4.1 + 3.3). Distinct de missionRequest.controller.js (point d'entrée invité de la
 // homepage, Lot 2) : ici pas de bootstrap de compte, le client a déjà une session.
 
-const { Op } = require('sequelize');
+const { Op, fn, col, where: sqlWhere, literal } = require('sequelize');
+const { myMissionsQuerySchema } = require('../validators/myMissions.schemas');
 const { MISSION_HISTORY_STATUSES } = require('../constants/missionStatus');
 const { getServicePaymentState } = require('../services/servicePaymentState.service');
 const {
@@ -17,6 +18,8 @@ const {
   MissionRating,
   Vehicle,
   ExecutorLocation,
+  Property,
+  sequelize,
 } = require('../../models');
 const { geocodeAddress, reverseGeocode, reverseGeocodeDetails } = require('../services/geocoding.service');
 const { getDistanceMatrix } = require('../services/distanceMatrix.service');
@@ -295,7 +298,14 @@ exports.create = async (req, res) => {
       packageHandling: rawPackageHandling,
     } = req.body;
 
+    let linkedProperty = null;
+    if (req.body.propertyId != null) {
+      linkedProperty = await Property.findByPk(req.body.propertyId);
+      if (!linkedProperty) return res.status(404).json({ error: 'Bien introuvable' });
+      if (String(linkedProperty.ownerId) !== String(req.user.id) || !canAccessGeoResource(linkedProperty, req.user)) return res.status(403).json({ error: 'Ce bien ne vous est pas accessible' });
+    }
     const tradeCategory = await resolveTradeCategory(executionType, tradeCategoryId);
+    if (linkedProperty && ['mobilite', 'livraison'].includes(tradeCategory?.slug)) return res.status(400).json({ error: 'Choisissez une intervention pour ce bien' });
     const requestedVehicleType =
       tradeCategory?.slug === 'mobilite' ? rawRequestedVehicleType || 'motorcycle' : null;
     const packageType = tradeCategory?.slug === 'livraison' ? rawPackageType || 'small' : null;
@@ -441,13 +451,14 @@ exports.create = async (req, res) => {
       packageType,
     });
 
+    if (linkedProperty && ((linkedProperty.countryId && String(linkedProperty.countryId) !== String(missionGeoScope.countryId)) || (linkedProperty.regionId && String(linkedProperty.regionId) !== String(missionGeoScope.regionId)))) return res.status(400).json({ error: 'Le lieu de l’intervention doit correspondre au territoire du bien' });
     const service = await createTrackedResource(req, Service, {
       clientId: req.user.id,
       clientRequestKey: req.body.requestKey || null,
       requestPayloadHash: req.body.requestKey ? missionRequestHash(req.body) : null,
       agentId: null,
       createdById: req.user.id,
-      propertyId: null,
+      propertyId: linkedProperty?.id || null,
       pickupAddress,
       pickupLatitude,
       pickupLongitude,
@@ -1020,20 +1031,20 @@ exports.accept = async (req, res) => {
 ============================================================ */
 exports.decline = async (req, res) => {
   try {
-    const service = await Service.findByPk(req.params.id);
-    if (!service) return res.status(404).json({ error: 'Mission introuvable' });
-
     const provider = await findProviderForUser(req.user.id);
-    if (!provider || String(service.providerId) !== String(provider.id)) {
-      return res.status(403).json({ error: 'Accès interdit' });
-    }
-
-    const updated = await transitionMissionStatus({
-      service,
-      toStatus: 'SEARCHING_EXECUTOR',
-      actorType: 'provider',
-      actorId: req.user.id,
-      extraFields: { providerId: null, vehicleId: null, acceptanceDeadlineAt: null },
+    if (!provider) return res.status(403).json({ error: 'Accès interdit' });
+    const updated = await sequelize.transaction(async transaction => {
+      const service = await Service.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!service) throw Object.assign(new Error('Mission introuvable'), { status: 404 });
+      if (String(service.providerId) !== String(provider.id)) throw Object.assign(new Error('Accès interdit'), { status: 403 });
+      if (service.missionStatus !== 'ASSIGNED' || !service.acceptanceDeadlineAt || new Date(service.acceptanceDeadlineAt).getTime() < Date.now()) {
+        throw Object.assign(new Error('Cette offre a expiré ou a déjà reçu une réponse. Actualisez sa prise en charge.'), { status: 409 });
+      }
+      return transitionMissionStatus({
+        service, transaction,
+        toStatus: 'SEARCHING_EXECUTOR', actorType: 'provider', actorId: req.user.id,
+        extraFields: { providerId: null, vehicleId: null, acceptanceDeadlineAt: null },
+      });
     });
 
     await releaseMobilityProviderIfEligible(provider.id);
@@ -1063,6 +1074,7 @@ exports.decline = async (req, res) => {
 
     return res.status(200).json({ mission: updated });
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
     logger.error({ err: e }, 'mission.decline.failed');
     return res.status(500).json({ error: 'Erreur lors du refus' });
   }
@@ -1134,12 +1146,29 @@ exports.updateStatus = async (req, res) => {
     }
 
     if (toStatus === 'COMPLETED') await assertCompletionReady(service);
+    let completionExtra = {};
+    if (toStatus === 'COMPLETED' && rawCollectedAmount != null && !service.parentServiceId) {
+      const tradeCategory = service.tradeCategoryId ? await TradeCategory.findByPk(service.tradeCategoryId, { attributes: ['slug'] }) : null;
+      if (tradeCategory?.slug === 'livraison') completionExtra = { collectedAmount: Number(rawCollectedAmount) };
+    }
+    if (service.missionStatus === 'RESOLVED_REDO' && toStatus === 'SEARCHING_EXECUTOR') {
+      // Un litige "à refaire" rouvre la mission pour une nouvelle affectation : l'exécutant jugé
+      // en tort n'est jamais reconduit automatiquement (voir exports.assign pour la réaffectation).
+      completionExtra = {
+        ...completionExtra,
+        providerId: null,
+        agentId: null,
+        vehicleId: null,
+        acceptanceDeadlineAt: null,
+      };
+    }
     let updated = await transitionMissionStatus({
       service,
       toStatus,
       actorType,
       actorId: req.user.id,
       expectedFields: { agentId: service.agentId, providerId: service.providerId, acceptanceDeadlineAt: service.acceptanceDeadlineAt },
+      extraFields: completionExtra,
     });
 
     await notifyServiceStatusUpdate({
@@ -1175,7 +1204,6 @@ exports.updateStatus = async (req, res) => {
             ? await TradeCategory.findByPk(updated.tradeCategoryId, { attributes: ['slug'] })
             : null;
           if (tradeCategory?.slug === 'livraison') {
-            await updated.update({ collectedAmount });
             const budget = updated.budget != null ? Number(updated.budget) : null;
             if (budget != null && Math.abs(collectedAmount - budget) > 1) {
               const masters = await getAdminRecipientIds({
@@ -1550,6 +1578,7 @@ exports.track = async (req, res) => {
       recipientName: service.recipientName || null,
       recipientPhone: service.recipientPhone || null,
       packageHandling: Array.isArray(service.packageHandling) ? service.packageHandling : [],
+      collectedAmount: service.collectedAmount ?? null,
       pickupLatitude: service.pickupLatitude != null ? Number(service.pickupLatitude) : null,
       pickupLongitude: service.pickupLongitude != null ? Number(service.pickupLongitude) : null,
       destination:
@@ -1572,7 +1601,9 @@ exports.track = async (req, res) => {
 ============================================================ */
 exports.mine = async (req, res) => {
   try {
-    if (req.query.view && !['active', 'history'].includes(req.query.view)) return res.status(400).json({ error: 'Vue de missions invalide' });
+    const { value: filters, error } = myMissionsQuerySchema.validate(req.query);
+    if (error) return res.status(400).json({ error: 'Filtres d’interventions invalides' });
+    res.set('Cache-Control', 'no-store');
     const { limit, offset, page } = getPagination(req);
     const tradeCategorySlug = String(req.query.tradeCategorySlug || '').trim();
 
@@ -1599,7 +1630,27 @@ exports.mine = async (req, res) => {
       where.tradeCategoryId = categoryIds.length ? { [Op.in]: categoryIds } : -1;
     }
 
-    if (req.query.view) where[Op.and] = [{ missionStatus: { [req.query.view === 'history' ? Op.in : Op.notIn]: MISSION_HISTORY_STATUSES } }];
+    if (filters.view) where[Op.and] = [{ missionStatus: { [filters.view === 'history' ? Op.in : Op.notIn]: MISSION_HISTORY_STATUSES } }];
+    if (filters.view === 'offers') {
+      where.missionStatus = 'ASSIGNED';
+      where.acceptanceDeadlineAt = { [Op.gte]: new Date() };
+    }
+    if (filters.kind !== 'all') {
+      const slugs = filters.kind === 'service' ? ['mobilite', 'livraison'] : [filters.kind === 'taxi' ? 'mobilite' : 'livraison'];
+      const categories = await TradeCategory.findAll({ where: { slug: { [Op.in]: slugs } }, attributes: ['id'] });
+      const ids = categories.map((category) => category.id);
+      const condition = filters.kind === 'service'
+        ? { [Op.or]: [{ tradeCategoryId: null }, { tradeCategoryId: { [Op.notIn]: ids } }] }
+        : { tradeCategoryId: { [Op.in]: ids } };
+      where[Op.and] = [...(where[Op.and] || []), condition];
+    }
+    if (filters.q) {
+      // LOCATE treats %, _ and backslashes literally; Sequelize escapes the value.
+      const search = ['title', 'description', 'address', 'pickupAddress'].map((field) => sqlWhere(fn('LOCATE', filters.q, col(`Service.${field}`)), { [Op.gt]: 0 }));
+      const id = Number(filters.q.replace(/^#/, ''));
+      if (/^#?[1-9][0-9]*$/.test(filters.q) && Number.isSafeInteger(id)) search.push({ id });
+      where[Op.and] = [...(where[Op.and] || []), { [Op.or]: search }];
+    }
     if (req.query.excludeTradeCategorySlug) {
       const slugs = String(req.query.excludeTradeCategorySlug).slice(0, 100).split(',').map((value) => value.trim()).filter(Boolean);
       const categories = await TradeCategory.findAll({ where: { slug: { [Op.in]: slugs } }, attributes: ['id'] });
@@ -1611,7 +1662,7 @@ exports.mine = async (req, res) => {
         { model: User, as: 'client', attributes: ['id', 'firstName', 'lastName', 'phone'] },
         { model: TradeCategory, as: 'tradeCategory', attributes: ['id', 'name', 'slug'] },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [...(filters.view === 'active' || filters.view === 'offers' ? [[literal('CASE WHEN `Service`.`acceptanceDeadlineAt` IS NOT NULL AND `Service`.`acceptanceDeadlineAt` >= CURRENT_TIMESTAMP AND `Service`.`missionStatus` = \'ASSIGNED\' THEN 0 ELSE 1 END'), 'ASC']] : []), ['createdAt', 'DESC'], ['id', 'DESC']],
       limit,
       offset,
       distinct: true,

@@ -1,7 +1,7 @@
 'use strict';
 
 const { Op } = require('sequelize');
-const { OrderItem, Order, Product, User } = require('../../models');
+const { OrderItem, Order, Product, User, sequelize } = require('../../models');
 const {
   ORDER_ITEM_STATUSES,
   ORDER_STATUSES,
@@ -189,8 +189,8 @@ function canWriteOnOrder(user, order) {
 /* ============================================================
    🧮 Recalcul totaux commande (prix + taxes + livraison)
 ============================================================ */
-async function recomputeOrderTotals(orderId) {
-  const items = await OrderItem.findAll({ where: { orderId } });
+async function recomputeOrderTotals(orderId, transaction = null) {
+  const items = await OrderItem.findAll({ where: { orderId }, transaction });
   let subtotal = 0;
 
   for (const it of items) {
@@ -200,13 +200,13 @@ async function recomputeOrderTotals(orderId) {
 
     if (line !== it.total) {
       it.total = line;
-      await it.save();
+      await it.save({ transaction });
     }
 
     subtotal += line;
   }
 
-  const ord = await Order.findByPk(orderId);
+  const ord = await Order.findByPk(orderId, { transaction });
   if (!ord) return null;
 
   const total =
@@ -216,7 +216,7 @@ async function recomputeOrderTotals(orderId) {
 
   ord.subtotal = subtotal;
   ord.total = Number(total.toFixed(2));
-  await ord.save();
+  await ord.save({ transaction });
 
   return ord;
 }
@@ -247,56 +247,63 @@ exports.create = async (req, res) => {
 
     const { productId, name, sku, unitPrice, price, quantity, status = 'created' } = req.body || {};
 
-    // Vérifie si le produit existe
-    let product = null;
     let pid = null;
     if (productId) {
       pid = toSafeInt(productId);
-      product = pid ? await Product.findByPk(pid) : null;
-
-      // ✅ Si user scoped et produit trouvé => vérifier scope produit
-      if (product && !canAccessProductByScope(req, product)) {
+      // ✅ Scope vérifié hors transaction (lecture seule, pas de verrou nécessaire ici).
+      const scoped = pid ? await Product.findByPk(pid) : null;
+      if (scoped && !canAccessProductByScope(req, scoped)) {
         return res.status(403).json({ error: 'Produit hors scope (accès interdit)' });
       }
-
       // ✅ Si user scoped et pas de produit => on laisse passer (legacy),
       // mais dans ce cas ce sera un item "manuel" sans contrôle stock.
     }
 
     const qty = toSafeInt(quantity) ?? 1;
 
-    // ✅ Contrôle de stock si le produit gère un stock
-    if (product && product.stock !== null && typeof product.stock !== 'undefined') {
-      const currentStock = Number(product.stock);
-      if (!Number.isNaN(currentStock) && currentStock < qty) {
-        return res.status(400).json({
-          error: `Stock insuffisant pour le produit "${product.name}". Disponible : ${currentStock}, demandé : ${qty}.`,
-        });
+    // Verrou du produit + décrémentation atomique (même transaction que la création de
+    // l'article) : sans cela, deux ajouts concurrents sur un stock limité passent tous les
+    // deux le contrôle avant décrément et survendent le produit.
+    const { item } = await sequelize.transaction(async (transaction) => {
+      const lockedProduct = pid ? await Product.findByPk(pid, { transaction, lock: true }) : null;
+      if (lockedProduct && !canAccessProductByScope(req, lockedProduct)) {
+        throw Object.assign(new Error('Produit hors scope (accès interdit)'), { status: 403 });
       }
-    }
+      if (lockedProduct && lockedProduct.stock !== null && typeof lockedProduct.stock !== 'undefined') {
+        const currentStock = Number(lockedProduct.stock);
+        if (!Number.isNaN(currentStock) && currentStock < qty) {
+          throw Object.assign(
+            new Error(`Stock insuffisant pour le produit "${lockedProduct.name}". Disponible : ${currentStock}, demandé : ${qty}.`),
+            { status: 400 }
+          );
+        }
+      }
 
-    const item = await OrderItem.create({
-      orderId: order.id,
-      productId: product ? product.id : pid,
-      name: toTrimOrNull(name) || product?.name || '—',
-      sku: toTrimOrNull(sku) || product?.sku || null,
-      price: toNullableNumber(unitPrice ?? price) ?? (product?.price ?? 0),
-      quantity: qty,
-      total: 0,
-      status: String(status).trim(),
+      const createdItem = await OrderItem.create({
+        orderId: order.id,
+        productId: lockedProduct ? lockedProduct.id : pid,
+        name: toTrimOrNull(name) || lockedProduct?.name || '—',
+        sku: toTrimOrNull(sku) || lockedProduct?.sku || null,
+        price: toNullableNumber(unitPrice ?? price) ?? (lockedProduct?.price ?? 0),
+        quantity: qty,
+        total: 0,
+        status: String(status).trim(),
+      }, { transaction });
+
+      if (lockedProduct && lockedProduct.stock !== null && typeof lockedProduct.stock !== 'undefined') {
+        const currentStock = Number(lockedProduct.stock);
+        if (!Number.isNaN(currentStock)) {
+          await lockedProduct.update({ stock: currentStock - qty }, { transaction });
+        }
+      }
+
+      await recomputeOrderTotals(order.id, transaction);
+
+      return { item: createdItem };
     });
 
-    // ✅ Décrémentation effective du stock
-    if (product && product.stock !== null && typeof product.stock !== 'undefined') {
-      const currentStock = Number(product.stock);
-      if (!Number.isNaN(currentStock)) {
-        product.stock = currentStock - qty;
-        await product.save();
-      }
-    }
-
-    // Recalcul commande
-    const updatedOrder = await recomputeOrderTotals(order.id);
+    // Recalcul hors transaction pour la réponse (déjà cohérent, lecture seule).
+    const updatedOrder = await Order.findByPk(order.id);
 
     const created = await OrderItem.findByPk(item.id, {
       include: [{ model: Product, as: 'product' }],
@@ -315,9 +322,8 @@ exports.create = async (req, res) => {
     });
   } catch (e) {
     logger.error('create orderItem:', e);
-    const msg = e?.message || '';
-    if (msg.toLowerCase().includes('stock insuffisant')) {
-      return res.status(400).json({ error: msg });
+    if (e?.status) {
+      return res.status(e.status).json({ error: e.message });
     }
     return res.status(500).json({ error: "Erreur lors de l'ajout de l'article à la commande." });
   }
@@ -348,7 +354,9 @@ exports.list = async (req, res) => {
     const { rows, count } = await OrderItem.findAndCountAll({
       where: { orderId: order.id },
       include: [{ model: Product, as: 'product' }],
-      order: [['createdAt', 'DESC']],
+      // OrderItem n'a pas de colonne createdAt (timestamps: false) ; id croissant
+      // reflète l'ordre d'ajout.
+      order: [['id', 'DESC']],
       limit,
       offset,
     });

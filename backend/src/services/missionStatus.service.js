@@ -8,10 +8,13 @@
 const { sequelize, MissionStatusHistory } = require('../../models');
 
 // Graphe de transitions valides (section 2). Les statuts absents de cet objet (CLOSED,
-// CANCELLED_BY_CLIENT, NO_EXECUTOR_FOUND, RESOLVED_*) sont terminaux dans ce lot.
+// CANCELLED_BY_CLIENT, NO_EXECUTOR_FOUND, RESOLVED_REFUND, RESOLVED_CLOSED) sont terminaux
+// dans ce lot. RESOLVED_REDO ne l'est volontairement pas : un litige "à refaire" exige encore
+// du travail, donc une issue vers une nouvelle affectation (voir mission.controller.js
+// exports.updateStatus, qui réinitialise aussi l'exécutant précédent lors de cette transition).
 const TRANSITIONS = {
-  CREATED: ['SEARCHING_EXECUTOR'],
-  SEARCHING_EXECUTOR: ['ASSIGNED', 'NO_EXECUTOR_FOUND'],
+  CREATED: ['SEARCHING_EXECUTOR', 'CANCELLED_BY_CLIENT'],
+  SEARCHING_EXECUTOR: ['ASSIGNED', 'NO_EXECUTOR_FOUND', 'CANCELLED_BY_CLIENT'],
   // 'SEARCHING_EXECUTOR' ajouté depuis ASSIGNED/EN_ROUTE (additif) : seule arête retour, pour
   // journaliser la désassignation complète d'un exécutant (admin), voir mission.controller.js
   // exports.assign.
@@ -22,6 +25,7 @@ const TRANSITIONS = {
   COMPLETED: ['VALIDATED', 'DISPUTED'],
   VALIDATED: ['CLOSED'],
   DISPUTED: ['RESOLVED_REFUND', 'RESOLVED_REDO', 'RESOLVED_CLOSED'],
+  RESOLVED_REDO: ['SEARCHING_EXECUTOR'],
 };
 
 // Mapping exact décision 0.6.b — statuts absents (branches annulation/litige) : services.status

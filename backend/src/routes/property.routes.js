@@ -26,12 +26,16 @@ router.post(
   ctrl.create
 );
 
+// Lecture seule : le contrôleur a une branche dédiée à l'agent (scope, sans filtre
+// ownerId) qui n'était jamais atteignable tant que cette route le bloquait avant lui.
 router.get(
   '/',
   auth,
-  requireRoles('client', 'admin'),
+  requireRoles('client', 'admin', 'agent'),
   ctrl.list
 );
+
+router.get('/:id', auth, requireRoles('client', 'admin', 'agent'), ctrl.detail);
 
 router.put(
   '/:id',

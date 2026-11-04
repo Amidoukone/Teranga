@@ -9,10 +9,10 @@ test('a real administrator has one home and opens management without loading fig
   page.on('request', (read) => { if (/\/(dashboard\/summary|transactions\/summary)(?:\?|$)/.test(read.url())) financialReads.push(read.url()); });
   await page.goto('/dashboard');
   await expect(page).toHaveURL(/\/operations$/);
-  await expect(page.getByRole('heading', { name: 'Centre des opérations', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pilotage', exact: true })).toBeVisible();
   await page.locator('nav:visible').getByRole('link', { name: 'Gestion', exact: true }).click();
   await expect(page).toHaveURL(/\/gestion$/);
-  await page.getByRole('main').getByText('Outils de gestion', { exact: true }).click();
+  await page.getByRole('main').getByText('Réseau', { exact: true }).click();
   await expect(page.getByRole('main').getByRole('link', { name: 'Agents', exact: true })).toBeVisible();
   expect(financialReads).toEqual([]);
 });

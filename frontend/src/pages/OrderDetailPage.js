@@ -8,6 +8,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useGeo } from '../contexts/GeoContext';
 import DossierHeader, { DossierNextAction } from '../components/DossierHeader';
+import DossierFinanceSection from '../features/finance/DossierFinanceSection';
 
 import {
   getOrderById,
@@ -102,6 +103,10 @@ function OrderDossier() {
   const [evidenceError, setEvidenceError] = useState('');
   const [productsError, setProductsError] = useState('');
   const [revision, setRevision] = useState(0);
+  const [updatingOrder, setUpdatingOrder] = useState(false);
+  const orderUpdateInFlight = useRef(false);
+  const [addingItem, setAddingItem] = useState(false);
+  const itemAddInFlight = useRef(false);
   const alive = useRef(true), request = useRef(0), evidenceRequest = useRef(0);
 
   // Form ajout article
@@ -259,10 +264,14 @@ function OrderDossier() {
   const imageEvidences = useMemo(() => {
     return (evidences || []).filter((ev) => isEvidenceImage(ev));
   }, [evidences]);
+  const currentEvidence = imageEvidences[evidenceLightbox.index] || null;
 
-  const nonImageEvidences = useMemo(() => {
-    return (evidences || []).filter((ev) => inferEvidenceKind(ev) !== 'image');
-  }, [evidences]);
+  // Le polling de fond peut réduire la liste pendant que la visionneuse est ouverte
+  // (suppression concurrente d'une preuve) : fermer plutôt que planter sur un index devenu
+  // invalide ou afficher silencieusement une autre photo que celle demandée.
+  useEffect(() => {
+    setEvidenceLightbox((lb) => (lb.open && lb.index >= imageEvidences.length ? { open: false, index: 0 } : lb));
+  }, [imageEvidences.length]);
 
  // Contexte: detail de commande.
   function openEvidenceLightbox(fromId) {
@@ -394,6 +403,8 @@ function OrderDossier() {
      Contexte: detail d une commande.
   ============================================================ */
   async function handleOrderUpdate(patch) {
+    if (orderUpdateInFlight.current) return;
+    orderUpdateInFlight.current = true; setUpdatingOrder(true);
     try {
       const payload = {};
 
@@ -409,7 +420,10 @@ function OrderDossier() {
       notify(t("orderDetail.alerts.updateSuccess"));
     } catch (e) {
       console.error("OrderDetailPage update order error:", e);
-      notify(t("orderDetail.alerts.updateError"));
+      notify(e?.response?.data?.error || t("orderDetail.alerts.updateError"));
+    } finally {
+      orderUpdateInFlight.current = false;
+      if (alive.current) setUpdatingOrder(false);
     }
   }
 
@@ -418,11 +432,14 @@ function OrderDossier() {
   ============================================================ */
   async function handleAddItem(e) {
     e.preventDefault();
+    if (itemAddInFlight.current) return;
 
     if (!itemForm.productId) return notify(t("orderDetail.alerts.productRequired"));
     if (Number(itemForm.quantity) <= 0)
       return notify(t("orderDetail.alerts.invalidQuantity"));
 
+    itemAddInFlight.current = true;
+    setAddingItem(true);
     try {
       const payload = {
         productId: Number(itemForm.productId),
@@ -441,6 +458,9 @@ function OrderDossier() {
     } catch (e2) {
       console.error("OrderDetailPage add item error:", e2);
       notify(t("orderDetail.alerts.itemAddError"));
+    } finally {
+      itemAddInFlight.current = false;
+      if (alive.current) setAddingItem(false);
     }
   }
 
@@ -533,9 +553,8 @@ function OrderDossier() {
 
   const total = Number(order.totalAmount || 0);
   const currency = order.currency || 'XOF';
-  const currencyLabel = t(`currency.${currency}`, { defaultValue: currency });
-  const getCurrencyLabel = (code) =>
-    t(`currency.${code || currency}`, { defaultValue: code || currency });
+  const currencyLabel = currency;
+  const getCurrencyLabel = (code) => String(code || currency).toUpperCase();
   const orderStatusLabel = t(
     `orders.status.${canonicalizeOrderStatus(order.orderStatus)}`,
     { defaultValue: order.orderStatus }
@@ -547,7 +566,7 @@ function OrderDossier() {
   const orderStatusTone = getOrderStatusTone(order.orderStatus);
   const paymentStatusTone = getPaymentStatusTone(order.paymentStatus);
 
-  return <div className="app-page-wrap"><div className="app-page-shell max-w-5xl space-y-6">
+  return <div className="app-page-wrap role-workspace"><div className="app-page-shell max-w-5xl space-y-6">
     <DossierHeader kind="order" id={order.id} title={order.code || t('orderDetail.title', { id: order.id })}
       assignee={order.coordination?.executorUserId ? `#${order.coordination.executorUserId}` : ''}
       status={<Badge tone={orderStatusTone}>{orderStatusLabel}</Badge>} />
@@ -673,6 +692,7 @@ function OrderDossier() {
 
                 <button
                   type="submit"
+                  disabled={addingItem}
                   className="px-4 py-2 text-sm rounded-lg app-btn-primary shadow-sm"
                 >
                   {t("orderDetail.items.addButton")}
@@ -766,110 +786,7 @@ function OrderDossier() {
             </form>
             </details>
 
-            {imageEvidences.length > 0 && (
-              <div className="mb-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm sm:text-base font-semibold text-text-primary">
-                    {t("orderDetail.sections.imagesGallery")}
-                  </h3>
-                  <span className="text-xs text-text-muted">
-                    {t("orderDetail.evidences.imagesCount", {
-                      count: imageEvidences.length,
-                    })}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {imageEvidences.map((ev) => {
-                    const fileUrl = toAbsUrl(ev.filePath);
-                    return (
-                      <button
-                        key={`gallery-${ev.id}`}
-                        type="button"
-                        onClick={() => openEvidenceLightbox(ev.id)}
-                        className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-border bg-surface-main"
-                        title={t("orderDetail.labels.preview")}
-                      >
-                        <img
-                          src={fileUrl}
-                          alt={ev.originalName || t("orderDetail.labels.proof")}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
-                        <div className="absolute bottom-2 left-2 right-2 text-[0.7rem] text-white font-semibold truncate drop-shadow">
-                          {ev.originalName || t("orderDetail.labels.proof")}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {nonImageEvidences.length > 0 && (
-              <div className="mb-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm sm:text-base font-semibold text-text-primary">
-                    {t("orderDetail.sections.docsGallery")}
-                  </h3>
-                  <span className="text-xs text-text-muted">
-                    {t("orderDetail.evidences.docsCount", {
-                      count: nonImageEvidences.length,
-                    })}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {nonImageEvidences.map((ev) => {
-                    const fileUrl = toAbsUrl(ev.filePath);
-                    const kind = inferEvidenceKind(ev);
-                    const extLabel = getFileExtLabel(
-                      ev.originalName || ev.filePath,
-                      kind === 'pdf'
-                        ? t("orderDetail.labels.pdf")
-                        : t("orderDetail.labels.file")
-                    );
-                    const typeLabel =
-                      kind === 'pdf'
-                        ? t("orderDetail.labels.pdf")
-                        : t("orderDetail.labels.file");
-
-                    return (
-                      <a
-                        key={`doc-${ev.id}`}
-                        href={fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-border bg-surface-card hover:shadow-md transition"
-                      >
-                        <div
-                          className={`absolute top-2 left-2 text-[0.65rem] font-semibold px-2 py-0.5 rounded-full border ${
-                            kind === 'pdf'
-                              ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                              : 'bg-surface-main text-text-secondary border-border'
-                          }`}
-                        >
-                          {typeLabel}
-                        </div>
-
-                        <div className="h-full w-full flex flex-col items-center justify-center px-2 text-center">
-                          <div className="text-xs font-semibold text-text-secondary bg-surface-main border border-border px-2 py-1 rounded-full inline-flex">
-                            {extLabel}
-                          </div>
-                          <div className="mt-2 text-[0.7rem] text-text-secondary truncate w-full">
-                            {ev.originalName || t("orderDetail.labels.document")}
-                          </div>
-                        </div>
-                      </a>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Liste des preuves */}
+            {/* Une seule liste conserve l’aperçu, les notes et les droits de chaque pièce. */}
             {evidences.length === 0 && !evidenceError ? (
               <p className="text-sm text-text-muted italic">
                 {t("orderDetail.evidences.noEvidence")}
@@ -1021,14 +938,12 @@ function OrderDossier() {
 
       <WorkProgressPanel embedded entityType="order" entityId={order.id} status={order.status || order.orderStatus} revision={revision} onSaved={init} />
     </section>
-    <details id="dossier-finance" className="scroll-mt-24 rounded-2xl border border-border bg-surface-card p-4 sm:p-5">
-      <summary className="min-h-11 cursor-pointer text-lg font-bold">{t('dossier.finance')}</summary>
+    <DossierFinanceSection kind="order" reference={order.id} revision={revision}>
       <p className="mt-3 text-sm">{t('orderDetail.labels.totalAmount')}</p><p className="text-2xl font-bold">{formatNumber(total)} {currencyLabel}</p>
       <div className="mt-3"><Badge tone={paymentStatusTone}>{t('orderDetail.labels.paymentStatus')} {paymentStatusLabel}</Badge></div>
       <p className="mt-3 text-sm text-text-secondary">{t('dossier.paymentHint')}</p>
-      <Link to={`/orders/${id}/transactions`} state={{ from: `/orders/${id}#dossier-finance` }} className="mt-3 inline-flex min-h-11 items-center text-sm underline">{t('orderDetail.actions.viewTransactions')}</Link>
-      {canAdmin && canonicalizePaymentStatus(order.paymentStatus) !== 'paid' && <button type="button" onClick={() => handleOrderUpdate({ orderStatus: 'paid', paymentStatus: 'paid' })} className="app-btn-neutral ml-3 min-h-11">{t('orderDetail.actions.markPaid')}</button>}
-    </details>
+      {canAdmin && canonicalizePaymentStatus(order.paymentStatus) !== 'paid' && <details className="rounded-xl border border-border p-3"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">{t('financialWorkspace.paymentReview')}</summary><p className="mb-3 text-sm text-text-secondary">{t('financialWorkspace.paymentReviewHint')}</p><button type="button" disabled={updatingOrder} onClick={() => handleOrderUpdate({ paymentStatus: 'paid' })} className="app-btn-neutral min-h-11">{t('orderDetail.actions.markPaid')}</button></details>}
+    </DossierFinanceSection>
     <details id="dossier-details" className="scroll-mt-24 rounded-2xl border border-border bg-surface-card p-4 sm:p-5">
       <summary className="min-h-11 cursor-pointer text-lg font-bold">{t('dossier.details')}</summary>
       <h2 className="mt-3 font-semibold">{t('orderDetail.sections.customer')}</h2><p className="mt-2 text-sm">{customerDisplay}</p>
@@ -1037,11 +952,11 @@ function OrderDossier() {
       {order.createdAt && <p className="mt-3 text-sm">{formatDateTime(order.createdAt)}</p>}
       {isGlobalAdmin && <p className="mt-3 text-sm">{getGeoLabel(order)}</p>}
       {canAdmin && <details className="mt-4 rounded-xl border border-border p-3"><summary className="min-h-11 cursor-pointer text-sm font-semibold">{t('dossier.tools')}</summary>
-        {!order.coordination && <button type="button" onClick={() => handleOrderUpdate({ orderStatus: 'delivered' })} className="app-btn-neutral min-h-11">{t('orderDetail.actions.markDelivered')}</button>}
-        <button type="button" onClick={() => handleOrderUpdate({ orderStatus: 'cancelled' })} className="app-btn-danger ml-3 min-h-11">{t('orderDetail.actions.cancel')}</button>
+        {!order.coordination && <button type="button" disabled={updatingOrder} onClick={() => handleOrderUpdate({ orderStatus: 'delivered' })} className="app-btn-neutral min-h-11">{t('orderDetail.actions.markDelivered')}</button>}
+        <button type="button" disabled={updatingOrder} onClick={() => handleOrderUpdate({ orderStatus: 'cancelled' })} className="app-btn-danger ml-3 min-h-11">{t('orderDetail.actions.cancel')}</button>
       </details>}
     </details>
-          {evidenceLightbox.open && imageEvidences.length > 0 && (
+          {evidenceLightbox.open && currentEvidence && (
         <div
           ref={evidenceLightboxRef}
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4"
@@ -1095,8 +1010,7 @@ function OrderDossier() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-border text-white text-sm">
               <div className="truncate">
                 <span className="font-semibold">
-                  {imageEvidences[evidenceLightbox.index].originalName ||
-                    imageEvidences[evidenceLightbox.index].filePath}
+                  {currentEvidence.originalName || currentEvidence.filePath}
                 </span>
               </div>
 
@@ -1110,11 +1024,8 @@ function OrderDossier() {
             {/* Image principale */}
             <div className="flex-1 flex items-center justify-center bg-black">
               <img
-                src={toAbsUrl(imageEvidences[evidenceLightbox.index].filePath)}
-                alt={
-                  imageEvidences[evidenceLightbox.index].originalName ||
-                    t("orderDetail.labels.proof")
-                }
+                src={toAbsUrl(currentEvidence.filePath)}
+                alt={currentEvidence.originalName || t("orderDetail.labels.proof")}
                 className="max-h-[70vh] max-w-full object-contain rounded-lg"
               />
             </div>

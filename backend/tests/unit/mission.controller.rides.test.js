@@ -27,7 +27,7 @@ const { Service, TradeCategory } = require("../../models");
 const ctrl = require("../../src/controllers/mission.controller");
 
 function makeRes() {
-  return { json: jest.fn(), status: jest.fn().mockReturnThis() };
+  return { json: jest.fn(), status: jest.fn().mockReturnThis(), set: jest.fn().mockReturnThis() };
 }
 
 describe("mission.controller dedicated transport lists", () => {

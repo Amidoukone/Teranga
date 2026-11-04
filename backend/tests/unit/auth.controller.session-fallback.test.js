@@ -124,6 +124,46 @@ describe('auth.controller session fallback', () => {
     expect(User.create).toHaveBeenLastCalledWith(expect.objectContaining({ language: 'fr' }));
   });
 
+  test('a phone race condition caught by the DB unique constraint returns a clean 400, not a 500', async () => {
+    User.findOne.mockResolvedValue(null);
+    Franchise.count.mockResolvedValue(1);
+    Country.findByPk.mockResolvedValue({ id: 3, isoCode: 'CI', isActive: true, defaultLanguage: 'fr' });
+    User.create.mockRejectedValue(
+      Object.assign(new Error('Validation error'), {
+        name: 'SequelizeUniqueConstraintError',
+        errors: [{ path: 'phone', value: '+2250100000000' }],
+      })
+    );
+
+    const res = makeRes();
+    await controller.register(makeReq({ body: {
+      phone: '+2250100000000', password: 'Password123!', countryId: 3,
+    } }), res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Téléphone déjà utilisé' });
+  });
+
+  test('a concurrent profile update racing on the same phone returns a clean 409, not a 500', async () => {
+    const update = jest.fn().mockRejectedValue(
+      Object.assign(new Error('Validation error'), {
+        name: 'SequelizeUniqueConstraintError',
+        errors: [{ path: 'phone', value: '+2250100000000' }],
+      })
+    );
+    User.findOne.mockResolvedValue(null);
+    User.findByPk.mockResolvedValue({ id: 9, email: null, phone: '+2250100000001', update });
+
+    const req = makeReq({ body: { phone: '+2250100000000' } });
+    req.user = { id: 9 };
+    const res = makeRes();
+
+    await controller.updateMe(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Téléphone déjà utilisé' });
+  });
+
   test('login exposes refresh token when fallback header is requested', async () => {
     bcrypt.compare.mockResolvedValue(true);
     User.findOne.mockResolvedValue({

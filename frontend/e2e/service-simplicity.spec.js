@@ -43,8 +43,8 @@ for (const width of [360, 1440]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false);
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await page.screenshot({ path: testInfo.outputPath('service-confirmation.png'), fullPage: true });
-    await page.getByRole('button', { name: 'Confirmer la mission', exact: true }).click();
-    await expect(page.getByRole('link', { name: 'Suivre ma mission' })).toHaveAttribute('href', '/missions/803/track');
+    await page.getByRole('button', { name: 'Envoyer ma demande', exact: true }).click();
+    await expect(page.getByRole('link', { name: 'Suivre ma demande' })).toHaveAttribute('href', '/missions/803/track');
     expect(creations).toBe(1);
   });
 }

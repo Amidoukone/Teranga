@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { buildTelHref, buildWhatsappHref } from '../utils/phone';
 
-export default function RequestHelp({ id, title = '', phone }) {
+export default function RequestHelp({ id, title = '', phone, mission = false }) {
   const { t } = useTranslation();
+  const location = useLocation();
   const tel = buildTelHref(phone);
   const whatsapp = buildWhatsappHref(phone, t('requestHelp.message', { id, title }));
   const email = t('homePage.contact.info.email');
@@ -13,7 +14,7 @@ export default function RequestHelp({ id, title = '', phone }) {
     <div className="mt-3 flex flex-wrap gap-2">
       {tel && <a href={tel} className="btn-secondary min-h-11 rounded-xl px-4 py-3 text-sm">{t('requestHelp.call')}</a>}
       {whatsapp && <a href={whatsapp} target="_blank" rel="noreferrer" className="btn-primary min-h-11 rounded-xl px-4 py-3 text-sm">{t('requestHelp.whatsapp')}</a>}
-      <Link to={`/help-support?demande=${encodeURIComponent(id)}`} className="btn-secondary min-h-11 rounded-xl px-4 py-3 text-sm">{t('requestHelp.options')}</Link>
+      <Link to={`/help-support?demande=${encodeURIComponent(id)}${mission ? '&suivi=mission' : ''}`} state={{ dossierFrom: location.pathname + location.search + location.hash, dossierState: location.state }} className="btn-secondary min-h-11 rounded-xl px-4 py-3 text-sm">{t('requestHelp.options')}</Link>
       {!tel && email.includes('@') && <a href={`mailto:${email}?subject=${encodeURIComponent(`Teranga #${id}`)}&body=${encodeURIComponent(t('requestHelp.message', { id, title }))}`} className="btn-secondary min-h-11 rounded-xl px-4 py-3 text-sm">{t('requestHelp.email')}</a>}
     </div>
     {!tel && <p className="mt-2 text-sm text-text-secondary">{t('requestHelp.missing')}</p>}

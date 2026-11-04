@@ -21,8 +21,9 @@ import { clearRequestDraft, readRequestDraft, saveRequestDraft } from "../../uti
 
 const TOTAL_STEPS = 3;
 
-export default function MissionCreationWizard({ serviceOnly = false, preferredCategorySlug = null, onTransportSelected }) {
+export default function MissionCreationWizard({ serviceOnly = false, preferredCategorySlug = null, onTransportSelected, property = null }) {
   const { t } = useTranslation();
+  const draftScope = property ? `mission-property-${property.id}` : 'mission';
 
   const [step, setStep] = useState(1);
   const wizardPanel = useRef(null);
@@ -89,14 +90,19 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
         if (cancelled) return;
         setCountries(countryList);
         draftActor.current = session.user?.id || null;
-        const draft = session.user?.id ? readRequestDraft('mission', session.user.id) : {};
+        const draft = session.user?.id ? readRequestDraft(draftScope, session.user.id) : {};
         const draftCountry = countryList.find((item) => String(item.id) === draft.countryId);
         const accountCountry = countryList.find((item) => String(item.id) === String(session.user?.countryId));
-        const initialCountry = draftCountry || accountCountry || (countryList.length === 1 ? countryList[0] : null);
+        const propertyCountry = property && countryList.find((item) => String(item.id) === String(property.countryId));
+        const initialCountry = draftCountry || propertyCountry || accountCountry || (countryList.length === 1 ? countryList[0] : null);
         setCountryId(initialCountry ? String(initialCountry.id) : "");
-        setRegionId(draftCountry ? draft.regionId || '' : accountCountry && session.user?.regionId ? String(session.user.regionId) : "");
+        setRegionId(draftCountry ? draft.regionId || '' : propertyCountry ? String(property.regionId || '') : accountCountry && session.user?.regionId ? String(session.user.regionId) : "");
         setTitle(draft.title || ''); setDescription(draft.description || '');
         if (draftCountry) { setAddress(draft.address || ''); setCoordinates(draft.coordinates || null); setPickupAddress(draft.pickupAddress || ''); setPickupCoordinates(draft.pickupCoordinates || null); }
+        else if (property) {
+          setAddress([property.address, property.city].filter(Boolean).join(', '));
+          if (property.latitude != null && property.longitude != null && Number.isFinite(Number(property.latitude)) && Number.isFinite(Number(property.longitude))) setCoordinates({ latitude: Number(property.latitude), longitude: Number(property.longitude) });
+        }
         submission.current = draft.submission || null;
         setRestoredDraft(Boolean(draft.title || draft.description || draft.address));
         setDraftReady(true);
@@ -114,12 +120,12 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [t, property, draftScope]);
 
   useEffect(() => {
     if (!draftReady || !draftActor.current || result) return;
-    saveRequestDraft('mission', draftActor.current, { countryId, regionId, title, description, address, coordinates, pickupAddress, pickupCoordinates, submission: submission.current });
-  }, [draftReady, countryId, regionId, title, description, address, coordinates, pickupAddress, pickupCoordinates, result]);
+    saveRequestDraft(draftScope, draftActor.current, { countryId, regionId, title, description, address, coordinates, pickupAddress, pickupCoordinates, submission: submission.current });
+  }, [draftReady, draftScope, countryId, regionId, title, description, address, coordinates, pickupAddress, pickupCoordinates, result]);
 
   useEffect(() => {
     if (!countryId) {
@@ -305,7 +311,7 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
   };
 
   const resetWizard = () => {
-    clearRequestDraft('mission', draftActor.current);
+    clearRequestDraft(draftScope, draftActor.current);
     setRestoredDraft(false);
     submission.current = null;
     setStep(1);
@@ -345,6 +351,7 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
     setFeedback(null);
     try {
       const payload = {
+        ...(property ? { propertyId: property.id } : {}),
         countryId: Number(countryId),
         ...(regionId ? { regionId: Number(regionId) } : {}),
         executionType,
@@ -374,10 +381,10 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
       if (submission.current?.fingerprint !== fingerprint) {
         submission.current = { fingerprint, requestKey: window.crypto?.randomUUID?.() || `mission-${Date.now()}-${Math.random().toString(36).slice(2)}` };
       }
-      saveRequestDraft('mission', draftActor.current, { countryId, regionId, title, description, address, coordinates, pickupAddress, pickupCoordinates, submission: submission.current });
+      saveRequestDraft(draftScope, draftActor.current, { countryId, regionId, title, description, address, coordinates, pickupAddress, pickupCoordinates, submission: submission.current });
       const data = await createMission({ ...payload, requestKey: submission.current.requestKey });
       const missionId = data?.mission?.id;
-      clearRequestDraft('mission', draftActor.current);
+      clearRequestDraft(draftScope, draftActor.current);
 
       if (saveThisLocation && !savedLocationId && address.trim() && coordinates?.latitude != null) {
         try {
@@ -436,6 +443,7 @@ export default function MissionCreationWizard({ serviceOnly = false, preferredCa
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             to={getRequestDetailPath(result.mission, selectedTradeCategorySlug)}
+            state={property ? { from: `/properties/${property.id}#property-requests` } : undefined}
             className="btn-primary rounded-full px-6 py-2.5 text-sm"
           >
             {t("missionCreation.success.trackCta")}

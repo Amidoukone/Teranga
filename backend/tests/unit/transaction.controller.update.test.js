@@ -75,6 +75,13 @@ test('relinking from a paid order to a pending order does not complete the trans
   expect(record.status).toBe('pending');
 });
 
+test('relinking to a different project resynchronizes the transaction owner, not only for orders', async () => {
+  resolveTransactionContext.mockResolvedValueOnce({ project: { id: 9, clientId: 55 }, countryId: 2, regionId: null });
+  await controller.update({ ...req({ projectId: 9 }), file: undefined }, response());
+  expect(record.projectId).toBe(9);
+  expect(record.userId).toBe(55);
+});
+
 test('a failed transaction creation removes its newly uploaded receipt', async () => {
   Transaction.create.mockRejectedValueOnce(new Error('Database unavailable'));
   const res = response();
@@ -103,4 +110,27 @@ test('an existing order receipt is retained on repeated creation without an unus
   expect(record.save).toHaveBeenCalledTimes(1);
   expect(record.proofFile).toBe(proof);
   expect(fs.promises.writeFile).not.toHaveBeenCalled();
+});
+
+test('project-linked transactions are never deduplicated — only orders merge by nature', async () => {
+  // Un service/projet/tâche peut légitimement porter plusieurs écritures distinctes du même
+  // type (plusieurs dépenses...) ; seule une commande a un paiement logique unique par nature.
+  Transaction.findOne.mockResolvedValue(record);
+  Transaction.create.mockResolvedValueOnce({ id: 123 });
+  resolveTransactionContext.mockResolvedValue({ project: { id: 5 }, countryId: 2, currency: 'GHS' });
+  const res = response();
+  await controller.create({ ...req({ type: 'revenue', amount: 777 }), file: undefined }, res);
+  expect(res.status).toHaveBeenCalledWith(201);
+  expect(Transaction.findOne).not.toHaveBeenCalled();
+  expect(Transaction.create).toHaveBeenCalledTimes(1);
+});
+
+test('two fully unlinked transactions of the same type are never merged into one', async () => {
+  Transaction.findOne.mockResolvedValue(null);
+  Transaction.create.mockResolvedValueOnce({ id: 99 });
+  resolveTransactionContext.mockResolvedValue({ countryId: 2, currency: 'GHS' });
+  const res = response();
+  await controller.create({ ...req({ type: 'expense', amount: 10 }), file: undefined }, res);
+  expect(Transaction.findOne).not.toHaveBeenCalled();
+  expect(Transaction.create).toHaveBeenCalledTimes(1);
 });

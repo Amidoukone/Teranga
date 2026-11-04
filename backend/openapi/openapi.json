@@ -2,7 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Teranga API",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "description": "Contrat documenté pour la coordination de missions/opérations (missions, operations, providers, requests, tasks, saved-locations, mission-pricing-rules) et une partie de auth/services. D'autres routes montées et actives n'ont PAS encore de contrat formel ici : activities, categories, countries, dashboard, evidences, franchises, notifications, order-items, orders, products, project-documents, project-phases, projects, properties, property-listings, regions, service-catalog, transactions, users — ainsi que le reste de auth et de services au-delà de /services/me. Ne pas déduire leur absence d'une non-existence : vérifier backend/src/routes/ pour la liste réelle des routes montées."
   },
   "servers": [
     {
@@ -10,6 +11,56 @@
     }
   ],
   "paths": {
+    "/providers/me/availability": {
+      "patch": {
+        "summary": "Declare the signed-in provider's availability",
+        "description": "A reserved or active Taxi ride prevents self-service availability changes (409). Conditional writes preserve a driver reservation made concurrently by dispatch. Repeating the current declaration remains successful. Going available for Mobility still checks the driver's active status and vehicle compliance.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["availabilityStatus"], "properties": { "availabilityStatus": { "type": "string", "enum": ["available", "busy", "offline"] }, "vehicleId": { "type": "integer", "minimum": 1, "nullable": true } }, "additionalProperties": false } } } },
+        "responses": { "200": { "description": "Current provider profile." }, "400": { "description": "Invalid declaration or compliance requirements unmet." }, "403": { "description": "Provider role required." }, "404": { "description": "Profile missing." }, "409": { "description": "Taxi reservation in progress or concurrent availability change." } }
+      }
+    },
+    "/missions/{id}/decline": {
+      "post": {
+        "summary": "Decline a live offer assigned to the signed-in provider",
+        "description": "Ownership, ASSIGNED status and unexpired pending acceptance are checked under a row lock. A previous acceptance or refusal cannot be undone by a stale request. Successful refusal returns the mission to SEARCHING_EXECUTOR and removes the assignment; the provider must return to their list because dossier access is revoked.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
+        "responses": { "200": { "description": "Offer declined and assignment released." }, "403": { "description": "The offer is no longer assigned to this provider." }, "404": { "description": "Mission missing." }, "409": { "description": "Offer expired or already answered." } }
+      }
+    },
+    "/missions/mine": {
+      "get": {
+        "summary": "List the signed-in provider's interventions or the agent's supervised missions",
+        "description": "Ownership is enforced before search, type filtering, counting and pagination. Personal assignments are independent of geographic selectors. Active includes COMPLETED awaiting client confirmation and prioritizes live offers before newer work. Offers requires ASSIGNED and a non-expired acceptance deadline. History uses MISSION_HISTORY_STATUSES. The response is no-store. Unknown query parameters return 400.",
+        "parameters": [
+          { "name": "view", "in": "query", "schema": { "type": "string", "enum": ["active", "offers", "history"] }, "description": "Omit to retain the historical all-status list." },
+          { "name": "kind", "in": "query", "schema": { "type": "string", "enum": ["all", "service", "taxi", "delivery"], "default": "all" } },
+          { "name": "q", "in": "query", "schema": { "type": "string", "maxLength": 200 }, "description": "Literal substring in title, description or addresses; #123 also matches the exact identifier." },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100000 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "minimum": 0, "maximum": 20000000 }, "description": "Historical offset pagination; page takes priority when supplied." },
+          { "name": "tradeCategorySlug", "in": "query", "schema": { "type": "string", "maxLength": 100 } },
+          { "name": "excludeTradeCategorySlug", "in": "query", "schema": { "type": "string", "maxLength": 100 }, "description": "Historical comma-separated category exclusion." }
+        ],
+        "responses": { "200": { "description": "Missions and pagination (page, limit, offset, total)." }, "400": { "description": "Invalid filters." }, "401": { "description": "Authentication required." }, "403": { "description": "Agent or provider role required." } }
+      }
+    },
+    "/requests": {
+      "get": {
+        "summary": "Find all of the signed-in client's services, projects and orders",
+        "description": "Client role only. Ownership is enforced on every source before global filtering, counting and pagination, without a geographic selector. Linked repeat services remain in their parent dossier. Sorting is newest first, then kind and descending id. Review includes completed services and coordinated completed projects; order payment or shipment never requires client result confirmation. Unknown query parameters return 400.",
+        "parameters": [
+          { "name": "view", "in": "query", "schema": { "type": "string", "enum": ["active", "review", "history", "all"], "default": "active" } },
+          { "name": "kind", "in": "query", "schema": { "type": "string", "enum": ["all", "service", "taxi", "delivery", "project", "order"], "default": "all" }, "description": "Service excludes the mobility and delivery categories; all includes every family." },
+          { "name": "q", "in": "query", "schema": { "type": "string", "maxLength": 200 }, "description": "Literal substring in title, description or order reference; #123 also matches the numeric id. Percent and underscore are literal." },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100000, "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } }
+        ],
+        "responses": {
+          "200": { "description": "Complete global pagination, no partial family fallback. Items include typed key (kind:id), kind (service/project/order), numeric id, title, status, missionStatus, paymentStatus, createdAt, review and history booleans. Service summaries include tradeCategory and optional executor name in agent. Project summaries include executor. Orders include an optional summary (first 240 characters of the customer note). Pagination includes page, limit and total. Cache-Control: no-store." },
+          "400": { "description": "Invalid filters" }, "401": { "description": "Authentication required" }, "403": { "description": "Client role required" }, "503": { "description": "The complete collection could not be read" }
+        }
+      }
+    },
     "/tasks": {
       "get": {
         "summary": "Find authorized interventions, including completed history",
@@ -1080,6 +1131,7 @@
     "/missions/{id}/status": {
       "patch": {
         "summary": "Transition mission status (section 2 state machine); allowed transitions depend on caller role",
+        "description": "For a delivery completed by its executor, the optional collectedAmount declaration is saved atomically with COMPLETED. It creates no payment transaction and never changes recorded payments or the remaining balance. Invalid amounts leave work progress unchanged. Provider completion requirements come from existing coordination or the active catalogue policy when a manual assignment preceded scheduler initialization; required reports cannot be bypassed in that case.",
         "parameters": [
           {
             "name": "id",
@@ -2316,6 +2368,11 @@
               "car"
             ]
           },
+          "propertyId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional property owned by the client; the intervention must use its territory. Taxi and delivery are excluded."
+          },
           "savedLocationId": {
             "type": "number"
           },
@@ -2698,6 +2755,7 @@
           "toStatus"
         ],
         "properties": {
+          "collectedAmount": { "type": "number", "nullable": true, "minimum": 0, "maximum": 9999999999.99, "description": "Optional amount declared on delivery at COMPLETED; stored separately from payment transactions." },
           "toStatus": {
             "type": "string",
             "enum": [
@@ -2788,6 +2846,7 @@
           "etaMinutes"
         ],
         "properties": {
+          "collectedAmount": { "type": ["number", "string", "null"], "description": "Courier declaration for reconciliation. Not a recorded payment; MySQL decimal values may be strings." },
           "missionStatus": {
             "type": [
               "string",

@@ -109,16 +109,31 @@ async function syncOrderPaymentTransaction({ order, transaction }) {
       return;
     }
 
+    let changed = false;
     if (existingTx.status !== "completed") {
       existingTx.status = "completed";
+      changed = true;
+    }
 
-      if (existingTx.countryId == null && order.countryId != null) {
-        existingTx.countryId = order.countryId;
-      }
-      if (existingTx.regionId == null && order.regionId != null) {
-        existingTx.regionId = order.regionId;
-      }
+    // Le journal doit refléter le total réel de la commande : si celui-ci a
+    // changé depuis la création de l'écriture (article ajouté, taxe ajustée),
+    // la transaction de paiement ne doit pas rester figée sur l'ancien montant.
+    const expectedAmount = Number(order.total) || 0;
+    if (Number(existingTx.amount) !== expectedAmount) {
+      existingTx.amount = expectedAmount;
+      changed = true;
+    }
 
+    if (existingTx.countryId == null && order.countryId != null) {
+      existingTx.countryId = order.countryId;
+      changed = true;
+    }
+    if (existingTx.regionId == null && order.regionId != null) {
+      existingTx.regionId = order.regionId;
+      changed = true;
+    }
+
+    if (changed) {
       await existingTx.save({ transaction });
     }
   } catch (err) {

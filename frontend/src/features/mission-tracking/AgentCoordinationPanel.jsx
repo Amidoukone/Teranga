@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import WorkAssignmentCard from './WorkAssignmentCard';
 import { getAgentAssignments, getAgentCapacity, updateAgentCapacity } from '../../services/operations';
 
 export default function AgentCoordinationPanel({ availabilityOnly = false, active: visible = true }) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const from = location.pathname + location.search;
   const editing = useRef(false);
   const sending = useRef(false);
   const readVersion = useRef(0);
@@ -59,10 +62,10 @@ export default function AgentCoordinationPanel({ availabilityOnly = false, activ
     finally { sending.current = false; if (alive.current) setBusy(false); }
   }
   return <section id={availabilityOnly ? 'workspace-availability' : undefined} aria-label={t(availabilityOnly ? 'connectedHome.availability' : 'agentCoordination.title')} className="scroll-mt-24 space-y-3 rounded-2xl border border-border bg-surface-card p-4">
-    <h2 className="text-base font-semibold">{t(availabilityOnly ? 'connectedHome.availability' : 'agentCoordination.title')}</h2>
+    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-base font-semibold">{t(availabilityOnly ? 'connectedHome.availability' : 'agentCoordination.title')}</h2>{availabilityOnly && capacity && <p role="status" className="text-sm font-semibold">{t(capacity.available ? 'roleViews.availability.available' : 'roleViews.availability.offline')}</p>}</div>
     {capacity && <>
-      <p role="status" className="text-sm font-semibold">{t(capacity.available ? 'fieldWorkspace.available' : 'fieldWorkspace.offline')}</p>
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {!availabilityOnly && <p role="status" className="text-sm font-semibold">{t(capacity.available ? 'fieldWorkspace.available' : 'fieldWorkspace.offline')}</p>}
         {!availabilityOnly && durationControl}
         <button type="button" disabled={busy} onClick={() => save({ available: !capacity.available, ...(capacity.available ? {} : { availableMinutes }) })} className={`${capacity.available ? 'btn-secondary' : 'btn-primary'} min-h-12 rounded-xl px-5 py-3 font-semibold`}>
           {t(busy ? 'operations.saving' : capacity.available ? 'fieldWorkspace.goOffline' : 'fieldWorkspace.goAvailable')}
@@ -70,8 +73,8 @@ export default function AgentCoordinationPanel({ availabilityOnly = false, activ
       </div>
       {capacity.available && capacity.availableUntil && <p className="text-xs text-text-secondary">{t('agentCoordination.availableUntil')} : {new Date(capacity.availableUntil).toLocaleString()}</p>}
       {capacity.availabilityExpired && <p role="status" className="text-sm">{t('agentCoordination.expired')}</p>}
-      <p className="text-xs text-text-secondary">{t('agentCoordination.load', { count: activeCount })}</p>
       <details><summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">{t(availabilityOnly ? 'connectedHome.settings' : 'fieldWorkspace.settings')}</summary>
+        <p className="text-xs text-text-secondary">{t('agentCoordination.load', { count: activeCount })}</p>
         {availabilityOnly && <div className="mt-2">{durationControl}</div>}
         <form onSubmit={(event) => { event.preventDefault(); save({ maxConcurrent: Number(capacity.maxConcurrent) }); }} className="mt-3 flex flex-wrap items-center gap-3">
           <label htmlFor="agent-capacity" className="text-sm">{t('agentCoordination.capacity')} <input id="agent-capacity" type="number" min="1" max="10" required value={capacity.maxConcurrent} disabled={busy} onChange={(event) => { editing.current = true; setCapacity({ ...capacity, maxConcurrent: event.target.value }); }} className="w-20 rounded-xl border border-border bg-surface-main p-3" /></label>
@@ -86,6 +89,6 @@ export default function AgentCoordinationPanel({ availabilityOnly = false, activ
       try { await load(); if (alive.current) setError(''); }
       catch (failure) { if (alive.current) { if ([401,403,404].includes(failure?.response?.status)) { setCapacity(null); setItems([]); } setError(failure?.response?.data?.error || t('operations.failed')); } }
     }} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
-    {!availabilityOnly && <div className="grid gap-3 sm:grid-cols-2">{items.map((item) => <WorkAssignmentCard key={`${item.entityType}-${item.id}`} item={item} onSaved={load} />)}</div>}
+    {!availabilityOnly && <div className="grid gap-3 sm:grid-cols-2">{items.map((item) => <WorkAssignmentCard key={`${item.entityType}-${item.id}`} item={item} onSaved={load} from={from} />)}</div>}
   </section>;
 }

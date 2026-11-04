@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getWorkProgress } from '../../services/operations';
 import WorkAssignmentCard from './WorkAssignmentCard';
@@ -9,6 +10,8 @@ export default function WorkProgressPanel(props) {
 
 function Progress({ entityType, entityId, status, onSaved, embedded = false, revision = 0, reviewBlocked = false }) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const from = location.pathname + location.search;
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState('');
   const version = useRef(0);
@@ -32,7 +35,7 @@ function Progress({ entityType, entityId, status, onSaved, embedded = false, rev
   return <section id="work-progress" className="scroll-mt-24 space-y-3">
     {embedded && <h2 className="text-lg font-bold">{t('dossier.progress')}</h2>}
     {error && <p role="alert">{error} <button type="button" onClick={load} className="min-h-11 underline">{t('serviceOrders.retry')}</button></p>}
-    {progress?.item?.coordination && <WorkAssignmentCard embedded={embedded} readiness={progress.readiness} reviewBlocked={reviewBlocked} item={progress.item} canAdvance={progress.canAdvance} clientValidation={progress.canValidate} onSaved={async () => { await load(); await onSaved?.(); }} />}
+    {progress?.item?.coordination && <WorkAssignmentCard embedded={embedded} readiness={progress.readiness} reviewBlocked={reviewBlocked} item={progress.item} canAdvance={progress.canAdvance} clientValidation={progress.canValidate} onSaved={async () => { await load(); await onSaved?.(); }} from={from} />}
     {embedded && progress && !progress.item?.coordination && <p className="text-sm text-text-secondary">{t('dossier.waiting')}</p>}
   </section>;
 }

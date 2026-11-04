@@ -98,6 +98,24 @@ test('three steps keep confirmation and prevent duplicate estimates and submissi
   expect(screen.getByRole('link', { name: 'missionCreation.success.trackCta' })).toHaveAttribute('href', '/missions/101/track');
 });
 
+test('an intervention from a property inherits its location and uses a separate draft and persistent reference', async () => {
+  setupSimpleMission();
+  saveRequestDraft('mission', 5, { title: 'Autre besoin', countryId: '1', address: 'Autre lieu' });
+  estimateMission.mockResolvedValue({ basePrice: 5000, currency: 'XOF' });
+  createMission.mockResolvedValue({ mission: { id: 103, missionStatus: 'CREATED' } });
+  render(<MissionCreationWizard property={{ id: 3, title: 'Maison', countryId: 1, address: 'Rue 1', city: 'Bamako', latitude: 12.63, longitude: -8 }} serviceOnly />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Service local' }));
+  userEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.next' }));
+  expect(screen.getByTestId('destination-address')).toHaveTextContent('Rue 1, Bamako');
+  expect(screen.getByRole('textbox', { name: 'Titre de la mission' })).toHaveValue('');
+  await userEvent.type(screen.getByRole('textbox', { name: 'Titre de la mission' }), 'Réparer la maison');
+  userEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.next' }));
+  await screen.findByRole('button', { name: 'missionCreation.wizard.confirm' });
+  userEvent.click(screen.getByRole('button', { name: 'missionCreation.wizard.confirm' }));
+  await screen.findByRole('link', { name: 'missionCreation.success.trackCta' });
+  expect(createMission).toHaveBeenCalledWith(expect.objectContaining({ propertyId: 3, address: 'Rue 1, Bamako', latitude: 12.63, longitude: -8 }));
+});
+
 test('transport requires both locations before estimating or confirming', async () => {
   setupSimpleMission('livraison');
   render(<MissionCreationWizard />);

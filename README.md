@@ -4,6 +4,19 @@
 Mettre en place Teranga comme une franchise panafricaine pilotée par un siège central (Teranga OS) et opérée localement par pays/région, afin d’assurer des standards communs tout en permettant l’adaptation locale et l’inclusion de toutes les diasporas africaines.
 
 ## Documentation de référence
+- [Audit de cohérence et de fiabilité : erreurs silencieuses, bugs et incohérences du 3 novembre 2026](docs/AUDIT_COHERENCE_FIABILITE_2026-11-03.md)
+- [Barre supérieure simplifiée : navigation par rôle, territoire, informations et menu de compte](docs/TOPBAR_SIMPLIFIEE_2026-10-27.md)
+- [Recette HTTPS : service commun interface/API, configuration de publication et banc de sessions sécurisées](docs/RECETTE_HTTPS_2026-10-27.md)
+- [Recette utilisateurs : environnement HTTPS recommandé, parcours par rôle et fiche d’observation sur téléphones](docs/RECETTE_UTILISATEURS_2026-10-27.md)
+- [Vues par rôle : accueil, disponibilité, filtres et navigation simplifiés](docs/VUES_PAR_ROLE_SIMPLIFIEES_2026-10-27.md)
+- [Synthèse de la simplification de Teranga et principes transposables à la santé](docs/SYNTHESE_SIMPLIFICATION_ET_TRANSPOSITION_SANTE_2026-10-27.md)
+- [Cohérence taxi/livraison : offres, réalisation et déclaration distincte des paiements](docs/COHERENCE_TRANSPORT_2026-10-27.md)
+- [Espace prestataire : offres, interventions et historique réunis](docs/ESPACE_PRESTATAIRE_UNIFIE_2026-10-27.md)
+- [Mes demandes : liste commune des services, projets et commandes, création et retours directs](docs/MES_DEMANDES_UNIFIEES_2026-10-26.md)
+- [Projets et biens : listes simples, fiche centrale et demande d'intervention contextualisée](docs/PROJETS_BIENS_SIMPLIFIES_2026-10-26.md)
+- [Catalogue → commande → paiements : parcours continu, formulaire commun et retours conservés](docs/CATALOGUE_COMMANDE_CONTINUE_2026-10-26.md)
+- [Commandes et paiements : consultation et saisie directement dans les dossiers](docs/COMMANDES_PAIEMENTS_DIRECTS_2026-10-26.md)
+- [Recette par rôle : parcours continus, libellés et accès aux paiements](docs/RECETTE_PAR_ROLE_2026-10-26.md)
 - [Reprise du 26 octobre : résumé complet, commit local et prochaine session](docs/REPRISE_SESSION_2026-10-26.md)
 - [Paiements et dépenses : journal commun, bilan et droits par dossier](docs/ESPACES_FINANCIERS_2026-10-26.md)
 - [Accueil connecté unique, disponibilité et outils administratifs dans Gestion](docs/ACCUEIL_CONNECTE_2026-10-26.md)
@@ -40,11 +53,7 @@ Mettre en place Teranga comme une franchise panafricaine pilotée par un siège 
 - Le seeder administrateur local exige `SEED_ADMIN_EMAIL` et `SEED_ADMIN_PASSWORD` (16 caractères minimum, 72 octets UTF-8 maximum), sans valeur par défaut. Il refuse la production, où le bootstrap contrôlé reste le parcours prévu.
 - `METRICS_TOKEN` : token d’accès à `/api/metrics` (recommandé en prod).
 - `SLOW_REQUEST_THRESHOLD_MS` : seuil (ms) pour signaler les requêtes lentes (défaut 1500).
-- `PASSWORD_RESET_EXPIRES` : durée du token de réinitialisation (ex: `30m`).
-- `PASSWORD_RESET_DEBUG` : `true` pour exposer le lien en réponse (dev uniquement).
-- `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` : configuration SMTP pour envoi des emails.
-- `SMTP_SECURE` : `true/false` (TLS), selon ton serveur SMTP.
-- `SMTP_FROM` : expéditeur par défaut (ex: `no-reply@teranga.app`).
+- La réinitialisation de mot de passe est volontairement manuelle (admin/master du pays/région de l'utilisateur, voir `manualPasswordReset` dans `user.controller.js`) — aucune configuration SMTP n'est nécessaire ni lue par le backend.
 - `PROPERTY_MAX_FILE_MB` : taille max par fichier uploadé pour les biens (recommandé en prod mobile: `20`).
 
 ## Vision globale (franchise panafricaine)

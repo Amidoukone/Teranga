@@ -214,8 +214,8 @@ export async function createMissionRating(missionId, payload) {
  * GET /api/v1/missions/mine — missions filière assignées au compte connecté (agent superviseur ou
  * exécutant, provider exécutant). Les missions classiques agent restent sur getAgentServices().
  */
-export async function getMyMissions(params = {}) {
-  const { data } = await api.get('/v1/missions/mine', { params });
+export async function getMyMissions(params = {}, { signal } = {}) {
+  const { data } = await api.get('/v1/missions/mine', { params, signal });
   return data;
 }
 

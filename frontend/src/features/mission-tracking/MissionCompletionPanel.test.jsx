@@ -32,6 +32,19 @@ test('receipt requirements expose the file type choice without an extra step', (
   expect(screen.getByLabelText('completion.fileKind')).toBeVisible();
 });
 
+test('a ride without a required report presents it as an optional collapsed action', async () => {
+  render(<MissionCompletionPanel missionId={4} completion={{ required: false }} canSubmit />);
+  expect(screen.getByText('transportWorkspace.optionalReport')).toBeInTheDocument();
+  expect(screen.getByLabelText('completion.summary')).not.toBeVisible();
+  userEvent.click(screen.getByText('transportWorkspace.optionalReport'));
+  await waitFor(() => expect(screen.getByLabelText('completion.summary')).toBeVisible());
+});
+
+test('a finished ride without a report has no empty report panel', () => {
+  render(<MissionCompletionPanel missionId={4} completion={{ required: false, report: null }} canSubmit={false} />);
+  expect(screen.queryByText('completion.title')).not.toBeInTheDocument();
+});
+
 test('a delayed upload freezes its content and prevents duplicate submissions', async () => {
   let resolveSave;
   submitMissionCompletion.mockReturnValue(new Promise((resolve) => { resolveSave = resolve; }));

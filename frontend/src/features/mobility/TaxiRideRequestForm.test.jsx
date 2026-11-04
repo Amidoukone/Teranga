@@ -122,6 +122,10 @@ describe("TaxiRideRequestForm", () => {
     render(<TaxiRideRequestForm preferredCountryId="2" onCountrySelected={onCountrySelected} />);
     await waitFor(() => expect(getTradeCategories).toHaveBeenCalledWith({ countryId: 2 }));
     await waitFor(() => expect(onCountrySelected).toHaveBeenCalledWith(expect.objectContaining({ id: 2, contactPhone: '+2250700000000' })));
+    createMission.mockResolvedValueOnce({ mission: { id: 94 }, estimate: quote.estimate });
+    await enterRouteAndEstimate();
+    await userEvent.click(screen.getByRole('button', { name: 'Commander cette moto' }));
+    await waitFor(() => expect(createMission).toHaveBeenCalledWith(expect.objectContaining({ countryId: 2 })));
   });
 
   async function enterRouteAndEstimate(phone) {
@@ -174,6 +178,7 @@ describe("TaxiRideRequestForm", () => {
       })
     );
     expect(submitMissionRequest).not.toHaveBeenCalled();
+    expect(createMission.mock.calls[0][0]).not.toHaveProperty('countryId');
   });
 
   test("un visiteur choisit une voiture puis s'identifie seulement après le devis", async () => {
