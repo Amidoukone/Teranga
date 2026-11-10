@@ -131,7 +131,7 @@ jobs:
 
   frontend-e2e:
     name: Frontend - E2E Playwright
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: frontend
     defaults:
       run:
