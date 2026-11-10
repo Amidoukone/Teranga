@@ -5,6 +5,9 @@ node_modules/
 .cache/
 dist/
 build/
+frontend/build-vite/
+frontend/.vite-public/
+frontend/index.html
 frontend/build-recette/
 tmp/
 playwright-report/

@@ -28,7 +28,9 @@ function buildRateLimiter({ windowMs, max, message, limiterName }) {
 
 const authLimiter = buildRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 15,
+  // Plusieurs parcours d'intégration se connectent depuis la même IP locale.
+  // La limite anti-abus de production reste inchangée.
+  max: process.env.NODE_ENV === 'test' ? 100 : 15,
   message: 'Trop de tentatives, reessayez plus tard.',
   limiterName: 'auth',
 });

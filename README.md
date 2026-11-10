@@ -5,6 +5,7 @@ Mettre en place Teranga comme une franchise panafricaine pilotée par un siège 
 
 ## Documentation de référence
 - [Audit de cohérence et de fiabilité : erreurs silencieuses, bugs et incohérences du 3 novembre 2026](docs/AUDIT_COHERENCE_FIABILITE_2026-11-03.md)
+- [Plan de migration du frontend CRA vers Vite : inventaire, compatibilité et étapes](docs/PLAN_MIGRATION_FRONTEND_VITE.md)
 - [Barre supérieure simplifiée : navigation par rôle, territoire, informations et menu de compte](docs/TOPBAR_SIMPLIFIEE_2026-10-27.md)
 - [Recette HTTPS : service commun interface/API, configuration de publication et banc de sessions sécurisées](docs/RECETTE_HTTPS_2026-10-27.md)
 - [Recette utilisateurs : environnement HTTPS recommandé, parcours par rôle et fiche d’observation sur téléphones](docs/RECETTE_UTILISATEURS_2026-10-27.md)

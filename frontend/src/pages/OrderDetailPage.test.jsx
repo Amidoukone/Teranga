@@ -73,7 +73,7 @@ test('the evidence lightbox closes rather than crashing when the list shrinks un
   getOrderEvidences.mockResolvedValue([
     { id: 1, originalName: 'photo-1.jpg', filePath: '/uploads/photo-1.jpg', mimeType: 'image/jpeg' },
   ]);
-  await act(async () => { fireEvent.online(window); });
+  fireEvent.online(window);
 
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 });

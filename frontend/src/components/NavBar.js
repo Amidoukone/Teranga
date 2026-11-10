@@ -120,6 +120,7 @@ const ACCOUNT_LINK_PATHS = new Set([
 const ROLE_LINKS = {
   client: [
     { path: "/operations", labelKey: "nav.home" },
+    { path: "/dossiers", labelKey: "dossierHub.title" },
     { path: "/demandes/nouvelle", labelKey: "nav.newRequest" },
     { path: "/demandes", labelKey: "nav.myRequests", exact: true },
     { path: "/properties", labelKey: "propertySimple.mine" },
@@ -198,6 +199,7 @@ const ICON_BY_PATH_PREFIX = [
   { prefix: "/gestion", icon: LayoutDashboard },
   { prefix: "/operations", icon: ListChecks },
   { prefix: "/projects", icon: FolderKanban },
+  { prefix: "/dossiers", icon: FolderKanban },
   { prefix: "/properties", icon: Building2 },
   { prefix: "/demandes/nouvelle", icon: CirclePlus },
   { prefix: "/demandes", icon: ListChecks },
@@ -322,6 +324,7 @@ function buildSections(role, links, t) {
 
     pushSection(t("nav.sections.work"), [
       ...byPrefix("/prestataire/interventions"),
+      ...byPrefix("/dossiers"),
       ...byPrefix("/projects"),
       ...byPrefix("/properties"),
       ...byPrefix("/tasks"),
@@ -447,18 +450,22 @@ function NavBar() {
     unread: 0,
     byProgress: {},
   });
+  const notificationRequestId = useRef(0);
+  const notificationMounted = useRef(false);
   const unreadCount = notificationSummary?.unread || 0;
 
   const loadNotificationSummary = useCallback(async (options = {}) => {
+    const requestId = ++notificationRequestId.current;
     const hasSession = USES_COOKIE_AUTH
       ? Boolean(getLocalUser()) || hasSessionHint()
       : Boolean(getToken());
     if (!user || !hasSession) {
-      setNotificationSummary({ unread: 0, byProgress: {} });
+      if (notificationMounted.current) setNotificationSummary({ unread: 0, byProgress: {} });
       return;
     }
     try {
       const data = await getNotificationSummary(options);
+      if (!notificationMounted.current || requestId !== notificationRequestId.current) return;
       setNotificationSummary({
         unread: data?.unread ?? 0,
         byProgress: data?.byProgress || {},
@@ -470,9 +477,19 @@ function NavBar() {
       if (status !== 401 && !isTimeout && !isNetwork) {
         console.error("NavBar notifications summary error:", e);
       }
-      setNotificationSummary((prev) => prev || { unread: 0, byProgress: {} });
+      if (notificationMounted.current && requestId === notificationRequestId.current) {
+        setNotificationSummary((prev) => prev || { unread: 0, byProgress: {} });
+      }
     }
   }, [user]);
+
+  useEffect(() => {
+    notificationMounted.current = true;
+    return () => {
+      notificationMounted.current = false;
+      notificationRequestId.current += 1;
+    };
+  }, []);
 
   /* LOAD USER (unchanged logic) */
   useEffect(() => {

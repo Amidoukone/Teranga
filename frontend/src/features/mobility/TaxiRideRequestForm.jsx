@@ -151,8 +151,7 @@ export default function TaxiRideRequestForm({ preferredCountryId = null, onCount
         setSessionUser(isClient(verifiedUser) ? verifiedUser : null);
         setIncompatibleUser(verifiedUser && !isClient(verifiedUser) ? verifiedUser : null);
         if (isClient(verifiedUser) && process.env.NODE_ENV !== "test") {
-          const { listSavedLocations } = require("../../services/savedLocations");
-          listSavedLocations().then((locations) => {
+          import("../../services/savedLocations").then(({ listSavedLocations }) => listSavedLocations()).then((locations) => {
             if (!cancelled) setSavedLocations(locations);
           }).catch(() => {});
         }
@@ -179,7 +178,12 @@ export default function TaxiRideRequestForm({ preferredCountryId = null, onCount
         }
       } catch (_error) {
         if (!cancelled) {
-          setFeedback({ type: "error", message: t("mobilityBooking.errors.load") });
+          console.warn('taxi.booking.bootstrap.failed', {
+            name: _error?.name || 'Error',
+            message: _error?.message || 'Unknown initialization error',
+            status: _error?.response?.status,
+          });
+          setFeedback({ type: "error", message: t("mobilityBooking.errors.load"), retryable: true });
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -294,7 +298,12 @@ export default function TaxiRideRequestForm({ preferredCountryId = null, onCount
         setFeedback({ type: "error", message: t("mobilityBooking.errors.unavailable") });
       }
     } catch (_error) {
-      setFeedback({ type: "error", message: t("mobilityBooking.errors.load") });
+      console.warn('taxi.booking.category_reload.failed', {
+        name: _error?.name || 'Error',
+        message: _error?.message || 'Unknown category loading error',
+        status: _error?.response?.status,
+      });
+      setFeedback({ type: "error", message: t("mobilityBooking.errors.load"), retryable: true });
     }
   };
 
@@ -580,6 +589,11 @@ export default function TaxiRideRequestForm({ preferredCountryId = null, onCount
         {feedback ? (
           <div className="mb-5">
             <AuthFeedbackBanner type={feedback.type} message={feedback.message} />
+            {feedback.retryable && (
+              <button type="button" onClick={() => window.location.reload()} className="mt-2 min-h-11 rounded-xl px-3 text-sm font-semibold underline">
+                {t("serviceOrders.retry")}
+              </button>
+            )}
           </div>
         ) : null}
 

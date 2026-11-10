@@ -29,6 +29,33 @@ test('mobilite reelle: commande, PIN client et notification admin vers le dispat
   request,
 }) => {
   await blockExternalTracking(page);
+  const bootstrapResponses = [];
+  page.on('response', async (response) => {
+    const pathname = new URL(response.url()).pathname;
+    if (!/\/(?:franchises\/masters|trade-categories)$/.test(pathname)) return;
+    const body = await response.json().catch(() => null);
+    bootstrapResponses.push({
+      pathname,
+      status: response.status(),
+      countries: Array.isArray(body?.countries)
+        ? body.countries.map(({ id, isoCode }) => ({ id, isoCode }))
+        : undefined,
+      categories: Array.isArray(body?.tradeCategories)
+        ? body.tradeCategories.map(({ id, slug, countryId, regionId }) => ({ id, slug, countryId, regionId }))
+        : undefined,
+    });
+  });
+  page.on('requestfailed', (request) => {
+    const pathname = new URL(request.url()).pathname;
+    if (/\/(?:franchises\/masters|trade-categories)$/.test(pathname)) {
+      bootstrapResponses.push({ pathname, failure: request.failure()?.errorText || 'unknown' });
+    }
+  });
+  page.on('console', (message) => {
+    if (message.type() === 'error' || message.text().includes('taxi.booking.')) {
+      bootstrapResponses.push({ console: message.text() });
+    }
+  });
 
   const clientSession = await loginAsSeededClient(request);
   await seedAuthenticatedSession(page, clientSession.user, clientSession.token);
@@ -40,7 +67,16 @@ test('mobilite reelle: commande, PIN client et notification admin vers le dispat
 
   await expect(page.getByLabel(/Point de d.part/i)).toHaveValue('ACI 2000, Bamako');
   await expect(page.getByLabel(/Destination/i)).toHaveValue('Badalabougou, Bamako');
-  await page.getByRole('button', { name: /Voir le trajet et le prix/i }).click();
+  const estimateButton = page.getByRole('button', { name: /Voir le trajet et le prix/i });
+  const retryBootstrap = page.getByRole('button', { name: /essayer|Retry/i });
+  await expect.poll(async () => (await estimateButton.isEnabled()) || (await retryBootstrap.isVisible()), { timeout: 15_000 }).toBeTruthy();
+  if (await retryBootstrap.isVisible()) {
+    await retryBootstrap.click();
+    await expect.poll(async () => await estimateButton.isEnabled(), { timeout: 30_000 }).toBeTruthy().catch(() => {
+      throw new Error(`Taxi form initialization is still unavailable after retry: ${JSON.stringify(bootstrapResponses)}`);
+    });
+  }
+  await estimateButton.click();
 
   await expect(page.getByText(/Estimation de votre course/i)).toBeVisible();
   const missionResponsePromise = page.waitForResponse(

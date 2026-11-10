@@ -131,6 +131,7 @@ async function ensureUser({
   countryId,
   regionId,
   countryIso,
+  phone = FIXTURE.phone,
 }) {
   const passwordHash = await bcrypt.hash(E2E_PASSWORD, 10);
   const [user] = await User.findOrCreate({
@@ -140,7 +141,7 @@ async function ensureUser({
       passwordHash,
       firstName,
       lastName,
-      phone: FIXTURE.phone,
+      phone,
       language: 'fr',
       role,
       country: countryIso,
@@ -155,7 +156,7 @@ async function ensureUser({
   const updates = {
     firstName,
     lastName,
-    phone: FIXTURE.phone,
+    phone,
     language: 'fr',
     role,
     country: countryIso,
@@ -398,6 +399,7 @@ async function main() {
     countryId: country.id,
     regionId: region.id,
     countryIso: FIXTURE.countryIso,
+    phone: '+22370000000',
   });
 
   const client = await ensureUser({
@@ -408,9 +410,10 @@ async function main() {
     countryId: country.id,
     regionId: region.id,
     countryIso: FIXTURE.countryIso,
+    phone: '+22370000001',
   });
-  const agent = await ensureUser({ email: 'e2e.real.agent@example.com', firstName: 'Ete', lastName: 'Agent', role: 'agent', countryId: country.id, regionId: region.id, countryIso: country.isoCode });
-  const providerUser = await ensureUser({ email: 'e2e.real.provider@example.com', firstName: 'Awa', lastName: 'Prestataire', role: 'provider', countryId: country.id, regionId: region.id, countryIso: country.isoCode });
+  const agent = await ensureUser({ email: 'e2e.real.agent@example.com', firstName: 'Ete', lastName: 'Agent', role: 'agent', countryId: country.id, regionId: region.id, countryIso: country.isoCode, phone: '+22370000002' });
+  const providerUser = await ensureUser({ email: 'e2e.real.provider@example.com', firstName: 'Awa', lastName: 'Prestataire', role: 'provider', countryId: country.id, regionId: region.id, countryIso: country.isoCode, phone: '+22370000003' });
   const [providerCategory] = await TradeCategory.findOrCreate({ where: { slug: 'plomberie-e2e' }, defaults: { name: 'Plomberie E2E', isActive: true } });
   const [provider] = await db.Provider.findOrCreate({ where: { userId: providerUser.id }, defaults: { type: 'independent', displayFirstName: 'Awa E2E', phoneNumber: '+22370000002', countryCode: country.isoCode, status: 'active', availabilityStatus: 'offline' } });
   await db.ProviderTradeCategory.findOrCreate({ where: { providerId: provider.id, tradeCategoryId: providerCategory.id } });
@@ -418,7 +421,7 @@ async function main() {
   await db.ServiceAvailability.findOrCreate({ where: { serviceDefinitionId: providerDefinition.id, territoryId: territory.id, organizationId: organization.id }, defaults: { currency: 'XOF', slaMinutes: 60, providerRules: { serviceOutcome: 'Réparation réalisée et vérifiée avec photographie.', requiredEvidenceTypes: ['photo'], coordination: { enabled: true } } } });
 
   // A dedicated transport account exercises the real assignment, PIN and delivery flows.
-  const driverUser = await ensureUser({ email: 'e2e.real.transport@example.com', firstName: 'Moussa', lastName: 'Transport', role: 'provider', countryId: country.id, regionId: region.id, countryIso: country.isoCode });
+  const driverUser = await ensureUser({ email: 'e2e.real.transport@example.com', firstName: 'Moussa', lastName: 'Transport', role: 'provider', countryId: country.id, regionId: region.id, countryIso: country.isoCode, phone: '+22370000004' });
   const [driver] = await db.Provider.findOrCreate({ where: { userId: driverUser.id }, defaults: { type: 'independent', displayFirstName: 'Moussa Transport E2E', phoneNumber: '+22370000003', countryCode: country.isoCode, status: 'active', availabilityStatus: 'offline' } });
   await driver.update({ status: 'active', availabilityStatus: 'offline', profilePhotoUrl: '/logo192.png', driverLicenseNumber: 'E2E-LICENSE', driverLicenseDocumentUrl: 'https://example.test/e2e-license.pdf', driverLicenseVerified: true, driverLicenseExpiresAt: '2035-12-31', identityDocumentUrl: 'https://example.test/e2e-identity.pdf', identityDocumentVerified: true });
   for (const category of [mobilityCategory, deliveryCategory]) await db.ProviderTradeCategory.findOrCreate({ where: { providerId: driver.id, tradeCategoryId: category.id } });

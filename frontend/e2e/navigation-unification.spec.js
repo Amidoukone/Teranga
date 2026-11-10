@@ -43,6 +43,38 @@ for (const role of ['client', 'agent', 'provider', 'admin']) {
   }
 }
 
+for (const width of [360, 1440]) {
+  test(`a client can open the property and project hub from navigation at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const ctx = await installApiMocks(page, { user: { role: 'client' } });
+    await seedAuthenticatedSession(page, ctx.user, ctx.token);
+    await page.goto('/operations');
+    const consent = page.getByRole('button', { name: 'Refuser', exact: true });
+    if (await consent.isVisible()) await consent.click();
+
+    const mobile = width < 768;
+    await page.getByRole('button', { name: mobile ? 'Ouvrir le menu Plus' : 'Plus', exact: true }).click();
+    const dossierLink = mobile
+      ? page.getByRole('dialog').getByRole('link', { name: 'Biens et projets', exact: true })
+      : page.getByRole('menuitem', { name: 'Biens et projets', exact: true });
+    await dossierLink.click();
+
+    await expect(page).toHaveURL(/\/dossiers$/);
+    await expect(page.getByRole('heading', { name: 'Biens et projets', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Ouvrir mes biens', exact: true })).toHaveAttribute('href', '/properties');
+    await expect(page.getByRole('link', { name: 'Ouvrir mes projets', exact: true })).toHaveAttribute('href', '/projects');
+  });
+}
+
+test('a non-client cannot open the client dossier hub directly', async ({ page }) => {
+  const ctx = await installApiMocks(page, { user: { role: 'agent' } });
+  await seedAuthenticatedSession(page, ctx.user, ctx.token);
+  await page.goto('/dossiers');
+
+  await expect(page).toHaveURL(/\/operations$/);
+  await expect(page.getByRole('heading', { name: 'Mon travail', exact: true })).toBeVisible();
+});
+
 test('a property retains its complete intervention archive and the return to page two', async ({ page }) => {
   const ctx = await installApiMocks(page);
   ctx.state.properties = [{ id: 301, title: 'Maison familiale', type: 'house', city: 'Bamako', createdAt: new Date().toISOString() }];

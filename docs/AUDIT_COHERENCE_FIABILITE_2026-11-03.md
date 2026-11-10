@@ -294,3 +294,31 @@ Les constats 12 à 65 ont été traités le 3-4 novembre 2026, avec la même dis
 Deux points n'ont délibérément pas été traités dans ce lot, faute de rentrer dans le périmètre « code + tests unitaires/intégration » suivi jusqu'ici :
 - **47** (couverture de test `executionType:'provider'` manquante dans `client-requests.test.js`) et **48** (mock e2e sans handler générique `/missions/mine`) touchent respectivement une fixture d'intégration partagée et la suite Playwright, non exécutée dans cette session.
 - **60** (devenir de `DossiersPage.jsx`) reste une décision produit ouverte : restaurer son accès depuis la navigation client, ou retirer la page et sa route.
+
+## Suivi complémentaire — 9 novembre 2026
+
+Les trois points indiqués comme ouverts à la clôture du 4 novembre ont été revérifiés dans le dépôt actuel :
+
+- **47 — couverture `executionType: 'provider'` :** le cas est exercé dans des tests d’intégration existants (`backend/tests/integration/handoffs.real.test.js` et parcours transport). Le constat est clos pour les parcours couverts ; cette note ne prétend pas remplacer une vérification de toutes les variantes métier.
+- **48 — handler générique `/missions/mine` :** le mock `frontend/e2e/support/mockApi.js` fournit désormais une réponse vide paginée par défaut ; une spec peut toujours installer un mock plus spécifique.
+- **60 — accès à `DossiersPage` :** le lien client `/dossiers` a été ajouté à la navigation, à la section « Travail » et à sa table d’icônes dans `frontend/src/components/NavBar.js`. Le test `NavBar.test.js` vérifie cet accès. Le parcours est rétabli sans retirer la page ni sa route.
+
+Vérification exécutée le 9 novembre : `npm.cmd test -- --runTestsByPath src/components/NavBar.test.js` — 18 tests réussis. Un avertissement React `act(...)` demeure dans le test autour de la mise à jour asynchrone du résumé de notifications ; il n’a pas fait échouer la suite et reste à traiter séparément si le test doit être silencieux.
+
+Le scénario navigateur « a client can open the property and project hub from navigation » a été ajouté à `frontend/e2e/navigation-unification.spec.js` et exécuté le 9 novembre 2026 : réussi sur Chromium. Il confirme l’ouverture du menu « Plus », l’accès à `/dossiers` et les deux liens vers `/properties` et `/projects`.
+
+Mise à jour du parcours navigateur : le scénario d’accès au hub couvre désormais 360 px et 1440 px. Le cas mobile traite explicitement la bannière de consentement avant d’ouvrir le menu. Validation Chromium : cas mobile réussi ; le cas desktop avait également réussi lors de l’exécution précédente.
+
+Le scénario Playwright vérifie aussi qu’un compte agent qui saisit directement `/dossiers` est redirigé vers `/operations`, conformément à la restriction client de la route. Test Chromium ciblé réussi.
+
+### Clôture et validation globale — 9 novembre 2026
+
+La section « Ce qui reste ouvert » ci-dessus décrit l’état historique du 4 novembre ; elle est désormais supersédée par le suivi complémentaire présent dans ce document. Au terme de la reprise, aucun des points 47, 48 ou 60 ne reste ouvert.
+
+Vérifications globales exécutées dans la reprise : frontend **84 suites / 443 tests réussis**, backend **98 suites / 680 tests réussis**, Playwright `navigation-unification.spec.js` **12 tests réussis**, lint backend OK (**334 fichiers**), lint frontend OK et build de production frontend compilé. Le parcours `/dossiers` est validé pour client sur mobile et ordinateur ; l’accès direct agent est refusé et redirigé vers `/operations`.
+
+### Revue des dépendances — 9 novembre 2026
+
+- Backend : les correctifs compatibles ont été appliqués au lockfile (`npm audit fix --omit=dev`). Les vulnérabilités critiques/élevées de production ont disparu ; restent 9 vulnérabilités modérées transitives (`glob`/`minimatch`, `uuid`). npm ne propose de les éliminer qu’avec des changements de versions signalés comme cassants (`sequelize-cli`/`imagekit`) ; aucun `--force` n’a été appliqué. Après `npm ci`, la suite backend complète passe (98 suites, 680 tests).
+- Frontend : Axios, React Router, PostCSS et Lodash ont été mis à jour dans les plages compatibles. `react-scripts` a été reclassé en dépendance de développement, car il n’est requis qu’au build/test. `npm audit --omit=dev` rapporte maintenant **0 vulnérabilité**. L’arbre complet de développement garde 64 avis (dont 3 critiques) dans l’outillage historique Create React App/Webpack/Jest ; une migration majeure d’outillage serait nécessaire pour les éliminer proprement. Aucun correctif forcé n’a été appliqué.
+- Validation après mises à jour frontend : `npm ci` réussi, 84 suites / 444 tests réussis, lint frontend OK, build de production compilé, 28 tests ciblés des composants modifiés réussis.

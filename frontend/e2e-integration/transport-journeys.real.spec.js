@@ -83,6 +83,7 @@ for (const slug of ['mobilite', 'livraison']) {
       } else {
         await worker.page.getByRole('button', { name: 'J’ai récupéré le colis', exact: true }).filter({ visible: true }).click();
         await expect(worker.page.getByRole('link', { name: /Appeler le destinataire/ })).toHaveAttribute('href', 'tel:+22370000004');
+        await worker.page.getByText('Ajouter un compte rendu et des justificatifs (facultatif)', { exact: true }).click();
         await worker.page.getByLabel('Travaux réalisés, résultat et points à signaler').fill('Le colis a été remis à la destinataire, qui a confirmé son bon état. Une photo présente la remise.');
         await worker.page.getByLabel('Ajouter des justificatifs', { exact: true }).setInputFiles({ name: 'remise.png', mimeType: 'image/png', buffer: png });
         await worker.page.getByRole('button', { name: 'Enregistrer le compte rendu', exact: true }).click();
@@ -112,7 +113,11 @@ for (const slug of ['mobilite', 'livraison']) {
       for (const page of [worker.page, customer.page]) expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
       await worker.page.screenshot({ path: testInfo.outputPath('intervention-confirmee.png'), fullPage: true });
       await customer.page.screenshot({ path: testInfo.outputPath('dossier-confirme.png'), fullPage: true });
-    } finally { await worker.context.close(); await customer.context.close(); await manager.context.close(); }
+    } finally {
+      await Promise.all([worker.context, customer.context, manager.context].map(async (context) => {
+        try { await context.close(); } catch (_error) { /* Playwright may already close a context after timeout. */ }
+      }));
+    }
   });
 }
 

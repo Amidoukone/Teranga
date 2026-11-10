@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import NavBar from "./NavBar";
 import {
   logout,
@@ -92,8 +92,23 @@ describe("NavBar logout flow", () => {
     getLocalUser.mockReturnValue(mockUser);
     getToken.mockReturnValue("test-token");
     hasSessionHint.mockReturnValue(true);
-    getNotificationSummary.mockResolvedValue({ unread: 0, byProgress: {} });
+    getNotificationSummary.mockImplementation(() => new Promise(() => {}));
     markAllNotificationsRead.mockClear();
+  });
+
+  test("ignores a notification response that arrives after unmount", async () => {
+    let resolveSummary;
+    getNotificationSummary.mockImplementation(() => new Promise((resolve) => {
+      resolveSummary = resolve;
+    }));
+
+    const { unmount } = render(<NavBar />);
+    await waitFor(() => expect(getNotificationSummary).toHaveBeenCalled());
+    unmount();
+
+    await act(async () => {
+      resolveSummary({ unread: 9, byProgress: {} });
+    });
   });
 
   test("redirects to login with a logout success message", async () => {
@@ -205,6 +220,15 @@ describe("NavBar logout flow", () => {
     expect(within(panel).getByRole('link', { name: 'nav.interventions' })).toHaveAttribute('href', '/tasks');
     const extraLinks = { client: [['propertySimple.mine', '/properties']], agent: [['roleViews.supervised', '/missions/mine']], admin: [] };
     extraLinks[role].forEach(([name, path]) => expect(within(panel).getByRole('link', { name })).toHaveAttribute('href', path));
+  });
+
+  test('makes the dossier hub reachable for clients', async () => {
+    const account = { ...mockUser, role: 'client', countryId: 1 };
+    getLocalUser.mockReturnValue(account); me.mockResolvedValue({ user: account });
+    render(<NavBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'nav.openMoreMenu' }));
+    const panel = await screen.findByRole('dialog', { name: 'nav.menu' });
+    expect(within(panel).getByRole('link', { name: 'dossierHub.title' })).toHaveAttribute('href', '/dossiers');
   });
 
   test("unifies provider work in one link on desktop and mobile", async () => {
