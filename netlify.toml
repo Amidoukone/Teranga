@@ -1,0 +1,8 @@
+# Keep the active production deployment on its existing CRA settings.
+# Deploy Previews use the reviewed Vite production build from the frontend package.
+[context.deploy-preview]
+  command = "npm --prefix frontend ci --include=dev && npm --prefix frontend run build:vite"
+  publish = "frontend/build-vite"
+
+[context.deploy-preview.environment]
+  NODE_VERSION = "22"

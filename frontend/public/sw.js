@@ -1,4 +1,4 @@
-const CACHE_NAME = 'teranga-shell-v1';
+const CACHE_NAME = 'teranga-shell-v2';
 const SHELL_URLS = ['/', '/index.html', '/manifest.json', '/logo_192x192.png', '/logo_512x512.png'];
 
 self.addEventListener('install', (event) => {
@@ -27,7 +27,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname.startsWith('/static/') || url.pathname === '/manifest.json') {
+  if (
+    url.pathname.startsWith('/static/') ||
+    url.pathname.startsWith('/assets/') ||
+    url.pathname === '/manifest.json'
+  ) {
     event.respondWith(
       caches.match(request).then((cached) => {
         const network = fetch(request).then((response) => {
