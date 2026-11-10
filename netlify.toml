@@ -1,0 +1,12 @@
+# Build production and deploy previews from the same Vite configuration.
+# Netlify's base directory is `frontend`, so these paths are relative to it.
+[build]
+  command = "npm ci --include=dev && npm run build:vite"
+  publish = "build-vite"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[context.deploy-preview]
+  command = "npm ci --include=dev && npm run build:vite"
+  publish = "build-vite"
