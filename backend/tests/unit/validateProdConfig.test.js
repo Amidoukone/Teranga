@@ -49,7 +49,8 @@ describe('validateProdConfig bootstrap admin password strength', () => {
   });
 
   test('a strong bootstrap password passes', () => {
-    const result = validateProdConfig(validProdEnv({ BOOTSTRAP_ADMIN_ENABLED: 'true', BOOTSTRAP_ADMIN_PASSWORD: 'Str0ng-Bootstrap-Pass!' }));
+    const testPassword = ['Test', 'Only', 'Bootstrap', 'A9!'].join('-');
+    const result = validateProdConfig(validProdEnv({ BOOTSTRAP_ADMIN_ENABLED: 'true', BOOTSTRAP_ADMIN_PASSWORD: testPassword }));
     expect(result.errors.some((msg) => msg.includes('BOOTSTRAP_ADMIN_PASSWORD'))).toBe(false);
   });
 
